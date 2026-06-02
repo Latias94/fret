@@ -56,6 +56,7 @@ fn prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape() {
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -213,6 +214,7 @@ fn prepaint_attributes_window_escape_to_scroll_offset_when_state_offset_was_sync
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -322,6 +324,7 @@ fn prepaint_detects_render_window_insufficient_for_overscan_policy() {
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -448,6 +451,7 @@ fn prepaint_marks_scroll_to_item_window_updates_with_distinct_invalidation_detai
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -570,6 +574,7 @@ fn prepaint_caps_retained_host_prefetch_step_to_bound_attach_detach_delta() {
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });

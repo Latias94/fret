@@ -127,7 +127,9 @@ When a dock drag session starts:
 
 - Close or suspend **non-modal dismissable overlays** in the same window by default (menus, popovers,
   context menus). This prevents outside-press dismissal logic and hover routing from fighting the drag.
-- Tooltips may remain visible if they are pointer-transparent, but must not capture or become hit-testable.
+- Pointer-transparent tooltips may remain visible. Tooltip variants that opt into hit-testing (for
+  example rich/action tooltip content) must be suspended or hidden like other interactive
+  overlays.
 - The docking system owns pointer capture for the duration of the drag.
 
 This policy is component-owned (overlay policy layer) but the behavior outcome is locked here.

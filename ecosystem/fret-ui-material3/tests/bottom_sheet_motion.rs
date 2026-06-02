@@ -7,7 +7,6 @@ use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{Button, ButtonVariant, ModalBottomSheet};
 
-mod interaction_harness;
 mod support;
 
 use support::goldens::run_overlay_frame_with_scene_scaled;
@@ -126,6 +125,47 @@ fn modal_bottom_sheet_slides_from_own_height_without_panel_fade() {
     assert!(
         !scene_has_intermediate_opacity(&first_open_scene),
         "Compose Material3 animates bottom sheet offset plus scrim alpha; the sheet panel itself should not fade"
+    );
+
+    for _ in 0..64 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let _ = app.models_mut().update(&open, |v| *v = false);
+    let mut close_slide_ty = None::<f32>;
+    let mut close_has_panel_fade = false;
+    for _ in 0..8 {
+        let scene = run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        close_slide_ty = close_slide_ty.or_else(|| largest_vertical_slide_ty(&scene));
+        close_has_panel_fade |= scene_has_intermediate_opacity(&scene);
+    }
+
+    let close_ty = close_slide_ty.expect("expected bottom sheet close to use vertical transform");
+    assert!(
+        close_ty < bounds.size.height.0 * 0.75,
+        "expected close transform to keep using the sheet-height anchor, got ty={close_ty}"
+    );
+    assert!(
+        !close_has_panel_fade,
+        "bottom sheet panel should remain offset-animated without panel fade during close"
     );
 }
 

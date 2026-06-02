@@ -1,0 +1,5 @@
+{"kind":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","note":"fret-ui remains mechanism/contract layer; Material direction policy stays in ecosystem"}
+{"kind":"adr","path":"docs/adr/0226-material3-state-layer-and-ripple-primitives.md","note":"Material3 foundation/recipe ownership reference"}
+{"kind":"workstream","path":"docs/workstreams/material3-field-logical-insets-v1/CLOSEOUT_AUDIT_2026-05-30.md","note":"previous trigger label/supporting text logical inset closeout"}
+{"kind":"reference","path":".agents/skills/fret-material-source-alignment/references/material-reference-stack.md","note":"Material source ordering and shadcn Select exemplar guidance"}
+{"kind":"reference","path":".agents/skills/fret-material-source-alignment/references/material-field-family-checklist.md","note":"field-family popup/listbox checklist and recommended gates"}

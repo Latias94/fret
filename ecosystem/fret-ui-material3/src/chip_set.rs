@@ -9,16 +9,16 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, KeyCode, LayoutDirection, Modifiers, Px, SemanticsRole};
+use fret_core::{Axis, KeyCode, Modifiers, Px, SemanticsRole};
 use fret_ui::UiHost;
 use fret_ui::action::RovingNavigateResult;
 use fret_ui::element::{AnyElement, RovingFlexProps, SemanticsProps};
 use fret_ui::elements::ElementContext;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::primitives::direction as direction_prim;
 
 use crate::chip::AssistChip;
 use crate::filter_chip::FilterChip;
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::input_chip::InputChip;
 use crate::suggestion_chip::SuggestionChip;
 
@@ -158,8 +158,7 @@ impl ChipSet {
             test_id,
         } = self;
 
-        let default_layout_direction = cx.with_theme(theme_default_layout_direction);
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
 
         let disabled_items: Arc<[bool]> = Arc::from(
             items
@@ -211,13 +210,8 @@ impl ChipSet {
                         return RovingNavigateResult::Handled { target };
                     }
 
-                    let forward = match (layout_direction, it.key) {
-                        (LayoutDirection::Ltr, KeyCode::ArrowRight) => Some(true),
-                        (LayoutDirection::Ltr, KeyCode::ArrowLeft) => Some(false),
-                        (LayoutDirection::Rtl, KeyCode::ArrowLeft) => Some(true),
-                        (LayoutDirection::Rtl, KeyCode::ArrowRight) => Some(false),
-                        _ => None,
-                    };
+                    let forward =
+                        direction_prim::horizontal_forward_for_key(it.key, layout_direction);
                     let Some(forward) = forward else {
                         return RovingNavigateResult::NotHandled;
                     };

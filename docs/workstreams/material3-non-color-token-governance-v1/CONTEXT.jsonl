@@ -1,0 +1,33 @@
+{"role":"adr","path":"docs/adr/0032-style-tokens-and-theme-resolution.md","why":"Defines style token and theme resolution expectations."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","why":"Keeps Material policy out of the mechanism layer."}
+{"role":"adr","path":"docs/adr/0226-material3-state-layer-and-ripple-primitives.md","why":"Defines Material state-layer/ripple foundation ownership."}
+{"role":"follow_on","path":"docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md","why":"Explains why non-color token governance is split from the closed color fallback lane."}
+{"role":"design","path":"docs/workstreams/material3-non-color-token-governance-v1/DESIGN.md","why":"Authoritative design and boundary note for this lane."}
+{"role":"execution","path":"docs/workstreams/material3-non-color-token-governance-v1/TODO.md","why":"Task ledger for bounded execution."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/chip.rs","why":"M3NC-020 centralized AssistChip label weight normalization through tokens::typography."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/filter_chip.rs","why":"M3NC-020 centralized FilterChip label weight normalization through tokens::typography."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/input_chip.rs","why":"M3NC-020 centralized InputChip label weight normalization through tokens::typography."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs","why":"M3NC-020 centralized SuggestionChip label weight normalization through tokens::typography."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/slider.rs","why":"M3NC-020 centralized Slider value-indicator label weight normalization through tokens::typography."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/chip_state.rs","why":"M3NC-020 targeted chip-family state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/slider_state.rs","why":"M3NC-020 targeted Slider state regression gate."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/radio.rs","why":"M3NC-030 migrated Radio disabled icon opacity to MaterialTokenResolver number access."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/radio_alignment.rs","why":"M3NC-030 targeted filtered Radio scene regression gate; full binary includes unrelated headless golden suites."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/foundation/token_resolver.rs","why":"M3NC-040 added Material duration/easing resolver helpers."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/dialog.rs","why":"M3NC-040 migrated Dialog duration/easing fallback reads to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/snackbar.rs","why":"M3NC-040 migrated Snackbar duration/easing fallback reads to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs","why":"M3NC-040 migrated ModalNavigationDrawer duration/easing fallback reads to MaterialTokenResolver."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/dialog_state.rs","why":"M3NC-040 targeted Dialog motion/state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/snackbar_state.rs","why":"M3NC-040 targeted Snackbar motion/state regression gate."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs","why":"M3NC-040 targeted ModalNavigationDrawer motion/state regression gate."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/time_input.rs","why":"M3NC-050 migrated TimeInput state-layer opacity fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/time_picker.rs","why":"M3NC-050 migrated TimePicker token-module state-layer opacity fallback chains to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/time_picker.rs","why":"M3NC-050 migrated TimePicker modal duration/easing/scrim reads to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/date_picker.rs","why":"M3NC-050 migrated DatePicker modal duration/easing reads to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/date_picker.rs","why":"M3NC-050 migrated DatePicker outside-month opacity to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/dropdown_menu.rs","why":"M3NC-050 migrated DropdownMenu close duration to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/tokens/tooltip.rs","why":"M3NC-050 migrated Tooltip close duration to MaterialTokenResolver."}
+{"role":"implementation","path":"ecosystem/fret-ui-material3/src/foundation/indication.rs","why":"M3NC-050 migrated indication duration/easing reads to MaterialTokenResolver."}
+{"role":"test","path":"ecosystem/fret-ui-material3/tests/automation_surface.rs","why":"M3NC-050 targeted DatePicker/TimePicker automation-surface regression gate."}
+{"role":"closeout","path":"docs/workstreams/material3-non-color-token-governance-v1/CLOSEOUT_AUDIT_2026-05-31.md","why":"M3NC-060 recorded final gates, residual direct-read ownership, and closed the lane."}
+{"role":"evidence","path":"docs/workstreams/material3-non-color-token-governance-v1/EVIDENCE_AND_GATES.md","why":"M3NC-060 recorded final package/workstream verification evidence."}

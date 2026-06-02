@@ -1,40 +1,46 @@
-//! Material 3 tabs (primary navigation) (MVP).
+//! Material 3 tabs (primary and secondary navigation).
 //!
 //! Outcome-oriented implementation:
-//! - Token-driven sizing/colors via `md.comp.primary-navigation-tab.*` (subset).
+//! - Token-driven sizing/colors via `md.comp.*-navigation-tab.*` (subset).
 //! - Roving focus + automatic activation (selection follows focus).
 //! - State layer + bounded ripple aligned to the tab bounds.
+//! - Optional active tabpanel surface for app-style tabbed views.
 
+use std::cell::Cell;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Modifiers, Px, Rect,
+    SemanticsOrientation, SemanticsRole, SvgFit, TextOverflow, TextWrap,
 };
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollAxis, ScrollProps,
-    SemanticsDecoration, SemanticsProps, TextProps,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, ScrollAxis,
+    ScrollProps, SemanticsDecoration, SemanticsProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::primitives::{direction as direction_prim, tabs as tabs_prim};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
 use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::context::with_material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::tabs as tabs_tokens;
 
@@ -42,12 +48,14 @@ use crate::tokens::tabs as tabs_tokens;
 struct TabListLayoutRuntime {
     tabs: LayoutProbeList,
     labels: LayoutProbeList,
+    icons: LayoutProbeList,
 }
 
 #[derive(Debug, Clone)]
 struct TabPartTestIds {
     chrome: Arc<str>,
     active_indicator: Arc<str>,
+    divider: Arc<str>,
 }
 
 impl TabPartTestIds {
@@ -55,14 +63,35 @@ impl TabPartTestIds {
         Self {
             chrome: part_test_id(base, "chrome"),
             active_indicator: part_test_id(base, "active-indicator"),
+            divider: part_test_id(base, "divider"),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct TabPanelItemMetadata {
+    value: Arc<str>,
+    label: Arc<str>,
+    tab_index: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabIconPlacement {
+    Leading,
+    Stacked,
+}
+
+#[derive(Debug, Clone)]
+struct TabItemIcon {
+    icon: IconId,
+    placement: TabIconPlacement,
 }
 
 #[derive(Debug, Clone)]
 pub struct TabItem {
     value: Arc<str>,
     label: Arc<str>,
+    icon: Option<TabItemIcon>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -73,6 +102,7 @@ impl TabItem {
         Self {
             value: value.into(),
             label: label.into(),
+            icon: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
@@ -84,6 +114,19 @@ impl TabItem {
         self
     }
 
+    pub fn icon(mut self, icon: IconId, placement: TabIconPlacement) -> Self {
+        self.icon = Some(TabItemIcon { icon, placement });
+        self
+    }
+
+    pub fn leading_icon(self, icon: IconId) -> Self {
+        self.icon(icon, TabIconPlacement::Leading)
+    }
+
+    pub fn stacked_icon(self, icon: IconId) -> Self {
+        self.icon(icon, TabIconPlacement::Stacked)
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -91,6 +134,57 @@ impl TabItem {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    fn uses_stacked_icon(&self) -> bool {
+        self.icon
+            .as_ref()
+            .is_some_and(|icon| icon.placement == TabIconPlacement::Stacked)
+    }
+}
+
+/// Declarative content for a Material tab value.
+///
+/// `Tabs` remains useful as a navigation-only tab row when no panels are provided. Add panels when
+/// the component should own the active `TabPanel` semantics and automation anchor, matching the
+/// complete app-tabs shape used by mature recipe layers.
+#[derive(Debug)]
+pub struct TabPanel {
+    value: Arc<str>,
+    children: Vec<AnyElement>,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    force_mount: bool,
+}
+
+impl TabPanel {
+    pub fn new(value: impl Into<Arc<str>>, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            value: value.into(),
+            children: children.into_iter().collect(),
+            a11y_label: None,
+            test_id: None,
+            force_mount: false,
+        }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    /// Keep this panel subtree mounted while it is inactive.
+    ///
+    /// Inactive force-mounted panels are not present or interactive; the subtree remains available
+    /// for retained local state and presence-style composition.
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
         self
     }
 }
@@ -127,32 +221,48 @@ impl TabsStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        if other.active_indicator_color.is_some() {
-            self.active_indicator_color = other.active_indicator_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                label_color,
+                state_layer_color,
+                active_indicator_color,
+            ]
+        )
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum TabsVariant {
+    #[default]
+    Primary,
+    Secondary,
+}
+
+impl TabsVariant {
+    fn token_kind(self) -> tabs_tokens::NavigationTabKind {
+        match self {
+            Self::Primary => tabs_tokens::NavigationTabKind::Primary,
+            Self::Secondary => tabs_tokens::NavigationTabKind::Secondary,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Tabs {
     model: Model<Arc<str>>,
     items: Vec<TabItem>,
+    panels: Vec<TabPanel>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     disabled: bool,
     loop_navigation: bool,
     scrollable: bool,
+    content_fill_remaining: bool,
+    variant: TabsVariant,
     style: TabsStyle,
 }
 
@@ -161,11 +271,14 @@ impl Tabs {
         Self {
             model,
             items: Vec::new(),
+            panels: Vec::new(),
             a11y_label: None,
             test_id: None,
             disabled: false,
             loop_navigation: true,
             scrollable: false,
+            content_fill_remaining: true,
+            variant: TabsVariant::Primary,
             style: TabsStyle::default(),
         }
     }
@@ -196,6 +309,16 @@ impl Tabs {
         self
     }
 
+    pub fn panel(mut self, panel: TabPanel) -> Self {
+        self.panels.push(panel);
+        self
+    }
+
+    pub fn panels(mut self, panels: impl IntoIterator<Item = TabPanel>) -> Self {
+        self.panels.extend(panels);
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -221,6 +344,21 @@ impl Tabs {
         self
     }
 
+    pub fn content_fill_remaining(mut self, fill: bool) -> Self {
+        self.content_fill_remaining = fill;
+        self
+    }
+
+    pub fn variant(mut self, variant: TabsVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn secondary(mut self) -> Self {
+        self.variant = TabsVariant::Secondary;
+        self
+    }
+
     pub fn style(mut self, style: TabsStyle) -> Self {
         self.style = self.style.merged(style);
         self
@@ -231,245 +369,342 @@ impl Tabs {
         let Tabs {
             model,
             items,
+            panels,
             a11y_label,
             test_id,
             disabled,
             loop_navigation,
             scrollable,
+            content_fill_remaining,
+            variant,
             style,
         } = self;
+        let token_kind = variant.token_kind();
 
         cx.scope(|cx| {
-            let values: Arc<[Arc<str>]> =
-                Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
-            let disabled_items: Arc<[bool]> = Arc::from(
-                items
-                    .iter()
-                    .map(|it| disabled || it.disabled)
-                    .collect::<Vec<_>>(),
-            );
-
-            let selected_value = cx
-                .get_model_cloned(&model, Invalidation::Paint)
-                .unwrap_or_else(empty_arc_str);
-            let selected_idx = items
-                .iter()
-                .position(|it| it.value.as_ref() == selected_value.as_ref());
-
-            let tab_stop = items
-                .iter()
-                .position(|it| {
-                    !disabled && !it.disabled && it.value.as_ref() == selected_value.as_ref()
-                })
-                .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
-
-            let sem = SemanticsProps {
-                role: SemanticsRole::TabList,
-                label: a11y_label.clone(),
-                test_id: test_id.clone(),
-                disabled,
-                orientation: Some(SemanticsOrientation::Horizontal),
-                ..Default::default()
-            };
-
-            let part_test_ids = test_id.as_ref().map(TabPartTestIds::from_base);
-            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
-            let indicator_test_id = part_test_ids
-                .as_ref()
-                .map(|ids| ids.active_indicator.clone());
-
-            let container_states = if disabled {
-                WidgetStates::DISABLED
-            } else {
-                Default::default()
-            };
-            let (container_height, container_bg) = {
-                let theme = Theme::global(&*cx.app);
-                let container_height = tabs_tokens::container_height(theme);
-                let container_bg = resolve_override_slot_with(
-                    style.container_background.as_ref(),
-                    container_states,
-                    |color| color.resolve(theme),
-                    || tabs_tokens::container_background(theme),
+            with_material_layout_direction_in_scope(cx, move |cx, layout_direction| {
+                let values: Arc<[Arc<str>]> =
+                    Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
+                let disabled_items: Arc<[bool]> = Arc::from(
+                    items
+                        .iter()
+                        .map(|it| disabled || it.disabled)
+                        .collect::<Vec<_>>(),
                 );
-                (container_height, container_bg)
-            };
 
-            let mut props = RovingFlexProps::default();
-            props.flex.direction = Axis::Horizontal;
-            props.flex.gap = Px(0.0).into();
-            props.flex.justify = MainAlign::Start;
-            props.flex.align = fret_ui::element::CrossAlign::Stretch;
-            if scrollable {
-                let edge_padding = {
-                    let theme = Theme::global(&*cx.app);
-                    tabs_tokens::scrollable_edge_padding(theme)
+                let selected_value = cx
+                    .get_model_cloned(&model, Invalidation::Paint)
+                    .unwrap_or_else(empty_arc_str);
+                let selected_idx = items
+                    .iter()
+                    .position(|it| it.value.as_ref() == selected_value.as_ref());
+                let panel_item_metadata: Arc<[TabPanelItemMetadata]> = Arc::from(
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, it)| TabPanelItemMetadata {
+                            value: it.value.clone(),
+                            label: it.label.clone(),
+                            tab_index: idx,
+                        })
+                        .collect::<Vec<_>>(),
+                );
+                let has_stacked_tabs = items.iter().any(TabItem::uses_stacked_icon);
+
+                let tab_stop = items
+                    .iter()
+                    .position(|it| {
+                        !disabled && !it.disabled && it.value.as_ref() == selected_value.as_ref()
+                    })
+                    .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
+
+                let sem = SemanticsProps {
+                    role: SemanticsRole::TabList,
+                    label: a11y_label.clone(),
+                    test_id: test_id.clone(),
+                    disabled,
+                    orientation: Some(SemanticsOrientation::Horizontal),
+                    ..Default::default()
                 };
-                props.flex.padding = Edges {
-                    left: edge_padding,
-                    right: edge_padding,
-                    top: Px(0.0),
-                    bottom: Px(0.0),
+
+                let part_test_ids = test_id.as_ref().map(TabPartTestIds::from_base);
+                let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+                let indicator_test_id = part_test_ids
+                    .as_ref()
+                    .map(|ids| ids.active_indicator.clone());
+                let divider_test_id = part_test_ids.as_ref().map(|ids| ids.divider.clone());
+                let default_active_panel_test_id =
+                    test_id.as_ref().map(|id| part_test_id(id, "panel"));
+
+                let container_states = if disabled {
+                    WidgetStates::DISABLED
+                } else {
+                    Default::default()
+                };
+                let (container_height, container_bg) = {
+                    let theme = Theme::global(&*cx.app);
+                    let container_height = if has_stacked_tabs {
+                        tabs_tokens::stacked_container_height_for(theme, token_kind)
+                    } else {
+                        tabs_tokens::container_height_for(theme, token_kind)
+                    };
+                    let container_bg = resolve_override_slot_with(
+                        style.container_background.as_ref(),
+                        container_states,
+                        |color| color.resolve(theme),
+                        || tabs_tokens::container_background_for(theme, token_kind),
+                    );
+                    (container_height, container_bg)
+                };
+
+                let mut props = RovingFlexProps::default();
+                props.flex.direction = Axis::Horizontal;
+                props.flex.gap = Px(0.0).into();
+                props.flex.justify = MainAlign::Start;
+                props.flex.align = fret_ui::element::CrossAlign::Stretch;
+                if scrollable {
+                    let edge_padding = {
+                        let theme = Theme::global(&*cx.app);
+                        tabs_tokens::scrollable_edge_padding_for(theme, token_kind)
+                    };
+                    props.flex.padding = Edges {
+                        left: edge_padding,
+                        right: edge_padding,
+                        top: Px(0.0),
+                        bottom: Px(0.0),
+                    }
+                    .into();
                 }
-                .into();
-            }
-            props.roving = fret_ui::element::RovingFocusProps {
-                enabled: !disabled,
-                wrap: loop_navigation,
-                disabled: disabled_items.clone(),
-            };
+                props.roving = fret_ui::element::RovingFocusProps {
+                    enabled: !disabled,
+                    wrap: loop_navigation,
+                    disabled: disabled_items.clone(),
+                };
 
-            cx.semantics(sem, move |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        background: Some(container_bg),
-                        layout: {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Px(container_height);
-                            layout
+                let tab_element_ids = (0..items.len())
+                    .map(|_| Cell::new(None))
+                    .collect::<Vec<_>>();
+                let tab_element_ids = &tab_element_ids;
+
+                let tab_list = cx.semantics(sem, move |cx| {
+                    vec![cx.container(
+                        ContainerProps {
+                            background: Some(container_bg),
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(container_height);
+                                layout
+                            },
+                            ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let tab_count = items.len();
-                        let container_id = cx.root_id();
+                        move |cx| {
+                            let tab_count = items.len();
+                            let container_id = cx.root_id();
 
-                        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
-                            rt.tabs.ensure_len(tab_count);
-                            rt.labels.ensure_len(tab_count);
-                        });
-                        let indicator = primary_tab_list_indicator(
-                            cx,
-                            container_id,
-                            tab_count,
-                            selected_idx,
-                            indicator_test_id.clone(),
-                            scrollable,
-                            disabled,
-                            &style,
-                        );
+                            cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                                rt.tabs.ensure_len(tab_count);
+                                rt.labels.ensure_len(tab_count);
+                                rt.icons.ensure_len(tab_count);
+                            });
+                            let indicator = tab_list_indicator(
+                                cx,
+                                container_id,
+                                tab_count,
+                                selected_idx,
+                                indicator_test_id.clone(),
+                                scrollable,
+                                disabled,
+                                token_kind,
+                                &style,
+                                layout_direction,
+                            );
+                            let divider = tab_row_divider(cx, token_kind, divider_test_id.clone());
 
-                        let roving = cx.roving_flex(props, move |cx| {
-                            let values_for_roving = values.clone();
-                            let model_for_roving = model.clone();
+                            let roving = cx.roving_flex(props, move |cx| {
+                                let values_for_roving = values.clone();
+                                let model_for_roving = model.clone();
+                                let layout_direction_for_roving = layout_direction;
 
-                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                use fret_ui::action::RovingNavigateResult;
+                                cx.roving_on_navigate(Arc::new(move |_host, _cx, it| {
+                                    use fret_ui::action::RovingNavigateResult;
 
-                                let is_disabled = |idx: usize| -> bool {
-                                    it.disabled.get(idx).copied().unwrap_or(false)
-                                };
-
-                                let forward = match (it.axis, it.key) {
-                                    (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-                                    (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
-                                    _ => None,
-                                };
-
-                                if it.key == KeyCode::Home {
-                                    let target = (0..it.len).find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-                                if it.key == KeyCode::End {
-                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-
-                                let Some(forward) = forward else {
-                                    return RovingNavigateResult::NotHandled;
-                                };
-
-                                let current = it
-                                    .current
-                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                let Some(current) = current else {
-                                    return RovingNavigateResult::Handled { target: None };
-                                };
-
-                                let len = it.len;
-                                let mut target: Option<usize> = None;
-                                if it.wrap {
-                                    for step in 1..=len {
-                                        let idx = if forward {
-                                            (current + step) % len
-                                        } else {
-                                            (current + len - (step % len)) % len
-                                        };
-                                        if !is_disabled(idx) {
-                                            target = Some(idx);
-                                            break;
-                                        }
+                                    if it.repeat || it.modifiers != Modifiers::default() {
+                                        return RovingNavigateResult::NotHandled;
                                     }
-                                } else if forward {
-                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                } else if current > 0 {
-                                    target = (0..current).rev().find(|&i| !is_disabled(i));
-                                }
+                                    if it.axis != Axis::Horizontal {
+                                        return RovingNavigateResult::NotHandled;
+                                    }
 
-                                RovingNavigateResult::Handled { target }
-                            }));
+                                    let is_disabled = |idx: usize| -> bool {
+                                        it.disabled.get(idx).copied().unwrap_or(false)
+                                    };
 
-                            cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
-                                let Some(value) = values_for_roving.get(idx).cloned() else {
-                                    return;
-                                };
-                                let already_selected = host
-                                    .models_mut()
-                                    .read(&model_for_roving, |v| v.as_ref() == value.as_ref())
-                                    .ok()
-                                    .unwrap_or(false);
-                                if already_selected {
-                                    return;
-                                }
-                                let _ = host.update_model(&model_for_roving, |v| *v = value);
-                                host.request_redraw(action_cx.window);
-                            }));
+                                    if it.key == KeyCode::Home {
+                                        let target = (0..it.len).find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
+                                    if it.key == KeyCode::End {
+                                        let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
 
-                            items
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, it)| {
-                                    let tab_stop = tab_stop.is_some_and(|t| t == idx);
-                                    material_primary_tab(
-                                        cx,
-                                        container_id,
-                                        model.clone(),
-                                        it,
-                                        idx,
-                                        items.len(),
-                                        tab_stop,
-                                        disabled,
-                                        scrollable,
-                                        selected_idx.is_some_and(|t| t == idx),
-                                        &style,
-                                    )
-                                })
-                                .collect::<Vec<_>>()
+                                    let Some(forward) = direction_prim::horizontal_forward_for_key(
+                                        it.key,
+                                        layout_direction_for_roving,
+                                    ) else {
+                                        return RovingNavigateResult::NotHandled;
+                                    };
+
+                                    let current = it
+                                        .current
+                                        .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                    let Some(current) = current else {
+                                        return RovingNavigateResult::Handled { target: None };
+                                    };
+
+                                    let len = it.len;
+                                    let mut target: Option<usize> = None;
+                                    if it.wrap {
+                                        for step in 1..=len {
+                                            let idx = if forward {
+                                                (current + step) % len
+                                            } else {
+                                                (current + len - (step % len)) % len
+                                            };
+                                            if !is_disabled(idx) {
+                                                target = Some(idx);
+                                                break;
+                                            }
+                                        }
+                                    } else if forward {
+                                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                    } else if current > 0 {
+                                        target = (0..current).rev().find(|&i| !is_disabled(i));
+                                    }
+
+                                    RovingNavigateResult::Handled { target }
+                                }));
+
+                                cx.roving_on_active_change(Arc::new(
+                                    move |host, action_cx, idx| {
+                                        let Some(value) = values_for_roving.get(idx).cloned()
+                                        else {
+                                            return;
+                                        };
+                                        let already_selected = host
+                                            .models_mut()
+                                            .read(&model_for_roving, |v| {
+                                                v.as_ref() == value.as_ref()
+                                            })
+                                            .ok()
+                                            .unwrap_or(false);
+                                        if already_selected {
+                                            return;
+                                        }
+                                        let _ =
+                                            host.update_model(&model_for_roving, |v| *v = value);
+                                        host.request_redraw(action_cx.window);
+                                    },
+                                ));
+
+                                items
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, it)| {
+                                        let tab_stop = tab_stop.is_some_and(|t| t == idx);
+                                        material_tab(
+                                            cx,
+                                            container_id,
+                                            model.clone(),
+                                            it,
+                                            idx,
+                                            items.len(),
+                                            tab_stop,
+                                            disabled,
+                                            scrollable,
+                                            token_kind,
+                                            container_height,
+                                            selected_idx.is_some_and(|t| t == idx),
+                                            &style,
+                                            tab_element_ids.get(idx),
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            });
+
+                            let mut tabs = if scrollable {
+                                let mut scroll_props = ScrollProps::default();
+                                scroll_props.axis = ScrollAxis::X;
+                                scroll_props.layout.size.width = Length::Fill;
+                                scroll_props.layout.size.height = Length::Fill;
+                                cx.scroll(scroll_props, move |_cx| vec![roving])
+                            } else {
+                                roving
+                            };
+                            if let Some(chrome_test_id) = chrome_test_id.clone() {
+                                tabs = tabs.test_id(chrome_test_id);
+                            }
+
+                            vec![divider, indicator, tabs]
+                        },
+                    )]
+                });
+
+                let panel_elements = panels
+                    .into_iter()
+                    .filter_map(|panel| {
+                        let active = panel.value.as_ref() == selected_value.as_ref();
+                        let item_meta = panel_item_metadata
+                            .iter()
+                            .find(|meta| meta.value.as_ref() == panel.value.as_ref());
+                        let fallback_label = item_meta.map(|meta| meta.label.clone());
+                        let labelled_by_element = item_meta
+                            .and_then(|meta| tab_element_ids.get(meta.tab_index))
+                            .and_then(Cell::get);
+                        let test_id = panel.test_id.clone().or_else(|| {
+                            active
+                                .then(|| default_active_panel_test_id.clone())
+                                .flatten()
                         });
 
-                        let mut tabs = if scrollable {
-                            let mut scroll_props = ScrollProps::default();
-                            scroll_props.axis = ScrollAxis::X;
-                            scroll_props.layout.size.width = Length::Fill;
-                            scroll_props.layout.size.height = Length::Fill;
-                            cx.scroll(scroll_props, move |_cx| vec![roving])
-                        } else {
-                            roving
-                        };
-                        if let Some(chrome_test_id) = chrome_test_id.clone() {
-                            tabs = tabs.test_id(chrome_test_id);
-                        }
+                        material_tab_panel(
+                            cx,
+                            panel,
+                            active,
+                            fallback_label,
+                            labelled_by_element,
+                            test_id,
+                            content_fill_remaining,
+                        )
+                    })
+                    .collect::<Vec<_>>();
 
-                        vec![indicator, tabs]
-                    },
-                )]
+                if panel_elements.is_empty() {
+                    return tab_list;
+                }
+
+                let mut root = FlexProps::default();
+                root.layout.size.width = Length::Fill;
+                root.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                root.direction = Axis::Vertical;
+                root.justify = MainAlign::Start;
+                root.align = CrossAlign::Stretch;
+                root.gap = Px(0.0).into();
+                root.padding = Edges::all(Px(0.0)).into();
+
+                cx.flex(root, move |_cx| {
+                    let mut children = Vec::with_capacity(1 + panel_elements.len());
+                    children.push(tab_list);
+                    children.extend(panel_elements);
+                    children
+                })
             })
         })
     }
 }
 
-fn material_primary_tab<H: UiHost>(
+fn material_tab<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     container_id: GlobalElementId,
     model: Model<Arc<str>>,
@@ -479,21 +714,32 @@ fn material_primary_tab<H: UiHost>(
     tab_stop: bool,
     disabled_group: bool,
     scrollable: bool,
+    token_kind: tabs_tokens::NavigationTabKind,
+    height: Px,
     selected: bool,
     style_override: &TabsStyle,
+    tab_element: Option<&Cell<Option<u64>>>,
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
+    let item_icon = item.icon.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
+        if let Some(tab_element) = tab_element {
+            tab_element.set(Some(pressable_id.0));
+        }
 
         cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
             rt.tabs.ensure_len(set_size);
             rt.labels.ensure_len(set_size);
+            rt.icons.ensure_len(set_size);
             rt.tabs.set(idx, pressable_id);
+            if item_icon.is_none() {
+                rt.icons.set(idx, GlobalElementId(0));
+            }
         });
 
         if enabled {
@@ -515,13 +761,6 @@ fn material_primary_tab<H: UiHost>(
         }
 
         let corner_radii = Corners::all(Px(0.0));
-        let height = {
-            let theme = Theme::global(&*cx.app);
-            theme
-                .metric_by_key("md.comp.primary-navigation-tab.container.height")
-                .unwrap_or(Px(48.0))
-        };
-
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
@@ -541,7 +780,7 @@ fn material_primary_tab<H: UiHost>(
                 if scrollable {
                     let min_width = {
                         let theme = Theme::global(&*cx.app);
-                        tabs_tokens::scrollable_min_tab_width(theme)
+                        tabs_tokens::scrollable_min_tab_width_for(theme, token_kind)
                     };
                     l.size.width = Length::Auto;
                     l.size.min_width = Some(Length::Px(min_width));
@@ -562,7 +801,7 @@ fn material_primary_tab<H: UiHost>(
                 let theme = Theme::global(&*cx.app);
                 material_focus_ring_for_component(
                     theme,
-                    "md.comp.primary-navigation-tab",
+                    tabs_tokens::component_prefix(token_kind),
                     corner_radii,
                 )
             }),
@@ -583,8 +822,9 @@ fn material_primary_tab<H: UiHost>(
             props.layout.size.height = Length::Fill;
             if scrollable {
                 let theme = Theme::global(&*cx.app);
-                props.layout.size.min_width =
-                    Some(Length::Px(tabs_tokens::scrollable_min_tab_width(theme)));
+                props.layout.size.min_width = Some(Length::Px(
+                    tabs_tokens::scrollable_min_tab_width_for(theme, token_kind),
+                ));
             }
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
@@ -613,6 +853,8 @@ fn material_primary_tab<H: UiHost>(
 
                 let (
                     label_color,
+                    icon_color,
+                    icon_size,
                     state_layer_color,
                     state_layer_target,
                     ripple_base_opacity,
@@ -623,21 +865,38 @@ fn material_primary_tab<H: UiHost>(
                         style_override.label_color.as_ref(),
                         states,
                         |color| color.resolve(theme),
-                        || tabs_tokens::label_color(theme, selected, interaction),
+                        || tabs_tokens::label_color_for(theme, token_kind, selected, interaction),
                     );
+                    let icon_color =
+                        tabs_tokens::icon_color_for(theme, token_kind, selected, interaction);
+                    let icon_size = tabs_tokens::icon_size_for(theme, token_kind);
                     let state_layer_color = resolve_override_slot_with(
                         style_override.state_layer_color.as_ref(),
                         states,
                         |color| color.resolve(theme),
-                        || tabs_tokens::state_layer_color(theme, selected, interaction),
+                        || {
+                            tabs_tokens::state_layer_color_for(
+                                theme,
+                                token_kind,
+                                selected,
+                                interaction,
+                            )
+                        },
                     );
-                    let state_layer_target =
-                        tabs_tokens::state_layer_opacity(theme, selected, interaction);
+                    let state_layer_target = tabs_tokens::state_layer_opacity_for(
+                        theme,
+                        token_kind,
+                        selected,
+                        interaction,
+                    );
                     let ripple_base_opacity =
-                        tabs_tokens::pressed_state_layer_opacity(theme, selected);
-                    let indication_config = material_pressable_indication_config(theme, None);
+                        tabs_tokens::pressed_state_layer_opacity_for(theme, token_kind, selected);
+                    let indication_config =
+                        material_pressable_indication_config_in_scope(&*cx, None);
                     (
                         label_color,
+                        icon_color,
+                        icon_size,
                         state_layer_color,
                         state_layer_target,
                         ripple_base_opacity,
@@ -658,7 +917,7 @@ fn material_primary_tab<H: UiHost>(
                     false,
                 );
                 let label_test_id = test_id.as_ref().map(|id| part_test_id(id, "label"));
-                let label_el = primary_tab_label(
+                let label_el = tab_label(
                     cx,
                     container_id,
                     idx,
@@ -666,7 +925,22 @@ fn material_primary_tab<H: UiHost>(
                     &label,
                     label_color,
                     scrollable,
+                    token_kind,
                     label_test_id,
+                );
+                let icon_test_id = test_id.as_ref().map(|id| part_test_id(id, "icon"));
+
+                let content = tab_content(
+                    cx,
+                    item_icon.clone(),
+                    icon_size,
+                    icon_color,
+                    label_el,
+                    tabs_tokens::leading_icon_label_gap(),
+                    container_id,
+                    idx,
+                    set_size,
+                    icon_test_id,
                 );
 
                 let mut row = FlexProps::default();
@@ -678,8 +952,9 @@ fn material_primary_tab<H: UiHost>(
                 row.layout.size.height = Length::Px(height);
                 if scrollable {
                     let theme = Theme::global(&*cx.app);
-                    row.layout.size.min_width =
-                        Some(Length::Px(tabs_tokens::scrollable_min_tab_width(theme)));
+                    row.layout.size.min_width = Some(Length::Px(
+                        tabs_tokens::scrollable_min_tab_width_for(theme, token_kind),
+                    ));
                 }
                 row.layout.overflow = Overflow::Clip;
                 {
@@ -690,18 +965,12 @@ fn material_primary_tab<H: UiHost>(
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
                 row.padding = if scrollable {
-                    Edges {
-                        left: Px(16.0),
-                        right: Px(16.0),
-                        top: Px(0.0),
-                        bottom: Px(0.0),
-                    }
-                    .into()
+                    tabs_tokens::horizontal_text_padding().into()
                 } else {
                     Edges::all(Px(0.0)).into()
                 };
 
-                let mut chrome = cx.flex(row, move |_cx| vec![ink, label_el]);
+                let mut chrome = cx.flex(row, move |_cx| vec![ink, content]);
                 if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
                 }
@@ -717,7 +986,118 @@ fn material_primary_tab<H: UiHost>(
     })
 }
 
-fn primary_tab_label<H: UiHost>(
+fn material_tab_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    panel: TabPanel,
+    active: bool,
+    fallback_label: Option<Arc<str>>,
+    labelled_by_element: Option<u64>,
+    test_id: Option<Arc<str>>,
+    content_fill_remaining: bool,
+) -> Option<AnyElement> {
+    let TabPanel {
+        children,
+        a11y_label,
+        force_mount,
+        ..
+    } = panel;
+    let label = a11y_label.or(fallback_label);
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+    layout.flex.grow = if content_fill_remaining { 1.0 } else { 0.0 };
+    layout.flex.shrink = 1.0;
+
+    let mut semantics = tabs_prim::tab_panel_semantics_props(layout, label, labelled_by_element);
+    semantics.test_id = test_id;
+
+    tabs_prim::tab_panel_with_gate_props(cx, active, force_mount, semantics, move |_cx| children)
+}
+
+fn tab_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    item_icon: Option<TabItemIcon>,
+    icon_size: Px,
+    icon_color: Color,
+    label_el: AnyElement,
+    gap: Px,
+    container_id: GlobalElementId,
+    idx: usize,
+    set_size: usize,
+    icon_test_id: Option<Arc<str>>,
+) -> AnyElement {
+    cx.named("tab_content", move |cx| {
+        let mut children = Vec::new();
+        if let Some(item_icon) = item_icon.clone() {
+            let mut icon_el = tab_icon(
+                cx,
+                container_id,
+                idx,
+                set_size,
+                &item_icon.icon,
+                icon_size,
+                icon_color,
+            );
+            if let Some(icon_test_id) = icon_test_id.clone() {
+                icon_el = icon_el.test_id(icon_test_id);
+            }
+            children.push(icon_el);
+        }
+        children.push(label_el);
+
+        let mut content = FlexProps::default();
+        content.layout.size.width = Length::Auto;
+        content.layout.size.min_width = Some(Length::Px(Px(0.0)));
+        content.layout.size.max_width = Some(Length::Fill);
+        content.layout.flex.shrink = 1.0;
+        content.direction = match item_icon.as_ref().map(|icon| icon.placement) {
+            Some(TabIconPlacement::Stacked) => Axis::Vertical,
+            _ => Axis::Horizontal,
+        };
+        content.justify = MainAlign::Center;
+        content.align = CrossAlign::Center;
+        content.gap = match item_icon.as_ref().map(|icon| icon.placement) {
+            Some(TabIconPlacement::Leading) => gap.into(),
+            Some(TabIconPlacement::Stacked) => tabs_tokens::stacked_icon_label_gap().into(),
+            None => Px(0.0).into(),
+        };
+        content.padding = Edges::all(Px(0.0)).into();
+
+        cx.flex(content, move |_cx| children)
+    })
+}
+
+fn tab_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    container_id: GlobalElementId,
+    idx: usize,
+    set_size: usize,
+    icon: &IconId,
+    size: Px,
+    color: Color,
+) -> AnyElement {
+    let icon = icon.clone();
+
+    cx.named("tab_icon", move |cx| {
+        let svg = svg_source_for_icon(cx, &icon);
+
+        let mut props = SvgIconProps::new(svg);
+        props.fit = SvgFit::Contain;
+        props.layout.size.width = Length::Px(size);
+        props.layout.size.height = Length::Px(size);
+        props.layout.flex.shrink = 0.0;
+        props.color = color;
+        let icon_el = cx.svg_icon_props(props);
+        let icon_id = icon_el.id;
+        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+            rt.icons.ensure_len(set_size);
+            rt.icons.set(idx, icon_id);
+        });
+        icon_el
+    })
+}
+
+fn tab_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     container_id: GlobalElementId,
     idx: usize,
@@ -725,23 +1105,15 @@ fn primary_tab_label<H: UiHost>(
     label: &Arc<str>,
     color: Color,
     scrollable: bool,
+    token_kind: tabs_tokens::NavigationTabKind,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let label = label.clone();
 
-    cx.named("primary_tab_label", move |cx| {
-        let label_id = cx.root_id();
-        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
-            rt.labels.ensure_len(set_size);
-            rt.labels.set(idx, label_id);
-        });
-
+    cx.named("tab_label", move |cx| {
         let style = {
             let theme = Theme::global(&*cx.app);
-            let style = theme
-                .text_style_by_key("md.sys.typescale.title-small")
-                .unwrap_or_default();
-            typography::with_intent(style, TextIntent::Control)
+            tabs_tokens::label_text_style_for(theme, token_kind)
         };
 
         let mut props = TextProps::new(label.clone());
@@ -760,10 +1132,46 @@ fn primary_tab_label<H: UiHost>(
         props.overflow = TextOverflow::Clip;
 
         let mut label_el = cx.text_props(props);
+        let label_id = label_el.id;
+        cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+            rt.labels.ensure_len(set_size);
+            rt.labels.set(idx, label_id);
+        });
         if let Some(test_id) = test_id.clone() {
             label_el = label_el.test_id(test_id);
         }
         label_el
+    })
+}
+
+fn tab_row_divider<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    token_kind: tabs_tokens::NavigationTabKind,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    cx.named("tab_row_divider", move |cx| {
+        let (height, color) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                tabs_tokens::divider_height_for(theme, token_kind),
+                tabs_tokens::divider_color_for(theme, token_kind),
+            )
+        };
+
+        let mut props = ContainerProps::default();
+        props.background = Some(color);
+        props.layout.position = PositionStyle::Absolute;
+        props.layout.size.width = Length::Fill;
+        props.layout.size.height = Length::Px(height);
+        props.layout.inset.left = Some(Px(0.0)).into();
+        props.layout.inset.right = Some(Px(0.0)).into();
+        props.layout.inset.bottom = Some(Px(0.0)).into();
+
+        let divider = cx.container(props, |_cx| Vec::new());
+        match test_id {
+            Some(test_id) => divider.test_id(test_id),
+            None => divider,
+        }
     })
 }
 
@@ -789,6 +1197,20 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text_by_content(child, text)),
         }
+    }
+
+    #[test]
+    fn tab_indicator_fallback_position_mirrors_logical_index_in_rtl() {
+        assert_eq!(visual_tab_index(0, 3, LayoutDirection::Ltr), 0);
+        assert_eq!(visual_tab_index(2, 3, LayoutDirection::Ltr), 2);
+        assert_eq!(visual_tab_index(0, 3, LayoutDirection::Rtl), 2);
+        assert_eq!(visual_tab_index(2, 3, LayoutDirection::Rtl), 0);
+
+        assert_eq!(fallback_tab_x(0, 3, 90.0, 52.0, LayoutDirection::Ltr), 52.0);
+        assert_eq!(
+            fallback_tab_x(0, 3, 90.0, 52.0, LayoutDirection::Rtl),
+            232.0
+        );
     }
 
     #[test]
@@ -906,7 +1328,7 @@ mod controllable_state_tests {
     }
 }
 
-fn primary_tab_list_indicator<H: UiHost>(
+fn tab_list_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     container_id: GlobalElementId,
     tab_count: usize,
@@ -914,9 +1336,11 @@ fn primary_tab_list_indicator<H: UiHost>(
     indicator_test_id: Option<Arc<str>>,
     scrollable: bool,
     disabled: bool,
+    token_kind: tabs_tokens::NavigationTabKind,
     style_override: &TabsStyle,
+    layout_direction: LayoutDirection,
 ) -> AnyElement {
-    cx.named("primary_tab_indicator", move |cx| {
+    cx.named("tab_indicator", move |cx| {
         let container_bounds = cx.last_bounds_for_element(container_id);
         let tab_bounds = selected_idx
             .and_then(|idx| {
@@ -932,6 +1356,13 @@ fn primary_tab_list_indicator<H: UiHost>(
                 })
             })
             .and_then(|label_id| cx.last_bounds_for_element(label_id));
+        let icon_bounds = selected_idx
+            .and_then(|idx| {
+                cx.state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                    rt.icons.get(idx)
+                })
+            })
+            .and_then(|icon_id| cx.last_bounds_for_element(icon_id));
 
         let mut states = WidgetStates::empty();
         if disabled {
@@ -949,15 +1380,10 @@ fn primary_tab_list_indicator<H: UiHost>(
                     let height = tabs_tokens::active_indicator_height(theme);
                     let min_width = tabs_tokens::active_indicator_min_width(theme).0;
                     let edge_padding = if scrollable {
-                        tabs_tokens::scrollable_edge_padding(theme).0
+                        tabs_tokens::scrollable_edge_padding_for(theme, token_kind).0
                     } else {
                         0.0
                     };
-                    let content_width = label_bounds
-                        .map(|bounds| bounds.size.width.0)
-                        .unwrap_or(min_width)
-                        .max(min_width)
-                        .min(tab_bounds.size.width.0);
                     let color = resolve_override_slot_with(
                         style_override.active_indicator_color.as_ref(),
                         states,
@@ -967,33 +1393,68 @@ fn primary_tab_list_indicator<H: UiHost>(
                     let idx = selected_idx.unwrap_or(0);
                     let tab_x = container_bounds
                         .map(|bounds| tab_bounds.origin.x.0 - bounds.origin.x.0)
-                        .unwrap_or_else(|| edge_padding + tab_bounds.size.width.0 * (idx as f32));
+                        .unwrap_or_else(|| {
+                            fallback_tab_x(
+                                idx,
+                                tab_count,
+                                tab_bounds.size.width.0,
+                                edge_padding,
+                                layout_direction,
+                            )
+                        });
                     let tab_y = container_bounds
                         .map(|bounds| tab_bounds.origin.y.0 - bounds.origin.y.0)
                         .unwrap_or(0.0);
-                    let x = tab_x + (tab_bounds.size.width.0 - content_width) * 0.5;
+                    let (x, content_width) = if tabs_tokens::indicator_matches_content(token_kind) {
+                        let content_span = tab_content_span(label_bounds, icon_bounds);
+                        if let Some((content_left, content_width)) = content_span {
+                            let target_width = content_width.max(min_width);
+                            let content_x = container_bounds
+                                .map(|bounds| content_left - bounds.origin.x.0)
+                                .unwrap_or_else(|| {
+                                    tab_x + (tab_bounds.size.width.0 - content_width) * 0.5
+                                });
+                            (
+                                content_x + (content_width - target_width) * 0.5,
+                                target_width,
+                            )
+                        } else {
+                            let target_width = min_width.min(tab_bounds.size.width.0);
+                            (
+                                tab_x + (tab_bounds.size.width.0 - target_width) * 0.5,
+                                target_width,
+                            )
+                        }
+                    } else {
+                        (tab_x, tab_bounds.size.width.0)
+                    };
                     let y = tab_y + (tab_bounds.size.height.0 - height.0).max(0.0);
                     (x, y, content_width, height.0, color)
                 } else if let Some(idx) = selected_idx {
                     let min_width = tabs_tokens::active_indicator_min_width(theme).0;
                     let edge_padding = if scrollable {
-                        tabs_tokens::scrollable_edge_padding(theme).0
+                        tabs_tokens::scrollable_edge_padding_for(theme, token_kind).0
                     } else {
                         0.0
                     };
                     let tab_width_px = if scrollable {
-                        tabs_tokens::scrollable_min_tab_width(theme).0
+                        tabs_tokens::scrollable_min_tab_width_for(theme, token_kind).0
                     } else {
                         container_bounds
                             .map(|bounds| bounds.size.width.0 / (tab_count as f32))
                             .unwrap_or(min_width.max(48.0))
                     };
                     let height = tabs_tokens::active_indicator_height(theme);
-                    let target_width = min_width.min(tab_width_px);
+                    let target_width = if tabs_tokens::indicator_matches_content(token_kind) {
+                        min_width.min(tab_width_px)
+                    } else {
+                        tab_width_px
+                    };
                     let target_y = container_bounds
                         .map(|bounds| (bounds.size.height.0 - height.0).max(0.0))
                         .unwrap_or_else(|| {
-                            (tabs_tokens::container_height(theme).0 - height.0).max(0.0)
+                            (tabs_tokens::container_height_for(theme, token_kind).0 - height.0)
+                                .max(0.0)
                         });
                     let color = resolve_override_slot_with(
                         style_override.active_indicator_color.as_ref(),
@@ -1001,7 +1462,13 @@ fn primary_tab_list_indicator<H: UiHost>(
                         |color| color.resolve(theme),
                         || tabs_tokens::active_indicator_color(theme),
                     );
-                    let tab_x = edge_padding + tab_width_px * (idx as f32);
+                    let tab_x = fallback_tab_x(
+                        idx,
+                        tab_count,
+                        tab_width_px,
+                        edge_padding,
+                        layout_direction,
+                    );
                     (
                         tab_x + (tab_width_px - target_width) * 0.5,
                         target_y,
@@ -1016,8 +1483,12 @@ fn primary_tab_list_indicator<H: UiHost>(
                 (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
             };
 
-            let corner_radii = tabs_tokens::active_indicator_shape(theme);
-            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            let corner_radii = tabs_tokens::active_indicator_shape_for(theme, token_kind);
+            let spring = material_motion_spring_in_scope(
+                &*cx,
+                theme,
+                MaterialMotionRole::SelectionIndicator,
+            );
 
             (
                 target_x,
@@ -1040,4 +1511,45 @@ fn primary_tab_list_indicator<H: UiHost>(
             indicator_test_id.clone(),
         )
     })
+}
+
+fn visual_tab_index(
+    logical_idx: usize,
+    tab_count: usize,
+    layout_direction: LayoutDirection,
+) -> usize {
+    if tab_count == 0 {
+        return 0;
+    }
+
+    let logical_idx = logical_idx.min(tab_count - 1);
+    match layout_direction {
+        LayoutDirection::Ltr => logical_idx,
+        LayoutDirection::Rtl => tab_count - 1 - logical_idx,
+    }
+}
+
+fn fallback_tab_x(
+    logical_idx: usize,
+    tab_count: usize,
+    tab_width_px: f32,
+    edge_padding_px: f32,
+    layout_direction: LayoutDirection,
+) -> f32 {
+    edge_padding_px
+        + tab_width_px * visual_tab_index(logical_idx, tab_count, layout_direction) as f32
+}
+
+fn tab_content_span(label_bounds: Option<Rect>, icon_bounds: Option<Rect>) -> Option<(f32, f32)> {
+    match (label_bounds, icon_bounds) {
+        (Some(label), Some(icon)) => {
+            let left = label.origin.x.0.min(icon.origin.x.0);
+            let right =
+                (label.origin.x.0 + label.size.width.0).max(icon.origin.x.0 + icon.size.width.0);
+            Some((left, (right - left).max(0.0)))
+        }
+        (Some(label), None) => Some((label.origin.x.0, label.size.width.0)),
+        (None, Some(icon)) => Some((icon.origin.x.0, icon.size.width.0)),
+        (None, None) => None,
+    }
 }

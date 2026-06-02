@@ -7,9 +7,42 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
+
+fn route_panel(cx: &mut AppComponentCx<'_>, route: &str) -> AnyElement {
+    let (route_id, title, body) = match route {
+        "settings" => (
+            "settings",
+            "Settings",
+            "Modal drawer-selected settings content with close-after-selection policy.",
+        ),
+        "play" => (
+            "play",
+            "Play",
+            "Playback queue, saved media, and current session details.",
+        ),
+        _ => (
+            "search",
+            "Search",
+            "Modal drawer-selected search content and discovery shortcuts.",
+        ),
+    };
+
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text(title).test_id(format!(
+                "ui-gallery-material3-modal-navigation-drawer-route-panel-{route_id}"
+            )),
+            cx.text(body),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .test_id("ui-gallery-material3-modal-navigation-drawer-route-panel")
+    .into_element(cx)
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let modal = material3::ModalNavigationDrawer::uncontrolled(cx);
@@ -29,6 +62,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             host.request_redraw(action_cx.window);
         })
     };
+    let close_on_select: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let current_for_content = current.clone();
 
     let modal = modal
         .test_id("ui-gallery-material3-modal-navigation-drawer")
@@ -41,6 +82,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-material3-modal-navigation-drawer-panel")
                     .items(vec![
                         material3::NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .on_select(close_on_select.clone())
                             .a11y_label("Destination Search")
                             .test_id("ui-gallery-material3-modal-drawer-search"),
                         material3::NavigationDrawerItem::new(
@@ -49,10 +91,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             ids::ui::SETTINGS,
                         )
                         .badge_label("2")
+                        .on_select(close_on_select.clone())
                         .a11y_label("Destination Settings")
                         .test_id("ui-gallery-material3-modal-drawer-settings"),
                         material3::NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
                             .badge_label("99+")
+                            .on_select(close_on_select.clone())
                             .a11y_label("Destination Play")
                             .test_id("ui-gallery-material3-modal-drawer-play"),
                         material3::NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -63,6 +107,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
             },
             move |cx| {
+                let current = current_for_content.clone();
                 ui::v_flex(move |cx| {
                         vec![
                             material3::Button::new("Open drawer")
@@ -75,8 +120,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .test_id("ui-gallery-material3-modal-drawer-underlay-probe")
                                 .into_element(cx),
                             cx.text(
-                                "Tip: click the scrim or press Esc to close; Tab/Shift+Tab should stay inside the drawer while open.",
+                                "Tip: select a destination to close the drawer; Tab/Shift+Tab should stay inside while open.",
                             ),
+                            route_panel(cx, current.as_ref()),
                         ]
                     })
                         .layout(LayoutRefinement::default().w_full().h_full())
@@ -98,7 +144,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
             vec![
                 cx.text(
-                    "Material 3 Modal Navigation Drawer: modal scrim + focus trap/restore + token-driven motion.",
+                    "Material 3 Modal Navigation Drawer: modal scrim + focus trap/restore + routed content.",
                 ),
                 container,
                 cx.text(format!("open={} value={}", is_open as u8, current.as_ref())),

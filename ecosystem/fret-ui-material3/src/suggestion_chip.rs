@@ -18,7 +18,6 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -27,12 +26,13 @@ use fret_ui_kit::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::suggestion_chip as suggestion_chip_tokens;
@@ -82,23 +82,18 @@ impl SuggestionChipStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.leading_icon_color.is_some() {
-            self.leading_icon_color = other.leading_icon_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                label_color,
+                leading_icon_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
@@ -294,11 +289,7 @@ impl SuggestionChip {
                             let theme = Theme::global(&*cx.app);
 
                             let height = suggestion_chip_tokens::container_height(theme);
-                            let label_style = theme
-                                .text_style_by_key("md.sys.typescale.label-large")
-                                .unwrap_or_default();
-                            let label_style =
-                                typography::with_intent(label_style, TextIntent::Control);
+                            let label_style = suggestion_chip_tokens::label_text_style(theme);
 
                             let label_color =
                                 suggestion_chip_tokens::label_color(theme, enabled, interaction);
@@ -334,7 +325,7 @@ impl SuggestionChip {
                                 suggestion_chip_tokens::state_layer_opacity(theme, interaction);
                             let ripple_base_opacity =
                                 suggestion_chip_tokens::pressed_state_layer_opacity(theme);
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             let (background, shadow, outline) = match self.variant {
                                 SuggestionChipVariant::Elevated => {

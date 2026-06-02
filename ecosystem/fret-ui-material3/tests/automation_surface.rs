@@ -18,14 +18,13 @@ use fret_runtime::{
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{pointer_down, pointer_move, pointer_up};
 use support::goldens::run_overlay_frame;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn live_test_id_exists(
     ui: &UiTree<TestHost>,
@@ -397,6 +396,7 @@ fn material3_select_exposes_stable_part_test_ids() {
                 let select = Select::new(selected_model)
                     .variant(SelectVariant::Filled)
                     .a11y_label("Material select")
+                    .leading_icon(ids::ui::SEARCH)
                     .label("Choice")
                     .placeholder("Pick one")
                     .items(items)
@@ -421,6 +421,7 @@ fn material3_select_exposes_stable_part_test_ids() {
         "m3-select.chrome",
         "m3-select.active-indicator",
         "m3-select.label",
+        "m3-select.leading-icon",
         "m3-select.trailing-icon",
     ] {
         assert!(
@@ -491,6 +492,63 @@ fn material3_select_exposes_stable_part_test_ids() {
         "expected selected Select item chrome width to account for both horizontal insets; listbox_width={}, selected_width={}",
         listbox_bounds.size.width.0,
         selected_bounds.size.width.0
+    );
+}
+
+#[test]
+fn material3_select_rtl_trigger_icons_use_logical_inline_edges() {
+    use fret_icons::ids;
+    use fret_ui_material3::{Select, SelectItem, SelectVariant};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(260.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+    let items: Arc<[SelectItem]> = vec![SelectItem::new("alpha", "Alpha")].into();
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let items = items.clone();
+            let selected_model = selected_model.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let select = Select::new(selected_model)
+                    .variant(SelectVariant::Outlined)
+                    .a11y_label("Material select")
+                    .leading_icon(ids::ui::SEARCH)
+                    .items(items)
+                    .test_id("m3-select-rtl")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), select)]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let leading = live_test_id_layout_bounds(&ui, &app, window, "m3-select-rtl.leading-icon");
+    let trailing = live_test_id_layout_bounds(&ui, &app, window, "m3-select-rtl.trailing-icon");
+
+    assert!(
+        rect_center_x(leading) > rect_center_x(trailing),
+        "expected RTL Select leading icon to sit on the visual right of trailing icon; leading={leading:?}, trailing={trailing:?}"
     );
 }
 
@@ -1062,7 +1120,7 @@ fn material3_surface_data_display_expose_stable_part_test_ids() {
 
 #[test]
 fn material3_tabs_exposes_stable_part_test_ids() {
-    use fret_ui_material3::{TabItem, Tabs};
+    use fret_ui_material3::{TabItem, TabPanel, Tabs};
 
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
@@ -1089,6 +1147,12 @@ fn material3_tabs_exposes_stable_part_test_ids() {
                         TabItem::new("overview", "Overview").test_id("m3-tab-overview"),
                         TabItem::new("settings", "Settings").test_id("m3-tab-settings"),
                     ])
+                    .panels(vec![
+                        TabPanel::new("overview", [cx.text("Overview panel")])
+                            .test_id("m3-tab-panel-overview"),
+                        TabPanel::new("settings", [cx.text("Settings panel")])
+                            .test_id("m3-tab-panel-settings"),
+                    ])
                     .into_element(cx);
                 vec![with_padding(cx, Px(32.0), tabs)]
             })
@@ -1103,6 +1167,8 @@ fn material3_tabs_exposes_stable_part_test_ids() {
         "m3-tabs",
         "m3-tabs.chrome",
         "m3-tabs.active-indicator",
+        "m3-tabs.divider",
+        "m3-tab-panel-overview",
         "m3-tab-overview",
         "m3-tab-overview.chrome",
         "m3-tab-overview.label",
@@ -3491,7 +3557,8 @@ fn material3_time_picker_uses_material_string_registry() {
 
 #[test]
 fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
-    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
+    use fret_icons::ids;
+    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuLabel};
     use fret_ui_material3::{Button, ButtonVariant, DropdownMenu};
 
     {
@@ -3516,9 +3583,20 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
                         .a11y_label("Material menu")
                         .test_id("m3-menu")
                         .entries(vec![
-                            MenuEntry::Item(MenuItem::new("Alpha").test_id("m3-menu-alpha")),
+                            MenuEntry::Label(MenuLabel::new("Actions").test_id("m3-menu-actions")),
+                            MenuEntry::Item(
+                                MenuItem::new("Alpha")
+                                    .leading_icon(ids::ui::COPY)
+                                    .shortcut("Ctrl+A")
+                                    .test_id("m3-menu-alpha"),
+                            ),
                             MenuEntry::Separator,
-                            MenuEntry::Item(MenuItem::new("Beta").test_id("m3-menu-beta")),
+                            MenuEntry::Item(
+                                MenuItem::new("Beta")
+                                    .supporting_text("Secondary line")
+                                    .trailing_icon(ids::ui::CHEVRON_RIGHT)
+                                    .test_id("m3-menu-beta"),
+                            ),
                         ])
                         .into_element(cx);
                     vec![with_padding(cx, Px(32.0), menu)]
@@ -3533,8 +3611,15 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
         for id in [
             "m3-menu",
             "m3-menu.chrome",
+            "m3-menu-actions",
+            "m3-menu-actions.text",
             "m3-menu-alpha",
             "m3-menu-alpha.chrome",
+            "m3-menu-alpha.label",
+            "m3-menu-alpha.leading-icon",
+            "m3-menu-alpha.shortcut",
+            "m3-menu-beta.supporting-text",
+            "m3-menu-beta.trailing-icon",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
@@ -3607,6 +3692,7 @@ fn material3_menu_and_dropdown_expose_stable_part_test_ids() {
             "m3-dropdown.chrome",
             "m3-dropdown-alpha",
             "m3-dropdown-alpha.chrome",
+            "m3-dropdown-alpha.label",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
@@ -3872,6 +3958,12 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
                                 .into_element(cx);
                             let rich_tooltip = RichTooltip::new(rich_trigger, "Rich supporting")
                                 .title("Rich title")
+                                .action_element(
+                                    Button::new("Action")
+                                        .variant(ButtonVariant::Text)
+                                        .test_id("m3-rich-tooltip-action-button")
+                                        .into_element(cx),
+                                )
                                 .open_delay_frames(Some(0))
                                 .close_delay_frames(Some(0))
                                 .test_id("m3-rich-tooltip")
@@ -3981,6 +4073,8 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
             "m3-rich-tooltip.chrome",
             "m3-rich-tooltip.title",
             "m3-rich-tooltip.supporting-text",
+            "m3-rich-tooltip.action",
+            "m3-rich-tooltip-action-button",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),

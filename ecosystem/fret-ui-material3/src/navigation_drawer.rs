@@ -9,8 +9,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsOrientation, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -23,31 +23,50 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::context::{
+    material_layout_direction_in_scope, with_material_layout_direction_in_scope,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::logical_edges::horizontal_logical_edges;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{
     optional_chrome_part_test_id, optional_part_test_id, part_test_id,
 };
 use crate::tokens::navigation_drawer as drawer_tokens;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct NavigationDrawerItem {
     value: Arc<str>,
     label: Arc<str>,
     icon: IconId,
     badge_label: Option<Arc<str>>,
     disabled: bool,
+    on_select: Option<OnActivate>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for NavigationDrawerItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NavigationDrawerItem")
+            .field("value", &self.value)
+            .field("label", &self.label)
+            .field("icon", &self.icon)
+            .field("badge_label", &self.badge_label)
+            .field("disabled", &self.disabled)
+            .field("on_select", &self.on_select.is_some())
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .finish()
+    }
 }
 
 impl NavigationDrawerItem {
@@ -58,6 +77,7 @@ impl NavigationDrawerItem {
             icon,
             badge_label: None,
             disabled: false,
+            on_select: None,
             a11y_label: None,
             test_id: None,
         }
@@ -70,6 +90,11 @@ impl NavigationDrawerItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn on_select(mut self, on_select: OnActivate) -> Self {
+        self.on_select = Some(on_select);
         self
     }
 
@@ -179,190 +204,205 @@ impl NavigationDrawer {
         } = self;
 
         cx.scope(|cx| {
-            let values: Arc<[Arc<str>]> =
-                Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
-            let disabled_items: Arc<[bool]> = Arc::from(
-                items
-                    .iter()
-                    .map(|it| disabled || it.disabled)
-                    .collect::<Vec<_>>(),
-            );
-
-            let selected = cx
-                .get_model_cloned(&model, Invalidation::Layout)
-                .unwrap_or_else(empty_arc_str);
-
-            let tab_stop = items
-                .iter()
-                .position(|it| !disabled && !it.disabled && it.value.as_ref() == selected.as_ref())
-                .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
-
-            let sem = SemanticsProps {
-                role: SemanticsRole::TabList,
-                label: a11y_label.clone(),
-                test_id: test_id.clone(),
-                disabled,
-                orientation: Some(SemanticsOrientation::Vertical),
-                ..Default::default()
-            };
-            let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
-
-            let (container_w, item_h_pad, container_bg, shadow, container_shape) = {
-                let theme = Theme::global(&*cx.app);
-
-                let container_w = drawer_tokens::container_width(theme);
-                let item_h_pad = drawer_tokens::item_horizontal_padding(theme);
-
-                let container_bg = drawer_tokens::container_background(theme, variant);
-                let elevation = drawer_tokens::container_elevation(theme, variant);
-                let container_shape = drawer_tokens::container_shape(theme);
-                let surface =
-                    material_surface_style(theme, container_bg, elevation, None, container_shape);
-                (
-                    container_w,
-                    item_h_pad,
-                    surface.background,
-                    surface.shadow,
-                    container_shape,
-                )
-            };
-
-            let mut props = RovingFlexProps::default();
-            props.flex.direction = Axis::Vertical;
-            props.flex.gap = Px(0.0).into();
-            props.flex.justify = MainAlign::Start;
-            props.flex.align = CrossAlign::Stretch;
-            props.flex.layout.size.width = Length::Fill;
-            props.flex.layout.size.height = Length::Fill;
-            props.flex.padding = Edges {
-                left: item_h_pad,
-                right: item_h_pad,
-                top: Px(0.0),
-                bottom: Px(0.0),
-            }
-            .into();
-            props.roving = fret_ui::element::RovingFocusProps {
-                enabled: !disabled,
-                wrap: loop_navigation,
-                disabled: disabled_items.clone(),
-            };
-
-            cx.semantics(sem, move |cx| {
-                let mut chrome = cx.container(
-                    ContainerProps {
-                        background: Some(container_bg),
-                        shadow,
-                        corner_radii: container_shape,
-                        layout: {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = Length::Px(container_w);
-                            layout.size.height = Length::Fill;
-                            layout.overflow = Overflow::Clip;
-                            layout
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        vec![cx.roving_flex(props, move |cx| {
-                            let values_for_roving = values.clone();
-                            let model_for_roving = model.clone();
-
-                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                use fret_ui::action::RovingNavigateResult;
-
-                                let is_disabled = |idx: usize| -> bool {
-                                    it.disabled.get(idx).copied().unwrap_or(false)
-                                };
-
-                                let forward = match (it.axis, it.key) {
-                                    (Axis::Vertical, KeyCode::ArrowDown) => Some(true),
-                                    (Axis::Vertical, KeyCode::ArrowUp) => Some(false),
-                                    _ => None,
-                                };
-
-                                if it.key == KeyCode::Home {
-                                    let target = (0..it.len).find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-                                if it.key == KeyCode::End {
-                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-
-                                let Some(forward) = forward else {
-                                    return RovingNavigateResult::NotHandled;
-                                };
-
-                                let current = it
-                                    .current
-                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                let Some(current) = current else {
-                                    return RovingNavigateResult::Handled { target: None };
-                                };
-
-                                let len = it.len;
-                                let mut target: Option<usize> = None;
-
-                                if it.wrap {
-                                    for step in 1..=len {
-                                        let idx = if forward {
-                                            (current + step) % len
-                                        } else {
-                                            (current + len - (step % len)) % len
-                                        };
-                                        if !is_disabled(idx) {
-                                            target = Some(idx);
-                                            break;
-                                        }
-                                    }
-                                } else if forward {
-                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                } else if current > 0 {
-                                    target = (0..current).rev().find(|&i| !is_disabled(i));
-                                }
-
-                                RovingNavigateResult::Handled { target }
-                            }));
-
-                            cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
-                                let Some(value) = values_for_roving.get(idx).cloned() else {
-                                    return;
-                                };
-                                let already_selected = host
-                                    .models_mut()
-                                    .read(&model_for_roving, |v| v.as_ref() == value.as_ref())
-                                    .ok()
-                                    .unwrap_or(false);
-                                if already_selected {
-                                    return;
-                                }
-                                let _ = host.update_model(&model_for_roving, |v| *v = value);
-                                host.request_redraw(action_cx.window);
-                            }));
-
-                            items
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, it)| {
-                                    let tab_stop = tab_stop.is_some_and(|t| t == idx);
-                                    navigation_drawer_item(
-                                        cx,
-                                        model.clone(),
-                                        it,
-                                        idx,
-                                        items.len(),
-                                        tab_stop,
-                                        disabled,
-                                    )
-                                })
-                                .collect::<Vec<_>>()
-                        })]
-                    },
+            with_material_layout_direction_in_scope(cx, move |cx, _layout_direction| {
+                let values: Arc<[Arc<str>]> =
+                    Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
+                let disabled_items: Arc<[bool]> = Arc::from(
+                    items
+                        .iter()
+                        .map(|it| disabled || it.disabled)
+                        .collect::<Vec<_>>(),
                 );
-                if let Some(test_id) = chrome_test_id.clone() {
-                    chrome = chrome.test_id(test_id);
+
+                let selected = cx
+                    .get_model_cloned(&model, Invalidation::Layout)
+                    .unwrap_or_else(empty_arc_str);
+
+                let tab_stop = items
+                    .iter()
+                    .position(|it| {
+                        !disabled && !it.disabled && it.value.as_ref() == selected.as_ref()
+                    })
+                    .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
+
+                let sem = SemanticsProps {
+                    role: SemanticsRole::TabList,
+                    label: a11y_label.clone(),
+                    test_id: test_id.clone(),
+                    disabled,
+                    orientation: Some(SemanticsOrientation::Vertical),
+                    ..Default::default()
+                };
+                let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
+
+                let (container_w, item_h_pad, container_bg, shadow, container_shape) = {
+                    let theme = Theme::global(&*cx.app);
+
+                    let container_w = drawer_tokens::container_width(theme);
+                    let item_h_pad = drawer_tokens::item_horizontal_padding(theme);
+
+                    let container_bg = drawer_tokens::container_background(theme, variant);
+                    let elevation = drawer_tokens::container_elevation(theme, variant);
+                    let container_shape = drawer_tokens::container_shape(theme);
+                    let surface = material_surface_style(
+                        theme,
+                        container_bg,
+                        elevation,
+                        None,
+                        container_shape,
+                    );
+                    (
+                        container_w,
+                        item_h_pad,
+                        surface.background,
+                        surface.shadow,
+                        container_shape,
+                    )
+                };
+
+                let mut props = RovingFlexProps::default();
+                props.flex.direction = Axis::Vertical;
+                props.flex.gap = Px(0.0).into();
+                props.flex.justify = MainAlign::Start;
+                props.flex.align = CrossAlign::Stretch;
+                props.flex.layout.size.width = Length::Fill;
+                props.flex.layout.size.height = Length::Fill;
+                props.flex.padding = Edges {
+                    left: item_h_pad,
+                    right: item_h_pad,
+                    top: Px(0.0),
+                    bottom: Px(0.0),
                 }
-                vec![chrome]
+                .into();
+                props.roving = fret_ui::element::RovingFocusProps {
+                    enabled: !disabled,
+                    wrap: loop_navigation,
+                    disabled: disabled_items.clone(),
+                };
+
+                cx.semantics(sem, move |cx| {
+                    let mut chrome = cx.container(
+                        ContainerProps {
+                            background: Some(container_bg),
+                            shadow,
+                            corner_radii: container_shape,
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = Length::Px(container_w);
+                                layout.size.height = Length::Fill;
+                                layout.overflow = Overflow::Clip;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.roving_flex(props, move |cx| {
+                                let values_for_roving = values.clone();
+                                let model_for_roving = model.clone();
+
+                                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                    use fret_ui::action::RovingNavigateResult;
+
+                                    let is_disabled = |idx: usize| -> bool {
+                                        it.disabled.get(idx).copied().unwrap_or(false)
+                                    };
+
+                                    let forward = match (it.axis, it.key) {
+                                        (Axis::Vertical, KeyCode::ArrowDown) => Some(true),
+                                        (Axis::Vertical, KeyCode::ArrowUp) => Some(false),
+                                        _ => None,
+                                    };
+
+                                    if it.key == KeyCode::Home {
+                                        let target = (0..it.len).find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
+                                    if it.key == KeyCode::End {
+                                        let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
+
+                                    let Some(forward) = forward else {
+                                        return RovingNavigateResult::NotHandled;
+                                    };
+
+                                    let current = it
+                                        .current
+                                        .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                    let Some(current) = current else {
+                                        return RovingNavigateResult::Handled { target: None };
+                                    };
+
+                                    let len = it.len;
+                                    let mut target: Option<usize> = None;
+
+                                    if it.wrap {
+                                        for step in 1..=len {
+                                            let idx = if forward {
+                                                (current + step) % len
+                                            } else {
+                                                (current + len - (step % len)) % len
+                                            };
+                                            if !is_disabled(idx) {
+                                                target = Some(idx);
+                                                break;
+                                            }
+                                        }
+                                    } else if forward {
+                                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                    } else if current > 0 {
+                                        target = (0..current).rev().find(|&i| !is_disabled(i));
+                                    }
+
+                                    RovingNavigateResult::Handled { target }
+                                }));
+
+                                cx.roving_on_active_change(Arc::new(
+                                    move |host, action_cx, idx| {
+                                        let Some(value) = values_for_roving.get(idx).cloned()
+                                        else {
+                                            return;
+                                        };
+                                        let already_selected = host
+                                            .models_mut()
+                                            .read(&model_for_roving, |v| {
+                                                v.as_ref() == value.as_ref()
+                                            })
+                                            .ok()
+                                            .unwrap_or(false);
+                                        if already_selected {
+                                            return;
+                                        }
+                                        let _ =
+                                            host.update_model(&model_for_roving, |v| *v = value);
+                                        host.request_redraw(action_cx.window);
+                                    },
+                                ));
+
+                                items
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, it)| {
+                                        let tab_stop = tab_stop.is_some_and(|t| t == idx);
+                                        navigation_drawer_item(
+                                            cx,
+                                            model.clone(),
+                                            it,
+                                            idx,
+                                            items.len(),
+                                            tab_stop,
+                                            disabled,
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            })]
+                        },
+                    );
+                    if let Some(test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(test_id);
+                    }
+                    vec![chrome]
+                })
             })
         })
     }
@@ -381,6 +421,7 @@ fn navigation_drawer_item<H: UiHost>(
     let label = item.label.clone();
     let icon = item.icon.clone();
     let badge_label = item.badge_label.clone();
+    let on_select = item.on_select.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
     let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
@@ -396,48 +437,28 @@ fn navigation_drawer_item<H: UiHost>(
         config,
         selected_bg,
         icon_size,
-        label_style_base,
-        label_weight_active,
-        label_weight_inactive,
+        label_style_active,
+        label_style_inactive,
         badge_style,
         badge_color,
     ) = {
         let theme = Theme::global(&*cx.app);
 
         let height = drawer_tokens::active_indicator_height(theme);
-        let corner_radii = Corners::all(drawer_tokens::active_indicator_radius(theme));
+        let corner_radii = drawer_tokens::active_indicator_shape(theme);
         let focus_ring =
             material_focus_ring_for_component(theme, "md.comp.navigation-drawer", corner_radii);
 
         let ripple_base_opacity = drawer_tokens::pressed_state_layer_opacity(theme);
-        let config = material_pressable_indication_config(theme, None);
+        let config = material_pressable_indication_config_in_scope(&*cx, None);
 
         let selected_bg = drawer_tokens::active_indicator_color(theme);
         let icon_size = drawer_tokens::icon_size(theme);
 
-        let label_style_base = theme
-            .text_style_by_key("md.sys.typescale.label-large")
-            .unwrap_or_default();
-        let label_style_base = typography::with_intent(label_style_base, TextIntent::Control);
-        let label_weight_active = drawer_tokens::label_weight(theme, true);
-        let label_weight_inactive = drawer_tokens::label_weight(theme, false);
-
-        let mut badge_style = theme
-            .text_style_by_key("md.sys.typescale.label-small")
-            .unwrap_or_default();
-        badge_style = typography::with_intent(badge_style, TextIntent::Control);
-        let weight = theme
-            .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
-            .unwrap_or(500.0);
-        badge_style.weight = fret_core::FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-
-        let badge_color = theme
-            .color_by_key("md.comp.navigation-drawer.large-badge-label.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-            .unwrap_or_else(|| {
-                crate::foundation::token_resolver::MaterialTokenResolver::new(theme)
-                    .color_sys("md.sys.color.on-surface-variant")
-            });
+        let label_style_active = drawer_tokens::label_text_style(theme, true);
+        let label_style_inactive = drawer_tokens::label_text_style(theme, false);
+        let badge_style = drawer_tokens::large_badge_label_text_style(theme);
+        let badge_color = drawer_tokens::large_badge_label_color(theme);
 
         (
             height,
@@ -447,9 +468,8 @@ fn navigation_drawer_item<H: UiHost>(
             config,
             selected_bg,
             icon_size,
-            label_style_base,
-            label_weight_active,
-            label_weight_inactive,
+            label_style_active,
+            label_style_inactive,
             badge_style,
             badge_color,
         )
@@ -465,17 +485,20 @@ fn navigation_drawer_item<H: UiHost>(
         if enabled {
             let model_for_press = model.clone();
             let value_for_press = value.clone();
-            let handler: OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let on_select = on_select.clone();
+            let handler: OnActivate = Arc::new(move |host, action_cx, reason| {
                 let already_selected = host
                     .models_mut()
                     .read(&model_for_press, |v| v.as_ref() == value_for_press.as_ref())
                     .ok()
                     .unwrap_or(false);
-                if already_selected {
-                    return;
+                if !already_selected {
+                    let _ = host.update_model(&model_for_press, |v| *v = value_for_press.clone());
+                    host.request_redraw(action_cx.window);
                 }
-                let _ = host.update_model(&model_for_press, |v| *v = value_for_press.clone());
-                host.request_redraw(action_cx.window);
+                if let Some(on_select) = on_select.as_ref() {
+                    on_select(host, action_cx, reason);
+                }
             });
             cx.pressable_on_activate(handler);
         }
@@ -560,11 +583,10 @@ fn navigation_drawer_item<H: UiHost>(
                 }
 
                 let mut label_el = {
-                    let mut style = label_style_base.clone();
-                    style.weight = if selected {
-                        label_weight_active
+                    let style = if selected {
+                        label_style_active.clone()
                     } else {
-                        label_weight_inactive
+                        label_style_inactive.clone()
                     };
                     drawer_label(cx, &label, style, label_color)
                 };
@@ -586,6 +608,8 @@ fn navigation_drawer_item<H: UiHost>(
                     }
                     badge
                 });
+
+                let layout_direction = material_layout_direction_in_scope(cx);
 
                 let left_slot = cx.flex(
                     FlexProps {
@@ -627,12 +651,13 @@ fn navigation_drawer_item<H: UiHost>(
                         },
                         direction: Axis::Horizontal,
                         gap: Px(12.0).into(),
-                        padding: Edges {
-                            left: Px(16.0),
-                            right: Px(24.0),
-                            top: Px(0.0),
-                            bottom: Px(0.0),
-                        }
+                        padding: horizontal_logical_edges(
+                            layout_direction,
+                            Px(16.0),
+                            Px(24.0),
+                            Px(0.0),
+                            Px(0.0),
+                        )
                         .into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,

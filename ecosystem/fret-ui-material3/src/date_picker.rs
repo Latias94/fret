@@ -20,11 +20,11 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
+use crate::foundation::indication::material_disabled_state_layer_opacity;
 use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
 use crate::foundation::modal_motion::material_modal_panel_transform;
 use crate::foundation::strings::{
@@ -304,7 +304,7 @@ impl DatePickerDialog {
             scrim_opacity: 0.32,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             selectable_dates: None,
             test_id: None,
@@ -442,34 +442,18 @@ impl DatePickerDialog {
                     .update(&models.draft_selected, |m| *m = external_selected);
             }
 
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-
             let (theme_motion_ms, bezier) = {
                 let theme = Theme::global(&*cx.app);
-                let motion_ms = theme.duration_ms_by_key("md.sys.motion.duration.medium2");
-                let bezier =
-                    theme
-                        .easing_by_key(easing_key.as_ref())
-                        .unwrap_or(fret_ui::theme::CubicBezier {
-                            x1: 0.0,
-                            y1: 0.0,
-                            x2: 1.0,
-                            y2: 1.0,
-                        });
+                let motion_ms = date_tokens::modal_open_duration_ms(theme);
+                let bezier = date_tokens::modal_easing(theme, self.easing_key.as_deref());
                 (motion_ms, bezier)
             };
 
-            let open_ms = self
-                .open_duration_ms
-                .or(theme_motion_ms)
-                .unwrap_or(300);
-            let close_ms = self
-                .close_duration_ms
-                .or(theme_motion_ms)
-                .unwrap_or(300);
+            let open_ms = self.open_duration_ms.unwrap_or(theme_motion_ms);
+            let close_ms = self.close_duration_ms.unwrap_or_else(|| {
+                let theme = Theme::global(&*cx.app);
+                date_tokens::modal_close_duration_ms(theme)
+            });
             let open_ticks = motion::ms_to_frames(open_ms);
             let close_ticks = motion::ms_to_frames(close_ms);
 
@@ -488,14 +472,13 @@ impl DatePickerDialog {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_base = {
+                let (scrim_base, scrim_opacity) = {
                     let theme = Theme::global(&*cx.app);
-                    theme.color_token("md.sys.color.scrim")
+                    (
+                        date_tokens::modal_scrim_color(theme),
+                        date_tokens::modal_scrim_opacity(theme, self.scrim_opacity),
+                    )
                 };
-                let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.sys.fret.material.date-picker.modal.scrim.opacity")
-                    .unwrap_or(self.scrim_opacity)
-                    .clamp(0.0, 1.0);
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -958,11 +941,8 @@ fn month_nav_header<H: UiHost>(
     let title_el = {
         let (style, color) = {
             let theme = Theme::global(&*cx.app);
-            let style = theme
-                .text_style_by_key("md.sys.typescale.title-large")
-                .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
-            let style = style.map(|style| typography::with_intent(style, TextIntent::Control));
-            let color = theme.color_token("md.sys.color.on-surface");
+            let style = date_tokens::month_nav_title_text_style(theme);
+            let color = date_tokens::month_nav_title_color(theme);
             (style, color)
         };
 
@@ -1132,9 +1112,7 @@ fn dates_grid<H: UiHost>(
             date_tokens::date_today_outline_width(theme, token_variant),
             date_tokens::date_today_outline_color(theme, token_variant),
             date_tokens::date_outside_month_opacity(theme, token_variant),
-            theme
-                .number_by_key("md.sys.state.disabled.state-layer-opacity")
-                .unwrap_or(0.38),
+            material_disabled_state_layer_opacity(theme),
         )
     };
 

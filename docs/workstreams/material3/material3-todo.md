@@ -138,7 +138,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Decision: keep as Material foundation policy for now (tree-local + token-driven), not core.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/interactive_size.rs`,
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.sys.layout.minimum-touch-target.size`),
-    tests in `ecosystem/fret-ui-material3/src/lib.rs` (`material3_components_apply_minimum_touch_target_policy`).
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_touch_target_cases_v1.json`,
+    tests in `ecosystem/fret-ui-material3/tests/minimum_touch_target.rs`
+    (`navigable_material_rows_enforce_minimum_touch_target_at_runtime`).
 - [x] Decide whether we need a core pixel-snapping policy hook for non-1.0 scale factors (radio/checkbox drift class).
   - Decision: add an explicit, opt-in snapping hook at the container paint boundary, and use it
     in Material 3 controls that are sensitive to fractional pixel drift.
@@ -270,6 +272,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
     resolver `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`.
 - [x] Provide a baseline, hand-authored v30 token preset injection (state/motion/shape/typescale subset).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`, `theme_config`).
+- [x] Split v30 preset composition into a generated Material Web baseline plus a curated Fret
+  overlay Module.
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
+    `ecosystem/fret-ui-material3/src/tokens/v30_overlay.rs`,
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`).
 - [x] Expand token audit coverage to validate format-string templates (variant/state keys) against v30 injection.
   - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (`expand_key_templates`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (icon-button hovered/focused/pressed icon tokens).
@@ -377,6 +384,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Implement a MotionScheme mapping for the 6 canonical specs (standard) and expose it via the
   tree-local Material context override.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/motion_roles.rs`,
     `ecosystem/fret-ui-material3/src/foundation/context.rs`
 - [x] Add a design variant selection mechanism (Standard vs Expressive) for component `.expressive.*`
   token variants (global default + subtree override).
@@ -398,10 +406,31 @@ These files are primarily *shared policy primitives*, not one-off component layo
     and we can revisit once another ecosystem (or core animation infra) needs first-class springs.
   - Evidence: `ecosystem/fret-ui-material3/src/motion.rs` (`SpringSpec`),
     `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs` (`sys_spring_in_scope`),
+    `ecosystem/fret-ui-material3/src/foundation/motion_roles.rs` (semantic Material motion roles),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (Expressive spring fallback tokens under
     `md.sys.fret.material.motion.spring.*`).
 - [x] Introduce typed token modules per component to reduce raw string key usage and centralize
   derived token math (disabled alpha, state-layer alpha selection).
+  - [x] Structured token usage manifest drives literal `md.*` coverage and keeps source scanning as
+    a drift guard instead of the coverage source of truth.
+    - Evidence: `ecosystem/fret-ui-material3/tests/fixtures/material3_token_usage_manifest_v1.json`,
+      `ecosystem/fret-ui-material3/src/tokens/coverage.rs`,
+      `ecosystem/fret-ui-material3/src/lib.rs`
+      (`material3_token_usage_manifest_matches_literal_md_sources`,
+      `material3_literal_md_tokens_resolve_in_v30_theme`).
+  - [x] Centralize Material token usage discovery and template expansion behind one crate-internal
+    Module shared by conformance tests and maintainer audit tooling.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/usage.rs`,
+      `ecosystem/fret-ui-material3/src/tokens/coverage.rs`,
+      `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs`.
+    - Notes: `material3_token_audit` now audits the same 121 manifest-owned source files and
+      excludes generated token presets, maintainer binaries, and crate-internal test token
+      namespaces from missing-injection reports.
+  - [x] Add maintainer regeneration/check commands for the structured token usage manifest.
+    - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs`
+      (`--check-usage-manifest`, `--update-usage-manifest`),
+      `ecosystem/fret-ui-material3/src/tokens/usage.rs` (`default_usage_manifest_json`).
+    - Repro: `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check-usage-manifest`.
   - [x] IconButton token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`,
       `ecosystem/fret-ui-material3/src/icon_button.rs`.
@@ -476,7 +505,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/navigation_bar.rs`,
     `ecosystem/fret-ui-material3/src/navigation_rail.rs`,
     `ecosystem/fret-ui-material3/src/navigation_drawer.rs`,
-    tests in `ecosystem/fret-ui-material3/src/lib.rs` (`material3_components_apply_minimum_touch_target_policy`),
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_touch_target_cases_v1.json`,
+    tests in `ecosystem/fret-ui-material3/tests/minimum_touch_target.rs`
+    (`navigable_material_rows_enforce_minimum_touch_target_at_runtime`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_touch_targets`),
     Compose reference: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/InteractiveComponentSize.kt`.
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.
@@ -661,9 +692,13 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Range slider (MVP: two-thumb range selection, token-driven styling, pointer drag + keyboard step)
   - Evidence: `ecosystem/fret-ui-material3/src/slider.rs` (`RangeSlider`),
     `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_slider_suite_goldens_v1`, cases: `range_dragging`/`range_focus_thumb_switch`; per-thumb focus semantics via test ids `range-slider-30-70.start` + `range-slider-30-70.end`).
-- [x] Tooltip (MVP: plain tooltip, delay group + hover intent + safe-hover corridor, token-driven styling)
-  - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`PlainTooltip`, `TooltipProvider`),
+- [x] Tooltip (plain/rich tooltip, rich action slot, delay group + hover intent + safe-hover corridor, token-driven styling, public `TooltipStyle`)
+  - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`PlainTooltip`, `RichTooltip`, `TooltipProvider`, `TooltipStyle`),
+    `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`tooltip_content_hit_testable`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_plain_tooltip_*`),
+    `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
+    (`plain_tooltip_style_overrides_paint_and_layout_contract`, `rich_tooltip_style_overrides_paint_parts_and_layout_contract`,
+    `rich_tooltip_action_slot_is_hit_testable_and_stable`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tooltip`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TOOLTIP`).
 - [x] Snackbar (MVP: toast-layer skin using `md.comp.snackbar.*` tokens, action + dismiss icon)

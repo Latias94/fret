@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::Px;
+use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::action::{
     OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
@@ -171,13 +171,16 @@ impl ToastVariantPalette {
 pub struct ToastTextStyle {
     pub style_key: Option<String>,
     pub color_key: Option<String>,
+    pub color: Option<Color>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ToastButtonStyle {
     pub label_style_key: Option<String>,
     pub label_color_key: Option<String>,
+    pub label_color: Option<Color>,
     pub state_layer_color_key: Option<String>,
+    pub state_layer_color: Option<Color>,
     pub hover_state_layer_opacity_key: Option<String>,
     pub focus_state_layer_opacity_key: Option<String>,
     pub pressed_state_layer_opacity_key: Option<String>,
@@ -193,7 +196,9 @@ impl Default for ToastButtonStyle {
         Self {
             label_style_key: None,
             label_color_key: None,
+            label_color: None,
             state_layer_color_key: Some("muted".to_string()),
+            state_layer_color: None,
             hover_state_layer_opacity_key: None,
             focus_state_layer_opacity_key: None,
             pressed_state_layer_opacity_key: None,
@@ -214,7 +219,9 @@ impl Default for ToastButtonStyle {
 #[derive(Debug, Clone)]
 pub struct ToastIconButtonStyle {
     pub icon_color_key: Option<String>,
+    pub icon_color: Option<Color>,
     pub state_layer_color_key: Option<String>,
+    pub state_layer_color: Option<Color>,
     pub hover_state_layer_opacity_key: Option<String>,
     pub focus_state_layer_opacity_key: Option<String>,
     pub pressed_state_layer_opacity_key: Option<String>,
@@ -229,7 +236,9 @@ impl Default for ToastIconButtonStyle {
     fn default() -> Self {
         Self {
             icon_color_key: None,
+            icon_color: None,
             state_layer_color_key: Some("muted".to_string()),
+            state_layer_color: None,
             hover_state_layer_opacity_key: None,
             focus_state_layer_opacity_key: None,
             pressed_state_layer_opacity_key: None,
@@ -250,6 +259,8 @@ impl Default for ToastIconButtonStyle {
 #[derive(Debug, Clone)]
 pub struct ToastLayerStyle {
     pub palette: ToastVariantPalette,
+    pub background_color: Option<Color>,
+    pub foreground_color: Option<Color>,
     /// Optional shadow for the toast container.
     pub shadow: Option<fret_ui::element::ShadowStyle>,
     /// Sonner-style icon overrides (`icons.*`).
@@ -274,12 +285,15 @@ pub struct ToastLayerStyle {
     pub scale_from: Option<f32>,
     /// Optional border color. When omitted, no border is drawn.
     pub border_color_key: Option<String>,
+    pub border_color: Option<Color>,
     pub border_width: Px,
     pub description_color_key: Option<String>,
+    pub description_color: Option<Color>,
     pub icon_size: Px,
     pub single_line_min_height: Option<Px>,
     pub two_line_min_height: Option<Px>,
     pub container_padding: Option<fret_core::Edges>,
+    pub container_corner_radii: Option<fret_core::Corners>,
     pub container_radius: Option<fret_core::Px>,
     pub title: ToastTextStyle,
     pub description: ToastTextStyle,
@@ -292,6 +306,8 @@ impl Default for ToastLayerStyle {
     fn default() -> Self {
         Self {
             palette: ToastVariantPalette::default(),
+            background_color: None,
+            foreground_color: None,
             shadow: None,
             icons: ToastIconOverrides::default(),
             show_close_button: true,
@@ -302,12 +318,15 @@ impl Default for ToastLayerStyle {
             slide_distance: Px(16.0),
             scale_from: None,
             border_color_key: Some("border".to_string()),
+            border_color: None,
             border_width: Px(1.0),
             description_color_key: Some("muted-foreground".to_string()),
+            description_color: None,
             icon_size: Px(16.0),
             single_line_min_height: None,
             two_line_min_height: None,
             container_padding: None,
+            container_corner_radii: None,
             container_radius: None,
             title: ToastTextStyle::default(),
             description: ToastTextStyle::default(),
@@ -548,6 +567,11 @@ pub struct TooltipRequest {
     /// When `false`, the tooltip may remain mounted for close transitions but must not observe
     /// outside-press or pointer-move events.
     pub interactive: bool,
+    /// Whether the tooltip content layer should participate in normal hit-testing while open.
+    ///
+    /// This is separate from observer routing so descriptive tooltips can remain click-through
+    /// while rich/action tooltips can receive pointer input.
+    pub content_hit_testable: bool,
     pub trigger: Option<GlobalElementId>,
     pub open: Model<bool>,
     pub present: bool,
@@ -562,6 +586,7 @@ pub(super) struct CachedTooltipDecl {
     pub id: GlobalElementId,
     pub root_name: String,
     pub interactive: bool,
+    pub content_hit_testable: bool,
     pub trigger: Option<GlobalElementId>,
     pub open: Model<bool>,
     pub on_dismiss_request: Option<OnDismissRequest>,
@@ -575,6 +600,7 @@ impl CachedTooltipDecl {
             id: req.id,
             root_name: req.root_name.clone(),
             interactive: req.interactive,
+            content_hit_testable: req.content_hit_testable,
             trigger: req.trigger,
             open: req.open.clone(),
             on_dismiss_request: req.on_dismiss_request.clone(),
@@ -604,6 +630,7 @@ impl std::fmt::Debug for TooltipRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("interactive", &self.interactive)
+            .field("content_hit_testable", &self.content_hit_testable)
             .field("trigger", &self.trigger)
             .field("open", &"<model>")
             .field("present", &self.present)

@@ -22,8 +22,8 @@ use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::test_id::{optional_part_test_id, part_test_id};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
+use crate::tokens::navigation_drawer as drawer_tokens;
 
 const MODAL_NAVIGATION_DRAWER_PANE_LABEL: &str = "Navigation menu";
 const MODAL_NAVIGATION_DRAWER_CLOSE_LABEL: &str = "Close drawer";
@@ -57,7 +57,7 @@ impl ModalNavigationDrawer {
             open,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             test_id: None,
         }
@@ -128,38 +128,16 @@ impl ModalNavigationDrawer {
 
                 let open_ms = self
                     .open_duration_ms
-                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                    .unwrap_or(300);
+                    .unwrap_or_else(|| drawer_tokens::modal_open_duration_ms(theme));
                 let close_ms = self
                     .close_duration_ms
-                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                    .unwrap_or(300);
+                    .unwrap_or_else(|| drawer_tokens::modal_close_duration_ms(theme));
 
-                let easing_key = self
-                    .easing_key
-                    .clone()
-                    .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-                let bezier = theme.easing_by_key(easing_key.as_ref()).unwrap_or(
-                    fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    },
-                );
+                let bezier = drawer_tokens::modal_easing(theme, self.easing_key.as_deref());
 
-                let tokens = MaterialTokenResolver::new(theme);
-                let scrim_color_base = tokens.color_comp_or_sys(
-                    "md.comp.navigation-drawer.scrim.color",
-                    "md.sys.color.scrim",
-                );
-                let scrim_opacity = theme
-                    .number_by_key("md.comp.navigation-drawer.scrim.opacity")
-                    .unwrap_or(0.4);
-
-                let drawer_w = theme
-                    .metric_by_key("md.comp.navigation-drawer.container.width")
-                    .unwrap_or(Px(360.0));
+                let scrim_color_base = drawer_tokens::scrim_color(theme);
+                let scrim_opacity = drawer_tokens::scrim_opacity(theme);
+                let drawer_w = drawer_tokens::container_width(theme);
 
                 (
                     open_ms,

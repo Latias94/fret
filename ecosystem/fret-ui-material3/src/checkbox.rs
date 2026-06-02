@@ -31,13 +31,14 @@ use fret_ui_kit::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::SpringAnimator;
 use crate::tokens::checkbox as checkbox_tokens;
@@ -74,20 +75,17 @@ impl CheckboxStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.icon_color.is_some() {
-            self.icon_color = other.icon_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                icon_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
@@ -294,9 +292,7 @@ impl Checkbox {
 
                 let (corner_radii, layout, focus_ring) = {
                     let theme = Theme::global(&*cx.app);
-                    let corner_radii = theme
-                        .corners_by_key("md.sys.shape.corner.full")
-                        .unwrap_or_else(|| Corners::all(Px(9999.0)));
+                    let corner_radii = checkbox_tokens::state_layer_shape(theme);
 
                     let mut layout = fret_ui::element::LayoutStyle::default();
                     layout.overflow = Overflow::Visible;
@@ -410,12 +406,15 @@ impl Checkbox {
 
                             let ripple_base_opacity =
                                 checkbox_tokens::pressed_state_layer_opacity(theme, selected);
-                            let config = material_pressable_indication_config(
-                                theme,
+                            let config = material_pressable_indication_config_in_scope(
+                                &*cx,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
-                            let mark_spring =
-                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial);
+                            let mark_spring = material_motion_spring_in_scope(
+                                &*cx,
+                                theme,
+                                MaterialMotionRole::CheckboxMark,
+                            );
 
                             (
                                 chrome,

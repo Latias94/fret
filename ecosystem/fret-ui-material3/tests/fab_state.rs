@@ -12,7 +12,6 @@ use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{Fab, FabSize, FabVariant};
 
-mod interaction_harness;
 mod support;
 
 use support::events::pointer_move;

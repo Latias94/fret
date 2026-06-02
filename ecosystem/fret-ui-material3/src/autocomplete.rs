@@ -11,8 +11,8 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    AttributedText, Axis, Edges, FontWeight, KeyCode, Px, SemanticsRole, Size, TextOverflow,
-    TextSpan, TextWrap,
+    AttributedText, Axis, Edges, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextSpan,
+    TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::action::{
@@ -23,17 +23,19 @@ use fret_ui::element::{
     PressableProps, ScrollProps, SemanticsProps, StyledTextProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
-use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::active_descendant::active_option_for_index;
-use fret_ui_kit::primitives::direction as direction_prim;
-use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::context::material_layout_direction_in_scope;
+use crate::foundation::field_overlay::{
+    MaterialFieldOverlayAlign, MaterialFieldOverlayWidth, material_field_overlay_layout,
+    material_field_overlay_listbox_size, material_field_overlay_placement,
+    material_field_overlay_scale_transform,
+};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
@@ -587,7 +589,7 @@ fn autocomplete_into_element<H: UiHost>(
         let (chevron_progress, chevron_want_frames) = if autocomplete.show_trailing_dropdown_icon {
             let spatial = {
                 let theme = Theme::global(&*cx.app);
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial)
+                material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::DropdownChevron)
             };
             cx.slot_state(AutocompleteChevronRuntime::default, |rt| {
                 if !rt.anim.is_initialized() {
@@ -730,28 +732,17 @@ fn autocomplete_into_element<H: UiHost>(
                     autocomplete.variant.as_text_field_variant(),
                 )
             };
-            let vertical_padding = Px(8.0);
-            let desired_width = anchor.size.width;
-            let desired_height = Px(
-                (item_height.0 * (filtered_items.len().min(6).max(1) as f32))
-                    + vertical_padding.0 * 2.0,
+            let desired = material_field_overlay_listbox_size(
+                anchor.size.width,
+                item_height,
+                filtered_items.len().min(6),
+                MaterialFieldOverlayWidth::MatchAnchor,
             );
-            let desired = Size::new(desired_width, desired_height);
 
-            let direction = direction_prim::use_direction_in_scope(cx, None);
-            let placement = popper::PopperContentPlacement::new(
-                direction,
-                Side::Bottom,
-                Align::Start,
-                Px(4.0),
-            )
-            .with_collision_padding(Edges {
-                left: Px(8.0),
-                right: Px(8.0),
-                top: Px(48.0),
-                bottom: Px(48.0),
-            });
-            let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+            let direction = material_layout_direction_in_scope(cx);
+            let placement =
+                material_field_overlay_placement(direction, MaterialFieldOverlayAlign::Start);
+            let layout = material_field_overlay_layout(outer, anchor, desired, placement);
 
             let listbox = popper_content::popper_wrapper_panel_at(
                 cx,
@@ -780,40 +771,37 @@ fn autocomplete_into_element<H: UiHost>(
                     let query_model = autocomplete.query.clone();
 
                     move |cx| {
-                        vec![autocomplete_listbox_panel(
-                            cx,
-                            variant,
-                            labelled_by,
-                            a11y_label.clone(),
-                            test_id.clone(),
-                            query.clone(),
-                            query_model.clone(),
-                            selected_value.clone(),
-                            selected_value_model.clone(),
-                            disabled,
-                            open.clone(),
-                            suppress_open.clone(),
-                            active_index.clone(),
-                            layout.rect.size.width,
-                            scroll_handle.clone(),
-                            items.clone(),
-                            listbox_element_id_out.clone(),
-                            option_elements_out.clone(),
-                            scroll_viewport_id_out.clone(),
-                            set_query_on_select,
-                            on_select.clone(),
-                        )]
+                        cx.provide(direction, |cx| {
+                            vec![autocomplete_listbox_panel(
+                                cx,
+                                variant,
+                                labelled_by,
+                                a11y_label.clone(),
+                                test_id.clone(),
+                                query.clone(),
+                                query_model.clone(),
+                                selected_value.clone(),
+                                selected_value_model.clone(),
+                                disabled,
+                                open.clone(),
+                                suppress_open.clone(),
+                                active_index.clone(),
+                                layout.rect.size.width,
+                                scroll_handle.clone(),
+                                items.clone(),
+                                listbox_element_id_out.clone(),
+                                option_elements_out.clone(),
+                                scroll_viewport_id_out.clone(),
+                                set_query_on_select,
+                                on_select.clone(),
+                            )]
+                        })
                     }
                 },
             );
 
             let opacity = motion.alpha;
-            let scale = motion.scale;
-            let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-            let transform = fret_core::Transform2D::translation(origin)
-                * fret_core::Transform2D::scale_uniform(scale)
-                * fret_core::Transform2D::translation(origin_inv);
+            let transform = material_field_overlay_scale_transform(&layout, anchor, motion.scale);
             let overlay_root =
                 fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,
@@ -1096,13 +1084,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
         let selected_bg =
             autocomplete_tokens::menu_list_item_selected_container_color(theme, token_variant);
         let label_style =
-            autocomplete_tokens::menu_list_item_label_text_style(theme, token_variant)
-                .unwrap_or_else(|| {
-                    theme
-                        .text_style_by_key("md.sys.typescale.body-large")
-                        .unwrap_or_default()
-                });
-        let label_style = typography::with_intent(label_style, TextIntent::Control);
+            autocomplete_tokens::menu_list_item_label_text_style_or_fallback(theme, token_variant);
         let item_height = autocomplete_tokens::menu_list_item_height(theme, token_variant);
         let selectable_outer_horizontal_padding =
             autocomplete_tokens::menu_selectable_item_outer_horizontal_padding(

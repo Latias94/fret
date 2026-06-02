@@ -5,6 +5,14 @@
 
 pub mod v30;
 
+#[doc(hidden)]
+pub mod usage;
+#[doc(hidden)]
+pub mod v30_overlay_metadata;
+
+#[cfg(test)]
+pub(crate) mod coverage;
+
 pub(crate) mod autocomplete;
 pub(crate) mod badge;
 pub(crate) mod button;
@@ -12,11 +20,14 @@ pub(crate) mod card;
 pub(crate) mod carousel_item;
 pub(crate) mod checkbox;
 pub(crate) mod chip;
+pub(crate) mod chip_common;
 pub(crate) mod date_picker;
 pub(crate) mod dialog;
 pub(crate) mod divider;
 pub(crate) mod dropdown_menu;
 pub(crate) mod fab;
+pub(crate) mod field_common;
+pub(crate) mod field_menu_common;
 pub(crate) mod filter_chip;
 pub(crate) mod icon_button;
 pub(crate) mod input_chip;
@@ -24,6 +35,7 @@ pub(crate) mod list;
 pub(crate) mod material_web_v30;
 pub(crate) mod menu;
 pub(crate) mod navigation_bar;
+pub(crate) mod navigation_common;
 pub(crate) mod navigation_drawer;
 pub(crate) mod navigation_rail;
 pub(crate) mod progress_indicator;
@@ -41,6 +53,14 @@ pub(crate) mod switch;
 pub(crate) mod tabs;
 pub(crate) mod text_field;
 pub(crate) mod time_input;
+pub(crate) mod time_period_common;
 pub(crate) mod time_picker;
 pub(crate) mod tooltip;
 pub(crate) mod top_app_bar;
+pub(crate) mod typography;
+pub(crate) mod v30_overlay;
+
+#[cfg(test)]
+mod visual_fixture_model;
+#[cfg(test)]
+mod visual_fixtures;

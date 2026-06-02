@@ -29,7 +29,7 @@ use crate::foundation::context::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
@@ -523,7 +523,7 @@ fn list_item<H: UiHost>(
                     );
                     let ripple_base_opacity =
                         list_tokens::pressed_state_layer_opacity(theme, selected);
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let selected_bg = selected
                         .then(|| list_tokens::selected_container_background(theme, enabled));
@@ -541,10 +541,7 @@ fn list_item<H: UiHost>(
                     let trailing_icon_size =
                         list_tokens::trailing_icon_size_with_variant(theme, expressive);
 
-                    let label_style = theme
-                        .text_style_by_key("md.sys.typescale.body-large")
-                        .unwrap_or_default();
-                    let label_style = typography::with_intent(label_style, TextIntent::Control);
+                    let label_style = list_tokens::label_text_style(theme, selected);
 
                     let overline_color = list_tokens::overline_text_color(theme, enabled, selected);
                     let overline_style = list_tokens::overline_text_style(theme, selected)

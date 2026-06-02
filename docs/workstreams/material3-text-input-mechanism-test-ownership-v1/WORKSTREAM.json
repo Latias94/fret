@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "slug": "material3-text-input-mechanism-test-ownership-v1",
+  "title": "Material3 TextInput Mechanism Test Ownership v1",
+  "status": "closed",
+  "updated": "2026-05-31",
+  "scope_kind": "fearless_refactor",
+  "follow_on_of": "material3-field-interaction-family-split-v1",
+  "problem": "The final Material3 residual interaction-regression binary contained only a raw fret-ui TextInputProps Event::TextInput model-update test, which belongs to mechanism-layer coverage.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    }
+  ],
+  "context_manifest": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CONTEXT.jsonl",
+  "repro": {
+    "summary": "Run the focused fret-ui TextInput mechanism test and verify Material3 no longer has a residual interaction-regression binary.",
+    "commands": [
+      "cargo nextest run -p fret-ui text_input_text_input_event_updates_model",
+      "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format",
+      "command": "cargo fmt --package fret-ui --package fret-ui-material3 --check"
+    },
+    {
+      "name": "fret-ui-text-input-mechanism",
+      "command": "cargo nextest run -p fret-ui text_input_text_input_event_updates_model"
+    },
+    {
+      "name": "fret-ui-tests-check",
+      "command": "cargo check -p fret-ui --tests"
+    },
+    {
+      "name": "material3-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "fret-ui-tests-clippy",
+      "command": "cargo clippy -p fret-ui --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "material3-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-text-input-mechanism-test-ownership-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-ui/src/declarative/tests/interactions/text_input.rs",
+    "ecosystem/fret-ui-material3/tests/material3_interaction_regressions.rs",
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/DESIGN.md",
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/TODO.md",
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "fret-ui",
+    "text-input",
+    "mechanism",
+    "test-ownership",
+    "fearless-refactor"
+  ],
+  "continue_policy": {
+    "default_action": "closed",
+    "notes": "Closed after moving the final raw TextInput residual coverage into fret-ui and deleting the Material3 residual interaction-regression binary."
+  }
+}

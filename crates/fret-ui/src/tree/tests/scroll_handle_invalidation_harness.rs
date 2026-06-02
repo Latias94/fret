@@ -461,6 +461,7 @@ fn register_scroll_surface(
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });

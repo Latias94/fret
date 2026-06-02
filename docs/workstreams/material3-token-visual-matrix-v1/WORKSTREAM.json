@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "slug": "material3-token-visual-matrix-v1",
+  "title": "Material3 Token Visual Matrix v1",
+  "status": "closed",
+  "updated": "2026-05-30",
+  "scope_kind": "fearless_refactor",
+  "problem": "The closed M3PV2 lane proves current component axes, but does not provide an exhaustive token visual matrix across component variants, states, schemes, parts, and visual roles.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/HANDOFF.md"
+    },
+    {
+      "role": "token_visual_matrix",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json"
+    },
+    {
+      "role": "token_inventory_report",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
+    },
+    {
+      "role": "token_visual_fixture_suite",
+      "path": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_closeout_audit.md"
+    }
+  ],
+  "repro": {
+    "summary": "Validate the token visual matrix lane state, matrix schema, and generated token inventory.",
+    "commands": [
+      "python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json",
+      "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null",
+      "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null",
+      "python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null",
+      "python tools/check_workstream_catalog.py",
+      "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures",
+      "git diff --check"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "token-visual-matrix-json",
+      "command": "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-token-inventory-report",
+      "command": "python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-30 --output docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
+    },
+    {
+      "name": "material3-token-inventory-json",
+      "command": "python -m json.tool docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-token-visual-fixture-json",
+      "command": "python -m json.tool ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json | Out-Null"
+    },
+    {
+      "name": "material3-token-visual-fixture-runner",
+      "command": "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "material3-token-lib",
+      "command": "cargo nextest run -p fret-ui-material3 --lib tokens::v30"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json",
+    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_schema_v1.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json",
+    "tools/parity-discovery/material3_token_inventory.py",
+    "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures.rs",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_v2_closeout_audit.md",
+    "ecosystem/fret-ui-material3/src/tokens",
+    "ecosystem/fret-ui-material3/src/foundation",
+    "ecosystem/fret-ui-material3/tests",
+    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_closeout_audit.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "closed",
+    "notes": "M3TVM-010 through M3TVM-090 are complete. Reopen only by creating a new follow-on workstream for API breadth or fallback hardening outside this lane."
+  }
+}

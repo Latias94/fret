@@ -770,6 +770,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -863,6 +864,7 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_paint_dirty_without_rerende
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -966,6 +968,7 @@ fn view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_upd
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -1143,6 +1146,7 @@ fn view_cache_virtual_list_revision_only_bump_after_internal_offset_update_marks
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });
@@ -1289,6 +1293,7 @@ fn view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings() {
                     inherited_text_style: None,
                     semantics_decoration: None,
                     key_context: None,
+                    layout_direction: fret_core::LayoutDirection::default(),
                 },
             );
         }

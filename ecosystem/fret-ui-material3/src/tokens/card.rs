@@ -8,6 +8,7 @@ use fret_ui::Theme;
 
 use crate::card::CardVariant;
 use crate::foundation::interaction::PressableInteraction;
+use crate::foundation::token_resolver::{MaterialTokenResolver, alpha_mul};
 
 pub(crate) const FILLED_COMPONENT_PREFIX: &str = "md.comp.filled-card";
 pub(crate) const ELEVATED_COMPONENT_PREFIX: &str = "md.comp.elevated-card";
@@ -27,53 +28,42 @@ pub(crate) fn component_prefix(variant: CardVariant) -> &'static str {
     }
 }
 
+fn card_metric(theme: &Theme, key: impl AsRef<str>, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key.as_ref()), fallback)
+}
+
 pub(crate) fn container_shape(theme: &Theme, variant: CardVariant) -> Corners {
-    theme
-        .metric_by_key(&format!("{}.container.shape", component_prefix(variant)))
-        .map(Corners::all)
-        .or_else(|| {
-            theme
-                .metric_by_key("md.sys.shape.corner.medium")
-                .map(Corners::all)
-        })
-        .unwrap_or_else(|| Corners::all(Px(12.0)))
+    let component_key = format!("{}.container.shape", component_prefix(variant));
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[component_key.as_str(), "md.sys.shape.corner.medium"],
+        Corners::all(Px(12.0)),
+    )
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, variant: CardVariant) -> Color {
-    theme
-        .color_by_key(&format!(
-            "{}.container.shadow-color",
-            component_prefix(variant)
-        ))
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        &format!("{}.container.shadow-color", component_prefix(variant)),
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn container_background(theme: &Theme, variant: CardVariant, enabled: bool) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
     if enabled {
-        theme
-            .color_by_key(&format!("{}.container.color", component_prefix(variant)))
-            .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low"))
+        tokens.color_comp_or_sys(
+            &format!("{}.container.color", component_prefix(variant)),
+            "md.sys.color.surface-container-low",
+        )
     } else {
-        let base = theme
-            .color_by_key(&format!(
-                "{}.disabled.container.color",
-                component_prefix(variant)
-            ))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
+        let base = tokens.color_comp_or_sys(
+            &format!("{}.disabled.container.color", component_prefix(variant)),
+            "md.sys.color.on-surface",
+        );
 
-        let opacity = theme
-            .number_by_key(&format!(
-                "{}.disabled.container.opacity",
-                component_prefix(variant)
-            ))
-            .unwrap_or(0.12);
+        let opacity_key = format!("{}.disabled.container.opacity", component_prefix(variant));
+        let opacity = tokens.number_optional(Some(opacity_key.as_str()), 0.12);
 
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
-        c
+        alpha_mul(base, opacity)
     }
 }
 
@@ -86,21 +76,18 @@ pub(crate) fn container_elevation(
     let prefix = component_prefix(variant);
 
     if !enabled {
-        return theme
-            .metric_by_key(&format!("{prefix}.disabled.container.elevation"))
-            .unwrap_or(Px(0.0));
+        return card_metric(
+            theme,
+            format!("{prefix}.disabled.container.elevation"),
+            Px(0.0),
+        );
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.container.elevation",
-        Some(PressableInteraction::Focused) => "focus.container.elevation",
-        Some(PressableInteraction::Hovered) => "hover.container.elevation",
-        None => "container.elevation",
-    };
+    let key = interaction
+        .map(|interaction| format!("{}.container.elevation", interaction.token_state()))
+        .unwrap_or_else(|| "container.elevation".to_string());
 
-    theme
-        .metric_by_key(&format!("{prefix}.{key}"))
-        .unwrap_or(Px(0.0))
+    card_metric(theme, format!("{prefix}.{key}"), Px(0.0))
 }
 
 pub(crate) fn outline(
@@ -114,35 +101,30 @@ pub(crate) fn outline(
     }
 
     let prefix = OUTLINED_COMPONENT_PREFIX;
-    let width = theme
-        .metric_by_key(&format!("{prefix}.outline.width"))
-        .unwrap_or(Px(1.0));
+    let width = card_metric(theme, format!("{prefix}.outline.width"), Px(1.0));
 
     if !enabled {
-        let base = theme
-            .color_by_key(&format!("{prefix}.disabled.outline.color"))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme
-            .number_by_key(&format!("{prefix}.disabled.outline.opacity"))
-            .unwrap_or(0.12);
-        let mut c = base;
-        c.a *= opacity.clamp(0.0, 1.0);
+        let tokens = MaterialTokenResolver::new(theme);
+        let base = tokens.color_comp_or_sys(
+            &format!("{prefix}.disabled.outline.color"),
+            "md.sys.color.on-surface",
+        );
+        let opacity_key = format!("{prefix}.disabled.outline.opacity");
+        let opacity = tokens.number_optional(Some(opacity_key.as_str()), 0.12);
+        let c = alpha_mul(base, opacity);
         return Some(CardOutline { width, color: c });
     }
 
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.outline.color",
-        Some(PressableInteraction::Focused) => "focus.outline.color",
-        Some(PressableInteraction::Hovered) => "hover.outline.color",
-        None => "outline.color",
-    };
+    let key = interaction
+        .map(|interaction| format!("{}.outline.color", interaction.token_state()))
+        .unwrap_or_else(|| "outline.color".to_string());
 
-    let mut color = theme
-        .color_by_key(&format!("{prefix}.{key}"))
-        .or_else(|| theme.color_by_key(&format!("{prefix}.outline.color")))
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.outline"));
+    let state_key = format!("{prefix}.{key}");
+    let default_key = format!("{prefix}.outline.color");
+    let mut color = MaterialTokenResolver::new(theme).color_comp_chain_or_sys(
+        &[state_key.as_str(), default_key.as_str()],
+        "md.sys.color.outline",
+    );
     color.a = 1.0;
 
     Some(CardOutline { width, color })
@@ -154,17 +136,12 @@ pub(crate) fn state_layer_color(
     interaction: Option<PressableInteraction>,
 ) -> Color {
     let prefix = component_prefix(variant);
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.state-layer.color",
-        Some(PressableInteraction::Focused) => "focus.state-layer.color",
-        Some(PressableInteraction::Hovered) => "hover.state-layer.color",
-        None => "hover.state-layer.color",
-    };
+    let key = interaction
+        .map(|interaction| format!("{}.state-layer.color", interaction.token_state()))
+        .unwrap_or_else(|| "hover.state-layer.color".to_string());
 
-    theme
-        .color_by_key(&format!("{prefix}.{key}"))
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(&format!("{prefix}.{key}"), "md.sys.color.on-surface")
 }
 
 pub(crate) fn state_layer_opacity(
@@ -173,26 +150,135 @@ pub(crate) fn state_layer_opacity(
     interaction: Option<PressableInteraction>,
 ) -> f32 {
     let prefix = component_prefix(variant);
-    let key = match interaction {
-        Some(PressableInteraction::Pressed) => "pressed.state-layer.opacity",
-        Some(PressableInteraction::Focused) => "focus.state-layer.opacity",
-        Some(PressableInteraction::Hovered) => "hover.state-layer.opacity",
-        None => return 0.0,
+    let Some(interaction) = interaction else {
+        return 0.0;
     };
 
-    theme
-        .number_by_key(&format!("{prefix}.{key}"))
-        .unwrap_or(0.0)
+    let key = format!("{}.state-layer.opacity", interaction.token_state());
+    MaterialTokenResolver::new(theme)
+        .pressable_state_layer_opacity(&format!("{prefix}.{key}"), interaction)
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: CardVariant) -> f32 {
-    theme
-        .number_by_key(&format!(
-            "{}.pressed.state-layer.opacity",
-            component_prefix(variant)
-        ))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme)
+        .pressable_state_layer_opacity(
+            &format!("{}.pressed.state-layer.opacity", component_prefix(variant)),
+            PressableInteraction::Pressed,
+        )
         .clamp(0.0, 1.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn card_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(
+            container_shape(theme, CardVariant::Filled),
+            Corners::all(Px(12.0))
+        );
+        assert_eq!(
+            container_elevation(theme, CardVariant::Elevated, true, None),
+            Px(0.0)
+        );
+        assert_eq!(
+            outline(theme, CardVariant::Outlined, true, None)
+                .expect("outlined card has outline")
+                .width,
+            Px(1.0)
+        );
+    }
+
+    #[test]
+    fn card_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.filled-card.container.shape".to_string(), 14.0);
+        patch.metrics.insert(
+            "md.comp.elevated-card.hover.container.elevation".to_string(),
+            5.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.outlined-card.outline.width".to_string(), 2.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, CardVariant::Filled),
+            Corners::all(Px(14.0))
+        );
+        assert_eq!(
+            container_elevation(
+                &theme,
+                CardVariant::Elevated,
+                true,
+                Some(PressableInteraction::Hovered),
+            ),
+            Px(5.0)
+        );
+        assert_eq!(
+            outline(&theme, CardVariant::Outlined, true, None)
+                .expect("outlined card has outline")
+                .width,
+            Px(2.0)
+        );
+    }
+
+    #[test]
+    fn card_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.medium".to_string(), 10.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, CardVariant::Filled),
+            Corners::all(Px(10.0))
+        );
+    }
+
+    #[test]
+    fn card_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.filled-card.container.shape".to_string(), 14.0);
+        patch.corners.insert(
+            "md.comp.filled-card.container.shape".to_string(),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, CardVariant::Filled),
+            Corners {
+                top_left: Px(2.0),
+                top_right: Px(4.0),
+                bottom_right: Px(6.0),
+                bottom_left: Px(8.0),
+            }
+        );
+    }
 }

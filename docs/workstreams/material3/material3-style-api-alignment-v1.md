@@ -109,12 +109,14 @@ wired into the crate and therefore do not represent the current public surface.
 | Checkbox | `ecosystem/fret-ui-material3/src/checkbox.rs` | Yes (`CheckboxStyle`) | Yes | Yes | Exposes container/outline/icon/state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
 | Switch | `ecosystem/fret-ui-material3/src/switch.rs` | Yes (`SwitchStyle`) | Yes | Yes | Exposes track/handle/outline/state-layer color overrides; maps `selected` to `WidgetStates::SELECTED`. |
 | Radio | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Exposes icon + state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
-| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`. |
+| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`; active `TabPanel` is API/semantics surface, not a style slot. |
 | TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | Yes (`TextFieldStyle`) | Yes | Yes | Keeps `error` as a bespoke boolean; style overrides apply to the existing token-derived defaults. |
-| Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Minimal container + item-color override surface; overlay/roving/dismiss remain policy-only. |
+| SearchBar | `ecosystem/fret-ui-material3/src/search_bar.rs` | Yes (`SearchBarStyle`) | Yes | Yes | Search surface, input, icon, state-layer, sizing, shape, and padding slots; maps hover/press/open/disabled into `WidgetStates`. |
+| SearchView | `ecosystem/fret-ui-material3/src/search_view.rs` | Yes (`SearchViewStyle`) | Yes | Yes | Overlay container/divider/body/header slots plus `SearchBarStyle` header forwarding; motion/dismiss remain policy-owned. |
+| Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Container, item width, section-label/item label/icon/supporting/trailing colors, state-layer, and text-style overrides; overlay/roving/dismiss remain policy-only. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
-| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | No | N/A | No | Often provider-driven; may stay policy-only in v1. |
-| Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | No | N/A | No | Typically a higher-level pattern; likely v2. |
+| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | Yes (`TooltipStyle`) | Yes | Yes | Plain/rich/action visual slots are public; `RichTooltip::action_element(...)` opts into hit-testable tooltip content while descriptive tooltips remain click-through. |
+| Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | Yes (`SnackbarStyle`) | Yes | Yes | Host-level style surface covers container/supporting/action/close colors, shape, padding, and single/two-line heights; rendering is applied through `fret-ui-kit`'s toast-layer skin. |
 
 ## Implementation plan
 
@@ -141,6 +143,8 @@ Add small, design-system-agnostic helpers (prefer `fret-ui-kit`) to reduce per-c
 
 - [x] `resolve_override_slot*` helpers in `fret-ui-kit` (including computed-default variants `resolve_override_slot_with` / `resolve_override_slot_opt_with`).
 - [x] `merge_override_slot(self.field, other.field)` helper to standardize right-biased merge.
+- [x] `foundation::style_overrides::merge_style_override_slots!` keeps Material 3 recipe
+  `merged()` implementations on one local Adapter while preserving each public `*Style` Interface.
 
 ### M3SA-100 — Define minimal `*Style` slot vocab for Material 3 controls
 
@@ -160,8 +164,9 @@ Suggested initial slot sets:
   - [x] Select (slot boundary documented below).
   - [x] Button / IconButton
   - [x] Checkbox / Switch / Radio / Tabs / TextField
+  - [x] SearchBar / SearchView
   - [x] Menu / Dialog (minimal style surface in v1)
-  - [x] Tooltip (policy-only in v1)
+  - [x] Tooltip (visual slots public; overlay/action policy remains mechanism-follow-up territory)
   - [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
 
 Widget state conventions (v1):
@@ -284,6 +289,8 @@ Policy-only in v1 (not exposed as slots):
 
 - Sizing and density: padding, minimum touch target enforcement.
 - Layout: scrollable behavior, spacing/insets, indicator geometry.
+- Semantics/layout API: `TabPanel` ownership, panel `test_id`, and tab-panel label relations are
+  public authoring surface but not `TabsStyle` slots.
 - Interaction: roving focus mechanics, ripple/state-layer behavior and motion timings.
 
 #### TextField slot boundary (v1)
@@ -305,6 +312,32 @@ Policy-only in v1 (not exposed as slots):
 - Shape/elevation: focus-ring thickness policy.
 - Interaction: hover/focus/press state-layer behavior and motion timings.
 - Error styling: kept as component-level boolean (see M3SA-400).
+
+#### Search slot boundary (v1)
+
+Public override surface (`SearchBarStyle` in `ecosystem/fret-ui-material3/src/search_bar.rs`):
+
+- `container_background` / `container_elevation` / `container_corner_radii` - search field
+  surface.
+- `container_height` / `container_min_width` / `container_max_width` - search field sizing.
+- `content_padding` / `content_gap` - icon/input row layout.
+- `input_text_color` / `supporting_text_color` / `input_text_style` - query and placeholder text.
+- `leading_icon_color` / `trailing_icon_color` - icon slots.
+- `state_layer_color` - hover/press state layer color (stateful).
+
+Public override surface (`SearchViewStyle` in `ecosystem/fret-ui-material3/src/search_view.rs`):
+
+- `header_style` - forwards a `SearchBarStyle` into the docked/full-screen header field.
+- `container_background` / `container_elevation` / `docked_container_corner_radii` - overlay
+  surface.
+- `divider_color` - docked/full-screen divider.
+- `full_screen_header_container_height` - full-screen header slot height.
+- `body_padding` - results/suggestions content inset.
+
+Policy-only in v1 (not exposed as slots):
+
+- Opening policy, focus handoff, outside/Escape dismissal, overlay placement, and search motion.
+- Result-list semantics and selection policy; consumers provide the content subtree.
 
 #### Menu / Dialog / Tooltip slot boundary (v1)
 
@@ -341,7 +374,28 @@ Policy-only in v1 (not exposed as slots):
 - Layout: panel padding / max width / action layout and spacing.
 - Motion: durations/easing and transform choreography.
 
-Tooltip remains policy-only in v1 (customize via theme tokens or higher-level components).
+Public override surface (`TooltipStyle` in `ecosystem/fret-ui-material3/src/tooltip.rs`):
+
+- `plain_container_background` / `plain_supporting_text_color` / `plain_supporting_text_style` -
+  plain tooltip surface and supporting text.
+- `plain_container_corner_radius` / `plain_container_padding` / `plain_container_max_width` -
+  plain tooltip shape and sizing.
+- `rich_container_background` / `rich_container_elevation` / `rich_container_shadow_color` -
+  rich tooltip surface.
+- `rich_title_color` / `rich_supporting_text_color` / `rich_title_text_style` /
+  `rich_supporting_text_style` - rich tooltip text roles.
+- `rich_action_label_color` / `rich_action_label_text_style` - rich tooltip action text role.
+- `rich_container_corner_radius` / `rich_container_padding` / `rich_container_max_width` /
+  `rich_text_gap` - rich tooltip shape and layout.
+- `rich_action_min_height` / `rich_action_bottom_padding` - rich tooltip action row layout.
+- `container_min_width` / `container_min_height` - shared tooltip minimum sizing.
+
+Policy-only in v1 (not exposed as slots):
+
+- Overlay mechanics: placement, safe-hover corridor, delay group, dismissal policy, and motion.
+- Hit-testing remains an explicit policy decision: descriptive tooltips keep
+  `tooltip_content_hit_testable=false`, while rich action tooltips opt in through
+  `RichTooltip::action_element(...)`.
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 

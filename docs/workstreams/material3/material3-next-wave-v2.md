@@ -28,6 +28,66 @@ Non-goals:
   outcomes.
 - Favor suite-style headless goldens + small scripted interaction tests over pixel snapshots.
 
+### Progress notes (2026-05-31)
+
+- Menu shadcn-level breadth batch landed in `ecosystem/fret-ui-material3`:
+  - API: `MenuLabel` and
+    `MenuItem::{leading_icon,trailing_icon,supporting_text,shortcut,checkbox,radio}`.
+  - Semantics: checkbox/radio menu items expose `MenuItemCheckbox` / `MenuItemRadio` with
+    `checked` and `checked_state`.
+  - Layout/parts: 32dp section labels, two-line 64dp menu rows, 24dp icon slots, shortcut text,
+    and stable part selectors (`.text`, `.label`, `.leading-icon`, `.supporting-text`,
+    `.shortcut`, `.trailing-icon`).
+  - Style: `MenuStyle` now covers label, icon, supporting text, trailing text, state-layer, and
+    text-style override slots using ADR 0220 shape.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/tests/menu_state.rs`
+      (`menu_rich_items_expose_material_slots_and_checked_semantics`,
+      `menu_checkbox_and_radio_items_update_models_on_activation`)
+    - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+      (`material3_menu_and_dropdown_expose_stable_part_test_ids`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/menu.rs`
+- Remaining Menu residuals:
+  - explicit grouped APIs,
+  - nested submenu overlay behavior,
+  - scroll buttons / max-height behavior for long menus,
+  - optional value/callback authoring parity with shadcn's non-model menu helpers.
+- Tabs shadcn-level app-tabs batch landed in `ecosystem/fret-ui-material3`:
+  - API: `TabPanel` plus `Tabs::{panel,panels,content_fill_remaining}`. Existing navigation-only
+    `Tabs` usage remains valid when no panels are supplied.
+  - Semantics: the active content renders as `SemanticsRole::TabPanel`, inherits the selected tab
+    label by default, and uses the selected tab element as `labelled_by`; the runtime derives the
+    reverse tab `controls` edge.
+  - Parts: explicit panel `test_id` is supported; when omitted, root `test_id` derives the active
+    panel selector as `.panel`.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/tests/tabs_state.rs`
+      (`tabs_render_active_tab_panel_semantics_and_relations`)
+    - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+      (`material3_tabs_exposes_stable_part_test_ids`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/tabs.rs`
+- Completeness matrix:
+  - `docs/workstreams/material3/material3-shadcn-level-completeness-v1.md`
+    tracks API/parts/semantics/behavior/tokens/motion/gallery status and next priorities.
+
+### Progress notes (2026-06-01)
+
+- Snackbar shadcn-level style/API batch landed across `fret-ui-material3` and `fret-ui-kit`:
+  - API: `SnackbarStyle` plus `SnackbarHost::style(...)` using the ADR 0220 override shape.
+  - Style slots: container background, supporting text color, action label/state-layer color,
+    close icon/state-layer color, container radius/padding, and single/two-line min heights.
+  - Foundation: the shared toast renderer now consumes `ToastLayerStyle` direct colors, text
+    styles, border width/color, and action/cancel/close button styles; shadcn/Sonner defaults keep
+    their old hardcoded path when no style fields are supplied.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs`
+      (`toast_layer_style_direct_colors_are_painted`)
+    - `ecosystem/fret-ui-material3/src/snackbar.rs`
+    - `ecosystem/fret-ui-material3/tests/snackbar_state.rs`
+      (`snackbar_style_overrides_paint_and_layout_contract`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs`
+
 ### Infrastructure notes (2026-02-06)
 
 Recent Material3 and shadcn alignment work uncovered a few mechanism gaps that were worth fixing
@@ -210,6 +270,8 @@ before continuing component surface work:
       `calculateMaxHeight`, focus / semantics behaviors).
   - Evidence:
     - `apps/fret-ui-gallery/src/ui.rs` (Material 3 Dialog page includes a Select inside the dialog)
+    - `ecosystem/fret-ui-material3/tests/select_behavior.rs`
+      (`select_chevron_rotates_on_first_open_frame`)
     - `tools/diag-scripts/ui-gallery-material3-select-dialog-overlay-screenshots.json` (fretboard screenshots)
       - Expected: both `ui-gallery-material3-dialog-select-listbox` and
         `ui-gallery-material3-dialog-select-bottom-listbox` open without being clipped by the dialog
@@ -312,6 +374,10 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_bar_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/search_bar_motion.rs`
+      (`search_bar_hover_state_layer_animates_between_idle_and_hovered`,
+      `search_bar_press_ripple_expands_on_fixed_frames`,
+      `search_bar_style_overrides_paint_and_layout_contract`)
     - `goldens/material3-headless/v1/material3-search-bar.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
   - References:
     - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-bar.scss`
@@ -329,7 +395,24 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/search_view.rs`
     - `ecosystem/fret-ui-material3/src/tokens/search_view.rs`
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_view_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/search_view_behavior.rs`
+      (`search_view_docked_overlay_fades_and_expands_on_open_close_frames`,
+      `search_view_full_screen_overlay_expands_from_input_geometry`,
+      `search_view_style_overrides_docked_overlay_paint_contract`,
+      `search_view_style_overrides_full_screen_header_layout_contract`)
     - `goldens/material3-headless/v1/material3-search-view.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+
+- [x] Search visual style API.
+  - Notes:
+    - `SearchBarStyle` follows ADR 0220 for surface, input, icon, state-layer, sizing, shape, and
+      row padding/gap slots.
+    - `SearchViewStyle` adds overlay container/divider/body/header slots and forwards
+      `SearchBarStyle` into the docked/full-screen header search field.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_bar.rs` (`SearchBarStyle`, `.style(...)`)
+    - `ecosystem/fret-ui-material3/src/search_view.rs` (`SearchViewStyle`, `.style(...)`)
+    - `ecosystem/fret-ui-material3/tests/search_bar_motion.rs`
+    - `ecosystem/fret-ui-material3/tests/search_view_behavior.rs`
 
 - [x] Carousel item (MVP) surface.
   - Goal: add a low-coupling `CarouselItem` primitive aligned with Material Web v30
@@ -412,6 +495,9 @@ before continuing component surface work:
             - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField::{trailing_icon,field_id_out}`)
             - `ecosystem/fret-ui-material3/src/autocomplete.rs` (popover request `dismissable_branches`)
             - `ecosystem/fret-ui-material3/src/exposed_dropdown.rs` (`Autocomplete::trailing_dropdown_icon(true)`)
+            - `ecosystem/fret-ui-material3/tests/autocomplete_motion.rs`
+              (`autocomplete_popup_and_chevron_animate_on_open_close_frames`,
+              `exposed_dropdown_popup_and_chevron_animate_on_open_close_frames`)
             - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
               (`material3_exposed_dropdown_trailing_icon_toggles_overlay_v1`)
             - `tools/diag-scripts/ui-gallery-material3-exposed-dropdown-filtering.json`
@@ -450,6 +536,8 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (v30 token injection wiring)
     - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (token import allowlist includes `md.comp.sheet.bottom.*`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_bottom_sheet_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs`
+      (`modal_bottom_sheet_slides_from_own_height_without_panel_fade`)
     - `goldens/material3-headless/v1/material3-bottom-sheet.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
     - `apps/fret-ui-gallery/src/spec.rs` + `apps/fret-ui-gallery/src/ui.rs` + `apps/fret-ui-gallery/src/docs.rs`
   - References:
@@ -462,6 +550,8 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (v30 token injection wiring)
     - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (token import + codegen covers `md.comp.date-picker.*`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_date_picker_suite_goldens_v1`)
+    - `ecosystem/fret-ui-material3/tests/date_picker_motion.rs`
+      (`date_picker_modal_scrim_and_panel_animate_on_open_close_frames`)
     - `goldens/material3-headless/v1/material3-date-picker.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
     - `apps/fret-ui-gallery/src/spec.rs` + `apps/fret-ui-gallery/src/ui.rs` + `apps/fret-ui-gallery/src/docs.rs`
   - References:
@@ -478,6 +568,9 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_time_picker_suite_goldens_v1`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`time_picker_clock_dial_drag_updates_time`, `time_picker_selector_keyboard_arrows_step_time`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`time_picker_time_input_replaces_and_auto_advances_hour`)
+    - `ecosystem/fret-ui-material3/tests/time_picker_motion.rs`
+      (`time_picker_modal_scrim_and_panel_animate_on_open_close_frames`,
+      `docked_time_picker_clock_face_crossfades_and_moves_selector_on_selection_change`)
     - `goldens/material3-headless/v1/material3-time-picker.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
     - `apps/fret-ui-gallery/src/spec.rs` + `apps/fret-ui-gallery/src/ui.rs` + `apps/fret-ui-gallery/src/docs.rs`
   - References:
@@ -494,14 +587,32 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_tooltip_text_styles`)
     - `ecosystem/fret-ui-material3/src/tooltip.rs` (uses `md.comp.plain-tooltip.supporting-text`)
 
-- [x] Rich tooltip (non-interactive) MVP surface.
+- [x] Rich tooltip action surface.
   - Notes:
-    - In Fret, `OverlayKind::Tooltip` is click-through (`layer.hit_testable=false`), so rich
-      tooltip actions are out-of-scope until we have a concrete consumer that requires an
-      interactive outcome (mechanism follow-up candidate).
+    - Descriptive tooltips remain click-through by default.
+    - `RichTooltip::action_element(...)` opts the tooltip content layer into hit-testing so action
+      controls can receive pointer input, matching Compose Material3's `action` slot without
+      pushing Material policy into `crates/*`.
   - Evidence:
     - `ecosystem/fret-ui-material3/src/tooltip.rs` (`RichTooltip`)
+    - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`tooltip_content_hit_testable`)
     - `ecosystem/fret-ui-material3/src/tokens/tooltip.rs` (rich tooltip token mapping)
+    - `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
+      (`rich_tooltip_action_slot_is_hit_testable_and_stable`)
+
+- [x] Tooltip visual style API.
+  - Notes:
+    - `TooltipStyle` follows ADR 0220 and covers plain/rich surface color, text colors/text styles,
+      shape, padding, max width, min size, rich elevation/shadow, rich text gap, and rich action
+      label/row slots.
+    - Plain/descriptive tooltip click-through remains the default; rich action content uses the
+      explicit hit-test opt-in above.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tooltip.rs` (`TooltipStyle`, `.style(...)`)
+    - `ecosystem/fret-ui-material3/tests/tooltip_state.rs`
+      (`plain_tooltip_style_overrides_paint_and_layout_contract`,
+      `rich_tooltip_style_overrides_paint_parts_and_layout_contract`)
+    - `apps/fret-ui-gallery/src/ui/snippets/material3/tooltip.rs`
 
 ## Mechanism follow-ups (only if required)
 

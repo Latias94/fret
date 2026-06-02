@@ -30,16 +30,17 @@ use crate::foundation::context::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::motion::{SpringAnimator, SpringSpec};
-use crate::tokens::icon_button as icon_button_tokens;
+use crate::tokens::icon_button::{self as icon_button_tokens, IconButtonSizeTokens};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IconButtonVariant {
@@ -88,20 +89,17 @@ impl IconButtonStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.icon_color.is_some() {
-            self.icon_color = other.icon_color;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                icon_color,
+                outline_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
@@ -227,10 +225,14 @@ impl IconButton {
                 let (shapes, corner_spring, size_tokens) = {
                     let theme = Theme::global(&*cx.app);
                     let shapes = resolved_icon_toggle_button_shapes(&*cx, theme, self.toggle, None);
-                    let scheme_spring =
-                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-                    let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
-                    let size_tokens = icon_button_size_tokens(theme, self.size);
+                    let scheme_spring = material_motion_spring_in_scope(
+                        &*cx,
+                        theme,
+                        MaterialMotionRole::IconButtonPressedShape,
+                    );
+                    let corner_spring =
+                        icon_button_tokens::pressed_container_corner_spring(theme, scheme_spring);
+                    let size_tokens = icon_button_tokens::size_tokens(theme, self.size);
                     (shapes, corner_spring, size_tokens)
                 };
 
@@ -345,7 +347,7 @@ impl IconButton {
                                     self.toggle,
                                     self.selected,
                                 );
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             (colors, state_layer_target, ripple_base_opacity, config)
                         };
@@ -557,10 +559,14 @@ impl IconToggleButton {
                 let (shapes, corner_spring, size_tokens) = {
                     let theme = Theme::global(&*cx.app);
                     let shapes = resolved_icon_toggle_button_shapes(&*cx, theme, true, self.shapes);
-                    let scheme_spring =
-                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-                    let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
-                    let size_tokens = icon_button_size_tokens(theme, self.size);
+                    let scheme_spring = material_motion_spring_in_scope(
+                        &*cx,
+                        theme,
+                        MaterialMotionRole::IconButtonPressedShape,
+                    );
+                    let corner_spring =
+                        icon_button_tokens::pressed_container_corner_spring(theme, scheme_spring);
+                    let size_tokens = icon_button_tokens::size_tokens(theme, self.size);
                     (shapes, corner_spring, size_tokens)
                 };
 
@@ -675,7 +681,7 @@ impl IconToggleButton {
                                     true,
                                     checked,
                                 );
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             (colors, state_layer_target, ripple_base_opacity, config)
                         };
@@ -729,22 +735,6 @@ struct IconButtonCornerRuntime {
     spring: SpringAnimator,
 }
 
-fn icon_button_shape_radius(theme: &Theme) -> f32 {
-    icon_button_tokens::container_shape_radius(theme)
-}
-
-fn icon_button_selected_shape_radius(theme: &Theme) -> f32 {
-    icon_button_tokens::selected_container_shape_radius(theme)
-}
-
-fn icon_button_pressed_shape_radius(theme: &Theme) -> f32 {
-    icon_button_tokens::pressed_container_shape_radius(theme)
-}
-
-fn icon_button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec) -> SpringSpec {
-    icon_button_tokens::pressed_container_corner_spring(theme, scheme_fallback)
-}
-
 fn resolved_icon_toggle_button_shapes<H: UiHost>(
     cx: &ElementContext<'_, H>,
     theme: &Theme,
@@ -755,13 +745,13 @@ fn resolved_icon_toggle_button_shapes<H: UiHost>(
         return shapes;
     }
 
-    let base = Px(icon_button_shape_radius(theme));
-    let pressed = Px(icon_button_pressed_shape_radius(theme));
+    let base = Px(icon_button_tokens::container_shape_radius(theme));
+    let pressed = Px(icon_button_tokens::pressed_container_shape_radius(theme));
 
     let expressive = resolved_design_variant(cx, theme_default_design_variant(theme))
         == MaterialDesignVariant::Expressive;
     let checked = if toggle && expressive {
-        Px(icon_button_selected_shape_radius(theme))
+        Px(icon_button_tokens::selected_container_shape_radius(theme))
     } else {
         base
     };
@@ -789,26 +779,6 @@ fn animated_icon_button_corner_radii<H: UiHost>(
         rt.spring.advance(now_frame);
         (Corners::all(Px(rt.spring.value())), rt.spring.is_active())
     })
-}
-
-#[derive(Debug, Clone, Copy)]
-struct IconButtonSizeTokens {
-    container: Px,
-    pad_left: Px,
-    pad_right: Px,
-    icon_size: Px,
-    outline_width: Px,
-}
-
-fn icon_button_size_tokens(theme: &Theme, size: IconButtonSize) -> IconButtonSizeTokens {
-    let t = icon_button_tokens::size_tokens(theme, size);
-    IconButtonSizeTokens {
-        container: t.container,
-        pad_left: t.pad_left,
-        pad_right: t.pad_right,
-        icon_size: t.icon_size,
-        outline_width: t.outline_width,
-    }
 }
 
 #[derive(Debug, Clone, Copy)]

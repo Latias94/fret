@@ -329,7 +329,7 @@
             "kind": "bounds_rect",
             "target": { "kind": "test_id", "id": "rtl-margin-left-auto-leading" },
             "expected": {
-              "origin": { "x": 0.0, "y": 40.0 },
+              "origin": { "x": 80.0, "y": 40.0 },
               "size": { "width": 20.0, "height": 10.0 }
             },
             "eps_px": 0.01
@@ -338,7 +338,7 @@
             "kind": "bounds_rect",
             "target": { "kind": "test_id", "id": "rtl-margin-left-auto-trailing" },
             "expected": {
-              "origin": { "x": 70.0, "y": 40.0 },
+              "origin": { "x": 50.0, "y": 40.0 },
               "size": { "width": 30.0, "height": 10.0 }
             },
             "eps_px": 0.01
@@ -356,7 +356,7 @@
             "kind": "bounds_rect",
             "target": { "kind": "test_id", "id": "rtl-margin-right-auto-leading" },
             "expected": {
-              "origin": { "x": 0.0, "y": 50.0 },
+              "origin": { "x": 30.0, "y": 50.0 },
               "size": { "width": 20.0, "height": 10.0 }
             },
             "eps_px": 0.01
@@ -365,7 +365,7 @@
             "kind": "bounds_rect",
             "target": { "kind": "test_id", "id": "rtl-margin-right-auto-trailing" },
             "expected": {
-              "origin": { "x": 70.0, "y": 50.0 },
+              "origin": { "x": 0.0, "y": 50.0 },
               "size": { "width": 30.0, "height": 10.0 }
             },
             "eps_px": 0.01

@@ -2,6 +2,8 @@ use fret_icons::{IconId, ids};
 
 use fret_core::{Edges, Px};
 use fret_ui::element::InsetStyle;
+use fret_ui_kit::primitives::direction as direction_prim;
+pub(crate) use fret_ui_kit::primitives::direction::HorizontalVisualItemPosition;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::direction::LayoutDirection;
@@ -94,13 +96,6 @@ pub(crate) fn inline_start_end_pair<T>(
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct HorizontalVisualItemPosition {
-    pub is_visual_first: bool,
-    pub is_visual_last: bool,
-    pub order: Option<i32>,
-}
-
 /// Computes visual first/last and flex-order for horizontal rows in Fret.
 ///
 /// Fret's horizontal flex axis stays physical left-to-right even under RTL, so recipe code that
@@ -112,20 +107,7 @@ pub(crate) fn horizontal_visual_item_position(
     idx: usize,
     len: usize,
 ) -> HorizontalVisualItemPosition {
-    debug_assert!(len > 0, "horizontal_visual_item_position requires len > 0");
-
-    match dir {
-        LayoutDirection::Ltr => HorizontalVisualItemPosition {
-            is_visual_first: idx == 0,
-            is_visual_last: idx + 1 == len,
-            order: None,
-        },
-        LayoutDirection::Rtl => HorizontalVisualItemPosition {
-            is_visual_first: idx + 1 == len,
-            is_visual_last: idx == 0,
-            order: Some((len - 1 - idx) as i32),
-        },
-    }
+    direction_prim::horizontal_visual_item_position(dir, idx, len)
 }
 
 #[inline]

@@ -9,8 +9,8 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, KeyCode, LayoutDirection, Modifiers, Px, SemanticsCheckedState,
-    SemanticsRole, SvgFit, TextOverflow, TextWrap,
+    Axis, Color, Corners, KeyCode, Modifiers, Px, SemanticsCheckedState, SemanticsRole, SvgFit,
+    TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -21,14 +21,14 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::primitives::direction as direction_prim;
 
 use crate::foundation::arc_str::empty_arc_str;
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
@@ -155,11 +155,7 @@ impl SegmentedButtonSet {
             test_id,
         } = self;
 
-        let default_layout_direction = {
-            let theme = Theme::global(&*cx.app);
-            theme_default_layout_direction(theme)
-        };
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
 
         let disabled_items: Arc<[bool]> = Arc::from(
             items
@@ -241,13 +237,8 @@ impl SegmentedButtonSet {
                         return RovingNavigateResult::Handled { target };
                     }
 
-                    let forward = match (layout_direction, it.key) {
-                        (LayoutDirection::Ltr, KeyCode::ArrowRight) => Some(true),
-                        (LayoutDirection::Ltr, KeyCode::ArrowLeft) => Some(false),
-                        (LayoutDirection::Rtl, KeyCode::ArrowLeft) => Some(true),
-                        (LayoutDirection::Rtl, KeyCode::ArrowRight) => Some(false),
-                        _ => None,
-                    };
+                    let forward =
+                        direction_prim::horizontal_forward_for_key(it.key, layout_direction);
                     let Some(forward) = forward else {
                         return RovingNavigateResult::NotHandled;
                     };
@@ -526,15 +517,10 @@ impl SegmentedButtonSegment {
                             let ripple_base_opacity =
                                 segmented_tokens::pressed_state_layer_opacity(theme);
                             let indication_config =
-                                material_pressable_indication_config(theme, None);
+                                material_pressable_indication_config_in_scope(&*cx, None);
 
                             let icon_size = segmented_tokens::icon_size(theme);
-                            let label_style = theme
-                                .text_style_by_key("md.comp.outlined-segmented-button.label-text")
-                                .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-                                .unwrap_or_default();
-                            let label_style =
-                                typography::with_intent(label_style, TextIntent::Control);
+                            let label_style = segmented_tokens::label_text_style(theme);
 
                             (
                                 container_height,

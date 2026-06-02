@@ -23,23 +23,25 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
 };
 
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
+use crate::foundation::context::with_material_layout_direction_in_scope;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable,
-    material_ink_layer_for_pressable_with_ripple_bounds, material_pressable_indication_config,
+    material_ink_layer_for_pressable_with_ripple_bounds,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size, minimum_interactive_size,
 };
+use crate::foundation::logical_edges::{horizontal_logical_edges, set_inset_inline_end};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::optional_part_test_id;
 use crate::tokens::filter_chip as filter_chip_tokens;
@@ -95,26 +97,19 @@ impl FilterChipStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.leading_icon_color.is_some() {
-            self.leading_icon_color = other.leading_icon_color;
-        }
-        if other.trailing_icon_color.is_some() {
-            self.trailing_icon_color = other.trailing_icon_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                label_color,
+                leading_icon_color,
+                trailing_icon_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
@@ -301,7 +296,6 @@ impl FilterChip {
                     height,
                     leading_icon_px,
                     trailing_icon_px,
-                    default_layout_direction,
                     label_style,
                 ) = {
                     let theme = Theme::global(&*cx.app);
@@ -314,18 +308,13 @@ impl FilterChip {
                     let height = filter_chip_tokens::container_height(theme);
                     let leading_icon_px = filter_chip_tokens::leading_icon_size(theme);
                     let trailing_icon_px = filter_chip_tokens::trailing_icon_size(theme);
-                    let default_layout_direction = theme_default_layout_direction(theme);
-                    let label_style = theme
-                        .text_style_by_key("md.sys.typescale.label-large")
-                        .unwrap_or_default();
-                    let label_style = typography::with_intent(label_style, TextIntent::Control);
+                    let label_style = filter_chip_tokens::label_text_style(theme);
                     (
                         corner_radii,
                         focus_ring,
                         height,
                         leading_icon_px,
                         trailing_icon_px,
-                        default_layout_direction,
                         label_style,
                     )
                 };
@@ -458,7 +447,7 @@ impl FilterChip {
                             let ripple_base_opacity =
                                 filter_chip_tokens::pressed_state_layer_opacity(theme, selected);
                             let indication_config =
-                                material_pressable_indication_config(theme, None);
+                                material_pressable_indication_config_in_scope(&*cx, None);
 
                             let (background, shadow, outline) = match self.variant {
                                 FilterChipVariant::Elevated => {
@@ -559,31 +548,31 @@ impl FilterChip {
                         let trailing_icon = self.trailing_icon;
                         let trailing_icon_size = trailing_icon.as_ref().map(|_| trailing_icon_px);
 
-                        let layout_direction =
-                            resolved_layout_direction(cx, default_layout_direction);
-
-                        let content = chip_content(
-                            cx,
-                            label_style.clone(),
-                            &self.label,
-                            label_color,
-                            leading_icon,
-                            leading_icon_size,
-                            leading_icon_color,
-                            trailing_icon,
-                            trailing_icon_size,
-                            trailing_icon_color,
-                            enabled,
-                            selected,
-                            self.test_id.clone(),
-                            self.trailing_action.clone(),
-                            self.on_trailing_icon_activate.clone(),
-                            self.trailing_icon_a11y_label.clone(),
-                            self.style.state_layer_color.clone(),
-                            pressable_id,
-                            layout_direction,
-                            height,
-                        );
+                        let content =
+                            with_material_layout_direction_in_scope(cx, |cx, layout_direction| {
+                                chip_content(
+                                    cx,
+                                    label_style.clone(),
+                                    &self.label,
+                                    label_color,
+                                    leading_icon,
+                                    leading_icon_size,
+                                    leading_icon_color,
+                                    trailing_icon,
+                                    trailing_icon_size,
+                                    trailing_icon_color,
+                                    enabled,
+                                    selected,
+                                    self.test_id.clone(),
+                                    self.trailing_action.clone(),
+                                    self.on_trailing_icon_activate.clone(),
+                                    self.trailing_icon_a11y_label.clone(),
+                                    self.style.state_layer_color.clone(),
+                                    pressable_id,
+                                    layout_direction,
+                                    height,
+                                )
+                            });
 
                         let mut chrome = ContainerProps::default();
                         chrome.layout.overflow = Overflow::Visible;
@@ -660,12 +649,12 @@ fn chip_content<H: UiHost>(
     let trailing_icon_is_actionable =
         trailing_action.is_some() || on_trailing_icon_activate.is_some();
 
-    let padding_left = if leading_icon.is_some() {
+    let padding_inline_start = if leading_icon.is_some() {
         WITH_LEADING_ICON_LEADING_SPACE
     } else {
         LEADING_SPACE
     };
-    let padding_right = if trailing_icon.is_some() {
+    let padding_inline_end = if trailing_icon.is_some() {
         WITH_TRAILING_ICON_TRAILING_SPACE
     } else {
         TRAILING_SPACE
@@ -676,12 +665,13 @@ fn chip_content<H: UiHost>(
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.gap = Px(0.0).into();
-    props.padding = Edges {
-        left: padding_left,
-        right: padding_right,
-        top: Px(0.0),
-        bottom: Px(0.0),
-    }
+    props.padding = horizontal_logical_edges(
+        layout_direction,
+        padding_inline_start,
+        padding_inline_end,
+        Px(0.0),
+        Px(0.0),
+    )
     .into();
     props.layout.size.height = Length::Px(height);
     props.layout.position = PositionStyle::Relative;
@@ -835,7 +825,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             layout.inset.top = Some(top).into();
             // In flex layout, absolute positioning uses the content rect (excluding padding).
             // Offset by the chip's trailing padding so the touch target covers the visible edge.
-            layout.inset.right = Some(Px(-8.0)).into();
+            set_inset_inline_end(&mut layout, layout_direction, Px(-8.0));
             layout.size.width = Length::Px(width);
             layout.size.height = Length::Px(min_touch);
 
@@ -930,7 +920,8 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
                             filter_chip_tokens::state_layer_opacity(theme, selected, interaction);
                         let ripple_base_opacity =
                             filter_chip_tokens::pressed_state_layer_opacity(theme, selected);
-                        let indication_config = material_pressable_indication_config(theme, None);
+                        let indication_config =
+                            material_pressable_indication_config_in_scope(&*cx, None);
 
                         (
                             state_layer_color,

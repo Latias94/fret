@@ -6,7 +6,7 @@
 
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::motion::SpringAnimator;
 
 pub const OVERLAY_CLOSED_SCALE: f32 = 0.8;
@@ -50,8 +50,8 @@ pub fn drive_overlay_open_close_motion<H: UiHost>(
     let (scale_spec, alpha_spec) = {
         let theme = Theme::global(&*cx.app);
         (
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial),
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::OverlayScale),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::OverlayOpacity),
         )
     };
 

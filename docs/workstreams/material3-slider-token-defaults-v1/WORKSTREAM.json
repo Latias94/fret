@@ -1,0 +1,49 @@
+{
+  "id": "material3-slider-token-defaults-v1",
+  "title": "Material3 Slider Token Defaults v1",
+  "status": "closed",
+  "created": "2026-05-31",
+  "updated": "2026-05-31",
+  "owner": "codex",
+  "scope": [
+    "ecosystem/fret-ui-material3/src/tokens",
+    "ecosystem/fret-ui-material3/tests/slider_state.rs",
+    "tools/parity-discovery/material3_token_inventory.py",
+    "docs/workstreams/material3-slider-token-defaults-v1",
+    "docs/workstreams/material3-slider-token-defaults-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "architecture_refs": [
+    "docs/workstreams/material3-token-inventory-helper-taxonomy-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "docs/workstreams/material3-fab-token-defaults-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "tokens",
+    "slider"
+  ],
+  "lane_slug": "material3",
+  "context_manifest": "docs/workstreams/material3-slider-token-defaults-v1/CONTEXT.jsonl",
+  "goals": [
+    "Move Slider default visual matrices out of resolver functions without changing Slider APIs.",
+    "Keep Slider token fallback policy inside ecosystem/fret-ui-material3.",
+    "Regenerate inventory evidence for the hardened slice."
+  ],
+  "non_goals": [
+    "Changing Slider rendered geometry.",
+    "Core mechanism changes.",
+    "Public Slider API changes."
+  ],
+  "validation": [
+    "cargo fmt --package fret-ui-material3 --check",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --lib tokens::slider_common",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test slider_state",
+    "cargo nextest run -p fret-ui-material3 --features diagnostics --test material3_headless_goldens material3_headless_slider_suite_goldens_v1",
+    "cargo check -p fret-ui-material3 --features diagnostics --tests",
+    "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings",
+    "python -m json.tool docs/workstreams/material3-slider-token-defaults-v1/WORKSTREAM.json | Out-Null",
+    "python -m json.tool docs/workstreams/material3-slider-token-defaults-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null",
+    "python tools/check_workstream_catalog.py",
+    "python tools/check_layering.py",
+    "git diff --check"
+  ]
+}

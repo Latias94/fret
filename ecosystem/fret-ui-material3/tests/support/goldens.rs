@@ -8,7 +8,7 @@ use fret_ui::UiTree;
 use serde::{Deserialize, Serialize};
 
 use super::host::TestHost;
-use crate::interaction_harness::{QuadSig, SceneSig, scene_quad_signature, scene_signature};
+use super::interaction_harness::{QuadSig, SceneSig, scene_quad_signature, scene_signature};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct Material3HeadlessGoldenV1 {

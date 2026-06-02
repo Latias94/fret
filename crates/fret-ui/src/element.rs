@@ -4,9 +4,9 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, CustomEffectPyramidRequestV1, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsLive, SemanticsOrientation,
-    SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
-    UvRect, ViewportFit,
+    ImageId, KeyCode, LayoutDirection, NodeId, Px, Rect, RenderTargetId, SemanticsLive,
+    SemanticsOrientation, SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle,
+    TextStyleRefinement, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, DragKindId, Model};
 use std::sync::Arc;
@@ -45,6 +45,11 @@ pub struct AnyElement {
     /// This is for component internals that need to classify child elements before mount. It is not
     /// exported to diagnostics, semantics, hit testing, layout, or platform accessibility.
     pub component_slot: Option<Arc<str>>,
+    /// Layout direction captured from the nearest provider when this element was built.
+    ///
+    /// This is layout-transparent metadata on the element tree, but it becomes a mechanism input
+    /// once copied into the mounted frame record.
+    pub layout_direction: LayoutDirection,
 }
 
 impl AnyElement {
@@ -58,7 +63,14 @@ impl AnyElement {
             semantics_decoration: None,
             key_context: None,
             component_slot: None,
+            layout_direction: LayoutDirection::default(),
         }
+    }
+
+    /// Override the captured layout direction for this element root.
+    pub fn with_layout_direction(mut self, direction: LayoutDirection) -> Self {
+        self.layout_direction = direction;
+        self
     }
 
     /// Attach a subtree-local inherited foreground without introducing a layout wrapper.

@@ -246,8 +246,12 @@ different widget as part of the same interaction. Therefore:
 
 - Overlay focus restoration must be conditional: restore previous focus **only if** focus is still
   inside the closing overlay (or is missing), otherwise do not override the new focus target.
+- When a non-modal overlay is nested above a modal layer, modal focus containment must not steal
+  focus from a still-visible closing child overlay before that child overlay has a chance to restore
+  focus to a live target inside the modal.
 
-This rule is implemented by `OverlayPortal::hide` and applies to all overlays.
+This rule is implemented by the window overlay policy layer and applies to all dismissable
+non-modal overlays.
 
 ## Consequences
 
@@ -269,7 +273,7 @@ The current shadcn-aligned defaults in this repo:
 | `Popover` | Non-modal | `false` | Yes | No (click-through) | No | Outside press closes; underlay click can focus/activate |
 | `Combobox` | Non-modal | `false` | Yes | No (click-through) | No | Popover + Command recipe; outside press closes; underlay click can focus/activate |
 | `HoverCard` | Hover overlay | `false` | No | No | No | Driven by hover intent; click-through (no outside-press dismissal) |
-| `Tooltip` | Tooltip overlay | `false` | No | No | No | Pointer-move observed; click-through |
+| `Tooltip` | Tooltip overlay | `false` | Optional | No | No | Pointer-move observed; click-through by default; rich/action tooltip content can opt into hit-testing without consuming outside pointer-down |
 | `DropdownMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Outside press closes without activating underlay; underlay pointer is inert while open |
 | `ContextMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Same as dropdown menu; open model is component-owned |
 | `Menubar` | Non-modal menu | `false` | Yes | No (click-through) | No (Radix `modal=false`) | Outside press closes and allows underlay activation |

@@ -17,13 +17,15 @@ use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, M
 use fret_ui::elements::ElementContext;
 
 use crate::foundation::test_id::chrome_part_test_id;
+use crate::foundation::token_resolver::MaterialTokenResolver;
 
 pub const DEFAULT_MINIMUM_INTERACTIVE_SIZE: Px = Px(48.0);
 
 pub fn minimum_interactive_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.sys.layout.minimum-touch-target.size")
-        .unwrap_or(DEFAULT_MINIMUM_INTERACTIVE_SIZE)
+    MaterialTokenResolver::new(theme).metric_optional(
+        Some("md.sys.layout.minimum-touch-target.size"),
+        DEFAULT_MINIMUM_INTERACTIVE_SIZE,
+    )
 }
 
 pub fn enforce_minimum_interactive_size(layout: &mut LayoutStyle, theme: &Theme) {
@@ -55,4 +57,56 @@ pub fn centered_fill_with_chrome_test_id<H: UiHost>(
         chrome
     };
     centered_fill(cx, chrome)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn minimum_interactive_size_defaults_to_material_touch_target() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(
+            minimum_interactive_size(theme),
+            DEFAULT_MINIMUM_INTERACTIVE_SIZE
+        );
+    }
+
+    #[test]
+    fn minimum_interactive_size_prefers_material_token() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.layout.minimum-touch-target.size".to_string(), 56.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(minimum_interactive_size(&theme), Px(56.0));
+    }
+
+    #[test]
+    fn enforce_minimum_interactive_size_applies_square_minimum() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.layout.minimum-touch-target.size".to_string(), 40.0);
+        let (_app, theme) = theme_with_patch(patch);
+        let mut layout = LayoutStyle::default();
+
+        enforce_minimum_interactive_size(&mut layout, &theme);
+
+        assert_eq!(layout.size.min_width, Some(Length::Px(Px(40.0))));
+        assert_eq!(layout.size.min_height, Some(Length::Px(Px(40.0))));
+    }
 }

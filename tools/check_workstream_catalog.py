@@ -8,6 +8,7 @@ This checker keeps the human-maintained README indexes honest:
   - dedicated directory count
   - standalone markdown file count
   - Directory Index coverage for dedicated workstream directories
+  - Directory Index status-prefix agreement with WORKSTREAM.json when a status prefix is present
 - docs/workstreams/standalone/README.md
   - File Index coverage for standalone markdown files
 
@@ -17,6 +18,7 @@ Intended usage:
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -28,7 +30,18 @@ STANDALONE_BUCKET_COUNT_RE = re.compile(
     r"^- `docs/workstreams/standalone/README\.md` — .*?, (\d+) markdown docs(?:\b| )"
 )
 DIRECTORY_ENTRY_RE = re.compile(r"^- `docs/workstreams/([^`/]+)/`")
+DIRECTORY_ENTRY_DETAIL_RE = re.compile(r"^- `docs/workstreams/([^`/]+)/` — .*?\(([^()]*)\)")
 STANDALONE_FILE_ENTRY_RE = re.compile(r"^- `([^`/]+\.md)`")
+STATUS_PREFIXES_BY_WORKSTREAM_STATUS = {
+    "active": {"active"},
+    "closed": {"closed"},
+    "complete": {"complete"},
+    "completed": {"complete", "completed"},
+    "maintenance": {"maintenance"},
+}
+STATUS_PREFIX_WORDS = {
+    prefix for prefixes in STATUS_PREFIXES_BY_WORKSTREAM_STATUS.values() for prefix in prefixes
+}
 
 
 def _repo_root() -> Path:
@@ -137,7 +150,58 @@ def _validate_dedicated_catalog(repo_root: Path, errors: list[str]) -> tuple[int
             + ", ".join(extra)
         )
 
+    _validate_dedicated_entry_statuses(catalog_path, workstreams_root, directory_section, errors)
+
     return len(actual_dirs), len(standalone_files)
+
+
+def _workstream_status(workstream_json_path: Path) -> str:
+    data = json.loads(workstream_json_path.read_text(encoding="utf-8"))
+    status = data.get("status")
+    if not isinstance(status, str) or not status:
+        raise ValueError(f"{workstream_json_path}: missing string status")
+    return status.lower()
+
+
+def _status_prefix(parenthetical: str) -> str | None:
+    words = parenthetical.split(maxsplit=1)
+    if not words:
+        return None
+    first_word = words[0].strip(".,;:").lower()
+    if first_word in STATUS_PREFIX_WORDS:
+        return first_word
+    return None
+
+
+def _validate_dedicated_entry_statuses(
+    catalog_path: Path, workstreams_root: Path, directory_section: list[str], errors: list[str]
+) -> None:
+    for line in directory_section:
+        match = DIRECTORY_ENTRY_DETAIL_RE.match(line)
+        if match is None:
+            continue
+
+        slug, parenthetical = match.groups()
+        workstream_json_path = workstreams_root / slug / "WORKSTREAM.json"
+        if not workstream_json_path.exists():
+            continue
+
+        declared_prefix = _status_prefix(parenthetical)
+        if declared_prefix is None:
+            continue
+
+        actual_status = _workstream_status(workstream_json_path)
+        expected_prefixes = STATUS_PREFIXES_BY_WORKSTREAM_STATUS.get(actual_status)
+        if expected_prefixes is None:
+            continue
+
+        if declared_prefix not in expected_prefixes:
+            expected = "/".join(sorted(expected_prefixes))
+            errors.append(
+                f"{catalog_path}: Directory Index entry {slug!r} starts with "
+                f"{declared_prefix!r}, but {workstream_json_path} status is "
+                f"{actual_status!r}; expected prefix {expected!r}"
+            )
 
 
 def _validate_standalone_catalog(repo_root: Path, errors: list[str]) -> int:

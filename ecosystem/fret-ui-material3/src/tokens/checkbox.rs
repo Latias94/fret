@@ -3,8 +3,12 @@
 //! This module centralizes token key mapping and fallback chains so checkbox visuals remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
+
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CheckboxInteraction {
@@ -22,19 +26,19 @@ pub(crate) struct CheckboxSizeTokens {
     pub(crate) container_corner: Px,
 }
 
+fn checkbox_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn checkbox_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn size_tokens(theme: &Theme) -> CheckboxSizeTokens {
-    let container = theme
-        .metric_by_key("md.comp.checkbox.container.size")
-        .unwrap_or(Px(18.0));
-    let icon = theme
-        .metric_by_key("md.comp.checkbox.icon.size")
-        .unwrap_or(container);
-    let state_layer = theme
-        .metric_by_key("md.comp.checkbox.state-layer.size")
-        .unwrap_or(Px(40.0));
-    let container_corner = theme
-        .metric_by_key("md.comp.checkbox.container.shape")
-        .unwrap_or(Px(2.0));
+    let container = checkbox_metric(theme, "md.comp.checkbox.container.size", Px(18.0));
+    let icon = checkbox_metric(theme, "md.comp.checkbox.icon.size", container);
+    let state_layer = checkbox_metric(theme, "md.comp.checkbox.state-layer.size", Px(40.0));
+    let container_corner = checkbox_metric(theme, "md.comp.checkbox.container.shape", Px(2.0));
 
     CheckboxSizeTokens {
         container,
@@ -44,9 +48,14 @@ pub(crate) fn size_tokens(theme: &Theme) -> CheckboxSizeTokens {
     }
 }
 
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
+pub(crate) fn state_layer_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.checkbox.state-layer.shape",
+            "md.sys.shape.corner.full",
+        ],
+        Corners::all(Px(9999.0)),
+    )
 }
 
 fn state_layer_opacity_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {
@@ -69,16 +78,21 @@ fn state_layer_opacity_key(selected: bool, interaction: CheckboxInteraction) -> 
         (false, CheckboxInteraction::Hovered) => {
             "md.comp.checkbox.unselected.hover.state-layer.opacity"
         }
-        (_, CheckboxInteraction::None) => "md.sys.state.hover.state-layer-opacity",
+        (true, CheckboxInteraction::None) => "md.comp.checkbox.selected.hover.state-layer.opacity",
+        (false, CheckboxInteraction::None) => {
+            "md.comp.checkbox.unselected.hover.state-layer.opacity"
+        }
     }
 }
 
-fn sys_state_opacity_key(interaction: CheckboxInteraction) -> &'static str {
+fn material_state_layer_interaction(
+    interaction: CheckboxInteraction,
+) -> Option<MaterialStateLayerInteraction> {
     match interaction {
-        CheckboxInteraction::Pressed => "md.sys.state.pressed.state-layer-opacity",
-        CheckboxInteraction::Focused => "md.sys.state.focus.state-layer-opacity",
-        CheckboxInteraction::Hovered => "md.sys.state.hover.state-layer-opacity",
-        CheckboxInteraction::None => "md.sys.state.hover.state-layer-opacity",
+        CheckboxInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        CheckboxInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        CheckboxInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        CheckboxInteraction::None => None,
     }
 }
 
@@ -92,40 +106,21 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        CheckboxInteraction::None => 0.0,
-        CheckboxInteraction::Pressed => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                CheckboxInteraction::Pressed,
-            ))
-            .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Pressed)))
-            .unwrap_or(0.1),
-        CheckboxInteraction::Focused => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                CheckboxInteraction::Focused,
-            ))
-            .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Focused)))
-            .unwrap_or(0.1),
-        CheckboxInteraction::Hovered => theme
-            .number_by_key(state_layer_opacity_key(
-                selected,
-                CheckboxInteraction::Hovered,
-            ))
-            .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Hovered)))
-            .unwrap_or(0.08),
-    }
+    let Some(material_interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(selected, interaction),
+        material_interaction,
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 {
-    theme
-        .number_by_key(state_layer_opacity_key(
-            selected,
-            CheckboxInteraction::Pressed,
-        ))
-        .or_else(|| theme.number_by_key(sys_state_opacity_key(CheckboxInteraction::Pressed)))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(selected, CheckboxInteraction::Pressed),
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 fn state_layer_color_key(selected: bool, interaction: CheckboxInteraction) -> &'static str {
@@ -154,10 +149,10 @@ pub(crate) fn state_layer_color(
     selected: bool,
     interaction: CheckboxInteraction,
 ) -> Color {
-    theme
-        .color_by_key(state_layer_color_key(selected, interaction))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        state_layer_color_key(selected, interaction),
+        "md.sys.color.primary",
+    )
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -169,9 +164,7 @@ pub(crate) struct CheckboxChrome {
 }
 
 fn disabled_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.sys.state.disabled.state-layer-opacity")
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme).disabled_state_layer_opacity()
 }
 
 fn selected_outline_width_key(interaction: CheckboxInteraction) -> &'static str {
@@ -201,52 +194,88 @@ fn unselected_outline_color_key(interaction: CheckboxInteraction) -> &'static st
     }
 }
 
+fn selected_container_color_key(interaction: CheckboxInteraction) -> &'static str {
+    match interaction {
+        CheckboxInteraction::Pressed => "md.comp.checkbox.selected.pressed.container.color",
+        CheckboxInteraction::Focused => "md.comp.checkbox.selected.focus.container.color",
+        CheckboxInteraction::Hovered => "md.comp.checkbox.selected.hover.container.color",
+        CheckboxInteraction::None => "md.comp.checkbox.selected.container.color",
+    }
+}
+
+fn selected_icon_color_key(interaction: CheckboxInteraction) -> &'static str {
+    match interaction {
+        CheckboxInteraction::Pressed => "md.comp.checkbox.selected.pressed.icon.color",
+        CheckboxInteraction::Focused => "md.comp.checkbox.selected.focus.icon.color",
+        CheckboxInteraction::Hovered => "md.comp.checkbox.selected.hover.icon.color",
+        CheckboxInteraction::None => "md.comp.checkbox.selected.icon.color",
+    }
+}
+
 pub(crate) fn chrome(
     theme: &Theme,
     selected: bool,
     enabled: bool,
     interaction: CheckboxInteraction,
 ) -> CheckboxChrome {
-    if selected {
-        let mut container = theme
-            .color_by_key("md.comp.checkbox.selected.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.primary"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.primary"));
+    let tokens = MaterialTokenResolver::new(theme);
 
-        let mut icon_color = theme
-            .color_by_key("md.comp.checkbox.selected.icon.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
+    if selected {
+        let mut container = tokens.color_comp_chain_or_sys(
+            &[
+                selected_container_color_key(interaction),
+                "md.comp.checkbox.selected.container.color",
+            ],
+            "md.sys.color.primary",
+        );
+
+        let mut icon_color = tokens.color_comp_chain_or_sys(
+            &[
+                selected_icon_color_key(interaction),
+                "md.comp.checkbox.selected.icon.color",
+            ],
+            "md.sys.color.on-primary",
+        );
 
         let outline_width = if enabled {
-            theme
-                .metric_by_key(selected_outline_width_key(interaction))
-                .or_else(|| theme.metric_by_key("md.comp.checkbox.selected.outline.width"))
-                .unwrap_or(Px(0.0))
+            checkbox_metric_chain(
+                theme,
+                &[
+                    selected_outline_width_key(interaction),
+                    "md.comp.checkbox.selected.outline.width",
+                ],
+                Px(0.0),
+            )
         } else {
-            theme
-                .metric_by_key("md.comp.checkbox.selected.disabled.container.outline.width")
-                .unwrap_or(Px(0.0))
+            checkbox_metric(
+                theme,
+                "md.comp.checkbox.selected.disabled.container.outline.width",
+                Px(0.0),
+            )
         };
 
         if !enabled {
-            let opacity = theme
-                .number_by_key("md.comp.checkbox.selected.disabled.container.opacity")
-                .unwrap_or_else(|| disabled_opacity(theme));
-            let disabled_container = theme
-                .color_by_key("md.comp.checkbox.selected.disabled.container.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                .unwrap_or(container);
+            let opacity = tokens.number_optional(
+                Some("md.comp.checkbox.selected.disabled.container.opacity"),
+                disabled_opacity(theme),
+            );
+            let disabled_container = tokens.color_comp_or_sys_or(
+                "md.comp.checkbox.selected.disabled.container.color",
+                "md.sys.color.on-surface",
+                container,
+            );
             container = alpha_mul(disabled_container, opacity);
 
-            icon_color = theme
-                .color_by_key("md.comp.checkbox.selected.disabled.icon.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface"))
-                .unwrap_or(icon_color);
+            icon_color = tokens.color_comp_or_sys_or(
+                "md.comp.checkbox.selected.disabled.icon.color",
+                "md.sys.color.surface",
+                icon_color,
+            );
 
-            let icon_opacity = theme
-                .number_by_key("md.comp.checkbox.disabled.selected.icon.opacity")
-                .unwrap_or_else(|| disabled_opacity(theme));
+            let icon_opacity = tokens.number_optional(
+                Some("md.comp.checkbox.disabled.selected.icon.opacity"),
+                disabled_opacity(theme),
+            );
             icon_color = alpha_mul(icon_color, icon_opacity);
         }
 
@@ -258,34 +287,43 @@ pub(crate) fn chrome(
         }
     } else {
         let outline_width = if enabled {
-            theme
-                .metric_by_key(unselected_outline_width_key(interaction))
-                .or_else(|| theme.metric_by_key("md.comp.checkbox.unselected.outline.width"))
-                .unwrap_or(Px(2.0))
+            checkbox_metric_chain(
+                theme,
+                &[
+                    unselected_outline_width_key(interaction),
+                    "md.comp.checkbox.unselected.outline.width",
+                ],
+                Px(2.0),
+            )
         } else {
-            theme
-                .metric_by_key("md.comp.checkbox.unselected.disabled.outline.width")
-                .unwrap_or(Px(2.0))
+            checkbox_metric(
+                theme,
+                "md.comp.checkbox.unselected.disabled.outline.width",
+                Px(2.0),
+            )
         };
 
         let outline_color = if enabled {
-            theme
-                .color_by_key(unselected_outline_color_key(interaction))
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+            Some(tokens.color_comp_or_sys(
+                unselected_outline_color_key(interaction),
+                "md.sys.color.on-surface-variant",
+            ))
         } else {
-            let base = theme
-                .color_by_key("md.comp.checkbox.unselected.disabled.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface"));
-            let opacity = theme
-                .number_by_key("md.comp.checkbox.unselected.disabled.container.opacity")
-                .unwrap_or_else(|| disabled_opacity(theme));
-            base.map(|c| alpha_mul(c, opacity))
+            let base = tokens.color_comp_or_sys(
+                "md.comp.checkbox.unselected.disabled.outline.color",
+                "md.sys.color.on-surface",
+            );
+            let opacity = tokens.number_optional(
+                Some("md.comp.checkbox.unselected.disabled.container.opacity"),
+                disabled_opacity(theme),
+            );
+            Some(alpha_mul(base, opacity))
         };
 
-        let icon_color = theme
-            .color_by_key("md.comp.checkbox.selected.icon.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-primary"));
+        let icon_color = tokens.color_comp_or_sys(
+            "md.comp.checkbox.selected.icon.color",
+            "md.sys.color.on-primary",
+        );
 
         CheckboxChrome {
             container_bg: None,
@@ -293,5 +331,105 @@ pub(crate) fn chrome(
             outline_color,
             icon_color,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn checkbox_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size = size_tokens(theme);
+
+        assert_eq!(size.container, Px(18.0));
+        assert_eq!(size.icon, Px(18.0));
+        assert_eq!(size.state_layer, Px(40.0));
+        assert_eq!(size.container_corner, Px(2.0));
+    }
+
+    #[test]
+    fn checkbox_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.checkbox.container.size".to_string(), 20.0);
+        patch
+            .metrics
+            .insert("md.comp.checkbox.state-layer.size".to_string(), 44.0);
+        patch
+            .metrics
+            .insert("md.comp.checkbox.container.shape".to_string(), 3.0);
+        patch.metrics.insert(
+            "md.comp.checkbox.selected.hover.outline.width".to_string(),
+            1.5,
+        );
+        patch
+            .metrics
+            .insert("md.comp.checkbox.unselected.outline.width".to_string(), 3.0);
+        patch.metrics.insert(
+            "md.comp.checkbox.unselected.disabled.outline.width".to_string(),
+            4.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        let size = size_tokens(&theme);
+        assert_eq!(size.container, Px(20.0));
+        assert_eq!(size.icon, Px(20.0));
+        assert_eq!(size.state_layer, Px(44.0));
+        assert_eq!(size.container_corner, Px(3.0));
+
+        assert_eq!(
+            chrome(&theme, true, true, CheckboxInteraction::Hovered).outline_width,
+            Px(1.5)
+        );
+        assert_eq!(
+            chrome(&theme, false, true, CheckboxInteraction::Hovered).outline_width,
+            Px(3.0)
+        );
+        assert_eq!(
+            chrome(&theme, false, false, CheckboxInteraction::None).outline_width,
+            Px(4.0)
+        );
+    }
+
+    #[test]
+    fn checkbox_state_layer_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.checkbox.state-layer.shape".to_string(), 40.0);
+        patch.corners.insert(
+            "md.comp.checkbox.state-layer.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            state_layer_shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
     }
 }

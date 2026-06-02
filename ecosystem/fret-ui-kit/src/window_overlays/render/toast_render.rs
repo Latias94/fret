@@ -3,13 +3,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, Px, TextStyle};
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, PressableState};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::typography::{self, TextIntent};
 
-use super::super::requests::ToastIconOverride;
+use super::super::requests::{
+    ToastButtonStyle, ToastIconButtonStyle, ToastIconOverride, ToastTextStyle,
+};
 use super::super::toast::{ToastEntry, ToastId};
 use super::super::{ToastPosition, ToastVariant};
 
@@ -79,6 +81,118 @@ pub(super) fn sonner_toast_description_style() -> TextStyle {
         },
         TextIntent::Control,
     )
+}
+
+pub(super) fn resolve_toast_color_key(
+    theme: &fret_ui::Theme,
+    key: Option<&str>,
+    fallback: Color,
+) -> Color {
+    key.and_then(|key| theme.color_by_key(key))
+        .unwrap_or(fallback)
+}
+
+pub(super) fn resolve_toast_text_style(
+    theme: &fret_ui::Theme,
+    style: &ToastTextStyle,
+    fallback: TextStyle,
+) -> TextStyle {
+    style
+        .style_key
+        .as_deref()
+        .and_then(|key| theme.text_style_by_key(key))
+        .unwrap_or(fallback)
+}
+
+pub(super) fn resolve_toast_text_color(
+    theme: &fret_ui::Theme,
+    style: &ToastTextStyle,
+    fallback: Color,
+) -> Color {
+    style
+        .color
+        .unwrap_or_else(|| resolve_toast_color_key(theme, style.color_key.as_deref(), fallback))
+}
+
+fn resolve_toast_number_key(theme: &fret_ui::Theme, key: Option<&str>, fallback: f32) -> f32 {
+    key.and_then(|key| theme.number_by_key(key))
+        .unwrap_or(fallback)
+}
+
+pub(super) fn toast_button_state_layer(
+    theme: &fret_ui::Theme,
+    style: &ToastButtonStyle,
+    st: PressableState,
+    fallback_color: Color,
+) -> Option<Color> {
+    let (key, fallback_opacity) = if st.pressed {
+        (
+            style.pressed_state_layer_opacity_key.as_deref(),
+            style.pressed_state_layer_opacity,
+        )
+    } else if st.focused {
+        (
+            style.focus_state_layer_opacity_key.as_deref(),
+            style.focus_state_layer_opacity,
+        )
+    } else if st.hovered {
+        (
+            style.hover_state_layer_opacity_key.as_deref(),
+            style.hover_state_layer_opacity,
+        )
+    } else {
+        return None;
+    };
+
+    let color = style.state_layer_color.unwrap_or_else(|| {
+        resolve_toast_color_key(
+            theme,
+            style.state_layer_color_key.as_deref(),
+            fallback_color,
+        )
+    });
+    Some(alpha_mul(
+        color,
+        resolve_toast_number_key(theme, key, fallback_opacity),
+    ))
+}
+
+pub(super) fn toast_icon_button_state_layer(
+    theme: &fret_ui::Theme,
+    style: &ToastIconButtonStyle,
+    st: PressableState,
+    fallback_color: Color,
+) -> Option<Color> {
+    let (key, fallback_opacity) = if st.pressed {
+        (
+            style.pressed_state_layer_opacity_key.as_deref(),
+            style.pressed_state_layer_opacity,
+        )
+    } else if st.focused {
+        (
+            style.focus_state_layer_opacity_key.as_deref(),
+            style.focus_state_layer_opacity,
+        )
+    } else if st.hovered {
+        (
+            style.hover_state_layer_opacity_key.as_deref(),
+            style.hover_state_layer_opacity,
+        )
+    } else {
+        return None;
+    };
+
+    let color = style.state_layer_color.unwrap_or_else(|| {
+        resolve_toast_color_key(
+            theme,
+            style.state_layer_color_key.as_deref(),
+            fallback_color,
+        )
+    });
+    Some(alpha_mul(
+        color,
+        resolve_toast_number_key(theme, key, fallback_opacity),
+    ))
 }
 
 pub(super) fn toast_description_text<H: UiHost>(

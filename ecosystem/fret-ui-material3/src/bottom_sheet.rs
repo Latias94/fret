@@ -22,7 +22,7 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
 use crate::motion::{self, SpringAnimator};
@@ -347,7 +347,7 @@ impl ModalBottomSheet {
 
             let scrim_base = {
                 let theme = Theme::global(&*cx.app);
-                theme.color_token("md.sys.color.scrim")
+                sheet_tokens::modal_scrim_color(theme)
             };
 
             let motion = drive_modal_bottom_sheet_motion(
@@ -365,10 +365,10 @@ impl ModalBottomSheet {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity")
-                    .unwrap_or(scrim_opacity)
-                    .clamp(0.0, 1.0);
+                let scrim_opacity = {
+                    let theme = Theme::global(&*cx.app);
+                    sheet_tokens::modal_scrim_opacity(theme, scrim_opacity)
+                };
                 let scrim_alpha =
                     (scrim_base.a * scrim_opacity * motion.scrim_progress).clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -551,18 +551,8 @@ fn drive_modal_bottom_sheet_motion<H: UiHost>(
     if open_duration_ms.is_some() || close_duration_ms.is_some() || easing_key.is_some() {
         let (default_duration_ms, bezier) = {
             let theme = Theme::global(&*cx.app);
-            let default_duration_ms = theme
-                .duration_ms_by_key("md.sys.motion.duration.medium2")
-                .unwrap_or(300);
-            let easing_key = easing_key.unwrap_or("md.sys.motion.easing.emphasized");
-            let bezier = theme
-                .easing_by_key(easing_key)
-                .unwrap_or(fret_ui::theme::CubicBezier {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: 1.0,
-                    y2: 1.0,
-                });
+            let default_duration_ms = sheet_tokens::modal_motion_duration_ms(theme);
+            let bezier = sheet_tokens::modal_motion_easing(theme, easing_key);
             (default_duration_ms, bezier)
         };
 
@@ -594,8 +584,8 @@ fn drive_modal_bottom_sheet_motion<H: UiHost>(
     let (sheet_spec, scrim_spec) = {
         let theme = Theme::global(&*cx.app);
         (
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelSpatial),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelEffects),
         )
     };
 

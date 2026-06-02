@@ -36,11 +36,11 @@ use time::Time;
 use crate::button::{Button, ButtonVariant};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::modal_motion::material_modal_panel_transform;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::strings::{
     material_time_picker_cancel_label, material_time_picker_confirm_label,
     material_time_picker_dismiss_label, material_time_picker_hour_selection_label,
@@ -324,7 +324,7 @@ impl TimePickerDialog {
             scrim_opacity: 0.32,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             test_id: None,
         }
@@ -464,34 +464,19 @@ impl TimePickerDialog {
                     .update(&models.input_minute, |v| *v = format!("{minute:02}"));
             }
 
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-
             let (open_ms, close_ms, bezier, scrim_base) = {
                 let theme = Theme::global(&*cx.app);
 
                 let open_ms = self
                     .open_duration_ms
-                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                    .unwrap_or(300);
+                    .unwrap_or_else(|| time_tokens::modal_open_duration_ms(theme));
                 let close_ms = self
                     .close_duration_ms
-                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                    .unwrap_or(300);
+                    .unwrap_or_else(|| time_tokens::modal_close_duration_ms(theme));
 
-                let bezier =
-                    theme
-                        .easing_by_key(easing_key.as_ref())
-                        .unwrap_or(fret_ui::theme::CubicBezier {
-                            x1: 0.0,
-                            y1: 0.0,
-                            x2: 1.0,
-                            y2: 1.0,
-                        });
+                let bezier = time_tokens::modal_easing(theme, self.easing_key.as_deref());
 
-                let scrim_base = theme.color_token("md.sys.color.scrim");
+                let scrim_base = time_tokens::modal_scrim_color(theme);
 
                 (open_ms, close_ms, bezier, scrim_base)
             };
@@ -516,10 +501,8 @@ impl TimePickerDialog {
                 let open_model_for_request = self.open.clone();
                 let open_model_for_overlay = self.open.clone();
 
-                let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.sys.fret.material.time-picker.scrim.opacity")
-                    .unwrap_or(self.scrim_opacity)
-                    .clamp(0.0, 1.0);
+                let scrim_opacity =
+                    time_tokens::modal_scrim_opacity(Theme::global(&*cx.app), self.scrim_opacity);
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -1712,7 +1695,7 @@ fn time_selector_field<H: UiHost>(
                         theme,
                         PressableInteraction::Pressed,
                     );
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
                     let label_style = time_tokens::time_selector_label_text_style(theme);
 
                     (
@@ -1991,8 +1974,8 @@ fn time_picker_clock_dial<H: UiHost>(
     let (spatial, effects) = {
         let theme = Theme::global(&*cx.app);
         (
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
-            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultEffects),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelSpatial),
+            material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::ModalPanelEffects),
         )
     };
     let now_frame = cx.frame_id.0;
@@ -2763,7 +2746,7 @@ fn time_input_period_item<H: UiHost>(
                             theme,
                             PressableInteraction::Pressed,
                         );
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let background = selected.then_some(
                         time_input_tokens::period_selector_selected_container_color(theme),
@@ -3012,7 +2995,7 @@ fn period_item<H: UiHost>(
                         theme,
                         PressableInteraction::Pressed,
                     );
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let background = selected
                         .then_some(time_tokens::period_selector_selected_container_color(theme));

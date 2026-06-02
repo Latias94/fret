@@ -4,10 +4,11 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::interaction::PressableInteraction;
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::{time_period_common, typography};
 
 pub(crate) const COMPONENT_PREFIX: &str = "md.comp.time-input";
 
@@ -15,23 +16,24 @@ fn token_key(suffix: &str) -> String {
     format!("{COMPONENT_PREFIX}.{suffix}")
 }
 
+fn time_input_metric(theme: &Theme, suffix: &str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(&token_key(suffix)), fallback)
+}
+
 pub(crate) fn time_input_field_container_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("time-input-field.container.width"))
-        .unwrap_or(Px(96.0))
+    time_input_metric(theme, "time-input-field.container.width", Px(96.0))
 }
 
 pub(crate) fn time_input_field_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("time-input-field.container.height"))
-        .unwrap_or(Px(72.0))
+    time_input_metric(theme, "time-input-field.container.height", Px(72.0))
 }
 
 pub(crate) fn time_input_field_container_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key(&token_key("time-input-field.container.shape"))
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
-        .unwrap_or(Corners::all(Px(8.0)))
+    let key = token_key("time-input-field.container.shape");
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[key.as_str(), "md.sys.shape.corner.small"],
+        Corners::all(Px(8.0)),
+    )
 }
 
 pub(crate) fn time_input_field_container_color(theme: &Theme, focused: bool, error: bool) -> Color {
@@ -61,9 +63,7 @@ pub(crate) fn time_input_field_container_color(theme: &Theme, focused: bool, err
 }
 
 pub(crate) fn time_input_field_focus_outline_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("time-input-field.focus.outline.width"))
-        .unwrap_or(Px(2.0))
+    time_input_metric(theme, "time-input-field.focus.outline.width", Px(2.0))
 }
 
 pub(crate) fn time_input_field_focus_outline_color(theme: &Theme, error: bool) -> Color {
@@ -81,11 +81,12 @@ pub(crate) fn time_input_field_focus_outline_color(theme: &Theme, error: bool) -
 }
 
 pub(crate) fn time_input_field_label_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("time-input-field.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.display-medium"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("time-input-field.label-text")),
+        "md.sys.typescale.display-medium",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn time_input_field_label_color(
@@ -127,19 +128,22 @@ pub(crate) fn time_input_field_state_layer_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn time_input_field_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key(&token_key("time-input-field.hover.state-layer.opacity"))
-        .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-        .unwrap_or(0.0)
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            &token_key("time-input-field.hover.state-layer.opacity"),
+            "md.sys.state.hover.state-layer-opacity",
+            0.0,
+        )
         .clamp(0.0, 1.0)
 }
 
 pub(crate) fn time_input_field_separator_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("time-input-field.separator"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.display-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(&token_key("time-input-field.separator")),
+        "md.sys.typescale.display-large",
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn time_input_field_separator_color(theme: &Theme) -> Color {
@@ -150,11 +154,12 @@ pub(crate) fn time_input_field_separator_color(theme: &Theme) -> Color {
 }
 
 pub(crate) fn time_input_field_supporting_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("time-input-field.supporting-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Content)
+    typography::text_style(
+        theme,
+        Some(&token_key("time-input-field.supporting-text")),
+        "md.sys.typescale.body-small",
+        TextIntent::Content,
+    )
 }
 
 pub(crate) fn time_input_field_supporting_text_color(theme: &Theme, error: bool) -> Color {
@@ -172,50 +177,36 @@ pub(crate) fn time_input_field_supporting_text_color(theme: &Theme, error: bool)
 }
 
 pub(crate) fn period_selector_container_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("period-selector.container.width"))
-        .unwrap_or(Px(52.0))
+    time_period_common::container_width(theme, COMPONENT_PREFIX, "period-selector.container.width")
 }
 
 pub(crate) fn period_selector_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("period-selector.container.height"))
-        .unwrap_or(Px(72.0))
+    time_period_common::container_height(
+        theme,
+        COMPONENT_PREFIX,
+        "period-selector.container.height",
+        Px(72.0),
+    )
 }
 
 pub(crate) fn period_selector_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key(&token_key("period-selector.container.shape"))
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.small"))
-        .unwrap_or(Corners::all(Px(8.0)))
+    time_period_common::container_shape(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_outline_width(theme: &Theme) -> Px {
-    theme
-        .metric_by_key(&token_key("period-selector.outline.width"))
-        .unwrap_or(Px(1.0))
+    time_period_common::outline_width(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_outline_color(theme: &Theme) -> Color {
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key("period-selector.outline.color"),
-        "md.sys.color.outline",
-    )
+    time_period_common::outline_color(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_selected_container_color(theme: &Theme) -> Color {
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key("period-selector.selected.container.color"),
-        "md.sys.color.tertiary-container",
-    )
+    time_period_common::selected_container_color(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_label_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key(&token_key("period-selector.label-text"))
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    time_period_common::label_text_style(theme, COMPONENT_PREFIX)
 }
 
 pub(crate) fn period_selector_label_color(
@@ -223,36 +214,7 @@ pub(crate) fn period_selector_label_color(
     selected: bool,
     interaction: Option<PressableInteraction>,
 ) -> Color {
-    let suffix = match (selected, interaction) {
-        (true, Some(PressableInteraction::Focused)) => {
-            "period-selector.selected.focus.label-text.color"
-        }
-        (true, Some(PressableInteraction::Hovered)) => {
-            "period-selector.selected.hover.label-text.color"
-        }
-        (true, Some(PressableInteraction::Pressed)) => {
-            "period-selector.selected.pressed.label-text.color"
-        }
-        (true, None) => "period-selector.selected.label-text.color",
-        (false, Some(PressableInteraction::Focused)) => {
-            "period-selector.unselected.focus.label-text.color"
-        }
-        (false, Some(PressableInteraction::Hovered)) => {
-            "period-selector.unselected.hover.label-text.color"
-        }
-        (false, Some(PressableInteraction::Pressed)) => {
-            "period-selector.unselected.pressed.label-text.color"
-        }
-        (false, None) => "period-selector.unselected.label-text.color",
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(suffix),
-        if selected {
-            "md.sys.color.on-tertiary-container"
-        } else {
-            "md.sys.color.on-surface-variant"
-        },
-    )
+    time_period_common::label_color(theme, COMPONENT_PREFIX, selected, interaction)
 }
 
 pub(crate) fn period_selector_state_layer_color(
@@ -260,53 +222,59 @@ pub(crate) fn period_selector_state_layer_color(
     selected: bool,
     interaction: PressableInteraction,
 ) -> Color {
-    let suffix = match (selected, interaction) {
-        (true, PressableInteraction::Focused) => "period-selector.selected.focus.state-layer.color",
-        (true, PressableInteraction::Hovered) => "period-selector.selected.hover.state-layer.color",
-        (true, PressableInteraction::Pressed) => {
-            "period-selector.selected.pressed.state-layer.color"
-        }
-        (false, PressableInteraction::Focused) => {
-            "period-selector.unselected.focus.state-layer.color"
-        }
-        (false, PressableInteraction::Hovered) => {
-            "period-selector.unselected.hover.state-layer.color"
-        }
-        (false, PressableInteraction::Pressed) => {
-            "period-selector.unselected.pressed.state-layer.color"
-        }
-    };
-    MaterialTokenResolver::new(theme).color_comp_or_sys(
-        &token_key(suffix),
-        if selected {
-            "md.sys.color.on-tertiary-container"
-        } else {
-            "md.sys.color.on-surface-variant"
-        },
-    )
+    time_period_common::state_layer_color(theme, COMPONENT_PREFIX, selected, interaction)
 }
 
 pub(crate) fn period_selector_state_layer_opacity(
     theme: &Theme,
     interaction: PressableInteraction,
 ) -> f32 {
-    let (suffix, fallback) = match interaction {
-        PressableInteraction::Focused => (
-            "period-selector.focus.state-layer.opacity",
-            "md.sys.state.focus.state-layer-opacity",
-        ),
-        PressableInteraction::Hovered => (
-            "period-selector.hover.state-layer.opacity",
-            "md.sys.state.hover.state-layer-opacity",
-        ),
-        PressableInteraction::Pressed => (
-            "period-selector.pressed.state-layer.opacity",
-            "md.sys.state.pressed.state-layer-opacity",
-        ),
-    };
-    theme
-        .number_by_key(&token_key(suffix))
-        .or_else(|| theme.number_by_key(fallback))
-        .unwrap_or(0.0)
-        .clamp(0.0, 1.0)
+    time_period_common::state_layer_opacity(theme, COMPONENT_PREFIX, interaction)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn time_input_metrics_keep_material_defaults() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(time_input_field_container_width(theme), Px(96.0));
+        assert_eq!(time_input_field_container_height(theme), Px(72.0));
+        assert_eq!(time_input_field_focus_outline_width(theme), Px(2.0));
+    }
+
+    #[test]
+    fn time_input_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.time-input.time-input-field.container.width".to_string(),
+            108.0,
+        );
+        patch.metrics.insert(
+            "md.comp.time-input.time-input-field.container.height".to_string(),
+            76.0,
+        );
+        patch.metrics.insert(
+            "md.comp.time-input.time-input-field.focus.outline.width".to_string(),
+            3.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(time_input_field_container_width(&theme), Px(108.0));
+        assert_eq!(time_input_field_container_height(&theme), Px(76.0));
+        assert_eq!(time_input_field_focus_outline_width(&theme), Px(3.0));
+    }
 }

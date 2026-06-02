@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "slug": "material3-test-harness-support-ownership-v1",
+  "title": "Material3 Test Harness Support Ownership v1",
+  "status": "closed",
+  "updated": "2026-05-31",
+  "scope_kind": "fearless_refactor",
+  "follow_on_of": "material3-text-input-mechanism-test-ownership-v1",
+  "problem": "Material3 test binaries repeatedly declared mod interaction_harness because shared support goldens depended on a crate-root interaction_harness module.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-test-harness-support-ownership-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-test-harness-support-ownership-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-test-harness-support-ownership-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-test-harness-support-ownership-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-test-harness-support-ownership-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-test-harness-support-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    }
+  ],
+  "context_manifest": "docs/workstreams/material3-test-harness-support-ownership-v1/CONTEXT.jsonl",
+  "repro": {
+    "summary": "Run focused tests that directly use interaction signature helpers, plus package check/clippy for all Material3 tests.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_alignment --test material3_overlay_interactions --test material3_choice_action_interactions --test progress_indicator_state --test search_bar_motion --test text_field_hover",
+      "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-format",
+      "command": "cargo fmt --package fret-ui-material3 --check"
+    },
+    {
+      "name": "material3-focused-harness-users",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_alignment --test material3_overlay_interactions --test material3_choice_action_interactions --test progress_indicator_state --test search_bar_motion --test text_field_hover"
+    },
+    {
+      "name": "material3-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-test-harness-support-ownership-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-material3/tests/support/interaction_harness.rs",
+    "ecosystem/fret-ui-material3/tests/support/goldens.rs",
+    "ecosystem/fret-ui-material3/tests/support/mod.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "ecosystem/fret-ui-material3/tests/text_field_hover.rs",
+    "docs/workstreams/material3-test-harness-support-ownership-v1/DESIGN.md",
+    "docs/workstreams/material3-test-harness-support-ownership-v1/TODO.md",
+    "docs/workstreams/material3-test-harness-support-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "test-harness",
+    "support",
+    "interaction",
+    "fearless-refactor"
+  ],
+  "continue_policy": {
+    "default_action": "closed",
+    "notes": "Closed after making interaction signature helpers support-owned and removing top-level mod interaction_harness declarations."
+  }
+}

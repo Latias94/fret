@@ -1,5 +1,7 @@
 use super::super::frame::ordered_flex_children;
-use super::super::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
+use super::super::frame::{
+    ElementInstance, element_record_for_node, layout_direction_for_node, layout_style_for_node,
+};
 use super::super::layout_helpers::absolute_child_envelope_size;
 use super::super::prelude::*;
 use super::ElementHostWidget;
@@ -1755,12 +1757,13 @@ impl ElementHostWidget {
             );
         }
 
+        let layout_direction = layout_direction_for_node(cx.app, window, cx.node);
         let root_style = TaffyStyle {
             display: Display::Flex,
-            flex_direction: match props.direction {
-                fret_core::Axis::Horizontal => FlexDirection::Row,
-                fret_core::Axis::Vertical => FlexDirection::Column,
-            },
+            flex_direction: super::super::taffy_layout::taffy_flex_direction(
+                props.direction,
+                layout_direction,
+            ),
             flex_wrap: if props.wrap {
                 FlexWrap::Wrap
             } else {

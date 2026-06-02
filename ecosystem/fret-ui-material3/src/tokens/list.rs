@@ -1,12 +1,30 @@
-//! Typed token access for Material 3 lists.
+//! Component-facing token access for Material 3 lists.
 //!
-//! This module centralizes token key mapping and fallback chains so list visuals remain stable and
-//! drift-resistant during refactors.
+//! This module owns the stable Material list default matrices directly so list item sizing,
+//! interaction, typography, and disabled-state policy stay local to the token interface.
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
+use crate::tokens::typography;
+
+const DEFAULT_ONE_LINE_CONTAINER_HEIGHT: Px = Px(56.0);
+const DEFAULT_TWO_LINE_CONTAINER_HEIGHT: Px = Px(72.0);
+const DEFAULT_THREE_LINE_CONTAINER_HEIGHT: Px = Px(88.0);
+const DEFAULT_SELECTED_CONTAINER_SHAPE: Corners = Corners::all(Px(16.0));
+const DEFAULT_UNSELECTED_CONTAINER_SHAPE: Corners = Corners::all(Px(0.0));
+const DEFAULT_ITEM_BETWEEN_SPACE: Px = Px(12.0);
+const DEFAULT_ITEM_EDGE_SPACE: Px = Px(16.0);
+const DEFAULT_ITEM_VERTICAL_SPACE: Px = Px(10.0);
+const DEFAULT_ICON_SIZE: Px = Px(24.0);
+const DEFAULT_DISABLED_OPACITY: f32 = 0.38;
+const DEFAULT_ENABLED_OPACITY: f32 = 1.0;
+const DEFAULT_STATE_LAYER_OPACITY: f32 = 0.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ListItemInteraction {
@@ -16,22 +34,36 @@ pub(crate) enum ListItemInteraction {
     Pressed,
 }
 
+fn list_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn list_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
 pub(crate) fn one_line_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.one-line.container.height")
-        .unwrap_or(Px(56.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.one-line.container.height",
+        DEFAULT_ONE_LINE_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn two_line_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.two-line.container.height")
-        .unwrap_or(Px(72.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.two-line.container.height",
+        DEFAULT_TWO_LINE_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn three_line_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.three-line.container.height")
-        .unwrap_or(Px(88.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.three-line.container.height",
+        DEFAULT_THREE_LINE_CONTAINER_HEIGHT,
+    )
 }
 
 pub(crate) fn item_container_shape_with_variant(
@@ -43,23 +75,21 @@ pub(crate) fn item_container_shape_with_variant(
         (
             "md.comp.list.list-item.selected.container.expressive.shape",
             "md.comp.list.list-item.selected.container.shape",
-            Corners::all(Px(16.0)),
+            DEFAULT_SELECTED_CONTAINER_SHAPE,
         )
     } else {
         (
             "md.comp.list.list-item.container.expressive.shape",
             "md.comp.list.list-item.container.shape",
-            Corners::all(Px(0.0)),
+            DEFAULT_UNSELECTED_CONTAINER_SHAPE,
         )
     };
 
+    let tokens = MaterialTokenResolver::new(theme);
     if expressive {
-        theme
-            .corners_by_key(expressive_key)
-            .or_else(|| theme.corners_by_key(standard_key))
-            .unwrap_or(fallback)
+        tokens.corners_chain_or(&[expressive_key, standard_key], fallback)
     } else {
-        theme.corners_by_key(standard_key).unwrap_or(fallback)
+        tokens.corners_chain_or(&[standard_key], fallback)
     }
 }
 
@@ -103,132 +133,109 @@ pub(crate) fn item_container_shape_for_interaction(
         }
     };
 
-    theme
-        .corners_by_key(key)
+    MaterialTokenResolver::new(theme)
+        .corners_value(key)
         .unwrap_or_else(|| item_container_shape_with_variant(theme, selected, true))
 }
 
 pub(crate) fn item_between_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.between-space")
-        .unwrap_or(Px(12.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.between-space",
+        DEFAULT_ITEM_BETWEEN_SPACE,
+    )
 }
 
 pub(crate) fn item_leading_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.leading-space")
-        .unwrap_or(Px(16.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.leading-space",
+        DEFAULT_ITEM_EDGE_SPACE,
+    )
 }
 
 pub(crate) fn item_trailing_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.trailing-space")
-        .unwrap_or(Px(16.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.trailing-space",
+        DEFAULT_ITEM_EDGE_SPACE,
+    )
 }
 
 pub(crate) fn item_top_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.top-space")
-        .unwrap_or(Px(10.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.top-space",
+        DEFAULT_ITEM_VERTICAL_SPACE,
+    )
 }
 
 pub(crate) fn item_bottom_space(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.bottom-space")
-        .unwrap_or(Px(10.0))
+    list_metric(
+        theme,
+        "md.comp.list.list-item.bottom-space",
+        DEFAULT_ITEM_VERTICAL_SPACE,
+    )
 }
 
 pub(crate) fn leading_icon_size_with_variant(theme: &Theme, expressive: bool) -> Px {
     if expressive {
-        theme
-            .metric_by_key("md.comp.list.list-item.leading-icon.expressive.size")
-            .or_else(|| theme.metric_by_key("md.comp.list.list-item.leading-icon.size"))
-            .unwrap_or(Px(24.0))
+        list_metric_chain(
+            theme,
+            &[
+                "md.comp.list.list-item.leading-icon.expressive.size",
+                "md.comp.list.list-item.leading-icon.size",
+            ],
+            DEFAULT_ICON_SIZE,
+        )
     } else {
-        theme
-            .metric_by_key("md.comp.list.list-item.leading-icon.size")
-            .unwrap_or(Px(24.0))
+        list_metric(
+            theme,
+            "md.comp.list.list-item.leading-icon.size",
+            DEFAULT_ICON_SIZE,
+        )
     }
 }
 
 pub(crate) fn trailing_icon_size_with_variant(theme: &Theme, expressive: bool) -> Px {
     if expressive {
-        theme
-            .metric_by_key("md.comp.list.list-item.trailing-icon.expressive.size")
-            .or_else(|| theme.metric_by_key("md.comp.list.list-item.trailing-icon.size"))
-            .unwrap_or(Px(24.0))
+        list_metric_chain(
+            theme,
+            &[
+                "md.comp.list.list-item.trailing-icon.expressive.size",
+                "md.comp.list.list-item.trailing-icon.size",
+            ],
+            DEFAULT_ICON_SIZE,
+        )
     } else {
-        theme
-            .metric_by_key("md.comp.list.list-item.trailing-icon.size")
-            .unwrap_or(Px(24.0))
+        list_metric(
+            theme,
+            "md.comp.list.list-item.trailing-icon.size",
+            DEFAULT_ICON_SIZE,
+        )
     }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-fn supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
-    if enabled {
-        return 1.0;
-    }
-
-    theme
-        .number_by_key(if selected {
-            "md.comp.list.list-item.selected.disabled.supporting-text.opacity"
-        } else {
-            "md.comp.list.list-item.disabled.supporting-text.opacity"
-        })
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38)
-        .clamp(0.0, 1.0)
-}
-
-fn overline_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
-    if enabled {
-        return 1.0;
-    }
-
-    theme
-        .number_by_key(if selected {
-            "md.comp.list.list-item.selected.disabled.overline.opacity"
-        } else {
-            "md.comp.list.list-item.disabled.overline.opacity"
-        })
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38)
-        .clamp(0.0, 1.0)
-}
-
-fn trailing_supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
-    if enabled {
-        return 1.0;
-    }
-
-    theme
-        .number_by_key(if selected {
-            "md.comp.list.list-item.selected.disabled.trailing-supporting-text.opacity"
-        } else {
-            // Material Web v30 does not define a dedicated non-selected trailing supporting opacity
-            // token; fall back to the sys disabled opacity.
-            "md.sys.state.disabled.state-layer-opacity"
-        })
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38)
-        .clamp(0.0, 1.0)
 }
 
 pub(crate) fn supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.body-medium")
+    MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.body-medium")
 }
 
 pub(crate) fn trailing_supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.label-small")
+    MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.label-small")
 }
 
 pub(crate) fn overline_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
-    theme.text_style_by_key("md.sys.typescale.label-small")
+    MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.label-small")
+}
+
+pub(crate) fn label_text_style(theme: &Theme, _selected: bool) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.body-large",
+        Some("md.comp.list.list-item.label-text.weight"),
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
@@ -238,10 +245,8 @@ pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool
         (false, true) => "md.comp.list.list-item.supporting-text.color",
         (false, false) => "md.comp.list.list-item.disabled.supporting-text.color",
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let mut color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant");
     color = alpha_mul(color, supporting_text_opacity(theme, enabled, selected));
     color
 }
@@ -254,14 +259,10 @@ pub(crate) fn trailing_supporting_text_color(
     let key = match (selected, enabled) {
         (true, true) => "md.comp.list.list-item.selected.trailing-supporting-text.color",
         (true, false) => "md.comp.list.list-item.selected.disabled.trailing-supporting-text.color",
-        // Material Web v30 does not define a dedicated non-selected disabled trailing supporting
-        // color token; use the enabled color with disabled opacity applied.
         (false, _) => "md.comp.list.list-item.trailing-supporting-text.color",
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let mut color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant");
     color = alpha_mul(
         color,
         trailing_supporting_text_opacity(theme, enabled, selected),
@@ -276,32 +277,31 @@ pub(crate) fn overline_text_color(theme: &Theme, enabled: bool, selected: bool) 
         (false, true) => "md.comp.list.list-item.overline.color",
         (false, false) => "md.comp.list.list-item.disabled.overline.color",
     };
-    let mut color = theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let mut color =
+        MaterialTokenResolver::new(theme).color_comp_or_sys(key, "md.sys.color.on-surface-variant");
     color = alpha_mul(color, overline_text_opacity(theme, enabled, selected));
     color
 }
 
 pub(crate) fn selected_container_background(theme: &Theme, enabled: bool) -> Color {
     if enabled {
-        return theme
-            .color_by_key("md.comp.list.list-item.selected.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container"));
+        return MaterialTokenResolver::new(theme).color_comp_or_sys(
+            "md.comp.list.list-item.selected.container.color",
+            "md.sys.color.secondary-container",
+        );
     }
 
-    let mut bg = theme
-        .color_by_key("md.comp.list.list-item.selected.disabled.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-    let opacity = theme
-        .number_by_key("md.comp.list.list-item.selected.disabled.container.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-        .unwrap_or(0.38);
-    bg.a = (bg.a * opacity).clamp(0.0, 1.0);
-    bg
+    let tokens = MaterialTokenResolver::new(theme);
+    let bg = tokens.color_comp_or_sys(
+        "md.comp.list.list-item.selected.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    let opacity = tokens.number_comp_or_sys(
+        "md.comp.list.list-item.selected.disabled.container.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
+        DEFAULT_DISABLED_OPACITY,
+    );
+    alpha_mul(bg, opacity)
 }
 
 pub(crate) fn item_outcomes(
@@ -363,21 +363,13 @@ pub(crate) fn item_outcomes(
         ),
     };
 
-    let mut label = theme
-        .color_by_key(label_key)
-        .unwrap_or(defaults.content_color);
-    let mut icon = theme
-        .color_by_key(icon_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
-    let state_layer = theme
-        .color_by_key(state_layer_key)
-        .unwrap_or(defaults.content_color);
-    let mut opacity = theme.number_by_key(opacity_key).unwrap_or(0.0);
-
-    if interaction == ListItemInteraction::Default {
-        opacity = 0.0;
-    }
+    let tokens = MaterialTokenResolver::new(theme);
+    let mut label = tokens.color_comp_or_fallback(label_key, defaults.content_color);
+    let mut icon = tokens.color_comp_or_sys(icon_key, "md.sys.color.on-surface-variant");
+    let state_layer = tokens.color_comp_or_fallback(state_layer_key, defaults.content_color);
+    let mut opacity = list_state_layer_interaction(interaction)
+        .map(|interaction| tokens.state_layer_opacity(opacity_key, interaction))
+        .unwrap_or(DEFAULT_STATE_LAYER_OPACITY);
 
     if !enabled {
         let (
@@ -401,36 +393,101 @@ pub(crate) fn item_outcomes(
             )
         };
 
-        label = theme
-            .color_by_key(disabled_label_key)
-            .unwrap_or(defaults.content_color);
-        icon = theme
-            .color_by_key(disabled_icon_key)
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+        label = tokens.color_comp_or_fallback(disabled_label_key, defaults.content_color);
+        icon = tokens.color_comp_or_sys(disabled_icon_key, "md.sys.color.on-surface-variant");
 
-        let label_opacity = theme
-            .number_by_key(disabled_label_opacity_key)
-            .unwrap_or(defaults.disabled_opacity);
-        let icon_opacity = theme
-            .number_by_key(disabled_icon_opacity_key)
-            .unwrap_or(defaults.disabled_opacity);
+        let label_opacity =
+            tokens.number_optional(Some(disabled_label_opacity_key), defaults.disabled_opacity);
+        let icon_opacity =
+            tokens.number_optional(Some(disabled_icon_opacity_key), defaults.disabled_opacity);
         label = alpha_mul(label, label_opacity);
         icon = alpha_mul(icon, icon_opacity);
-        opacity = 0.0;
+        opacity = DEFAULT_STATE_LAYER_OPACITY;
     }
 
     (label, icon, state_layer, opacity)
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 {
-    theme
-        .number_by_key(if selected {
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        if selected {
             "md.comp.list.list-item.selected.pressed.state-layer.opacity"
         } else {
             "md.comp.list.list-item.pressed.state-layer.opacity"
-        })
-        .unwrap_or(0.1)
+        },
+        MaterialStateLayerInteraction::Pressed,
+    )
+}
+
+fn supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
+    if enabled {
+        return DEFAULT_ENABLED_OPACITY;
+    }
+
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            if selected {
+                "md.comp.list.list-item.selected.disabled.supporting-text.opacity"
+            } else {
+                "md.comp.list.list-item.disabled.supporting-text.opacity"
+            },
+            "md.sys.state.disabled.state-layer-opacity",
+            DEFAULT_DISABLED_OPACITY,
+        )
+        .clamp(0.0, DEFAULT_ENABLED_OPACITY)
+}
+
+fn overline_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
+    if enabled {
+        return DEFAULT_ENABLED_OPACITY;
+    }
+
+    MaterialTokenResolver::new(theme)
+        .number_comp_or_sys(
+            if selected {
+                "md.comp.list.list-item.selected.disabled.overline.opacity"
+            } else {
+                "md.comp.list.list-item.disabled.overline.opacity"
+            },
+            "md.sys.state.disabled.state-layer-opacity",
+            DEFAULT_DISABLED_OPACITY,
+        )
+        .clamp(0.0, DEFAULT_ENABLED_OPACITY)
+}
+
+fn trailing_supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
+    if enabled {
+        return DEFAULT_ENABLED_OPACITY;
+    }
+
+    let tokens = MaterialTokenResolver::new(theme);
+    if selected {
+        tokens
+            .number_comp_or_sys(
+                "md.comp.list.list-item.selected.disabled.trailing-supporting-text.opacity",
+                "md.sys.state.disabled.state-layer-opacity",
+                DEFAULT_DISABLED_OPACITY,
+            )
+            .clamp(0.0, DEFAULT_ENABLED_OPACITY)
+    } else {
+        tokens
+            .number_sys(
+                "md.sys.state.disabled.state-layer-opacity",
+                DEFAULT_DISABLED_OPACITY,
+            )
+            .clamp(0.0, DEFAULT_ENABLED_OPACITY)
+    }
+}
+
+fn list_state_layer_interaction(
+    interaction: ListItemInteraction,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        ListItemInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        ListItemInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        ListItemInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        ListItemInteraction::Default => None,
+    }
 }
 
 #[cfg(test)]
@@ -438,9 +495,67 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_ui::Theme;
+    use fret_ui::{Theme, theme::ThemeConfig};
 
     use crate::tokens::v30::{TypographyOptions, theme_config};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn list_size_and_spacing_defaults_match_material_matrix() {
+        let cfg = theme_config(TypographyOptions::default());
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&cfg);
+        });
+        let theme = Theme::global(&app);
+
+        assert_eq!(one_line_container_height(theme), Px(56.0));
+        assert_eq!(two_line_container_height(theme), Px(72.0));
+        assert_eq!(three_line_container_height(theme), Px(88.0));
+        assert_eq!(item_between_space(theme), Px(12.0));
+        assert_eq!(item_leading_space(theme), Px(16.0));
+        assert_eq!(item_trailing_space(theme), Px(16.0));
+        assert_eq!(item_top_space(theme), Px(10.0));
+        assert_eq!(item_bottom_space(theme), Px(10.0));
+        assert_eq!(leading_icon_size_with_variant(theme, false), Px(24.0));
+        assert_eq!(trailing_icon_size_with_variant(theme, false), Px(24.0));
+    }
+
+    #[test]
+    fn list_metric_chains_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.list.list-item.one-line.container.height".to_string(),
+            60.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.list.list-item.leading-space".to_string(), 20.0);
+        patch
+            .metrics
+            .insert("md.comp.list.list-item.leading-icon.size".to_string(), 28.0);
+        patch.metrics.insert(
+            "md.comp.list.list-item.trailing-icon.size".to_string(),
+            30.0,
+        );
+        patch.metrics.insert(
+            "md.comp.list.list-item.trailing-icon.expressive.size".to_string(),
+            36.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(one_line_container_height(&theme), Px(60.0));
+        assert_eq!(item_leading_space(&theme), Px(20.0));
+        assert_eq!(leading_icon_size_with_variant(&theme, true), Px(28.0));
+        assert_eq!(trailing_icon_size_with_variant(&theme, false), Px(30.0));
+        assert_eq!(trailing_icon_size_with_variant(&theme, true), Px(36.0));
+    }
 
     #[test]
     fn expressive_list_shapes_vary_by_interaction() {

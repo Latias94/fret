@@ -18,22 +18,42 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
     let active_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
 
-    let fixed_tabs = tabs
-        .a11y_label("Material 3 Tabs")
-        .test_id("ui-gallery-material3-tabs")
-        .items(vec![
-            material3::TabItem::new("overview", "Overview")
-                .a11y_label("Tab Overview")
-                .test_id("ui-gallery-material3-tab-overview"),
-            material3::TabItem::new("settings", "Settings")
-                .a11y_label("Tab Settings")
-                .test_id("ui-gallery-material3-tab-settings"),
-            material3::TabItem::new("disabled", "Disabled")
-                .disabled(true)
-                .a11y_label("Tab Disabled")
-                .test_id("ui-gallery-material3-tab-disabled"),
-        ])
-        .into_element(cx);
+    let fixed_tabs =
+        tabs.a11y_label("Material 3 Tabs")
+            .test_id("ui-gallery-material3-tabs")
+            .items(vec![
+                material3::TabItem::new("overview", "Overview")
+                    .a11y_label("Tab Overview")
+                    .test_id("ui-gallery-material3-tab-overview"),
+                material3::TabItem::new("settings", "Settings")
+                    .a11y_label("Tab Settings")
+                    .test_id("ui-gallery-material3-tab-settings"),
+                material3::TabItem::new("disabled", "Disabled")
+                    .disabled(true)
+                    .a11y_label("Tab Disabled")
+                    .test_id("ui-gallery-material3-tab-disabled"),
+            ])
+            .panels(vec![
+                material3::TabPanel::new(
+                    "overview",
+                    [
+                        cx.text("Overview panel: selected tab content owns TabPanel semantics.")
+                            .test_id("ui-gallery-material3-tabs-panel-overview-child"),
+                    ],
+                )
+                .test_id("ui-gallery-material3-tabs-panel-overview")
+                .force_mount(true),
+                material3::TabPanel::new(
+                    "settings",
+                    [cx.text(
+                        "Settings panel: active content follows the Material tabs value model.",
+                    )
+                    .test_id("ui-gallery-material3-tabs-panel-settings-child")],
+                )
+                .test_id("ui-gallery-material3-tabs-panel-settings")
+                .force_mount(true),
+            ])
+            .into_element(cx);
 
     let override_style = material3::TabsStyle::default()
         .label_color(

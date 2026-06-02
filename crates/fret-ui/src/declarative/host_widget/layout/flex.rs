@@ -1,5 +1,7 @@
 use super::super::ElementHostWidget;
-use crate::declarative::frame::{layout_style_for_node, ordered_flex_children};
+use crate::declarative::frame::{
+    layout_direction_for_node, layout_style_for_node, ordered_flex_children,
+};
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::layout_constraints::AvailableSpace as RuntimeAvailableSpace;
@@ -98,6 +100,9 @@ impl ElementHostWidget {
         let is_in_flow = |style: &crate::element::LayoutStyle| {
             style.position != crate::element::PositionStyle::Absolute
         };
+        let layout_direction = layout_direction_for_node(cx.app, window, cx.node);
+        let horizontal_rtl = props.direction == fret_core::Axis::Horizontal
+            && layout_direction == fret_core::LayoutDirection::Rtl;
         let ordered_children = ordered_flex_children(cx.app, window, cx.children);
         let children = ordered_children.as_ref();
         let child_layouts: Vec<Option<Rect>> = children
@@ -110,7 +115,7 @@ impl ElementHostWidget {
         let mut ml_auto_tail_shift_x = 0.0f32;
         let mut mt_auto_tail_group_start: Option<usize> = None;
         let mut mt_auto_tail_shift_y = 0.0f32;
-        if props.direction == fret_core::Axis::Horizontal && children.len() > 1 {
+        if props.direction == fret_core::Axis::Horizontal && !horizontal_rtl && children.len() > 1 {
             for (idx, &child) in children.iter().enumerate() {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if matches!(child_style.margin.left, crate::element::MarginEdge::Auto) {
@@ -236,7 +241,7 @@ impl ElementHostWidget {
                         }
                     }
 
-                    if margin_left_auto || margin_right_auto {
+                    if !horizontal_rtl && (margin_left_auto || margin_right_auto) {
                         // Partial support for CSS-like auto margins in flex rows.
                         //
                         // - `ml-auto` (left auto) pushes the item to the end of the main axis

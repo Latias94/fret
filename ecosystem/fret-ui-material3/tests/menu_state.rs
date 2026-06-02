@@ -3,25 +3,27 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, KeyCode, Paint, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsNode,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, KeyCode, Paint, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsCheckedState,
+    SemanticsNode, SemanticsRole, Size, UiServices,
 };
+use fret_icons::ids;
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{Length, PressableA11y, PressableProps};
 use fret_ui::{UiTree, declarative};
 use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
-use fret_ui_material3::DropdownMenu;
-use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
+use fret_ui_material3::menu::{
+    Menu, MenuEntry, MenuGroup, MenuItem, MenuLabel, MenuSub, MenuSubContent, MenuSubTrigger,
+};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
+use fret_ui_material3::{DropdownMenu, DropdownMenuAlign};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up, pointer_down, pointer_move};
 use support::goldens::run_overlay_frame_with_scene_scaled;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn assert_px_close(actual: f32, expected: f32, context: &str) {
     let delta = (actual - expected).abs();
@@ -44,6 +46,10 @@ fn live_test_id_layout_bounds(
                 .or_else(|| ui.debug_node_visual_bounds(m.node))
         })
         .unwrap_or_else(|| panic!("expected live layout bounds for test_id {id}"))
+}
+
+fn rect_right(rect: Rect) -> f32 {
+    rect.origin.x.0 + rect.size.width.0
 }
 
 fn semantics_node_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> SemanticsNode {
@@ -223,6 +229,296 @@ fn menu_matches_material_item_geometry_and_semantics() {
 }
 
 #[test]
+fn menu_group_wraps_entries_without_skewing_collection_metadata() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(360.0)),
+    );
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let menu = Menu::new()
+                    .a11y_label("Grouped Material menu")
+                    .test_id("m3-grouped-menu")
+                    .entries(vec![
+                        MenuEntry::Group(
+                            MenuGroup::new(vec![
+                                MenuEntry::Label(
+                                    MenuLabel::new("Edit").test_id("m3-grouped-label-edit"),
+                                ),
+                                MenuEntry::Item(MenuItem::new("Cut").test_id("m3-grouped-cut")),
+                                MenuEntry::Item(MenuItem::new("Copy").test_id("m3-grouped-copy")),
+                            ])
+                            .a11y_label("Edit actions")
+                            .test_id("m3-grouped-edit"),
+                        ),
+                        MenuEntry::Separator,
+                        MenuEntry::Group(
+                            MenuGroup::new(vec![MenuEntry::Item(
+                                MenuItem::new("Settings").test_id("m3-grouped-settings"),
+                            )])
+                            .a11y_label("Application actions")
+                            .test_id("m3-grouped-application"),
+                        ),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), menu)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let edit_group = semantics_node_by_test_id(&ui, "m3-grouped-edit");
+    assert_eq!(edit_group.role, SemanticsRole::Group);
+    assert_eq!(edit_group.label.as_deref(), Some("Edit actions"));
+
+    let app_group = semantics_node_by_test_id(&ui, "m3-grouped-application");
+    assert_eq!(app_group.role, SemanticsRole::Group);
+    assert_eq!(app_group.label.as_deref(), Some("Application actions"));
+
+    let cut = semantics_node_by_test_id(&ui, "m3-grouped-cut");
+    assert_eq!(cut.role, SemanticsRole::MenuItem);
+    assert_eq!(cut.pos_in_set, Some(1));
+    assert_eq!(cut.set_size, Some(3));
+
+    let copy = semantics_node_by_test_id(&ui, "m3-grouped-copy");
+    assert_eq!(copy.role, SemanticsRole::MenuItem);
+    assert_eq!(copy.pos_in_set, Some(2));
+    assert_eq!(copy.set_size, Some(3));
+
+    let settings = semantics_node_by_test_id(&ui, "m3-grouped-settings");
+    assert_eq!(settings.role, SemanticsRole::MenuItem);
+    assert_eq!(settings.pos_in_set, Some(3));
+    assert_eq!(settings.set_size, Some(3));
+}
+
+#[test]
+fn menu_rich_items_expose_material_slots_and_checked_semantics() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked = app.models_mut().insert(true);
+    let selected = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("comfortable")));
+    let checked_for_render = checked.clone();
+    let selected_for_render = selected.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(360.0)),
+    );
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let checked = checked_for_render.clone();
+        let selected = selected_for_render.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let menu = Menu::new()
+                .a11y_label("Rich Material menu")
+                .test_id("m3-rich-menu")
+                .entries(vec![
+                    MenuEntry::Label(MenuLabel::new("View").test_id("m3-rich-section-view")),
+                    MenuEntry::Item(
+                        MenuItem::checkbox(checked, "Show toolbar")
+                            .supporting_text("Always visible")
+                            .shortcut("Ctrl+B")
+                            .test_id("m3-rich-toolbar"),
+                    ),
+                    MenuEntry::Item(
+                        MenuItem::radio(selected.clone(), "comfortable", "Comfortable")
+                            .trailing_icon(ids::ui::CHEVRON_RIGHT)
+                            .test_id("m3-rich-comfortable"),
+                    ),
+                    MenuEntry::Item(
+                        MenuItem::radio(selected, "compact", "Compact").test_id("m3-rich-compact"),
+                    ),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), menu)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let toolbar = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.chrome");
+    let section = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-section-view");
+    assert_px_close(section.size.height.0, 32.0, "menu section label height");
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-section-view.text")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert_px_close(toolbar.size.height.0, 64.0, "two-line menu item height");
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.label")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.supporting-text")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert_px_close(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.leading-icon")
+            .size
+            .width
+            .0,
+        24.0,
+        "checkbox leading indicator slot width",
+    );
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-toolbar.shortcut")
+            .size
+            .width
+            .0
+            > 0.0
+    );
+    assert_px_close(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-comfortable.trailing-icon")
+            .size
+            .width
+            .0,
+        24.0,
+        "trailing icon slot width",
+    );
+    assert_px_close(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-compact.leading-icon")
+            .size
+            .width
+            .0,
+        24.0,
+        "unchecked radio still reserves leading indicator slot",
+    );
+
+    let toolbar_sem = semantics_node_by_test_id(&ui, "m3-rich-toolbar");
+    assert_eq!(toolbar_sem.role, SemanticsRole::MenuItemCheckbox);
+    assert_eq!(toolbar_sem.pos_in_set, Some(1));
+    assert_eq!(toolbar_sem.set_size, Some(3));
+    assert_eq!(toolbar_sem.flags.checked, Some(true));
+    assert_eq!(
+        toolbar_sem.flags.checked_state,
+        Some(SemanticsCheckedState::True)
+    );
+
+    let comfortable_sem = semantics_node_by_test_id(&ui, "m3-rich-comfortable");
+    assert_eq!(comfortable_sem.role, SemanticsRole::MenuItemRadio);
+    assert_eq!(comfortable_sem.pos_in_set, Some(2));
+    assert_eq!(comfortable_sem.set_size, Some(3));
+    assert_eq!(comfortable_sem.flags.checked, Some(true));
+    assert_eq!(
+        comfortable_sem.flags.checked_state,
+        Some(SemanticsCheckedState::True)
+    );
+
+    let compact_sem = semantics_node_by_test_id(&ui, "m3-rich-compact");
+    assert_eq!(compact_sem.role, SemanticsRole::MenuItemRadio);
+    assert_eq!(compact_sem.pos_in_set, Some(3));
+    assert_eq!(compact_sem.set_size, Some(3));
+    assert_eq!(compact_sem.flags.checked, Some(false));
+    assert_eq!(
+        compact_sem.flags.checked_state,
+        Some(SemanticsCheckedState::False)
+    );
+}
+
+#[test]
+fn menu_checkbox_and_radio_items_update_models_on_activation() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let checked = app.models_mut().insert(false);
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("list")));
+    let checked_for_render = checked.clone();
+    let selected_for_render = selected.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let checked = checked_for_render.clone();
+        let selected = selected_for_render.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let menu = Menu::new()
+                .a11y_label("Mutable Material menu")
+                .test_id("m3-mutable-menu")
+                .entries(vec![
+                    MenuEntry::Item(
+                        MenuItem::checkbox(checked, "Show toolbar").test_id("m3-mutable-toolbar"),
+                    ),
+                    MenuEntry::Item(
+                        MenuItem::radio(selected, "grid", "Grid").test_id("m3-mutable-grid"),
+                    ),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(24.0), menu)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let toolbar = semantics_node_id_by_test_id(&ui, "m3-mutable-toolbar")
+        .expect("expected toolbar menu item semantics node");
+    ui.set_focus(Some(toolbar));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    assert_eq!(app.models().get_copied(&checked), Some(true));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let grid = semantics_node_id_by_test_id(&ui, "m3-mutable-grid")
+        .expect("expected grid menu item semantics node");
+    ui.set_focus(Some(grid));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    assert_eq!(
+        app.models().get_cloned(&selected).flatten().as_deref(),
+        Some("grid")
+    );
+}
+
+#[test]
 fn menu_pressed_state_layer_animates_over_item_chrome() {
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
@@ -388,6 +684,111 @@ fn menu_roving_focus_includes_disabled_items_without_activation() {
 }
 
 #[test]
+fn dropdown_menu_rtl_start_align_uses_material_theme_direction() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(420.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let dropdown = DropdownMenu::new(open)
+                .align(DropdownMenuAlign::Start)
+                .min_width(Px(260.0))
+                .a11y_label("RTL dropdown menu")
+                .test_id("m3-dropdown-rtl")
+                .into_element(
+                    cx,
+                    |cx| {
+                        let mut props = PressableProps::default();
+                        props.layout.size.width = Length::Px(Px(160.0));
+                        props.layout.size.height = Length::Px(Px(40.0));
+                        props.a11y = PressableA11y {
+                            label: Some(Arc::<str>::from("Open RTL menu")),
+                            test_id: Some(Arc::<str>::from("m3-dropdown-rtl-trigger")),
+                            ..Default::default()
+                        };
+                        cx.pressable(props, |_cx, _st| Vec::new())
+                    },
+                    |_cx| {
+                        vec![
+                            MenuEntry::Item(
+                                MenuItem::new("Alpha").test_id("m3-dropdown-rtl-alpha"),
+                            ),
+                            MenuEntry::Item(MenuItem::new("Beta").test_id("m3-dropdown-rtl-beta")),
+                        ]
+                    },
+                );
+            vec![with_padding(cx, Px(120.0), dropdown)]
+        })
+    };
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Popover && entry.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected RTL dropdown overlay to open");
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger = live_test_id_layout_bounds(&ui, &app, window, "m3-dropdown-rtl-trigger");
+    let menu = live_test_id_layout_bounds(&ui, &app, window, "m3-dropdown-rtl.chrome");
+
+    assert!(
+        menu.size.width.0 > trigger.size.width.0 + 40.0,
+        "expected test menu to be wider than trigger; trigger={trigger:?}, menu={menu:?}"
+    );
+    assert_px_close(
+        rect_right(menu),
+        rect_right(trigger),
+        "RTL dropdown start alignment right edge",
+    );
+    assert!(
+        menu.origin.x.0 < trigger.origin.x.0 - 40.0,
+        "expected RTL start-aligned wider menu to extend left from trigger; trigger={trigger:?}, menu={menu:?}"
+    );
+}
+
+#[test]
 fn dropdown_menu_matches_material_panel_focus_and_motion() {
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
@@ -543,5 +944,342 @@ fn dropdown_menu_matches_material_panel_focus_and_motion() {
     assert!(
         scene_has_intermediate_overlay_motion(&close_scene),
         "expected dropdown menu to fade and scale during close"
+    );
+}
+
+#[test]
+fn dropdown_menu_submenu_opens_on_arrow_right_and_arrow_left_restores_trigger_focus() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(420.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open.clone();
+        declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let dropdown = DropdownMenu::new(open)
+                .a11y_label("Material submenu dropdown")
+                .test_id("m3-submenu-dropdown")
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        let mut props = PressableProps::default();
+                        props.layout.size.width = Length::Px(Px(220.0));
+                        props.layout.size.height = Length::Px(Px(40.0));
+                        props.a11y = PressableA11y {
+                            label: Some(Arc::<str>::from("Open submenu menu")),
+                            test_id: Some(Arc::<str>::from("m3-submenu-trigger")),
+                            ..Default::default()
+                        };
+                        cx.pressable(props, |_cx, _st| Vec::new())
+                    },
+                    |_cx| {
+                        vec![
+                            MenuEntry::Item(
+                                MenuItem::new("Alpha").test_id("m3-submenu-alpha-root"),
+                            ),
+                            MenuSub::new(
+                                MenuSubTrigger::new("More").refine(|item| {
+                                    item.value("more").test_id("m3-submenu-more").shortcut(">")
+                                }),
+                                MenuSubContent::new(vec![
+                                    MenuEntry::Item(
+                                        MenuItem::new("Sub Alpha").test_id("m3-submenu-sub-alpha"),
+                                    ),
+                                    MenuEntry::Item(
+                                        MenuItem::new("Sub Beta").test_id("m3-submenu-sub-beta"),
+                                    ),
+                                ]),
+                            )
+                            .into_entry(),
+                        ]
+                    },
+                );
+            vec![with_padding(cx, Px(32.0), dropdown)]
+        })
+    };
+
+    for _ in 0..8 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let more = semantics_node_id_by_test_id(&ui, "m3-submenu-more")
+        .expect("expected submenu trigger semantics node");
+    ui.set_focus(Some(more));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let more_sem = semantics_node_by_test_id(&ui, "m3-submenu-more");
+    assert_eq!(more_sem.role, SemanticsRole::MenuItem);
+    assert!(
+        more_sem.flags.expanded,
+        "expected ArrowRight to mark the submenu trigger expanded"
+    );
+    assert!(
+        !more_sem.controls.is_empty(),
+        "expected submenu trigger to expose a controls relation"
+    );
+    assert!(
+        live_test_id_layout_bounds(&ui, &app, window, "m3-submenu-more.submenu-chevron")
+            .size
+            .width
+            .0
+            > 0.0,
+        "expected Material submenu trigger to render an inline-end chevron"
+    );
+
+    let sub_alpha = semantics_node_id_by_test_id(&ui, "m3-submenu-sub-alpha")
+        .expect("expected submenu item semantics node after ArrowRight");
+    ui.set_focus(Some(sub_alpha));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(more),
+        "expected ArrowLeft from submenu content to restore focus to the submenu trigger"
+    );
+    let more_sem = semantics_node_by_test_id(&ui, "m3-submenu-more");
+    assert!(
+        !more_sem.flags.expanded,
+        "expected ArrowLeft to close the submenu"
+    );
+}
+
+#[test]
+fn dropdown_menu_submenu_uses_rtl_inline_end_key_and_clamps_long_content() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(420.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let open = open.clone();
+            declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let dropdown = DropdownMenu::new(open)
+                    .align(DropdownMenuAlign::Start)
+                    .a11y_label("RTL long Material submenu dropdown")
+                    .test_id("m3-rtl-long-submenu")
+                    .max_height(Px(160.0))
+                    .submenu_min_width(Px(192.0))
+                    .into_element(
+                        cx,
+                        |cx| {
+                            let mut props = PressableProps::default();
+                            props.layout.size.width = Length::Px(Px(220.0));
+                            props.layout.size.height = Length::Px(Px(40.0));
+                            props.a11y = PressableA11y {
+                                label: Some(Arc::<str>::from("Open RTL submenu menu")),
+                                test_id: Some(Arc::<str>::from("m3-rtl-long-submenu-trigger")),
+                                ..Default::default()
+                            };
+                            cx.pressable(props, |_cx, _st| Vec::new())
+                        },
+                        |_cx| {
+                            vec![
+                                MenuEntry::Item(
+                                    MenuItem::new("More")
+                                        .value("more")
+                                        .test_id("m3-rtl-long-submenu-more")
+                                        .submenu((0..20).map(|idx| {
+                                            MenuEntry::Item(
+                                                MenuItem::new(format!("Nested {idx:02}")).test_id(
+                                                    format!("m3-rtl-long-submenu-item-{idx:02}"),
+                                                ),
+                                            )
+                                        })),
+                                ),
+                                MenuEntry::Item(
+                                    MenuItem::new("Other").test_id("m3-rtl-long-submenu-other"),
+                                ),
+                            ]
+                        },
+                    );
+                vec![with_padding(cx, Px(320.0), dropdown)]
+            })
+        };
+
+    for _ in 0..8 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let more = semantics_node_id_by_test_id(&ui, "m3-rtl-long-submenu-more")
+        .expect("expected RTL submenu trigger semantics node");
+    ui.set_focus(Some(more));
+    dispatch_key_pair(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let more_sem = semantics_node_by_test_id(&ui, "m3-rtl-long-submenu-more");
+    assert!(
+        more_sem.flags.expanded,
+        "expected RTL ArrowLeft to open the inline-end submenu"
+    );
+    assert!(
+        live_test_id_layout_bounds(
+            &ui,
+            &app,
+            window,
+            "m3-rtl-long-submenu-more.submenu-chevron"
+        )
+        .size
+        .width
+        .0 > 0.0,
+        "expected RTL submenu trigger chevron to render"
+    );
+
+    let submenu_panel =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rtl-long-submenu.submenu-more");
+    assert!(
+        submenu_panel.size.height.0 <= 160.5,
+        "expected long Material submenu content to clamp to max height, got {submenu_panel:?}"
+    );
+    assert!(
+        semantics_node_id_by_test_id(&ui, "m3-rtl-long-submenu-item-00").is_some(),
+        "expected long submenu items to mount in the scrollable submenu panel"
+    );
+}
+
+#[test]
+fn dropdown_menu_long_content_uses_scrollable_material_viewport() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+    let open = app.models_mut().insert(true);
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let open = open.clone();
+            declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let dropdown = DropdownMenu::new(open)
+                    .a11y_label("Long Material dropdown menu")
+                    .test_id("m3-long-dropdown")
+                    .max_height(Px(160.0))
+                    .into_element(
+                        cx,
+                        |cx| {
+                            let mut props = PressableProps::default();
+                            props.layout.size.width = Length::Px(Px(180.0));
+                            props.layout.size.height = Length::Px(Px(40.0));
+                            props.a11y = PressableA11y {
+                                label: Some(Arc::<str>::from("Open long menu")),
+                                test_id: Some(Arc::<str>::from("m3-long-dropdown-trigger")),
+                                ..Default::default()
+                            };
+                            cx.pressable(props, |_cx, _st| Vec::new())
+                        },
+                        |_cx| {
+                            (0..24)
+                                .map(|idx| {
+                                    MenuEntry::Item(
+                                        MenuItem::new(format!("Item {idx:02}"))
+                                            .test_id(format!("m3-long-dropdown-item-{idx:02}")),
+                                    )
+                                })
+                                .collect()
+                        },
+                    );
+                vec![with_padding(cx, Px(24.0), dropdown)]
+            })
+        };
+
+    for _ in 0..12 {
+        run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let viewport = live_test_id_layout_bounds(&ui, &app, window, "m3-long-dropdown.viewport");
+    assert!(
+        viewport.size.height.0 <= 160.5,
+        "expected long Material dropdown viewport to clamp to max height, got {viewport:?}"
+    );
+
+    let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-long-dropdown.chrome");
+    assert!(
+        chrome.size.height.0 > viewport.size.height.0 + 160.0,
+        "expected long Material dropdown content to remain scrollable inside the clamped viewport; viewport={viewport:?} chrome={chrome:?}"
     );
 }

@@ -148,6 +148,7 @@ fn observe_virtual_list_prepaint_case(
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });

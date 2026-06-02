@@ -1,17 +1,20 @@
 //! Fixed-frame motion regression tests for Material 3 SearchBar.
 
-use fret_core::{AppWindowId, DrawOrder, NodeId, Point, PointerId, Px, Rect, Scene, Size};
+use fret_core::{
+    AppWindowId, Color, Corners, DrawOrder, Edges, NodeId, Paint, Point, PointerId, Px, Rect,
+    Scene, SceneOp, Size,
+};
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
-use fret_ui_material3::SearchBar;
+use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
+use fret_ui_material3::{SearchBar, SearchBarStyle};
 
-mod interaction_harness;
 mod support;
 
-use interaction_harness::{QuadSig, RectSig, scene_quad_signature};
 use support::events::{pointer_down, pointer_move};
 use support::host::{FakeUiServices, TestHost};
+use support::interaction_harness::{QuadSig, RectSig, scene_quad_signature};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
 use support::theme::apply_material_theme;
 
@@ -76,6 +79,23 @@ fn rect_sig(rect: Rect) -> RectSig {
 
 fn px_sig(px: Px) -> i32 {
     ((px.0 * 10.0).round()) as i32
+}
+
+fn color_close(actual: Color, expected: Color) -> bool {
+    (actual.r - expected.r).abs() <= 0.001
+        && (actual.g - expected.g).abs() <= 0.001
+        && (actual.b - expected.b).abs() <= 0.001
+        && (actual.a - expected.a).abs() <= 0.001
+}
+
+fn scene_has_solid_text_color(scene: &Scene, expected: Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Text { paint, .. }
+                if matches!(paint.paint, Paint::Solid(color) if color_close(color, expected))
+        )
+    })
 }
 
 fn state_layer_for_chrome(quads: &[QuadSig], chrome: RectSig) -> Option<QuadSig> {
@@ -236,5 +256,95 @@ fn search_bar_press_ripple_expands_on_fixed_frames() {
         "expected SearchBar ripple radius to expand, first={:?}, later={:?}",
         first_ripple.rect,
         later_ripple.rect
+    );
+}
+
+#[test]
+fn search_bar_style_overrides_paint_and_layout_contract() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(980.0), Px(180.0)),
+    );
+    let query = app.models_mut().insert(String::from("alpha"));
+    let background = Color {
+        r: 0.11,
+        g: 0.15,
+        b: 0.20,
+        a: 1.0,
+    };
+    let text = Color {
+        r: 0.96,
+        g: 0.84,
+        b: 0.40,
+        a: 1.0,
+    };
+    let style = SearchBarStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(background))))
+        .container_corner_radii(WidgetStateProperty::new(Some(Corners::all(Px(18.0)))))
+        .container_height(WidgetStateProperty::new(Some(Px(64.0))))
+        .container_max_width(WidgetStateProperty::new(Some(Px(420.0))))
+        .content_padding(WidgetStateProperty::new(Some(Edges {
+            left: Px(24.0),
+            right: Px(24.0),
+            top: Px(0.0),
+            bottom: Px(0.0),
+        })))
+        .input_text_color(WidgetStateProperty::new(Some(ColorRef::Color(text))));
+
+    app.advance_frame();
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let bar = SearchBar::new(query.clone())
+                .style(style)
+                .a11y_label("Material search")
+                .placeholder("Search")
+                .test_id("m3-search-bar")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), bar)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let chrome = chrome_rect(&ui);
+    assert_eq!(
+        chrome.w, 4200,
+        "container_max_width override should affect SearchBar chrome width"
+    );
+    assert_eq!(
+        chrome.h, 640,
+        "container_height override should affect SearchBar chrome height"
+    );
+
+    let chrome_quad = scene_quad_signature(&scene)
+        .into_iter()
+        .find(|q| q.rect == chrome && q.order == DrawOrder(0) && q.background.a == 1000)
+        .expect("expected SearchBar chrome quad");
+    assert_eq!(chrome_quad.background.r, 110);
+    assert_eq!(chrome_quad.background.g, 150);
+    assert_eq!(chrome_quad.background.b, 200);
+    assert_eq!(chrome_quad.corner_radii.top_left, 180);
+    assert!(
+        scene_has_solid_text_color(&scene, text),
+        "input_text_color override should paint SearchBar query text"
     );
 }

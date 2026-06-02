@@ -11,19 +11,109 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::Px;
+use fret_core::{Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{
-    OverlayController, OverlayRequest, ToastAction, ToastButtonStyle, ToastId, ToastLayerStyle,
-    ToastOffset, ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
+    ColorRef, OverlayController, OverlayRequest, OverrideSlot, ToastAction, ToastButtonStyle,
+    ToastId, ToastLayerStyle, ToastOffset, ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
+    WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::motion::ms_to_frames;
 use crate::tokens::snackbar as snackbar_tokens;
+
+#[derive(Debug, Clone, Default)]
+pub struct SnackbarStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub supporting_text_color: OverrideSlot<ColorRef>,
+    pub action_label_color: OverrideSlot<ColorRef>,
+    pub action_state_layer_color: OverrideSlot<ColorRef>,
+    pub close_icon_color: OverrideSlot<ColorRef>,
+    pub close_state_layer_color: OverrideSlot<ColorRef>,
+    pub container_corner_radius: OverrideSlot<Px>,
+    pub container_padding: OverrideSlot<Edges>,
+    pub single_line_min_height: OverrideSlot<Px>,
+    pub two_line_min_height: OverrideSlot<Px>,
+}
+
+impl SnackbarStyle {
+    pub fn container_background(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.container_background = Some(color);
+        self
+    }
+
+    pub fn supporting_text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn action_label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.action_label_color = Some(color);
+        self
+    }
+
+    pub fn action_state_layer_color(
+        mut self,
+        color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.action_state_layer_color = Some(color);
+        self
+    }
+
+    pub fn close_icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.close_icon_color = Some(color);
+        self
+    }
+
+    pub fn close_state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.close_state_layer_color = Some(color);
+        self
+    }
+
+    pub fn container_corner_radius(mut self, radius: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_corner_radius = Some(radius);
+        self
+    }
+
+    pub fn container_padding(mut self, padding: WidgetStateProperty<Option<Edges>>) -> Self {
+        self.container_padding = Some(padding);
+        self
+    }
+
+    pub fn single_line_min_height(mut self, height: WidgetStateProperty<Option<Px>>) -> Self {
+        self.single_line_min_height = Some(height);
+        self
+    }
+
+    pub fn two_line_min_height(mut self, height: WidgetStateProperty<Option<Px>>) -> Self {
+        self.two_line_min_height = Some(height);
+        self
+    }
+
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                supporting_text_color,
+                action_label_color,
+                action_state_layer_color,
+                close_icon_color,
+                close_state_layer_color,
+                container_corner_radius,
+                container_padding,
+                single_line_min_height,
+                two_line_min_height,
+            ]
+        )
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum SnackbarDuration {
@@ -155,6 +245,7 @@ pub struct SnackbarHost {
     gap: Option<Px>,
     min_width: Option<Px>,
     max_width: Option<Px>,
+    style: SnackbarStyle,
 }
 
 #[derive(Debug, Default)]
@@ -172,6 +263,7 @@ impl SnackbarHost {
             gap: None,
             min_width: None,
             max_width: None,
+            style: SnackbarStyle::default(),
         }
     }
 
@@ -209,6 +301,11 @@ impl SnackbarHost {
         self
     }
 
+    pub fn style(mut self, style: SnackbarStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
@@ -230,7 +327,7 @@ impl SnackbarHost {
 
             let (style, default_margin, default_max_width) = cx.with_theme(|theme| {
                 (
-                    snackbar_toast_layer_style(theme),
+                    snackbar_toast_layer_style(theme, &self.style),
                     snackbar_tokens::host_margin(theme),
                     snackbar_tokens::container_max_width(theme),
                 )
@@ -261,20 +358,88 @@ impl SnackbarHost {
     }
 }
 
-fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
+fn snackbar_color_override(
+    theme: &Theme,
+    slot: &OverrideSlot<ColorRef>,
+    states: WidgetStates,
+) -> Option<fret_core::Color> {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |color| Some(color.resolve(theme)),
+        || None,
+    )
+}
+
+fn snackbar_corner_radii_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Corners,
+) -> Corners {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |value| Corners::all(*value),
+        fallback,
+    )
+}
+
+fn snackbar_edges_override(
+    slot: &OverrideSlot<Edges>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Edges,
+) -> Edges {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn snackbar_optional_metric_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Option<Px>,
+) -> Option<Px> {
+    resolve_override_slot_with(slot.as_ref(), states, |value| Some(*value), fallback)
+}
+
+fn snackbar_toast_layer_style(theme: &Theme, style: &SnackbarStyle) -> ToastLayerStyle {
     let icon_size = snackbar_tokens::icon_size(theme);
-    let container_shape = snackbar_tokens::container_shape_radius(theme);
+    let states = WidgetStates::empty();
+    let container_corner_radii =
+        snackbar_corner_radii_override(&style.container_corner_radius, states, || {
+            snackbar_tokens::container_shape(theme)
+        });
     let shadow = snackbar_tokens::container_shadow(theme);
     let open_ticks = ms_to_frames(snackbar_tokens::open_duration_ms(theme));
     let close_ticks = ms_to_frames(snackbar_tokens::close_duration_ms(theme));
     let easing = snackbar_tokens::easing(theme);
-    let single_line_height = snackbar_tokens::single_line_min_height(theme);
-    let two_line_height = snackbar_tokens::two_line_min_height(theme);
+    let single_line_height =
+        snackbar_optional_metric_override(&style.single_line_min_height, states, || {
+            snackbar_tokens::single_line_min_height(theme)
+        });
+    let two_line_height =
+        snackbar_optional_metric_override(&style.two_line_min_height, states, || {
+            snackbar_tokens::two_line_min_height(theme)
+        });
+    let container_padding = snackbar_edges_override(&style.container_padding, states, || {
+        snackbar_tokens::container_padding(theme)
+    });
 
     let palette = snackbar_tokens::palette();
+    let background_color = snackbar_color_override(theme, &style.container_background, states);
+    let supporting_text_color =
+        snackbar_color_override(theme, &style.supporting_text_color, states);
+    let mut action = snackbar_tokens::action_button_style(theme);
+    action.label_color = snackbar_color_override(theme, &style.action_label_color, states);
+    action.state_layer_color =
+        snackbar_color_override(theme, &style.action_state_layer_color, states);
+    let mut close = snackbar_tokens::close_icon_button_style(theme);
+    close.icon_color = snackbar_color_override(theme, &style.close_icon_color, states);
+    close.state_layer_color =
+        snackbar_color_override(theme, &style.close_state_layer_color, states);
 
     ToastLayerStyle {
         palette,
+        background_color,
+        foreground_color: supporting_text_color,
         shadow,
         open_ticks,
         close_ticks,
@@ -285,23 +450,26 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         close_button_aria_label: Some(Arc::from("Dismiss")),
         border_color_key: None,
         border_width: Px(0.0),
-        description_color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
+        description_color_key: Some(snackbar_tokens::supporting_text_color_key().to_string()),
         icon_size,
         single_line_min_height: single_line_height,
         two_line_min_height: two_line_height,
-        container_padding: Some(snackbar_tokens::container_padding(theme)),
-        container_radius: Some(container_shape),
+        container_padding: Some(container_padding),
+        container_corner_radii: Some(container_corner_radii),
         title: ToastTextStyle {
-            style_key: Some("md.sys.typescale.body-medium".to_string()),
-            color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
+            style_key: Some(snackbar_tokens::supporting_text_style_key().to_string()),
+            color_key: Some(snackbar_tokens::supporting_text_color_key().to_string()),
+            color: supporting_text_color,
         },
         description: ToastTextStyle {
-            style_key: Some("md.sys.typescale.body-medium".to_string()),
-            color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
+            style_key: Some(snackbar_tokens::supporting_text_style_key().to_string()),
+            color_key: Some(snackbar_tokens::supporting_text_color_key().to_string()),
+            color: supporting_text_color,
         },
-        action: snackbar_tokens::action_button_style(theme),
+        description_color: supporting_text_color,
+        action,
         cancel: ToastButtonStyle::default(),
-        close: snackbar_tokens::close_icon_button_style(theme),
+        close,
         ..ToastLayerStyle::default()
     }
 }

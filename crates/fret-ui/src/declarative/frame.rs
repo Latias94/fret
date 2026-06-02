@@ -149,6 +149,7 @@ pub(crate) struct ElementRecord {
     pub inherited_text_style: Option<fret_core::TextStyleRefinement>,
     pub semantics_decoration: Option<crate::element::SemanticsDecoration>,
     pub key_context: Option<Arc<str>>,
+    pub layout_direction: fret_core::LayoutDirection,
 }
 
 #[derive(Clone)]
@@ -210,6 +211,15 @@ pub(crate) fn inherited_text_style_for_node<H: UiHost>(
         record.inherited_text_style.clone()
     })
     .flatten()
+}
+
+pub(crate) fn layout_direction_for_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+) -> fret_core::LayoutDirection {
+    with_element_record_for_node(app, window, node, |record| record.layout_direction)
+        .unwrap_or_default()
 }
 
 pub(crate) fn effective_test_id_for_record(record: &ElementRecord) -> Option<&str> {

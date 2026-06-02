@@ -1,9 +1,11 @@
 //! Shared Material field motion policy.
 
 use fret_core::{Color, Edges, Px};
+use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::elements::ElementContext;
 
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::motion::{SpringAnimator, SpringSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -22,9 +24,33 @@ pub(crate) struct FieldMotionTargets {
     pub placeholder_target_opacity: f32,
     pub border: Edges,
     pub border_color: Color,
+    pub springs: FieldMotionSprings,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct FieldMotionSprings {
     pub spatial: SpringSpec,
     pub fast_effects: SpringSpec,
     pub slow_effects: SpringSpec,
+}
+
+pub(crate) fn field_motion_springs_in_scope<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    theme: &Theme,
+) -> FieldMotionSprings {
+    FieldMotionSprings {
+        spatial: material_motion_spring_in_scope(cx, theme, MaterialMotionRole::FieldChrome),
+        fast_effects: material_motion_spring_in_scope(
+            cx,
+            theme,
+            MaterialMotionRole::FieldFastEffects,
+        ),
+        slow_effects: material_motion_spring_in_scope(
+            cx,
+            theme,
+            MaterialMotionRole::FieldSlowEffects,
+        ),
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -34,6 +60,16 @@ pub(crate) struct FieldMotionFrame {
     pub border: Edges,
     pub border_color: Color,
     pub placeholder_opacity: f32,
+}
+
+pub(crate) fn field_input_phase(focused: bool, populated: bool) -> FieldInputPhase {
+    if focused {
+        FieldInputPhase::Focused
+    } else if populated {
+        FieldInputPhase::UnfocusedNotEmpty
+    } else {
+        FieldInputPhase::UnfocusedEmpty
+    }
 }
 
 #[derive(Debug, Default)]
@@ -133,17 +169,19 @@ pub(crate) fn field_motion_frame<H: UiHost>(
             rt.float.set_target(
                 now_frame,
                 if targets.should_float { 1.0 } else { 0.0 },
-                targets.spatial,
+                targets.springs.spatial,
             );
         }
 
         let placeholder_effects = match (rt.last_phase, targets.input_phase) {
-            (FieldInputPhase::Focused, FieldInputPhase::UnfocusedEmpty) => targets.fast_effects,
+            (FieldInputPhase::Focused, FieldInputPhase::UnfocusedEmpty) => {
+                targets.springs.fast_effects
+            }
             (FieldInputPhase::UnfocusedEmpty, FieldInputPhase::Focused)
             | (FieldInputPhase::UnfocusedNotEmpty, FieldInputPhase::UnfocusedEmpty) => {
-                targets.slow_effects
+                targets.springs.slow_effects
             }
-            _ => targets.fast_effects,
+            _ => targets.springs.fast_effects,
         };
         rt.last_phase = targets.input_phase;
 
@@ -154,16 +192,19 @@ pub(crate) fn field_motion_frame<H: UiHost>(
         );
 
         rt.border_top
-            .set_target(now_frame, targets.border.top.0, targets.spatial);
+            .set_target(now_frame, targets.border.top.0, targets.springs.spatial);
         rt.border_right
-            .set_target(now_frame, targets.border.right.0, targets.spatial);
+            .set_target(now_frame, targets.border.right.0, targets.springs.spatial);
         rt.border_bottom
-            .set_target(now_frame, targets.border.bottom.0, targets.spatial);
+            .set_target(now_frame, targets.border.bottom.0, targets.springs.spatial);
         rt.border_left
-            .set_target(now_frame, targets.border.left.0, targets.spatial);
+            .set_target(now_frame, targets.border.left.0, targets.springs.spatial);
 
-        rt.border_color
-            .set_target(now_frame, targets.border_color, targets.fast_effects);
+        rt.border_color.set_target(
+            now_frame,
+            targets.border_color,
+            targets.springs.fast_effects,
+        );
 
         rt.float.advance(now_frame);
         rt.placeholder_opacity.advance(now_frame);

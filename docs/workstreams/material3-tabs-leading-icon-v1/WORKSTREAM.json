@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "slug": "material3-tabs-leading-icon-v1",
+  "title": "Material3 Tabs Leading Icon v1",
+  "status": "closed",
+  "updated": "2026-05-30",
+  "scope_kind": "follow_on",
+  "problem": "Material3 Tabs supported label-only tabs plus primary/secondary variants, but did not expose the Compose LeadingIconTab shape with a 24dp icon before the label and an 8dp gap.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-tabs-leading-icon-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-tabs-leading-icon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-tabs-leading-icon-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-tabs-leading-icon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-tabs-leading-icon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-tabs-leading-icon-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run focused Material3 Tabs diagnostics tests plus v30 token resolution checks.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state",
+      "cargo nextest run -p fret-ui-material3 --lib tokens::v30"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-tabs-leading-icon-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "material3-tabs-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state"
+    },
+    {
+      "name": "material3-v30-token-resolution",
+      "command": "cargo nextest run -p fret-ui-material3 --lib tokens::v30"
+    },
+    {
+      "name": "material3-diagnostics-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-diagnostics-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    }
+  ],
+  "evidence": [
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Tab.kt",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/PrimaryNavigationTabTokens.kt",
+    "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/SecondaryNavigationTabTokens.kt",
+    "ecosystem/fret-ui-material3/src/tabs.rs",
+    "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
+    "ecosystem/fret-ui-material3/src/tokens/v30.rs",
+    "ecosystem/fret-ui-material3/tests/tabs_state.rs",
+    "docs/workstreams/material3-tabs-leading-icon-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane only covers Compose LeadingIconTab. Start separate follow-ons for stacked 72dp icon-label tabs, divider rendering, gallery snippets, RTL indicator positioning, and selected-tab auto-scroll."
+  }
+}

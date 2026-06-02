@@ -1,6 +1,8 @@
 use fret_core::{Px, TextStyle};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
+
 fn lerp_px(a: Px, b: Px, t: f32) -> Px {
     let t = t.clamp(0.0, 1.0);
     Px(a.0 + (b.0 - a.0) * t)
@@ -27,8 +29,9 @@ pub fn interpolated_label_text_style(
     large_key: &'static str,
     small_key: &'static str,
 ) -> Option<TextStyle> {
-    let large = theme.text_style_by_key(large_key)?;
-    let small = theme.text_style_by_key(small_key)?;
+    let tokens = MaterialTokenResolver::new(theme);
+    let large = tokens.text_style_value(large_key)?;
+    let small = tokens.text_style_value(small_key)?;
 
     if large.font != small.font
         || large.weight != small.weight

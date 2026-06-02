@@ -7,7 +7,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, Px, SemanticsRole};
+use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -18,16 +18,59 @@ use fret_ui::{GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
-use fret_ui_kit::{OverlayController, OverlayPresence};
+use fret_ui_kit::{
+    ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
+    resolve_override_slot_with,
+};
 
-use crate::SearchBar;
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::search_motion::{
     SearchMotionKind, drive_search_motion, search_full_screen_geometry_transform,
 };
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
 use crate::search_bar::SearchBarHeaderTokens;
 use crate::tokens::{dropdown_menu as dropdown_menu_tokens, search_view as search_view_tokens};
+use crate::{SearchBar, SearchBarStyle};
+
+fn search_view_color_override(
+    theme: &Theme,
+    slot: &OverrideSlot<ColorRef>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Color,
+) -> Color {
+    resolve_override_slot_with(
+        slot.as_ref(),
+        states,
+        |color| color.resolve(theme),
+        fallback,
+    )
+}
+
+fn search_view_metric_override(
+    slot: &OverrideSlot<Px>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Px,
+) -> Px {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn search_view_edges_override(
+    slot: &OverrideSlot<Edges>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Edges,
+) -> Edges {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
+
+fn search_view_corners_override(
+    slot: &OverrideSlot<Corners>,
+    states: WidgetStates,
+    fallback: impl FnOnce() -> Corners,
+) -> Corners {
+    resolve_override_slot_with(slot.as_ref(), states, |value| *value, fallback)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SearchViewPresentation {
@@ -36,10 +79,81 @@ pub enum SearchViewPresentation {
     FullScreen,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct SearchViewStyle {
+    pub header_style: SearchBarStyle,
+    pub container_background: OverrideSlot<ColorRef>,
+    pub container_elevation: OverrideSlot<Px>,
+    pub docked_container_corner_radii: OverrideSlot<Corners>,
+    pub divider_color: OverrideSlot<ColorRef>,
+    pub full_screen_header_container_height: OverrideSlot<Px>,
+    pub body_padding: OverrideSlot<Edges>,
+}
+
+impl SearchViewStyle {
+    pub fn header_style(mut self, style: SearchBarStyle) -> Self {
+        self.header_style = self.header_style.merged(style);
+        self
+    }
+
+    pub fn container_background(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.container_background = Some(color);
+        self
+    }
+
+    pub fn container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_elevation = Some(elevation);
+        self
+    }
+
+    pub fn docked_container_corner_radii(
+        mut self,
+        corners: WidgetStateProperty<Option<Corners>>,
+    ) -> Self {
+        self.docked_container_corner_radii = Some(corners);
+        self
+    }
+
+    pub fn divider_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.divider_color = Some(color);
+        self
+    }
+
+    pub fn full_screen_header_container_height(
+        mut self,
+        height: WidgetStateProperty<Option<Px>>,
+    ) -> Self {
+        self.full_screen_header_container_height = Some(height);
+        self
+    }
+
+    pub fn body_padding(mut self, padding: WidgetStateProperty<Option<Edges>>) -> Self {
+        self.body_padding = Some(padding);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        self.header_style = self.header_style.merged(other.header_style);
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                container_elevation,
+                docked_container_corner_radii,
+                divider_color,
+                full_screen_header_container_height,
+                body_padding,
+            ]
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SearchView {
     open: Model<bool>,
     query: Model<String>,
+    style: SearchViewStyle,
     presentation: SearchViewPresentation,
     disabled: bool,
     placeholder: Option<Arc<str>>,
@@ -57,6 +171,7 @@ impl SearchView {
         Self {
             open,
             query,
+            style: SearchViewStyle::default(),
             presentation: SearchViewPresentation::default(),
             disabled: false,
             placeholder: None,
@@ -104,6 +219,11 @@ impl SearchView {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn style(mut self, style: SearchViewStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -181,6 +301,7 @@ impl SearchView {
             // - focus stays on the text input while the overlay is open (Compose-like),
             // - the overlay can be dismissed without fighting focus-gained/blur heuristics.
             let mut bar = SearchBar::new(self.query.clone())
+                .style(self.style.header_style.clone())
                 .disabled(self.disabled)
                 .placeholder_opt(self.placeholder.clone())
                 .a11y_label_opt(self.a11y_label.clone())
@@ -281,6 +402,7 @@ impl SearchView {
                 let header_input_id_out_for_bar = header_input_id_out.clone();
 
                 let mut header = SearchBar::new(self.query.clone())
+                    .style(self.style.header_style.clone())
                     .disabled(self.disabled)
                     .placeholder_opt(self.placeholder.clone())
                     .a11y_label_opt(self.a11y_label.clone())
@@ -299,12 +421,34 @@ impl SearchView {
                 let initial_focus = header_input_id_out.get();
                 let labelled_by_element = initial_focus.map(|id| id.0);
 
-                let (container_color, divider_color, header_slot_height) = {
+                let (
+                    container_color,
+                    container_shape,
+                    divider_color,
+                    header_slot_height,
+                    body_padding,
+                ) = {
                     let theme = Theme::global(&*cx.app);
+                    let states = WidgetStates::empty();
                     (
-                        search_view_tokens::container_color(theme),
-                        search_view_tokens::divider_color(theme),
-                        search_view_tokens::full_screen_header_container_height(theme),
+                        search_view_color_override(
+                            theme,
+                            &self.style.container_background,
+                            states,
+                            || search_view_tokens::container_color(theme),
+                        ),
+                        search_view_tokens::full_screen_container_shape(theme),
+                        search_view_color_override(theme, &self.style.divider_color, states, || {
+                            search_view_tokens::divider_color(theme)
+                        }),
+                        search_view_metric_override(
+                            &self.style.full_screen_header_container_height,
+                            states,
+                            || search_view_tokens::full_screen_header_container_height(theme),
+                        ),
+                        search_view_edges_override(&self.style.body_padding, states, || {
+                            Edges::all(Px(8.0))
+                        }),
                     )
                 };
 
@@ -315,6 +459,7 @@ impl SearchView {
                     panel_container.layout.size.height = Length::Fill;
                     panel_container.layout.overflow = Overflow::Clip;
                     panel_container.background = Some(container_color);
+                    panel_container.corner_radii = container_shape;
 
                     let mut column = FlexProps::default();
                     column.direction = Axis::Vertical;
@@ -329,6 +474,7 @@ impl SearchView {
                         let mut header_slot = ContainerProps::default();
                         header_slot.layout.size.width = Length::Fill;
                         header_slot.layout.size.height = Length::Px(header_slot_height);
+                        header_slot.layout.size.min_height = Some(Length::Px(header_slot_height));
                         header_slot.layout.overflow = Overflow::Visible;
                         header_slot.padding = Edges {
                             left: Px(0.0),
@@ -370,7 +516,7 @@ impl SearchView {
                                     layout.flex.grow = 1.0;
                                     layout
                                 },
-                                padding: Edges::all(Px(8.0)).into(),
+                                padding: body_padding.into(),
                                 ..Default::default()
                             },
                             content,
@@ -439,7 +585,7 @@ impl SearchView {
             let animated_height = (self.max_height.0 * motion.progress).max(1.0);
             let desired = fret_core::Size::new(anchor.size.width, Px(animated_height));
 
-            let direction = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, None);
+            let direction = material_layout_direction_in_scope(cx);
             let placement = fret_ui_kit::primitives::popper::PopperContentPlacement::new(
                 direction,
                 fret_ui_kit::primitives::popper::Side::Bottom,
@@ -456,15 +602,40 @@ impl SearchView {
             );
 
             let overlay_rect = layout.rect;
-            let (container_color, container_shape, shadow, divider_color) = {
+            let (container_color, container_shape, shadow, divider_color, body_padding) = {
                 let theme = Theme::global(&*cx.app);
-                let container_color = search_view_tokens::container_color(theme);
-                let container_shape = search_view_tokens::docked_container_shape(theme);
-                let elevation = search_view_tokens::container_elevation(theme);
+                let states = WidgetStates::empty();
+                let container_color = search_view_color_override(
+                    theme,
+                    &self.style.container_background,
+                    states,
+                    || search_view_tokens::container_color(theme),
+                );
+                let container_shape = search_view_corners_override(
+                    &self.style.docked_container_corner_radii,
+                    states,
+                    || search_view_tokens::docked_container_shape(theme),
+                );
+                let elevation =
+                    search_view_metric_override(&self.style.container_elevation, states, || {
+                        search_view_tokens::container_elevation(theme)
+                    });
                 let shadow =
                     shadow_for_elevation_with_color(theme, elevation, None, container_shape);
-                let divider_color = search_view_tokens::divider_color(theme);
-                (container_color, container_shape, shadow, divider_color)
+                let divider_color =
+                    search_view_color_override(theme, &self.style.divider_color, states, || {
+                        search_view_tokens::divider_color(theme)
+                    });
+                let body_padding = search_view_edges_override(&self.style.body_padding, states, || {
+                    Edges::all(Px(8.0))
+                });
+                (
+                    container_color,
+                    container_shape,
+                    shadow,
+                    divider_color,
+                    body_padding,
+                )
             };
 
             let overlay_test_id = self
@@ -485,60 +656,62 @@ impl SearchView {
                 Edges::all(Px(0.0)),
                 Overflow::Visible,
                 move |cx| {
-                    let mut container = ContainerProps::default();
-                    container.layout.size.width = Length::Fill;
-                    container.layout.size.height = Length::Fill;
-                    container.layout.overflow = Overflow::Clip;
-                    container.background = Some(container_color);
-                    container.corner_radii = container_shape;
-                    container.shadow = shadow;
+                    cx.provide(direction, |cx| {
+                        let mut container = ContainerProps::default();
+                        container.layout.size.width = Length::Fill;
+                        container.layout.size.height = Length::Fill;
+                        container.layout.overflow = Overflow::Clip;
+                        container.background = Some(container_color);
+                        container.corner_radii = container_shape;
+                        container.shadow = shadow;
 
-                    let panel = cx.container(container, move |cx| {
-                        let mut divider = cx.container(
-                            ContainerProps {
-                                layout: fret_ui::element::LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Px(Px(1.0)),
+                        let panel = cx.container(container, move |cx| {
+                            let mut divider = cx.container(
+                                ContainerProps {
+                                    layout: fret_ui::element::LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Px(Px(1.0)),
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
+                                    background: Some(divider_color),
                                     ..Default::default()
                                 },
-                                background: Some(divider_color),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::<AnyElement>::new(),
-                        );
-                        if let Some(test_id) = divider_test_id.clone() {
-                            divider = divider.test_id(test_id);
-                        }
+                                |_cx| Vec::<AnyElement>::new(),
+                            );
+                            if let Some(test_id) = divider_test_id.clone() {
+                                divider = divider.test_id(test_id);
+                            }
 
-                        let mut body = cx.container(
-                            ContainerProps {
-                                padding: Edges::all(Px(8.0)).into(),
-                                ..Default::default()
-                            },
-                            content,
-                        );
-                        if let Some(test_id) = body_test_id.clone() {
-                            body = body.test_id(test_id);
-                        }
+                            let mut body = cx.container(
+                                ContainerProps {
+                                    padding: body_padding.into(),
+                                    ..Default::default()
+                                },
+                                content,
+                            );
+                            if let Some(test_id) = body_test_id.clone() {
+                                body = body.test_id(test_id);
+                            }
 
-                        vec![divider, body]
-                    });
+                            vec![divider, body]
+                        });
 
-                    let sem = SemanticsProps {
-                        role: SemanticsRole::Panel,
-                        test_id: overlay_test_id.clone(),
-                        labelled_by_element,
-                        ..Default::default()
-                    };
-                    let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
-                        controlled_element_id_out.set(Some(panel_id));
+                        let sem = SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            test_id: overlay_test_id.clone(),
+                            labelled_by_element,
+                            ..Default::default()
+                        };
+                        let panel = cx.semantics_with_id(sem, move |_cx, panel_id| {
+                            controlled_element_id_out.set(Some(panel_id));
+                            vec![panel]
+                        });
+
                         vec![panel]
-                    });
-
-                    vec![panel]
+                    })
                 },
             );
 
@@ -561,6 +734,7 @@ impl SearchView {
                 vec![overlay_root],
             );
             request.root_name = Some(format!("material3.search_view.{}", input_id.0));
+            request.initial_focus = Some(input_id);
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
             request = request.add_dismissable_branch(input_id);

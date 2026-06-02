@@ -2,12 +2,51 @@ pub const SOURCE: &str = include_str!("tooltip.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_core::{Color, Edges, Px};
+use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let content = material3::TooltipProvider::new().with_elements(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;
+        let styled = material3::TooltipStyle::default()
+            .plain_container_background(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+                r: 0.12,
+                g: 0.17,
+                b: 0.22,
+                a: 1.0,
+            }))))
+            .plain_supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+                r: 0.94,
+                g: 0.83,
+                b: 0.43,
+                a: 1.0,
+            }))))
+            .plain_container_padding(WidgetStateProperty::new(Some(Edges {
+                left: Px(16.0),
+                right: Px(16.0),
+                top: Px(8.0),
+                bottom: Px(8.0),
+            })))
+            .rich_container_background(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+                r: 0.18,
+                g: 0.13,
+                b: 0.22,
+                a: 1.0,
+            }))))
+            .rich_title_color(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+                r: 0.98,
+                g: 0.80,
+                b: 0.48,
+                a: 1.0,
+            }))))
+            .rich_supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+                r: 0.82,
+                g: 0.90,
+                b: 0.98,
+                a: 1.0,
+            }))));
 
         let top = material3::PlainTooltip::new(
             material3::Button::new("Hover (Top)")
@@ -57,6 +96,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             "Rich tooltip supporting text (body medium).",
         )
         .title("Rich tooltip title")
+        .action_element(
+            material3::Button::new("Learn more")
+                .variant(material3::ButtonVariant::Text)
+                .test_id("ui-gallery-material3-rich-tooltip-action")
+                .into_element(cx),
+        )
         .side(material3::TooltipSide::Top)
         .into_element(cx);
 
@@ -70,14 +115,42 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .side(material3::TooltipSide::Bottom)
         .into_element(cx);
 
+        let styled_plain = material3::PlainTooltip::new(
+            material3::Button::new("Hover (Styled)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-tooltip-styled-trigger")
+                .into_element(cx),
+            "Styled plain tooltip",
+        )
+        .style(styled.clone())
+        .side(material3::TooltipSide::Right)
+        .into_element(cx);
+
+        let styled_rich = material3::RichTooltip::new(
+            material3::Button::new("Hover (Styled rich)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-rich-tooltip-styled-trigger")
+                .into_element(cx),
+            "Rich tooltip with explicit Material3 style overrides.",
+        )
+        .title("Styled rich tooltip")
+        .style(styled)
+        .side(material3::TooltipSide::Bottom)
+        .into_element(cx);
+
         vec![
             ui::h_flex(|_cx| [top, right, bottom, left])
-                    .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()).into_element(cx),
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
             ui::h_flex(|_cx| [rich, rich_no_title])
-                    .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()).into_element(cx),
-            cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+            ui::h_flex(|_cx| [styled_plain, styled_rich])
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
         ]
     });
 

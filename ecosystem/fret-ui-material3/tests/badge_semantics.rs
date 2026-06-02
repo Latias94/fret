@@ -7,12 +7,11 @@ use fret_ui::element::{AnyElement, ContainerProps, Length};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{Badge, BadgePlacement};
 
-mod interaction_harness;
 mod support;
 
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -27,6 +26,21 @@ fn render_badge(
     services: &mut dyn UiServices,
     window: AppWindowId,
 ) {
+    let badge = Badge::text("99+")
+        .placement(BadgePlacement::TopRight)
+        .anchor_size(Px(40.0))
+        .a11y_label("99 or more new notifications")
+        .test_id("m3-badge");
+    render_badge_with(ui, app, services, window, badge);
+}
+
+fn render_badge_with(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    badge: Badge,
+) {
     let bounds = bounds();
     let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
         let anchor = |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>| {
@@ -36,12 +50,7 @@ fn render_badge(
             cx.container(props, |_cx| Vec::<AnyElement>::new())
         };
 
-        let badge = Badge::text("99+")
-            .placement(BadgePlacement::TopRight)
-            .anchor_size(Px(40.0))
-            .a11y_label("99 or more new notifications")
-            .test_id("m3-badge")
-            .into_element(cx, |cx| vec![anchor(cx)]);
+        let badge = badge.into_element(cx, |cx| vec![anchor(cx)]);
 
         vec![with_padding(cx, Px(24.0), badge)]
     });
@@ -65,6 +74,13 @@ fn assert_px_close(actual: f32, expected: f32, context: &str) {
         delta <= 0.5,
         "{context}: expected {expected}px, got {actual}px (delta {delta}px)"
     );
+}
+
+fn layout_bounds_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> Rect {
+    let node = semantics_node_id_by_test_id(ui, test_id)
+        .unwrap_or_else(|| panic!("expected semantics node {test_id}"));
+    ui.debug_node_bounds(node)
+        .unwrap_or_else(|| panic!("expected layout bounds for {test_id}"))
 }
 
 #[test]
@@ -127,5 +143,61 @@ fn badge_exposes_badged_box_anchor_and_badge_part_semantics() {
         badge_bounds.origin.y.0,
         anchor_bounds.origin.y.0,
         "badge top",
+    );
+}
+
+#[test]
+fn navigation_icon_badge_uses_logical_inline_edge_in_ltr_and_rtl() {
+    fn render_direction(rtl: bool) -> (Rect, Rect) {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        if rtl {
+            apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+        } else {
+            apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+        }
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        render_badge_with(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            Badge::dot()
+                .placement(BadgePlacement::NavigationIcon)
+                .anchor_size(Px(40.0))
+                .test_id("m3-nav-badge"),
+        );
+
+        (
+            layout_bounds_by_test_id(&ui, "m3-nav-badge.anchor"),
+            layout_bounds_by_test_id(&ui, "m3-nav-badge.badge"),
+        )
+    }
+
+    let (ltr_anchor, ltr_badge) = render_direction(false);
+    let (rtl_anchor, rtl_badge) = render_direction(true);
+
+    assert!(
+        ltr_badge.origin.x.0 > ltr_anchor.origin.x.0 + ltr_anchor.size.width.0 * 0.5,
+        "expected LTR navigation badge to sit on the physical right half; anchor={ltr_anchor:?}, badge={ltr_badge:?}"
+    );
+    assert!(
+        rtl_badge.origin.x.0 < rtl_anchor.origin.x.0 + rtl_anchor.size.width.0 * 0.5,
+        "expected RTL navigation badge to sit on the physical left half; anchor={rtl_anchor:?}, badge={rtl_badge:?}"
+    );
+    assert_px_close(
+        ltr_badge.origin.y.0,
+        ltr_anchor.origin.y.0 + 4.0,
+        "LTR navigation badge top offset",
+    );
+    assert_px_close(
+        rtl_badge.origin.y.0,
+        rtl_anchor.origin.y.0 + 4.0,
+        "RTL navigation badge top offset",
     );
 }

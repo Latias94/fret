@@ -1,0 +1,6 @@
+{"role":"architecture","path":"docs/architecture.md","reason":"Overall Fret mechanism/policy layering context."}
+{"role":"adr","path":"docs/adr/0066-fret-ui-runtime-contract-surface.md","reason":"Defines fret-ui as mechanism/contract layer and keeps component policy outside it."}
+{"role":"workstream","path":"docs/workstreams/material3-field-interaction-family-split-v1/WORKSTREAM.json","reason":"Previous split that left the final TextInput residual."}
+{"role":"design","path":"docs/workstreams/material3-text-input-mechanism-test-ownership-v1/DESIGN.md","reason":"Current lane intent, boundary decision, and deletion plan."}
+{"role":"tasks","path":"docs/workstreams/material3-text-input-mechanism-test-ownership-v1/TODO.md","reason":"Closed task ledger for the ownership audit."}
+{"role":"gates","path":"docs/workstreams/material3-text-input-mechanism-test-ownership-v1/EVIDENCE_AND_GATES.md","reason":"Verification commands and evidence anchors."}

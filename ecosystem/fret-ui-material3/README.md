@@ -21,6 +21,8 @@ Experimental learning project (not production-ready).
 - `state-selector`: opt into derived-state helper integration
 - `state-query`: opt into async/query helper integration
 - `state`: enables both selector + query integration
+- `diagnostics`: enables `fret-ui` live diagnostic helpers used by Material 3 test and
+  automation surfaces
 
 ## Authoring note
 

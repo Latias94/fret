@@ -7688,3 +7688,150 @@ fn nested_flow_is_solved_once_per_island() {
     );
     ui.put_layout_engine(engine);
 }
+
+#[test]
+fn flex_row_uses_provided_rtl_layout_direction_for_physical_order() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn fixed_child(width: f32) -> crate::element::ContainerProps {
+        let mut props = crate::element::ContainerProps::default();
+        props.layout.size.width = Length::Px(Px(width));
+        props.layout.size.height = Length::Px(Px(10.0));
+        props
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "flex-row-rtl-physical-order",
+        |cx| {
+            cx.provide(fret_core::LayoutDirection::Rtl, |cx| {
+                let row = crate::element::FlexProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(100.0)),
+                            height: Length::Px(Px(10.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(5.0).into(),
+                    align: CrossAlign::Start,
+                    ..Default::default()
+                };
+
+                vec![
+                    cx.flex(row, |cx| {
+                        vec![
+                            cx.container(fixed_child(20.0), |_cx| Vec::new())
+                                .test_id("rtl-flex-a"),
+                            cx.container(fixed_child(30.0), |_cx| Vec::new())
+                                .test_id("rtl-flex-b"),
+                            cx.container(fixed_child(10.0), |_cx| Vec::new())
+                                .test_id("rtl-flex-c"),
+                        ]
+                    })
+                    .test_id("rtl-flex-row"),
+                ]
+            })
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let row = ui.children(root)[0];
+    let a = ui.children(row)[0];
+    let b = ui.children(row)[1];
+    let c = ui.children(row)[2];
+
+    let a_bounds = ui.debug_node_bounds(a).expect("a bounds");
+    let b_bounds = ui.debug_node_bounds(b).expect("b bounds");
+    let c_bounds = ui.debug_node_bounds(c).expect("c bounds");
+
+    assert_eq!(a_bounds.origin.x, Px(80.0));
+    assert_eq!(b_bounds.origin.x, Px(45.0));
+    assert_eq!(c_bounds.origin.x, Px(30.0));
+    assert!(
+        a_bounds.origin.x.0 > b_bounds.origin.x.0 && b_bounds.origin.x.0 > c_bounds.origin.x.0,
+        "logical child order should remain source order while physical x positions run right-to-left"
+    );
+}
+
+#[test]
+fn flex_row_uses_nested_ltr_provider_inside_rtl_scope() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "flex-row-nested-ltr-provider",
+        |cx| {
+            cx.provide(fret_core::LayoutDirection::Rtl, |cx| {
+                vec![cx.provide(fret_core::LayoutDirection::Ltr, |cx| {
+                    let row = crate::element::FlexProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Px(Px(100.0)),
+                                height: Length::Px(Px(10.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(5.0).into(),
+                        align: CrossAlign::Start,
+                        ..Default::default()
+                    };
+
+                    cx.flex(row, |cx| {
+                        let mut child = crate::element::ContainerProps::default();
+                        child.layout.size.width = Length::Px(Px(20.0));
+                        child.layout.size.height = Length::Px(Px(10.0));
+                        vec![
+                            cx.container(child, |_cx| Vec::new()).test_id("ltr-flex-a"),
+                            cx.container(child, |_cx| Vec::new()).test_id("ltr-flex-b"),
+                        ]
+                    })
+                    .test_id("ltr-flex-row")
+                })]
+            })
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let row = ui.children(root)[0];
+    let a = ui.children(row)[0];
+    let b = ui.children(row)[1];
+
+    let a_bounds = ui.debug_node_bounds(a).expect("a bounds");
+    let b_bounds = ui.debug_node_bounds(b).expect("b bounds");
+
+    assert_eq!(a_bounds.origin.x, Px(0.0));
+    assert_eq!(b_bounds.origin.x, Px(25.0));
+}

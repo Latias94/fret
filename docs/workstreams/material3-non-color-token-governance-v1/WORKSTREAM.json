@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "slug": "material3-non-color-token-governance-v1",
+  "title": "Material3 Non-Color Token Governance v1",
+  "status": "closed",
+  "updated": "2026-05-31",
+  "scope_kind": "fearless_refactor",
+  "follow_on_of": "material3-token-resolver-non-field-fallback-v1",
+  "problem": "Material3 still has a smaller set of direct non-color token reads that need ownership classification before more visual matrix work hardens around them.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-non-color-token-governance-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-non-color-token-governance-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-non-color-token-governance-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-non-color-token-governance-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-non-color-token-governance-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-non-color-token-governance-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    }
+  ],
+  "context_manifest": "docs/workstreams/material3-non-color-token-governance-v1/CONTEXT.jsonl",
+  "repro": {
+    "summary": "Audit Material3 non-color direct token reads and prove migrated slices with token visual and targeted component gates.",
+    "commands": [
+      "rg -n \"theme\\\\.number_by_key\\\\(|theme\\\\.duration_ms_by_key\\\\(|theme\\\\.easing_by_key\\\\(\" ecosystem/fret-ui-material3/src -g \"*.rs\" -g \"!tokens/v30.rs\" -g \"!tokens/material_web_v30.rs\"",
+      "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-format",
+      "command": "cargo fmt --package fret-ui-material3 --check"
+    },
+    {
+      "name": "material3-token-matrix",
+      "command": "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes"
+    },
+    {
+      "name": "material3-typography-weight-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test chip_state --test slider_state"
+    },
+    {
+      "name": "material3-selection-numeric-radio-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test radio_alignment radio"
+    },
+    {
+      "name": "material3-selection-numeric-choice-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state"
+    },
+    {
+      "name": "material3-motion-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test dialog_state --test snackbar_state --test navigation_drawer_state"
+    },
+    {
+      "name": "material3-time-picker-input-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface"
+    },
+    {
+      "name": "material3-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-non-color-token-governance-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-non-color-token-governance-v1/DESIGN.md",
+    "docs/workstreams/material3-non-color-token-governance-v1/TODO.md",
+    "docs/workstreams/material3-non-color-token-governance-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-non-color-token-governance-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "ecosystem/fret-ui-material3/src/foundation/token_resolver.rs",
+    "ecosystem/fret-ui-material3/src/tokens/typography.rs",
+    "ecosystem/fret-ui-material3/src/tokens/chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/slider.rs",
+    "ecosystem/fret-ui-material3/src/tokens/radio.rs",
+    "ecosystem/fret-ui-material3/src/tokens/dialog.rs",
+    "ecosystem/fret-ui-material3/src/tokens/snackbar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/time_input.rs",
+    "ecosystem/fret-ui-material3/src/tokens/time_picker.rs",
+    "ecosystem/fret-ui-material3/tests/chip_state.rs",
+    "ecosystem/fret-ui-material3/tests/slider_state.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "ecosystem/fret-ui-material3/tests/dialog_state.rs",
+    "ecosystem/fret-ui-material3/tests/snackbar_state.rs",
+    "ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0032-style-tokens-and-theme-resolution.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "tokens",
+    "non-color",
+    "fallback",
+    "fearless-refactor"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Closed after M3NC-060. Do not reopen this lane unless a classified residual owner proves wrong; start a narrower follow-on for that owner."
+  }
+}

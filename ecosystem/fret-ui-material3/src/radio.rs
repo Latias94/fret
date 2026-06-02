@@ -29,13 +29,14 @@ use fret_ui_kit::{
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, minimum_interactive_size,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{
     absolute_region_layout, diagnostic_anchor, optional_part_test_id,
 };
@@ -548,14 +549,8 @@ impl RadioStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.icon_color.is_some() {
-            self.icon_color = other.icon_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(self, other, [icon_color, state_layer_color])
     }
 }
 
@@ -724,9 +719,7 @@ impl Radio {
             let (size, min_touch_target, corner_radii, focus_ring) = {
                 let theme = Theme::global(&*cx.app);
                 let size = radio_tokens::size_tokens(theme);
-                let corner_radii = theme
-                    .corners_by_key("md.sys.shape.corner.full")
-                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
+                let corner_radii = radio_tokens::state_layer_shape(theme);
                 let focus_ring =
                     material_focus_ring_for_component(theme, "md.comp.radio-button", corner_radii);
                 let min_touch_target = minimum_interactive_size(theme);
@@ -899,13 +892,16 @@ impl Radio {
                                 || state_layer_color_tokens,
                             );
 
-                            let indication_config = material_pressable_indication_config(
-                                theme,
+                            let indication_config = material_pressable_indication_config_in_scope(
+                                &*cx,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
 
-                            let dot_spring =
-                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+                            let dot_spring = material_motion_spring_in_scope(
+                                &*cx,
+                                theme,
+                                MaterialMotionRole::RadioDot,
+                            );
 
                             let ripple_base_opacity =
                                 radio_tokens::pressed_state_layer_opacity(theme, checked);

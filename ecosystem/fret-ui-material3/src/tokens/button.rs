@@ -3,10 +3,19 @@
 //! This module centralizes token key mapping and fallback chains so button variants remain
 //! consistent and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
-use crate::button::ButtonVariant;
+use crate::button::{ButtonSize, ButtonVariant};
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
+use crate::tokens::typography as material_typography;
+
+// Keep the Material button root on a stable minimum width so snapshots and layout do not depend on
+// underconstrained wrapper fill resolution.
+const BUTTON_MIN_WIDTH: Px = Px(64.0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ButtonInteraction {
@@ -15,29 +24,108 @@ pub(crate) enum ButtonInteraction {
     Pressed,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ButtonSizeTokens {
+    pub(crate) min_width: Px,
+    pub(crate) container_height: Px,
+    pub(crate) leading_space: Px,
+    pub(crate) trailing_space: Px,
+    pub(crate) icon_size: Px,
+    pub(crate) icon_label_space: Px,
+    pub(crate) outlined_outline_width: Px,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ButtonSizeMetricKeys {
+    container_height: &'static str,
+    leading_space: &'static str,
+    trailing_space: &'static str,
+    icon_size: &'static str,
+    icon_label_space: &'static str,
+    outlined_outline_width: &'static str,
+}
+
+fn button_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
+fn button_metric_chain(theme: &Theme, keys: &[&'static str], fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_chain(keys, fallback)
+}
+
+pub(crate) fn size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
+    let keys = size_metric_keys(size);
+    let defaults = size_metric_defaults(size);
+
+    ButtonSizeTokens {
+        min_width: BUTTON_MIN_WIDTH,
+        container_height: button_metric(theme, keys.container_height, defaults.container_height),
+        leading_space: button_metric(theme, keys.leading_space, defaults.leading_space),
+        trailing_space: button_metric(theme, keys.trailing_space, defaults.trailing_space),
+        icon_size: button_metric(theme, keys.icon_size, defaults.icon_size),
+        icon_label_space: button_metric(theme, keys.icon_label_space, defaults.icon_label_space),
+        outlined_outline_width: button_metric(
+            theme,
+            keys.outlined_outline_width,
+            defaults.outlined_outline_width,
+        ),
+    }
+}
+
+pub(crate) fn label_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
+    material_typography::text_style_chain(
+        theme,
+        &[
+            label_text_key(size),
+            "md.comp.button.label-text",
+            "md.sys.typescale.label-large",
+        ],
+        TextIntent::Control,
+    )
+}
+
+pub(crate) fn container_shape_radius(theme: &Theme, size: ButtonSize) -> Px {
+    button_metric_chain(
+        theme,
+        &[container_shape_round_key(size), "md.sys.shape.corner.full"],
+        Px(999.0),
+    )
+}
+
+pub(crate) fn pressed_container_shape_radius(theme: &Theme, size: ButtonSize) -> Px {
+    button_metric_chain(
+        theme,
+        &[
+            pressed_container_shape_key(size),
+            "md.sys.shape.corner.small",
+        ],
+        Px(8.0),
+    )
+}
+
 pub(crate) fn label_color(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+
     if enabled {
-        theme
-            .color_by_key(label_color_key(variant))
-            .or_else(|| match variant {
-                ButtonVariant::Filled => theme.color_by_key("md.sys.color.on-primary"),
-                ButtonVariant::Tonal => theme.color_by_key("md.sys.color.on-secondary-container"),
-                ButtonVariant::Elevated | ButtonVariant::Text => {
-                    theme.color_by_key("md.sys.color.primary")
-                }
-                ButtonVariant::Outlined => theme.color_by_key("md.sys.color.on-surface-variant"),
-            })
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+        tokens.color_comp_or_sys_chain(label_color_key(variant), label_sys_keys(variant))
     } else {
-        let base = theme
-            .color_by_key(disabled_label_color_key(variant))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = disabled_label_opacity(theme, variant);
-        let mut c = base;
-        c.a *= opacity;
-        c
+        let base =
+            tokens.color_comp_or_sys(disabled_label_color_key(variant), "md.sys.color.on-surface");
+        alpha_mul(base, disabled_label_opacity(theme, variant))
+    }
+}
+
+fn label_sys_keys(variant: ButtonVariant) -> &'static [&'static str] {
+    match variant {
+        ButtonVariant::Filled => &["md.sys.color.on-primary", "md.sys.color.on-surface"],
+        ButtonVariant::Tonal => &[
+            "md.sys.color.on-secondary-container",
+            "md.sys.color.on-surface",
+        ],
+        ButtonVariant::Elevated | ButtonVariant::Text => {
+            &["md.sys.color.primary", "md.sys.color.on-surface"]
+        }
+        ButtonVariant::Outlined => &["md.sys.color.on-surface-variant", "md.sys.color.on-surface"],
     }
 }
 
@@ -47,59 +135,18 @@ pub(crate) fn container_background(
     enabled: bool,
     label_fallback: Color,
 ) -> Option<Color> {
-    match variant {
-        ButtonVariant::Text | ButtonVariant::Outlined => None,
-        ButtonVariant::Filled => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.filled.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.primary")),
-                )
-            } else {
-                Some(disabled_container_color(
-                    theme,
-                    variant,
-                    "md.comp.button.filled.disabled.container.color",
-                    label_fallback,
-                ))
-            }
-        }
-        ButtonVariant::Tonal => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.tonal.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.secondary-container")),
-                )
-            } else {
-                Some(disabled_container_color(
-                    theme,
-                    variant,
-                    "md.comp.button.tonal.disabled.container.color",
-                    label_fallback,
-                ))
-            }
-        }
-        ButtonVariant::Elevated => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.elevated.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-low")),
-                )
-            } else {
-                Some(disabled_container_color(
-                    theme,
-                    variant,
-                    "md.comp.button.elevated.disabled.container.color",
-                    label_fallback,
-                ))
-            }
-        }
+    let (container_key, sys_key) = enabled_container_color_keys(variant)?;
+    let tokens = MaterialTokenResolver::new(theme);
+
+    if enabled {
+        Some(tokens.color_comp_or_sys(container_key, sys_key))
+    } else {
+        Some(disabled_container_color(
+            theme,
+            variant,
+            disabled_container_color_key(variant),
+            label_fallback,
+        ))
     }
 }
 
@@ -111,15 +158,17 @@ pub(crate) fn container_elevation(
 ) -> Px {
     let key = container_elevation_key(variant, enabled, interaction);
     let fallback = container_elevation_fallback(variant, enabled, interaction);
-    theme.metric_by_key(key).unwrap_or(Px(fallback))
+    button_metric(theme, key, Px(fallback))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme, variant: ButtonVariant) -> Color {
-    theme
-        .color_by_key(container_shadow_color_key(variant))
-        .or_else(|| theme.color_by_key("md.comp.button.container.shadow-color"))
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_chain_or_sys(
+        &[
+            container_shadow_color_key(variant),
+            "md.comp.button.container.shadow-color",
+        ],
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn state_layer_color(
@@ -132,9 +181,8 @@ pub(crate) fn state_layer_color(
         return label_fallback;
     };
 
-    theme
-        .color_by_key(state_layer_color_key(variant, interaction))
-        .unwrap_or(label_fallback)
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_fallback(state_layer_color_key(variant, interaction), label_fallback)
 }
 
 pub(crate) fn icon_color(
@@ -144,30 +192,33 @@ pub(crate) fn icon_color(
     label_fallback: Color,
     interaction: Option<ButtonInteraction>,
 ) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+
     if !enabled {
-        let base = theme
-            .color_by_key(disabled_icon_color_key(variant))
-            .or_else(|| theme.color_by_key("md.comp.button.disabled.icon.color"))
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or(label_fallback);
-        let opacity = disabled_icon_opacity(theme, variant);
-        let mut c = base;
-        c.a *= opacity;
-        return c;
+        let base = tokens.color_comp_chain_or_sys_or(
+            &[
+                disabled_icon_color_key(variant),
+                "md.comp.button.disabled.icon.color",
+            ],
+            "md.sys.color.on-surface",
+            label_fallback,
+        );
+        return alpha_mul(base, disabled_icon_opacity(theme, variant));
     }
 
     if let Some(interaction) = interaction
-        && let Some(c) = theme
-            .color_by_key(interaction_icon_color_key(variant, interaction))
-            .or_else(|| theme.color_by_key(interaction_icon_color_key_any(interaction)))
+        && let Some(c) = tokens.color_comp_chain(&[
+            interaction_icon_color_key(variant, interaction),
+            interaction_icon_color_key_any(interaction),
+        ])
     {
         return c;
     }
 
-    theme
-        .color_by_key(icon_color_key(variant))
-        .or_else(|| theme.color_by_key("md.comp.button.icon.color"))
-        .unwrap_or(label_fallback)
+    tokens.color_comp_chain_or_fallback(
+        &[icon_color_key(variant), "md.comp.button.icon.color"],
+        label_fallback,
+    )
 }
 
 pub(crate) fn state_layer_opacity(
@@ -175,39 +226,51 @@ pub(crate) fn state_layer_opacity(
     variant: ButtonVariant,
     interaction: ButtonInteraction,
 ) -> f32 {
-    let (sys_key, fallback) = match interaction {
-        ButtonInteraction::Pressed => ("md.sys.state.pressed.state-layer-opacity", 0.1),
-        ButtonInteraction::Focused => ("md.sys.state.focus.state-layer-opacity", 0.1),
-        ButtonInteraction::Hovered => ("md.sys.state.hover.state-layer-opacity", 0.08),
-    };
-
-    theme
-        .number_by_key(state_layer_opacity_key(variant, interaction))
-        .or_else(|| theme.number_by_key(sys_key))
-        .unwrap_or(fallback)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(variant, interaction),
+        material_state_layer_interaction(interaction),
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
     state_layer_opacity(theme, variant, ButtonInteraction::Pressed)
 }
 
+pub(crate) fn outlined_outline_color(theme: &Theme, enabled: bool) -> Color {
+    let tokens = MaterialTokenResolver::new(theme);
+    let color = if enabled {
+        tokens.color_comp_or_sys_chain(
+            "md.comp.button.outlined.outline.color",
+            &["md.sys.color.outline-variant", "md.sys.color.outline"],
+        )
+    } else {
+        tokens.color_comp_or_sys_chain(
+            "md.comp.button.outlined.disabled.outline.color",
+            &["md.sys.color.outline-variant", "md.sys.color.outline"],
+        )
+    };
+
+    Color { a: 1.0, ..color }
+}
+
 fn disabled_label_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
-    theme
-        .number_by_key(disabled_label_opacity_key(variant))
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some(disabled_label_opacity_key(variant)), 0.38)
 }
 
 fn disabled_icon_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
-    theme
-        .number_by_key(disabled_icon_opacity_key(variant))
-        .or_else(|| theme.number_by_key("md.comp.button.disabled.icon.opacity"))
-        .unwrap_or(0.38)
+    MaterialTokenResolver::new(theme).number_chain(
+        &[
+            disabled_icon_opacity_key(variant),
+            "md.comp.button.disabled.icon.opacity",
+        ],
+        0.38,
+    )
 }
 
 fn disabled_container_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
-    theme
-        .number_by_key(disabled_container_opacity_key(variant))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some(disabled_container_opacity_key(variant)), 0.1)
 }
 
 fn disabled_container_color(
@@ -216,12 +279,165 @@ fn disabled_container_color(
     token_key: &'static str,
     fallback: Color,
 ) -> Color {
-    let mut c = theme
-        .color_by_key(token_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or(fallback);
-    c.a *= disabled_container_opacity(theme, variant);
-    c
+    let base = MaterialTokenResolver::new(theme).color_comp_or_sys_or(
+        token_key,
+        "md.sys.color.on-surface",
+        fallback,
+    );
+    alpha_mul(base, disabled_container_opacity(theme, variant))
+}
+
+fn size_metric_keys(size: ButtonSize) -> ButtonSizeMetricKeys {
+    match size {
+        ButtonSize::XSmall => ButtonSizeMetricKeys {
+            container_height: "md.comp.button.xsmall.container.height",
+            leading_space: "md.comp.button.xsmall.leading-space",
+            trailing_space: "md.comp.button.xsmall.trailing-space",
+            icon_size: "md.comp.button.xsmall.icon.size",
+            icon_label_space: "md.comp.button.xsmall.icon-label-space",
+            outlined_outline_width: "md.comp.button.xsmall.outlined.outline.width",
+        },
+        ButtonSize::Small => ButtonSizeMetricKeys {
+            container_height: "md.comp.button.small.container.height",
+            leading_space: "md.comp.button.small.leading-space",
+            trailing_space: "md.comp.button.small.trailing-space",
+            icon_size: "md.comp.button.small.icon.size",
+            icon_label_space: "md.comp.button.small.icon-label-space",
+            outlined_outline_width: "md.comp.button.small.outlined.outline.width",
+        },
+        ButtonSize::Medium => ButtonSizeMetricKeys {
+            container_height: "md.comp.button.medium.container.height",
+            leading_space: "md.comp.button.medium.leading-space",
+            trailing_space: "md.comp.button.medium.trailing-space",
+            icon_size: "md.comp.button.medium.icon.size",
+            icon_label_space: "md.comp.button.medium.icon-label-space",
+            outlined_outline_width: "md.comp.button.medium.outlined.outline.width",
+        },
+        ButtonSize::Large => ButtonSizeMetricKeys {
+            container_height: "md.comp.button.large.container.height",
+            leading_space: "md.comp.button.large.leading-space",
+            trailing_space: "md.comp.button.large.trailing-space",
+            icon_size: "md.comp.button.large.icon.size",
+            icon_label_space: "md.comp.button.large.icon-label-space",
+            outlined_outline_width: "md.comp.button.large.outlined.outline.width",
+        },
+        ButtonSize::XLarge => ButtonSizeMetricKeys {
+            container_height: "md.comp.button.xlarge.container.height",
+            leading_space: "md.comp.button.xlarge.leading-space",
+            trailing_space: "md.comp.button.xlarge.trailing-space",
+            icon_size: "md.comp.button.xlarge.icon.size",
+            icon_label_space: "md.comp.button.xlarge.icon-label-space",
+            outlined_outline_width: "md.comp.button.xlarge.outlined.outline.width",
+        },
+    }
+}
+
+fn size_metric_defaults(size: ButtonSize) -> ButtonSizeTokens {
+    match size {
+        ButtonSize::XSmall => ButtonSizeTokens {
+            min_width: BUTTON_MIN_WIDTH,
+            container_height: Px(32.0),
+            leading_space: Px(12.0),
+            trailing_space: Px(12.0),
+            icon_size: Px(20.0),
+            icon_label_space: Px(8.0),
+            outlined_outline_width: Px(1.0),
+        },
+        ButtonSize::Small => ButtonSizeTokens {
+            min_width: BUTTON_MIN_WIDTH,
+            container_height: Px(40.0),
+            leading_space: Px(16.0),
+            trailing_space: Px(16.0),
+            icon_size: Px(20.0),
+            icon_label_space: Px(8.0),
+            outlined_outline_width: Px(1.0),
+        },
+        ButtonSize::Medium => ButtonSizeTokens {
+            min_width: BUTTON_MIN_WIDTH,
+            container_height: Px(56.0),
+            leading_space: Px(24.0),
+            trailing_space: Px(24.0),
+            icon_size: Px(24.0),
+            icon_label_space: Px(8.0),
+            outlined_outline_width: Px(1.0),
+        },
+        ButtonSize::Large => ButtonSizeTokens {
+            min_width: BUTTON_MIN_WIDTH,
+            container_height: Px(96.0),
+            leading_space: Px(48.0),
+            trailing_space: Px(48.0),
+            icon_size: Px(32.0),
+            icon_label_space: Px(12.0),
+            outlined_outline_width: Px(2.0),
+        },
+        ButtonSize::XLarge => ButtonSizeTokens {
+            min_width: BUTTON_MIN_WIDTH,
+            container_height: Px(136.0),
+            leading_space: Px(64.0),
+            trailing_space: Px(64.0),
+            icon_size: Px(40.0),
+            icon_label_space: Px(16.0),
+            outlined_outline_width: Px(3.0),
+        },
+    }
+}
+
+fn container_shape_round_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.container.shape.round",
+        ButtonSize::Small => "md.comp.button.small.container.shape.round",
+        ButtonSize::Medium => "md.comp.button.medium.container.shape.round",
+        ButtonSize::Large => "md.comp.button.large.container.shape.round",
+        ButtonSize::XLarge => "md.comp.button.xlarge.container.shape.round",
+    }
+}
+
+fn pressed_container_shape_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.pressed.container.shape",
+        ButtonSize::Small => "md.comp.button.small.pressed.container.shape",
+        ButtonSize::Medium => "md.comp.button.medium.pressed.container.shape",
+        ButtonSize::Large => "md.comp.button.large.pressed.container.shape",
+        ButtonSize::XLarge => "md.comp.button.xlarge.pressed.container.shape",
+    }
+}
+
+fn material_state_layer_interaction(
+    interaction: ButtonInteraction,
+) -> MaterialStateLayerInteraction {
+    match interaction {
+        ButtonInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        ButtonInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        ButtonInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+    }
+}
+
+fn enabled_container_color_keys(variant: ButtonVariant) -> Option<(&'static str, &'static str)> {
+    match variant {
+        ButtonVariant::Filled => Some((
+            "md.comp.button.filled.container.color",
+            "md.sys.color.primary",
+        )),
+        ButtonVariant::Tonal => Some((
+            "md.comp.button.tonal.container.color",
+            "md.sys.color.secondary-container",
+        )),
+        ButtonVariant::Elevated => Some((
+            "md.comp.button.elevated.container.color",
+            "md.sys.color.surface-container-low",
+        )),
+        ButtonVariant::Outlined | ButtonVariant::Text => None,
+    }
+}
+
+fn disabled_container_color_key(variant: ButtonVariant) -> &'static str {
+    match variant {
+        ButtonVariant::Filled => "md.comp.button.filled.disabled.container.color",
+        ButtonVariant::Tonal => "md.comp.button.tonal.disabled.container.color",
+        ButtonVariant::Elevated => "md.comp.button.elevated.disabled.container.color",
+        ButtonVariant::Outlined => "md.comp.button.outlined.disabled.container.color",
+        ButtonVariant::Text => "md.comp.button.text.disabled.container.color",
+    }
 }
 
 fn container_elevation_key(
@@ -322,6 +538,16 @@ fn container_shadow_color_key(variant: ButtonVariant) -> &'static str {
         ButtonVariant::Elevated => "md.comp.button.elevated.container.shadow-color",
         ButtonVariant::Outlined => "md.comp.button.outlined.container.shadow-color",
         ButtonVariant::Text => "md.comp.button.text.container.shadow-color",
+    }
+}
+
+fn label_text_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.label-text",
+        ButtonSize::Small => "md.comp.button.small.label-text",
+        ButtonSize::Medium => "md.comp.button.medium.label-text",
+        ButtonSize::Large => "md.comp.button.large.label-text",
+        ButtonSize::XLarge => "md.comp.button.xlarge.label-text",
     }
 }
 
@@ -565,5 +791,90 @@ fn state_layer_opacity_key(variant: ButtonVariant, interaction: ButtonInteractio
         (ButtonVariant::Text, ButtonInteraction::Pressed) => {
             "md.comp.button.text.pressed.state-layer.opacity"
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn button_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        let xsmall = size_tokens(theme, ButtonSize::XSmall);
+        assert_eq!(xsmall.container_height, Px(32.0));
+        assert_eq!(xsmall.leading_space, Px(12.0));
+        assert_eq!(xsmall.icon_size, Px(20.0));
+        assert_eq!(xsmall.outlined_outline_width, Px(1.0));
+
+        let large = size_tokens(theme, ButtonSize::Large);
+        assert_eq!(large.container_height, Px(96.0));
+        assert_eq!(large.leading_space, Px(48.0));
+        assert_eq!(large.icon_size, Px(32.0));
+        assert_eq!(large.outlined_outline_width, Px(2.0));
+
+        let xlarge = size_tokens(theme, ButtonSize::XLarge);
+        assert_eq!(xlarge.container_height, Px(136.0));
+        assert_eq!(xlarge.trailing_space, Px(64.0));
+        assert_eq!(xlarge.icon_label_space, Px(16.0));
+        assert_eq!(xlarge.outlined_outline_width, Px(3.0));
+    }
+
+    #[test]
+    fn button_metric_chains_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.button.medium.container.height".to_string(), 60.0);
+        patch
+            .metrics
+            .insert("md.comp.button.medium.leading-space".to_string(), 28.0);
+        patch.metrics.insert(
+            "md.comp.button.medium.outlined.outline.width".to_string(),
+            2.0,
+        );
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.full".to_string(), 88.0);
+        patch.metrics.insert(
+            "md.comp.button.medium.pressed.container.shape".to_string(),
+            12.0,
+        );
+        patch.metrics.insert(
+            "md.comp.button.filled.hovered.container.elevation".to_string(),
+            4.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        let medium = size_tokens(&theme, ButtonSize::Medium);
+        assert_eq!(medium.container_height, Px(60.0));
+        assert_eq!(medium.leading_space, Px(28.0));
+        assert_eq!(medium.outlined_outline_width, Px(2.0));
+        assert_eq!(container_shape_radius(&theme, ButtonSize::Medium), Px(88.0));
+        assert_eq!(
+            pressed_container_shape_radius(&theme, ButtonSize::Medium),
+            Px(12.0)
+        );
+        assert_eq!(
+            container_elevation(
+                &theme,
+                ButtonVariant::Filled,
+                true,
+                Some(ButtonInteraction::Hovered),
+            ),
+            Px(4.0)
+        );
     }
 }

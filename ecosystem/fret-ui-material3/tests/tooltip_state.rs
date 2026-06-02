@@ -1,20 +1,21 @@
 //! Focused Material 3 Tooltip layout, accessibility, and motion regression tests.
 
 use fret_core::{
-    AppWindowId, NodeId, Point, PointerId, Px, Rect, Scene, SceneOp, SemanticsLive, SemanticsNode,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, Color, Edges, NodeId, Paint, Point, PointerId, Px, Rect, Scene, SceneOp,
+    SemanticsLive, SemanticsNode, SemanticsRole, Size, UiServices,
 };
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::{ElementContext, UiHost, UiTree};
-use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+use fret_ui_kit::{ColorRef, OverlayController, OverlayStackEntryKind, WidgetStateProperty};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{Button, ButtonVariant, PlainTooltip, RichTooltip, TooltipProvider};
+use fret_ui_material3::{
+    Button, ButtonVariant, PlainTooltip, RichTooltip, TooltipProvider, TooltipStyle,
+};
 
-mod interaction_harness;
 mod support;
 
-use support::events::pointer_move;
+use support::events::{pointer_down, pointer_move, pointer_up};
 use support::goldens::run_overlay_frame_with_scene_scaled;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::{semantics_node_id_by_test_id, with_padding};
@@ -97,6 +98,33 @@ fn scene_has_intermediate_overlay_motion(scene: &Scene) -> bool {
         )
     });
     has_alpha && has_scale
+}
+
+fn color_close(actual: Color, expected: Color) -> bool {
+    (actual.r - expected.r).abs() <= 0.001
+        && (actual.g - expected.g).abs() <= 0.001
+        && (actual.b - expected.b).abs() <= 0.001
+        && (actual.a - expected.a).abs() <= 0.001
+}
+
+fn scene_has_solid_quad_color(scene: &Scene, expected: Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { background, .. }
+                if matches!(background.paint, Paint::Solid(color) if color_close(color, expected))
+        )
+    })
+}
+
+fn scene_has_solid_text_color(scene: &Scene, expected: Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Text { paint, .. }
+                if matches!(paint.paint, Paint::Solid(color) if color_close(color, expected))
+        )
+    })
 }
 
 fn run_until_tooltip_visible(
@@ -330,4 +358,376 @@ fn rich_tooltip_matches_material_layout_and_a11y() {
         chrome.size
     );
     assert_material_tooltip_semantics(&ui, "m3-rich-tooltip-trigger", "m3-rich-tooltip");
+}
+
+#[test]
+fn rich_tooltip_action_slot_is_hit_testable_and_stable() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let action_activated = app.models_mut().insert(false);
+    let action_activated_for_render = action_activated.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(760.0), Px(460.0)),
+    );
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let action_activated = action_activated_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                TooltipProvider::new()
+                    .delay_duration_frames(0)
+                    .skip_delay_duration_frames(0)
+                    .with_elements(cx, |cx| {
+                        let trigger = Button::new("Rich action")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("m3-rich-action-tooltip-trigger")
+                            .into_element(cx);
+                        let action = Button::new("Learn more")
+                            .variant(ButtonVariant::Text)
+                            .on_activate(fret_ui_kit::on_activate_request_redraw({
+                                let action_activated = action_activated.clone();
+                                move |host| {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&action_activated, |activated| *activated = true);
+                                }
+                            }))
+                            .test_id("m3-rich-action-button")
+                            .into_element(cx);
+                        let tooltip = RichTooltip::new(trigger, "Rich tooltip with an action.")
+                            .title("Rich action")
+                            .action_element(action)
+                            .open_delay_frames(Some(0))
+                            .close_delay_frames(Some(0))
+                            .test_id("m3-rich-action-tooltip")
+                            .into_element(cx);
+                        vec![with_padding(cx, Px(48.0), tooltip)]
+                    })
+            })
+        };
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let hover_at = center_for_test_id(&ui, "m3-rich-action-tooltip-trigger");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), hover_at),
+    );
+
+    let _ = run_until_tooltip_visible(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.hit_testable),
+        "rich tooltip with action should opt the tooltip layer into hit-testing"
+    );
+
+    let action_slot =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-action-tooltip.action");
+    assert!(
+        action_slot.size.height.0 >= 35.5,
+        "expected rich tooltip action slot to reserve Material action height"
+    );
+
+    let click_at = center_for_test_id(&ui, "m3-rich-action-button");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&action_activated),
+        Some(true),
+        "expected rich tooltip action button to receive pointer activation"
+    );
+    assert_material_tooltip_semantics(
+        &ui,
+        "m3-rich-action-tooltip-trigger",
+        "m3-rich-action-tooltip",
+    );
+}
+
+#[test]
+fn plain_tooltip_style_overrides_paint_and_layout_contract() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let background = Color {
+        r: 0.09,
+        g: 0.14,
+        b: 0.19,
+        a: 1.0,
+    };
+    let text = Color {
+        r: 0.92,
+        g: 0.82,
+        b: 0.38,
+        a: 1.0,
+    };
+    let style = TooltipStyle::default()
+        .plain_container_background(WidgetStateProperty::new(Some(ColorRef::Color(background))))
+        .plain_supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(text))))
+        .plain_container_padding(WidgetStateProperty::new(Some(Edges {
+            left: Px(18.0),
+            right: Px(18.0),
+            top: Px(10.0),
+            bottom: Px(10.0),
+        })))
+        .plain_container_corner_radius(WidgetStateProperty::new(Some(Px(10.0))))
+        .plain_container_max_width(WidgetStateProperty::new(Some(Px(128.0))))
+        .container_min_height(WidgetStateProperty::new(Some(Px(48.0))));
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(420.0)),
+    );
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let style = style.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                TooltipProvider::new()
+                    .delay_duration_frames(0)
+                    .skip_delay_duration_frames(0)
+                    .with_elements(cx, |cx| {
+                        let trigger = Button::new("Styled plain")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("m3-plain-style-trigger")
+                            .into_element(cx);
+                        let tooltip = PlainTooltip::new(
+                            trigger,
+                            "Styled plain tooltip copy wraps inside a custom max width.",
+                        )
+                        .style(style)
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .test_id("m3-plain-style")
+                        .into_element(cx);
+                        vec![with_padding(cx, Px(64.0), tooltip)]
+                    })
+            })
+        };
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let hover_at = center_for_test_id(&ui, "m3-plain-style-trigger");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), hover_at),
+    );
+
+    let scene = run_until_tooltip_visible(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert!(
+        scene_has_solid_quad_color(&scene, background),
+        "expected TooltipStyle plain_container_background to paint tooltip chrome"
+    );
+    assert!(
+        scene_has_solid_text_color(&scene, text),
+        "expected TooltipStyle plain_supporting_text_color to paint tooltip text"
+    );
+
+    let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-plain-style.chrome");
+    assert!(
+        chrome.size.width.0 <= 128.5,
+        "plain_container_max_width override should affect tooltip layout; bounds={chrome:?}"
+    );
+    assert!(
+        chrome.size.height.0 >= 47.5,
+        "container_min_height override should affect tooltip layout; bounds={chrome:?}"
+    );
+}
+
+#[test]
+fn rich_tooltip_style_overrides_paint_parts_and_layout_contract() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let background = Color {
+        r: 0.18,
+        g: 0.13,
+        b: 0.22,
+        a: 1.0,
+    };
+    let title = Color {
+        r: 0.96,
+        g: 0.78,
+        b: 0.46,
+        a: 1.0,
+    };
+    let supporting = Color {
+        r: 0.82,
+        g: 0.90,
+        b: 0.98,
+        a: 1.0,
+    };
+    let style = TooltipStyle::default()
+        .rich_container_background(WidgetStateProperty::new(Some(ColorRef::Color(background))))
+        .rich_title_color(WidgetStateProperty::new(Some(ColorRef::Color(title))))
+        .rich_supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(supporting))))
+        .rich_container_padding(WidgetStateProperty::new(Some(Edges {
+            left: Px(20.0),
+            right: Px(20.0),
+            top: Px(14.0),
+            bottom: Px(18.0),
+        })))
+        .rich_container_corner_radius(WidgetStateProperty::new(Some(Px(18.0))))
+        .rich_container_max_width(WidgetStateProperty::new(Some(Px(184.0))))
+        .rich_text_gap(WidgetStateProperty::new(Some(Px(12.0))))
+        .container_min_height(WidgetStateProperty::new(Some(Px(84.0))));
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(760.0), Px(460.0)),
+    );
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let style = style.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                TooltipProvider::new()
+                    .delay_duration_frames(0)
+                    .skip_delay_duration_frames(0)
+                    .with_elements(cx, |cx| {
+                        let trigger = Button::new("Styled rich")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("m3-rich-style-trigger")
+                            .into_element(cx);
+                        let tooltip = RichTooltip::new(
+                            trigger,
+                            "Rich tooltip supporting text wraps inside the styled container.",
+                        )
+                        .title("Rich style")
+                        .style(style)
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .test_id("m3-rich-style")
+                        .into_element(cx);
+                        vec![with_padding(cx, Px(64.0), tooltip)]
+                    })
+            })
+        };
+
+    run_overlay_frame_with_scene_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let hover_at = center_for_test_id(&ui, "m3-rich-style-trigger");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), hover_at),
+    );
+
+    let scene = run_until_tooltip_visible(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert!(
+        scene_has_solid_quad_color(&scene, background),
+        "expected TooltipStyle rich_container_background to paint tooltip chrome"
+    );
+    assert!(
+        scene_has_solid_text_color(&scene, title),
+        "expected TooltipStyle rich_title_color to paint the title"
+    );
+    assert!(
+        scene_has_solid_text_color(&scene, supporting),
+        "expected TooltipStyle rich_supporting_text_color to paint supporting text"
+    );
+
+    let chrome = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-style.chrome");
+    assert!(
+        chrome.size.width.0 <= 184.5,
+        "rich_container_max_width override should affect tooltip layout; bounds={chrome:?}"
+    );
+    assert!(
+        chrome.size.height.0 >= 83.5,
+        "container_min_height override should affect rich tooltip layout; bounds={chrome:?}"
+    );
+
+    let title_bounds = live_test_id_layout_bounds(&ui, &app, window, "m3-rich-style.title");
+    let supporting_bounds =
+        live_test_id_layout_bounds(&ui, &app, window, "m3-rich-style.supporting-text");
+    assert!(
+        supporting_bounds.origin.y.0 > title_bounds.origin.y.0,
+        "rich tooltip title and supporting-text parts should keep vertical order"
+    );
 }

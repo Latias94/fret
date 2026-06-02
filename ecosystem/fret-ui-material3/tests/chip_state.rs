@@ -13,13 +13,12 @@ use fret_ui::element::{FlexProps, Length};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 use fret_ui_material3::{AssistChip, ChipSet, ChipSetItem, FilterChip, InputChip, SuggestionChip};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{pointer_down, pointer_move, pointer_up};
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -575,6 +574,55 @@ fn chip_set_wrap_layout_keeps_material_gap_between_rows() {
         (c.origin.y.0 - (b.origin.y.0 + b.size.height.0) - 8.0).abs() <= 1.0,
         "expected wrapped ChipSet row gap to be 8px, b={b:?}, c={c:?}"
     );
+}
+
+#[test]
+fn rtl_filter_and_input_chips_mirror_inline_content_edges() {
+    let ChipHarness {
+        mut app,
+        window,
+        mut services,
+        mut ui,
+        filter_selected,
+        input_selected,
+        assist_activations,
+        suggestion_activations,
+        trailing_activations,
+    } = chip_harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    render_chips(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        filter_selected,
+        input_selected,
+        assist_activations,
+        suggestion_activations,
+        trailing_activations,
+    );
+
+    for base in ["m3-filter-chip", "m3-input-chip"] {
+        let label = visual_bounds_by_test_id(&ui, &app, window, &format!("{base}.label"));
+        let leading = visual_bounds_by_test_id(&ui, &app, window, &format!("{base}.leading-icon"));
+        let trailing_glyph =
+            visual_bounds_by_test_id(&ui, &app, window, &format!("{base}.trailing-icon.glyph"));
+        let trailing_action =
+            visual_bounds_by_test_id(&ui, &app, window, &format!("{base}.trailing-icon"));
+
+        assert!(
+            leading.origin.x.0 > label.origin.x.0,
+            "expected {base} leading icon to sit on physical right in RTL, leading={leading:?}, label={label:?}"
+        );
+        assert!(
+            trailing_glyph.origin.x.0 < label.origin.x.0,
+            "expected {base} trailing glyph to sit on physical left in RTL, trailing={trailing_glyph:?}, label={label:?}"
+        );
+        assert!(
+            trailing_action.origin.x.0 < label.origin.x.0,
+            "expected {base} trailing action target to sit on physical left in RTL, action={trailing_action:?}, label={label:?}"
+        );
+    }
 }
 
 #[test]

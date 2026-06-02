@@ -473,12 +473,14 @@ fn with_badge_transparent_metadata(
     semantics_decoration: Option<SemanticsDecoration>,
     key_context: Option<Arc<str>>,
     component_slot: Option<Arc<str>>,
+    layout_direction: fret_core::LayoutDirection,
 ) -> AnyElement {
     element.inherited_foreground = inherited_foreground;
     element.inherited_text_style = inherited_text_style;
     element.semantics_decoration = semantics_decoration;
     element.key_context = key_context;
     element.component_slot = component_slot;
+    element.layout_direction = layout_direction;
     element
 }
 
@@ -492,6 +494,7 @@ fn apply_badge_hover_underline(element: AnyElement) -> AnyElement {
         semantics_decoration,
         key_context,
         component_slot,
+        layout_direction,
     } = element;
     let children = children
         .into_iter()
@@ -526,6 +529,7 @@ fn apply_badge_hover_underline(element: AnyElement) -> AnyElement {
                 semantics_decoration,
                 key_context,
                 component_slot,
+                layout_direction,
             )
         }
         ElementKind::StyledText(mut props) => {
@@ -537,6 +541,7 @@ fn apply_badge_hover_underline(element: AnyElement) -> AnyElement {
                 semantics_decoration,
                 key_context,
                 component_slot,
+                layout_direction,
             )
         }
         ElementKind::SelectableText(mut props) => {
@@ -548,6 +553,7 @@ fn apply_badge_hover_underline(element: AnyElement) -> AnyElement {
                 semantics_decoration,
                 key_context,
                 component_slot,
+                layout_direction,
             )
         }
         kind => with_badge_transparent_metadata(
@@ -557,6 +563,7 @@ fn apply_badge_hover_underline(element: AnyElement) -> AnyElement {
             semantics_decoration,
             key_context,
             component_slot,
+            layout_direction,
         ),
     }
 }

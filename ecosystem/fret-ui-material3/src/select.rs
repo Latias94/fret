@@ -12,8 +12,8 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Point, Px, SemanticsRole, Size, SvgFit, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Point, Px, SemanticsRole, SvgFit,
+    TextOverflow, TextWrap,
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::Model;
@@ -23,31 +23,41 @@ use fret_ui::element::{
     SemanticsProps, SvgIconProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
-use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::primitives::direction as direction_prim;
-use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
 use fret_ui_kit::{
-    OverrideSlot, WidgetStateProperty, WidgetStates, merge_override_slot,
-    resolve_override_slot_opt_with, resolve_override_slot_with,
+    OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::field::{
-    material_field_active_indicator_layer, material_field_text_start_inset_x,
+    MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
+    material_field_active_indicator_layer, material_field_floating_label,
+    material_field_supporting_text,
 };
-use crate::foundation::field_motion::{FieldInputPhase, FieldMotionTargets, field_motion_frame};
+use crate::foundation::field_motion::{
+    FieldMotionTargets, field_input_phase, field_motion_frame, field_motion_springs_in_scope,
+};
+use crate::foundation::field_overlay::{
+    MATERIAL_FIELD_OVERLAY_WIDTH_FLOOR, MaterialFieldOverlayAlign, MaterialFieldOverlayWidth,
+    material_field_overlay_layout, material_field_overlay_listbox_size,
+    material_field_overlay_placement, material_field_overlay_scale_transform,
+};
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_focus_state_layer_opacity, material_ink_layer_for_pressable,
+    material_pressable_indication_config_in_scope, material_pressed_state_layer_opacity,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::logical_edges::horizontal_logical_edges;
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
 use crate::motion::{SpringAnimator, ms_to_frames};
@@ -66,6 +76,8 @@ struct SelectPartTestIds {
     chrome: Arc<str>,
     active_indicator: Arc<str>,
     label: Arc<str>,
+    supporting_text: Arc<str>,
+    leading_icon: Arc<str>,
     trailing_icon: Arc<str>,
 }
 
@@ -75,6 +87,8 @@ impl SelectPartTestIds {
             chrome: chrome_part_test_id(base),
             active_indicator: part_test_id(base, "active-indicator"),
             label: part_test_id(base, "label"),
+            supporting_text: part_test_id(base, "supporting-text"),
+            leading_icon: part_test_id(base, "leading-icon"),
             trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
@@ -104,11 +118,25 @@ pub enum SelectVariant {
     Filled,
 }
 
+fn material_field_variant(variant: SelectVariant) -> MaterialFieldVariant {
+    match variant {
+        SelectVariant::Filled => MaterialFieldVariant::Filled,
+        SelectVariant::Outlined => MaterialFieldVariant::Outlined,
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectMenuAlign {
     #[default]
     Start,
     End,
+}
+
+fn select_menu_align_to_field_overlay_align(align: SelectMenuAlign) -> MaterialFieldOverlayAlign {
+    match align {
+        SelectMenuAlign::Start => MaterialFieldOverlayAlign::Start,
+        SelectMenuAlign::End => MaterialFieldOverlayAlign::End,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -261,25 +289,22 @@ impl SelectStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        self.container_background =
-            merge_override_slot(self.container_background, other.container_background);
-        self.outline_color = merge_override_slot(self.outline_color, other.outline_color);
-        self.active_indicator_color =
-            merge_override_slot(self.active_indicator_color, other.active_indicator_color);
-        self.text_color = merge_override_slot(self.text_color, other.text_color);
-        self.label_color = merge_override_slot(self.label_color, other.label_color);
-        self.supporting_text_color =
-            merge_override_slot(self.supporting_text_color, other.supporting_text_color);
-        self.leading_icon_color =
-            merge_override_slot(self.leading_icon_color, other.leading_icon_color);
-        self.trailing_icon_color =
-            merge_override_slot(self.trailing_icon_color, other.trailing_icon_color);
-        self.menu_selected_container_color = merge_override_slot(
-            self.menu_selected_container_color,
-            other.menu_selected_container_color,
-        );
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                outline_color,
+                active_indicator_color,
+                text_color,
+                label_color,
+                supporting_text_color,
+                leading_icon_color,
+                trailing_icon_color,
+                menu_selected_container_color,
+            ]
+        )
     }
 }
 
@@ -317,7 +342,7 @@ impl Select {
             variant: SelectVariant::default(),
             menu_align: SelectMenuAlign::default(),
             match_anchor_width: true,
-            menu_width_floor: Px(210.0),
+            menu_width_floor: MATERIAL_FIELD_OVERLAY_WIDTH_FLOOR,
             typeahead_delay_ms: 200,
             disabled: false,
             leading_icon: None,
@@ -488,6 +513,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         } = select;
         let style: Arc<SelectStyle> = Arc::new(style);
         let runtime = select_runtime_models(cx);
+        let layout_direction = material_layout_direction_in_scope(cx);
 
         let is_open = cx
             .get_model_copied(&runtime.open, Invalidation::Layout)
@@ -569,6 +595,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             a11y_label.clone(),
             test_id.clone(),
             runtime.open.clone(),
+            layout_direction,
             style.clone(),
         );
         let anchor_id = trigger.anchor_id;
@@ -590,36 +617,26 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 let theme = Theme::global(&*cx.app);
                 select_tokens::menu_list_item_height(theme, variant)
             };
-            let menu_vertical_padding = Px(8.0);
             let select_width = anchor.size.width;
-            let desired_width = if match_anchor_width {
-                select_width
+            let width = if match_anchor_width {
+                MaterialFieldOverlayWidth::MatchAnchor
             } else {
                 let estimate = estimate_select_menu_content_width(&*cx, variant, &items);
-                resolve_select_menu_width(select_width, estimate, menu_width_floor)
+                MaterialFieldOverlayWidth::Content {
+                    estimated_content_width: estimate,
+                    floor: menu_width_floor,
+                }
             };
-            let desired_height =
-                Px((item_height.0 * (items.len().max(1) as f32)) + menu_vertical_padding.0 * 2.0);
-            let desired = Size::new(desired_width, desired_height);
 
-            let direction = direction_prim::use_direction_in_scope(cx, None);
-            let placement = popper::PopperContentPlacement::new(
-                direction,
-                Side::Bottom,
-                match menu_align {
-                    SelectMenuAlign::Start => Align::Start,
-                    SelectMenuAlign::End => Align::End,
-                },
-                Px(4.0),
-            )
-            .with_collision_padding(Edges {
-                left: Px(8.0),
-                right: Px(8.0),
-                top: Px(48.0),
-                bottom: Px(48.0),
-            });
+            let desired =
+                material_field_overlay_listbox_size(select_width, item_height, items.len(), width);
 
-            let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+            let placement = material_field_overlay_placement(
+                layout_direction,
+                select_menu_align_to_field_overlay_align(menu_align),
+            );
+
+            let layout = material_field_overlay_layout(outer, anchor, desired, placement);
 
             let initial_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let initial_focus_id_for_list = initial_focus_id.clone();
@@ -633,33 +650,31 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 Edges::all(Px(0.0)),
                 Overflow::Visible,
                 move |cx| {
-                    vec![select_listbox_panel(
-                        cx,
-                        variant,
-                        model.clone(),
-                        open_model_for_panel.clone(),
-                        items.clone(),
-                        selected.clone(),
-                        a11y_label.clone(),
-                        test_id.clone(),
-                        Some(anchor_id.0),
-                        initial_focus_id_for_list,
-                        listbox_element_id_out,
-                        layout.rect.size.width,
-                        runtime.scroll_handle.clone(),
-                        typeahead_delay_ms,
-                        style.clone(),
-                    )]
+                    vec![cx.provide(layout_direction, |cx| {
+                        select_listbox_panel(
+                            cx,
+                            variant,
+                            model.clone(),
+                            open_model_for_panel.clone(),
+                            items.clone(),
+                            selected.clone(),
+                            a11y_label.clone(),
+                            test_id.clone(),
+                            Some(anchor_id.0),
+                            initial_focus_id_for_list,
+                            listbox_element_id_out,
+                            layout.rect.size.width,
+                            runtime.scroll_handle.clone(),
+                            typeahead_delay_ms,
+                            layout_direction,
+                            style.clone(),
+                        )
+                    })]
                 },
             );
 
             let opacity = motion.alpha;
-            let scale = motion.scale;
-            let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-            let transform = fret_core::Transform2D::translation(origin)
-                * fret_core::Transform2D::scale_uniform(scale)
-                * fret_core::Transform2D::translation(origin_inv);
+            let transform = material_field_overlay_scale_transform(&layout, anchor, motion.scale);
             let overlay_root =
                 fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,
@@ -710,11 +725,16 @@ fn select_trigger_element<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     open_model: Model<bool>,
+    layout_direction: LayoutDirection,
     style: Arc<SelectStyle>,
 ) -> SelectTriggerOutput {
     let part_test_ids = test_id.as_ref().map(SelectPartTestIds::from_base);
     let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
     let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+    let supporting_text_test_id = part_test_ids
+        .as_ref()
+        .map(|ids| ids.supporting_text.clone());
+    let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
     let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
     let active_indicator_test_id = part_test_ids
         .as_ref()
@@ -820,9 +840,8 @@ fn select_trigger_element<H: UiHost>(
             focus_opacity,
             ripple_base_opacity,
             ripple_config,
-            spatial,
-            fast_effects,
-            slow_effects,
+            field_springs,
+            chevron_spring,
             placeholder_color,
             input_text_style_fallback,
         ) = {
@@ -901,18 +920,14 @@ fn select_trigger_element<H: UiHost>(
             let container_height = select_tokens::container_height(theme, variant);
 
             let hover_state_layer = select_tokens::hover_state_layer(theme, variant, error);
-            let pressed_opacity = theme
-                .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                .unwrap_or(0.1);
-            let focus_opacity = theme
-                .number_by_key("md.sys.state.focus.state-layer-opacity")
-                .unwrap_or(0.1);
+            let pressed_opacity = material_pressed_state_layer_opacity(theme);
+            let focus_opacity = material_focus_state_layer_opacity(theme);
             let ripple_base_opacity = pressed_opacity;
-            let ripple_config = material_pressable_indication_config(theme, None);
+            let ripple_config = material_pressable_indication_config_in_scope(&*cx, None);
 
-            let spatial = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-            let fast_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects);
-            let slow_effects = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::SlowEffects);
+            let field_springs = field_motion_springs_in_scope(&*cx, theme);
+            let chevron_spring =
+                material_motion_spring_in_scope(&*cx, theme, MaterialMotionRole::DropdownChevron);
 
             let placeholder_color =
                 select_tokens::placeholder_color(theme, variant, !enabled, error);
@@ -934,9 +949,8 @@ fn select_trigger_element<H: UiHost>(
                 focus_opacity,
                 ripple_base_opacity,
                 ripple_config,
-                spatial,
-                fast_effects,
-                slow_effects,
+                field_springs,
+                chevron_spring,
                 placeholder_color,
                 input_text_style_fallback,
             )
@@ -1004,13 +1018,7 @@ fn select_trigger_element<H: UiHost>(
                 );
 
                 let should_float = focused || open || populated;
-                let input_phase = if focused {
-                    FieldInputPhase::Focused
-                } else if populated {
-                    FieldInputPhase::UnfocusedNotEmpty
-                } else {
-                    FieldInputPhase::UnfocusedEmpty
-                };
+                let input_phase = field_input_phase(focused, populated);
                 let show_placeholder = if label.is_some() {
                     (focused || open) && !populated
                 } else {
@@ -1037,9 +1045,7 @@ fn select_trigger_element<H: UiHost>(
                         placeholder_target_opacity,
                         border: target_border,
                         border_color: target_border_color,
-                        spatial,
-                        fast_effects,
-                        slow_effects,
+                        springs: field_springs,
                     },
                 );
                 let float_progress = motion.float_progress.clamp(0.0, 1.0);
@@ -1051,8 +1057,11 @@ fn select_trigger_element<H: UiHost>(
                             rt.anim.reset(now_frame, if open { 1.0 } else { 0.0 });
                         } else if rt.target_open != open {
                             rt.target_open = open;
-                            rt.anim
-                                .set_target(now_frame, if open { 1.0 } else { 0.0 }, spatial);
+                            rt.anim.set_target(
+                                now_frame,
+                                if open { 1.0 } else { 0.0 },
+                                chevron_spring,
+                            );
                         }
                         rt.anim.advance(now_frame);
                         (rt.anim.value(), rt.anim.is_active())
@@ -1091,7 +1100,7 @@ fn select_trigger_element<H: UiHost>(
                     props.layout.flex.basis = Length::Px(Px(0.0));
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Ellipsis;
-                    cx.text_props(props)
+                    cx.text_props(props).with_layout_direction(layout_direction)
                 };
 
                 let icon_el = chevron_down_icon_rotated(
@@ -1114,12 +1123,13 @@ fn select_trigger_element<H: UiHost>(
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::SpaceBetween;
                 row.align = CrossAlign::Center;
-                row.padding = Edges {
-                    left: if has_leading_icon { Px(12.0) } else { Px(16.0) },
-                    right: Px(12.0),
-                    top: Px(0.0),
-                    bottom: Px(0.0),
-                }
+                row.padding = horizontal_logical_edges(
+                    layout_direction,
+                    if has_leading_icon { Px(12.0) } else { Px(16.0) },
+                    Px(12.0),
+                    Px(0.0),
+                    Px(0.0),
+                )
                 .into();
 
                 let mut chrome = ContainerProps::default();
@@ -1151,13 +1161,18 @@ fn select_trigger_element<H: UiHost>(
                     let mut children = vec![overlay];
 
                     let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                        select_trigger_icon(
+                        let icon_el = select_trigger_icon(
                             cx,
                             icon,
                             leading_icon_color,
                             leading_icon_opacity,
                             leading_icon_size,
-                        )
+                        );
+                        if let Some(test_id) = leading_icon_test_id.clone() {
+                            icon_el.test_id(test_id)
+                        } else {
+                            icon_el
+                        }
                     });
 
                     let left_slot = cx.container(
@@ -1183,36 +1198,45 @@ fn select_trigger_element<H: UiHost>(
                             left.align = CrossAlign::Center;
                             left.gap = if has_leading_icon { Px(16.0) } else { Px(0.0) }.into();
 
-                            vec![cx.flex(left, move |_cx| {
-                                let mut out = Vec::new();
-                                if let Some(icon) = leading_icon_el {
-                                    out.push(icon);
-                                }
-                                out.push(text_el);
-                                out
-                            })]
+                            vec![
+                                cx.flex(left, move |_cx| {
+                                    let mut out = Vec::new();
+                                    if let Some(icon) = leading_icon_el {
+                                        out.push(icon);
+                                    }
+                                    out.push(text_el);
+                                    out
+                                })
+                                .with_layout_direction(layout_direction),
+                            ]
                         },
                     );
 
-                    children.push(cx.flex(row, move |_cx| vec![left_slot, icon_el]));
+                    children.push(
+                        cx.flex(row, move |_cx| vec![left_slot, icon_el])
+                            .with_layout_direction(layout_direction),
+                    );
 
                     if let Some(label) = label.as_ref() {
-                        children.push(select_trigger_label(
-                            cx,
-                            variant,
-                            states_for_style,
-                            style_override.as_ref(),
-                            label.clone(),
-                            float_progress,
-                            has_leading_icon.then_some(leading_icon_size),
-                            hovered,
-                            !enabled,
-                            error,
-                            focused,
-                            container_bg.unwrap_or(Color::TRANSPARENT),
-                            outline_width_for_notch,
-                            label_test_id.clone(),
-                        ));
+                        children.push(cx.provide(layout_direction, |cx| {
+                            select_trigger_label(
+                                cx,
+                                variant,
+                                states_for_style,
+                                style_override.as_ref(),
+                                label.clone(),
+                                float_progress,
+                                has_leading_icon.then_some(leading_icon_size),
+                                hovered,
+                                !enabled,
+                                error,
+                                focused,
+                                container_bg.unwrap_or(Color::TRANSPARENT),
+                                outline_width_for_notch,
+                                label_test_id.clone(),
+                                layout_direction,
+                            )
+                        }));
                     }
                     if let Some(indicator_el) = indicator_el {
                         children.push(indicator_el);
@@ -1265,18 +1289,22 @@ fn select_trigger_element<H: UiHost>(
         cx.flex(props, move |cx| {
             vec![
                 container,
-                select_supporting_text(
-                    cx,
-                    variant,
-                    supporting_states,
-                    supporting_style_override.as_ref(),
-                    text.clone(),
-                    has_leading_icon.then_some(leading_icon_size),
-                    hovered,
-                    disabled,
-                    error,
-                    focused,
-                ),
+                cx.provide(layout_direction, |cx| {
+                    select_supporting_text(
+                        cx,
+                        variant,
+                        supporting_states,
+                        supporting_style_override.as_ref(),
+                        text.clone(),
+                        has_leading_icon.then_some(leading_icon_size),
+                        hovered,
+                        disabled,
+                        error,
+                        focused,
+                        supporting_text_test_id.clone(),
+                        layout_direction,
+                    )
+                }),
             ]
         })
     } else {
@@ -1362,6 +1390,27 @@ fn select_menu_item_icon<H: UiHost>(
     cx.svg_icon_props(props)
 }
 
+fn select_menu_item_icon_slot<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    color: Color,
+    size: Px,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let icon = select_menu_item_icon(cx, icon, color, size);
+
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    props.layout.overflow = Overflow::Visible;
+
+    let mut slot = cx.container(props, move |_cx| vec![icon]);
+    if let Some(test_id) = test_id {
+        slot = slot.test_id(test_id);
+    }
+    slot
+}
+
 #[derive(Debug, Default)]
 struct SelectChevronRuntime {
     target_open: bool,
@@ -1383,11 +1432,12 @@ fn select_trigger_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
     test_id: Option<Arc<str>>,
+    layout_direction: LayoutDirection,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = floating_label::material_floating_label_text_style(theme, progress)
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
+            .or_else(|| select_tokens::input_text_style(theme, variant))
             .map(|style| typography::with_intent(style, TextIntent::Control));
         let color = resolve_override_slot_with(
             style_override.label_color.as_ref(),
@@ -1398,54 +1448,22 @@ fn select_trigger_label<H: UiHost>(
         (style, color)
     };
 
-    let (x, y) = floating_label::material_floating_label_offsets(progress);
-
-    let x = material_field_text_start_inset_x(x, leading_icon_size);
-
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y).into();
-    layout.inset.left = Some(x).into();
-    layout.inset.right = Some(Px(16.0)).into();
-    layout.overflow = Overflow::Visible;
-
-    let floated = floating_label::is_floated(progress);
-
-    let mut patch = ContainerProps::default();
-    if variant == SelectVariant::Outlined {
-        let patch_padding_x = Px(4.0);
-        let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
-        patch.padding = (if floated {
-            Edges {
-                top: patch_padding_y,
-                right: patch_padding_x,
-                bottom: patch_padding_y,
-                left: patch_padding_x,
-            }
-        } else {
-            Edges::all(Px(0.0))
-        })
-        .into();
-        patch.background = floated.then_some(input_bg);
-    }
-    patch.layout = layout;
-
-    let mut label = cx.container(patch, move |cx| {
-        vec![cx.text_props(TextProps {
-            layout: fret_ui::element::LayoutStyle::default(),
-            text: text.clone(),
+    material_field_floating_label(
+        cx,
+        MaterialFieldFloatingLabelProps {
+            variant: material_field_variant(variant),
+            text,
+            progress,
             style,
-            color: Some(color),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        })]
-    });
-    if let Some(test_id) = test_id {
-        label = label.test_id(test_id);
-    }
-    label
+            color,
+            input_bg,
+            outline_width,
+            test_id,
+            leading_icon_size,
+            layout_direction,
+            focus_target: None,
+        },
+    )
 }
 
 fn select_supporting_text<H: UiHost>(
@@ -1459,12 +1477,12 @@ fn select_supporting_text<H: UiHost>(
     disabled: bool,
     error: bool,
     focused: bool,
+    test_id: Option<Arc<str>>,
+    layout_direction: LayoutDirection,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
-        let style = theme
-            .text_style_by_key("md.sys.typescale.body-small")
-            .map(|style| typography::with_intent(style, TextIntent::Content));
+        let style = select_tokens::supporting_text_style(theme, variant);
         let color = resolve_override_slot_with(
             style_override.supporting_text_color.as_ref(),
             states,
@@ -1478,23 +1496,17 @@ fn select_supporting_text<H: UiHost>(
         (style, color)
     };
 
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
-        Px(16.0),
-        leading_icon_size,
-    ));
-    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
-
-    cx.text_props(TextProps {
-        layout,
-        text,
-        style,
-        color: Some(color),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: Default::default(),
-    })
+    material_field_supporting_text(
+        cx,
+        MaterialFieldSupportingTextProps {
+            text,
+            style,
+            color,
+            test_id,
+            leading_icon_size,
+            layout_direction,
+        },
+    )
 }
 
 fn with_opacity(mut color: Color, opacity: f32) -> Color {
@@ -1516,14 +1528,6 @@ fn select_item_typeahead_text(item: &SelectItem) -> Arc<str> {
         .unwrap_or_else(|| item.label.clone())
 }
 
-fn resolve_select_menu_width(select_width: Px, estimate: Px, floor: Px) -> Px {
-    // Match Material Web behavior:
-    // - Menu min-width tracks the select width.
-    // - If unclamped, allow the menu to grow to fit content.
-    // We additionally apply a small floor for ergonomics (configurable by the caller).
-    Px(select_width.0.max(estimate.0).max(floor.0))
-}
-
 fn estimate_select_menu_content_width<H: UiHost>(
     cx: &ElementContext<'_, H>,
     variant: SelectVariant,
@@ -1538,20 +1542,12 @@ fn estimate_select_menu_content_width<H: UiHost>(
     let padding_right = Px(outer_horizontal_padding.0 + content_horizontal_padding.0);
     let gap = select_tokens::menu_list_item_icon_text_gap(theme, variant);
 
-    let label_style = select_tokens::menu_list_item_label_text_style(theme, variant)
-        .unwrap_or_else(|| fret_core::TextStyle {
-            size: Px(14.0),
-            ..Default::default()
-        });
+    let label_style = select_tokens::menu_list_item_label_text_style_or_fallback(theme, variant);
     // Heuristic: average glyph width in a proportional UI font is ~0.5-0.6em.
     let avg_char_w = label_style.size.0 * 0.55;
 
-    let supporting_style = theme
-        .text_style_by_key("md.sys.typescale.body-small")
-        .unwrap_or_else(|| fret_core::TextStyle {
-            size: Px(12.0),
-            ..Default::default()
-        });
+    let supporting_style =
+        select_tokens::menu_list_item_supporting_text_estimate_style(theme, variant);
     let supporting_avg_char_w = supporting_style.size.0 * 0.55;
 
     let has_leading_icon = items.iter().any(|it| it.leading_icon.is_some());
@@ -1599,7 +1595,7 @@ fn estimate_select_menu_content_width<H: UiHost>(
 mod item_text_tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Point, Px, Rect, Size};
+    use fret_core::{LayoutDirection, Point, Px, Rect, Size};
     use fret_ui::element::{ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {
@@ -1683,31 +1679,6 @@ mod item_text_tests {
     }
 
     #[test]
-    fn select_menu_width_floor_only_applies_when_unclamped() {
-        let floor = Px(210.0);
-        let select_width = Px(120.0);
-        let estimate = Px(160.0);
-        assert_eq!(
-            super::resolve_select_menu_width(select_width, estimate, floor).0,
-            210.0
-        );
-
-        let select_width = Px(320.0);
-        let estimate = Px(240.0);
-        assert_eq!(
-            super::resolve_select_menu_width(select_width, estimate, floor).0,
-            320.0
-        );
-
-        let select_width = Px(320.0);
-        let estimate = Px(480.0);
-        assert_eq!(
-            super::resolve_select_menu_width(select_width, estimate, floor).0,
-            480.0
-        );
-    }
-
-    #[test]
     fn select_trigger_value_can_truncate_within_trigger_row() {
         let window = fret_core::AppWindowId::default();
         let mut app = App::new();
@@ -1768,6 +1739,7 @@ mod item_text_tests {
                     true,
                     0,
                     1,
+                    LayoutDirection::Ltr,
                     initial_focus.clone(),
                 )
             },
@@ -1814,6 +1786,7 @@ mod item_text_tests {
                     true,
                     0,
                     1,
+                    LayoutDirection::Ltr,
                     initial_focus.clone(),
                 )
             },
@@ -1879,6 +1852,7 @@ mod item_text_tests {
                     true,
                     0,
                     1,
+                    LayoutDirection::Ltr,
                     initial_focus.clone(),
                 )
             },
@@ -2001,6 +1975,7 @@ fn select_listbox_panel<H: UiHost>(
     listbox_width: Px,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     typeahead_delay_ms: u32,
+    layout_direction: LayoutDirection,
     style: Arc<SelectStyle>,
 ) -> AnyElement {
     #[derive(Default)]
@@ -2237,6 +2212,7 @@ fn select_listbox_panel<H: UiHost>(
                                             tab_stop,
                                             idx,
                                             count,
+                                            layout_direction,
                                             initial_focus_id_out.clone(),
                                         ));
                                     }
@@ -2264,6 +2240,7 @@ fn select_list_item<H: UiHost>(
     tab_stop: bool,
     idx: usize,
     set_size: usize,
+    layout_direction: LayoutDirection,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let height = {
@@ -2375,20 +2352,15 @@ fn select_list_item<H: UiHost>(
                     item_container_shape,
                 ) = {
                     let theme = Theme::global(&*cx.app);
-                    let state_layer_color = theme
-                        .color_by_key("md.sys.color.on-surface")
-                        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-                    let pressed_opacity = theme
-                        .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                        .unwrap_or(0.1);
-                    let hover_opacity = theme
-                        .number_by_key("md.sys.state.hover.state-layer-opacity")
-                        .unwrap_or(0.08);
-                    let focus_opacity = theme
-                        .number_by_key("md.sys.state.focus.state-layer-opacity")
-                        .unwrap_or(0.1);
+                    let state_layer_color = select_tokens::menu_list_item_state_layer_color(theme);
+                    let pressed_opacity =
+                        select_tokens::menu_list_item_pressed_state_layer_opacity(theme);
+                    let hover_opacity =
+                        select_tokens::menu_list_item_hover_state_layer_opacity(theme);
+                    let focus_opacity =
+                        select_tokens::menu_list_item_focus_state_layer_opacity(theme);
                     let ripple_base_opacity = pressed_opacity;
-                    let config = material_pressable_indication_config(theme, None);
+                    let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                     let label_color = select_tokens::menu_list_item_label_text_color(
                         theme,
@@ -2536,159 +2508,155 @@ fn select_list_item<H: UiHost>(
                 .into();
 
                 let mut chrome = cx.container(chrome, move |cx| {
-                    vec![cx.flex(row, move |cx| {
-                        let body_slot = if has_secondary_text {
-                            let headline_el = {
-                                let mut props = TextProps::new(item.label.clone());
-                                props.style = label_style;
-                                props.color = Some(label_color);
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                props.layout.flex.grow = 1.0;
-                                props.layout.flex.basis = Length::Px(Px(0.0));
-                                cx.text_props(props)
-                            };
-
-                            let supporting_el = supporting_text.as_ref().map(|text| {
-                                let mut props = TextProps::new(text.clone());
-                                props.style = supporting_style;
-                                props.color = Some(supporting_color);
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                props.layout.flex.grow = 1.0;
-                                props.layout.flex.basis = Length::Px(Px(0.0));
-                                cx.text_props(props)
-                            });
-
-                            let trailing_supporting_el =
-                                trailing_supporting_text.as_ref().map(|text| {
-                                    let mut props = TextProps::new(text.clone());
-                                    props.style = trailing_supporting_style;
-                                    props.color = Some(trailing_supporting_color);
+                    vec![
+                        cx.flex(row, move |cx| {
+                            let body_slot = if has_secondary_text {
+                                let headline_el = {
+                                    let mut props = TextProps::new(item.label.clone());
+                                    props.style = label_style;
+                                    props.color = Some(label_color);
                                     props.wrap = TextWrap::None;
                                     props.overflow = TextOverflow::Clip;
+                                    props.align = fret_core::TextAlign::Start;
+                                    props.layout.size.width = Length::Fill;
                                     props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                    props.layout.flex.shrink = 1.0;
-                                    cx.text_props(props)
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                    cx.text_props(props).with_layout_direction(layout_direction)
+                                };
+
+                                let supporting_el = supporting_text.as_ref().map(|text| {
+                                    let mut props = TextProps::new(text.clone());
+                                    props.style = supporting_style;
+                                    props.color = Some(supporting_color);
+                                    props.wrap = TextWrap::None;
+                                    props.overflow = TextOverflow::Clip;
+                                    props.align = fret_core::TextAlign::Start;
+                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                    cx.text_props(props).with_layout_direction(layout_direction)
                                 });
 
-                            let mut column = FlexProps::default();
-                            column.direction = Axis::Vertical;
-                            column.justify = MainAlign::Start;
-                            column.align = CrossAlign::Stretch;
-                            column.gap = Px(2.0).into();
-                            column.layout.size.width = Length::Fill;
-                            column.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                            column.layout.overflow = Overflow::Clip;
-                            column.layout.flex.grow = 1.0;
-                            column.layout.flex.basis = Length::Px(Px(0.0));
+                                let trailing_supporting_el =
+                                    trailing_supporting_text.as_ref().map(|text| {
+                                        let mut props = TextProps::new(text.clone());
+                                        props.style = trailing_supporting_style;
+                                        props.color = Some(trailing_supporting_color);
+                                        props.wrap = TextWrap::None;
+                                        props.overflow = TextOverflow::Clip;
+                                        props.align = fret_core::TextAlign::Start;
+                                        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                        props.layout.flex.shrink = 1.0;
+                                        cx.text_props(props).with_layout_direction(layout_direction)
+                                    });
 
-                            cx.flex(column, move |cx| {
-                                let mut out = Vec::new();
-                                out.push(headline_el);
+                                let mut column = FlexProps::default();
+                                column.direction = Axis::Vertical;
+                                column.justify = MainAlign::Start;
+                                column.align = CrossAlign::Stretch;
+                                column.gap = Px(2.0).into();
+                                column.layout.size.width = Length::Fill;
+                                column.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                column.layout.overflow = Overflow::Clip;
+                                column.layout.flex.grow = 1.0;
+                                column.layout.flex.basis = Length::Px(Px(0.0));
 
-                                let mut second_row = FlexProps::default();
-                                second_row.direction = Axis::Horizontal;
-                                second_row.justify = MainAlign::Start;
-                                second_row.align = CrossAlign::Center;
-                                second_row.gap = Px(8.0).into();
-                                second_row.layout.size.width = Length::Fill;
-                                second_row.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                second_row.layout.overflow = Overflow::Clip;
+                                cx.flex(column, move |cx| {
+                                    let mut out = Vec::new();
+                                    out.push(headline_el);
 
-                                out.push(cx.flex(second_row, move |cx| {
-                                    let mut flex_spacer = fret_ui::element::SpacerProps::default();
-                                    flex_spacer.layout.size.width = Length::Fill;
-                                    flex_spacer.layout.size.height = Length::Px(Px(0.0));
-                                    flex_spacer.layout.flex.grow = 1.0;
-                                    let flex_spacer = cx.spacer(flex_spacer);
+                                    let mut second_row = FlexProps::default();
+                                    second_row.direction = Axis::Horizontal;
+                                    second_row.justify = MainAlign::Start;
+                                    second_row.align = CrossAlign::Center;
+                                    second_row.gap = Px(8.0).into();
+                                    second_row.layout.size.width = Length::Fill;
+                                    second_row.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    second_row.layout.overflow = Overflow::Clip;
 
-                                    let mut children = Vec::new();
-                                    if let Some(el) = supporting_el {
-                                        children.push(el);
-                                    }
-                                    children.push(flex_spacer);
-                                    if let Some(el) = trailing_supporting_el {
-                                        children.push(el);
-                                    }
-                                    children
-                                }));
-                                out
-                            })
-                        } else {
-                            let label_el = {
-                                let mut props = TextProps::new(item.label.clone());
-                                props.style = label_style;
-                                props.color = Some(label_color);
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.layout.size.width = Length::Fill;
-                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                props.layout.flex.grow = 1.0;
-                                props.layout.flex.basis = Length::Px(Px(0.0));
-                                cx.text_props(props)
+                                    out.push(
+                                        cx.flex(second_row, move |cx| {
+                                            let mut flex_spacer =
+                                                fret_ui::element::SpacerProps::default();
+                                            flex_spacer.layout.size.width = Length::Fill;
+                                            flex_spacer.layout.size.height = Length::Px(Px(0.0));
+                                            flex_spacer.layout.flex.grow = 1.0;
+                                            let flex_spacer = cx.spacer(flex_spacer);
+
+                                            let mut children = Vec::new();
+                                            if let Some(el) = supporting_el {
+                                                children.push(el);
+                                            }
+                                            children.push(flex_spacer);
+                                            if let Some(el) = trailing_supporting_el {
+                                                children.push(el);
+                                            }
+                                            children
+                                        })
+                                        .with_layout_direction(layout_direction),
+                                    );
+                                    out
+                                })
+                                .with_layout_direction(layout_direction)
+                            } else {
+                                let label_el = {
+                                    let mut props = TextProps::new(item.label.clone());
+                                    props.style = label_style;
+                                    props.color = Some(label_color);
+                                    props.wrap = TextWrap::None;
+                                    props.overflow = TextOverflow::Clip;
+                                    props.align = fret_core::TextAlign::Start;
+                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                    cx.text_props(props).with_layout_direction(layout_direction)
+                                };
+
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut l = fret_ui::element::LayoutStyle::default();
+                                            l.size.width = Length::Fill;
+                                            l.size.min_width = Some(Length::Px(Px(0.0)));
+                                            l.flex.grow = 1.0;
+                                            l.flex.basis = Length::Px(Px(0.0));
+                                            l.overflow = Overflow::Clip;
+                                            l
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![label_el],
+                                )
                             };
 
-                            cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut l = fret_ui::element::LayoutStyle::default();
-                                        l.size.width = Length::Fill;
-                                        l.size.min_width = Some(Length::Px(Px(0.0)));
-                                        l.flex.grow = 1.0;
-                                        l.flex.basis = Length::Px(Px(0.0));
-                                        l.overflow = Overflow::Clip;
-                                        l
-                                    },
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![label_el],
-                            )
-                        };
-
-                        let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                            let icon = select_menu_item_icon(
-                                cx,
-                                icon,
-                                leading_icon_color,
-                                leading_icon_size,
-                            );
-                            if let Some(test_id) = leading_icon_test_id.clone() {
-                                icon.test_id(test_id)
-                            } else {
-                                icon
+                            let mut children = Vec::new();
+                            children.push(overlay);
+                            if let Some(icon) = leading_icon.as_ref() {
+                                children.push(select_menu_item_icon_slot(
+                                    cx,
+                                    icon,
+                                    leading_icon_color,
+                                    leading_icon_size,
+                                    leading_icon_test_id.clone(),
+                                ));
                             }
-                        });
-
-                        let trailing_icon_el = trailing_icon.as_ref().map(|icon| {
-                            let icon = select_menu_item_icon(
-                                cx,
-                                icon,
-                                trailing_icon_color,
-                                trailing_icon_size,
-                            );
-                            if let Some(test_id) = trailing_icon_test_id.clone() {
-                                icon.test_id(test_id)
-                            } else {
-                                icon
+                            children.push(body_slot);
+                            if let Some(icon) = trailing_icon.as_ref() {
+                                children.push(select_menu_item_icon_slot(
+                                    cx,
+                                    icon,
+                                    trailing_icon_color,
+                                    trailing_icon_size,
+                                    trailing_icon_test_id.clone(),
+                                ));
                             }
-                        });
-
-                        let mut children = Vec::new();
-                        children.push(overlay);
-                        if let Some(icon) = leading_icon_el {
-                            children.push(icon);
-                        }
-                        children.push(body_slot);
-                        if let Some(icon) = trailing_icon_el {
-                            children.push(icon);
-                        }
-                        children
-                    })]
+                            children
+                        })
+                        .with_layout_direction(layout_direction),
+                    ]
                 });
                 if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);

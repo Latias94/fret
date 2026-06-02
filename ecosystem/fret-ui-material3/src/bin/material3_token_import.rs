@@ -544,7 +544,7 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     writeln!(out, "use fret_ui::{{theme::CubicBezier, ThemeConfig}};").ok();
     writeln!(
         out,
-        "use fret_core::{{Corners, FontId, FontWeight, Px, TextSlant, TextStyle}};"
+        "use fret_core::{{Corners, FontId, FontWeight, Px, TextSlant, TextStyle, TextVerticalPlacement}};"
     )
     .ok();
     writeln!(out).ok();
@@ -1410,12 +1410,18 @@ fn emit_inject_sys_typescale(out: &mut String, defs: Vec<&TokenDef>) {
     writeln!(out, "            weight: FontWeight(role.weight),").ok();
     writeln!(out, "            slant: TextSlant::Normal,").ok();
     writeln!(out, "            line_height: Some(line_height_px),").ok();
+    writeln!(out, "            line_height_em: None,").ok();
+    writeln!(out, "            line_height_policy: Default::default(),").ok();
+    writeln!(out, "            letter_spacing_em: Some(tracking_em),").ok();
+    writeln!(out, "            features: Vec::new(),").ok();
+    writeln!(out, "            axes: Vec::new(),").ok();
     writeln!(
         out,
-        "            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,"
+        "            vertical_placement: TextVerticalPlacement::CenterMetricsBox,"
     )
     .ok();
-    writeln!(out, "            letter_spacing_em: Some(tracking_em),").ok();
+    writeln!(out, "            leading_distribution: Default::default(),").ok();
+    writeln!(out, "            strut_style: None,").ok();
     writeln!(out, "        }});").ok();
     writeln!(out, "    }}").ok();
     writeln!(out, "}}").ok();

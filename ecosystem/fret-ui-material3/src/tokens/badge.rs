@@ -2,54 +2,136 @@
 //!
 //! Reference: Material Web v30 `md.comp.badge.*` tokens.
 
-use fret_core::{Color, Corners, Px};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::typography;
+
+fn badge_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
 
 pub(crate) fn dot_size(theme: &Theme) -> Px {
-    theme.metric_by_key("md.comp.badge.size").unwrap_or(Px(6.0))
+    badge_metric(theme, "md.comp.badge.size", Px(6.0))
 }
 
 pub(crate) fn large_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.badge.large.size")
-        .unwrap_or(Px(16.0))
+    badge_metric(theme, "md.comp.badge.large.size", Px(16.0))
 }
 
 pub(crate) fn dot_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.badge.color")
-        .or_else(|| theme.color_by_key("md.sys.color.error"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.error"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys("md.comp.badge.color", "md.sys.color.error")
 }
 
 pub(crate) fn large_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.badge.large.color")
-        .or_else(|| theme.color_by_key("md.sys.color.error"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.error"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.badge.large.color", "md.sys.color.error")
 }
 
 pub(crate) fn large_label_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.badge.large.label-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-error"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-error"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.badge.large.label-text.color",
+        "md.sys.color.on-error",
+    )
+}
+
+pub(crate) fn large_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        Some("md.comp.badge.large.label-text"),
+        "md.sys.typescale.label-small",
+        Some("md.comp.badge.large.label-text.weight"),
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn shape(theme: &Theme) -> Corners {
-    let r = theme
-        .metric_by_key("md.comp.badge.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(Px(9999.0));
-    Corners::all(r)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &["md.comp.badge.shape", "md.sys.shape.corner.full"],
+        Corners::all(Px(9999.0)),
+    )
 }
 
 pub(crate) fn large_shape(theme: &Theme) -> Corners {
-    let r = theme
-        .metric_by_key("md.comp.badge.large.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(Px(9999.0));
-    Corners::all(r)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &["md.comp.badge.large.shape", "md.sys.shape.corner.full"],
+        Corners::all(Px(9999.0)),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn badge_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(dot_size(theme), Px(6.0));
+        assert_eq!(large_size(theme), Px(16.0));
+        assert_eq!(shape(theme), Corners::all(Px(9999.0)));
+        assert_eq!(large_shape(theme), Corners::all(Px(9999.0)));
+    }
+
+    #[test]
+    fn badge_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert("md.comp.badge.size".to_string(), 8.0);
+        patch
+            .metrics
+            .insert("md.comp.badge.large.size".to_string(), 18.0);
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.full".to_string(), 40.0);
+        patch
+            .metrics
+            .insert("md.comp.badge.large.shape".to_string(), 9.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(dot_size(&theme), Px(8.0));
+        assert_eq!(large_size(&theme), Px(18.0));
+        assert_eq!(shape(&theme), Corners::all(Px(40.0)));
+        assert_eq!(large_shape(&theme), Corners::all(Px(9.0)));
+    }
+
+    #[test]
+    fn badge_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.badge.shape".to_string(), 40.0);
+        patch.corners.insert(
+            "md.comp.badge.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
+    }
 }

@@ -196,6 +196,7 @@ fn shortcuts_use_focus_barrier_key_context_scope_when_input_barrier_is_off() {
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: Some(Arc::<str>::from("underlay")),
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
         window_frame.instances.insert(
@@ -209,6 +210,7 @@ fn shortcuts_use_focus_barrier_key_context_scope_when_input_barrier_is_off() {
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: Some(Arc::<str>::from("overlay")),
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
     });

@@ -4,9 +4,10 @@ pub const SOURCE: &str = include_str!("snackbar.rs");
 use std::sync::Arc;
 
 use fret::{AppComponentCx, UiChild};
+use fret_core::{Color, Edges, Px};
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
-use fret_ui_kit::ToastStore;
+use fret_ui_kit::{ColorRef, ToastStore, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -15,8 +16,42 @@ const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
 pub fn render(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
     let store = cx.local_model_keyed("store", ToastStore::default);
 
+    let host_style = material3::SnackbarStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+            r: 0.12,
+            g: 0.15,
+            b: 0.18,
+            a: 1.0,
+        }))))
+        .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+            r: 0.96,
+            g: 0.92,
+            b: 0.82,
+            a: 1.0,
+        }))))
+        .action_label_color(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+            r: 0.67,
+            g: 0.86,
+            b: 1.0,
+            a: 1.0,
+        }))))
+        .close_icon_color(WidgetStateProperty::new(Some(ColorRef::Color(Color {
+            r: 0.96,
+            g: 0.92,
+            b: 0.82,
+            a: 0.88,
+        }))))
+        .container_corner_radius(WidgetStateProperty::new(Some(Px(10.0))))
+        .container_padding(WidgetStateProperty::new(Some(Edges {
+            left: Px(18.0),
+            right: Px(14.0),
+            top: Px(10.0),
+            bottom: Px(10.0),
+        })));
+
     let host_layer = material3::SnackbarHost::new(store.clone())
         .max_snackbars(1)
+        .style(host_style)
         .into_element(cx);
 
     let show_short: OnActivate = {

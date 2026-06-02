@@ -1,20 +1,21 @@
 //! Focused interaction regression tests for Material 3 SearchView.
 
 use fret_core::{
-    AppWindowId, KeyCode, NodeId, Px, Rect, Scene, SceneOp, SemanticsRole, Size, UiServices,
+    AppWindowId, Color, Corners, Edges, KeyCode, NodeId, Paint, Px, Rect, Scene, SceneOp,
+    SemanticsRole, Size, UiServices,
 };
 use fret_runtime::{ModelHost, PlatformCapabilities};
-use fret_ui::UiTree;
-use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+use fret_ui::{Theme, UiTree, theme::ThemeConfig};
+use fret_ui_kit::{ColorRef, OverlayController, OverlayStackEntryKind, WidgetStateProperty};
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{SearchView, SearchViewPresentation};
+use fret_ui_material3::{SearchBarStyle, SearchView, SearchViewPresentation, SearchViewStyle};
 
-mod interaction_harness;
 mod support;
 
 use support::events::{key_down, key_up};
 use support::goldens::{run_overlay_frame, run_overlay_frame_with_scene_scaled};
 use support::host::{FakeUiServices, TestHost};
+use support::layout::with_padding;
 use support::theme::apply_material_theme;
 
 fn semantics_test_id_layout_bounds(ui: &UiTree<TestHost>, id: &str) -> Rect {
@@ -37,6 +38,23 @@ fn scene_has_intermediate_opacity(scene: &Scene) -> bool {
         matches!(
             op,
             SceneOp::PushOpacity { opacity } if *opacity > 0.01 && *opacity < 0.99
+        )
+    })
+}
+
+fn color_close(actual: Color, expected: Color) -> bool {
+    (actual.r - expected.r).abs() <= 0.001
+        && (actual.g - expected.g).abs() <= 0.001
+        && (actual.b - expected.b).abs() <= 0.001
+        && (actual.a - expected.a).abs() <= 0.001
+}
+
+fn scene_has_solid_quad_color(scene: &Scene, expected: Color) -> bool {
+    scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { background, .. }
+                if matches!(background.paint, Paint::Solid(color) if color_close(color, expected))
         )
     })
 }
@@ -92,15 +110,17 @@ fn search_view_full_screen_uses_modal_overlay_and_closes_on_escape() {
         })
     };
 
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
+    for _ in 0..64 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
 
     let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
     assert!(
@@ -218,15 +238,17 @@ fn search_view_docked_overlay_fades_and_expands_on_open_close_frames() {
         })
     };
 
-    run_overlay_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        true,
-        |ui, app, services| render(ui, app, services),
-    );
+    for _ in 0..64 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
 
     let _ = app.models_mut().update(&open, |v| *v = true);
     let first_open_scene = run_overlay_frame_with_scene_scaled(
@@ -284,6 +306,317 @@ fn search_view_docked_overlay_fades_and_expands_on_open_close_frames() {
         first_close_overlay.size.height.0 > 4.0 && first_close_overlay.size.height.0 < 236.0,
         "expected docked SearchView overlay height to shrink on the first close frame, got {}",
         first_close_overlay.size.height.0
+    );
+}
+
+#[test]
+fn search_view_docked_overlay_flips_and_clamps_near_viewport_bottom() {
+    use fret_ui::element::{ContainerProps, FlexProps, Length, Overflow, SpacingLength};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(260.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+    let query = app.models_mut().insert(String::from("bottom"));
+    let open_model = open.clone();
+    let query_model = query.clone();
+
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open_model.clone();
+        let query = query_model.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", move |cx| {
+            let search = SearchView::new(open, query)
+                .test_id("m3-search-view")
+                .placeholder("Search bottom edge")
+                .max_height(Px(180.0))
+                .into_element(cx, |cx| {
+                    vec![
+                        cx.text("Alpha"),
+                        cx.text("Bravo"),
+                        cx.text("Charlie"),
+                        cx.text("Delta"),
+                        cx.text("Echo"),
+                    ]
+                });
+
+            let search = {
+                let mut props = ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(360.0));
+                props.layout.overflow = Overflow::Visible;
+                cx.container(props, move |_cx| vec![search])
+            };
+
+            let spacer = {
+                let mut props = ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(360.0));
+                props.layout.size.height = Length::Px(Px(172.0));
+                cx.container(props, |_cx| Vec::<fret_ui::element::AnyElement>::new())
+            };
+
+            let mut column = FlexProps::default();
+            column.direction = fret_core::Axis::Vertical;
+            column.align = fret_ui::element::CrossAlign::Start;
+            column.gap = SpacingLength::Px(Px(0.0));
+            column.layout.size.width = Length::Px(Px(360.0));
+            column.layout.overflow = Overflow::Visible;
+
+            let content = cx.flex(column, move |_cx| vec![spacer, search]);
+            vec![with_padding(cx, Px(12.0), content)]
+        })
+    };
+
+    for _ in 0..64 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let anchor = semantics_test_id_layout_bounds(&ui, "m3-search-view");
+    let overlay = semantics_test_id_layout_bounds(&ui, "m3-search-view.overlay");
+
+    assert!(
+        anchor.origin.y.0 > 160.0,
+        "test setup should place the SearchView input near the bottom edge; anchor={anchor:?}"
+    );
+    assert!(
+        overlay.origin.y.0 >= 20.0 - 0.5,
+        "docked SearchView overlay should respect window margin plus collision padding; overlay={overlay:?}"
+    );
+    assert!(
+        overlay.origin.y.0 + overlay.size.height.0 <= bounds.size.height.0 - 20.0 + 0.5,
+        "docked SearchView overlay should stay inside the bottom collision boundary; overlay={overlay:?}"
+    );
+    assert!(
+        overlay.origin.y.0 + overlay.size.height.0 <= anchor.origin.y.0 + 0.5,
+        "docked SearchView should flip above the input when bottom space is insufficient; anchor={anchor:?} overlay={overlay:?}"
+    );
+    assert!(
+        overlay.size.height.0 < 180.0 && overlay.size.height.0 > 80.0,
+        "docked SearchView should clamp height to the available top-side space; overlay={overlay:?}"
+    );
+}
+
+#[test]
+fn search_view_style_overrides_docked_overlay_paint_contract() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+    let query = app.models_mut().insert(String::from("alpha"));
+    let open_model = open.clone();
+    let query_model = query.clone();
+    let container = Color {
+        r: 0.12,
+        g: 0.15,
+        b: 0.20,
+        a: 1.0,
+    };
+    let divider = Color {
+        r: 0.94,
+        g: 0.74,
+        b: 0.36,
+        a: 1.0,
+    };
+    let style = SearchViewStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(container))))
+        .divider_color(WidgetStateProperty::new(Some(ColorRef::Color(divider))))
+        .docked_container_corner_radii(WidgetStateProperty::new(Some(Corners::all(Px(16.0)))))
+        .body_padding(WidgetStateProperty::new(Some(Edges::all(Px(20.0)))));
+
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open_model.clone();
+        let query = query_model.clone();
+        let style = style.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", move |cx| {
+            vec![
+                SearchView::new(open, query)
+                    .style(style)
+                    .test_id("m3-search-view")
+                    .placeholder("Search")
+                    .max_height(Px(240.0))
+                    .into_element(cx, |cx| vec![cx.text("Result alpha")]),
+            ]
+        })
+    };
+
+    let mut scene = Scene::default();
+    for _ in 0..64 {
+        scene = run_overlay_frame_with_scene_scaled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            1.0,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    assert!(
+        scene_has_solid_quad_color(&scene, container),
+        "container_background override should paint the docked SearchView overlay"
+    );
+    assert!(
+        scene_has_solid_quad_color(&scene, divider),
+        "divider_color override should paint the docked SearchView divider"
+    );
+}
+
+#[test]
+fn search_view_docked_header_uses_search_view_header_height_token() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let mut patch = ThemeConfig::default();
+    patch.metrics.insert(
+        "md.comp.search-view.docked.header.container.height".to_string(),
+        68.0,
+    );
+    patch
+        .metrics
+        .insert("md.comp.search-bar.container.height".to_string(), 56.0);
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(180.0)),
+    );
+    let open = app.models_mut().insert(false);
+    let query = app.models_mut().insert(String::from("alpha"));
+
+    app.advance_frame();
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let search_view = SearchView::new(open.clone(), query.clone())
+                .test_id("m3-search-view")
+                .placeholder("Search")
+                .into_element(cx, |cx| vec![cx.text("Result alpha")]);
+            vec![with_padding(cx, Px(24.0), search_view)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let header_chrome = semantics_test_id_layout_bounds(&ui, "m3-search-view.chrome");
+    assert!(
+        (header_chrome.size.height.0 - 68.0).abs() <= 0.5,
+        "docked SearchView header should use md.comp.search-view.docked.header.container.height; bounds={header_chrome:?}"
+    );
+}
+
+#[test]
+fn search_view_style_overrides_full_screen_header_layout_contract() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::Expressive);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+    let query = app.models_mut().insert(String::from("alpha"));
+    let open_model = open.clone();
+    let query_model = query.clone();
+    let style = SearchViewStyle::default()
+        .full_screen_header_container_height(WidgetStateProperty::new(Some(Px(92.0))))
+        .header_style(
+            SearchBarStyle::default().container_height(WidgetStateProperty::new(Some(Px(64.0)))),
+        );
+
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let open = open_model.clone();
+        let query = query_model.clone();
+        let style = style.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", move |cx| {
+            vec![
+                SearchView::new(open, query)
+                    .style(style)
+                    .test_id("m3-search-view")
+                    .placeholder("Search")
+                    .presentation(SearchViewPresentation::FullScreen)
+                    .into_element(cx, |cx| vec![cx.text("Result alpha")]),
+            ]
+        })
+    };
+
+    for _ in 0..64 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let header_slot = semantics_test_id_layout_bounds(&ui, "m3-search-view.overlay.header-slot");
+    assert!(
+        (header_slot.size.height.0 - 92.0).abs() <= 0.5,
+        "full_screen_header_container_height override should affect header slot layout; bounds={header_slot:?}"
+    );
+
+    let header_chrome =
+        semantics_test_id_layout_bounds(&ui, "m3-search-view.overlay.header.chrome");
+    assert!(
+        (header_chrome.size.height.0 - 64.0).abs() <= 0.5,
+        "header_style container_height override should affect full-screen header SearchBar; bounds={header_chrome:?}"
     );
 }
 

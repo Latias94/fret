@@ -1,0 +1,44 @@
+{
+  "id": "material3-token-inventory-helper-taxonomy-v1",
+  "title": "Material3 Token Inventory Helper Taxonomy v1",
+  "status": "closed",
+  "created": "2026-05-31",
+  "updated": "2026-05-31",
+  "owner": "codex",
+  "scope": [
+    "tools/parity-discovery/material3_token_inventory.py",
+    "docs/workstreams/material3-token-inventory-helper-taxonomy-v1",
+    "docs/workstreams/material3-fab-token-defaults-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "docs/workstreams/material3-token-inventory-helper-taxonomy-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "architecture_refs": [
+    "docs/workstreams/material3-fab-token-defaults-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "tokens",
+    "tooling",
+    "inventory"
+  ],
+  "lane_slug": "material3",
+  "context_manifest": "docs/workstreams/material3-token-inventory-helper-taxonomy-v1/CONTEXT.jsonl",
+  "goals": [
+    "Clarify Material3 token helper taxonomy in inventory reports.",
+    "Preserve backward-compatible JSON aliases for existing readers.",
+    "Regenerate focused evidence for the taxonomy change."
+  ],
+  "non_goals": [
+    "Changing token scanner heuristics.",
+    "Changing runtime Material3 code.",
+    "Rewriting historical inventory artifacts."
+  ],
+  "validation": [
+    "python tools/parity-discovery/material3_token_inventory.py --generated-date 2026-05-31 --output docs/workstreams/material3-token-inventory-helper-taxonomy-v1/artifacts/material3_token_inventory_report_v1.json",
+    "python -m json.tool docs/workstreams/material3-token-inventory-helper-taxonomy-v1/WORKSTREAM.json | Out-Null",
+    "python -m json.tool docs/workstreams/material3-token-inventory-helper-taxonomy-v1/artifacts/material3_token_inventory_report_v1.json | Out-Null",
+    "python tools/check_workstream_catalog.py",
+    "python tools/check_layering.py",
+    "git diff --check"
+  ]
+}

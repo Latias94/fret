@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "slug": "direction-infrastructure-v1",
+  "title": "Direction Infrastructure v1",
+  "status": "closed",
+  "updated": "2026-05-30",
+  "scope_kind": "refactor",
+  "problem": "Direction handling exists in several layers but repeated RTL policy remains in design-system components. The lane defines ownership and extracts the first shared direction policy helpers without claiming full Flex RTL layout support.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/direction-infrastructure-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/direction-infrastructure-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/direction-infrastructure-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/direction-infrastructure-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/direction-infrastructure-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/direction-infrastructure-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run focused direction primitive and representative shadcn/Material3 RTL tests.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --lib primitives::direction primitives::roving_focus_group",
+      "cargo nextest run -p fret-ui-shadcn --lib rtl",
+      "cargo nextest run -p fret-ui-material3 --features diagnostics --test tabs_state rtl_tabs_arrow_left_moves_to_next_logical_tab_without_wrapping"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/direction-infrastructure-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "module-size-report",
+      "command": "python tools/report_largest_files.py --top 30 --min-lines 800"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "crates/fret-core/src/layout_direction.rs",
+    "crates/fret-ui/src/overlay_placement/types.rs",
+    "ecosystem/fret-ui-kit/src/primitives/direction.rs",
+    "ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs",
+    "ecosystem/fret-ui-shadcn/src/direction.rs",
+    "ecosystem/fret-ui-shadcn/src/rtl.rs",
+    "ecosystem/fret-ui-material3/src/chip_set.rs",
+    "ecosystem/fret-ui-material3/src/segmented_button.rs",
+    "ecosystem/fret-ui-material3/src/tabs.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane extracted shared direction policy helpers. Global Flex RTL physical placement should be split into a mechanism-layer follow-on."
+  }
+}

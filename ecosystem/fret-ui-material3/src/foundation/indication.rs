@@ -2,12 +2,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use fret_core::{Color, Corners, DrawOrder, Point, Px, Rect};
-use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, CanvasProps};
 use fret_ui::elements::ElementContext;
 use fret_ui::theme::CubicBezier;
+use fret_ui::{Theme, UiHost};
 
 use crate::foundation::context::{MaterialRippleConfiguration, inherited_ripple_configuration};
+use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
 use crate::interaction::ripple::{RippleAnimator, RippleOrigin, RipplePaintFrame};
 use crate::interaction::state_layer::StateLayerAnimator;
 
@@ -61,17 +62,15 @@ pub fn material_pressable_indication_config(
     ripple_radius: Option<Px>,
 ) -> IndicationConfig {
     let defaults = IndicationConfig::default();
-    let state_duration_ms = theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(defaults.state_duration_ms);
-    let ripple_expand_ms = theme
-        .duration_ms_by_key("md.sys.motion.duration.short4")
-        .unwrap_or(defaults.ripple_expand_ms);
-    let ripple_fade_ms = theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(defaults.ripple_fade_ms);
-    let easing = theme
-        .easing_by_key("md.sys.motion.easing.standard")
+    let tokens = MaterialTokenResolver::new(theme);
+    let state_duration_ms =
+        tokens.duration_ms_sys("md.sys.motion.duration.short2", defaults.state_duration_ms);
+    let ripple_expand_ms =
+        tokens.duration_ms_sys("md.sys.motion.duration.short4", defaults.ripple_expand_ms);
+    let ripple_fade_ms =
+        tokens.duration_ms_sys("md.sys.motion.duration.short2", defaults.ripple_fade_ms);
+    let easing = tokens
+        .easing_optional(Some("md.sys.motion.easing.standard"))
         .unwrap_or(defaults.easing);
 
     IndicationConfig {
@@ -82,6 +81,34 @@ pub fn material_pressable_indication_config(
         ripple_radius,
         easing,
     }
+}
+
+fn material_state_layer_opacity(theme: &Theme, interaction: MaterialStateLayerInteraction) -> f32 {
+    MaterialTokenResolver::new(theme).system_state_layer_opacity(interaction)
+}
+
+pub(crate) fn material_hover_state_layer_opacity(theme: &Theme) -> f32 {
+    material_state_layer_opacity(theme, MaterialStateLayerInteraction::Hovered)
+}
+
+pub(crate) fn material_focus_state_layer_opacity(theme: &Theme) -> f32 {
+    material_state_layer_opacity(theme, MaterialStateLayerInteraction::Focused)
+}
+
+pub(crate) fn material_pressed_state_layer_opacity(theme: &Theme) -> f32 {
+    material_state_layer_opacity(theme, MaterialStateLayerInteraction::Pressed)
+}
+
+pub(crate) fn material_disabled_state_layer_opacity(theme: &Theme) -> f32 {
+    MaterialTokenResolver::new(theme).disabled_state_layer_opacity()
+}
+
+pub fn material_pressable_indication_config_in_scope<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    ripple_radius: Option<Px>,
+) -> IndicationConfig {
+    let theme = fret_ui::Theme::global(&*cx.app);
+    material_pressable_indication_config(theme, ripple_radius)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -594,7 +621,9 @@ fn paint_ink_frame(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
     use fret_core::Size;
+    use fret_ui::{Theme, theme::ThemeConfig};
 
     fn test_color() -> Color {
         Color {
@@ -615,6 +644,31 @@ mod tests {
 
     fn test_bounds() -> Rect {
         Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)))
+    }
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn material_state_layer_opacity_helpers_use_theme_then_material_defaults() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .numbers
+            .insert("md.sys.state.pressed.state-layer-opacity".to_string(), 0.24);
+        patch.numbers.insert(
+            "md.sys.state.disabled.state-layer-opacity".to_string(),
+            0.42,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(material_hover_state_layer_opacity(&theme), 0.08);
+        assert_eq!(material_focus_state_layer_opacity(&theme), 0.1);
+        assert_eq!(material_pressed_state_layer_opacity(&theme), 0.24);
+        assert_eq!(material_disabled_state_layer_opacity(&theme), 0.42);
     }
 
     #[test]

@@ -18,7 +18,6 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -30,12 +29,13 @@ use crate::foundation::elevation::{
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{
     centered_fill_with_chrome_test_id, enforce_minimum_interactive_size,
 };
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::fab as fab_tokens;
 
@@ -89,20 +89,17 @@ impl FabStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.icon_color.is_some() {
-            self.icon_color = other.icon_color;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                container_background,
+                icon_color,
+                label_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
@@ -393,14 +390,18 @@ impl Fab {
                                     extended,
                                     self.variant,
                                 );
-                            let config = material_pressable_indication_config(theme, None);
+                            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
                             let content_tokens = ExtendedFabContentTokens {
                                 icon_size: fab_tokens::extended_icon_size(theme, self.size),
                                 icon_label_space: fab_tokens::extended_icon_label_space(
                                     theme, self.size,
                                 ),
-                                label_style: extended_fab_label_style(theme, self.size),
+                                label_style: fab_tokens::extended_label_text_style(
+                                    theme,
+                                    self.size,
+                                    self.variant,
+                                ),
                             };
 
                             let chrome_tokens = ExtendedFabChromeTokens {
@@ -549,24 +550,6 @@ fn state_layer_target_opacity(
     };
 
     fab_tokens::state_layer_opacity(theme, extended, variant, interaction)
-}
-
-fn extended_fab_label_style(theme: &Theme, size: FabSize) -> fret_core::TextStyle {
-    let primary_key = match size {
-        FabSize::Small => "md.sys.typescale.title-medium",
-        FabSize::Regular => "md.comp.extended-fab.label-text",
-        FabSize::Medium => "md.sys.typescale.title-large",
-        FabSize::Large => "md.sys.typescale.headline-small",
-    };
-
-    typography::with_intent(
-        theme
-            .text_style_by_key(primary_key)
-            .or_else(|| theme.text_style_by_key("md.comp.extended-fab.label-text"))
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-            .unwrap_or_default(),
-        TextIntent::Control,
-    )
 }
 
 fn material_fab_chrome<H: UiHost>(

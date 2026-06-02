@@ -29,12 +29,13 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
-    material_pressable_indication_config,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
-use crate::tokens::switch as switch_tokens;
+use crate::tokens::switch::{self as switch_tokens, SwitchSizeTokens};
 
 #[derive(Debug, Clone)]
 struct SwitchPartTestIds {
@@ -123,20 +124,12 @@ impl SwitchStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.track_color.is_some() {
-            self.track_color = other.track_color;
-        }
-        if other.handle_color.is_some() {
-            self.handle_color = other.handle_color;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [track_color, handle_color, outline_color, state_layer_color,]
+        )
     }
 }
 
@@ -270,7 +263,7 @@ impl Switch {
         cx.scope(|cx| {
             let size = {
                 let theme = Theme::global(&*cx.app);
-                switch_size_tokens(theme)
+                switch_tokens::size_tokens(theme)
             };
             let icons_enabled = self.icons;
             let show_only_selected_icon = self.show_only_selected_icon;
@@ -515,8 +508,8 @@ impl Switch {
 
                             let ripple_base_opacity =
                                 switch_tokens::pressed_state_layer_opacity(theme, selected);
-                            let config = material_pressable_indication_config(
-                                theme,
+                            let config = material_pressable_indication_config_in_scope(
+                                &*cx,
                                 Some(Px(size.state_layer.0 * 0.5)),
                             );
 
@@ -775,82 +768,6 @@ impl Switch {
                 (pressable_props, vec![pointer_region])
             })
         })
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct SwitchSizeTokens {
-    state_layer: Px,
-    track_width: Px,
-    track_height: Px,
-    track_outline_width: Px,
-    selected_handle_width: Px,
-    selected_handle_height: Px,
-    unselected_handle_width: Px,
-    unselected_handle_height: Px,
-    pressed_handle_width: Px,
-    pressed_handle_height: Px,
-    with_icon_handle_width: Px,
-    with_icon_handle_height: Px,
-    track_y_offset: Px,
-}
-
-fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
-    let state_layer = theme
-        .metric_by_key("md.comp.switch.state-layer.size")
-        .unwrap_or(Px(40.0));
-    let track_width = theme
-        .metric_by_key("md.comp.switch.track.width")
-        .unwrap_or(Px(52.0));
-    let track_height = theme
-        .metric_by_key("md.comp.switch.track.height")
-        .unwrap_or(Px(32.0));
-    let track_outline_width = theme
-        .metric_by_key("md.comp.switch.track.outline.width")
-        .unwrap_or(Px(2.0));
-
-    let selected_handle_width = theme
-        .metric_by_key("md.comp.switch.selected.handle.width")
-        .unwrap_or(Px(24.0));
-    let selected_handle_height = theme
-        .metric_by_key("md.comp.switch.selected.handle.height")
-        .unwrap_or(Px(24.0));
-    let unselected_handle_width = theme
-        .metric_by_key("md.comp.switch.unselected.handle.width")
-        .unwrap_or(Px(16.0));
-    let unselected_handle_height = theme
-        .metric_by_key("md.comp.switch.unselected.handle.height")
-        .unwrap_or(Px(16.0));
-    let pressed_handle_width = theme
-        .metric_by_key("md.comp.switch.pressed.handle.width")
-        .unwrap_or(Px(28.0));
-    let pressed_handle_height = theme
-        .metric_by_key("md.comp.switch.pressed.handle.height")
-        .unwrap_or(Px(28.0));
-
-    let with_icon_handle_width = theme
-        .metric_by_key("md.comp.switch.with-icon.handle.width")
-        .unwrap_or(selected_handle_width);
-    let with_icon_handle_height = theme
-        .metric_by_key("md.comp.switch.with-icon.handle.height")
-        .unwrap_or(selected_handle_height);
-
-    let track_y_offset = Px(((state_layer.0 - track_height.0) * 0.5).max(0.0));
-
-    SwitchSizeTokens {
-        state_layer,
-        track_width,
-        track_height,
-        track_outline_width,
-        selected_handle_width,
-        selected_handle_height,
-        unselected_handle_width,
-        unselected_handle_height,
-        pressed_handle_width,
-        pressed_handle_height,
-        with_icon_handle_width,
-        with_icon_handle_height,
-        track_y_offset,
     }
 }
 

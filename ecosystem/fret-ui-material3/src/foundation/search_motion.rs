@@ -9,7 +9,7 @@ use fret_core::{Point, Px, Rect, Transform2D};
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::motion::SpringAnimator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,16 +45,48 @@ pub(crate) fn drive_search_motion<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         match kind {
             SearchMotionKind::Docked => (
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial),
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects),
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchDockedExpand,
+                ),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchDockedCollapse,
+                ),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchContentFadeIn,
+                ),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchContentFadeOut,
+                ),
             ),
             SearchMotionKind::FullScreen => (
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::SlowSpatial),
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::DefaultSpatial),
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects),
-                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchFullScreenExpand,
+                ),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchFullScreenCollapse,
+                ),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchContentFadeIn,
+                ),
+                material_motion_spring_in_scope(
+                    &*cx,
+                    theme,
+                    MaterialMotionRole::SearchContentFadeOut,
+                ),
             ),
         }
     };

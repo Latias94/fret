@@ -30,9 +30,10 @@ use fret_ui_kit::{
     declarative::controllable_state, resolve_override_slot_with,
 };
 
-use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
-use crate::foundation::indication::material_pressable_indication_config;
+use crate::foundation::context::material_layout_direction_in_scope;
+use crate::foundation::indication::material_pressable_indication_config_in_scope;
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::{
     absolute_region_layout, centered_absolute_region_layout, diagnostic_anchor,
     optional_part_test_id, part_test_id,
@@ -177,20 +178,17 @@ impl SliderStyle {
         self
     }
 
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.active_track_color.is_some() {
-            self.active_track_color = other.active_track_color;
-        }
-        if other.inactive_track_color.is_some() {
-            self.inactive_track_color = other.inactive_track_color;
-        }
-        if other.handle_color.is_some() {
-            self.handle_color = other.handle_color;
-        }
-        if other.state_layer_color.is_some() {
-            self.state_layer_color = other.state_layer_color;
-        }
-        self
+    pub fn merged(self, other: Self) -> Self {
+        merge_style_override_slots!(
+            self,
+            other,
+            [
+                active_track_color,
+                inactive_track_color,
+                handle_color,
+                state_layer_color,
+            ]
+        )
     }
 }
 
@@ -501,28 +499,19 @@ pub fn slider<H: UiHost>(
         .get_model_copied(&hovered_model, Invalidation::Paint)
         .unwrap_or(false);
 
-    let (
-        active_track_h,
-        inactive_track_h,
-        track_shape,
-        handle_h,
-        handle_shape,
-        default_layout_direction,
-    ) = {
+    let (active_track_h, inactive_track_h, track_shape, handle_h, handle_shape) = {
         let theme = Theme::global(&*cx.app);
         let active_track_h = slider_tokens::active_track_height(theme);
         let inactive_track_h = slider_tokens::inactive_track_height(theme);
         let track_shape = slider_tokens::track_shape(theme);
         let handle_h = slider_tokens::handle_height(theme);
         let handle_shape = slider_tokens::handle_shape(theme);
-        let default_layout_direction = theme_default_layout_direction(theme);
         (
             active_track_h,
             inactive_track_h,
             track_shape,
             handle_h,
             handle_shape,
-            default_layout_direction,
         )
     };
     let track_h = Px(active_track_h.0.max(inactive_track_h.0));
@@ -583,7 +572,7 @@ pub fn slider<H: UiHost>(
         let track_test_id = optional_part_test_id(root_test_id.as_ref(), "track");
         let active_track_test_id = optional_part_test_id(root_test_id.as_ref(), "active-track");
         let handle_test_id = optional_part_test_id(root_test_id.as_ref(), "handle");
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
         let rtl = layout_direction == LayoutDirection::Rtl;
         let sign = if rtl { -1.0 } else { 1.0 };
         let t_visual = if rtl { 1.0 - t_value } else { t_value };
@@ -659,7 +648,7 @@ pub fn slider<H: UiHost>(
                 || state_layer_default,
             );
             let state_layer_size = slider_tokens::state_layer_size(theme);
-            let config = material_pressable_indication_config(theme, None);
+            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
             let handle_w = slider_tokens::handle_width(theme, enabled, token_interaction);
 
@@ -1291,23 +1280,14 @@ pub fn range_slider<H: UiHost>(
     let values_now = clamp_range_pair(values_now, min, max, step);
     let t0_value = value_to_t(values_now[0], min, max);
     let t1_value = value_to_t(values_now[1], min, max);
-    let (
-        default_layout_direction,
-        active_track_h,
-        inactive_track_h,
-        track_shape,
-        handle_h,
-        handle_shape,
-    ) = {
+    let (active_track_h, inactive_track_h, track_shape, handle_h, handle_shape) = {
         let theme = Theme::global(&*cx.app);
-        let default_layout_direction = theme_default_layout_direction(theme);
         let active_track_h = slider_tokens::active_track_height(theme);
         let inactive_track_h = slider_tokens::inactive_track_height(theme);
         let track_shape = slider_tokens::track_shape(theme);
         let handle_h = slider_tokens::handle_height(theme);
         let handle_shape = slider_tokens::handle_shape(theme);
         (
-            default_layout_direction,
             active_track_h,
             inactive_track_h,
             track_shape,
@@ -1355,7 +1335,7 @@ pub fn range_slider<H: UiHost>(
     cx.semantics_with_id(semantics, move |cx, group_semantics_id| {
         let track_test_id = optional_part_test_id(test_id.as_ref(), "track");
         let active_track_test_id = optional_part_test_id(test_id.as_ref(), "active-track");
-        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
+        let layout_direction = material_layout_direction_in_scope(cx);
         let rtl = layout_direction == LayoutDirection::Rtl;
         let sign = if rtl { -1.0 } else { 1.0 };
 
@@ -1712,7 +1692,7 @@ pub fn range_slider<H: UiHost>(
                 || state_layer_default,
             );
             let state_layer_size = slider_tokens::state_layer_size(theme);
-            let config = material_pressable_indication_config(theme, None);
+            let config = material_pressable_indication_config_in_scope(&*cx, None);
 
             let handle_w_active = slider_tokens::handle_width(theme, enabled, interaction_active);
             let handle_w_inactive =

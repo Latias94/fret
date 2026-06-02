@@ -112,6 +112,7 @@ fn event_scroll_handle_invalidation_targets_live_bindings_across_layers_only() {
                     inherited_text_style: None,
                     semantics_decoration: None,
                     key_context: None,
+                    layout_direction: fret_core::LayoutDirection::default(),
                 },
             );
         }
@@ -227,6 +228,7 @@ fn event_scroll_target_invalidation_prefers_live_attached_node_over_stale_same_f
                 inherited_text_style: None,
                 semantics_decoration: None,
                 key_context: None,
+                layout_direction: fret_core::LayoutDirection::default(),
             },
         );
         for node in [stale_target, live_target] {
@@ -241,6 +243,7 @@ fn event_scroll_target_invalidation_prefers_live_attached_node_over_stale_same_f
                     inherited_text_style: None,
                     semantics_decoration: None,
                     key_context: None,
+                    layout_direction: fret_core::LayoutDirection::default(),
                 },
             );
         }

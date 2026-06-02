@@ -4,11 +4,16 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::{Theme, theme::CubicBezier};
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::cubic_bezier_ease;
+use crate::tokens::typography;
 use crate::top_app_bar::TopAppBarVariant;
+
+fn top_app_bar_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
 
 fn container_height_key(variant: TopAppBarVariant) -> &'static str {
     match variant {
@@ -104,9 +109,7 @@ pub(crate) fn container_height(theme: &Theme, variant: TopAppBarVariant) -> Px {
         TopAppBarVariant::Medium => Px(112.0),
         TopAppBarVariant::Large => Px(152.0),
     };
-    theme
-        .metric_by_key(container_height_key(variant))
-        .unwrap_or(fallback)
+    top_app_bar_metric(theme, container_height_key(variant), fallback)
 }
 
 pub(crate) fn container_background(
@@ -166,7 +169,7 @@ fn lerp_color(from: Color, to: Color, t: f32) -> Color {
 pub(crate) fn container_elevation(theme: &Theme, variant: TopAppBarVariant, scrolled: bool) -> Px {
     if scrolled {
         if let Some(key) = on_scroll_container_elevation_key(variant) {
-            return theme.metric_by_key(key).unwrap_or(Px(3.0));
+            return top_app_bar_metric(theme, key, Px(3.0));
         }
 
         // Medium/Large v1 behavior: treat `scrolled` as level2 until we model a full scroll
@@ -174,16 +177,12 @@ pub(crate) fn container_elevation(theme: &Theme, variant: TopAppBarVariant, scro
         return Px(3.0);
     }
 
-    theme
-        .metric_by_key(container_elevation_key(variant))
-        .unwrap_or(Px(0.0))
+    top_app_bar_metric(theme, container_elevation_key(variant), Px(0.0))
 }
 
 pub(crate) fn container_shape(theme: &Theme, variant: TopAppBarVariant) -> Corners {
-    let r = theme
-        .metric_by_key(container_shape_key(variant))
-        .unwrap_or(Px(0.0));
-    Corners::all(r)
+    MaterialTokenResolver::new(theme)
+        .corners_chain_or(&[container_shape_key(variant)], Corners::all(Px(0.0)))
 }
 
 pub(crate) fn headline_color(theme: &Theme, variant: TopAppBarVariant) -> Color {
@@ -192,17 +191,17 @@ pub(crate) fn headline_color(theme: &Theme, variant: TopAppBarVariant) -> Color 
 }
 
 pub(crate) fn headline_text_style(theme: &Theme, variant: TopAppBarVariant) -> TextStyle {
-    if let Some(style) = theme.text_style_by_key(headline_text_style_key(variant)) {
-        return typography::with_intent(style, TextIntent::Control);
-    }
-
     let fallback_key = match variant {
         TopAppBarVariant::Small | TopAppBarVariant::SmallCentered => "md.sys.typescale.title-large",
         TopAppBarVariant::Medium => "md.sys.typescale.headline-small",
         TopAppBarVariant::Large => "md.sys.typescale.headline-medium",
     };
-    let style = theme.text_style_by_key(fallback_key).unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some(headline_text_style_key(variant)),
+        fallback_key,
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn leading_icon_color(theme: &Theme, variant: TopAppBarVariant) -> Color {
@@ -215,4 +214,104 @@ pub(crate) fn trailing_icon_color(theme: &Theme, variant: TopAppBarVariant) -> C
         trailing_icon_color_key(variant),
         "md.sys.color.on-surface-variant",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn top_app_bar_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_height(theme, TopAppBarVariant::Small), Px(64.0));
+        assert_eq!(container_height(theme, TopAppBarVariant::Medium), Px(112.0));
+        assert_eq!(container_height(theme, TopAppBarVariant::Large), Px(152.0));
+        assert_eq!(
+            container_elevation(theme, TopAppBarVariant::Small, false),
+            Px(0.0)
+        );
+        assert_eq!(
+            container_elevation(theme, TopAppBarVariant::Small, true),
+            Px(3.0)
+        );
+        assert_eq!(
+            container_shape(theme, TopAppBarVariant::Small),
+            Corners::all(Px(0.0))
+        );
+    }
+
+    #[test]
+    fn top_app_bar_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.top-app-bar.small.container.height".to_string(),
+            68.0,
+        );
+        patch.metrics.insert(
+            "md.comp.top-app-bar.small.container.elevation".to_string(),
+            1.0,
+        );
+        patch.metrics.insert(
+            "md.comp.top-app-bar.small.on-scroll.container.elevation".to_string(),
+            4.0,
+        );
+        patch
+            .metrics
+            .insert("md.comp.top-app-bar.small.container.shape".to_string(), 8.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_height(&theme, TopAppBarVariant::Small), Px(68.0));
+        assert_eq!(
+            container_elevation(&theme, TopAppBarVariant::Small, false),
+            Px(1.0)
+        );
+        assert_eq!(
+            container_elevation(&theme, TopAppBarVariant::Small, true),
+            Px(4.0)
+        );
+        assert_eq!(
+            container_shape(&theme, TopAppBarVariant::Small),
+            Corners::all(Px(8.0))
+        );
+    }
+
+    #[test]
+    fn top_app_bar_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.top-app-bar.small.container.shape".to_string(), 8.0);
+        patch.corners.insert(
+            "md.comp.top-app-bar.small.container.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(3.0),
+                bottom_right: Px(5.0),
+                bottom_left: Px(7.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme, TopAppBarVariant::Small),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(3.0),
+                bottom_right: Px(5.0),
+                bottom_left: Px(7.0),
+            }
+        );
+    }
 }

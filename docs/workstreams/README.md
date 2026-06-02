@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-30
+Catalog updated: 2026-05-31
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -18,7 +18,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 510
+- Dedicated directories: 541
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1945,14 +1945,14 @@ Rule:
 - `docs/workstreams/carousel-embla-parity-v2/` — first 2026-02-28, latest 2026-03-03, 5 markdown docs
 - `docs/workstreams/clipboard-write-completion-fearless-refactor-v1/` — first 2026-03-25, latest 2026-03-25, 5 markdown docs
 - `docs/workstreams/code-editor-ecosystem-v1/` — first 2026-01-27, latest 2026-02-16, 2 markdown docs
-- `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (active narrow follow-on for code-editor resize edge-row replay/prefetch work; includes `WORKSTREAM.json`)
+- `docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (closed narrow follow-on for code-editor resize edge-row replay/prefetch work; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-prepaint-planner-cost-v1/` — first 2026-05-15, latest 2026-05-16, 5 markdown docs (closed narrow follow-on for code-editor replay-plan construction cost after edge-row payload prebuild; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-public-api-and-architecture-v1/` — first n/a, latest n/a, 18 markdown docs (active narrow follow-on for stabilizing the code editor public API, model boundaries, extension points, and perf/diagnostics gates; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-resize-paint-cache-replay-v1/` — first 2026-05-15, latest 2026-05-15, 6 markdown docs (closed narrow follow-on for code-editor resize paint/cache replay short paths; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-row-fragment-replay-contract-v1/` — first 2026-05-16, latest 2026-05-16, 4 markdown docs (active narrow follow-on for code-editor row-fragment replay contract design and perf validation; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-row-content-snapshot-cache-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (closed narrow follow-on for shared row content snapshot payloads across text, scene cache, replay plan, and paint; includes `WORKSTREAM.json`)
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
-- `docs/workstreams/component-parity-fact-harness-v1/` — first 2026-05-25, latest 2026-05-25, 5 markdown docs (active narrow follow-on for unified shadcn/Material component facts, agent repair packets, and Button Group pilot evidence; includes `WORKSTREAM.json`)
+- `docs/workstreams/component-parity-fact-harness-v1/` — first 2026-05-25, latest 2026-05-25, 5 markdown docs (closed narrow follow-on for unified shadcn/Material component facts, agent repair packets, and Button Group pilot evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
 - `docs/workstreams/container-aware-editor-rail-surface-v1/` — first 2026-04-11, latest 2026-04-11, 11 markdown docs
 - `docs/workstreams/container-queries-v1/` — first 2026-02-09, latest 2026-02-11, 3 markdown docs
@@ -1986,6 +1986,7 @@ Rule:
 - `docs/workstreams/diag-simplification-v1/` — first 2026-02-13, latest 2026-03-09, 4 markdown docs
 - `docs/workstreams/diag-skill-evidence-owner-drift-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the narrow `fret-diag-workflow` evidence-owner correction between public `fretboard` and workspace-dev `fretboard-dev` diagnostics help surfaces)
 - `docs/workstreams/diag-v2-hardening-and-switches-v1/` — first 2026-02-26, latest 2026-03-03, 10 markdown docs
+- `docs/workstreams/direction-infrastructure-v1/` — first n/a, latest n/a, 6 markdown docs (closed refactor lane for shared layout-direction policy helpers and cross-design-system RTL boundary cleanup; includes `WORKSTREAM.json`)
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
@@ -1999,7 +2000,7 @@ Rule:
 - `docs/workstreams/editor-canvas-paint-replay-preedit-plan-cache-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for keeping row-scene replay-plan cache useful on non-preedit rows while an inline preedit row stays on the paint-time path; r62 closeout still leaves the parent owner at canvas-paint-replay; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for reducing planned row-scene replay hosted-resource touch overhead after r62 kept owner=canvas-paint-replay; r63 closeout still leaves the parent owner at canvas-paint-replay; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/` — first n/a, latest n/a, 7 markdown docs (closed diagnostics-only follow-on for attributing planned replay row setup after r63 kept owner=canvas-paint-replay; closeout still selects canvas-paint-replay; includes `WORKSTREAM.json`)
-- `docs/workstreams/editor-canvas-paint-replay-slice-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for the 20260523-r58 Windows RTX4090 editor-paint closeout owner=canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-slice-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for the 20260523-r58 Windows RTX4090 editor-paint closeout owner=canvas-paint-replay; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/` — first 2026-03-09, latest 2026-05-12, 12 markdown docs (active editor ecosystem orchestration lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-05, 7 markdown docs
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs
@@ -2009,6 +2010,7 @@ Rule:
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow closeout lane for the default app-facing async submit/mutation split on `fret-mutation` + `fret`; keeps `fret-query` read-only and records why GenUI/Sonner executor-backed side flows stay recipe/app-owned exceptions)
+- `docs/workstreams/flex-rtl-physical-placement-v1/` — first n/a, latest n/a, 6 markdown docs (closed mechanism-layer follow-on for capturing layout direction on element records and placing horizontal Flex rows from the right edge under RTL; includes `WORKSTREAM.json`)
 - `docs/workstreams/mutation-toast-feedback-golden-path-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow closeout lane that turns the closed submit-owner verdict into a copyable cookbook + docs + screenshot path while keeping Sonner as feedback-only chrome above the authoritative mutation lane)
 - `docs/workstreams/foreground-inheritance-late-binding-v2/` — first 2026-02-24, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/foreground-style-context-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-06, 3 markdown docs
@@ -2030,7 +2032,7 @@ Rule:
 - `docs/workstreams/fret-node-architecture-fearless-refactor-v2/` — first 2026-05-28, latest 2026-05-28, 5 markdown docs (complete architecture lane that deepened mutation, store, state, patch, canvas, and test seams while deleting historical compatibility where proven; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-declarative-contract-closure-v1/` — first n/a, latest n/a, 10 markdown docs (closed follow-on that closed retained-current-fact drift, store dispatch duplication, binding mirror ownership, declarative interaction hook direction, and paint-only orchestration risk; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-06, 3 markdown docs
-- `docs/workstreams/fret-node-event-runtime-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for splitting retained node graph event runtime entrypoint wiring behind a named adapter; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (closed follow-on for splitting retained node graph event runtime entrypoint wiring behind a named adapter; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-low-level-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed lane that proved low-level host operations and command dispatch adapter seams for the retained node graph compatibility island; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-prepaint-adapter-v1/` — first n/a, latest n/a, 7 markdown docs (closed follow-on that proved the retained node graph prepaint cull-window adapter seam and split paint-root cache-plan work into a new lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that split node graph paint-root cache-plan host/bounds/scale-factor route inputs behind a named adapter seam; includes `WORKSTREAM.json`)
@@ -2236,7 +2238,7 @@ Rule:
 - `docs/workstreams/imui-stack-fearless-refactor-v2/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the immediate-mode doc reset, editor adapter closure, and proof-surface cleanup lane)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
-- `docs/workstreams/jellyflow-package-split-v1/` — first 2026-05-30, latest 2026-05-30, 5 markdown docs (active package-boundary lane for splitting reusable headless Jellyflow core/runtime contracts from the Fret node adapter; includes `WORKSTREAM.json`)
+- `docs/workstreams/jellyflow-package-split-v1/` — first 2026-05-30, latest 2026-05-30, 5 markdown docs (active Jellyflow package-boundary split for separating reusable headless node/flow graph engine crates from the Fret UI adapter; includes `WORKSTREAM.json`)
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs
 - `docs/workstreams/length-percentage-semantics-v1/` — first 2026-02-23, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/localization-i18n-v1/` — first 2026-02-06, latest 2026-02-07, 2 markdown docs
@@ -2250,11 +2252,29 @@ Rule:
 - `docs/workstreams/material3-dialog-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 Dialog modal barrier, panel/scrim selectors, Dialog role, Escape dismissal, and focus-restore diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-expressive-alignment-v1/` — first 2026-02-18, latest 2026-02-18, 4 markdown docs
 - `docs/workstreams/material3-exposed-dropdown-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 ExposedDropdown filtering popup diagnostics, selector evidence, and recipe/foundation boundary classification; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-fab-token-defaults-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for moving Material3 FAB and extended-FAB visual default matrices into token helper policy; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-icon-toggle-button-expressive-v1/` — first 2026-02-18, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/material3-icon-button-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 IconButton centered-chrome diagnostics, stale navigation repair, and pressed-scene evidence; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-interaction-regression-harness-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for moving non-Radio Material3 interaction regressions out of `radio_alignment.rs` into a purpose-owned test binary; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-interaction-regression-family-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for splitting the first Material3 interaction-regression family packet into navigation, overlay, and choice/action owner binaries while leaving field/time/text input residuals for later audits; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-layout-direction-provider-bridge-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for bridging resolved Material3 layout direction into the core `LayoutDirection` provider and proving Tabs RTL physical order; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-field-logical-insets-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 TextField/Select floating label and supporting text logical inline insets with RTL geometry proof; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-field-family-production-alignment-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor audit/refactor for Material3 field-family icon-slot logical geometry and Select trigger automation coverage; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-field-interaction-family-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for splitting Autocomplete and ExposedDropdown residual interaction regressions into a field-family test binary while leaving plain TextInput for mechanism ownership audit; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-foundation-deepening-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for deepening Material3 context, field-family chrome, and token matrix interfaces; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-headless-golden-harness-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for moving broad Material3 headless golden suites out of `radio_alignment.rs` into a purpose-owned test binary; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-headless-golden-hygiene-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for isolating stale Material3 navigation/overlay headless golden suites from the default `radio_alignment` gate; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-non-color-token-governance-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for Material3 typography weight, opacity, motion easing, and time picker/input non-color token ownership; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-resolver-fallback-v1/` — first n/a, latest n/a, 5 markdown docs (closed fearless-refactor lane for deepening Material3 token resolver fallback, alpha, and blend policy; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-resolver-non-field-fallback-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for non-field Material3 token fallback chains; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-inventory-helper-taxonomy-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for renaming Material3 token inventory helper taxonomy while preserving JSON aliases; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-fallback-hardening-v2/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for reducing duplicated Material3 chip-family token fallback logic; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-logical-edge-layout-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 logical inline edge helpers plus FilterChip/InputChip RTL padding and trailing-action inset proof; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-select-popup-rtl-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Select popup logical start alignment and listbox option RTL visual-slot proof; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-slider-token-defaults-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for moving Material3 Slider visual default matrices into token helper policy; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-canvas-draw-region-diagnostics-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 ProgressIndicator/Slider canvas draw-region diagnostics, recipe-level rectangular anchors, and named SceneOp mechanism split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-component-alignment-sweep-v1/` — first 2026-05-27, latest 2026-05-28, 6 markdown docs (closed Material 3 all-component alignment sweep with component matrix, packet waves, foundation-escalation rules, closeout audit, and current follow-on closure audit; includes `WORKSTREAM.json`)
-- `docs/workstreams/material3-visual-behavior-layout-parity-v2/` — first 2026-05-28, latest 2026-05-28, 5 markdown docs (active fearless-refactor lane for shadcn-level Material3 style/behavior/layout parity axes, v2 matrix, and bounded packet gates; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-visual-behavior-layout-parity-v2/` — first 2026-05-28, latest 2026-05-28, 5 markdown docs (complete fearless-refactor lane for shadcn-level Material3 style/behavior/layout parity axes, v2 matrix, and bounded packet gates; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 Menu/DropdownMenu focus-dismiss diagnostics, chrome-fill evidence, and recipe/kit boundary classification; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 DatePicker value-derived day-cell selector aliases while preserving row/column selectors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-date-picker-locale-strings-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 DatePicker locale string registry wiring and date-cell descriptions through `I18nService`; includes `WORKSTREAM.json`)
@@ -2269,10 +2289,20 @@ Rule:
 - `docs/workstreams/material3-segmented-button-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 SegmentedButtonSet roving semantics gallery diagnostics and recipe/foundation boundary classification; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-snackbar-parts-selector-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 Snackbar root-derived action/close selectors through the shared toast kit renderer; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-switch-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 Switch adapter report reconciliation and fresh icon state-matrix gallery diagnostics; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-tabs-api-breadth-v1/` — first n/a, latest n/a, 7 markdown docs (closed follow-on for Material3 primary/secondary Tabs API breadth, Compose-backed secondary token aliases, and active-indicator geometry gates; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-tabs-divider-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Tabs default TabRow divider rendering, token routing, and focused geometry gates; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-tabs-leading-icon-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Tabs leading-icon API, icon token routing, and focused layout gates; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-tabs-rtl-indicator-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Tabs RTL keyboard direction, indicator fallback geometry, and public layout direction context helpers; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-tabs-stacked-icon-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for Material3 Tabs stacked icon API, Compose 72px layout, and focused geometry gates; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-test-harness-support-ownership-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for moving Material3 interaction signature helpers under `tests/support` and removing repeated top-level `mod interaction_harness` declarations; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-time-family-token-fallback-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless-refactor lane for reducing duplicated Material3 TimePicker/TimeInput period-selector token fallback logic; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-time-picker-interaction-family-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for splitting TimePicker residual interaction regressions into a purpose-owned test binary while leaving field/TextInput ownership audits; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker Compose-aligned selector roles, spoken values, dial labels, and AM/PM period grouping; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker value-derived clock dial label selectors and picker accessibility residual-risk split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker invalid input error text, invalid semantics, and supporting-text live-region anchors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-string-registry-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TimePicker string registry wiring through `I18nService` plus bootstrap default resources; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-text-input-mechanism-test-ownership-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor follow-on for moving the final plain TextInput residual coverage into `fret-ui` mechanism tests and deleting the empty Material3 residual interaction binary; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-token-visual-matrix-v1/` — first n/a, latest n/a, 6 markdown docs (closed fearless-refactor lane for exhaustive Material3 token visual matrix schema, source map, fixture strategy, and family token packets; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TopAppBar promoted gallery scroll diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-tooltip-rich-parts-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 RichTooltip title/supporting-text selectors, shared tooltip root/chrome wiring, and click-through mechanism boundary; includes `WORKSTREAM.json`)
 - `docs/workstreams/menu-surfaces-alignment-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs
@@ -2378,7 +2408,7 @@ Rule:
 - `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/` — first 2026-03-04, latest 2026-03-04, 3 markdown docs
 - `docs/workstreams/ui-editor-v1/` — first 2026-02-14, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-03, 8 markdown docs
-- `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/` — first n/a, latest n/a, 19 markdown docs (active Frame Pipeline v2 execution-model refactor lane; includes `WORKSTREAM.json`, `PROGRESS.md`, and M4C boundary-hint API evidence)
+- `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/` — first n/a, latest n/a, 19 markdown docs (closed Frame Pipeline v2 execution-model refactor lane; includes `WORKSTREAM.json`, `PROGRESS.md`, and M4C boundary-hint API evidence)
 - `docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for proving one additional Frame Pipeline v2 phase-contract surface without reopening the closed broad lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/` — first n/a, latest n/a, 8 markdown docs (closed attribution lane; CPT-030/CPT-040 evidence shows the code-editor `Canvas` paint tail was caused by `fret-ui` positioned-container final sizing giving the inner windowed scroll a full-content viewport; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-gallery-fearless-refactor/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs

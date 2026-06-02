@@ -3,8 +3,12 @@
 //! This module centralizes token key mapping and fallback chains so radio visuals remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
+
+use crate::foundation::token_resolver::{
+    MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RadioInteraction {
@@ -20,14 +24,24 @@ pub(crate) struct RadioSizeTokens {
     pub(crate) state_layer: Px,
 }
 
+fn radio_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
+
 pub(crate) fn size_tokens(theme: &Theme) -> RadioSizeTokens {
-    let icon = theme
-        .metric_by_key("md.comp.radio-button.icon.size")
-        .unwrap_or(Px(20.0));
-    let state_layer = theme
-        .metric_by_key("md.comp.radio-button.state-layer.size")
-        .unwrap_or(Px(40.0));
+    let icon = radio_metric(theme, "md.comp.radio-button.icon.size", Px(20.0));
+    let state_layer = radio_metric(theme, "md.comp.radio-button.state-layer.size", Px(40.0));
     RadioSizeTokens { icon, state_layer }
+}
+
+pub(crate) fn state_layer_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.radio-button.state-layer.shape",
+            "md.sys.shape.corner.full",
+        ],
+        Corners::all(Px(9999.0)),
+    )
 }
 
 pub(crate) fn state_layer_target_opacity(
@@ -40,28 +54,21 @@ pub(crate) fn state_layer_target_opacity(
         return 0.0;
     }
 
-    match interaction {
-        RadioInteraction::None => 0.0,
-        RadioInteraction::Pressed => theme
-            .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Pressed))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        RadioInteraction::Focused => theme
-            .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Focused))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        RadioInteraction::Hovered => theme
-            .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Hovered))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-    }
+    let Some(material_interaction) = material_state_layer_interaction(interaction) else {
+        return 0.0;
+    };
+
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(checked, interaction),
+        material_interaction,
+    )
 }
 
 pub(crate) fn pressed_state_layer_opacity(theme: &Theme, checked: bool) -> f32 {
-    theme
-        .number_by_key(state_layer_opacity_key(checked, RadioInteraction::Pressed))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        state_layer_opacity_key(checked, RadioInteraction::Pressed),
+        MaterialStateLayerInteraction::Pressed,
+    )
 }
 
 pub(crate) fn state_layer_color(
@@ -69,13 +76,10 @@ pub(crate) fn state_layer_color(
     checked: bool,
     interaction: RadioInteraction,
 ) -> Color {
-    theme
-        .color_by_key(state_layer_color_key(checked, interaction))
-        .unwrap_or_else(|| {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        state_layer_color_key(checked, interaction),
+        "md.sys.color.primary",
+    )
 }
 
 pub(crate) fn icon_color(
@@ -97,26 +101,25 @@ pub(crate) fn icon_color(
             )
         };
 
-        let base = theme
-            .color_by_key(color_key)
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"));
-        let opacity = theme.number_by_key(opacity_key).unwrap_or(0.38);
+        let tokens = MaterialTokenResolver::new(theme);
+        let base = tokens.color_comp_or_sys(color_key, "md.sys.color.on-surface");
+        let opacity = tokens.number_optional(Some(opacity_key), 0.38);
         return alpha_mul(base, opacity);
     }
 
-    theme
-        .color_by_key(icon_color_key(checked, interaction))
-        .unwrap_or_else(|| {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
-        })
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(icon_color_key(checked, interaction), "md.sys.color.primary")
 }
 
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
+fn material_state_layer_interaction(
+    interaction: RadioInteraction,
+) -> Option<MaterialStateLayerInteraction> {
+    match interaction {
+        RadioInteraction::Pressed => Some(MaterialStateLayerInteraction::Pressed),
+        RadioInteraction::Focused => Some(MaterialStateLayerInteraction::Focused),
+        RadioInteraction::Hovered => Some(MaterialStateLayerInteraction::Hovered),
+        RadioInteraction::None => None,
+    }
 }
 
 fn state_layer_opacity_key(checked: bool, interaction: RadioInteraction) -> &'static str {
@@ -180,5 +183,74 @@ fn icon_color_key(checked: bool, interaction: RadioInteraction) -> &'static str 
         (false, RadioInteraction::Hovered) => "md.comp.radio-button.unselected.hover.icon.color",
         (false, RadioInteraction::Focused) => "md.comp.radio-button.unselected.focus.icon.color",
         (false, RadioInteraction::Pressed) => "md.comp.radio-button.unselected.pressed.icon.color",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn radio_size_defaults_match_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+        let size = size_tokens(theme);
+
+        assert_eq!(size.icon, Px(20.0));
+        assert_eq!(size.state_layer, Px(40.0));
+    }
+
+    #[test]
+    fn radio_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.radio-button.icon.size".to_string(), 22.0);
+        patch
+            .metrics
+            .insert("md.comp.radio-button.state-layer.size".to_string(), 44.0);
+        let (_app, theme) = theme_with_patch(patch);
+        let size = size_tokens(&theme);
+
+        assert_eq!(size.icon, Px(22.0));
+        assert_eq!(size.state_layer, Px(44.0));
+    }
+
+    #[test]
+    fn radio_state_layer_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.radio-button.state-layer.shape".to_string(), 40.0);
+        patch.corners.insert(
+            "md.comp.radio-button.state-layer.shape".to_string(),
+            Corners {
+                top_left: Px(5.0),
+                top_right: Px(6.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(8.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            state_layer_shape(&theme),
+            Corners {
+                top_left: Px(5.0),
+                top_right: Px(6.0),
+                bottom_right: Px(7.0),
+                bottom_left: Px(8.0),
+            }
+        );
     }
 }

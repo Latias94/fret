@@ -1,0 +1,2 @@
+{"ts":"2026-05-31","kind":"classification","summary":"The material3_headless_*_suite_goldens_v1 tests are broad Material3 golden harness coverage, not Radio-owned tests."}
+{"ts":"2026-05-31","kind":"decision","summary":"Move broad headless golden suites to material3_headless_goldens.rs while preserving ignored maintenance semantics for stale navigation and overlay suites."}

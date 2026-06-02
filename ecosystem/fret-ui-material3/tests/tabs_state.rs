@@ -5,20 +5,21 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode, SemanticsOrientation,
-    SemanticsRole, Size, UiServices,
+    AppWindowId, KeyCode, Paint, Point, Px, Rect, Scene, SceneOp, SemanticsNode,
+    SemanticsOrientation, SemanticsRole, Size, UiServices,
 };
+use fret_icons::ids;
 use fret_runtime::{Model, ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
-use fret_ui_material3::{TabItem, Tabs};
+use fret_ui_material3::{TabItem, TabPanel, Tabs, TabsVariant};
 
-mod interaction_harness;
 mod support;
 
+use support::events::key_down;
 use support::host::{FakeUiServices, TestHost};
 use support::layout::with_padding;
-use support::theme::apply_material_theme;
+use support::theme::{apply_material_theme, apply_material_theme_rtl};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -55,18 +56,129 @@ fn render_tabs(
     selected: Model<Arc<str>>,
     scrollable: bool,
 ) {
+    render_tabs_with_variant(
+        ui,
+        app,
+        services,
+        window,
+        selected,
+        scrollable,
+        TabsVariant::Primary,
+    );
+}
+
+fn render_tabs_with_variant(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) {
+    render_tabs_with_variant_and_loop_navigation(
+        ui, app, services, window, selected, scrollable, variant, true,
+    );
+}
+
+fn render_tabs_with_variant_and_loop_navigation(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+    loop_navigation: bool,
+) {
     let root =
         fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
             let tabs = Tabs::new(selected)
                 .a11y_label("Material tabs")
                 .test_id("m3-tabs")
                 .scrollable(scrollable)
+                .variant(variant)
+                .loop_navigation(loop_navigation)
                 .items(vec![
                     TabItem::new("a", "A").test_id("m3-tab-a"),
                     TabItem::new("b", "B").test_id("m3-tab-b"),
                     TabItem::new("disabled", "Disabled")
                         .disabled(true)
                         .test_id("m3-tab-disabled"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn render_tabs_with_panels(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .items(vec![
+                    TabItem::new("a", "A").test_id("m3-tab-a"),
+                    TabItem::new("b", "B").test_id("m3-tab-b"),
+                    TabItem::new("disabled", "Disabled")
+                        .disabled(true)
+                        .test_id("m3-tab-disabled"),
+                ])
+                .panels(vec![
+                    TabPanel::new("a", [cx.text("A panel")]).test_id("m3-tab-panel-a"),
+                    TabPanel::new("b", [cx.text("B panel")]).test_id("m3-tab-panel-b"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn render_tabs_with_force_mounted_panels(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .items(vec![
+                    TabItem::new("a", "A").test_id("m3-tab-a"),
+                    TabItem::new("b", "B").test_id("m3-tab-b"),
+                    TabItem::new("disabled", "Disabled")
+                        .disabled(true)
+                        .test_id("m3-tab-disabled"),
+                ])
+                .panels(vec![
+                    TabPanel::new(
+                        "a",
+                        [cx.text("A panel")
+                            .test_id("m3-tab-panel-a-force-mounted-child")],
+                    )
+                    .test_id("m3-tab-panel-a")
+                    .force_mount(true),
+                    TabPanel::new(
+                        "b",
+                        [cx.text("B panel")
+                            .test_id("m3-tab-panel-b-force-mounted-child")],
+                    )
+                    .test_id("m3-tab-panel-b")
+                    .force_mount(true),
                 ])
                 .into_element(cx);
             vec![with_padding(cx, Px(32.0), tabs)]
@@ -90,9 +202,153 @@ fn settle_tabs(
     selected: Model<Arc<str>>,
     scrollable: bool,
 ) -> Scene {
+    settle_tabs_with_variant(
+        ui,
+        app,
+        services,
+        window,
+        selected,
+        scrollable,
+        TabsVariant::Primary,
+    )
+}
+
+fn settle_tabs_with_variant(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) -> Scene {
     let mut scene = Scene::default();
     for _ in 0..6 {
-        render_tabs(ui, app, services, window, selected.clone(), scrollable);
+        render_tabs_with_variant(
+            ui,
+            app,
+            services,
+            window,
+            selected.clone(),
+            scrollable,
+            variant,
+        );
+        scene = paint(ui, app, services);
+        app.advance_frame();
+    }
+    scene
+}
+
+fn render_leading_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .scrollable(scrollable)
+                .variant(variant)
+                .items(vec![
+                    TabItem::new("a", "Search")
+                        .leading_icon(ids::ui::SEARCH)
+                        .test_id("m3-tab-a"),
+                    TabItem::new("b", "Settings")
+                        .leading_icon(ids::ui::SETTINGS)
+                        .test_id("m3-tab-b"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn settle_leading_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) -> Scene {
+    let mut scene = Scene::default();
+    for _ in 0..6 {
+        render_leading_icon_tabs(
+            ui,
+            app,
+            services,
+            window,
+            selected.clone(),
+            scrollable,
+            variant,
+        );
+        scene = paint(ui, app, services);
+        app.advance_frame();
+    }
+    scene
+}
+
+fn render_stacked_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) {
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds(), "root", |cx| {
+            let tabs = Tabs::new(selected)
+                .a11y_label("Material tabs")
+                .test_id("m3-tabs")
+                .scrollable(scrollable)
+                .variant(variant)
+                .items(vec![
+                    TabItem::new("a", "Workspace Settings")
+                        .stacked_icon(ids::ui::SEARCH)
+                        .test_id("m3-tab-a"),
+                    TabItem::new("b", "History")
+                        .stacked_icon(ids::ui::SETTINGS)
+                        .test_id("m3-tab-b"),
+                ])
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), tabs)]
+        });
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(app, services, bounds(), 1.0);
+}
+
+fn settle_stacked_icon_tabs(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    selected: Model<Arc<str>>,
+    scrollable: bool,
+    variant: TabsVariant,
+) -> Scene {
+    let mut scene = Scene::default();
+    for _ in 0..6 {
+        render_stacked_icon_tabs(
+            ui,
+            app,
+            services,
+            window,
+            selected.clone(),
+            scrollable,
+            variant,
+        );
         scene = paint(ui, app, services);
         app.advance_frame();
     }
@@ -110,6 +366,26 @@ fn semantics_node<'a>(ui: &'a UiTree<TestHost>, test_id: &str) -> &'a SemanticsN
         .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
 }
 
+fn semantics_node_exists(ui: &UiTree<TestHost>, test_id: &str) -> bool {
+    ui.semantics_snapshot().is_some_and(|snapshot| {
+        snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(test_id))
+    })
+}
+
+fn live_test_id_exists(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    test_id: &str,
+) -> bool {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, test_id)
+        .into_iter()
+        .any(|m| ui.debug_node_bounds(m.node).is_some())
+}
+
 fn visual_bounds_by_test_id(
     ui: &UiTree<TestHost>,
     app: &TestHost,
@@ -123,6 +399,18 @@ fn visual_bounds_by_test_id(
                 .or_else(|| ui.debug_node_bounds(m.node))
         })
         .unwrap_or_else(|| panic!("expected visual bounds for test_id {test_id}"))
+}
+
+fn layout_bounds_by_test_id(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    test_id: &str,
+) -> Rect {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, test_id)
+        .into_iter()
+        .find_map(|m| ui.debug_node_bounds(m.node))
+        .unwrap_or_else(|| panic!("expected layout bounds for test_id {test_id}"))
 }
 
 fn active_indicator_rect(scene: &Scene) -> Rect {
@@ -201,6 +489,136 @@ fn tabs_export_tablist_orientation_and_tab_collection_semantics() {
 }
 
 #[test]
+fn tabs_render_active_tab_panel_semantics_and_relations() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    render_tabs_with_panels(&mut ui, &mut app, &mut services, window, selected.clone());
+
+    let a = semantics_node(&ui, "m3-tab-a");
+    let panel = semantics_node(&ui, "m3-tab-panel-a");
+    assert_eq!(panel.role, SemanticsRole::TabPanel);
+    assert_eq!(panel.label.as_deref(), Some("A"));
+    assert!(
+        panel.labelled_by.contains(&a.id),
+        "active Material tabpanel should be labelled by the selected tab"
+    );
+    assert!(
+        a.controls.contains(&panel.id),
+        "selected Material tab should expose the derived controls edge to the active tabpanel"
+    );
+    assert!(
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .all(|node| node.test_id.as_deref() != Some("m3-tab-panel-b")),
+        "inactive non-force-mounted Material tabpanel should not be present"
+    );
+
+    app.models_mut()
+        .update(&selected, |value| *value = Arc::<str>::from("b"))
+        .expect("selected model should update");
+    render_tabs_with_panels(&mut ui, &mut app, &mut services, window, selected);
+
+    let b = semantics_node(&ui, "m3-tab-b");
+    let panel = semantics_node(&ui, "m3-tab-panel-b");
+    assert_eq!(panel.role, SemanticsRole::TabPanel);
+    assert_eq!(panel.label.as_deref(), Some("B"));
+    assert!(panel.labelled_by.contains(&b.id));
+    assert!(b.controls.contains(&panel.id));
+}
+
+#[test]
+fn tabs_force_mounted_panels_stay_mounted_but_only_active_panel_is_semantic() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    render_tabs_with_force_mounted_panels(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected.clone(),
+    );
+
+    let a = semantics_node(&ui, "m3-tab-a");
+    let a_panel = semantics_node(&ui, "m3-tab-panel-a");
+    assert_eq!(a_panel.role, SemanticsRole::TabPanel);
+    assert_eq!(a_panel.label.as_deref(), Some("A"));
+    assert!(a_panel.labelled_by.contains(&a.id));
+    assert!(a.controls.contains(&a_panel.id));
+    assert!(
+        !semantics_node_exists(&ui, "m3-tab-panel-b"),
+        "inactive force-mounted Material tabpanel should stay out of semantics"
+    );
+    assert!(
+        live_test_id_exists(&ui, &app, window, "m3-tab-panel-b-force-mounted-child"),
+        "inactive force-mounted Material tabpanel child should stay mounted"
+    );
+
+    app.models_mut()
+        .update(&selected, |value| *value = Arc::<str>::from("b"))
+        .expect("selected model should update");
+    render_tabs_with_force_mounted_panels(&mut ui, &mut app, &mut services, window, selected);
+
+    let b = semantics_node(&ui, "m3-tab-b");
+    let b_panel = semantics_node(&ui, "m3-tab-panel-b");
+    assert_eq!(b_panel.role, SemanticsRole::TabPanel);
+    assert_eq!(b_panel.label.as_deref(), Some("B"));
+    assert!(b_panel.labelled_by.contains(&b.id));
+    assert!(b.controls.contains(&b_panel.id));
+    assert!(
+        !semantics_node_exists(&ui, "m3-tab-panel-a"),
+        "previously active force-mounted Material tabpanel should leave semantics after selection changes"
+    );
+    assert!(
+        live_test_id_exists(&ui, &app, window, "m3-tab-panel-a-force-mounted-child"),
+        "previously active force-mounted Material tabpanel child should remain mounted"
+    );
+}
+
+#[test]
+fn rtl_tabs_arrow_left_moves_to_next_logical_tab_without_wrapping() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    render_tabs_with_variant_and_loop_navigation(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected.clone(),
+        false,
+        TabsVariant::Primary,
+        false,
+    );
+
+    let first = semantics_node(&ui, "m3-tab-a").id;
+    let second = semantics_node(&ui, "m3-tab-b").id;
+    ui.set_focus(Some(first));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+
+    assert_eq!(
+        ui.focus(),
+        Some(second),
+        "expected RTL ArrowLeft to move forward to the next logical tab"
+    );
+    assert_eq!(app.models().get_cloned(&selected).as_deref(), Some("b"));
+}
+
+#[test]
+fn rtl_tabs_theme_direction_mirrors_physical_tab_order() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    apply_material_theme_rtl(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+    render_tabs(&mut ui, &mut app, &mut services, window, selected, false);
+
+    let first = visual_bounds_by_test_id(&ui, &app, window, "m3-tab-a");
+    let second = visual_bounds_by_test_id(&ui, &app, window, "m3-tab-b");
+
+    assert!(
+        first.origin.x.0 > second.origin.x.0,
+        "expected RTL tab row to place the first logical tab to the physical right of the second logical tab, first={first:?}, second={second:?}"
+    );
+}
+
+#[test]
 fn fixed_primary_tabs_use_content_sized_active_indicator() {
     let (mut app, window, mut services, mut ui, selected) = tabs_harness();
     let scene = settle_tabs(&mut ui, &mut app, &mut services, window, selected, false);
@@ -230,6 +648,150 @@ fn fixed_primary_tabs_use_content_sized_active_indicator() {
 }
 
 #[test]
+fn fixed_primary_tabs_render_bottom_divider_under_active_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_tabs(&mut ui, &mut app, &mut services, window, selected, false);
+
+    let chrome = visual_bounds_by_test_id(&ui, &app, window, "m3-tabs.chrome");
+    let divider = layout_bounds_by_test_id(&ui, &app, window, "m3-tabs.divider");
+    let indicator = active_indicator_rect(&scene);
+
+    assert!(
+        (divider.size.height.0 - 1.0).abs() <= 0.5,
+        "expected TabRow divider to use Material HorizontalDivider thickness, got {divider:?}"
+    );
+    assert!(
+        (divider.origin.x.0 - chrome.origin.x.0).abs() <= 0.5
+            && (divider.size.width.0 - chrome.size.width.0).abs() <= 0.5,
+        "expected TabRow divider to span the row width; chrome={chrome:?} divider={divider:?}"
+    );
+    assert!(
+        (divider.origin.y.0 + divider.size.height.0 - (chrome.origin.y.0 + chrome.size.height.0))
+            .abs()
+            <= 0.5,
+        "expected TabRow divider at the row bottom; chrome={chrome:?} divider={divider:?}"
+    );
+    assert!(
+        (indicator.origin.y.0 + indicator.size.height.0
+            - (divider.origin.y.0 + divider.size.height.0))
+            .abs()
+            <= 0.5,
+        "expected active indicator to share the bottom edge with the divider; indicator={indicator:?} divider={divider:?}"
+    );
+}
+
+#[test]
+fn fixed_secondary_tabs_use_full_width_active_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_tabs_with_variant(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        false,
+        TabsVariant::Secondary,
+    );
+
+    let tab = ui
+        .debug_node_visual_bounds(semantics_node(&ui, "m3-tab-a").id)
+        .expect("expected tab visual bounds");
+    let indicator = active_indicator_rect(&scene);
+
+    assert!(
+        (indicator.origin.x.0 - tab.origin.x.0).abs() <= 0.5,
+        "expected secondary tab indicator to start at the selected tab edge; tab={tab:?} indicator={indicator:?}"
+    );
+    assert!(
+        (indicator.size.width.0 - tab.size.width.0).abs() <= 0.5,
+        "expected secondary tab indicator to span the selected tab width; tab={tab:?} indicator={indicator:?}"
+    );
+}
+
+#[test]
+fn primary_leading_icon_tabs_use_material_icon_size_and_content_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_leading_icon_tabs(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        false,
+        TabsVariant::Primary,
+    );
+
+    let icon = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.icon");
+    let label = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.label");
+    let indicator = active_indicator_rect(&scene);
+    let icon_label_gap = label.origin.x.0 - (icon.origin.x.0 + icon.size.width.0);
+    let expected_indicator_width = icon.size.width.0 + 8.0 + label.size.width.0;
+
+    assert!(
+        (icon.size.width.0 - 24.0).abs() <= 0.5 && (icon.size.height.0 - 24.0).abs() <= 0.5,
+        "expected leading tab icon to use the Material 24px icon size, got {icon:?}"
+    );
+    assert!(
+        icon.origin.x.0 < label.origin.x.0,
+        "expected leading icon to be placed before the tab label; icon={icon:?} label={label:?}"
+    );
+    assert!(
+        (icon_label_gap - 8.0).abs() <= 0.5,
+        "expected leading icon and label to use the Material 8px gap; icon={icon:?} label={label:?}"
+    );
+    assert!(
+        (indicator.origin.x.0 - icon.origin.x.0).abs() <= 1.5
+            && (indicator.size.width.0 - expected_indicator_width).abs() <= 2.5,
+        "expected primary leading-icon tab indicator to match icon+gap+label content width; icon={icon:?} label={label:?} indicator={indicator:?}"
+    );
+}
+
+#[test]
+fn primary_stacked_icon_tabs_use_large_height_and_vertical_content_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_stacked_icon_tabs(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        false,
+        TabsVariant::Primary,
+    );
+
+    let tab = ui
+        .debug_node_visual_bounds(semantics_node(&ui, "m3-tab-a").id)
+        .expect("expected selected tab visual bounds");
+    let icon = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.icon");
+    let label = layout_bounds_by_test_id(&ui, &app, window, "m3-tab-a.label");
+    let indicator = active_indicator_rect(&scene);
+    let content_left = icon.origin.x.0.min(label.origin.x.0);
+    let content_right =
+        (icon.origin.x.0 + icon.size.width.0).max(label.origin.x.0 + label.size.width.0);
+    let expected_indicator_width = (content_right - content_left).max(24.0);
+    let icon_center_x = icon.origin.x.0 + icon.size.width.0 * 0.5;
+    let label_center_x = label.origin.x.0 + label.size.width.0 * 0.5;
+
+    assert!(
+        (tab.size.height.0 - 72.0).abs() <= 0.5,
+        "expected stacked icon tab to use the Compose 72px large height, got {tab:?}"
+    );
+    assert!(
+        (icon.size.width.0 - 24.0).abs() <= 0.5 && (icon.size.height.0 - 24.0).abs() <= 0.5,
+        "expected stacked tab icon to use the Material 24px icon size, got {icon:?}"
+    );
+    assert!(
+        icon.origin.y.0 < label.origin.y.0 && (icon_center_x - label_center_x).abs() <= 1.0,
+        "expected stacked icon to be centered above the label; icon={icon:?} label={label:?}"
+    );
+    assert!(
+        (indicator.origin.x.0 - content_left).abs() <= 1.5
+            && (indicator.size.width.0 - expected_indicator_width).abs() <= 2.5,
+        "expected primary stacked-icon tab indicator to match the stacked icon/label content width; icon={icon:?} label={label:?} indicator={indicator:?}"
+    );
+}
+
+#[test]
 fn scrollable_primary_tabs_use_material_edge_padding_and_min_width() {
     let (mut app, window, mut services, mut ui, selected) = tabs_harness();
     let _scene = settle_tabs(&mut ui, &mut app, &mut services, window, selected, true);
@@ -247,5 +809,43 @@ fn scrollable_primary_tabs_use_material_edge_padding_and_min_width() {
         (tab.size.width.0 - 90.0).abs() <= 0.5,
         "expected scrollable primary tab to use Material 90px min width, got {:?}",
         tab
+    );
+}
+
+#[test]
+fn scrollable_secondary_tabs_use_material_metrics_and_full_width_indicator() {
+    let (mut app, window, mut services, mut ui, selected) = tabs_harness();
+    let scene = settle_tabs_with_variant(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        selected,
+        true,
+        TabsVariant::Secondary,
+    );
+
+    let chrome = visual_bounds_by_test_id(&ui, &app, window, "m3-tabs.chrome");
+    let tab = ui
+        .debug_node_visual_bounds(semantics_node(&ui, "m3-tab-a").id)
+        .expect("expected tab visual bounds");
+    let indicator = active_indicator_rect(&scene);
+
+    assert!(
+        (tab.origin.x.0 - (chrome.origin.x.0 + 52.0)).abs() <= 0.5,
+        "expected scrollable secondary tabs to start after Material 52px edge padding; chrome={chrome:?} tab={tab:?}"
+    );
+    assert!(
+        (tab.size.width.0 - 90.0).abs() <= 0.5,
+        "expected scrollable secondary tab to use Material 90px min width, got {:?}",
+        tab
+    );
+    assert!(
+        (indicator.origin.x.0 - tab.origin.x.0).abs() <= 0.5,
+        "expected scrollable secondary indicator to start at the selected tab edge; tab={tab:?} indicator={indicator:?}"
+    );
+    assert!(
+        (indicator.size.width.0 - tab.size.width.0).abs() <= 0.5,
+        "expected scrollable secondary indicator to span the selected tab width; tab={tab:?} indicator={indicator:?}"
     );
 }

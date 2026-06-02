@@ -23,19 +23,18 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
-    material_pressable_indication_config,
+    material_pressable_indication_config_in_scope,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::test_id::part_test_id;
 use crate::tokens::navigation_rail as rail_tokens;
 use crate::{Badge, BadgePlacement, BadgeValue};
@@ -459,9 +458,8 @@ fn navigation_rail_item<H: UiHost>(
         icon_size,
         ripple_base_opacity,
         config,
-        label_style_base,
-        label_weight_active,
-        label_weight_inactive,
+        label_style_active,
+        label_style_inactive,
         active_indicator_corner_radii,
     ) = {
         let theme = Theme::global(&*cx.app);
@@ -473,14 +471,10 @@ fn navigation_rail_item<H: UiHost>(
         let icon_size = rail_tokens::icon_size(theme);
 
         let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
-        let config = material_pressable_indication_config(theme, None);
+        let config = material_pressable_indication_config_in_scope(&*cx, None);
 
-        let label_style_base = theme
-            .text_style_by_key("md.sys.typescale.label-medium")
-            .unwrap_or_default();
-        let label_style_base = typography::with_intent(label_style_base, TextIntent::Control);
-        let label_weight_active = rail_tokens::label_weight(theme, true);
-        let label_weight_inactive = rail_tokens::label_weight(theme, false);
+        let label_style_active = rail_tokens::label_text_style(theme, true);
+        let label_style_inactive = rail_tokens::label_text_style(theme, false);
 
         let active_indicator_corner_radii = rail_tokens::active_indicator_shape(theme);
 
@@ -492,9 +486,8 @@ fn navigation_rail_item<H: UiHost>(
             icon_size,
             ripple_base_opacity,
             config,
-            label_style_base,
-            label_weight_active,
-            label_weight_inactive,
+            label_style_active,
+            label_style_inactive,
             active_indicator_corner_radii,
         )
     };
@@ -660,11 +653,10 @@ fn navigation_rail_item<H: UiHost>(
                 });
 
                 let label_el = show_label.then(|| {
-                    let mut style = label_style_base.clone();
-                    style.weight = if selected {
-                        label_weight_active
+                    let style = if selected {
+                        label_style_active.clone()
                     } else {
-                        label_weight_inactive
+                        label_style_inactive.clone()
                     };
                     rail_label(cx, &label, style, label_color)
                 });
@@ -722,7 +714,11 @@ fn navigation_rail_active_indicator<H: UiHost>(
             let item_gap = rail_tokens::vertical_padding(theme);
             let indicator_color = rail_tokens::active_indicator_color(theme);
             let corner_radii = rail_tokens::active_indicator_shape(theme);
-            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            let spring = material_motion_spring_in_scope(
+                &*cx,
+                theme,
+                MaterialMotionRole::SelectionIndicator,
+            );
             (
                 indicator_w,
                 indicator_h,

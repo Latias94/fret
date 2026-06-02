@@ -179,18 +179,41 @@ where
     I: IntoIterator<Item = T>,
     T: IntoUiElement<H>,
 {
+    tab_panel_with_gate_props(
+        cx,
+        active,
+        force_mount,
+        tab_panel_semantics_props(layout, label, labelled_by_element),
+        children,
+    )
+}
+
+/// Builds a tab panel subtree from caller-provided semantics props, optionally force-mounting it
+/// behind an interactivity gate.
+///
+/// Use this when recipe code needs to attach stable automation ids or additional semantics fields
+/// to the `TabPanel` node itself. The mounted/present behavior matches `tab_panel_with_gate`.
+#[track_caller]
+pub fn tab_panel_with_gate_props<H: UiHost, I, T>(
+    cx: &mut ElementContext<'_, H>,
+    active: bool,
+    force_mount: bool,
+    semantics: SemanticsProps,
+    children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> Option<AnyElement>
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     if !active && !force_mount {
         return None;
     }
 
     let panel = |cx: &mut ElementContext<'_, H>| {
-        cx.semantics(
-            tab_panel_semantics_props(layout, label, labelled_by_element),
-            move |cx| {
-                let items = children(cx);
-                collect_children(cx, items)
-            },
-        )
+        cx.semantics(semantics, move |cx| {
+            let items = children(cx);
+            collect_children(cx, items)
+        })
     };
 
     if force_mount {

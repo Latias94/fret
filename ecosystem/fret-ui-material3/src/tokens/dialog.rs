@@ -3,9 +3,12 @@
 //! This module centralizes token key mapping and fallback chains so dialog outcomes remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::{Color, Corners, Edges, Px};
-use fret_ui::Theme;
-use fret_ui::theme::CubicBezier;
+use fret_core::{Color, Corners, Edges, Px, TextStyle};
+use fret_ui::{Theme, theme::CubicBezier};
+use fret_ui_kit::typography::TextIntent;
+
+use crate::foundation::token_resolver::{MaterialStateLayerInteraction, MaterialTokenResolver};
+use crate::tokens::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DialogActionInteraction {
@@ -16,72 +19,90 @@ pub(crate) enum DialogActionInteraction {
 }
 
 pub(crate) fn scrim_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.sys.color.scrim")
-        .unwrap_or_else(|| theme.color_token("md.sys.color.scrim"))
+    MaterialTokenResolver::new(theme).color_sys("md.sys.color.scrim")
+}
+
+pub(crate) fn scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
+    MaterialTokenResolver::new(theme)
+        .number_optional(Some("md.sys.fret.material.dialog.scrim.opacity"), fallback)
+        .clamp(0.0, 1.0)
 }
 
 pub(crate) fn container_background(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.surface-container-high"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.dialog.container.color",
+        "md.sys.color.surface-container-high",
+    )
+}
+
+fn dialog_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
 }
 
 pub(crate) fn container_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key("md.comp.dialog.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
-        .unwrap_or_else(|| Corners::all(Px(28.0)))
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.dialog.container.shape",
+            "md.sys.shape.corner.extra-large",
+        ],
+        Corners::all(Px(28.0)),
+    )
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.dialog.container.elevation")
-        .unwrap_or(Px(0.0))
+    dialog_metric(theme, "md.comp.dialog.container.elevation", Px(0.0))
 }
 
 pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.container.shadow-color")
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.shadow"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.dialog.container.shadow-color",
+        "md.sys.color.shadow",
+    )
 }
 
 pub(crate) fn headline_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.headline.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.dialog.headline.color", "md.sys.color.on-surface")
 }
 
 pub(crate) fn supporting_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.dialog.supporting-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.dialog.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    )
+}
+
+pub(crate) fn headline_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.headline-small",
+        Some("md.comp.dialog.headline.weight"),
+        TextIntent::Content,
+    )
+}
+
+pub(crate) fn supporting_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.body-medium",
+        Some("md.comp.dialog.supporting-text.weight"),
+        TextIntent::Content,
+    )
 }
 
 pub(crate) fn default_open_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.medium2")
-        .unwrap_or(300)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.medium2", 300)
 }
 
 pub(crate) fn default_close_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.medium2")
-        .unwrap_or(300)
+    MaterialTokenResolver::new(theme).duration_ms_sys("md.sys.motion.duration.medium2", 300)
 }
 
 pub(crate) fn easing(theme: &Theme, easing_key: Option<&str>) -> CubicBezier {
     let key = easing_key.unwrap_or("md.sys.motion.easing.emphasized");
-    theme.easing_by_key(key).unwrap_or(CubicBezier {
-        x1: 0.0,
-        y1: 0.0,
-        x2: 1.0,
-        y2: 1.0,
-    })
+    MaterialTokenResolver::new(theme).easing_optional_or_linear(Some(key))
 }
 
 pub(crate) fn panel_padding(theme: &Theme) -> Edges {
@@ -124,6 +145,16 @@ pub(crate) fn action_corner_radii(theme: &Theme) -> Corners {
     Corners::all(Px(9999.0))
 }
 
+pub(crate) fn action_label_text_style(theme: &Theme) -> TextStyle {
+    typography::text_style_with_weight(
+        theme,
+        None,
+        "md.sys.typescale.label-large",
+        Some("md.comp.dialog.action.label-text.weight"),
+        TextIntent::Control,
+    )
+}
+
 fn action_label_color_key(interaction: DialogActionInteraction) -> &'static str {
     match interaction {
         DialogActionInteraction::Pressed => "md.comp.dialog.action.pressed.label-text.color",
@@ -134,10 +165,8 @@ fn action_label_color_key(interaction: DialogActionInteraction) -> &'static str 
 }
 
 pub(crate) fn action_label_color(theme: &Theme, interaction: DialogActionInteraction) -> Color {
-    theme
-        .color_by_key(action_label_color_key(interaction))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys(action_label_color_key(interaction), "md.sys.color.primary")
 }
 
 fn action_state_layer_color_key(interaction: DialogActionInteraction) -> &'static str {
@@ -154,10 +183,10 @@ pub(crate) fn action_state_layer_color(
     theme: &Theme,
     interaction: DialogActionInteraction,
 ) -> Color {
-    theme
-        .color_by_key(action_state_layer_color_key(interaction))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_token("md.sys.color.primary"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        action_state_layer_color_key(interaction),
+        "md.sys.color.primary",
+    )
 }
 
 fn action_state_layer_opacity_key(interaction: DialogActionInteraction) -> Option<&'static str> {
@@ -171,15 +200,6 @@ fn action_state_layer_opacity_key(interaction: DialogActionInteraction) -> Optio
     }
 }
 
-fn sys_state_layer_opacity_key(interaction: DialogActionInteraction) -> Option<&'static str> {
-    match interaction {
-        DialogActionInteraction::Pressed => Some("md.sys.state.pressed.state-layer-opacity"),
-        DialogActionInteraction::Hovered => Some("md.sys.state.hover.state-layer-opacity"),
-        DialogActionInteraction::Focused => Some("md.sys.state.focus.state-layer-opacity"),
-        DialogActionInteraction::Default => None,
-    }
-}
-
 pub(crate) fn action_state_layer_target_opacity(
     theme: &Theme,
     interaction: DialogActionInteraction,
@@ -187,22 +207,102 @@ pub(crate) fn action_state_layer_target_opacity(
     let Some(key) = action_state_layer_opacity_key(interaction) else {
         return 0.0;
     };
-    let sys_key = sys_state_layer_opacity_key(interaction)
-        .unwrap_or("md.sys.state.hover.state-layer-opacity");
-    theme
-        .number_by_key(key)
-        .or_else(|| theme.number_by_key(sys_key))
-        .unwrap_or(match interaction {
-            DialogActionInteraction::Pressed => 0.1,
-            DialogActionInteraction::Hovered => 0.08,
-            DialogActionInteraction::Focused => 0.1,
-            DialogActionInteraction::Default => 0.0,
-        })
+    MaterialTokenResolver::new(theme)
+        .state_layer_opacity(key, material_state_layer_interaction(interaction))
 }
 
 pub(crate) fn action_pressed_state_layer_opacity(theme: &Theme) -> f32 {
-    theme
-        .number_by_key("md.comp.dialog.action.pressed.state-layer.opacity")
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
+    MaterialTokenResolver::new(theme).state_layer_opacity(
+        "md.comp.dialog.action.pressed.state-layer.opacity",
+        MaterialStateLayerInteraction::Pressed,
+    )
+}
+
+fn material_state_layer_interaction(
+    interaction: DialogActionInteraction,
+) -> MaterialStateLayerInteraction {
+    match interaction {
+        DialogActionInteraction::Pressed => MaterialStateLayerInteraction::Pressed,
+        DialogActionInteraction::Hovered => MaterialStateLayerInteraction::Hovered,
+        DialogActionInteraction::Focused => MaterialStateLayerInteraction::Focused,
+        DialogActionInteraction::Default => MaterialStateLayerInteraction::Hovered,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn dialog_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_shape(theme), Corners::all(Px(28.0)));
+        assert_eq!(container_elevation(theme), Px(0.0));
+    }
+
+    #[test]
+    fn dialog_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.dialog.container.shape".to_string(), 24.0);
+        patch
+            .metrics
+            .insert("md.comp.dialog.container.elevation".to_string(), 2.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_shape(&theme), Corners::all(Px(24.0)));
+        assert_eq!(container_elevation(&theme), Px(2.0));
+    }
+
+    #[test]
+    fn dialog_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.extra-large".to_string(), 26.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_shape(&theme), Corners::all(Px(26.0)));
+    }
+
+    #[test]
+    fn dialog_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.dialog.container.shape".to_string(), 24.0);
+        patch.corners.insert(
+            "md.comp.dialog.container.shape".to_string(),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            container_shape(&theme),
+            Corners {
+                top_left: Px(10.0),
+                top_right: Px(12.0),
+                bottom_right: Px(14.0),
+                bottom_left: Px(16.0),
+            }
+        );
+    }
 }

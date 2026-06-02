@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "slug": "material3-token-resolver-non-field-fallback-v1",
+  "title": "Material3 Token Resolver Non-Field Fallback v1",
+  "status": "closed",
+  "updated": "2026-05-31",
+  "scope_kind": "fearless_refactor",
+  "follow_on_of": "material3-token-resolver-fallback-v1",
+  "problem": "Non-field Material3 token modules still duplicate component-to-system color fallback chains instead of using the Material token resolver seam.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    }
+  ],
+  "context_manifest": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/CONTEXT.jsonl",
+  "repro": {
+    "summary": "Audit residual non-field Material3 token fallback chains and prove migrated families through the token visual matrix.",
+    "commands": [
+      "rg --count-matches \"or_else\\\\(\\\\|\\\\| theme\\\\.color_by_key|unwrap_or_else\\\\(\\\\|\\\\| theme\\\\.color_token|theme\\\\.color_by_key\\\\(\" ecosystem/fret-ui-material3/src/tokens -g \"*.rs\" -g \"!v30.rs\" -g \"!material_web_v30.rs\"",
+      "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes"
+    ]
+  },
+  "gates": [
+    {
+      "name": "material3-format",
+      "command": "cargo fmt --package fret-ui-material3 --check"
+    },
+    {
+      "name": "material3-token-matrix",
+      "command": "cargo nextest run -p fret-ui-material3 --lib material3_token_visual_fixtures_match_expected_token_outcomes"
+    },
+    {
+      "name": "material3-button-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state"
+    },
+    {
+      "name": "material3-surface-navigation-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test automation_surface"
+    },
+    {
+      "name": "material3-selection-control-state",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test checkbox_state --test slider_state --test switch_state --test automation_surface"
+    },
+    {
+      "name": "material3-closeout-state-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test button_state --test chip_state --test icon_button_state --test fab_state --test segmented_button_state --test tabs_state --test card_state --test carousel_item_state --test dialog_state --test list_state --test menu_state --test navigation_drawer_state --test navigation_state --test progress_indicator_state --test snackbar_state --test tooltip_state --test bottom_sheet_motion --test checkbox_state --test slider_state --test switch_state --test automation_surface"
+    },
+    {
+      "name": "material3-tests-check",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-tests-clippy",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-token-resolver-non-field-fallback-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-token-resolver-non-field-fallback-v1/DESIGN.md",
+    "docs/workstreams/material3-token-resolver-non-field-fallback-v1/TODO.md",
+    "docs/workstreams/material3-token-resolver-non-field-fallback-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "ecosystem/fret-ui-material3/src/foundation/token_resolver.rs",
+    "ecosystem/fret-ui-material3/src/tokens/button.rs",
+    "ecosystem/fret-ui-material3/src/tokens/chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/filter_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/input_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/suggestion_chip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/icon_button.rs",
+    "ecosystem/fret-ui-material3/src/tokens/fab.rs",
+    "ecosystem/fret-ui-material3/src/tokens/segmented_button.rs",
+    "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
+    "ecosystem/fret-ui-material3/src/tokens/badge.rs",
+    "ecosystem/fret-ui-material3/src/tokens/card.rs",
+    "ecosystem/fret-ui-material3/src/tokens/carousel_item.rs",
+    "ecosystem/fret-ui-material3/src/tokens/dialog.rs",
+    "ecosystem/fret-ui-material3/src/tokens/divider.rs",
+    "ecosystem/fret-ui-material3/src/tokens/list.rs",
+    "ecosystem/fret-ui-material3/src/tokens/menu.rs",
+    "ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs",
+    "ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs",
+    "ecosystem/fret-ui-material3/src/tokens/progress_indicator.rs",
+    "ecosystem/fret-ui-material3/src/tokens/search_bar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/search_view.rs",
+    "ecosystem/fret-ui-material3/src/tokens/sheet_bottom.rs",
+    "ecosystem/fret-ui-material3/src/tokens/snackbar.rs",
+    "ecosystem/fret-ui-material3/src/tokens/tooltip.rs",
+    "ecosystem/fret-ui-material3/src/tokens/checkbox.rs",
+    "ecosystem/fret-ui-material3/src/tokens/slider.rs",
+    "ecosystem/fret-ui-material3/src/tokens/switch.rs",
+    "ecosystem/fret-ui-material3/tests/button_state.rs",
+    "ecosystem/fret-ui-material3/tests/chip_state.rs",
+    "ecosystem/fret-ui-material3/tests/icon_button_state.rs",
+    "ecosystem/fret-ui-material3/tests/fab_state.rs",
+    "ecosystem/fret-ui-material3/tests/segmented_button_state.rs",
+    "ecosystem/fret-ui-material3/tests/tabs_state.rs",
+    "ecosystem/fret-ui-material3/tests/card_state.rs",
+    "ecosystem/fret-ui-material3/tests/carousel_item_state.rs",
+    "ecosystem/fret-ui-material3/tests/dialog_state.rs",
+    "ecosystem/fret-ui-material3/tests/list_state.rs",
+    "ecosystem/fret-ui-material3/tests/menu_state.rs",
+    "ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs",
+    "ecosystem/fret-ui-material3/tests/navigation_state.rs",
+    "ecosystem/fret-ui-material3/tests/progress_indicator_state.rs",
+    "ecosystem/fret-ui-material3/tests/snackbar_state.rs",
+    "ecosystem/fret-ui-material3/tests/tooltip_state.rs",
+    "ecosystem/fret-ui-material3/tests/bottom_sheet_motion.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/checkbox_state.rs",
+    "ecosystem/fret-ui-material3/tests/slider_state.rs",
+    "ecosystem/fret-ui-material3/tests/switch_state.rs",
+    "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0032-style-tokens-and-theme-resolution.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "capability_tags": [
+    "material3",
+    "tokens",
+    "fallback",
+    "non-field",
+    "fearless-refactor"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Closed after M3NF-060. Do not reopen this lane for non-color direct token lookup governance; start a narrower follow-on if fresh evidence shows typography weight, time picker/input numeric, or runtime token reads need resolver policy."
+  }
+}

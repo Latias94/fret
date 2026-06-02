@@ -10,7 +10,7 @@ use material_colors::color::Argb;
 use material_colors::dynamic_color::Variant as MaterialVariant;
 use material_colors::theme::ThemeBuilder;
 
-use super::material_web_v30;
+use super::{material_web_v30, v30_overlay};
 
 /// Material token version string (from Material Web generation metadata).
 pub const MATERIAL_WEB_VERSION: &str = "30.0.14";
@@ -88,22 +88,11 @@ impl DynamicVariant {
 /// Notes:
 /// - This does not set `cfg.name`/`cfg.author`/`cfg.url`.
 pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
-    // Compose `minimumInteractiveComponentSize()` default (48dp).
-    cfg.metrics
-        .insert("md.sys.layout.minimum-touch-target.size".to_string(), 48.0);
-
-    // Fret-owned layout direction marker (0 = LTR, 1 = RTL).
-    //
-    // This is not a Material Web token. It represents app-level directionality and can be
-    // overridden at the theme or subtree level.
-    cfg.numbers
-        .entry("md.sys.fret.layout.is-rtl".to_string())
-        .or_insert(0.0);
-
+    v30_overlay::inject_system_layout_defaults(cfg);
     material_web_v30::inject_sys_state(cfg);
     material_web_v30::inject_sys_state_focus_indicator(cfg);
     material_web_v30::inject_sys_motion(cfg);
-    inject_fret_sys_motion_expressive(cfg);
+    v30_overlay::inject_expressive_motion_tokens(cfg);
     material_web_v30::inject_sys_shape(cfg);
     material_web_v30::inject_sys_typescale(cfg, typography);
     inject_comp_badge_text_styles(cfg);
@@ -114,7 +103,9 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_text_field_text_styles(cfg);
     inject_comp_menu_text_styles(cfg);
     inject_comp_primary_navigation_tab_text_styles(cfg);
+    inject_comp_secondary_navigation_tab_text_styles(cfg);
     inject_comp_tooltip_text_styles(cfg);
+    inject_comp_snackbar_text_styles(cfg);
     inject_comp_date_picker_text_styles(cfg);
     inject_comp_time_picker_text_styles(cfg);
     inject_comp_time_input_text_styles(cfg);
@@ -136,6 +127,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_outlined_autocomplete_scalars(cfg);
     inject_comp_filled_autocomplete_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
+    inject_comp_secondary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
     inject_comp_navigation_drawer_scalars(cfg);
     inject_comp_navigation_rail_scalars(cfg);
@@ -166,69 +158,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_elevated_card_scalars(cfg);
     inject_comp_outlined_card_scalars(cfg);
 
-    // Material Web v30 notes that the navigation drawer scrim tokens are deprecated and do not
-    // represent the intended M3 defaults. Prefer Neutral-Variant10 at 50% opacity for scrims.
-    cfg.numbers
-        .insert("md.comp.navigation-drawer.scrim.opacity".to_string(), 0.5);
-}
-
-fn inject_fret_sys_motion_expressive(cfg: &mut ThemeConfig) {
-    // Compose baseline: ExpressiveMotionTokens (v0_14_0).
-    //
-    // We keep these as Fret-owned tokens so:
-    // - The component layer can converge on a stable `MotionScheme` API.
-    // - Downstream apps can override values at the theme level.
-    //
-    // Material Web v30 currently provides only a single `md.sys.motion.spring.*` set.
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.default.spatial.damping".to_string(),
-        0.8,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.default.spatial.stiffness".to_string(),
-        380.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.fast.spatial.damping".to_string(),
-        0.6,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.fast.spatial.stiffness".to_string(),
-        800.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.slow.spatial.damping".to_string(),
-        0.8,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.slow.spatial.stiffness".to_string(),
-        200.0,
-    );
-
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.default.effects.damping".to_string(),
-        1.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.default.effects.stiffness".to_string(),
-        1600.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.fast.effects.damping".to_string(),
-        1.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.fast.effects.stiffness".to_string(),
-        3800.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.slow.effects.damping".to_string(),
-        1.0,
-    );
-    cfg.numbers.insert(
-        "md.sys.fret.material.motion.spring.slow.effects.stiffness".to_string(),
-        800.0,
-    );
+    v30_overlay::override_navigation_drawer_scrim_opacity(cfg);
 }
 
 fn inject_comp_button_text_styles(cfg: &mut ThemeConfig) {
@@ -346,8 +276,27 @@ fn inject_comp_menu_text_styles(cfg: &mut ThemeConfig) {
         return;
     };
 
-    cfg.text_styles
-        .insert("md.comp.menu.list-item.label-text".to_string(), label_large);
+    cfg.text_styles.insert(
+        "md.comp.menu.list-item.label-text".to_string(),
+        label_large.clone(),
+    );
+    cfg.text_styles.insert(
+        "md.comp.menu.list-item.trailing-text".to_string(),
+        label_large,
+    );
+
+    if let Some(body_medium) = cfg.text_styles.get("md.sys.typescale.body-medium").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.menu.list-item.supporting-text".to_string(),
+            body_medium,
+        );
+    }
+    if let Some(label_small) = cfg.text_styles.get("md.sys.typescale.label-small").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.menu.section-label.label-text".to_string(),
+            label_small,
+        );
+    }
 }
 
 fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
@@ -357,6 +306,17 @@ fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
 
     cfg.text_styles.insert(
         "md.comp.primary-navigation-tab.with-label-text.label-text".to_string(),
+        title_small,
+    );
+}
+
+fn inject_comp_secondary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
+    let Some(title_small) = cfg.text_styles.get("md.sys.typescale.title-small").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.secondary-navigation-tab.with-label-text.label-text".to_string(),
         title_small,
     );
 }
@@ -382,6 +342,19 @@ fn inject_comp_tooltip_text_styles(cfg: &mut ThemeConfig) {
         cfg.text_styles.insert(
             "md.comp.rich-tooltip.supporting-text".to_string(),
             body_medium,
+        );
+    }
+}
+
+fn inject_comp_snackbar_text_styles(cfg: &mut ThemeConfig) {
+    if let Some(body_medium) = cfg.text_styles.get("md.sys.typescale.body-medium").cloned() {
+        cfg.text_styles
+            .insert("md.comp.snackbar.supporting-text".to_string(), body_medium);
+    }
+    if let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.snackbar.action.label-text".to_string(),
+            label_large,
         );
     }
 }
@@ -550,14 +523,9 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         .variant(options.variant.to_material())
         .build();
 
-    // Fret-owned marker token: allow Material3 components to switch to expressive component token
-    // variants when the dynamic scheme uses the expressive palette variant.
-    cfg.numbers.insert(
-        "md.sys.fret.material.is-expressive".to_string(),
-        match options.variant {
-            DynamicVariant::Expressive => 1.0,
-            _ => 0.0,
-        },
+    v30_overlay::inject_dynamic_variant_marker(
+        cfg,
+        matches!(options.variant, DynamicVariant::Expressive),
     );
 
     let scheme = match options.mode {
@@ -773,6 +741,7 @@ pub fn theme_config_with_colors(
     inject_comp_outlined_autocomplete_colors_from_sys(&mut cfg);
     inject_comp_filled_autocomplete_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
+    inject_comp_secondary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
     inject_comp_navigation_rail_colors_from_sys(&mut cfg);
@@ -819,6 +788,7 @@ fn insert_color(cfg: &mut ThemeConfig, key: &str, argb: Argb) {
 
 fn inject_comp_button_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_button_scalars(cfg);
+    v30_overlay::inject_button_scalar_aliases(cfg);
 }
 
 fn inject_comp_badge_scalars(cfg: &mut ThemeConfig) {
@@ -839,20 +809,17 @@ fn inject_comp_outlined_segmented_button_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_date_picker_docked_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_date_picker_docked_scalars(cfg);
+    v30_overlay::inject_date_picker_docked_scalars(cfg);
 }
 
 fn inject_comp_date_picker_modal_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_date_picker_modal_scalars(cfg);
-    cfg.numbers
-        .entry("md.sys.fret.material.date-picker.modal.scrim.opacity".to_string())
-        .or_insert(0.32);
+    v30_overlay::inject_date_picker_modal_scalars(cfg);
 }
 
 fn inject_comp_time_picker_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_time_picker_scalars(cfg);
-    cfg.numbers
-        .entry("md.sys.fret.material.time-picker.scrim.opacity".to_string())
-        .or_insert(0.32);
+    v30_overlay::inject_time_picker_scalars(cfg);
 }
 
 fn inject_comp_time_input_scalars(cfg: &mut ThemeConfig) {
@@ -1036,6 +1003,11 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
     );
     copy_color(
         cfg,
+        "md.comp.button.outlined.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
         "md.comp.button.outlined.disabled.outline.color",
         "md.sys.color.outline-variant",
     );
@@ -1066,6 +1038,13 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.on-surface",
     );
     material_web_v30::inject_comp_button_colors_from_sys(cfg);
+
+    for key in [
+        "md.comp.button.outlined.container.shadow-color",
+        "md.comp.button.text.container.shadow-color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.shadow");
+    }
 }
 
 fn inject_comp_icon_button_scalars(cfg: &mut ThemeConfig) {
@@ -1772,6 +1751,7 @@ fn inject_comp_radio_button_scalars(cfg: &mut ThemeConfig) {
         );
     }
     material_web_v30::inject_comp_radio_button_scalars(cfg);
+    v30_overlay::inject_radio_button_scalar_backfills(cfg);
 }
 
 fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -1888,10 +1868,16 @@ fn inject_comp_filled_autocomplete_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
+    v30_overlay::inject_primary_navigation_tab_scalars(cfg);
+}
+
+fn inject_comp_secondary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
+    v30_overlay::inject_secondary_navigation_tab_scalars(cfg);
 }
 
 fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_navigation_bar_scalars(cfg);
+    v30_overlay::inject_navigation_bar_scalars(cfg);
 }
 
 fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
@@ -1900,10 +1886,12 @@ fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_navigation_rail_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_navigation_rail_scalars(cfg);
+    v30_overlay::inject_navigation_rail_scalars(cfg);
 }
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_menu_scalars(cfg);
+    v30_overlay::inject_menu_scalars(cfg);
 }
 
 fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
@@ -2082,58 +2070,7 @@ fn inject_comp_top_app_bar_scalars(cfg: &mut ThemeConfig) {
 }
 
 fn inject_comp_sheet_bottom_scalars(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-sheet-bottom.scss
-
-    cfg.metrics.insert(
-        "md.comp.sheet.bottom.docked.drag-handle.height".to_string(),
-        4.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.sheet.bottom.docked.drag-handle.width".to_string(),
-        32.0,
-    );
-    cfg.numbers.insert(
-        "md.comp.sheet.bottom.docked.drag-handle.opacity".to_string(),
-        0.4,
-    );
-
-    cfg.corners.insert(
-        "md.comp.sheet.bottom.docked.container.shape".to_string(),
-        Corners {
-            top_left: Px(28.0),
-            top_right: Px(28.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        },
-    );
-    cfg.corners.insert(
-        "md.comp.sheet.bottom.docked.minimized.container.shape".to_string(),
-        Corners::all(Px(0.0)),
-    );
-
-    // Both modal and standard use level1 in Material Web v30.
-    cfg.metrics.insert(
-        "md.comp.sheet.bottom.docked.modal.container.elevation".to_string(),
-        1.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.sheet.bottom.docked.standard.container.elevation".to_string(),
-        1.0,
-    );
-
-    cfg.metrics.insert(
-        "md.comp.sheet.bottom.focus.indicator.outline.offset".to_string(),
-        2.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.sheet.bottom.focus.indicator.thickness".to_string(),
-        3.0,
-    );
-
-    // Material guidance defaults around ~0.32 for modal scrims.
-    cfg.numbers
-        .entry("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity".to_string())
-        .or_insert(0.32);
+    v30_overlay::inject_sheet_bottom_scalars(cfg);
 }
 
 fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
@@ -2150,6 +2087,7 @@ fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_search_bar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_search_bar_scalars(cfg);
+    v30_overlay::inject_search_bar_scalars(cfg);
 }
 
 fn inject_comp_search_view_scalars(cfg: &mut ThemeConfig) {
@@ -2162,10 +2100,7 @@ fn inject_comp_carousel_item_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_dialog_scalars(cfg);
-    // Material guidance defaults around ~0.32 for modal scrims.
-    cfg.numbers
-        .entry("md.sys.fret.material.dialog.scrim.opacity".to_string())
-        .or_insert(0.32);
+    v30_overlay::inject_dialog_scalars(cfg);
 }
 
 fn inject_comp_full_screen_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -2659,6 +2594,57 @@ fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_colors_from_sys(cfg);
 }
 
+fn inject_comp_secondary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: Compose Material3 `SecondaryNavigationTabTokens`.
+
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.container.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.divider.color",
+        "md.sys.color.outline-variant",
+    );
+
+    for key in [
+        "md.comp.secondary-navigation-tab.with-label-text.active.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.active.focus.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.active.hover.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.active.pressed.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.focus.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.hover.label-text.color",
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.pressed.label-text.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.focus.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.hover.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.active.pressed.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.inactive.focus.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.inactive.hover.icon.color",
+        "md.comp.secondary-navigation-tab.with-icon.inactive.pressed.icon.color",
+        "md.comp.secondary-navigation-tab.active.focus.state-layer.color",
+        "md.comp.secondary-navigation-tab.active.hover.state-layer.color",
+        "md.comp.secondary-navigation-tab.active.pressed.state-layer.color",
+        "md.comp.secondary-navigation-tab.inactive.focus.state-layer.color",
+        "md.comp.secondary-navigation-tab.inactive.hover.state-layer.color",
+        "md.comp.secondary-navigation-tab.inactive.pressed.state-layer.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.on-surface");
+    }
+
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.with-label-text.inactive.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.secondary-navigation-tab.with-icon.inactive.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+}
+
 fn inject_comp_navigation_bar_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
@@ -3144,6 +3130,17 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.menu.list-item.disabled.label-text.color",
         "md.sys.color.on-surface",
     );
+    for key in [
+        "md.comp.menu.list-item.icon.color",
+        "md.comp.menu.list-item.leading-icon.color",
+        "md.comp.menu.list-item.shortcut.color",
+        "md.comp.menu.list-item.supporting-text.color",
+        "md.comp.menu.list-item.trailing-icon.color",
+        "md.comp.menu.list-item.trailing-text.color",
+        "md.comp.menu.section-label.label-text.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.on-surface-variant");
+    }
 
     copy_color(
         cfg,
@@ -3925,6 +3922,11 @@ mod tests {
         );
         assert!(
             cfg.text_styles
+                .contains_key("md.comp.secondary-navigation-tab.with-label-text.label-text"),
+            "expected secondary navigation tab label text style token"
+        );
+        assert!(
+            cfg.text_styles
                 .contains_key("md.comp.plain-tooltip.supporting-text"),
             "expected plain tooltip supporting text style token"
         );
@@ -3959,6 +3961,40 @@ mod tests {
             cfg.corners
                 .contains_key("md.comp.primary-navigation-tab.active-indicator.shape"),
             "expected component corner set token"
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.secondary-navigation-tab.container.height")
+                .copied(),
+            Some(48.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.secondary-navigation-tab.divider.height")
+                .copied(),
+            Some(1.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.secondary-navigation-tab.with-icon.icon.size")
+                .copied(),
+            Some(24.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get(
+                    "md.comp.primary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                )
+                .copied(),
+            Some(72.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get(
+                    "md.comp.secondary-navigation-tab.with-stacked-icon-and-label-text.container.height"
+                )
+                .copied(),
+            Some(72.0)
         );
         assert_eq!(
             cfg.metrics
@@ -4015,6 +4051,12 @@ mod tests {
                 .get("md.comp.radio-button.state-layer.size")
                 .copied(),
             Some(40.0)
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.radio-button.state-layer.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(9999.0)))
         );
         assert_eq!(
             cfg.numbers
@@ -4145,6 +4187,21 @@ mod tests {
             cfg.colors
                 .contains_key("md.comp.radio-button.selected.icon.color"),
             "expected radio-button color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.secondary-navigation-tab.container.color"),
+            "expected secondary navigation tab color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.secondary-navigation-tab.with-icon.active.icon.color"),
+            "expected secondary navigation tab icon color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.secondary-navigation-tab.divider.color"),
+            "expected secondary navigation tab divider color token to be derived from sys roles"
         );
     }
 

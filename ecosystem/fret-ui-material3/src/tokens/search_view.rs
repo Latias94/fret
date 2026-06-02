@@ -4,82 +4,238 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::typography;
+
+fn search_view_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+    MaterialTokenResolver::new(theme).metric_optional(Some(key), fallback)
+}
 
 pub(crate) fn container_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.container.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-container-high"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.surface-container-high")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.container.color",
+        "md.sys.color.surface-container-high",
+    )
 }
 
 pub(crate) fn container_elevation(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.search-view.container.elevation")
-        .unwrap_or(Px(6.0))
+    search_view_metric(theme, "md.comp.search-view.container.elevation", Px(6.0))
+}
+
+pub(crate) fn docked_header_container_height(theme: &Theme) -> Px {
+    search_view_metric(
+        theme,
+        "md.comp.search-view.docked.header.container.height",
+        Px(56.0),
+    )
 }
 
 pub(crate) fn full_screen_header_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.search-view.full-screen.header.container.height")
-        .unwrap_or(Px(72.0))
+    search_view_metric(
+        theme,
+        "md.comp.search-view.full-screen.header.container.height",
+        Px(72.0),
+    )
 }
 
 pub(crate) fn divider_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.divider.color")
-        .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.outline"))
+    MaterialTokenResolver::new(theme)
+        .color_comp_or_sys("md.comp.search-view.divider.color", "md.sys.color.outline")
 }
 
 pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
-    let r = theme
-        .metric_by_key("md.comp.search-view.docked.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-large"))
-        .unwrap_or(Px(28.0));
-    Corners::all(r)
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.search-view.docked.container.shape",
+            "md.sys.shape.corner.extra-large",
+        ],
+        Corners::all(Px(28.0)),
+    )
+}
+
+pub(crate) fn full_screen_container_shape(theme: &Theme) -> Corners {
+    MaterialTokenResolver::new(theme).corners_chain_or(
+        &[
+            "md.comp.search-view.full-screen.container.shape",
+            "md.sys.shape.corner.none",
+        ],
+        Corners::all(Px(0.0)),
+    )
 }
 
 pub(crate) fn header_leading_icon_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.leading-icon.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.leading-icon.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn header_trailing_icon_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.trailing-icon.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.trailing-icon.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn header_input_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.input-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.input-text.color",
+        "md.sys.color.on-surface",
+    )
 }
 
 pub(crate) fn header_supporting_text_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("md.comp.search-view.header.supporting-text.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-        })
+    MaterialTokenResolver::new(theme).color_comp_or_sys(
+        "md.comp.search-view.header.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    )
 }
 
 pub(crate) fn header_input_text_style(theme: &Theme) -> TextStyle {
-    let style = theme
-        .text_style_by_key("md.comp.search-view.header.input-text")
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
-        .unwrap_or_default();
-    typography::with_intent(style, TextIntent::Control)
+    typography::text_style(
+        theme,
+        Some("md.comp.search-view.header.input-text"),
+        "md.sys.typescale.body-large",
+        TextIntent::Control,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::{Theme, theme::ThemeConfig};
+
+    fn theme_with_patch(patch: ThemeConfig) -> (App, Theme) {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config_patch(&patch));
+        let theme = Theme::global(&app).clone();
+        (app, theme)
+    }
+
+    #[test]
+    fn search_view_metrics_default_to_material_matrix() {
+        let app = App::new();
+        let theme = Theme::global(&app);
+
+        assert_eq!(container_elevation(theme), Px(6.0));
+        assert_eq!(docked_header_container_height(theme), Px(56.0));
+        assert_eq!(full_screen_header_container_height(theme), Px(72.0));
+        assert_eq!(docked_container_shape(theme), Corners::all(Px(28.0)));
+        assert_eq!(full_screen_container_shape(theme), Corners::all(Px(0.0)));
+    }
+
+    #[test]
+    fn search_view_metrics_prefer_material_tokens() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.comp.search-view.container.elevation".to_string(), 4.0);
+        patch.metrics.insert(
+            "md.comp.search-view.docked.header.container.height".to_string(),
+            64.0,
+        );
+        patch.metrics.insert(
+            "md.comp.search-view.full-screen.header.container.height".to_string(),
+            80.0,
+        );
+        patch.metrics.insert(
+            "md.comp.search-view.docked.container.shape".to_string(),
+            18.0,
+        );
+        patch.metrics.insert(
+            "md.comp.search-view.full-screen.container.shape".to_string(),
+            0.0,
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(container_elevation(&theme), Px(4.0));
+        assert_eq!(docked_header_container_height(&theme), Px(64.0));
+        assert_eq!(full_screen_header_container_height(&theme), Px(80.0));
+        assert_eq!(docked_container_shape(&theme), Corners::all(Px(18.0)));
+        assert_eq!(full_screen_container_shape(&theme), Corners::all(Px(0.0)));
+    }
+
+    #[test]
+    fn search_view_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.extra-large".to_string(), 26.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(docked_container_shape(&theme), Corners::all(Px(26.0)));
+    }
+
+    #[test]
+    fn search_view_full_screen_shape_uses_system_fallback() {
+        let mut patch = ThemeConfig::default();
+        patch
+            .metrics
+            .insert("md.sys.shape.corner.none".to_string(), 2.0);
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(full_screen_container_shape(&theme), Corners::all(Px(2.0)));
+    }
+
+    #[test]
+    fn search_view_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.search-view.docked.container.shape".to_string(),
+            18.0,
+        );
+        patch.corners.insert(
+            "md.comp.search-view.docked.container.shape".to_string(),
+            Corners {
+                top_left: Px(20.0),
+                top_right: Px(22.0),
+                bottom_right: Px(24.0),
+                bottom_left: Px(26.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            docked_container_shape(&theme),
+            Corners {
+                top_left: Px(20.0),
+                top_right: Px(22.0),
+                bottom_right: Px(24.0),
+                bottom_left: Px(26.0),
+            }
+        );
+    }
+
+    #[test]
+    fn search_view_full_screen_shape_prefers_structured_corners_over_uniform_metric() {
+        let mut patch = ThemeConfig::default();
+        patch.metrics.insert(
+            "md.comp.search-view.full-screen.container.shape".to_string(),
+            0.0,
+        );
+        patch.corners.insert(
+            "md.comp.search-view.full-screen.container.shape".to_string(),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            },
+        );
+        let (_app, theme) = theme_with_patch(patch);
+
+        assert_eq!(
+            full_screen_container_shape(&theme),
+            Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            }
+        );
+    }
 }
