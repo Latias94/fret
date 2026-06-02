@@ -177,6 +177,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M42_DOCKING_PAINT_TAB_DETAIL_OWNER_SPLIT_2026-06-02.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M43_MAINLINE_ABSORPTION_AND_WORKTREE_CONSOLIDATION_2026-06-02.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
