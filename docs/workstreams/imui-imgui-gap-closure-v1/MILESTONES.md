@@ -5210,6 +5210,12 @@ continue to own public entrypoints and public props. This keeps the optional IMU
 thin over declarative panels instead of rebuilding plot policy in `fret-imui` or
 `fret-ui-kit::imui`.
 
+Fret Plot declarative legend owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/legend.rs` now owns private legend painting and hit testing,
+including row metrics, swatch/text painting, hover/pin highlight, and swatch/label hit testing. The
+declarative root keeps event state mutation for hidden-series and pinned-series changes, so legend
+interaction policy does not move into the paint/hit-test owner or the optional IMUI adapter.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

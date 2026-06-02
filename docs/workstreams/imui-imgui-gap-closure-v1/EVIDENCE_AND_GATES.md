@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Legend Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative legend paint and hit testing moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/legend.rs` without changing legend row metrics, text/swatch
+painting, hover/pin highlight, swatch/label hit testing, hidden-series mutation, pinned-series
+mutation, plot event routing, public panel props, or optional IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/legend.rs` owns legend paint and hit testing, including row
+  metrics, swatch/text painting, hover/pin highlight and swatch/label hit testing.
+- `ecosystem/fret-plot/src/declarative.rs` keeps event state mutation for hidden-series and
+  pinned-series changes while delegating legend paint/hit-test queries to the private owner.
+- `tools/gate_imui_workstream_source.py` tracks root, legend, model, panels, and props owners
+  separately and rejects legend paint/hit-test bodies from drifting back into the root paint/event
+  owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new legend owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast`:
+  pass, 1 test.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Model Projection Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative model projection moved out of

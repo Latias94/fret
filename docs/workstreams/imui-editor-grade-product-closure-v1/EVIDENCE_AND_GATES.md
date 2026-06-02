@@ -300,6 +300,33 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative legend owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving legend paint and
+hit testing out of the retained-free paint/event root:
+
+- `ecosystem/fret-plot/src/declarative/legend.rs` now owns the legend paint and hit-test owner,
+  including row metrics, text/swatch painting, hover/pin highlight and swatch/label hit testing.
+- `ecosystem/fret-plot/src/declarative.rs` imports the legend paint/hit-test entrypoints while
+  event state mutation stays in `declarative.rs`, preserving existing hidden-series and pinned-series
+  behavior.
+- The legend owner does not depend on `fret-imui`, `fret-authoring`, retained plot bridges, or plot
+  panel props; it stays a private child of the declarative plot surface.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast` -
+  passed, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` -
+  passed, 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02
 
 This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while

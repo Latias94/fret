@@ -5946,10 +5946,16 @@ opening the slice.
       without changing public plot panel props, `*_plot_panel` entrypoints, optional IMUI adapter
       routing, histogram bin projection, multi-axis bounds propagation, or the deleted retained
       bridge boundary.
-      Result: `ecosystem/fret-plot/src/declarative/model.rs` owns all concrete plot model to
-      private `PlotPanelModel` projection, including histogram bin projection, while
+      Result: `ecosystem/fret-plot/src/declarative/model.rs` owns all concrete plot model
+      projection into private `PlotPanelModel` records, including histogram bin projection, while
       `declarative.rs` keeps paint/event/layout orchestration and `declarative/panels.rs` plus
       `props.rs` keep the public entrypoint and props owners.
+- [x] Split Fret Plot declarative legend paint/hit-testing out of the retained-free paint/event root
+      without changing legend row metrics, swatch/text painting, hover/pin highlight, swatch/label
+      hit testing, hidden-series mutation, pinned-series mutation, public panel props, or optional
+      IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/declarative/legend.rs` owns the private legend paint and
+      hit-test owner; `declarative.rs` keeps event state mutation and plot event routing.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
