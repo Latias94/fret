@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-02
 
+## IMUI Input-Text Policy Command Snapshot Owner-Split Evidence - 2026-06-02
+
+Claim verified: IMUI input-text policy command snapshot storage moved out of
+`text_controls/policy_commands/input/resolve.rs` into a private child owner without changing
+completion/history/undo/redo command capture, repeat gating, IME/modifier suppression, key routing,
+dispatch behavior, or `fret-imui` facade semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve.rs` keeps
+  key-event-to-command resolution for Tab, ArrowUp, ArrowDown, Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve/snapshot.rs` owns
+  `InputTextPolicyCommands`, `from_options(...)`, `is_empty()`, and command/repeat option capture.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs` keeps the installer
+  shape and still dispatches the resolved command through the existing helper pair.
+- `tools/gate_imui_workstream_source.py` tracks the snapshot owner and rejects option snapshot
+  construction from drifting back into the resolver.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new snapshot owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo test -p fret-imui --no-fail-fast models_text_commands`: pass, 4 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass, 540 dedicated directories / 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## IMUI Pointer-Region Drag Phase Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI pointer-region drag phase handling moved out of

@@ -58,6 +58,15 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text policy command snapshot storage out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve.rs` into a
+      private child owner without changing completion/history/undo/redo command capture, repeat
+      gating, IME/modifier suppression, key routing, dispatch behavior, or `fret-imui` facade
+      semantics.
+      Result: `policy_commands/input/resolve.rs` keeps only key-event-to-command resolution and
+      re-exports the snapshot type for the installer. `policy_commands/input/resolve/snapshot.rs`
+      owns `InputTextPolicyCommands`, `from_options(...)`, and `is_empty()`. The source gate
+      prevents option snapshot construction from drifting back into the resolver.
 - [x] Split IMUI pointer-region drag phase handling out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region.rs` into private
       down/move/up phase owners without changing left-button gating, focus/cursor handling,

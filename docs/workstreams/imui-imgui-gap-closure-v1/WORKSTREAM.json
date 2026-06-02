@@ -835,6 +835,7 @@
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input/resolve/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls/textarea/element.rs",
