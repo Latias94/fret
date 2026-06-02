@@ -7,6 +7,7 @@ pub(crate) mod headless_carousel_item_cases;
 pub(crate) mod headless_exposed_dropdown_cases;
 pub(crate) mod headless_fixture_primitives;
 pub(crate) mod headless_golden_runners;
+pub(crate) mod headless_icon_button_cases;
 pub(crate) mod headless_interactions;
 pub(crate) mod headless_list_cases;
 pub(crate) mod headless_menu_dialog_style_cases;

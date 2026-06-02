@@ -136,10 +136,9 @@
       "id": "icon_button",
       "source": "src/icon_button.rs",
       "token_visual_component": "icon_button",
-      "headless_golden_suites": [],
+      "headless_golden_suites": ["icon_button"],
       "behavior_tests": ["automation_surface.rs", "icon_button_state.rs", "material3_choice_action_interactions.rs"],
-      "proof_status": "behavior_only",
-      "known_gap": "IconButton has token visual and focused interaction coverage, but no fixture-driven headless golden across standard, filled, tonal, outlined, and toggle variants."
+      "proof_status": "headless_golden"
     },
     {
       "id": "input_chip",

@@ -14,6 +14,11 @@ fn material3_headless_fab_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_icon_button_suite_goldens_v1() {
+    support::headless_golden_runners::icon_button::run_material3_headless_icon_button_suite_goldens_v1();
+}
+
+#[test]
 fn material3_headless_segmented_button_suite_goldens_v1() {
     support::headless_golden_runners::segmented_button::run_material3_headless_segmented_button_suite_goldens_v1();
 }

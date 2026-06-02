@@ -7,6 +7,7 @@ pub(crate) mod date_picker;
 pub(crate) mod divider;
 pub(crate) mod exposed_dropdown;
 pub(crate) mod fab;
+pub(crate) mod icon_button;
 pub(crate) mod list;
 pub(crate) mod menu_dialog_style;
 pub(crate) mod navigation;
