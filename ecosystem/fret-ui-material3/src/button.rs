@@ -22,7 +22,6 @@ use fret_ui::{Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::typography::TextIntent;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -42,7 +41,6 @@ use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::button::{self as button_tokens, ButtonSizeTokens};
-use crate::tokens::typography as material_typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
@@ -255,7 +253,7 @@ impl Button {
                     );
                     let corner_spring = button_pressed_corner_spring(scheme_spring);
                     let size_tokens = button_tokens::size_tokens(theme, self.size);
-                    let label_style = button_label_style(theme, self.size);
+                    let label_style = button_tokens::label_text_style(theme, self.size);
                     (
                         base_radius,
                         pressed_radius,
@@ -606,28 +604,6 @@ fn material_button_content<H: UiHost>(
 #[derive(Debug, Default, Clone)]
 struct ButtonCornerRuntime {
     spring: SpringAnimator,
-}
-
-fn button_label_text_key(size: ButtonSize) -> &'static str {
-    match size {
-        ButtonSize::XSmall => "md.comp.button.xsmall.label-text",
-        ButtonSize::Small => "md.comp.button.small.label-text",
-        ButtonSize::Medium => "md.comp.button.medium.label-text",
-        ButtonSize::Large => "md.comp.button.large.label-text",
-        ButtonSize::XLarge => "md.comp.button.xlarge.label-text",
-    }
-}
-
-fn button_label_style(theme: &Theme, size: ButtonSize) -> fret_core::TextStyle {
-    material_typography::text_style_chain(
-        theme,
-        &[
-            button_label_text_key(size),
-            "md.comp.button.label-text",
-            "md.sys.typescale.label-large",
-        ],
-        TextIntent::Control,
-    )
 }
 
 fn button_pressed_corner_spring(scheme: SpringSpec) -> SpringSpec {

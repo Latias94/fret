@@ -25,14 +25,7 @@
       "id": "button",
       "layer": "recipe",
       "path": "src/button.rs",
-      "tokens": [
-        "md.comp.button.large.label-text",
-        "md.comp.button.medium.label-text",
-        "md.comp.button.small.label-text",
-        "md.comp.button.xlarge.label-text",
-        "md.comp.button.xsmall.label-text",
-        "md.sys.typescale.label-large"
-      ]
+      "tokens": []
     },
     {
       "id": "card",
@@ -599,6 +592,7 @@
         "md.comp.button.large.container.shape.round",
         "md.comp.button.large.icon-label-space",
         "md.comp.button.large.icon.size",
+        "md.comp.button.large.label-text",
         "md.comp.button.large.leading-space",
         "md.comp.button.large.outlined.outline.width",
         "md.comp.button.large.pressed.container.shape",
@@ -607,6 +601,7 @@
         "md.comp.button.medium.container.shape.round",
         "md.comp.button.medium.icon-label-space",
         "md.comp.button.medium.icon.size",
+        "md.comp.button.medium.label-text",
         "md.comp.button.medium.leading-space",
         "md.comp.button.medium.outlined.outline.width",
         "md.comp.button.medium.pressed.container.shape",
@@ -641,6 +636,7 @@
         "md.comp.button.small.container.shape.round",
         "md.comp.button.small.icon-label-space",
         "md.comp.button.small.icon.size",
+        "md.comp.button.small.label-text",
         "md.comp.button.small.leading-space",
         "md.comp.button.small.outlined.outline.width",
         "md.comp.button.small.pressed.container.shape",
@@ -696,6 +692,7 @@
         "md.comp.button.xlarge.container.shape.round",
         "md.comp.button.xlarge.icon-label-space",
         "md.comp.button.xlarge.icon.size",
+        "md.comp.button.xlarge.label-text",
         "md.comp.button.xlarge.leading-space",
         "md.comp.button.xlarge.outlined.outline.width",
         "md.comp.button.xlarge.pressed.container.shape",
@@ -704,6 +701,7 @@
         "md.comp.button.xsmall.container.shape.round",
         "md.comp.button.xsmall.icon-label-space",
         "md.comp.button.xsmall.icon.size",
+        "md.comp.button.xsmall.label-text",
         "md.comp.button.xsmall.leading-space",
         "md.comp.button.xsmall.outlined.outline.width",
         "md.comp.button.xsmall.pressed.container.shape",
@@ -719,7 +717,8 @@
         "md.sys.color.shadow",
         "md.sys.color.surface-container-low",
         "md.sys.shape.corner.full",
-        "md.sys.shape.corner.small"
+        "md.sys.shape.corner.small",
+        "md.sys.typescale.label-large"
       ]
     },
     {

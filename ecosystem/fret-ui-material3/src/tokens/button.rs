@@ -3,13 +3,15 @@
 //! This module centralizes token key mapping and fallback chains so button variants remain
 //! consistent and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, TextStyle};
 use fret_ui::Theme;
+use fret_ui_kit::typography::TextIntent;
 
 use crate::button::{ButtonSize, ButtonVariant};
 use crate::foundation::token_resolver::{
     MaterialStateLayerInteraction, MaterialTokenResolver, alpha_mul,
 };
+use crate::tokens::typography as material_typography;
 
 // Keep the Material button root on a stable minimum width so snapshots and layout do not depend on
 // underconstrained wrapper fill resolution.
@@ -68,6 +70,18 @@ pub(crate) fn size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
             defaults.outlined_outline_width,
         ),
     }
+}
+
+pub(crate) fn label_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
+    material_typography::text_style_chain(
+        theme,
+        &[
+            label_text_key(size),
+            "md.comp.button.label-text",
+            "md.sys.typescale.label-large",
+        ],
+        TextIntent::Control,
+    )
 }
 
 pub(crate) fn container_shape_radius(theme: &Theme, size: ButtonSize) -> Px {
@@ -524,6 +538,16 @@ fn container_shadow_color_key(variant: ButtonVariant) -> &'static str {
         ButtonVariant::Elevated => "md.comp.button.elevated.container.shadow-color",
         ButtonVariant::Outlined => "md.comp.button.outlined.container.shadow-color",
         ButtonVariant::Text => "md.comp.button.text.container.shadow-color",
+    }
+}
+
+fn label_text_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.label-text",
+        ButtonSize::Small => "md.comp.button.small.label-text",
+        ButtonSize::Medium => "md.comp.button.medium.label-text",
+        ButtonSize::Large => "md.comp.button.large.label-text",
+        ButtonSize::XLarge => "md.comp.button.xlarge.label-text",
     }
 }
 
