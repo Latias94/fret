@@ -58,6 +58,14 @@ Last updated: 2026-06-02
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor theme ImGui-like dense preset patch construction out of
+      `ecosystem/fret-ui-editor/src/theme/patches.rs` into a private child owner without changing
+      default patch tokens, dense override token values, preset dispatch, install/replay APIs, or
+      editor theme preset picker semantics.
+      Result: `theme/patches.rs` keeps the default editor patch, preset override dispatch, and
+      shared patch insertion helpers. `theme/patches/dense.rs` owns
+      `imgui_like_dense_patch_v1(...)` and all dense override metric/color tokens. The source gate
+      prevents dense override token construction from drifting back into the default patch owner.
 - [x] Split IMUI textarea policy command snapshot and key resolution out of
       `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/textarea.rs` into private child
       owners without changing submit/cancel command capture, Ctrl+Enter vs Enter policy, Escape

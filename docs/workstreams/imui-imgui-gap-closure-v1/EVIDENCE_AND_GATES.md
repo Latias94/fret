@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor Theme Dense Preset Patch Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor ImGui-like dense preset token patch construction moved out of
+`theme/patches.rs` into a private child owner without changing default patch token values, dense
+override token values, preset dispatch, install/replay APIs, or editor theme preset picker
+semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme/patches.rs` keeps the default editor patch,
+  `editor_theme_preset_overrides_v1(...)`, and shared `metric(...)` / `color(...)` insertion
+  helpers.
+- `ecosystem/fret-ui-editor/src/theme/patches/dense.rs` owns
+  `imgui_like_dense_patch_v1(...)` and the dense override metric/color token construction.
+- `tools/gate_imui_workstream_source.py` tracks both owners and rejects dense override token
+  construction from drifting back into `theme/patches.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new dense patch owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo nextest run -p fret-ui-editor theme`: unavailable in this environment (`cargo nextest` is
+  not installed).
+- `cargo test -p fret-ui-editor --no-fail-fast theme`: pass, 14 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Textarea Policy Command Resolver Owner-Split Evidence - 2026-06-02
 
 Claim verified: IMUI textarea policy command snapshot and key resolution moved out of

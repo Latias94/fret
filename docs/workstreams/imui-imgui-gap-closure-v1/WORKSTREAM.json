@@ -1153,6 +1153,7 @@
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/theme.rs",
     "ecosystem/fret-ui-editor/src/theme/patches.rs",
+    "ecosystem/fret-ui-editor/src/theme/patches/dense.rs",
     "ecosystem/fret-ui-editor/src/theme/tests.rs",
     "ecosystem/fret-ui-editor/src/primitives/chrome.rs",
     "ecosystem/fret-ui-editor/src/primitives/chrome/tests.rs",
