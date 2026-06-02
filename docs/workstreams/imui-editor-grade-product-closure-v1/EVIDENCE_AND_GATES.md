@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative bars props builder owner split - 2026-06-02
+
+This maintenance slice keeps bars plot prop construction out of the shared props root while
+preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/props/bars.rs` owns `BarsPlotPanelProps` construction plus
+  output/state/style/axis-label/axis-scale/step-mode builder methods.
+- `props.rs` declares the bars, histogram, error-bars, and line builder owners, re-exports public
+  prop records, and keeps remaining plot prop builders plus heatmap colorbar defaults.
+- Evidence anchor: builder methods for candlestick remain in the props root.
+- Evidence anchor: Props root declares bars builder owner.
+- Evidence anchor: BarsPlotPanelProps builder owner.
+- Public panel props, panel entrypoints, optional IMUI adapter routing, paint/event owners, output
+  publication, and plot model projection remain unchanged.
+- The bars props builder owner stays non-bars-props-free, authoring-free, retained-free, paint-free,
+  event-free, and output-publication-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so bars builder methods cannot
+  drift back into `props.rs` and other plot prop builders cannot drift into `props/bars.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot bars_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative histogram props builder owner split - 2026-06-02
 
 This maintenance slice keeps histogram plot prop construction out of the shared props root while

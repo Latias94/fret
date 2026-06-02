@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot bars props builder owner-split result:
+`ecosystem/fret-plot/src/declarative/props.rs` now declares the private bars, histogram,
+error-bars, and line builder owners, re-exports public prop records, and keeps remaining plot prop
+builders plus heatmap colorbar defaults while `ecosystem/fret-plot/src/declarative/props/bars.rs`
+owns `BarsPlotPanelProps` construction and output/state/style/axis-label/axis-scale/step-mode
+builder methods. Public prop type names, builder signatures/defaults, panel entrypoints, optional
+IMUI adapter routing, paint/event owners, output publication, and plot model projection remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot histogram props builder owner-split result:
 `ecosystem/fret-plot/src/declarative/props.rs` now declares the private histogram, error-bars, and
 line builder owners, re-exports public prop records, and keeps remaining plot prop builders plus
