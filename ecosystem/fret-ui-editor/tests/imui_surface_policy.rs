@@ -3,6 +3,8 @@
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_ELEMENT_RS: &str = include_str!("../src/controls/color_edit/element.rs");
+const COLOR_EDIT_ELEMENT_KEYING_RS: &str =
+    include_str!("../src/controls/color_edit/element/keying.rs");
 const COLOR_EDIT_ELEMENT_TEST_IDS_RS: &str =
     include_str!("../src/controls/color_edit/element/test_ids.rs");
 const COLOR_EDIT_INPUT_RS: &str = include_str!("../src/controls/color_edit/input.rs");
@@ -106,6 +108,22 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("mod swatch;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("pub struct ColorEdit"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("fn into_element_keyed"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("mod keying;"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("use self::keying::color_edit_into_element;"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_into_element(self, cx)"));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("Location::caller"));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("cx.keyed("));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("ColorEdit caller-keyed element routing owner."));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("fn color_edit_into_element<"));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("type Callsite = (&'static str, u32, u32);"));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("Location::caller"));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("id_source.as_deref()"));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("\"fret-ui-editor.color_edit\""));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("control.into_element_keyed(cx)"));
+    assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("fn current_callsite() -> Callsite"));
+    assert!(!COLOR_EDIT_ELEMENT_KEYING_RS.contains("color_hex_input("));
+    assert!(!COLOR_EDIT_ELEMENT_KEYING_RS.contains("color_swatch("));
+    assert!(!COLOR_EDIT_ELEMENT_KEYING_RS.contains("request_popup_overlay("));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("mod test_ids;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("use self::test_ids::color_edit_element_test_ids;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_element_test_ids(&self.options)"));

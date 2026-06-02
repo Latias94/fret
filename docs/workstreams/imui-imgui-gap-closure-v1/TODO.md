@@ -786,6 +786,16 @@ Last updated: 2026-06-02
       requests, and root layout orchestration while delegating child test-id derivation to
       `controls/color_edit/element/test_ids.rs`. The source gate and `imui_surface_policy` test
       prevent `derived_test_id(...)` policy from drifting back into the root element owner.
+- [x] Split editor color-edit caller-keyed root mounting into a private child owner without
+      changing explicit `id_source` precedence, callsite fallback identity, model-id keying,
+      `#[track_caller]` behavior, keyed element assembly, test-id derivation, popup requests,
+      drag/drop routing, or public `ColorEdit` APIs.
+      Result: `controls/color_edit/element.rs` keeps public `ColorEdit`, state/model setup,
+      child construction, delivered-drop application, overlay requests, test-id owner handoff,
+      and root layout orchestration while delegating root keyed mounting to
+      `controls/color_edit/element/keying.rs`. The source gate and `imui_surface_policy` test
+      prevent `Location::caller` and `cx.keyed(...)` routing from drifting back into the root
+      element owner.
 - [x] Split editor color-edit popup swatch slot behavior into a private child owner without
       changing preset/history row entrypoints, row wrapping, stable test-id derivation,
       pressable/a11y chrome, activation color application, drag source/drop target behavior,

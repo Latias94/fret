@@ -1,5 +1,3 @@
-use std::panic::Location;
-
 use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
@@ -7,8 +5,10 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
+mod keying;
 mod test_ids;
 
+use self::keying::color_edit_into_element;
 use self::test_ids::color_edit_element_test_ids;
 
 use super::drag_drop::{
@@ -49,20 +49,7 @@ impl ColorEdit {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let model_id = self.model.id();
-        let loc = Location::caller();
-        let callsite = (loc.file(), loc.line(), loc.column());
-        let id_source = self.options.id_source.clone();
-
-        if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(("fret-ui-editor.color_edit", id_source, model_id), |cx| {
-                self.into_element_keyed(cx)
-            })
-        } else {
-            cx.keyed(("fret-ui-editor.color_edit", callsite, model_id), |cx| {
-                self.into_element_keyed(cx)
-            })
-        }
+        color_edit_into_element(self, cx)
     }
 
     fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {

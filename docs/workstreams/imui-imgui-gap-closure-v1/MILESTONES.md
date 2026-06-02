@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 editor ColorEdit caller-keying owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now keeps public `ColorEdit`,
+state/model setup, input/swatch construction, delivered-drop application, overlay requests, test-id
+owner handoff, and root layout orchestration while delegating root keyed mounting to
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/keying.rs`. The private keying owner
+captures the color model id, preserves explicit `id_source` precedence, preserves `#[track_caller]`
+callsite fallback behavior, and mounts through the existing keyed element assembly. Public
+`ColorEdit` behavior, popup routing, drag/drop routing, and IMUI adapter routing remain unchanged,
+and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor ColorEdit root test-id owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now keeps public `ColorEdit`,
 caller-keyed root mounting, state/model setup, input/swatch construction, delivered-drop

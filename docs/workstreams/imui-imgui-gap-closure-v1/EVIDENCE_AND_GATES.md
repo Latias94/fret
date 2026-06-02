@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor ColorEdit Caller-Keying Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor color-edit caller-keyed root mounting moved out of
+`controls/color_edit/element.rs` into private `controls/color_edit/element/keying.rs` without
+changing explicit `id_source` precedence, callsite fallback identity, model-id keying,
+`#[track_caller]` behavior, keyed element assembly, test-id derivation, popup requests, drag/drop
+routing, root layout, public `ColorEdit` APIs, or IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` keeps public `ColorEdit`,
+  state/model setup, input/swatch construction, delivered-drop application, overlay requests,
+  test-id owner handoff, and root layout orchestration.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/element/keying.rs` owns model-id capture,
+  explicit `id_source` routing, callsite fallback capture, and keyed mounting into
+  `into_element_keyed(...)`.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` verifies the root element delegates to
+  the keying owner and no longer contains `Location::caller` or `cx.keyed(...)`.
+- `tools/gate_imui_workstream_source.py` tracks root element, keying, and test-id owners
+  separately, and rejects input/swatch/popup composition policy from drifting into the keying owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new keying owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass, 51 unit tests
+  plus 1 integration test.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Root Test-Id Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor color-edit child test-id derivation moved out of
