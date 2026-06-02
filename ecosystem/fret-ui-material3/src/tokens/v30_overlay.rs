@@ -238,6 +238,11 @@ pub(crate) fn inject_menu_scalars(cfg: &mut ThemeConfig) {
         ("md.comp.menu.list-item.icon.size", 24.0),
         ("md.comp.menu.list-item.leading-icon.size", 24.0),
         ("md.comp.menu.list-item.leading-icon.trailing-space", 12.0),
+        ("md.sys.fret.material.dropdown-menu.collision-padding", 8.0),
+        (
+            "md.sys.fret.material.dropdown-menu.divider-margin-total",
+            8.0,
+        ),
         (
             "md.comp.menu.list-item.supporting-text.container.height",
             64.0,

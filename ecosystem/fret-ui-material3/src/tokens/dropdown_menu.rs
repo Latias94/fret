@@ -13,13 +13,17 @@ pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
 }
 
 pub(crate) fn divider_margin_total(theme: &Theme) -> Px {
-    let _ = theme;
-    Px(8.0)
+    MaterialTokenResolver::new(theme).metric_optional(
+        Some("md.sys.fret.material.dropdown-menu.divider-margin-total"),
+        Px(8.0),
+    )
 }
 
 pub(crate) fn collision_padding(theme: &Theme) -> Edges {
-    let _ = theme;
-    Edges::all(Px(8.0))
+    Edges::all(MaterialTokenResolver::new(theme).metric_optional(
+        Some("md.sys.fret.material.dropdown-menu.collision-padding"),
+        Px(8.0),
+    ))
 }
 
 pub(crate) fn max_height(theme: &Theme) -> Px {
@@ -47,6 +51,8 @@ mod tests {
         let theme = Theme::global(&app);
 
         assert_eq!(max_height(theme), Px(320.0));
+        assert_eq!(divider_margin_total(theme), Px(8.0));
+        assert_eq!(collision_padding(theme), Edges::all(Px(8.0)));
     }
 
     #[test]
@@ -55,9 +61,19 @@ mod tests {
         patch
             .metrics
             .insert("md.comp.menu.container.max-height".to_string(), 280.0);
+        patch.metrics.insert(
+            "md.sys.fret.material.dropdown-menu.divider-margin-total".to_string(),
+            10.0,
+        );
+        patch.metrics.insert(
+            "md.sys.fret.material.dropdown-menu.collision-padding".to_string(),
+            12.0,
+        );
         let (_app, theme) = theme_with_patch(patch);
 
         assert_eq!(max_height(&theme), Px(280.0));
+        assert_eq!(divider_margin_total(&theme), Px(10.0));
+        assert_eq!(collision_padding(&theme), Edges::all(Px(12.0)));
     }
 
     #[test]

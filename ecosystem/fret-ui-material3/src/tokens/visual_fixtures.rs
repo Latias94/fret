@@ -1792,6 +1792,7 @@ fn actual_dropdown_menu_metric(theme: &Theme, role: &str) -> Px {
     match role {
         "divider_margin_total" => dropdown_menu::divider_margin_total(theme),
         "collision_padding" => dropdown_menu::collision_padding(theme).left,
+        "max_height" => dropdown_menu::max_height(theme),
         other => actual_menu_metric(theme, other),
     }
 }

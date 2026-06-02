@@ -930,6 +930,8 @@
       "path": "src/tokens/dropdown_menu.rs",
       "tokens": [
         "md.comp.menu.container.max-height",
+        "md.sys.fret.material.dropdown-menu.collision-padding",
+        "md.sys.fret.material.dropdown-menu.divider-margin-total",
         "md.sys.motion.duration.short2"
       ]
     },
