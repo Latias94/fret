@@ -36,6 +36,34 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## IMUI text picker input-root type owner split - 2026-06-03
+
+This maintenance slice keeps the text picker input-root render owner focused on composition while
+moving request/result carrier records into a private type owner:
+
+- IMUI text picker input-root type owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/types.rs` owns
+  InputTextPickerInputRootRequest and BuiltInputTextPickerInputRoot data shapes.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/types.rs.
+- Evidence anchor: InputTextPickerInputRootRequest and BuiltInputTextPickerInputRoot data shapes.
+- Evidence anchor: input.rs keeps text input mounting, response capture, root container construction, and keyboard install.
+- Public input-text picker options, responses, active-descendant semantics, root fill sizing,
+  input-focused keyboard navigation, popup-open forwarding, and completion/history picker behavior
+  remain unchanged.
+- `tools/gate_imui_workstream_source.py` checks the type owner separately from input render,
+  semantics, keyboard, and options owners.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI debug draw round command payload owner split - 2026-06-03
 
 This maintenance slice separates round geometry command payload ownership from the root debug-draw

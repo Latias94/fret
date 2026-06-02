@@ -3323,6 +3323,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## IMUI Text Picker Input-Root Type Owner-Split Evidence - 2026-06-03
+
+Claim verified: IMUI text picker input-root request/result data shapes moved out of
+`text_picker_controls/input.rs` into `text_picker_controls/input/types.rs` without changing text
+input mounting, response capture, root fill sizing, assistive semantics, focused-input keyboard
+handler installation, popup-open forwarding, or completion/history picker behavior.
+
+Evidence:
+
+- IMUI text picker input-root type owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/types.rs` owns
+  InputTextPickerInputRootRequest and BuiltInputTextPickerInputRoot data shapes.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/types.rs.
+- Evidence anchor: InputTextPickerInputRootRequest and BuiltInputTextPickerInputRoot data shapes.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` keeps text input mounting,
+  response capture, root container construction, and keyboard install.
+- Evidence anchor: input.rs keeps text input mounting, response capture, root container construction, and keyboard install.
+- `tools/gate_imui_workstream_source.py` now checks the data-shape owner and rejects render,
+  semantics, keyboard-install, option-preparation, popup, or response-finalization logic from
+  drifting into `input/types.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Affix Segment Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` prefix/suffix affix segment rendering moved out of

@@ -3670,6 +3670,11 @@ Last updated: 2026-06-03
       `text_picker_controls/input/keyboard.rs` owns the focused-input keyboard handler gating and
       candidate forwarding, and `input.rs` now keeps request/result shapes plus text input/root
       container construction.
+      2026-06-03 follow-up: split IMUI text picker input-root request/result data shapes into
+      `text_picker_controls/input/types.rs` without changing text input mounting, response capture,
+      root fill sizing, assistive semantics, focused-input keyboard handler installation, or
+      completion/history picker behavior. `input.rs` now keeps text input mounting, response
+      capture, root container construction, and keyboard install.
 - [x] Split IMUI popup-store stale-generation cleanup out of
       `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into a private lifecycle owner without
       changing per-window state shape, popup open/anchor drop semantics, keep-alive generation

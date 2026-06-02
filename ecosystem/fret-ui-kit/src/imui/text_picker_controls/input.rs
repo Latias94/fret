@@ -1,39 +1,17 @@
-use std::sync::Arc;
+use fret_ui::element::{ContainerProps, Length};
+use fret_ui::{ElementContext, UiHost};
 
-use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, Length};
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
-
-use super::super::{InputTextOptions, ResponseExt};
-use super::keyboard::InputTextPickerKeyboardState;
+use super::super::ResponseExt;
 use keyboard::{InputRootKeyboardHandlerRequest, install_input_root_keyboard_handler};
 use semantics::input_root_assistive_semantics;
 
 mod keyboard;
 mod options;
 mod semantics;
+mod types;
 
 pub(super) use options::prepare_text_picker_input_options;
-
-pub(super) struct InputTextPickerInputRootRequest<'a> {
-    pub(super) model: Model<String>,
-    pub(super) input_options: InputTextOptions,
-    pub(super) popup_open: Model<bool>,
-    pub(super) keyboard_state: Option<Model<InputTextPickerKeyboardState>>,
-    pub(super) visible_candidates: &'a [(usize, Arc<str>)],
-    pub(super) keyboard_navigation: bool,
-    pub(super) keyboard_repeat: bool,
-    pub(super) picker_candidate_visible: bool,
-    pub(super) hide_for_exact_match: bool,
-    pub(super) picker_expanded: bool,
-    pub(super) active_element: Option<GlobalElementId>,
-    pub(super) popup_panel_id: Option<GlobalElementId>,
-}
-
-pub(super) struct BuiltInputTextPickerInputRoot {
-    pub(super) root: AnyElement,
-    pub(super) response: ResponseExt,
-}
+pub(super) use types::{BuiltInputTextPickerInputRoot, InputTextPickerInputRootRequest};
 
 pub(super) fn render_text_picker_input_root<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

@@ -858,6 +858,7 @@
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/options.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/semantics.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/types.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler/navigation.rs",

@@ -531,6 +531,14 @@ picker behavior, popup-open state, active-descendant semantics, root sizing, key
 conditions, and public IMUI options/responses remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-03 IMUI text picker input-root type owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/types.rs` now owns
+InputTextPickerInputRootRequest and BuiltInputTextPickerInputRoot data shapes. `input.rs` keeps text
+input mounting, response capture, root container construction, and keyboard install. Completion/
+history picker behavior, popup-open forwarding, assistive semantics, root fill sizing, and public
+IMUI options/responses remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
 2026-06-01 editor NumericInput affix segment owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps joined field/frame
 orchestration, input owner invocation, and error owner invocation while delegating prefix/suffix
