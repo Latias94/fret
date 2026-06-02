@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor ColorEdit Root Test-Id Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor color-edit child test-id derivation moved out of
+`controls/color_edit/element.rs` into private `controls/color_edit/element/test_ids.rs` without
+changing explicit child test-id precedence, fallback root-test-id suffixes, input/swatch test-id
+assignment, popup/tooltip/copy/eyedropper overlay ids, caller-keyed element identity, drag/drop
+routing, overlay request routing, root layout, public `ColorEdit` APIs, or IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` keeps public `ColorEdit`,
+  caller-keyed root mounting, local state/model setup, input/swatch construction, delivered-drop
+  application, overlay requests, and root layout orchestration.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/element/test_ids.rs` owns
+  `ColorEditElementTestIds`, explicit child-id precedence, and fallback suffixes for input, swatch,
+  popup, tooltip, copy-menu, and eyedropper ids.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` verifies the root element calls the
+  test-id owner and no longer contains `derived_test_id(...)`.
+- `tools/gate_imui_workstream_source.py` tracks root element and test-id owners separately and
+  rejects input/swatch/popup composition policy from drifting into the test-id owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new test-id owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass, 51 unit tests
+  plus 1 integration test.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor GradientEditor Preview Paint Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor gradient preview canvas painting moved out of

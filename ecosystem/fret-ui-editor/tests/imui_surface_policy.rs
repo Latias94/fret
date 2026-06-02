@@ -3,6 +3,8 @@
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_ELEMENT_RS: &str = include_str!("../src/controls/color_edit/element.rs");
+const COLOR_EDIT_ELEMENT_TEST_IDS_RS: &str =
+    include_str!("../src/controls/color_edit/element/test_ids.rs");
 const COLOR_EDIT_INPUT_RS: &str = include_str!("../src/controls/color_edit/input.rs");
 const COLOR_EDIT_POPUP_COPY_RS: &str = include_str!("../src/controls/color_edit/popup/copy.rs");
 const COLOR_EDIT_POPUP_COPY_ENTRIES_RS: &str =
@@ -104,6 +106,23 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("mod swatch;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("pub struct ColorEdit"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("fn into_element_keyed"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("mod test_ids;"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("use self::test_ids::color_edit_element_test_ids;"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_element_test_ids(&self.options)"));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("derived_test_id("));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("struct ColorEditElementTestIds"));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("fn color_edit_element_test_ids("));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("ColorEditOptions"));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("derived_test_id"));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("\"input\""));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("\"swatch\""));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("\"popup\""));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("\"tooltip\""));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("\"copy-menu\""));
+    assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("\"eyedropper\""));
+    assert!(!COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("color_hex_input("));
+    assert!(!COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("color_swatch("));
+    assert!(!COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("request_popup_overlay("));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("color_hex_input("));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("color_swatch("));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("request_popup_overlay("));

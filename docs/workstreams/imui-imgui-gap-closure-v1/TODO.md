@@ -777,6 +777,15 @@ Last updated: 2026-06-02
       private activation owner contains visible-content guard, original-reference capture,
       open-state toggle, copy-menu close, and redraw request. The source gate prevents popup
       activation policy from drifting back into the root swatch owner.
+- [x] Split editor color-edit root test-id derivation into a private child owner without changing
+      explicit child test-id precedence, fallback derivation from the root test id, input/swatch
+      assignment, popup/tooltip/copy/eyedropper overlay ids, caller-keyed element identity,
+      drag/drop routing, popup request routing, or public `ColorEdit` options.
+      Result: `controls/color_edit/element.rs` keeps public `ColorEdit`, caller-keyed root
+      mounting, state/model setup, child construction, delivered-drop application, overlay
+      requests, and root layout orchestration while delegating child test-id derivation to
+      `controls/color_edit/element/test_ids.rs`. The source gate and `imui_surface_policy` test
+      prevent `derived_test_id(...)` policy from drifting back into the root element owner.
 - [x] Split editor color-edit popup swatch slot behavior into a private child owner without
       changing preset/history row entrypoints, row wrapping, stable test-id derivation,
       pressable/a11y chrome, activation color application, drag source/drop target behavior,

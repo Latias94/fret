@@ -5,8 +5,11 @@ use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
-use crate::primitives::input_group::derived_test_id;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
+
+mod test_ids;
+
+use self::test_ids::color_edit_element_test_ids;
 
 use super::drag_drop::{
     ColorEditDeliveredDropArgs, apply_delivered_color_drop, color_drag_drop_store_for,
@@ -87,36 +90,7 @@ impl ColorEdit {
         prune_color_drag_drop_store(cx, &drag_drop_store);
         let drag_drop_options = self.options.drag_drop;
         let drag_threshold = resolve_color_drag_threshold(cx);
-        let input_test_id = self
-            .options
-            .input_test_id
-            .clone()
-            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "input"));
-        let swatch_test_id = self
-            .options
-            .swatch_test_id
-            .clone()
-            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "swatch"));
-        let popup_test_id = self
-            .options
-            .popup_test_id
-            .clone()
-            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "popup"));
-        let tooltip_test_id = self
-            .options
-            .tooltip_test_id
-            .clone()
-            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "tooltip"));
-        let copy_menu_test_id = self
-            .options
-            .copy_menu_test_id
-            .clone()
-            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "copy-menu"));
-        let eyedropper_test_id = self
-            .options
-            .eyedropper_test_id
-            .clone()
-            .or_else(|| derived_test_id(self.options.test_id.as_ref(), "eyedropper"));
+        let test_ids = color_edit_element_test_ids(&self.options);
         let popup_options = self.options.popup;
         let tooltip_options = self.options.tooltip;
         let copy_options = self.options.copy;
@@ -162,7 +136,7 @@ impl ColorEdit {
                 show_alpha: self.options.show_alpha,
                 enabled: self.options.enabled,
                 focusable: self.options.focusable,
-                test_id: input_test_id.clone(),
+                test_id: test_ids.input.clone(),
                 row_height: density.row_height,
             },
         );
@@ -191,7 +165,7 @@ impl ColorEdit {
                 drag_drop_enabled,
                 drag_drop_options,
                 drag_threshold,
-                test_id: swatch_test_id.clone(),
+                test_id: test_ids.swatch.clone(),
             },
         );
 
@@ -230,8 +204,8 @@ impl ColorEdit {
             popup_options,
             popup_runtime_options,
             popup_padding,
-            popup_test_id,
-            eyedropper_test_id,
+            test_ids.popup,
+            test_ids.eyedropper,
         );
         request_color_tooltip_overlay(
             cx,
@@ -241,7 +215,7 @@ impl ColorEdit {
             self.options.show_alpha,
             self.options.alpha_preview,
             tooltip_options,
-            tooltip_test_id,
+            test_ids.tooltip,
         );
         request_color_copy_menu_overlay(
             cx,
@@ -250,7 +224,7 @@ impl ColorEdit {
             current,
             self.options.show_alpha,
             copy_options,
-            copy_menu_test_id,
+            test_ids.copy_menu,
         );
 
         color_edit_root_layout(

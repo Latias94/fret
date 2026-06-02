@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 editor ColorEdit root test-id owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now keeps public `ColorEdit`,
+caller-keyed root mounting, state/model setup, input/swatch construction, delivered-drop
+application, overlay requests, and root layout orchestration while delegating child test-id
+derivation to `ecosystem/fret-ui-editor/src/controls/color_edit/element/test_ids.rs`. The private
+test-id owner preserves explicit child test-id precedence and root-test-id fallback suffixes for
+input, swatch, popup, tooltip, copy-menu, and eyedropper ids. Public `ColorEdit` behavior, popup
+request routing, drag/drop routing, and IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating
