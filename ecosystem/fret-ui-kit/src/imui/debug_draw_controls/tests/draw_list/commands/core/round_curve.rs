@@ -60,26 +60,29 @@ pub(super) fn add_round_curve_commands(list: &mut ImUiDebugDrawList) {
 }
 
 pub(super) fn assert_round_curve_command_order(commands: &[DebugDrawCommand], offset: usize) {
-    assert!(matches!(commands[offset], DebugDrawCommand::Circle { .. }));
+    assert!(matches!(
+        commands[offset],
+        DebugDrawCommand::Round(DebugDrawRoundCommand::Circle { .. })
+    ));
     assert!(matches!(
         commands[offset + 1],
-        DebugDrawCommand::CircleFilled { .. }
+        DebugDrawCommand::Round(DebugDrawRoundCommand::CircleFilled { .. })
     ));
     assert!(matches!(
         commands[offset + 2],
-        DebugDrawCommand::Ngon { .. }
+        DebugDrawCommand::Round(DebugDrawRoundCommand::Ngon { .. })
     ));
     assert!(matches!(
         commands[offset + 3],
-        DebugDrawCommand::NgonFilled { .. }
+        DebugDrawCommand::Round(DebugDrawRoundCommand::NgonFilled { .. })
     ));
     assert!(matches!(
         commands[offset + 4],
-        DebugDrawCommand::Ellipse { .. }
+        DebugDrawCommand::Round(DebugDrawRoundCommand::Ellipse { .. })
     ));
     assert!(matches!(
         commands[offset + 5],
-        DebugDrawCommand::EllipseFilled { .. }
+        DebugDrawCommand::Round(DebugDrawRoundCommand::EllipseFilled { .. })
     ));
     assert!(matches!(
         commands[offset + 6],

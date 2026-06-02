@@ -40,7 +40,7 @@ fn debug_draw_channels_merge_in_channel_order() {
     ));
     assert!(matches!(
         list.commands[1],
-        DebugDrawCommand::CircleFilled { .. }
+        DebugDrawCommand::Round(DebugDrawRoundCommand::CircleFilled { .. })
     ));
     assert!(matches!(
         list.commands[2],

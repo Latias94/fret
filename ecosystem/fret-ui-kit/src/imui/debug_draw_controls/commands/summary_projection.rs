@@ -30,12 +30,7 @@ impl DebugDrawCommand {
         match self {
             DebugDrawCommand::Linear(_)
             | DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { .. })
-            | DebugDrawCommand::Circle { .. }
-            | DebugDrawCommand::CircleFilled { .. }
-            | DebugDrawCommand::Ngon { .. }
-            | DebugDrawCommand::NgonFilled { .. }
-            | DebugDrawCommand::Ellipse { .. }
-            | DebugDrawCommand::EllipseFilled { .. }
+            | DebugDrawCommand::Round(_)
             | DebugDrawCommand::BezierQuadratic { .. }
             | DebugDrawCommand::BezierCubic { .. } => {
                 unreachable!("geometry commands are handled by geometry_summary")

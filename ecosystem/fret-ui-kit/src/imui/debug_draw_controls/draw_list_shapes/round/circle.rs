@@ -1,6 +1,6 @@
 use fret_core::{Color, Point, Px};
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawRoundCommand};
 use super::super::super::{DebugDrawStrokeStyle, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -15,19 +15,22 @@ impl ImUiDebugDrawList {
         color: Color,
         style: impl Into<DebugDrawStrokeStyle>,
     ) {
-        self.commands.push(DebugDrawCommand::Circle {
-            center,
-            radius,
-            color,
-            style: style.into(),
-        });
+        self.commands
+            .push(DebugDrawCommand::Round(DebugDrawRoundCommand::Circle {
+                center,
+                radius,
+                color,
+                style: style.into(),
+            }));
     }
 
     pub fn add_circle_filled(&mut self, center: Point, radius: Px, color: Color) {
-        self.commands.push(DebugDrawCommand::CircleFilled {
-            center,
-            radius,
-            color,
-        });
+        self.commands.push(DebugDrawCommand::Round(
+            DebugDrawRoundCommand::CircleFilled {
+                center,
+                radius,
+                color,
+            },
+        ));
     }
 }

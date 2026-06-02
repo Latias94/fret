@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Debug Draw Round Command Payload Owner Split - 2026-06-03
+
+Claim verified: circle/ngon/ellipse debug-draw command payload variants moved out of
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into private
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/round.rs` without
+changing public `ImUiDebugDrawList` round geometry APIs, command summaries, round point-count
+projection, path paint dispatch, media dispatch filtering, residual shape dispatch, or public
+debug-draw response APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/round.rs` owns
+  circle/ngon/ellipse debug-draw command payload variants.
+- Evidence anchor: circle/ngon/ellipse debug-draw command payload variants.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps Bezier,
+  mesh, clip, media, text, Linear, and Round wrappers.
+- Evidence anchor: DebugDrawCommand keeps Bezier, mesh, clip, media, text, Linear, and Round wrappers.
+- Draw-list round builders still expose the same public methods and now wrap the private round
+  payload owner through `DebugDrawCommand::Round(...)`.
+- Geometry summary projection still emits the same `DebugDrawCommandKind` values and keeps the same
+  round point counts for circle, filled circle, ngon, filled ngon, ellipse, and filled ellipse.
+- Paint dispatch still routes stroked/filled circle/ngon/ellipse path commands through the round
+  path paint owners and treats round commands as non-media for media dispatch filtering.
+- `tools/gate_imui_workstream_source.py` source-checks the split so round payload variants cannot
+  drift back into the root command enum owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug Draw Linear Command Payload Owner Split - 2026-06-03
 
 Claim verified: line/poly/rect/quad/triangle debug-draw command payload variants moved out of

@@ -1,6 +1,6 @@
 use fret_core::{Color, Point, Px};
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawRoundCommand};
 use super::super::super::{DebugDrawStrokeStyle, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -23,21 +23,23 @@ impl ImUiDebugDrawList {
         color: Color,
         style: impl Into<DebugDrawStrokeStyle>,
     ) {
-        self.commands.push(DebugDrawCommand::Ngon {
-            center,
-            radius,
-            segments,
-            color,
-            style: style.into(),
-        });
+        self.commands
+            .push(DebugDrawCommand::Round(DebugDrawRoundCommand::Ngon {
+                center,
+                radius,
+                segments,
+                color,
+                style: style.into(),
+            }));
     }
 
     pub fn add_ngon_filled(&mut self, center: Point, radius: Px, segments: usize, color: Color) {
-        self.commands.push(DebugDrawCommand::NgonFilled {
-            center,
-            radius,
-            segments,
-            color,
-        });
+        self.commands
+            .push(DebugDrawCommand::Round(DebugDrawRoundCommand::NgonFilled {
+                center,
+                radius,
+                segments,
+                color,
+            }));
     }
 }

@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 IMUI debug-draw round-command payload owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/round.rs` now owns
+circle/ngon/ellipse debug-draw command payload variants, including filled circle, filled ngon, and
+filled ellipse payloads.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` keeps Bezier, mesh,
+clip, media, text, and the `Round(DebugDrawRoundCommand)` wrapper plus existing wrappers. Public
+`ImUiDebugDrawList` circle/ngon/ellipse APIs, command summaries, round point-count projection, path
+paint dispatch, media dispatch filtering, residual shape dispatch, and debug-draw response APIs
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 IMUI debug-draw linear-command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/linear.rs` now owns
 line/poly/rect/quad/triangle debug-draw command payload variants, including convex/concave polygon

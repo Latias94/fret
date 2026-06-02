@@ -45,12 +45,7 @@ pub(super) fn paint_residual_shape_command(
             size,
         } => text::paint_text(painter, order, *origin, text, *color, *size, scale),
         DebugDrawCommand::Linear(_)
-        | DebugDrawCommand::Circle { .. }
-        | DebugDrawCommand::CircleFilled { .. }
-        | DebugDrawCommand::Ngon { .. }
-        | DebugDrawCommand::NgonFilled { .. }
-        | DebugDrawCommand::Ellipse { .. }
-        | DebugDrawCommand::EllipseFilled { .. }
+        | DebugDrawCommand::Round(_)
         | DebugDrawCommand::BezierQuadratic { .. }
         | DebugDrawCommand::BezierCubic { .. }
         | DebugDrawCommand::Clip(_)

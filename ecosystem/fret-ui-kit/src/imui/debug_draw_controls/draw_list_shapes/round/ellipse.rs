@@ -1,6 +1,6 @@
 use fret_core::{Color, Point, Px, Size};
 
-use super::super::super::commands::DebugDrawCommand;
+use super::super::super::commands::{DebugDrawCommand, DebugDrawRoundCommand};
 use super::super::super::{DebugDrawStrokeStyle, ImUiDebugDrawList};
 
 impl ImUiDebugDrawList {
@@ -25,14 +25,15 @@ impl ImUiDebugDrawList {
         color: Color,
         style: impl Into<DebugDrawStrokeStyle>,
     ) {
-        self.commands.push(DebugDrawCommand::Ellipse {
-            center,
-            radius,
-            rotation_radians,
-            segments,
-            color,
-            style: style.into(),
-        });
+        self.commands
+            .push(DebugDrawCommand::Round(DebugDrawRoundCommand::Ellipse {
+                center,
+                radius,
+                rotation_radians,
+                segments,
+                color,
+                style: style.into(),
+            }));
     }
 
     pub fn add_ellipse_filled(
@@ -43,12 +44,14 @@ impl ImUiDebugDrawList {
         segments: usize,
         color: Color,
     ) {
-        self.commands.push(DebugDrawCommand::EllipseFilled {
-            center,
-            radius,
-            rotation_radians,
-            segments,
-            color,
-        });
+        self.commands.push(DebugDrawCommand::Round(
+            DebugDrawRoundCommand::EllipseFilled {
+                center,
+                radius,
+                rotation_radians,
+                segments,
+                color,
+            },
+        ));
     }
 }

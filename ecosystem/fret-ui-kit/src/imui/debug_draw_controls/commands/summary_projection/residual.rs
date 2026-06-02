@@ -50,12 +50,7 @@ pub(super) fn residual_summary(command: &DebugDrawCommand) -> Option<DebugDrawCo
         }
         DebugDrawCommand::Linear(_)
         | DebugDrawCommand::Mesh(DebugDrawMeshCommand::TriangleMesh { .. })
-        | DebugDrawCommand::Circle { .. }
-        | DebugDrawCommand::CircleFilled { .. }
-        | DebugDrawCommand::Ngon { .. }
-        | DebugDrawCommand::NgonFilled { .. }
-        | DebugDrawCommand::Ellipse { .. }
-        | DebugDrawCommand::EllipseFilled { .. }
+        | DebugDrawCommand::Round(_)
         | DebugDrawCommand::BezierQuadratic { .. }
         | DebugDrawCommand::BezierCubic { .. } => None,
     }

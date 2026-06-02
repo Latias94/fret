@@ -58,6 +58,16 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw round geometry command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
+      private child owner without changing public `ImUiDebugDrawList` circle/ngon/ellipse methods,
+      command summaries, round point-count projection, path paint dispatch, media dispatch
+      filtering, residual shape dispatch, or debug-draw response APIs.
+      Result: `debug_draw_controls/commands/types/command/round.rs` owns circle, circle-filled,
+      ngon, ngon-filled, ellipse, and ellipse-filled payload variants. `command.rs` keeps Bezier,
+      mesh, clip, media, text, and wrappers `Linear(...)`, `Round(...)`, etc.; draw-list builders,
+      round geometry summaries, round path paint, residual dispatch, and tests route through the
+      private round owner.
 - [x] Split IMUI debug-draw linear geometry command payload variants out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
       private child owner without changing public `ImUiDebugDrawList` line/poly/rect/quad/triangle

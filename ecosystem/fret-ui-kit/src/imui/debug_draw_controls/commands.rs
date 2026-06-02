@@ -3,5 +3,5 @@ mod types;
 
 pub(super) use types::{
     DebugDrawClipCommand, DebugDrawCommand, DebugDrawLinearCommand, DebugDrawMediaCommand,
-    DebugDrawMeshCommand,
+    DebugDrawMeshCommand, DebugDrawRoundCommand,
 };

@@ -5,12 +5,7 @@ pub(super) fn is_non_media_command(command: &DebugDrawCommand) -> bool {
         DebugDrawCommand::Media(_) => false,
         DebugDrawCommand::Linear(_)
         | DebugDrawCommand::Mesh(_)
-        | DebugDrawCommand::Circle { .. }
-        | DebugDrawCommand::CircleFilled { .. }
-        | DebugDrawCommand::Ngon { .. }
-        | DebugDrawCommand::NgonFilled { .. }
-        | DebugDrawCommand::Ellipse { .. }
-        | DebugDrawCommand::EllipseFilled { .. }
+        | DebugDrawCommand::Round(_)
         | DebugDrawCommand::BezierQuadratic { .. }
         | DebugDrawCommand::BezierCubic { .. }
         | DebugDrawCommand::Clip(_)
