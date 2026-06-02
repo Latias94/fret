@@ -27,7 +27,6 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::active_descendant::active_option_for_index;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::context::material_layout_direction_in_scope;
@@ -1085,13 +1084,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
         let selected_bg =
             autocomplete_tokens::menu_list_item_selected_container_color(theme, token_variant);
         let label_style =
-            autocomplete_tokens::menu_list_item_label_text_style(theme, token_variant)
-                .unwrap_or_else(|| {
-                    theme
-                        .text_style_by_key("md.sys.typescale.body-large")
-                        .unwrap_or_default()
-                });
-        let label_style = typography::with_intent(label_style, TextIntent::Control);
+            autocomplete_tokens::menu_list_item_label_text_style_or_fallback(theme, token_variant);
         let item_height = autocomplete_tokens::menu_list_item_height(theme, token_variant);
         let selectable_outer_horizontal_padding =
             autocomplete_tokens::menu_selectable_item_outer_horizontal_padding(

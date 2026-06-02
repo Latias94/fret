@@ -3,15 +3,21 @@
 //! This module centralizes token key mapping and fallback chains so text field visuals remain
 //! stable and drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, TextStyle};
 use fret_ui::{TextInputStyle, Theme};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::text_field::TextFieldVariant;
-use crate::tokens::field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant};
+use crate::tokens::{
+    field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant},
+    typography as material_typography,
+};
 
 const TEXT_FIELD_TOKENS: FieldTokenSet =
     FieldTokenSet::new("md.comp.outlined-text-field", "md.comp.filled-text-field");
+const INPUT_TEXT_STYLE_KEY: &str = "md.sys.typescale.body-large";
+const SUPPORTING_TEXT_STYLE_KEY: &str = "md.sys.typescale.body-small";
 
 pub(crate) fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
     field_common::container_height(theme, field_prefix(variant))
@@ -19,6 +25,14 @@ pub(crate) fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
 
 pub(crate) fn initial_input_background(theme: &Theme) -> Color {
     MaterialTokenResolver::new(theme).color_sys("md.sys.color.surface")
+}
+
+pub(crate) fn input_text_style(theme: &Theme) -> Option<TextStyle> {
+    material_typography::text_style_value(theme, INPUT_TEXT_STYLE_KEY, TextIntent::Control)
+}
+
+pub(crate) fn supporting_text_style(theme: &Theme) -> Option<TextStyle> {
+    material_typography::text_style_value(theme, SUPPORTING_TEXT_STYLE_KEY, TextIntent::Content)
 }
 
 pub(crate) fn text_input_style(

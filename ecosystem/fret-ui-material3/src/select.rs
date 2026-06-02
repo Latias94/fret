@@ -60,7 +60,6 @@ use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, ms_to_frames};
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::list as list_tokens;
@@ -1438,9 +1437,7 @@ fn select_trigger_label<H: UiHost>(
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = floating_label::material_floating_label_text_style(theme, progress)
-            .or_else(|| {
-                MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.body-large")
-            })
+            .or_else(|| select_tokens::input_text_style(theme, variant))
             .map(|style| typography::with_intent(style, TextIntent::Control));
         let color = resolve_override_slot_with(
             style_override.label_color.as_ref(),
@@ -1485,9 +1482,7 @@ fn select_supporting_text<H: UiHost>(
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
-        let style = theme
-            .text_style_by_key("md.sys.typescale.body-small")
-            .map(|style| typography::with_intent(style, TextIntent::Content));
+        let style = select_tokens::supporting_text_style(theme, variant);
         let color = resolve_override_slot_with(
             style_override.supporting_text_color.as_ref(),
             states,
@@ -1547,20 +1542,12 @@ fn estimate_select_menu_content_width<H: UiHost>(
     let padding_right = Px(outer_horizontal_padding.0 + content_horizontal_padding.0);
     let gap = select_tokens::menu_list_item_icon_text_gap(theme, variant);
 
-    let label_style = select_tokens::menu_list_item_label_text_style(theme, variant)
-        .unwrap_or_else(|| fret_core::TextStyle {
-            size: Px(14.0),
-            ..Default::default()
-        });
+    let label_style = select_tokens::menu_list_item_label_text_style_or_fallback(theme, variant);
     // Heuristic: average glyph width in a proportional UI font is ~0.5-0.6em.
     let avg_char_w = label_style.size.0 * 0.55;
 
-    let supporting_style = theme
-        .text_style_by_key("md.sys.typescale.body-small")
-        .unwrap_or_else(|| fret_core::TextStyle {
-            size: Px(12.0),
-            ..Default::default()
-        });
+    let supporting_style =
+        select_tokens::menu_list_item_supporting_text_estimate_style(theme, variant);
     let supporting_avg_char_w = supporting_style.size.0 * 0.55;
 
     let has_leading_icon = items.iter().any(|it| it.leading_icon.is_some());

@@ -5,12 +5,13 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::{TextInputStyle, Theme};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::text_field::TextFieldVariant;
 use crate::tokens::{
     field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant},
     field_menu_common::{self, FieldMenuTokenSet},
-    selectable_menu_item as selectable_item_tokens,
+    selectable_menu_item as selectable_item_tokens, typography as material_typography,
 };
 
 const AUTOCOMPLETE_FIELD_TOKENS: FieldTokenSet = FieldTokenSet::new(
@@ -21,6 +22,7 @@ const AUTOCOMPLETE_MENU_TOKENS: FieldMenuTokenSet = FieldMenuTokenSet::new(
     "md.comp.outlined-autocomplete.menu",
     "md.comp.filled-autocomplete.menu",
 );
+const MENU_LIST_ITEM_LABEL_TEXT_FALLBACK_KEY: &str = "md.sys.typescale.body-large";
 
 pub(crate) fn text_field_container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
     field_common::container_height(theme, field_prefix(variant))
@@ -209,6 +211,21 @@ pub(crate) fn menu_list_item_label_text_style(
     _variant: TextFieldVariant,
 ) -> Option<TextStyle> {
     field_menu_common::list_item_label_text_style(theme)
+}
+
+pub(crate) fn menu_list_item_label_text_style_or_fallback(
+    theme: &Theme,
+    variant: TextFieldVariant,
+) -> TextStyle {
+    menu_list_item_label_text_style(theme, variant)
+        .or_else(|| {
+            material_typography::text_style_value(
+                theme,
+                MENU_LIST_ITEM_LABEL_TEXT_FALLBACK_KEY,
+                TextIntent::Control,
+            )
+        })
+        .unwrap_or_default()
 }
 
 pub(crate) fn menu_list_item_label_text_color(

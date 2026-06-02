@@ -3,14 +3,14 @@
 
 use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
-use fret_ui_kit::typography::{self, TextIntent};
+use fret_ui_kit::typography::TextIntent;
 
 use crate::foundation::token_resolver::{MaterialTokenResolver, blend_over};
 use crate::select::SelectVariant;
 use crate::tokens::{
     field_common::{self, FieldIconRole, FieldState, FieldTokenSet, FieldVariant},
     field_menu_common::{self, FieldMenuTokenSet, MenuItemIconRole},
-    selectable_menu_item as selectable_item_tokens,
+    selectable_menu_item as selectable_item_tokens, typography as material_typography,
 };
 
 const SELECT_FIELD_TOKENS: FieldTokenSet = FieldTokenSet::new(
@@ -19,6 +19,8 @@ const SELECT_FIELD_TOKENS: FieldTokenSet = FieldTokenSet::new(
 );
 const SELECT_MENU_TOKENS: FieldMenuTokenSet =
     FieldMenuTokenSet::new("md.comp.outlined-select.menu", "md.comp.filled-select.menu");
+const INPUT_TEXT_STYLE_KEY: &str = "md.sys.typescale.body-large";
+const SUPPORTING_TEXT_STYLE_KEY: &str = "md.sys.typescale.body-small";
 
 pub(crate) fn container_height(theme: &Theme, variant: SelectVariant) -> Px {
     field_common::container_height(theme, field_prefix(variant))
@@ -101,9 +103,12 @@ pub(crate) fn input_text_style(theme: &Theme, variant: SelectVariant) -> Option<
     // Material Web v30 models Select typography via `*.font/size/weight/tracking/line-height` and
     // a `*.type` mixin token (not a scalar key). For now, use the canonical sys typescale and keep
     // component-specific typography as a future import step.
-    theme
-        .text_style_by_key("md.sys.typescale.body-large")
-        .map(|style| typography::with_intent(style, TextIntent::Control))
+    material_typography::text_style_value(theme, INPUT_TEXT_STYLE_KEY, TextIntent::Control)
+}
+
+pub(crate) fn supporting_text_style(theme: &Theme, variant: SelectVariant) -> Option<TextStyle> {
+    let _ = variant;
+    material_typography::text_style_value(theme, SUPPORTING_TEXT_STYLE_KEY, TextIntent::Content)
 }
 
 pub(crate) fn input_text_color(
@@ -289,6 +294,28 @@ pub(crate) fn menu_list_item_label_text_style(
     // Material Web v30 `menu.list-item.label-text.type` is a mixin. The underlying scalars map to
     // sys `label-large`, so use that as the stable default in v1.
     field_menu_common::list_item_label_text_style(theme)
+}
+
+pub(crate) fn menu_list_item_label_text_style_or_fallback(
+    theme: &Theme,
+    variant: SelectVariant,
+) -> TextStyle {
+    menu_list_item_label_text_style(theme, variant).unwrap_or_else(|| TextStyle {
+        size: Px(14.0),
+        ..Default::default()
+    })
+}
+
+pub(crate) fn menu_list_item_supporting_text_estimate_style(
+    theme: &Theme,
+    variant: SelectVariant,
+) -> TextStyle {
+    let _ = variant;
+    material_typography::text_style_value(theme, SUPPORTING_TEXT_STYLE_KEY, TextIntent::Content)
+        .unwrap_or_else(|| TextStyle {
+            size: Px(12.0),
+            ..Default::default()
+        })
 }
 
 pub(crate) fn menu_list_item_label_text_color(

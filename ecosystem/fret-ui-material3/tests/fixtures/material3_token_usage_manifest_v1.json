@@ -7,9 +7,7 @@
       "id": "autocomplete",
       "layer": "recipe",
       "path": "src/autocomplete.rs",
-      "tokens": [
-        "md.sys.typescale.body-large"
-      ]
+      "tokens": []
     },
     {
       "id": "badge",
@@ -202,10 +200,7 @@
       "id": "select",
       "layer": "recipe",
       "path": "src/select.rs",
-      "tokens": [
-        "md.sys.typescale.body-large",
-        "md.sys.typescale.body-small"
-      ]
+      "tokens": []
     },
     {
       "id": "slider",
@@ -241,10 +236,7 @@
       "id": "text_field",
       "layer": "recipe",
       "path": "src/text_field.rs",
-      "tokens": [
-        "md.sys.typescale.body-large",
-        "md.sys.typescale.body-small"
-      ]
+      "tokens": []
     },
     {
       "id": "time_picker",
@@ -523,7 +515,8 @@
       "layer": "token_module",
       "path": "src/tokens/autocomplete.rs",
       "tokens": [
-        "md.sys.color.on-surface-variant"
+        "md.sys.color.on-surface-variant",
+        "md.sys.typescale.body-large"
       ]
     },
     {
@@ -1558,7 +1551,8 @@
         "md.sys.state.focus.state-layer-opacity",
         "md.sys.state.hover.state-layer-opacity",
         "md.sys.state.pressed.state-layer-opacity",
-        "md.sys.typescale.body-large"
+        "md.sys.typescale.body-large",
+        "md.sys.typescale.body-small"
       ]
     },
     {
@@ -1904,7 +1898,9 @@
       "path": "src/tokens/text_field.rs",
       "tokens": [
         "md.sys.color.on-surface-variant",
-        "md.sys.color.surface"
+        "md.sys.color.surface",
+        "md.sys.typescale.body-large",
+        "md.sys.typescale.body-small"
       ]
     },
     {

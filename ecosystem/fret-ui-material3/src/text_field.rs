@@ -48,7 +48,6 @@ use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::logical_edges::{set_inset_inline_end, set_inset_inline_start};
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::test_id::part_test_id;
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
 
@@ -184,9 +183,7 @@ fn material_text_field_input_text_style<H: UiHost>(
 ) -> TextStyle {
     let base_style = crate::foundation::context::inherited_text_style(cx).unwrap_or_else(|| {
         let theme = Theme::global(&*cx.app);
-        theme
-            .text_style_by_key("md.sys.typescale.body-large")
-            .unwrap_or_default()
+        text_field_tokens::input_text_style(theme).unwrap_or_default()
     });
 
     if multiline && !stable_line_boxes {
@@ -1504,9 +1501,7 @@ fn text_field_label<H: UiHost>(
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
         let style = floating_label::material_floating_label_text_style(theme, progress)
-            .or_else(|| {
-                MaterialTokenResolver::new(theme).text_style_value("md.sys.typescale.body-large")
-            })
+            .or_else(|| text_field_tokens::input_text_style(theme))
             .map(|style| typography::with_intent(style, TextIntent::Control));
 
         let color = resolve_override_slot_with(
@@ -1564,9 +1559,7 @@ fn text_field_supporting_text<H: UiHost>(
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
-        let style = theme
-            .text_style_by_key("md.sys.typescale.body-small")
-            .map(|style| typography::with_intent(style, TextIntent::Content));
+        let style = text_field_tokens::supporting_text_style(theme);
         let color = resolve_override_slot_with(
             style_override.supporting_text_color.as_ref(),
             states,
