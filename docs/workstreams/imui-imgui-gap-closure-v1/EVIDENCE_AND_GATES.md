@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Drop Resolve Intent Owner Split - 2026-06-03
+
+Claim verified: drop intent projection and effect emission moved out of
+`ecosystem/fret-docking/src/dock/drop_resolve.rs` into private
+`ecosystem/fret-docking/src/dock/drop_resolve/intent.rs` without changing panel/tab drop intent
+selection, in-window float rect projection, tear-off request gating, effect emission, invalidate
+layout toggling, debug intent labels, target resolution, diagnostics publication, or public docking
+APIs.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve/intent.rs` owns `DockPanelDropDrag`,
+  `DockTabsDropDrag`, panel/tab drop intent projection, drop intent effect emission, and debug
+  intent labels.
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs` keeps diagnostics orchestration and re-exports
+  the intent owner API for existing declarative callers.
+- `ecosystem/fret-docking/src/dock/drop_resolve/target.rs` remains the drop target resolution owner.
+- `tools/gate_imui_workstream_source.py` rejects drop intent/effect drift back into the drop
+  resolve root and rejects target-resolution/diagnostics policy in the intent owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new intent owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking floating_title_bar_drag center_drop tab_drop drop_hint --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-docking drags_floating_title_bar --no-fail-fast`: pass.
+- `cargo fmt -p fret-docking -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Drop Resolve Target Owner Split - 2026-06-03
 
 Claim verified: dock drop target resolution moved out of

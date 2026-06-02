@@ -604,6 +604,14 @@ Last updated: 2026-06-03
       `dock/drop_resolve.rs` keeps drop-intent, apply, and diagnostics orchestration while
       re-exporting `resolve_dock_drop_target(...)`. The source gate prevents target-resolution
       helpers from drifting back into the drop resolve root.
+- [x] Split docking drop resolve drop-intent and effect emission into a private child owner without
+      changing panel/tab drop intent selection, in-window float rect projection, tear-off request
+      gating, emitted `DockOp`s, invalidate-layout toggling, debug intent labels, target resolution,
+      diagnostics publication, or public docking APIs.
+      Result: `dock/drop_resolve/intent.rs` owns `DockPanelDropDrag`, `DockTabsDropDrag`, intent
+      projection, effect emission, and debug intent labels. `dock/drop_resolve.rs` keeps diagnostics
+      orchestration while re-exporting the intent owner API. The source gate prevents intent/effect
+      helpers from drifting back into the drop resolve root.
 - [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
       child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
       tear-off handoff, drop intent application, drag diagnostics publication, drag inversion

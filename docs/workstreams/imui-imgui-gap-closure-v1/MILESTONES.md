@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 docking drop resolve intent owner-split result:
+`ecosystem/fret-docking/src/dock/drop_resolve/intent.rs` now owns panel/tab drop intent projection,
+in-window float intent projection, tear-off request gating, effect emission, invalidate-layout
+toggling, and debug intent labels. `ecosystem/fret-docking/src/dock/drop_resolve.rs` now keeps
+diagnostics orchestration and re-exports the intent owner API for existing declarative callers.
+Public docking APIs, panel/tab drop intents, effect projection, invalidation behavior, target
+resolution, debug labels, and diagnostics payloads remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 docking drop resolve target owner-split result:
 `ecosystem/fret-docking/src/dock/drop_resolve/target.rs` now owns dock drop target resolution:
 layout-map projection, tab-bar insert target resolution, inner/outer hint-pad target picking,
