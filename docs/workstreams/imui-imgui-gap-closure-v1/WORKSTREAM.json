@@ -1885,6 +1885,7 @@
     "ecosystem/fret-plot/src/declarative/model.rs",
     "ecosystem/fret-plot/src/declarative/overlays.rs",
     "ecosystem/fret-plot/src/declarative/overlays/draggable_labels.rs",
+    "ecosystem/fret-plot/src/declarative/overlays/draggable_shapes.rs",
     "ecosystem/fret-plot/src/declarative/overlays/images.rs",
     "ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs",
     "ecosystem/fret-plot/src/declarative/overlays/tags.rs",

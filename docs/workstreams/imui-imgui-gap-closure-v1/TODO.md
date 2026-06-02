@@ -5997,17 +5997,25 @@ opening the slice.
       draggable labels, tag overlays, text overlays, multi-axis projection, public panel props, or
       optional IMUI adapter routing.
       Result: `ecosystem/fret-plot/src/declarative/overlays.rs` is the overlay re-export hub,
-      keeps draggable point/rect paint plus shared annotation helper ownership, and delegates
-      reference-line, image, draggable-label, tag, and text overlay paint to private child owners.
-      `declarative.rs` keeps panel paint orchestration, draggable overlay event routing, output
-      publication, and plot state handling.
+      keeps shared annotation helper ownership, and delegates reference-line, draggable-shape,
+      image, draggable-label, tag, and text overlay paint to private child owners. `declarative.rs`
+      keeps panel paint orchestration, draggable overlay event routing, output publication, and plot
+      state handling.
 - [x] Split Fret Plot declarative reference-line overlay painting out of the overlay paint owner
       without changing draggable point/rect paint, image overlays, draggable labels, tag overlays,
       text overlays, shared annotation helpers, multi-axis projection, panel paint orchestration,
       public panel props, optional IMUI adapter routing, or plot model projection.
       Result: `ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs` owns infinite-line
       and draggable-line rectangle projection; `overlays.rs` re-exports reference-line overlay
-      painting and keeps draggable point/rect paint plus shared annotation helper ownership.
+      painting and keeps shared annotation helper ownership.
+- [x] Split Fret Plot declarative draggable shape overlay painting out of the overlay paint owner
+      without changing reference-line rectangles, image overlays, draggable labels, tag overlays,
+      text overlays, shared annotation helpers, multi-axis projection, panel paint orchestration,
+      public panel props, optional IMUI adapter routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/overlays/draggable_shapes.rs` owns draggable
+      point and draggable rectangle projection; `overlays.rs` re-exports draggable-shape overlay
+      painting and keeps shared annotation helper ownership for tag, text, and draggable-label
+      overlays.
 - [x] Split Fret Plot declarative image overlay painting out of the overlay paint owner without
       changing reference lines, draggable point/rect paint, draggable labels, tag overlays, text
       overlays, multi-axis projection, panel paint orchestration, public panel props, optional IMUI
