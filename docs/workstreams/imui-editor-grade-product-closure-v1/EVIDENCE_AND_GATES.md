@@ -2,6 +2,34 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative draggable overlay labels paint owner split - 2026-06-02
+
+This maintenance slice keeps draggable line and point label projection out of the shared overlay
+owner while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/overlays/draggable_labels.rs` is the draggable line and point label paint owner.
+- `overlays.rs` re-exports draggable overlay label painting and keeps shared annotation helpers.
+- Evidence anchor: draggable line and point label paint owner.
+- Evidence anchor: Overlays root re-exports draggable overlay label painting.
+- The draggable labels owner stays event-free, output-free, state-model-free, image-overlay-free,
+  authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so draggable label projection
+  cannot drift back into `overlays.rs` and non-label overlay concerns cannot drift into
+  `overlays/draggable_labels.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_draggable_overlay_labels --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_right_axis_draggable_overlay_labels --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_tag_x_and_y_overlays --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative image overlay paint owner split - 2026-06-02
 
 This maintenance slice keeps caller-owned `PlotImage` layer filtering, multi-axis projection,

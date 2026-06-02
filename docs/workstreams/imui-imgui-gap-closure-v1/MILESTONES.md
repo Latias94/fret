@@ -5259,6 +5259,11 @@ filtering, multi-axis projection, clipping, opacity filtering, and `ImageRegion`
 `overlays.rs` re-exports image overlay painting and keeps reference lines, draggable shapes,
 draggable labels, tag overlays, text overlays, and annotation text box helpers.
 
+Fret Plot declarative draggable overlay labels paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/overlays/draggable_labels.rs` now owns draggable line and point
+label projection. `overlays.rs` re-exports draggable overlay label painting and keeps shared
+annotation token/text-box helpers for tag, text, and label overlay owners.
+
 Fret Plot declarative tests owner split - 2026-06-02:
 `ecosystem/fret-plot/src/declarative/tests.rs` now owns the declarative plot panel regression tests,
 including `TestHost`, scene helpers, paint regressions, drag output regressions, and
