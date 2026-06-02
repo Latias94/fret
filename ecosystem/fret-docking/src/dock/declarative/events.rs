@@ -1,6 +1,8 @@
 use super::*;
 use fret_ui::managed_surface::ManagedSurfaceEventCx;
 
+mod internal_drag;
+
 pub(super) fn handle_declarative_event<H: UiHost + 'static>(
     cx: &mut ManagedSurfaceEventCx<'_, '_, H>,
     event: &fret_core::Event,
@@ -8,91 +10,14 @@ pub(super) fn handle_declarative_event<H: UiHost + 'static>(
     allow_multi_window_tear_off: bool,
 ) {
     match event {
-        fret_core::Event::InternalDrag(e)
-            if matches!(
-                e.kind,
-                fret_core::InternalDragKind::Enter | fret_core::InternalDragKind::Over
-            ) =>
-        {
-            let position = cx.pointer_position_window(event).unwrap_or(e.position);
-            let bounds = cx.bounds();
-            let theme = cx.theme().snapshot();
-            let allow_tear_off = cx
-                .app()
-                .global::<fret_runtime::PlatformCapabilities>()
-                .cloned()
-                .unwrap_or_default()
-                .ui
-                .window_tear_off;
-            let (effects, changed, invalidate_layout) = declarative_resolve_internal_drag_hover(
-                cx.app(),
+        fret_core::Event::InternalDrag(e) => {
+            internal_drag::handle_internal_drag_event(
+                cx,
+                event,
+                e,
                 window,
-                e.pointer_id,
-                bounds,
-                theme,
-                position,
-                allow_tear_off,
                 allow_multi_window_tear_off,
             );
-            for effect in effects {
-                cx.push_effect(effect);
-            }
-            if invalidate_layout {
-                cx.invalidate_self(fret_ui::Invalidation::Layout);
-            }
-            if changed {
-                cx.invalidate_self(fret_ui::Invalidation::Paint);
-                cx.request_redraw();
-            }
-        }
-        fret_core::Event::InternalDrag(e) if e.kind == fret_core::InternalDragKind::Drop => {
-            let position = cx.pointer_position_window(event).unwrap_or(e.position);
-            let bounds = cx.bounds();
-            let theme = cx.theme().snapshot();
-            let (effects, changed, invalidate_layout, end_drag) =
-                declarative_resolve_internal_drag_drop(
-                    cx.app(),
-                    window,
-                    e.pointer_id,
-                    bounds,
-                    theme,
-                    position,
-                    false,
-                    false,
-                );
-            for effect in effects {
-                cx.push_effect(effect);
-            }
-            if invalidate_layout {
-                cx.invalidate_self(fret_ui::Invalidation::Layout);
-            }
-            if end_drag
-                && cx
-                    .app()
-                    .drag(e.pointer_id)
-                    .is_some_and(|drag| is_dock_drag_kind(drag.kind))
-            {
-                cx.app().cancel_drag(e.pointer_id);
-            }
-            if changed {
-                cx.invalidate_self(fret_ui::Invalidation::Paint);
-                cx.request_redraw();
-            }
-        }
-        fret_core::Event::InternalDrag(e)
-            if matches!(
-                e.kind,
-                fret_core::InternalDragKind::Leave | fret_core::InternalDragKind::Cancel
-            ) =>
-        {
-            let hover_cleared = cx
-                .app()
-                .with_global_mut(DockManager::default, |dock, _app| {
-                    dock.hover.take().is_some()
-                });
-            if hover_cleared {
-                cx.request_redraw();
-            }
         }
         fret_core::Event::Pointer(fret_core::PointerEvent::Down {
             position,
