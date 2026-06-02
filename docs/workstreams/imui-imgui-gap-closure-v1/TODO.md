@@ -6042,13 +6042,21 @@ opening the slice.
       explicitly, while `declarative.rs` keeps panel assembly, paint orchestration, formatting
       helpers, series color policy, and plot state model wiring.
 - [x] Split Fret Plot declarative style and formatting helpers out of the implementation root
-      without changing panel assembly, paint orchestration, geometry, event routing, output
+      without changing panel assembly, paint orchestration at that slice, geometry, event routing, output
       publication, public panel props, optional IMUI adapter routing, or plot model projection
       behavior.
       Result: `ecosystem/fret-plot/src/declarative/style_helpers.rs` owns axis label formatting and
       series color fallback; axis labels, readout, selection, overlays, legend, and panel paint
       import style helpers explicitly, while `declarative.rs` keeps panel assembly, paint
-      orchestration, and plot state model wiring.
+      orchestration at that slice, and plot state model wiring. The later panel-paint owner split
+      moves current paint orchestration into `declarative/panel_paint.rs`.
+- [x] Split Fret Plot declarative panel paint orchestration out of the implementation root without
+      changing panel element assembly, event routing, output publication, public panel props,
+      optional IMUI adapter routing, plot model projection, or existing paint sub-owner behavior.
+      Result: `ecosystem/fret-plot/src/declarative/panel_paint.rs` owns panel background, grid,
+      heatmap, right-axis labels, series, overlays, legend, selection/readout, and command-builder
+      orchestration; `declarative.rs` keeps panel element assembly, event wiring, output
+      publication, and plot state model wiring.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

@@ -1,5 +1,6 @@
 //! Declarative plot panel regression tests.
 
+use super::geometry::line_plot_inner_rect;
 use super::*;
 use crate::cartesian::DataPoint;
 use crate::models::{
@@ -14,11 +15,11 @@ use crate::state::{
     PlotImage, PlotOutput, PlotState, PlotText, TagX, TagY,
 };
 use fret_core::{
-    AppWindowId, Event, FrameId, ImageId, MaterialDescriptor, MaterialId,
-    MaterialRegistrationError, MaterialService, Modifiers, MouseButton, MouseButtons, PathCommand,
-    PathConstraints, PathId, PathMetrics, PathService, PointerEvent, PointerId, PointerType, Rect,
-    Scene, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
-    TextService, UvRect,
+    AppWindowId, Color, DrawOrder, Event, FrameId, ImageId, MaterialDescriptor, MaterialId,
+    MaterialRegistrationError, MaterialService, Modifiers, MouseButton, MouseButtons, Paint,
+    PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent,
+    PointerId, PointerType, Px, Rect, Scene, Size, SvgId, SvgService, TextBlobId, TextConstraints,
+    TextInput, TextMetrics, TextService, UvRect,
 };
 use fret_runtime::{
     ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,

@@ -3,13 +3,53 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Panel Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative panel paint orchestration moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/panel_paint.rs` without changing panel element assembly,
+event routing, output publication, public panel props, optional IMUI adapter routing, or plot model
+projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/panel_paint.rs` is the panel background, grid, series,
+  overlay, legend, and readout paint orchestration owner.
+- Root keeps panel element and event wiring in `ecosystem/fret-plot/src/declarative.rs`.
+- The panel paint owner imports grid/axis, heatmap, right-axis labels, overlays, selection,
+  readout, command builders, geometry, and style helpers explicitly.
+- `tools/gate_imui_workstream_source.py` rejects `paint_line_plot_panel` from drifting back into
+  the root implementation owner and rejects event/state-model/retained concerns from
+  `panel_paint.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new panel paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_axes_and_grid --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_image_overlay --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Style Helpers Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative axis label formatting and series color fallback helpers moved
 out of `ecosystem/fret-plot/src/declarative.rs` into private
 `ecosystem/fret-plot/src/declarative/style_helpers.rs` without changing panel assembly, paint
-orchestration, geometry, event routing, output publication, public panel props, optional IMUI
-adapter routing, or plot model projection behavior.
+orchestration at that slice, geometry, event routing, output publication, public panel props,
+optional IMUI adapter routing, or plot model projection behavior. The later panel paint owner split
+above moves current paint orchestration into
+`ecosystem/fret-plot/src/declarative/panel_paint.rs`.
 
 Evidence:
 
@@ -17,8 +57,8 @@ Evidence:
   color fallback owner.
 - Axis labels, readout, selection, overlays, legend, and panel paint import style helpers
   explicitly.
-- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, and plot
-  state model wiring, but no longer owns shared formatting or color fallback helpers.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly and plot state model wiring, but no
+  longer owns shared formatting, color fallback helpers, or current panel paint orchestration.
 - `tools/gate_imui_workstream_source.py` rejects `axis_tick_label_text` and `series_color` from
   drifting back into the root implementation owner.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new style helper owner.

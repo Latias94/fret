@@ -1886,6 +1886,7 @@
     "ecosystem/fret-plot/src/declarative/overlays.rs",
     "ecosystem/fret-plot/src/declarative/output.rs",
     "ecosystem/fret-plot/src/declarative/paint_primitives.rs",
+    "ecosystem/fret-plot/src/declarative/panel_paint.rs",
     "ecosystem/fret-plot/src/declarative/readout.rs",
     "ecosystem/fret-plot/src/declarative/selection.rs",
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",

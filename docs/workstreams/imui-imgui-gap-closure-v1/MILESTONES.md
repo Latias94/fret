@@ -5291,8 +5291,15 @@ and plot state model wiring.
 Fret Plot declarative style helpers owner split - 2026-06-02:
 `ecosystem/fret-plot/src/declarative/style_helpers.rs` now owns axis label formatting and series
 color fallback. Axis labels, readout, selection, overlays, legend, and panel paint import style
-helpers explicitly, and the declarative root keeps panel assembly, paint orchestration, and plot
-state model wiring.
+helpers explicitly, and the declarative root kept panel assembly, paint orchestration, and plot
+state model wiring at that slice. The later panel-paint owner split narrows the current root role.
+
+Fret Plot declarative panel paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/panel_paint.rs` now owns panel background, grid, heatmap,
+right-axis labels, series, overlays, legend, selection/readout, and command-builder paint
+orchestration. The declarative root keeps panel element assembly, event wiring, output
+publication, and plot state model wiring, while the source gate keeps event/state/retained concerns
+out of the paint owner.
 
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
