@@ -32,6 +32,16 @@ list viewport test-id derivation, and root list test-id mounting. Filter, list v
 selected-row reveal, row rendering, and dismiss behavior remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
+2026-06-02 editor TextAssistField keyboard owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs` now keeps public control
+construction, controller/expanded-state/semantics preparation, field/panel/empty layout, and
+overlay routing while delegating root key-handler installation to
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/element/keyboard.rs`. The private keyboard
+owner contains input-owned text-assist key policy forwarding, query/dismissed-query/active-id model
+handoff, and keyboard acceptance routing through `accept_text_assist_match(...)`. Public
+`TextAssistField` APIs, panel row activation, overlay routing, accept semantics, and redraw behavior
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor ColorEdit popup body layout owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup model reads,
 effective option resolution, and picker/numeric/swatches/eyedropper element creation while

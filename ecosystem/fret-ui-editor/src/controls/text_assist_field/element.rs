@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::UiFocusActionHost;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
 };
@@ -15,11 +14,9 @@ use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, active_match_index, controller_with_active_item_id,
-    input_owned_text_assist_expanded, input_owned_text_assist_key_handler,
-    input_owned_text_assist_semantics,
+    input_owned_text_assist_expanded, input_owned_text_assist_semantics,
 };
 
-use super::accept::accept_text_assist_match;
 use super::empty::render_text_assist_inline_empty_label;
 use super::model::{
     OnTextAssistFieldAccept, RenderedTextAssistPanel, TextAssistFieldOptions,
@@ -29,6 +26,10 @@ use super::overlay::{overlay_open_model, request_text_assist_overlay};
 use super::panel::render_text_assist_panel;
 use super::should_render_inline_empty_label;
 use crate::controls::{TextField, TextFieldAssistiveSemantics};
+
+mod keyboard;
+
+use keyboard::{TextAssistFieldKeyboardInput, install_text_assist_field_key_handler};
 
 const TEXT_ASSIST_ROOT_GAP: Px = Px(6.0);
 
@@ -215,12 +216,6 @@ impl TextAssistField {
             should_render_inline_empty_label(options.surface, &query, visible_count);
         let empty_label = options.empty_label.clone();
         let empty_test_id = options.empty_test_id.clone();
-        let query_model_for_key = query_model.clone();
-        let dismissed_query_model_for_key = dismissed_query_model.clone();
-        let active_item_id_model_for_key = active_item_id_model.clone();
-        let items_for_key = items.clone();
-        let on_accept_for_key = on_accept.clone();
-        let key_options = options.key_options;
         let root = cx.flex(
             FlexProps {
                 layout: LayoutStyle {
@@ -254,26 +249,17 @@ impl TextAssistField {
             },
         );
 
-        cx.key_add_on_key_down_capture_for(
+        install_text_assist_field_key_handler(
+            cx,
             root.id,
-            input_owned_text_assist_key_handler(
-                items_for_key,
-                query_model_for_key.clone(),
-                dismissed_query_model_for_key.clone(),
-                active_item_id_model_for_key.clone(),
-                key_options,
-                Arc::new(move |host: &mut dyn UiFocusActionHost, action_cx, active| {
-                    accept_text_assist_match(
-                        host,
-                        action_cx,
-                        &query_model_for_key,
-                        &dismissed_query_model_for_key,
-                        &active_item_id_model_for_key,
-                        active,
-                        on_accept_for_key.as_ref(),
-                    );
-                }),
-            ),
+            TextAssistFieldKeyboardInput {
+                items,
+                query_model,
+                dismissed_query_model,
+                active_item_id_model,
+                key_options: options.key_options,
+                on_accept,
+            },
         );
 
         root

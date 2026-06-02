@@ -1381,6 +1381,7 @@
     "ecosystem/fret-ui-editor/src/controls/enum_select/row/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field/element/keyboard.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field/accept.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field/empty.rs",

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor TextAssistField Keyboard Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor `TextAssistField` input-owned keyboard policy moved out of
+`controls/text_assist_field/element.rs` into private
+`controls/text_assist_field/element/keyboard.rs` without changing root capture target, visible item
+navigation, key option forwarding, query/dismissed-query/active-id model forwarding, accept commit
+semantics, redraw requests, panel row activation, overlay routing, or public `TextAssistField`
+APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs` keeps public control
+  construction, controller/expanded-state/semantics preparation, field/panel/empty layout, and
+  overlay routing.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element/keyboard.rs` owns root key
+  handler installation, `input_owned_text_assist_key_handler(...)` forwarding, keyboard acceptance
+  callback wiring, and `accept_text_assist_match(...)` dispatch.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/accept.rs` remains the shared accept
+  commit owner used by both keyboard acceptance and panel row activation.
+- `tools/gate_imui_workstream_source.py` tracks the root element owner and keyboard owner
+  separately, and rejects direct `UiFocusActionHost`, input-owned key-handler installation, and
+  accept dispatch from drifting back into the root element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new keyboard owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui text_assist --no-fail-fast`: pass, 4 tests.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor EnumSelect Overlay Panel Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor `EnumSelect` overlay anchored panel composition moved out of

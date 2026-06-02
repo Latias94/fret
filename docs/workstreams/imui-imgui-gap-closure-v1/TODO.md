@@ -1206,6 +1206,16 @@ Last updated: 2026-06-02
       Result: `controls/text_assist_field.rs` keeps input/key orchestration, panel routing, and
       helper policy. `controls/text_assist_field/accept.rs` owns match acceptance model writes,
       callback dispatch, and redraw requests for both keyboard acceptance and row activation.
+- [x] Split editor `TextAssistField` input-owned keyboard policy into a private element child owner
+      without changing root capture target, visible item navigation, key option forwarding,
+      query/dismissed-query/active-id model forwarding, accept commit semantics, redraw requests,
+      panel row activation, overlay routing, or public `TextAssistField` APIs.
+      Result: `controls/text_assist_field/element.rs` keeps public control construction,
+      controller/expanded-state/semantics preparation, field/panel/empty layout, and overlay
+      routing. `controls/text_assist_field/element/keyboard.rs` owns root key-handler
+      installation, input-owned text-assist key policy forwarding, and keyboard acceptance routing
+      through `accept_text_assist_match(...)`. The source gate prevents key-handler installation
+      from drifting back into the root element owner.
 - [x] Split editor-owned property-row reset affordance handling into a private child owner without
       changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
       property chrome semantics.
