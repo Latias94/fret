@@ -5315,6 +5315,12 @@ command painting. `series_paint.rs` delegates candlestick drawing and keeps line
 stems, histogram, bars, and error-bar series routing, while the source gate keeps non-candlestick
 series concerns out of the candlestick owner.
 
+Fret Plot declarative bar and histogram series paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/series_paint/bar_histogram.rs` now owns bar and histogram
+closed fill path drawing. `series_paint.rs` delegates bar/histogram drawing and keeps line, area,
+shaded, stems, and error-bar series routing, while the source gate keeps non-bar/histogram concerns
+out of the bar/histogram owner.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

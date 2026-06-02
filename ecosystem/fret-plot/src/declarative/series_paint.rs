@@ -9,17 +9,18 @@ use crate::series::SeriesId;
 use crate::style::LinePlotStyle;
 
 use super::commands::{
-    area_fill_commands_from_polyline, bars_commands_from_series, error_bars_commands_from_series,
-    histogram_commands_from_series, line_plot_area_fill_path_key, line_plot_series_path_key,
-    line_plot_shaded_lower_path_key, shaded_band_commands_from_series, stems_commands_from_points,
-    step_commands_from_polyline,
+    area_fill_commands_from_polyline, error_bars_commands_from_series,
+    line_plot_area_fill_path_key, line_plot_series_path_key, line_plot_shaded_lower_path_key,
+    shaded_band_commands_from_series, stems_commands_from_points, step_commands_from_polyline,
 };
 use super::geometry::line_plot_view_bounds_for_y_axis;
 use super::model::PlotPanelModel;
 use super::style_helpers::series_color;
 
+mod bar_histogram;
 mod candlestick;
 
+use bar_histogram::{paint_line_plot_bars_series, paint_line_plot_histogram_series};
 use candlestick::paint_line_plot_candlestick_series;
 
 pub(super) fn paint_line_plot_series(
@@ -83,52 +84,29 @@ pub(super) fn paint_line_plot_series(
             continue;
         }
         if let Some(bars) = &series.bars {
-            let commands = bars_commands_from_series(series_transform, &*series.data, bars);
-            if commands.is_empty() {
-                continue;
-            }
-
-            let mut fill_color = series
-                .stroke_color
-                .unwrap_or_else(|| series_color(style, index, series_count));
-            if let Some(emphasized) = emphasized_series
-                && series.id != emphasized
-            {
-                fill_color.a *= style.dimmed_series_alpha.clamp(0.0, 1.0);
-            }
-            painter.path(
-                line_plot_area_fill_path_key(series.id.0),
-                DrawOrder(19),
-                Point::new(Px(0.0), Px(0.0)),
-                &commands,
-                PathStyle::Fill(fret_core::FillStyle::default()),
-                fill_color,
+            paint_line_plot_bars_series(
+                painter,
+                series,
+                bars,
+                series_transform,
+                style,
+                index,
+                series_count,
+                emphasized_series,
                 raster_scale_factor,
             );
             continue;
         }
         if let Some(histogram) = &series.histogram {
-            let commands =
-                histogram_commands_from_series(series_transform, &*series.data, histogram);
-            if commands.is_empty() {
-                continue;
-            }
-
-            let mut fill_color = series
-                .stroke_color
-                .unwrap_or_else(|| series_color(style, index, series_count));
-            if let Some(emphasized) = emphasized_series
-                && series.id != emphasized
-            {
-                fill_color.a *= style.dimmed_series_alpha.clamp(0.0, 1.0);
-            }
-            painter.path(
-                line_plot_area_fill_path_key(series.id.0),
-                DrawOrder(19),
-                Point::new(Px(0.0), Px(0.0)),
-                &commands,
-                PathStyle::Fill(fret_core::FillStyle::default()),
-                fill_color,
+            paint_line_plot_histogram_series(
+                painter,
+                series,
+                histogram,
+                series_transform,
+                style,
+                index,
+                series_count,
+                emphasized_series,
                 raster_scale_factor,
             );
             continue;

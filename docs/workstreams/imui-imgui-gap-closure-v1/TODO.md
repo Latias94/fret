@@ -6073,6 +6073,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs` owns
       candlestick wick/body command painting; `series_paint.rs` delegates candlestick drawing and
       keeps line, area, shaded, stems, histogram, bars, and error-bar series routing.
+- [x] Split Fret Plot declarative bar and histogram series painting out of the series paint router
+      without changing non-bar/histogram series routing, panel paint orchestration, event routing,
+      output publication, public panel props, optional IMUI adapter routing, or plot model
+      projection.
+      Result: `ecosystem/fret-plot/src/declarative/series_paint/bar_histogram.rs` owns bar and
+      histogram closed fill path drawing; `series_paint.rs` delegates bar/histogram drawing and
+      keeps line, area, shaded, stems, and error-bar series routing.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
