@@ -217,10 +217,9 @@
       "id": "radio",
       "source": "src/radio.rs",
       "token_visual_component": "radio",
-      "headless_golden_suites": [],
+      "headless_golden_suites": ["radio"],
       "behavior_tests": ["automation_surface.rs", "material3_choice_action_interactions.rs", "radio_alignment.rs", "radio_state.rs"],
-      "proof_status": "behavior_only",
-      "known_gap": "Radio has state, semantics, and pressed-geometry coverage, but no fixture-driven headless golden suite across standalone and group variants."
+      "proof_status": "headless_golden"
     },
     {
       "id": "search_bar",

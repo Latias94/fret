@@ -13,6 +13,7 @@ pub(crate) mod menu_dialog_style;
 pub(crate) mod navigation;
 pub(crate) mod overlays;
 pub(crate) mod progress_indicator;
+pub(crate) mod radio;
 pub(crate) mod search_bar;
 pub(crate) mod search_view;
 pub(crate) mod segmented_button;
