@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot bar/histogram command owner-split result:
+`ecosystem/fret-plot/src/declarative/commands.rs` now re-exports bar and histogram command
+entrypoints and keeps shared path keys plus non-bar/histogram command builders while
+`ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs` owns histogram bin closed-rect
+command construction and grouped/stacked bar baseline closed-rect command construction. Paint
+style/color/draw-order dispatch, public panel props, panel entrypoints, optional IMUI adapter
+routing, paint/event owners, output publication, and plot model projection remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot candlestick command owner-split result:
 `ecosystem/fret-plot/src/declarative/commands.rs` now re-exports candlestick command entrypoints
 and keeps shared line/area/shaded keys plus non-candlestick command builders while

@@ -5978,6 +5978,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/commands/candlestick.rs` owns candlestick
       wick/body command construction and device point budgeting; `commands.rs` re-exports
       candlestick command entrypoints and keeps non-candlestick command builders.
+- [x] Split Fret Plot declarative bar/histogram path-command projection out of the shared command
+      owner without changing histogram bin width/gap filtering, positive-bin filtering,
+      grouped/stacked bar baseline projection, closed fill path construction, painter dispatch,
+      public panel props, panel entrypoints, optional IMUI adapter routing, paint owners, event
+      owners, output publication, or plot model projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs` owns histogram and
+      bar closed-rect command construction; `commands.rs` re-exports bar/histogram command
+      entrypoints and keeps non-bar/histogram command builders.
 - [x] Split Fret Plot declarative selection overlay paint and tooltip geometry out of the
       retained-free paint/event root without changing query/box-zoom rectangles, tooltip placement,
       tooltip text formatting, persisted query rendering, active selection rendering,

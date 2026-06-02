@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Bar/Histogram Command Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative bar and histogram closed-rectangle command projection moved
+out of `ecosystem/fret-plot/src/declarative/commands.rs` into private
+`ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs` without changing histogram bin
+width/gap filtering, positive-bin filtering, grouped/stacked bar baseline projection, closed fill
+path construction, public plot panel props, panel entrypoints, optional IMUI adapter routing, paint
+owners, event owners, output publication, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs` owns histogram bin closed-rect
+  path construction and bar baseline closed-rect path construction.
+- `commands.rs` re-exports bar and histogram command entrypoints and keeps shared path keys plus
+  non-bar/histogram command builders.
+- `series_paint/bar_histogram.rs` remains the paint owner for style/color, draw order, and painter
+  dispatch while importing the same command entrypoints from the command owner.
+- `tools/gate_imui_workstream_source.py` rejects bar/histogram command construction from drifting
+  back into `commands.rs` and rejects other series command builders from drifting into the
+  bar/histogram owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new bar/histogram command
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo nextest run -p fret-plot histogram_plot_panel bars_plot_panel --no-fail-fast`: pass
+  (3 passed, 86 skipped; `bars_plot_panel` also matched the existing `error_bars_plot_panel`
+  substring test).
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Candlestick Command Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative candlestick wick/body command projection moved out of

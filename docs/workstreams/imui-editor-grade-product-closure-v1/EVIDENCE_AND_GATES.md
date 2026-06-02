@@ -2,6 +2,38 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative bar/histogram command owner split - 2026-06-02
+
+This maintenance slice keeps bar and histogram closed-rectangle command construction out of the
+shared command root while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/commands/bar_histogram.rs` owns histogram bin closed-rect
+  command projection and grouped/stacked bar baseline closed-rect command projection.
+- `commands.rs` re-exports bar and histogram command entrypoints and keeps non-bar/histogram
+  command builders plus shared path keys.
+- Evidence anchor: bar and histogram closed-rect command projection owner.
+- Evidence anchor: Commands root re-exports bar and histogram command entrypoints.
+- `series_paint/bar_histogram.rs` remains the paint owner for style/color, draw order, and painter
+  dispatch.
+- The bar/histogram command owner stays candlestick-free, error-bars-free, paint-free, event-free,
+  output-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so bar/histogram command logic
+  cannot drift back into `commands.rs` and other series command builders cannot drift into the
+  bar/histogram owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot histogram_plot_panel bars_plot_panel --no-fail-fast` - passed
+  (3 passed, 86 skipped; `bars_plot_panel` also matched the existing `error_bars_plot_panel`
+  substring test).
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative candlestick command owner split - 2026-06-02
 
 This maintenance slice keeps candlestick path-command construction out of the shared command root
