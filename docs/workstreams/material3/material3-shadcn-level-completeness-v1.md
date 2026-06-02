@@ -276,14 +276,24 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     concrete gallery gaps found during the manifest audit.
   - Gates:
     `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- --nocapture`.
+- 2026-06-02 Rustdoc/API authoring-surface closure:
+  - The crate-level rustdoc and README now teach the same Material3 authoring model: controlled and
+    copyable state, action-first pressables, style overrides, stable automation IDs, explicit icon
+    provider ownership, component families, and proof surfaces.
+  - `material3_api_doc_surface_manifest_v1.json` maps every recipe proof entry into an API
+    documentation family or an explicit supporting API source, so public docs cannot silently drift
+    from the proof manifest.
+  - The new gate verifies crate docs, README, public re-exports, module-level rustdoc, stable
+    `.test_id(...)` APIs for rendered recipes, public `*Style` + `.style(...)` surfaces, and
+    copyable `new_controllable` / `uncontrolled` / `*_model()` paths.
+  - Gates:
+    `cargo test -p fret-ui-material3 --test material3_api_doc_surface_manifest -- --nocapture`.
 
 ## Next Recommended Focus
 
-1. Run a rustdoc/API ergonomics pass for Material recipes, especially style builders, slot APIs,
-   stable `test_id` parts, and component-family composition examples.
-2. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
+1. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
    vocabulary is expanded.
-3. Add diagnostics screenshots or layout bundles for the compact State Matrix examples if visual
+2. Add diagnostics screenshots or layout bundles for the compact State Matrix examples if visual
    teaching-surface parity becomes product-critical.
-4. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
+3. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
    after concrete product gates prove those conditional risks matter.

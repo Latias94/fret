@@ -119,6 +119,24 @@ The gate verifies that each mapping has:
 New rendered recipes should update both manifests: the recipe proof manifest for correctness gates
 and the teaching surface manifest for user-facing discoverability.
 
+## API Documentation Follow-up
+
+Crate-level API docs are tracked by a separate manifest:
+
+- Manifest:
+  `ecosystem/fret-ui-material3/tests/fixtures/material3_api_doc_surface_manifest_v1.json`
+- Gate:
+  `ecosystem/fret-ui-material3/tests/material3_api_doc_surface_manifest.rs`
+
+That gate keeps rustdoc and README guidance aligned with the recipe proof manifest. It verifies:
+
+- every proof entry belongs to a documented component family or an explicit supporting API source,
+- public family exports remain re-exported from the crate root,
+- recipe source files keep module-level rustdoc,
+- rendered recipes keep stable `.test_id(...)` APIs,
+- public `*Style` surfaces are paired with `.style(...)` builders, and
+- copyable state sources expose `new_controllable`, `uncontrolled`, and `*_model()` paths.
+
 ## Proof
 
 Recommended gates for this closure layer:
@@ -128,6 +146,7 @@ cargo test -p fret-ui-material3 --test material3_recipe_proof_manifest material3
 cargo test -p fret-ui-material3 --test material3_headless_goldens material3_headless_tabs_suite_goldens_v1 -- --nocapture
 cargo test -p fret-ui-material3 --test material3_headless_goldens material3_headless_chip_set_suite_goldens_v1 -- --nocapture
 cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- --nocapture
+cargo test -p fret-ui-material3 --test material3_api_doc_surface_manifest -- --nocapture
 ```
 
 Full component changes should still run their focused behavior tests plus `cargo check` and `cargo
@@ -143,5 +162,5 @@ clippy` for `fret-ui-material3`.
   is expanded; that should be a separate mechanism/a11y lane.
 - Gallery teaching-surface coverage is text-gated, not a visual proof. It prevents missing
   copyable examples and page wiring, but does not replace diagnostics screenshots or layout bundles.
-- Rustdoc examples are not closed by this proof layer. They should be audited next so the crate API
-  surface teaches the same recipes as the gallery.
+- Rustdoc and README API guidance are now text/API-manifest gated, but the snippets remain
+  illustrative `ignore` examples rather than executable doctests.

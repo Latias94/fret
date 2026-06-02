@@ -16,6 +16,66 @@ Experimental learning project (not production-ready).
 - You want app-facing widgets to follow the same action-first authoring story as the rest of the
   action-first/view-runtime workstream.
 
+## Public authoring model
+
+Material3 recipes are app-facing components, but they still keep the framework boundary explicit:
+
+- Controlled and copyable state: controlled roots keep explicit `new(model)` constructors. Copyable
+  teaching paths use `new_controllable(cx, ...)`, `uncontrolled(cx)`, and `*_model()` accessors when
+  the component can own local state safely.
+- Action-first pressables: normal app-facing pressables expose `action(...)` for stable unit-action
+  dispatch.
+- Style overrides: components with public `*Style` types expose `.style(...)`. These style surfaces
+  own intrinsic Material chrome, state-layer colors, shapes, text styles, density, and slot spacing.
+  Page width, flex, grid placement, and surrounding layout remain caller-owned.
+- Automation IDs: rendered recipes expose `.test_id(...)` and derive stable part IDs for triggers,
+  listboxes, options, panels, indicators, chrome, and other automation-critical slots.
+- Icons: recipes consume semantic `IconId` values such as `ui.*`; apps or reusable bundles install
+  the actual icon provider.
+
+Example:
+
+```rust
+use fret_ui_material3 as material3;
+
+let title = material3::TextField::uncontrolled(cx)
+    .label("Title")
+    .test_id("settings.title");
+
+let section = material3::Select::uncontrolled(cx)
+    .label("Section")
+    .test_id("settings.section");
+
+let save = material3::Button::new("Save")
+    .style(material3::ButtonStyle::default())
+    .action("settings.save")
+    .test_id("settings.save");
+```
+
+## Component families
+
+- Actions and surfaces: `Button`, `Fab`, `IconButton`, `IconToggleButton`, `Card`, and
+  `CarouselItem`.
+- Selection controls: `Checkbox`, `Radio`, `RadioGroup`, `Switch`, `Slider`, `RangeSlider`,
+  `SegmentedButtonSet`, `AssistChip`, `FilterChip`, `InputChip`, `SuggestionChip`, and `ChipSet`.
+- Fields and search: `TextField`, `Select`, `ExposedDropdown`, `Autocomplete`, `SearchBar`,
+  `SearchView`, `DatePickerDialog`, `DockedDatePicker`, `TimePickerDialog`, and `DockedTimePicker`.
+- Navigation: `Tabs`, `NavigationBar`, `NavigationRail`, `NavigationDrawer`,
+  `ModalNavigationDrawer`, `TopAppBar`, and `List`.
+- Overlays and feedback: `Menu`, `DropdownMenu`, `Dialog`, `ModalBottomSheet`,
+  `DockedBottomSheet`, `Snackbar`, `SnackbarHost`, `PlainTooltip`, and `RichTooltip`.
+- Display feedback: `Badge`, `Divider`, `LinearProgressIndicator`, and
+  `CircularProgressIndicator`.
+- Foundation APIs: `tokens`, `motion`, and `context` expose the Material theme, motion, and
+  tree-local override surfaces used by recipes.
+
+## Proof surface
+
+Public recipes are tracked by `material3_recipe_proof_manifest_v1.json`, headless golden suites,
+focused behavior tests, gallery teaching-surface gates, and an API documentation manifest that keeps
+rustdoc, README guidance, public re-exports, style builders, copyable state helpers, and stable
+`test_id` APIs aligned.
+
 ## Features
 
 - `state-selector`: opt into derived-state helper integration
