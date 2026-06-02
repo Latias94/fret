@@ -46,6 +46,8 @@ use fret_ui_shadcn::facade as shadcn;
 mod demo_metrics_debug;
 mod followup;
 mod gate_run;
+#[path = "native/header_state.rs"]
+mod header_state;
 mod pack;
 #[path = "native/discovery_lines.rs"]
 mod discovery_lines;
@@ -61,6 +63,7 @@ use demo_metrics_debug::{
     demo_metrics_debug_action_command_for_copy_command, demo_metrics_debug_action_command_text,
     devtools_demo_metrics_debug_panel,
 };
+use header_state::{collect_header_diagnostics_state, header_next_action_lines};
 use discovery_lines::{
     devtools_dogfood_workflow_lines, devtools_first_open_lines,
     devtools_first_open_next_action_lines, devtools_gate_command_lines,
@@ -70,7 +73,6 @@ use recent_evidence::{
     RecentEvidenceRerunCommand, RecentEvidenceTarget,
     devtools_recent_evidence_lines_with_workflow_commands,
     devtools_recent_evidence_selection_effect, devtools_recent_failed_evidence_target,
-    recent_evidence_failing_count, recent_evidence_next_action,
     recent_failed_evidence_bundle_dir,
     recent_failed_evidence_rerun_command_from_state,
     recent_failed_evidence_rerun_unavailable_reason_from_state,
@@ -1298,29 +1300,7 @@ fn header_bar(
         .models()
         .read(&st.sessions, |sessions| sessions.len())
         .unwrap_or(0);
-    let scripts_count = cx
-        .app
-        .models()
-        .read(&st.script_library, |scripts| scripts.len())
-        .unwrap_or(0);
-    let regression_loaded = cx
-        .app
-        .models()
-        .read(&st.regression_loaded_dir, |dir| dir.is_some())
-        .unwrap_or(false);
-    let regression_selected_summary_loaded = cx
-        .app
-        .models()
-        .read(&st.regression_selected_summary_json, |value| !value.trim().is_empty())
-        .unwrap_or(false);
-    let selected_followup_result_loaded = selected_followup_result_loaded_from_state(cx.app, st);
-    let regression_failing_count = cx
-        .app
-        .models()
-        .read(&st.regression_index_json, |index_json| {
-            regression_failing_summary_rows(index_json, 10).len()
-        })
-        .unwrap_or(0);
+    let header = collect_header_diagnostics_state(cx.app, st);
     let session_items = cx
         .app
         .models()
@@ -1385,75 +1365,13 @@ fn header_bar(
         "Artifacts root: {} | token: {} | port: {}",
         st.cfg.fs_out_dir, st.cfg.token, st.cfg.ws_port
     ));
-    let gate_run_result_history = cx
-        .app
-        .models()
-        .read(&st.gate_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let workflow_run_result_history = cx
-        .app
-        .models()
-        .read(&st.workflow_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let followup_result_history = cx
-        .app
-        .models()
-        .read(&st.followup_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let recent_failed_evidence_target = devtools_recent_failed_evidence_target(
-        &gate_run_result_history,
-        &workflow_run_result_history,
-        &followup_result_history,
-    );
-    let recent_workflow_commands = devtools_workflow_commands_from_state(cx.app, st);
-    let recent_failed_evidence_rerunnable_kind = recent_failed_evidence_target
-        .as_ref()
-        .and_then(|target| {
-            recent_failed_evidence_rerun_command_from_state(target, &recent_workflow_commands)
-        })
-        .map(|command| command.kind());
-    let recent_failed_evidence_rerun_reason =
-        recent_failed_evidence_target.as_ref().and_then(|target| {
-            recent_failed_evidence_rerun_unavailable_reason_from_state(
-                target,
-                &recent_workflow_commands,
-            )
-        });
-    let recent_failing_count = recent_evidence_failing_count(
-        &gate_run_result_history,
-        &workflow_run_result_history,
-        &followup_result_history,
-    );
-    let recent_evidence_empty = gate_run_result_history.is_empty()
-        && workflow_run_result_history.is_empty()
-        && followup_result_history.is_empty();
-    let recent_evidence_next = recent_evidence_next_action(
-        recent_failing_count,
-        recent_evidence_empty,
-        recent_failed_evidence_target.as_ref(),
-        &recent_workflow_commands,
-    );
     let first_open_recent_evidence_actions = first_open_recent_evidence_action_specs(
-        recent_failed_evidence_target.is_some(),
-        recent_failed_evidence_rerunnable_kind.is_some(),
+        header.recent_failed_evidence_target.is_some(),
+        header.recent_failed_evidence_rerunnable_kind.is_some(),
     );
 
     let mut next_action_rows = Vec::new();
-    for line in devtools_first_open_next_action_lines(
-        has_session,
-        session_count,
-        selected_session.as_deref(),
-        scripts_count,
-        regression_loaded,
-        regression_selected_summary_loaded,
-        selected_followup_result_loaded,
-        regression_failing_count,
-        st.cfg.fs_out_dir.as_ref(),
-        recent_failed_evidence_target.as_ref(),
-        recent_failed_evidence_rerunnable_kind,
-        recent_failed_evidence_rerun_reason.as_deref(),
-        &recent_evidence_next,
-    ) {
+    for line in header_next_action_lines(st, &header) {
         next_action_rows.push(cx.text(line));
     }
     next_action_rows.push(first_open_recent_evidence_action_row(

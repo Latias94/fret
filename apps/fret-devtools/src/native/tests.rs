@@ -1,4 +1,8 @@
 use super::*;
+use super::header_state::{
+    HeaderDiagnosticsState, header_next_action_lines_for_artifacts_root,
+};
+use super::recent_evidence::recent_evidence_next_action;
 
 #[test]
 fn resolve_repo_or_abs_path_resolves_relative_input() {
@@ -1720,6 +1724,28 @@ fn devtools_gate_command_lines_surface_first_class_gates() {
     assert!(text.contains("check.perf_thresholds.json"));
     assert!(text.contains("check.resource_footprint.json"));
     assert!(text.contains("resource.footprint.json"));
+}
+
+#[test]
+fn header_next_action_lines_project_recent_evidence_state() {
+    let state = HeaderDiagnosticsState {
+        has_session: true,
+        selected_session: Some(Arc::<str>::from("session-1")),
+        session_count: 2,
+        scripts_count: 4,
+        regression_loaded: true,
+        regression_selected_summary_loaded: true,
+        selected_followup_result_loaded: false,
+        regression_failing_count: 3,
+        recent_failed_evidence_target: None,
+        recent_failed_evidence_rerunnable_kind: None,
+        recent_failed_evidence_rerun_reason: Some("select failed evidence".to_string()),
+        recent_evidence_next: "rerun the latest failed evidence".to_string(),
+    };
+    let text = header_next_action_lines_for_artifacts_root("target/fret-diag", &state).join("\n");
+    assert!(text.contains("selected session: session-1"));
+    assert!(text.contains("regression failing rows: 3"));
+    assert!(text.contains("recent evidence next: rerun the latest failed evidence"));
 }
 
 #[test]
