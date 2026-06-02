@@ -119,6 +119,22 @@ The gate verifies that each mapping has:
 New rendered recipes should update both manifests: the recipe proof manifest for correctness gates
 and the teaching surface manifest for user-facing discoverability.
 
+## Runtime Evidence Follow-up
+
+Runtime screenshot and interaction evidence is tracked by a separate diagnostics suite:
+
+- Suite:
+  `tools/diag-scripts/suites/ui-gallery-material3-runtime-evidence/suite.json`
+- Campaign:
+  `tools/diag-campaigns/ui-gallery-material3-runtime-evidence.json`
+- Gate:
+  `apps/fret-ui-gallery/tests/material3_runtime_evidence_suite.rs`
+
+That suite is intentionally narrower than "every file under `tools/diag-scripts/ui-gallery/material3`".
+It promotes Material3 scripts that already declare explicit script-v2 capability metadata, then keeps
+the generated registry membership gated from the app side. Legacy scripts without explicit
+capability metadata should be promoted only after their authoring contract is made precise.
+
 ## API Documentation Follow-up
 
 Crate-level API docs are tracked by a separate manifest:

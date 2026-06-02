@@ -3,7 +3,7 @@
   "meta": {
     "required_launch_features": ["gallery-material3"],
     "name": "ui-gallery-material3-exposed-dropdown-filtering",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
