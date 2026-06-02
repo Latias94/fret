@@ -1,8 +1,10 @@
+mod context_menu;
+
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, KeyCode, MouseButton, Px, SemanticsRole};
+use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate, PressablePointerDownResult};
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
     SizeStyle,
@@ -13,6 +15,9 @@ use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
+use self::context_menu::{
+    install_context_menu_keyboard_handler, install_context_menu_pointer_handler,
+};
 use super::drag_drop::{ColorDragDropStore, install_color_drag_source, update_color_drop_target};
 use super::popup::color_preview_stack;
 use super::{
@@ -157,35 +162,13 @@ pub(super) fn color_swatch<H: UiHost>(
         },
         move |cx, st| {
             cx.pressable_add_on_activate(on_activate.clone());
-            if copy_options.enabled {
-                cx.pressable_add_on_pointer_down(Arc::new({
-                    let copy_menu_open_for_pointer = copy_menu_open_for_pointer.clone();
-                    let open_for_pointer = open_for_pointer.clone();
-                    let tooltip_open_for_pointer = tooltip_open_for_pointer.clone();
-                    move |host, action_cx, down| {
-                        let is_context_menu = down.button == MouseButton::Right
-                            || (cfg!(target_os = "macos")
-                                && down.button == MouseButton::Left
-                                && down.modifiers.ctrl);
-                        if !is_context_menu {
-                            return PressablePointerDownResult::Continue;
-                        }
-
-                        let _ = host
-                            .models_mut()
-                            .update(&open_for_pointer, |value| *value = false);
-                        let _ = host
-                            .models_mut()
-                            .update(&tooltip_open_for_pointer, |value| *value = false);
-                        let _ = host
-                            .models_mut()
-                            .update(&copy_menu_open_for_pointer, |value| *value = true);
-                        host.request_focus(action_cx.target);
-                        host.request_redraw(action_cx.window);
-                        PressablePointerDownResult::SkipDefaultAndStopPropagation
-                    }
-                }));
-            }
+            install_context_menu_pointer_handler(
+                cx,
+                copy_options.enabled,
+                open_for_pointer.clone(),
+                tooltip_open_for_pointer.clone(),
+                copy_menu_open_for_pointer.clone(),
+            );
             let swatch_id = cx.root_id();
             install_color_drag_source(
                 cx,
@@ -271,42 +254,13 @@ pub(super) fn color_swatch<H: UiHost>(
         swatch = swatch.test_id(test_id.clone());
     }
     swatch = swatch.a11y_value(current_hex.clone());
-    if copy_enabled {
-        let open_for_key = open.clone();
-        let tooltip_open_for_key = tooltip_open.clone();
-        let copy_menu_open_for_key = copy_menu_open.clone();
-        cx.key_on_key_down_for(
-            swatch.id,
-            Arc::new(move |host, action_cx, down| {
-                if down.repeat {
-                    return false;
-                }
-
-                let no_extra_modifiers = !down.modifiers.ctrl
-                    && !down.modifiers.alt
-                    && !down.modifiers.meta
-                    && !down.modifiers.alt_gr;
-                let is_shift_f10 =
-                    down.key == KeyCode::F10 && down.modifiers.shift && no_extra_modifiers;
-                let is_context_menu_key =
-                    down.key == KeyCode::ContextMenu && !down.modifiers.shift && no_extra_modifiers;
-                if !is_shift_f10 && !is_context_menu_key {
-                    return false;
-                }
-
-                let _ = host
-                    .models_mut()
-                    .update(&open_for_key, |value| *value = false);
-                let _ = host
-                    .models_mut()
-                    .update(&tooltip_open_for_key, |value| *value = false);
-                let _ = host
-                    .models_mut()
-                    .update(&copy_menu_open_for_key, |value| *value = true);
-                host.request_redraw(action_cx.window);
-                true
-            }),
-        );
-    }
+    install_context_menu_keyboard_handler(
+        cx,
+        swatch.id,
+        copy_enabled,
+        open.clone(),
+        tooltip_open.clone(),
+        copy_menu_open.clone(),
+    );
     swatch
 }

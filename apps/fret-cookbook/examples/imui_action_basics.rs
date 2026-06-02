@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::imui::{
-    kit::{ButtonOptions, InputTextOptions},
+    kit::{ButtonOptions, InputTextOptions, SameLineOptions},
     prelude::*,
 };
 use fret::semantics::SemanticsRole;
@@ -28,6 +28,7 @@ const TEST_ID_BUTTON_IMUI: &str = "cookbook.imui_action_basics.button.imui";
 const TEST_ID_BUTTON_IMUI_PAYLOAD_1: &str = "cookbook.imui_action_basics.button.imui.payload.1";
 const TEST_ID_BUTTON_IMUI_PAYLOAD_5: &str = "cookbook.imui_action_basics.button.imui.payload.5";
 const TEST_ID_BUTTON_IMUI_PAYLOAD_10: &str = "cookbook.imui_action_basics.button.imui.payload.10";
+const TEST_ID_PAYLOAD_ROW: &str = "cookbook.imui_action_basics.button.imui.payload.row";
 const TEST_ID_INPUT_FILTER: &str = "cookbook.imui_action_basics.input.filter";
 const TEST_ID_INPUT_SNAPSHOT: &str = "cookbook.imui_action_basics.input.snapshot";
 
@@ -179,23 +180,29 @@ impl View for ImUiActionBasicsView {
                             ..Default::default()
                         },
                     );
-                    ui.horizontal(|ui| {
-                        for (preset, test_id) in [
-                            (1u32, TEST_ID_BUTTON_IMUI_PAYLOAD_1),
-                            (5u32, TEST_ID_BUTTON_IMUI_PAYLOAD_5),
-                            (10u32, TEST_ID_BUTTON_IMUI_PAYLOAD_10),
-                        ] {
-                            ui.action_payload_button_with_options(
-                                Arc::from(format!("Set {preset}")),
-                                act::SetCount,
-                                preset,
-                                ButtonOptions {
-                                    test_id: Some(Arc::from(test_id)),
-                                    ..Default::default()
-                                },
-                            );
-                        }
-                    });
+                    ui.same_line_with_options(
+                        SameLineOptions {
+                            test_id: Some(Arc::from(TEST_ID_PAYLOAD_ROW)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            for (preset, test_id) in [
+                                (1u32, TEST_ID_BUTTON_IMUI_PAYLOAD_1),
+                                (5u32, TEST_ID_BUTTON_IMUI_PAYLOAD_5),
+                                (10u32, TEST_ID_BUTTON_IMUI_PAYLOAD_10),
+                            ] {
+                                ui.action_payload_button_with_options(
+                                    Arc::from(format!("Set {preset}")),
+                                    act::SetCount,
+                                    preset,
+                                    ButtonOptions {
+                                        test_id: Some(Arc::from(test_id)),
+                                        ..Default::default()
+                                    },
+                                );
+                            }
+                        },
+                    );
                 })
             });
 

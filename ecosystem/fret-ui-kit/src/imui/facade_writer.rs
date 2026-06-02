@@ -24,88 +24,11 @@ mod scope_methods;
 mod scope_surface;
 mod selection_combo;
 mod text_models;
+mod trait_ext;
 mod value_models;
 
 pub use facade_core::ImUiFacade;
-
-/// Immediate-mode facade helpers for any authoring frontend that implements `UiWriter`.
-///
-/// This is intentionally a small convenience layer. It aims to feel closer to egui/imgui while
-/// still compiling down to Fret's declarative element tree and delegating complex policy to
-/// higher-level components.
-pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
-    scope_surface::scope_surface_methods!();
-
-    basic_surface::basic_text_surface_methods!();
-
-    basic_surface::basic_debug_draw_surface_methods!();
-
-    basic_surface::basic_separator_surface_methods!();
-
-    container_surface::layout_flow_surface_methods!();
-
-    container_surface::layout_group_surface_methods!();
-
-    container_surface::menu_tab_surface_methods!();
-
-    container_surface::collection_list_box_surface_methods!();
-
-    container_surface::collection_grid_surface_methods!();
-
-    container_surface::collection_table_surface_methods!();
-
-    container_surface::collection_virtual_list_surface_methods!();
-
-    container_surface::region_surface_methods!();
-
-    floating_surface::floating_area_surface_methods!();
-
-    floating_surface::popup_state_surface_methods!();
-
-    floating_surface::popup_begin_surface_methods!();
-
-    disclosure_surface::collapsing_header_surface_methods!();
-
-    disclosure_surface::tree_node_surface_methods!();
-
-    floating_surface::tooltip_surface_methods!();
-
-    floating_surface::drag_drop_surface_methods!();
-
-    menu_selection_surface::menu_item_surface_methods!();
-
-    menu_selection_surface::menu_family_surface_methods!();
-
-    menu_selection_surface::selection_surface_methods!();
-
-    menu_selection_surface::combo_surface_methods!();
-
-    menu_selection_surface::context_popup_surface_methods!();
-
-    button_surface::plain_button_surface_methods!();
-
-    button_surface::image_button_surface_methods!();
-
-    button_surface::action_button_surface_methods!();
-
-    button_surface::payload_action_button_surface_methods!();
-
-    button_surface::command_button_surface_methods!();
-
-    model_surface::boolean_model_surface_methods!();
-
-    model_surface::value_combo_model_surface_methods!();
-
-    model_surface::input_text_model_surface_methods!();
-
-    model_surface::picker_text_model_surface_methods!();
-
-    model_surface::textarea_text_model_surface_methods!();
-
-    floating_surface::window_surface_methods!();
-}
-
-impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterImUiFacadeExt<H> for W {}
+pub use trait_ext::UiWriterImUiFacadeExt;
 
 #[cfg(test)]
 mod tests;

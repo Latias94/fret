@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -11,6 +11,1828 @@ Exit criteria:
 - Keep public IMUI facade method names, options, responses, and behavior stable.
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
+
+2026-06-02 IMUI begin-submenu open-policy read owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` now keeps
+clicked-trigger reconciliation, stale close cleanup, and popup close/open dispatch while delegating
+submenu `open_value` readback to `submenu/open_policy/read.rs`. Submenu hover/shortcut behavior,
+sibling switching, popup anchoring, and begin-submenu response semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the read owner boundary.
+
+2026-06-02 IMUI debug-draw residual shape paint owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` now keeps draw-order/key setup
+and path-vs-residual dispatch while delegating filled-rect, vertex-color rect, triangle mesh,
+image-triangle mesh, text paint, and exhaustive no-op residual routing to
+`paint_shapes/residual.rs`. Path command routing, media paint dispatch, clip balancing, draw-list
+recording, and public debug-draw summaries remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the new root/residual boundary.
+
+2026-06-02 IMUI begin-menu active-trigger child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+now keeps guard/orchestration and the reconcile re-export while delegating current-trigger
+group-active readback to `active_trigger/read.rs` and `MenubarActiveTrigger` plus row-open
+activation writes to `active_trigger/activate.rs`. Menubar open-menu synchronization, post-trigger
+reconciliation, and begin-menu response semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI begin-menu open-request bridge owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps trigger mounting, popup body
+mounting, disabled cleanup routing, and final `DisclosureResponse` assembly while delegating
+open-request resolution bridging to `menu_family_controls/menu/open.rs`. The private open owner
+contains resolve-open-request, menubar active-trigger activation, and trigger-rect
+`ui.open_popup_at(...)` dispatch. Menubar hover/open behavior, popup body mounting, disabled-popup
+cleanup, and public IMUI menu response semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI floating-area drag-state commit owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now keeps drag snapshot
+discovery, scale-factor lookup, prepared output assembly, and final-state re-export routing while
+delegating drag-state commit to `floating_surface/area/drag_state/commit.rs` and final placement
+readback to `floating_surface/area/drag_state/final_state.rs`. The commit owner contains
+initial/test-id state construction, drag delta application, device-pixel snapping, and
+last-drag-position cleanup. Floating-area dragging/position response semantics, test-id overrides,
+and child-window resize feedback remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 IMUI table-column visibility mutation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` now keeps construction
+and read-side override queries while delegating `set_visible`, `show`, `hide`, `toggle`, `remove`,
+and `clear` to private `table_column_visibility/state/mutation.rs`. Empty-id filtering,
+last-entry-wins behavior, snapshot restoration, table-column application, and public
+`ImUiTableColumnVisibilityState` methods remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI input-text picker input-root child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now keeps input-root request/result
+shapes, text input mounting, and fill-width root container construction while delegating
+ComboBox assistive semantics to `text_picker_controls/input/semantics.rs` and focused-input keyboard
+handler gating/candidate forwarding to `text_picker_controls/input/keyboard.rs`. Completion/history
+picker behavior, popup-open state, active-descendant semantics, root sizing, keyboard navigation
+conditions, and public IMUI options/responses remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor NumericInput affix segment owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps joined field/frame
+orchestration, input owner invocation, and error owner invocation while delegating prefix/suffix
+segment chrome to private `controls/numeric_input/element/affix.rs`. The affix owner contains muted
+text color resolution, frame text-px/padding usage, prefix/suffix test-id routing, and a11y label
+stamping. Prefix/suffix duplicate suppression, segment order, trailing error icon composition,
+text-entry mounting, and public `NumericInput` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor NumericInput text-entry mounting owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed field/frame
+assembly, affix routing, and error owner invocation while delegating TextInput props construction,
+focus-target capture, focus-state synchronization, last-draft tracking, key handler installation,
+and draft/error cleanup to private `controls/numeric_input/element/input.rs`. TextInput enabled,
+focusable, placeholder, test-id, invalid a11y state, joined input chrome, editor numeric text style,
+selection behavior, keyboard commit/cancel behavior, affix rendering, and public `NumericInput`
+options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor NumericInput error presentation owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed field assembly,
+affix rendering, draft/focus sync, and keyboard handler wiring while delegating trailing error icon
+and inline validation text rendering to private `controls/numeric_input/element/error.rs`. The
+error owner contains error display-mode gating, invalid border/foreground color resolution,
+validation-message text role routing, error icon/test-id stamping, inline error test-id/a11y label
+routing, and source text size/line-height adoption. Public `NumericInput` constructors, options,
+keyboard behavior, draft/error model ownership, and affix behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor PropertyGroup element owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_group.rs` now keeps the public
+`PropertyGroup` builder/toggle API and delegates header/content/root construction to private
+`composites/property_group/element.rs`. The element owner contains theme metric/color resolution,
+collapsed model reads and toggle mutation, disclosure icon choice, hover/press header chrome,
+header action slot mounting, content visibility, test-id routing, root flex decoration, and outer
+panel chrome. Public `PropertyGroupOptions`, toggle callback behavior, collapsed defaults, and
+builder import paths remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor VecEdit element assembly owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` now keeps Vec2/Vec3/Vec4 keyed
+entrypoints and maps concrete axis fields to axis descriptors while delegating shared element
+assembly to `controls/vec_edit/element/assembly.rs`. The private assembly owner contains layout
+plan resolution, per-axis id/test-id derivation, axis color mapping, root flex chrome, axis group
+mounting, numeric format/parse/validate forwarding, outcome forwarding, and root test-id
+decoration. Public Vec2/Vec3/Vec4 constructors/builders, options, axis reset behavior, and layout
+semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextField buffered actions owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now keeps buffered state, focus
+transition planning, draft model allocation, model-to-draft sync, focus/timer orchestration, blur
+dispatch, and multiline commit shortcut classification while delegating commit/cancel finalizers to
+`controls/text_field/buffered/actions.rs`. The private actions owner contains pending-blur
+clearing, clear-state reset, model/draft commit and cancel finalizers, draft-controller finalizers,
+outcome emission, submit-command dispatch, and redraw requests. Public `TextFieldDraftController`
+and `TextField` options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
+2026-06-01 editor TextField entry owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps public construction,
+callsite/model keying, joined frame/chrome orchestration, current draft sync, clear trailing
+segments, and field id reporting while delegating entry mounting/session wiring to
+`controls/text_field/element/entry.rs`. The private entry owner contains TextInput/TextArea
+selection and mounting, input-id reporting, buffered session sync, draft-controller binding,
+buffered key routing, blur commit/cancel handling, focus-selection routing, and unbuffered
+multiline Escape-clear installation. Public `TextField` options, entry props/chrome semantics,
+clear-button behavior, and joined frame mounting remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor AxisDragValue scrub-element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps scrub/typing
+orchestration, focus sync, typing input/key/frame routing, error clearing, and final mounted
+composition while delegating `DragValueCore` scrub assembly to
+`controls/axis_drag_value/element/scrub_element.rs`. The private scrub-element owner contains
+scrub options, live model update wiring, commit/cancel outcome callbacks, double-click typing
+handoff, focus-handoff arming, scrub id recording, scrub response state mapping, and scrub frame
+owner routing. Public AxisDragValue options, typing behavior, frame visuals/test ids/reset action,
+and hidden-layout semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
+2026-06-01 editor TextAssistField option-row owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs` now keeps listbox semantics,
+scroll wrapping, popup surface chrome, and rendered panel packaging while delegating suggestion
+option-row assembly to `controls/text_assist_field/panel/row.rs`. The private row owner contains
+pressable props, option activation commit wiring, active/disabled row palette selection,
+item test-id derivation, listbox option a11y fields, and row text rendering. Visible-match
+semantics, scroll threshold, popup chrome, and `RenderedTextAssistPanel` handoff remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextAssistField accept owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+panel routing, inline empty-label helper policy, and max-height helper policy while delegating
+match acceptance to `controls/text_assist_field/accept.rs`. The private accept owner contains
+query model writes, dismissed-query sync, active item-id updates, user accept callback dispatch,
+and redraw requests shared by keyboard acceptance and suggestion row activation. Public
+`TextAssistField` options, root key handling, panel row activation, and overlay routing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextAssistField empty-label owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+panel routing, and inline empty-label gating while delegating empty-label rendering to
+`controls/text_assist_field/empty.rs`. The private empty owner contains popup empty-text props,
+muted foreground resolution, density row-height routing, and empty test-id mounting. Inline gating,
+panel routing, overlay routing, and public `TextAssistField` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextField escape-clear owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
+assembly, buffered key routing, focus-selection sync, blur handling, and clear-button composition
+while delegating unbuffered multiline Escape-clear key capture to
+`controls/text_field/element/escape_clear.rs`. The private escape-clear owner preserves
+clear-on-Escape behavior and redraw requests with a focused key-classification test. Single-line
+cancel command routing, buffered commit/cancel handling, clear-button behavior, and public
+`TextField` options remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextField focus-selection owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps TextInput/TextArea
+assembly, buffered key routing, blur handling, and clear-button composition while delegating
+text-present detection plus shared focus-selection sync to `controls/text_field/element/focus.rs`.
+The private focus owner contains buffered draft vs model value precedence and the call into shared
+editor text-entry focus-selection policy. Select-all-on-focus behavior, timer dispatch,
+single-line/multiline focus sync, buffered behavior, and public `TextField` options remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor EnumSelect trigger owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control construction,
+model reads, trigger-key registration, and overlay routing while delegating trigger pressable and
+visual assembly to `controls/enum_select/trigger.rs`. The private trigger owner preserves
+min-height fallback, a11y combobox state, focus ring geometry, activate toggle behavior, trigger
+press open-change reason, text/caret layout, divider, caret icon selection, and frame chrome.
+Public `EnumSelect` options, overlay routing, trigger key policy, and row behavior remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor EnumSelect trigger-key owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control construction,
+trigger visual composition, key-handler registration, and overlay routing while delegating
+trigger keyboard open/close policy to `controls/enum_select/trigger_keys.rs`. The private key
+owner preserves enabled gating, Enter/NumpadEnter/Space/ArrowDown open behavior, Escape close
+behavior, open-change reason updates, and redraw requests with focused key intent tests. Public
+`EnumSelect` options, trigger visuals, overlay routing, and row behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor EnumSelect overlay-reveal owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request and popup
+layout orchestration while delegating selected-row reveal, active-descendant scroll-into-view,
+viewport test-id derivation, pending-reveal clearing, and viewport visibility math to
+`controls/enum_select/overlay/reveal.rs`. Close-focus policy, filtering, row routing, popup/list
+layout, selected reveal behavior, and public `EnumSelect` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor EnumSelect overlay-filter owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request assembly,
+popup/list layout, selected-row reveal, close-focus policy, and dismiss behavior while delegating
+query normalization plus label/value filtering to `controls/enum_select/overlay/filter.rs`. The
+private filter owner preserves trim/lowercase matching, empty-query ordering, and label/value match
+coverage with focused tests. Public `EnumSelect` options, row routing, selected reveal behavior,
+and overlay chrome remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor EnumSelect overlay-empty owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request assembly,
+popup/list layout, search field routing, row routing, selected-row reveal, close-focus policy, and
+dismiss behavior while delegating empty result rendering to `controls/enum_select/overlay/empty.rs`.
+The private empty owner contains the `No matches` popup readout text, muted foreground resolution,
+and row-height routing. Public `EnumSelect` options, filtered row behavior, overlay chrome, and
+reveal behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor EnumSelect overlay-list owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay request assembly,
+anchored panel chrome, search box routing, close-focus policy, and dismiss behavior while
+delegating scroll/list viewport orchestration to `controls/enum_select/overlay/list.rs`. The
+private list owner contains row collection, empty-state routing, scroll handle wiring, viewport
+test-id propagation, selected-row capture, and reveal dispatch. Public `EnumSelect` options,
+filtered ordering, row behavior, popup/search layout, and selected-row reveal timing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 kit IMUI debug-draw stroke-style owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` now keeps the public
+`DebugDrawStrokeStyle` record, builders, defaults, invalid dash/miter guards, and method names
+while delegating visibility/path-style projection to `options/stroke/style.rs`. The private style
+owner contains the V1 `PathStyle::Stroke` fast path and explicit `StrokeV2` policy projection.
+Public debug-draw option exports, stroke defaults, and tests remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValue element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps the public control API, callsite /
+id-source keying wrapper, module declarations, and `DragValueOptions` re-export while delegating
+keyed element composition to `controls/drag_value/element.rs`. The private element owner contains
+state lookup, current value reads, mode/scrub revision reads, duplicate chrome affix suppression,
+test-id derivation, scrub/input owner routing, hidden input mounting, and final mounted
+composition. Public `DragValue` constructors/builders, keying behavior, options, and scrub/typing
+semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValue scrub-element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration and
+scrub/input owner composition while delegating `DragValueCore` scrub assembly to
+`controls/drag_value/scrub_element.rs`. The private scrub-element owner contains live model update
+wiring, commit/cancel callback emission, scrub layout hiding while typing, double-click typing
+handoff, focus-handoff arming, scrub id recording, scrub response state mapping, and scrub frame
+owner routing. Public `DragValue` options, mounted scrub/input semantics, and scrub frame visuals
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValue typing owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration, scrub
+mode switching, `DragValueCore` wiring, live model updates, and scrub/input composition while
+delegating typed `NumericInput` assembly to `controls/drag_value/typing.rs`. The private typing
+owner contains constrained parse wrapping, validation/options forwarding, hidden typing layout
+consumption, commit/cancel outcome mapping, scrub focus restore, scrub revision bumping, redraw,
+and numeric text-entry focus handoff. Public `DragValue` options, scrub frame behavior, and mounted
+hidden input semantics remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
+2026-06-01 editor AxisDragValue typing-key owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed scrub/typing
+orchestration, mounted text input props, focus handoff, scrub frame assembly, and typing frame
+routing. The private `controls/axis_drag_value/element/typing_keys.rs` owner contains
+replace-on-focus key handling plus Enter commit and Escape cancel policy, including parse/validate,
+constraint application, invalid-number reporting, draft/error sync, focus restore to scrub, scrub
+revision bumping, and outcome routing. Public AxisDragValue options and scrub/typing frame behavior
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor AxisDragValue typing-input owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps scrub/typing
+orchestration, focus handoff, typing key handling, error clearing, and frame routing while
+delegating TextInput props and mount to `controls/axis_drag_value/element/input.rs`. The private
+input owner contains hidden/active enabled and focusable gating, invalid a11y state, joined input
+chrome, text style routing, test-id routing, input mounting, input id capture, and focus reads.
+Public AxisDragValue options, typing key behavior, focus handoff, scrub mounting, and typing frame
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TransformEdit section-control owner-split result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit/element.rs` now keeps linked-scale
+model/sync orchestration, Column/Row layout selection, section row/column mounting, and root
+test-id decoration while delegating Vec3 section-control construction to
+`controls/transform_edit/element/section_control.rs`. The private section-control owner contains
+per-section presentation projection, id-source/test-id routing, validation forwarding, link-scale
+test-id derivation, and transform-axis outcome mapping. Public TransformEdit options,
+section presentation formats/parses/chrome affixes, linked-scale sync, and layout behavior remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextField entry-props owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps keyed construction, joined
+frame assembly, buffered session orchestration, focus/blur/key handlers, clear-button composition,
+and entry mounting while delegating TextInput/TextArea props construction to
+`controls/text_field/element/entry_props.rs`. The private entry-props owner contains joined chrome,
+field style resolution, single-line assistive semantics, password mode, submit/cancel command
+forwarding, and multiline min-height/stable line-box policy. Public TextField options,
+single-line/multiline routing, buffered behavior, focus selection, clear behavior, and mounted entry
+IDs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor Slider interaction owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider/element.rs` now keeps keyed state lookup, current
+value reads, quantization, affix/test-id routing, pressable/frame composition, NumericInput typing
+composition, and focus handoff sync while delegating pointer interaction handler installation to
+`controls/slider/element/interaction.rs`. The private interaction owner contains click-to-update,
+drag begin/move/up, missed pointer-up cleanup, double-click typing handoff, value math updates,
+redraw requests, and col-resize cursor setting. Public Slider options, frame assembly,
+NumericInput typing behavior, and focus handoff behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor VecEdit options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps the public Vec2/Vec3/Vec4 control hub,
+constructors, builder methods, keyed entrypoints, presentation adoption, and axis exports while
+re-exporting `VecEditOptions` and `VecEditLayoutVariant`. The private
+`controls/vec_edit/options.rs` owner contains public option fields, layout variant, and defaults.
+Public import paths, default layout/auto-stack/gap/id/test-id behavior, Vec2/Vec3/Vec4
+constructors, and layout/axis assembly remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 editor EnumSelect options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps the item record, control hub,
+trigger/open-key orchestration, and overlay request routing while re-exporting
+`EnumSelectOptions`. The private `controls/enum_select/options.rs` owner contains public option
+fields and defaults. Public import paths, default layout, placeholder/none labels, max-list-height
+and diagnostics fields, keyed state identity, trigger composition, open-key policy, and overlay
+routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor TextField buffered-key owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps keyed construction, joined
+frame/input/area assembly, focus selection sync, blur handler installation, and clear affordance
+composition. The private `controls/text_field/element/buffered_keys.rs` owner contains buffered
+single-line and multiline commit/cancel key routing, including IME/repeat guards, single-line Enter
+commit, multiline Ctrl/Cmd+Enter commit, Escape cancel, submit-command forwarding, and outcome
+routing. Text input/area composition, blur behavior, clear-button behavior, draft controller
+binding, and public TextField options remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 editor TextField clear-button owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element.rs` now keeps input/textarea assembly and
+delegates clear affordance construction. The private `controls/text_field/element/clear_button.rs`
+owner contains clear visibility reads, buffered draft/model clearing, buffered-state reset, and
+single-line/multiline clear segment selection. Clear-button visibility, draft/model clearing,
+buffered session reset, single-line vs multiline clear button chrome, a11y label, test-id routing,
+and redraw behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor Checkbox options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps model reads, tri-state behavior,
+chrome resolution, pressable activation, indicator mounting, and chrome regression routing while
+re-exporting `CheckboxOptions`. The private `controls/checkbox/options.rs` owner contains option
+fields and defaults. Public `CheckboxOptions` import paths, auto layout defaults,
+enabled/focusable defaults, a11y/test-id fields, bool/optional-bool model behavior, tri-state
+chrome, token fallback, and pressable activation behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor Checkbox chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps model reads, a11y, pressable
+activation, indicator mounting, and root control assembly while delegating token fallback chrome to
+`controls/checkbox/chrome.rs`. The private chrome owner contains resolved chrome colors, editor
+token precedence, generic palette fallback, and the chrome token regression. Bool/optional-bool
+model behavior, tri-state indicator selection, focus-ring geometry, a11y/test-id routing, checked
+foreground/background semantics, and pressable activation behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor Checkbox model owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps a11y, pressable props, indicator
+mounting, and root control assembly while delegating checked-state reads and activation toggling to
+`controls/checkbox/model.rs`. The private model owner contains bool/optional-bool model variants,
+paint invalidation reads, optional-bool tri-state mapping, disabled activation guard, toggle
+mutation, and redraw request behavior. Public bool vs optional-bool constructors, a11y routing,
+focus-ring geometry, chrome resolution, and indicator mounting remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor Checkbox indicator owner-split result:
+`ecosystem/fret-ui-editor/src/controls/checkbox.rs` now keeps a11y, pressable props, root control
+assembly, and visual-state calculation while delegating indicator container/icon mounting to
+`controls/checkbox/indicator.rs`. The private indicator owner contains tri-state icon selection,
+checked/indeterminate/unchecked icon mounting, box size/radius, border width, centered icon layout,
+and icon color routing. A11y routing, focus-ring geometry, model behavior, chrome resolution, and
+pressable activation behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
+2026-06-01 editor PropertyRow trailing-slot owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps row/column layout,
+value-slot marking, reset/action visibility decisions, and reset/action child routing while
+delegating the fixed-width trailing slot wrapper to `composites/property_row/slot.rs`. The private
+slot owner contains shared reset/action slot chrome: fixed width, min row height, clip overflow,
+zero gap/padding, horizontal end alignment, and center cross-axis alignment. Row/column layout,
+reset/action visibility, reset element routing, action mounting, value-slot overflow semantics, and
+test-id propagation remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor PropertyGrid test owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_grid.rs` now keeps public grid options,
+row-option resolution, row-context helper methods, and root grid composition while routing
+regression coverage through `#[cfg(test)] mod tests;`. The private
+`composites/property_grid/tests.rs` owner contains the narrow wrapping-layout regression fixture,
+including wrapping text services, measured bounds helpers, row separation assertions, and test-id
+capture. Public `PropertyGridOptions`, row option defaults, row composition, wrapping value text
+measurement, and test-id propagation remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor GradientEditor stop-row owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition,
+preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper. The
+private `composites/gradient_editor/stops.rs` owner contains stop-row PropertyRow assembly,
+position DragValue, ColorEdit, remove button, and row/field test-id derivation. Stop sorting, row
+identity/test-id derivation, position/color editor wiring, remove action routing, row layout,
+empty-state text role, preview behavior, and public gradient editor options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor GradientEditor options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps keyed element composition,
+preview/angle/stops group orchestration, add-stop behavior, and empty-state text role helper while
+re-exporting options. The private `composites/gradient_editor/options.rs` owner contains public
+option/action/binding records and defaults. Public re-export paths, layout defaults,
+enabled/preview/angle defaults, preview/stops/add-stop test-id fields, stop binding model fields,
+add/remove action callback types, preview behavior, stop-row ordering, add-stop gating, and
+empty-state text role behavior remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 editor GradientEditor angle owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps keyed element composition,
+preview/stops/add-stop orchestration, and empty-state text role helper while delegating angle row
+construction to the private `composites/gradient_editor/angle.rs` owner. `show_angle` gating,
+angle model routing, derived angle test id, PropertyRow slot width overrides, Angle label text
+role, DragValue degrees presentation, preview behavior, stop-row ordering, add-stop gating, and
+public gradient editor options remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 editor GradientEditor Stops group owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps keyed element composition,
+model reads, preview assembly, angle row routing, and root layout while delegating Stops group
+construction to the private `composites/gradient_editor/stops_group.rs` owner. Stop-row sorting,
+stops group test-id propagation, add-stop max-stop gating, add-stop action routing, PropertyGrid
+row-option forwarding, stop-row mounting, empty-state text role behavior, preview behavior, angle
+row behavior, and public gradient editor options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor GradientEditor stop model owner-split result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps keyed element composition
+and final preview / angle / Stops group / root assembly while delegating stop model reads and
+derived row data to the private `composites/gradient_editor/stops_model.rs` owner. Paint
+invalidation model reads, transparent color fallback, preview stop clamping, preview stop sorting,
+stop-row sorting, preview drag stop-model collection, preview assembly, Stops group assembly,
+angle row behavior, and public gradient editor options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor InspectorPanel search owner-split result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` now keeps panel
+metrics/header/content/root assembly and delegates search field construction to the private
+`composites/inspector_panel/element/search.rs` owner. Search query trimming/lowercase matching,
+header visibility, enabled/focusable routing, clear-button test ids, `MiniSearchBox` fallback,
+`TextAssistField` anchored overlay routing, search assist list/empty/key/test/max-height
+forwarding, and public `InspectorPanel` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor InspectorPanel options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public cx/control records,
+builder methods, and child-owner routing while re-exporting options. The private
+`composites/inspector_panel/options.rs` owner contains public option records and defaults. Public
+`InspectorPanelOptions` and `InspectorPanelSearchAssistOptions` import paths, layout defaults,
+enabled/title/test-id defaults, search assist option fields, search fallback behavior, and panel
+assembly behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor InspectorPanel element owner-split result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps public options/cx/control
+records, builder methods, and `into_element_in(...)` routing. The private
+`composites/inspector_panel/element.rs` owner contains scoped panel assembly, theme/chrome
+resolution, header/title/toolbar layout, search/search-assist element selection, content mounting,
+and root panel chrome. Public constructors/builders, `InspectorPanelCx` accessor shape, query
+trimming/lowercase matching, title text-role behavior, search assist fallback, header/content/root
+test-id propagation, panel chrome token fallback, and `into_element_in(...)` routing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor PropertyGroup header owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_group/element.rs` now keeps metric/theme
+resolution, collapsed-state reads, content/root/panel assembly, and delegates header construction
+to the private `composites/property_group/element/header.rs` owner. Toggle callback behavior,
+collapsed model mutation/redraw routing, disclosure icon choice, enabled/collapsible gating,
+hover/press header chrome, header text role, header actions slot, header test-id propagation,
+content visibility, and panel chrome remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 editor PropertyGroup options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_group.rs` now keeps the public group control,
+collapse/toggle behavior, header/content/root assembly, and re-exports `PropertyGroupOptions`.
+The private `composites/property_group/options.rs` owner contains option fields and defaults.
+Public `PropertyGroupOptions` import paths, layout defaults, collapsed model/default behavior,
+enabled/collapsible defaults, header/content test-id fields, header rendering, content mounting,
+and toggle callback routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
+2026-06-01 editor PropertyRow element owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
+helper, keying/identity wrapper, and public re-exports. The private
+`composites/property_row/element.rs` owner contains row/column flex assembly, layout-query usage,
+resolved-layout consumption, value-slot marking, reset/action slot mounting, and test-id
+application. Public constructors/builders, explicit id-source keying, label helper behavior,
+layout resolution, auto row/column switching, value-slot overflow semantics, reset/action slots,
+test-id propagation, and property-row text role behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor PropertyRow row branch owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps layout-query /
+resolution, auto dispatch, column branch assembly, and test-id application while delegating row
+branch construction to the private `composites/property_row/element/row.rs` owner. Row/column/auto
+layout variant resolution, row label fixed slot width, single-line label line box, row value-slot
+overflow semantics, reset/action trailing slot wiring, row min-height behavior, test-id
+propagation, and public property row APIs remain unchanged. `tools/gate_imui_workstream_source.py`
+freezes the split and the value-slot overflow guard now tracks the two marked slots across root
+and row owners.
+
+2026-06-01 editor PropertyRow column branch owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row/element.rs` now keeps layout-query /
+resolution, auto dispatch, row/column owner routing, and test-id application while delegating
+column branch construction to the private `composites/property_row/element/column.rs` owner.
+Row/column/auto layout variant resolution, column header/value stacking, header label line box,
+column value-slot overflow semantics, reset/action trailing slot wiring, column stack gap
+behavior, test-id propagation, and public property row APIs remain unchanged. The source gate and
+value-slot overflow guard now track the two marked slots across row and column owners.
+
+2026-06-01 editor PropertyRow options owner-split result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite, label
+helper, keyed row entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring
+while re-exporting `PropertyRowOptions`. The private `composites/property_row/options.rs` owner
+contains public option fields and defaults. Public import paths, layout defaults, slot-width
+defaults, auto-stack identity/test-id fields, row/column assembly, reset slot behavior, value-slot
+marking, and property-row text role behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValueCore behavior owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps public API shape,
+slot-state lookup, layout/a11y setup, current-value synchronization, and response construction.
+The private `primitives/drag_value_core/behavior.rs` owner contains pressable pointer down/move/up
+handler installation, Escape key capture, pointer capture/release calls, scrub delta calculation,
+constraint application, and commit/cancel/live callback dispatch. Public constructors/builders,
+options import paths, drag threshold crossing, unexpected pointer-stream cleanup, pointer-up
+commit, Escape cancel, and response accessor behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValueCore options owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps the public drag-to-edit
+primitive entrypoint, pressable/key handler wiring, and response construction while re-exporting
+`DragValueCoreOptions`. The private `primitives/drag_value_core/options.rs` owner contains public
+options, defaults, theme-token resolution, finite-value sanitization, and drag-threshold clamping.
+Public import paths, defaults, theme token fallback behavior, and `DragValueCore` runtime behavior
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValueCore scrub-state owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps the public drag-to-edit
+primitive entrypoint, pressable/key handler wiring, a11y/layout options, and response construction.
+The private `primitives/drag_value_core/state.rs` owner contains scrub session storage,
+commit/cancel state mutation, move action classification, and scrub multiplier resolution. Public
+`DragValueCore` APIs, response accessors, pointer routing, Escape cancel behavior, live callbacks,
+commit/cancel callbacks, modifier multipliers, and numeric constraints remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 docking declarative frame drop-hints owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` no longer owns the drop-hint helper that only
+serves frame aggregation. The private `dock/declarative/frame.rs` owner now contains both
+`DockSpaceElementFrame` construction and `DockDropHints` projection from hover state. Public docking
+APIs, frame output construction, and drop-hint painting remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the helper boundary.
+
+2026-06-01 docking declarative drag-resolve owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, event routing,
+paint ordering, and public entrypoint functions while importing private drag-resolve owner helpers.
+The private `dock/declarative/drag_resolve.rs` owner contains internal drag hover/drop resolution,
+drop-intent effect projection, tab-bar auto-scroll during drag, tear-off handoff, drag diagnostics
+publication, drag inversion payload flags, panel/tabs drag allow checks, and cross-window drag
+session payload startup. Public docking APIs, drag/drop behavior, and diagnostics payloads remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 docking declarative drag-preview owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, paint ordering,
+drop-overlay dispatch, and public entrypoint functions while importing private drag-preview owner
+helpers. The private `dock/declarative/drag_preview.rs` owner contains drag ghost snapshot lookup,
+drag source tab lookup, ghost title fallback, drag ghost paint preparation, and center-zone tab
+insert preview title metadata. Public docking APIs, drag ghost rendering order, and tab insert
+preview painting remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 docking declarative floating owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
+routing, layout/render wiring, and public entrypoint functions while importing private floating
+owner helpers. The private `dock/declarative/floating.rs` owner contains floating hover lookup,
+floating hover paint-state projection, floating chrome paint inputs, close/title-bar hit tests,
+leaf-tabs selection for title-bar drags, and floating title-bar drag target resolution. Public
+docking APIs and managed dock-space entrypoints remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 docking declarative geometry owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
+routing, layout/render wiring, and public entrypoint functions while importing private geometry
+owner helpers. The private `dock/declarative/geometry.rs` owner contains declarative tab hit tests,
+layout snapshot lookup, split-handle hit/min-size geometry, split-handle cursor mapping,
+pixels-per-point lookup, and active viewport hit-test projection. Public docking APIs and managed
+dock-space entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
+2026-06-01 docking declarative tab-overflow owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, layout/render
+wiring, input event routing, and public entrypoint functions while importing private overflow
+owner helpers. The private `dock/declarative/overflow.rs` owner contains tab overflow menu lookup
+and opening, active-row scroll positioning, menu click/close effects, menu wheel scrolling,
+tab-strip wheel persistence, and tab/overflow hover projection. Public docking APIs and managed
+dock-space entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
+2026-06-01 docking declarative tear-off owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, drag/drop event
+routing, layout/render wiring, and public entrypoint functions while importing the private tear-off
+owner helpers. The private `dock/declarative/tear_off.rs` owner contains panel/tab tear-off
+eligibility checks, stable out-of-bounds frame tracking, retry clearing, request-float effect
+construction, default floating rect sizing, and floating bounds clamping. Public docking APIs and
+managed dock-space entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes
+the split.
+
+2026-06-01 docking declarative frame owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, input routing,
+layout/render event wiring, and public entrypoint functions while importing the private frame
+output owner. The private `dock/declarative/frame.rs` owner contains `DockSpaceElementFrame`, empty
+frame construction, layout snapshot projection, cached panel sizes, tab/floating/viewport/split
+paint input storage, drag ghost storage, and drop-hint derivation. Managed dock-space entrypoints
+and public docking APIs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
+
+2026-06-01 docking declarative registry owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, input routing,
+layout/render assembly, and public entrypoint functions while re-exporting the registry public
+surface through the existing module path. The private `dock/declarative/registry.rs` owner contains
+`DockSpaceElementOptions`, `DockPanelElement`, `DockPanelElementRegistry`,
+`DockPanelElementRegistryService`, `dock_panel_element`, panel collection/order, missing-panel
+fallback UI, and panel-node binding helpers. Public re-export paths and managed dock-space
+entrypoints remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 docking declarative tab-metrics owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps dock-space orchestration, hit testing,
+input routing, paint input assembly, and public entrypoints. The private
+`dock/declarative/tab_metrics.rs` owner contains tab title/glyph text preparation, measured and
+fallback tab width projection, tab-bar geometry, active-tab visibility clamping, persisted tab
+scroll sync, tab detail paint preparation, and drag auto-scroll insert-index updates. Public
+dock-space APIs and tab/overflow behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 docking declarative interaction-state owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
+entrypoint, panel registry, layout/render/input orchestration, and public docking APIs. The private
+`dock/declarative/interaction.rs` owner contains declarative pressed close, floating/divider/panel
+drag, viewport capture, tab-overflow menu, tab scroll/width, tab-hover, and floating-hover state
+records plus the `DeclarativeDockInteractionService` helpers. Managed dock-space behavior and
+cross-window docking call paths remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
+2026-06-01 docking declarative drag-route owner-split result:
+`ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
+entrypoint, layout/render/input orchestration, and public docking APIs. The private
+`dock/declarative/drag_route.rs` owner contains internal dock drag route anchor installation,
+dock-space node registration, dock drag session-kind checks, active-window invalidation gating, and
+drop-time dock drag kind detection. Public dock-space APIs and cross-window docking call paths
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI text-picker popup render owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now keeps
+session/input/open-policy orchestration only. `text_picker_controls/core/popup.rs` owns popup
+request construction and render dispatch, including trigger forwarding, popup open model
+forwarding, keyboard handler gating, selected candidate routing, and pending keyboard pick
+forwarding. Public picker APIs, popup semantics, and response finalization remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI text-picker response finalization owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` initially kept
+session/input/open-policy/popup orchestration. The 2026-06-01 popup owner follow-up moved popup
+request construction and render dispatch into `text_picker_controls/core/popup.rs`.
+`text_picker_controls/response.rs` owns popup-result finalization and picked-change response
+merging, including changed/edited/deactivated-after-edit propagation. Public
+`InputTextPickerResponse` behavior and picker popup semantics remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 IMUI debug-draw paint clip-stack owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` now keeps command iteration plus
+media/shape dispatch only. `paint/clip.rs` owns clip push/pop scene-op emission, empty clip elision,
+unmatched pop elision, open-depth tracking, and final clip-stack cleanup. Debug-draw command order,
+media dispatch, shape dispatch, and public drawing APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 IMUI disclosure visual tests owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests/visual.rs` now keeps visual regression
+module routing only. `tests/visual/palette.rs` owns tree-node hover palette coverage, while
+`tests/visual/text_roles.rs` owns row label and disclosure indicator text-role coverage. The
+shared disclosure test harness, palette assertions, text-role assertions, and public disclosure
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 IMUI switch entry render owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/entry.rs` now keeps public switch model
+entrypoints and label identity scoping only. `switch/entry/render.rs` owns model reads,
+`PressableProps` construction, active-trigger behavior installation, field chrome, switch state
+badge/label mounting, and response return. Public switch facade behavior, label identity scoping,
+`SwitchOptions` a11y/test-id wiring, active-trigger semantics, and visual row output remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 window overlay toast render helper owner-split result:
+`ecosystem/fret-ui-kit/src/window_overlays/render.rs` now keeps overlay render orchestration and
+toast layer assembly. `window_overlays/render/toast_render.rs` owns toast viewport pause state,
+part test-id derivation, icon override/glyph helpers, Sonner title/description text helpers, alpha
+blending, and stack-shift state/output calculation. Toast layer request synthesis, viewport
+pause/focus behavior, action/cancel/close test IDs, icon routing, stack animation, and dismissal
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 editor DragValue model/session owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps root public surface and control
+orchestration. `controls/drag_value/model.rs` owns `DragValueMode` and `DragValueState`.
+`controls/drag_value/session.rs` owns hidden layout, numeric-input outcome mapping, and outcome
+callback emission. Hidden scrub/input mounting, double-click typing handoff, and public
+`DragValue` APIs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 editor DragValue scrub frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration,
+mode switching, `DragValueCore` commit/cancel wiring, live model updates, and `NumericInput`
+typing routing. `controls/drag_value/scrub.rs` owns scrub frame chrome, prefix/value/suffix segment
+rendering, and scrub test-id stamping. Public `DragValue` options and double-click typing handoff
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-01 editor DragValue options owner-split result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps keyed control orchestration, mode
+switching, `DragValueCore` wiring, live model updates, and `NumericInput` typing routing while
+re-exporting `DragValueOptions`. The private `controls/drag_value/options.rs` owner contains
+option fields and defaults. Public `DragValueOptions` import paths, fill-width/flex defaults,
+prefix/suffix fields, shared numeric constraints, replace-all typing selection behavior,
+id-source semantics, test-id routing, scrub frame behavior, and typing input routing remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 editor input-group icon segment owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group/segments.rs` now keeps segment layout, text,
+value, axis, and derived-test-id helpers plus re-exports the icon segment helper names.
+`input_group/segments/icon.rs` owns icon-button chrome, clear-button routing, multiline clear-button
+inset layout, and static icon slot rendering. Existing `crate::primitives::input_group::*` helper
+paths remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-05-31 editor theme tests owner-split result:
+`ecosystem/fret-ui-editor/src/theme.rs` now keeps public editor theme preset metadata, preset
+install/replay helpers, and host theme sync helpers only, plus a `#[cfg(test)] mod tests;` route.
+`ecosystem/fret-ui-editor/src/theme/tests.rs` owns the preset metadata, default/dense token patch,
+installed-preset replay, and window-metrics sync regressions. `tools/gate_imui_workstream_source.py`
+now gates that split so test bodies stay out of the runtime theme entry point, while
+`theme/patches.rs` remains the private token patch owner.
+
+2026-05-31 IMUI runtime boundary source-gate refresh:
+`fret-imui` remains a thin policy-light authoring facade over `fret-authoring` and `fret-ui`.
+`tools/gate_imui_workstream_source.py` now also freezes the public `ecosystem/fret-imui/src/lib.rs`
+shape and rejects kit/editor/docking/workspace/plot/shadcn/winit/wgpu imports from the runtime
+facade. Generic IMUI policy stays in `fret-ui-kit::imui`, editor controls stay in
+`fret-ui-editor`, and docking/multi-window policy stays in `fret-docking` plus runner/backend
+owners.
+
+2026-05-31 IMUI virtual-list output owner-split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` keeps keyed runtime list
+assembly, default scroll-handle slot state, focus child mounting, row wrapping, rendered-range
+tracking, and runtime option consumption. `virtual_list_controls/element/output.rs` owns list-level
+semantics decoration and `VirtualListResponse` packaging. Facade method names, keyed substrate
+usage, list semantics, row behavior, and response reporting remain unchanged.
+
+2026-05-31 IMUI floating title-bar row owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` now keeps owner routing and close-glyph
+text construction. `floating_window_title_bar/row.rs` owns row composition, title text mounting,
+drag-surface setup, close-button prop selection, and behavior owner calls. Title text-role
+selection, drag-surface behavior hooks, close-button behavior wiring, close-glyph text-role helper,
+and public floating-window facade behavior remain unchanged.
+
+2026-05-31 IMUI bullet-text element owner-split result:
+`ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs` now keeps the immediate-mode entry point
+only. `bullet_text_controls/element.rs` owns bullet indicator/track layout, label semantics/test
+IDs, inherited foreground, and compact paragraph mounting. Public bullet text facade behavior,
+bullet indicator layout, label test-id forwarding, inherited foreground, and compact paragraph
+text-role semantics remain unchanged.
+
+2026-05-31 IMUI multi-select interaction owner-split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps controllable model hooks, selected-state
+reads, selectable response wiring, and changed-signal propagation. `multi_select/interaction.rs`
+owns `apply_click(...)` and primary modifier detection for plain, primary-modifier, and shift
+selection. Selection mutation semantics, read-only state storage, and regression test routing remain
+unchanged.
+
+2026-05-31 IMUI adapter signal owner-split result:
+`ecosystem/fret-ui-kit/src/imui/adapters.rs` now keeps the public adapter seam hub,
+`AdapterSeamOptions`, and `report_adapter_signal(...)` only. The private
+`adapters/signal.rs` owner contains `AdapterSignalMetadata`, `AdapterSignalRecord`, and
+`AdapterSignalReporter`. Public `imui::adapters::*` paths, emitted signal accessors, reporter
+callback shape, seam options, and signal reporting behavior remain unchanged.
+
+2026-05-31 IMUI open response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` is now a thin hub that re-exports open
+response child owners. `response/widgets/open/disclosure.rs` owns `DisclosureResponse` and its
+`empty()` constructor plus query accessors. `response/widgets/open/combo.rs` owns `ComboResponse`
+and its query accessors. Public response type names, accessor semantics, crate-visible field access,
+and re-export paths remain unchanged.
+
+2026-05-31 editor input-group segments owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` is now a thin hub that re-exports frame,
+joined-input, and segment owner APIs at the existing module path. The private
+`primitives/input_group/segments.rs` owner now contains inset/segment/row/divider helpers,
+icon/clear/text/value segments, derived test-id policy, axis segment composition, and axis tint
+color mixing. Crate-visible input-group APIs remain unchanged.
+
+2026-05-31 editor input-group joined owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, text-role
+helpers, axis segment composition, and re-exports joined-input APIs at the existing module path.
+The private `primitives/input_group/joined.rs` owner now contains joined frame composition,
+leading/input/trailing segment assembly, pointer pressed-state cleanup, pointer down/up/cancel
+handlers, and frame override handoff. Crate-visible input-group APIs remain unchanged.
+
+2026-05-31 editor input-group frame owner-split result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps segment helpers, joined-input
+assembly, pointer-region behavior, axis segment composition, text-role usage, and re-exports the
+frame owner APIs at the existing module path. The private `primitives/input_group/frame.rs` owner
+now contains `EditorInputGroupFrameOverrides`, base frame construction, min-height fallback,
+semantic/bg/border override application, and `EditorWidgetVisuals` frame visual resolution.
+Crate-visible input-group APIs remain unchanged.
+
+2026-05-31 editor TransformEdit element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps public options,
+section/outcome records, constructors, presentation adoption, builder methods, and callsite/
+id-source keying only. The private `controls/transform_edit/element.rs` owner now contains keyed
+element assembly, per-section presentation projection, linked-scale model/sync orchestration,
+section row/column composition, derived id/test-id routing, and root test-id decoration. Public
+TransformEdit option/control APIs remain unchanged.
+
+2026-05-31 editor VecEdit element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps public VecEdit options, Vec2/Vec3/
+Vec4 records, constructors, presentation adoption, builder methods, and callsite/id-source keying
+only. The private `controls/vec_edit/element.rs` owner now contains keyed Vec2/Vec3/Vec4 element
+assembly, layout-plan consumption, derived axis id/test-id routing, axis group order, and root
+test-id decoration. Public VecEdit option/control APIs remain unchanged.
+
+2026-05-31 editor AxisDragValue element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps public control construction,
+presentation adoption, builder methods, and callsite/id-source keying only. The private
+`controls/axis_drag_value/element.rs` owner now contains keyed scrub/typing element assembly,
+focus handoff, Enter/Escape commit/cancel policy, reset segment wiring, and error icon chrome.
+Public AxisDragValue options/outcome APIs remain unchanged.
+
+2026-05-31 editor AxisDragValue typing-frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed owner
+orchestration, scrub frame composition, text input props, focus/key handling, and mode transitions.
+The private `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
+composition plus axis/prefix/suffix/error/reset segments. Scrub mounting, Enter/Escape
+commit/cancel behavior, focus handoff, test-id routing, invalid-state icon, reset affordance, and
+public AxisDragValue options remain unchanged.
+
+2026-05-31 editor AxisDragValue scrub-frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed owner
+orchestration, DragValueCore wiring, double-click typing transition, and text-entry focus/key
+policy. The private `controls/axis_drag_value/element/scrub.rs` owner contains scrub input-group
+frame composition plus axis/value/prefix/suffix/reset segments. DragValueCore commit/cancel
+routing, scrub response state mapping, test-id routing, reset affordance, and public AxisDragValue
+options remain unchanged.
+
+2026-05-31 editor proof helper owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps workflow rendering, docking/window
+glue, model factories, and proof orchestration, while
+`apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs` owns demo-local proof text-role
+helpers, numeric presentation adapters, outcome labels, drag preview card composition, outliner
+helper structs/readouts, and theme diagnostic projection. Public IMUI/editor APIs and the
+collection module remain unchanged.
+
+2026-05-31 SameLine status-drift refresh result:
+`P0_CURRENT_SOURCE_AUDIT_2026-05-06.md`, the long-form TODO readiness notes, and historical
+milestone summary now agree that SameLine is a narrow proven teaching-surface helper. Remaining
+porting-sugar pressure stays on item-width stacks, next-item width defaults, and label-ID helpers
+until a future two-surface proof justifies widening.
+
+2026-05-31 same-line porting sugar proof result:
+`apps/fret-cookbook/examples/imui_action_basics.rs` now teaches the existing closure-scoped
+`ui.same_line_with_options(...)` helper for the IMUI payload button row, with a stable row
+`test_id` and source-gate coverage. The P3 readiness note now treats SameLine as a narrow proven
+teaching-surface helper while keeping item-width stacks, next-item width defaults, label-suffix
+identity parsing, and broad Dear ImGui mutable cursor sugar out of scope.
+
+2026-05-31 debug-draw command type hub owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a thin private command-type
+re-export hub, while
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` owns the private
+`DebugDrawCommand` payload enum and all draw-list command variants. Command module wiring, summary
+projection, draw-list recording, paint dispatch, public debug-draw summaries, and facade APIs remain
+unchanged.
+
+2026-05-31 selectable visual palette owner-split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs` now keeps selectable row composition
+and shared list-row text-role mounting only. `selectable_controls/visual/palette.rs` owns
+`SelectablePalette`, selected/hover/pressed/disabled palette fallback order, and highlighted-row
+palette semantics. Public selectable behavior remains unchanged.
+
+2026-05-31 boolean-control indicator owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now keeps shared boolean label text and
+indicator re-export routing only. `boolean_controls/visual/indicators.rs` owns checkbox badge,
+radio ring/dot, and switch state badge chrome. Public checkbox, radio, and switch behavior remains
+unchanged.
+
+2026-05-31 editor style/theme picker density status result:
+`ecosystem/fret-ui-editor/src/theme.rs` now exposes `EditorThemePresetV1::picker_status_label()` as
+stable picker metadata, and `controls/editor_theme_preset_picker/render.rs` renders compact
+`24px`/`22px` density status labels in each preset row. This improves the Dear ImGui-style
+style/theme picker affordance while keeping editor policy in `fret-ui-editor` and leaving
+`GetStyle`, `PushStyleVar`, global style stacks, and `fret-ui-kit::imui` theme-editor policy out of
+scope.
+
+2026-05-31 selectable pressable/a11y props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` now keeps label identity, option state
+reads, behavior wiring, and row visual assembly. `selectable_controls/props.rs` owns fill-width
+pressable props, enabled/focusable forwarding, listbox-option role fallback, and a11y
+label/test-id/selected forwarding. Public selectable behavior remains unchanged.
+
+2026-05-31 disclosure layout props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now keeps body `ImUiFacade` mounting,
+root/content composition, and test-id routing only. `disclosure_controls/layout/props.rs` owns the
+fill-width/auto-height visible-overflow props, zero-gap column props, and content padding
+application. Public collapsing-header/tree-node behavior remains unchanged.
+
+2026-05-31 editor axis-drag-value session owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps scrub/typing control
+orchestration and child-owner routing. `controls/axis_drag_value/session.rs` owns hidden layout
+projection, outcome callback emit, and draft/error local model allocation. Scrub/typing mounting,
+focus handoff, local state identity, outcome routing, and public AxisDragValue options remain
+unchanged.
+
+2026-05-31 editor axis-drag-value ids owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps control orchestration while
+delegating scrub/typing/reset child test-id derivation to `controls/axis_drag_value/ids.rs`.
+`ids/tests.rs` covers active typing gating, default scrub/typing child ids, explicit reset-id
+precedence, and typing reset suffix behavior. Diagnostics naming, control routing, and public
+AxisDragValue options remain unchanged.
+
+2026-05-31 editor axis-drag-value joined input chrome reuse result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now reuses
+`primitives::chrome::joined_text_input_style(...)` for the typing field instead of carrying a local
+duplicate of transparent/borderless joined input chrome policy. Joined input transparency,
+borderless chrome, focus-ring suppression, text style, typing field routing, scrub mounting, and
+public AxisDragValue options remain unchanged.
+
+2026-05-31 editor slider options model owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now re-exports `SliderOptions` from the model
+owner and keeps Slider constructors/builders plus control orchestration. `controls/slider/model.rs`
+owns `SliderOptions`, its default layout/value/readout/typing policy values, mode/state, hidden
+layout projection, and affixed-value helper. Public option field names and defaults remain
+unchanged.
+
+2026-05-31 editor slider default text strategy owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now delegates `Slider::new` default format/parse
+construction to `controls/slider/model.rs`. `model.rs` owns integer-or-three-decimal display text
+and trimmed f64 parsing defaults, while `model/tests.rs` owns focused coverage for those defaults.
+Presentation overrides, pointer/typing behavior, and public `SliderOptions` remain unchanged.
+
+2026-05-31 editor slider typing adapter owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps NumericInput composition and typing
+mode lifecycle only. `controls/slider/typing.rs` owns typing parse quantization and validation
+adapter construction, while `typing/tests.rs` covers clamp/step quantization, unclamped range
+validation, and custom-validator delegation. Focus restore, NumericInput typing mode, and public
+`SliderOptions` remain unchanged.
+
+2026-05-31 editor slider pointer state owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps pointer event wiring and rendering.
+`controls/slider/pointer.rs` owns slide/typing mode resets, drag pointer begin/clear/finish, and
+matching-pointer policy, while `pointer/tests.rs` covers the state transitions. Double-click typing
+entry, missed-pointer-up cleanup, matching-pointer release, NumericInput commit/cancel reset, and
+public `SliderOptions` remain unchanged.
+
+2026-05-31 editor slider runtime paint chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps event wiring, layout, and paint
+application only. `controls/slider/chrome.rs` owns resolved runtime paint derivation from chrome
+tokens, hover/pressed accent mixing, and disabled alpha attenuation, while `chrome/tests.rs` covers
+token precedence plus paint state behavior. Pointer/typing behavior, rendering layout, and public
+`SliderOptions` remain unchanged.
+
+2026-05-31 editor slider geometry chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now consumes resolved track/thumb geometry from
+the chrome owner. `controls/slider/chrome.rs` owns slider track/thumb metric fallback, minimum track
+height, thumb-at-least-track clamping, and radius derivation, while `chrome/tests.rs` covers default
+and clamped geometry behavior. Pointer math, rendering layout, and public `SliderOptions` remain
+unchanged.
+
+2026-05-31 editor slider track/thumb props chrome owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps element composition order and value
+display assembly only for the track row. `controls/slider/chrome.rs` owns track flex props,
+left/right segment container props, and thumb container props, while `chrome/tests.rs` covers track
+layout, segment shape, fixed thumb diameter, border, and radius behavior. Render order, pointer
+math, value display layout, and public `SliderOptions` remain unchanged.
+
+2026-05-31 editor slider frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps public Slider orchestration, keyed
+state, pointer handlers, value math, resolved paint/geometry handoff, and NumericInput typing mode.
+The private `controls/slider/frame.rs` owner contains input-group frame assembly, track/thumb
+children, optional value display segment, readout styling, and value display test-id decoration.
+Pointer event wiring, typing handoff, track/thumb render order, and public `SliderOptions` remain
+unchanged.
+
+2026-06-01 editor slider element owner-split result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps the public Slider API,
+`NumericPresentation` adoption, identity keying, and child-owner routing. The private
+`controls/slider/element.rs` owner contains keyed element assembly, slider state/focus-handoff
+storage, pressable pointer hooks, NumericInput typing composition, focus handoff synchronization,
+and frame owner invocation. Public constructors/builders, identity semantics, pointer/typing
+behavior, resolved paint/geometry policy, and public `SliderOptions` remain unchanged.
+
+2026-05-31 editor numeric-input model/session owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps NumericInput constructors,
+builder methods, keyed control orchestration, validation message rendering, and presentation test
+routing. `controls/numeric_input/model.rs` owns options, error display, outcome/type aliases, and
+edit-line text-style policy; `model/tests.rs` owns line-box coverage; `session.rs` owns draft/error
+local model allocation. Public option/type alias names and default selection behavior remain
+unchanged.
+
+2026-05-31 editor text-field draft-controller owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now re-exports
+`TextFieldDraftController` from `buffered/controller.rs` and keeps buffered state, focus/blur
+planning, session sync, commit/cancel helpers, shortcut policy, and tests. `controller.rs` owns the
+public controller, private binding, commit/discard forwarding, bind/unbind, and Debug output. The
+public text-field re-export path remains unchanged.
+
+2026-05-31 editor text-field buffered tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/buffered.rs` now keeps buffered runtime state,
+focus/blur/session helpers, commit/cancel helpers, and shortcut policy only. `buffered/tests.rs`
+owns focus/blur plan coverage, stable line-box default coverage, and draft-controller
+commit/discard/no-op behavior tests.
+
+2026-05-31 editor text-field element child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
+draft-controller re-export. `controls/text_field/element.rs` owns keyed element construction,
+input/textarea assembly, buffered session wiring, clear affordance wiring, and focus-selection
+handoff. Public TextField builders, option names/defaults, buffered draft behavior, clear-button
+reset behavior, multiline shortcuts, password mode, assistive semantics, and IMUI adapter routing
+remain unchanged.
+
+2026-05-31 editor color-edit numeric tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps color-edit policy, picker,
+preview, drag/drop, copy, tooltip, and shared HSV assertion coverage. `color_edit/tests/numeric.rs`
+owns popup numeric mode ordering, RGB/HSV readout formatting, hex/numeric parsing, alpha
+preservation, and HSV conversion roundtrip coverage.
+
+2026-05-31 editor color-edit picker tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps color-edit policy/defaults,
+drag/drop, copy, tooltip, and shared HSV assertion coverage. `color_edit/tests/picker.rs` owns SV
+picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, original restore,
+and a11y alpha percent coverage. Picker geometry, preview alpha policy, original-restore component
+rules, and public color-edit behavior remain unchanged.
+
+2026-05-31 editor color-edit hue-wheel model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/model.rs` now keeps numeric text/parse helpers,
+RGB/HSV conversion, SV/hue bar helpers, and root re-exports. `color_edit/model/hue_wheel.rs` owns
+hue-wheel geometry, target selection, barycentric triangle math, cursor projection, and hue-wheel
+HSV updates. Hue-wheel import paths inside `color_edit`, target hit-testing, rotated triangle
+geometry, SV cursor projection, HSV update math, numeric input parsing, and picker tests remain
+unchanged.
+
+2026-05-31 editor color-edit popup policy tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps palette/history, drag/drop,
+eyedropper, tooltip/copy payload, and shared HSV assertion coverage.
+`color_edit/tests/popup_policy.rs` owns popup defaults, side-preview ratio/defaults, alpha-preview
+modes, tooltip/copy defaults, visible-content swatch policy, and runtime override sync coverage.
+Popup policy and public color-edit behavior remain unchanged.
+
+2026-05-31 editor color-edit drag/drop tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps palette/history, eyedropper,
+tooltip/copy payload, and shared HSV assertion coverage. `color_edit/tests/drag_drop.rs` owns
+palette slot drop defaults/events and color drag/drop payload shape/application coverage. Palette
+slot metadata, RGB-only palette slot semantics, local payload defaults, and COL3F/COL4F alpha rules
+remain unchanged.
+
+2026-05-31 editor color-edit palette tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` now keeps eyedropper, tooltip/copy
+payload, and shared HSV assertion coverage. `color_edit/tests/palette.rs` owns preset uniqueness,
+hex formatting, default palette source, and app-owned palette/history slot coverage. Public
+ColorEdit palette/history option behavior remains unchanged.
+
+2026-05-31 editor color-edit affordance tests owner-split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs` is now a test hub with module routing
+plus the shared HSV assertion helper. `color_edit/tests/affordances.rs` owns app-owned eyedropper
+defaults, sample alpha application, tooltip preview text, and copy-as payload formats. Public
+ColorEdit eyedropper/tooltip/copy behavior remains unchanged.
+
+2026-05-31 menu interaction behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
+installation and keyboard behavior orchestration only. `behavior/activation.rs` owns activate
+handling, close-popup mutation, clicked transient recording, lifecycle instant marking, and command
+dispatch. `behavior/response.rs` owns clicked transient consumption and response population.
+Public menu item behavior remains unchanged.
+
+2026-05-31 checkbox entry render owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/entry.rs` now owns public checkbox model
+entrypoints and label identity scoping only. `entry/render.rs` owns model reads, pressable props,
+behavior installation, field chrome, indicator/label mounting, and response return. Public
+checkbox facade behavior remains unchanged.
+
+2026-05-31 tooltip runtime model owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now keeps trigger-id validation,
+provider defaults, layout/interaction/request orchestration, and response return only.
+`runtime/models.rs` owns local open/panel models, Radix trigger event models, last-pointer
+tracking, dismiss handler installation, and pointer-move open gate installation. Public tooltip
+facade behavior remains unchanged.
+
+2026-05-31 virtual-list element assembly owner-split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` is now a thin module/re-export hub.
+`virtual_list_controls/element.rs` owns keyed runtime list assembly, default scroll-handle slot
+state, build-focus forwarding, list semantics, and response packaging. Public virtual-list facade
+behavior remains unchanged.
+
+2026-05-31 bullet-text test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests.rs` is now a thin test hub.
+`tests/text_role.rs` owns compact paragraph text-role coverage for bullet labels. Public
+bullet-text behavior remains unchanged.
+
+2026-05-31 drag/drop test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/drag_drop/tests.rs` is now a thin test hub.
+`tests/source.rs` owns source no-trigger fallback coverage, while `tests/target.rs` owns target
+no-trigger fallback coverage. Public drag/drop behavior remains unchanged.
+
+2026-05-31 label-identity test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/label_identity/tests.rs` is now a thin test hub.
+`tests/double_hash.rs` owns plain and `##` identity coverage, while `tests/triple_hash.rs` owns
+`###` stable identity and precedence coverage. Public label identity behavior remains unchanged.
+
+2026-05-31 image-item test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` is now a thin test hub.
+`tests/helpers.rs` owns size/opacity/UV normalization coverage, while `tests/props.rs` owns image
+props fill/fit/sampling/UV coverage. Public image-item behavior remains unchanged.
+
+2026-05-31 radio entry/props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` is now a thin module/re-export hub.
+`radio/entry.rs` owns label identity, behavior installation, field chrome, and visual row assembly,
+while `radio/props.rs` owns `PressableProps` plus radio semantics wiring. Public radio behavior
+remains unchanged.
+
+2026-05-31 disclosure visual style owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/style.rs` is now a thin re-export hub.
+`style/padding.rs` owns content padding by disclosure kind, while `style/palette.rs` owns
+`DisclosurePalette` and palette resolution. Public disclosure behavior remains unchanged.
+
+2026-05-31 input-text policy command owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands/input.rs` now installs the focused
+key handler and dispatches resolved commands only. `input/resolve.rs` owns completion/history/
+undo/redo command capture, repeat gating, IME/meta/alt suppression, and key-to-command resolution.
+Public input-text command behavior remains unchanged.
+
+2026-05-31 table body-row cell-preparation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs` now keeps row iteration,
+keying, striping, and row wrapping only. `body_rows/cells.rs` owns hidden-column filtering,
+fallback empty-cell creation, default/explicit test-id precedence, and prepared-cell wrapping.
+Public table rendering behavior remains unchanged.
+
+2026-05-31 table body wrapper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` is now a thin hub.
+`body/row.rs` owns row wrapping and grouped row chrome, while `body/cell.rs` owns cell wrapping
+and semantics decoration. Public table body wrapper behavior remains unchanged.
+
+2026-05-31 table render planning owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now keeps final table assembly only.
+`render/plan.rs` owns visible-column scanning, horizontal scroll-handle planning, header gating,
+and column test-id suffix preparation. Public table rendering behavior remains unchanged.
+
+2026-05-31 table row-group composition owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now dispatches only.
+`row_groups/unpinned.rs` owns the no-pinned fill/scroll path, while `row_groups/pinned.rs` owns
+left/center/right pinned group assembly. Public table row-group behavior remains unchanged.
+
+2026-05-31 floating-window resize drag-application owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` now owns delta
+calculation and `last_resize_position` updates only. `drag_apply/bounds.rs` owns min/max clamps,
+while `drag_apply/handles.rs` owns handle-specific size/position mutation. Public floating-window
+resize drag behavior remains unchanged.
+
+2026-05-31 floating-window resize handle-mutation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply/handles.rs` now dispatches
+by handle family only. `handles/edge.rs` owns left/right/top/bottom edge mutation, while
+`handles/corner.rs` owns corner mutation. Public floating-window resize handle behavior remains
+unchanged.
+
+2026-05-31 floating-window resize commit mutation owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now keeps state
+transaction, pixel snap, and output packing. `commit/mutation.rs` owns collapsed/reset/drag
+lifecycle mutation. Public floating-window resize commit behavior remains unchanged.
+
+2026-05-31 facade-writer text test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` is now a thin test hub.
+`tests/text.rs` owns `ui.text(...)` dense single-line coverage, while `tests/wrapped.rs` owns
+`ui.text_wrapped(...)` explicit wrapping coverage. Public facade writer behavior remains unchanged.
+
+2026-05-31 virtual-list test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls/tests.rs` is now a thin test hub.
+`tests/fixed_known.rs` owns fixed and known row clipping coverage, while `tests/measured.rs`
+owns measured overflow visibility coverage. Public virtual-list behavior remains unchanged.
+
+2026-05-31 multi-select test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select/tests.rs` is now a thin test hub.
+`tests/clicks.rs` owns plain/primary/shift click policy coverage, while
+`tests/ordered_selection.rs` owns ordered-selection normalization and anchor repair coverage.
+Public multi-select behavior remains unchanged.
+
+2026-05-31 tooltip test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests.rs` is now a thin test hub.
+`tests/mount.rs` owns no-trigger mount behavior, `tests/text_role.rs` owns compact body text-role
+coverage, and `tests/options.rs` owns default placement/delay/test-id coverage. Public tooltip
+behavior remains unchanged.
+
+2026-05-31 control-chrome test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` is now a thin test hub.
+`tests/text_roles.rs` owns control/fill text single-line shrink coverage, while `tests/layout.rs`
+owns row/stack dense layout helper coverage. Public control chrome behavior remains unchanged.
+
+2026-05-31 text-control chrome test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/tests.rs` is now a thin test hub.
+`tests/input_chrome.rs` owns input-text fixed-height chrome coverage, while
+`tests/textarea_chrome.rs` owns textarea fill-width chrome coverage. Public text-control behavior
+remains unchanged.
+
+2026-05-31 selectable test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/tests.rs` is now a thin test hub.
+`tests/palette.rs` owns selected/hover/disabled palette and highlight coverage, while
+`tests/row_text.rs` owns shared list-row text-role coverage for selectable rows. Public selectable
+behavior remains unchanged.
+
+2026-05-31 table-column visibility test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs` is now a thin test hub.
+`tests/state.rs` owns runtime override, snapshot, and column-application coverage, while
+`tests/menu.rs` owns stable menu-column id, visible label, and test-id suffix coverage. Public
+table-column visibility behavior remains unchanged.
+
+2026-05-31 menu-control test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs` is now a thin test hub.
+`tests/text_roles.rs` owns label/shortcut/indicator text-role coverage, while
+`tests/root.rs` owns root pressable and visible-child mounting coverage. Shared helpers and module
+routing stay in the root file, and the public menu-item behavior remains unchanged.
+
+2026-05-31 debug-draw path-builder test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder.rs` is now a thin test
+hub. Stroke/fill command recording and invalid finished-path cleanup live in
+`tests/path_builder/commands.rs`, rectangle and rounded-rectangle sampling coverage lives in
+`tests/path_builder/rects.rs`, Bezier defaults live in `tests/path_builder/curves.rs`, and
+circular/elliptical arc defaults live in `tests/path_builder/arcs.rs`. The public
+`ImUiDebugDrawPath` behavior and source-gated path-builder coverage remain unchanged.
+
+2026-05-31 debug-draw draw-list command test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands.rs` is now a thin
+test hub. Broad command-order coverage lives in `tests/draw_list/commands/core.rs`, triangle
+mesh/image mesh coverage lives in `tests/draw_list/commands/meshes.rs`, image/SVG overlay coverage
+lives in `tests/draw_list/commands/media.rs`, and concave polygon fill coverage lives in
+`tests/draw_list/commands/polygons.rs`. `ImUiDebugDrawList` command recording behavior and public
+debug-draw authoring APIs remain unchanged.
+
+2026-05-31 debug-draw core command-order test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands/core.rs` is now a
+thin nested hub. `core/linear.rs` owns line/poly/rect/quad/triangle command ordering,
+`core/round_curve.rs` owns circle/ngon/ellipse/Bezier ordering, `core/text.rs` owns text command
+ordering, and `core/order.rs` retains the all-command aggregate order proof. Public debug-draw
+behavior remains unchanged.
+
+2026-05-31 debug-draw draw-list summary test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries.rs` is now a thin
+test hub. `tests/draw_list/summaries/merge_order.rs` owns command-summary merge ordering,
+`tests/draw_list/summaries/counts.rs` owns aggregate list-summary counts, and
+`tests/draw_list/summaries/clip_stack.rs` owns effective clip-stack plus clip push/pop command
+coverage.
+
+2026-05-31 debug-draw path helper test-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths.rs` is now a thin test hub.
+Rect/polyline/polygon/triangle/quad path closure coverage lives in `tests/paths/linear.rs`,
+circle/ngon/ellipse generation and ellipse default/rotation coverage lives in `tests/paths/round.rs`,
+and native quadratic/cubic Bezier command coverage lives in `tests/paths/beziers.rs`. Path helper
+behavior and debug-draw scene output contracts remain unchanged.
+
+2026-05-30 text-field buffered child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_field.rs` now keeps the public control/options and
+layout orchestration only. `controls/text_field/buffered.rs` owns the draft controller, buffered
+state, session planning, commit/cancel helpers, clear-button session reset, and the buffered unit
+tests. Public TextField options, draft-controller API, buffered blur behavior, and
+`text_field_api_smoke` coverage remain unchanged.
+
+2026-05-30 text-assist field model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps control orchestration, panel
+rendering, overlay request, key handling, and accept commits. `controls/text_assist_field/model.rs`
+owns `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
+`RenderedTextAssistPanel`, and the focused option/default tests. Public option names, default
+unbuffered input policy, item test-id prefix fallback, rendered panel handoff, inline empty-label
+behavior, and anchored-overlay height policy remain unchanged.
+
+2026-05-31 text-assist field model tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/model.rs` now keeps option/model records
+and test-owner routing. `controls/text_assist_field/model/tests.rs` owns option/default coverage.
+Public option names, default unbuffered input policy, item test-id prefix fallback, rendered panel
+handoff, and root control orchestration remain unchanged.
+
+2026-05-30 text-assist field overlay child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input and panel
+orchestration. `controls/text_assist_field/overlay.rs` owns anchored placement, diagnostics
+placement recording, dismissible popover request construction, branch registration, query
+dismissal writeback, and overlay open-state model creation. Anchor fallback, popper placement,
+overlay diagnostics, dismiss behavior, and local open model behavior remain unchanged.
+
+2026-05-30 text-assist field panel child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration and
+accept flow. `controls/text_assist_field/panel.rs` owns suggestion panel content, option rows,
+scroll wrapping, listbox semantics, popup chrome, and rendered panel packaging. Visible-match
+listbox semantics, active/disabled row palette, option activation, scroll threshold, popup surface
+chrome, item test-id derivation, and rendered panel handoff remain unchanged.
+
+2026-05-31 text-assist field root tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now keeps input/key orchestration,
+accept flow, helper policy, and test-owner routing. `controls/text_assist_field/tests.rs` owns
+inline empty-label and anchored-overlay default-height coverage. Panel and overlay child-owner
+boundaries remain unchanged.
+
+2026-05-30 property-row reset child-owner result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the row layout and value
+orchestration plus reset delegation only. `composites/property_row/reset.rs` owns
+`OnPropertyRowReset`, `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable /
+activation helpers. Row layout, value-slot growth, reset keying, and property chrome semantics
+remain unchanged.
+
+2026-05-30 property-row layout child-owner result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps the public composite,
+test-facing value slot marker, and row/column child assembly. `composites/property_row/layout.rs`
+owns `PropertyRowLayoutVariant`, theme-derived resolved layout/chrome metrics, auto-stack variant
+selection, min-height application, and focused layout-policy tests. Public row options, row vs
+column rendering, value-slot growth, fixed label line boxes, and reset/action slot mounting remain
+unchanged.
+
+2026-05-30 property-row tests child-owner result:
+`ecosystem/fret-ui-editor/src/composites/property_row.rs` now keeps implementation and a thin
+`mod tests;` hook. `composites/property_row/tests.rs` owns the wrapping label/value-slot regression
+harness, including value-slot marker lookup, wrapping text services, and layout-query assertions.
+Public row options, label line-box behavior, wrapping value growth, and value-slot overflow
+contracts remain unchanged.
+
+2026-05-31 editor field-status tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/field_status.rs` now keeps badge implementation and palette
+resolution plus test-owner routing. `controls/field_status/tests.rs` owns short-label and luma
+coverage. Compact badge text-role routing, status palette mixing, destructive/loading label policy,
+and badge layout remain unchanged.
+
+2026-05-31 editor chrome tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/chrome.rs` now keeps editor chrome/style resolution and
+test-owner routing. `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.
+Editor token precedence, legacy component fallback behavior, line-height policy, and focus ring
+token routing remain unchanged.
+
+2026-05-31 editor colors tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/colors.rs` now keeps semantic color helper implementation
+and test-owner routing. `primitives/colors/tests.rs` owns color fallback policy coverage.
+Editor-owned token precedence, legacy text-field fallback behavior, shared palette fallbacks,
+invalid lane fallback, and popup/panel fallback order remain unchanged.
+
+2026-05-31 editor density tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/density.rs` now keeps density policy implementation and
+test-owner routing. `primitives/density/tests.rs` owns affordance extent coverage. Editor density
+defaults, theme metric resolution, non-negative clamping, and hit-target extent policy remain
+unchanged.
+
+2026-05-31 editor edit-session tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/edit_session.rs` now keeps edit-session primitive
+implementation and test-owner routing. `primitives/edit_session/tests.rs` owns dirty-state
+coverage. Pre-edit capture, commit/cancel clearing, active-state reporting, and changed-from
+semantics remain unchanged.
+
+2026-05-31 editor numeric-format tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_format.rs` now keeps numeric format
+implementation and test-owner routing. `primitives/numeric_format/tests.rs` owns formatting and
+presentation coverage. Fixed decimal formatting, plain parsing, affix format/parse semantics,
+duplicate chrome affix suppression, presentation chrome layering, and degrees helper behavior
+remain unchanged.
+
+2026-05-31 editor numeric-text-entry tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs` now keeps numeric text-entry policy
+implementation and test-owner routing. `primitives/numeric_text_entry/tests.rs` owns
+replacement-plan coverage. Focus handoff state, replace-on-focus arming, draft/error
+synchronization, paste/delete/navigation key planning, and text-insertion key detection remain
+unchanged.
+
+2026-05-31 editor numeric-value tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_value.rs` now keeps numeric constraint
+implementation and test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and
+quantization coverage. Bound normalization, finite-step filtering, clamp ordering, quantization
+origin, and scalar conversion behavior remain unchanged.
+
+2026-05-31 editor popup-surface tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/popup_surface.rs` now keeps popup chrome implementation
+and test-owner routing. `primitives/popup_surface/tests.rs` owns popup surface chrome coverage.
+Overlay/inline shadow policy, popup token precedence, radius/shadow metric resolution, shadow color
+fallback, and dense preset popup chrome remain unchanged.
+
+2026-05-31 editor popup-list tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/popup_list.rs` now keeps popup-list
+state/dimensions/palette policy and test-owner routing. `primitives/popup_list/tests.rs` owns
+palette and height coverage. Popup-list state records, row gap/height helpers, default max-height
+budget, highlight palette, disabled foreground, and text-role ownership in the readout child owner
+remain unchanged.
+
+2026-05-31 editor visuals tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps editor widget visual policy and
+test-owner routing. `primitives/visuals/tests.rs` owns visual-state policy coverage. Shared visual
+policy, selected-frame fill/foreground behavior, disabled alpha attenuation, invalid chrome
+routing, and icon-button hover overlay source remain unchanged.
+
+2026-05-31 editor drag-value core tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs` now keeps drag-to-edit primitive
+implementation and test-owner routing. `primitives/drag_value_core/tests.rs` owns session and
+response coverage. Scrub session commit/cancel semantics, response accessor privacy, and response
+construction remain unchanged.
+
+2026-05-31 editor inspector-panel tests child-owner result:
+`ecosystem/fret-ui-editor/src/composites/inspector_panel.rs` now keeps panel composition and
+test-owner routing. `composites/inspector_panel/tests.rs` owns the single-line title layout
+regression harness. Panel composition, title text-role routing, toolbar/body slots, and layout query
+coverage remain unchanged.
+
+2026-05-31 editor gradient tests child-owner result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps gradient editor composition
+and preview implementation. `composites/gradient_editor/tests.rs` owns empty-state text-role
+coverage. Gradient stop composition, preview canvas behavior, empty-state copy, and editor readout
+text-role routing remain unchanged.
+
+2026-05-31 editor gradient preview child-owner result:
+`ecosystem/fret-ui-editor/src/composites/gradient_editor.rs` now keeps public composition and stop
+rows. `composites/gradient_editor/preview.rs` owns preview drag state, pressable pointer handlers,
+gradient fill construction, and stop marker painting. Public gradient editor builders, stop
+sorting, preview drag mutation, marker painting, empty-state copy, and IMUI adapter routing remain
+unchanged.
+
+2026-05-30 editor readout popup-list child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup editor readout
+helpers only. `primitives/readout/popup_list.rs` owns the popup-list row, centered-row,
+option-caption, and empty-state text helpers plus the focused popup-list tests. Popup row geometry,
+alignment, empty-state copy, and popup-list text-role coverage remain unchanged.
+
+2026-05-31 editor readout popup-list tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout/popup_list.rs` now keeps popup-list readout helper
+implementation and test-owner routing. `primitives/readout/popup_list/tests.rs` owns popup-list
+readout text-role coverage. Popup row text props, empty text props, centered row alignment, fixed
+caption line boxes, and direct `TextProps` allowance for the readout child owner remain unchanged.
+
+2026-05-30 editor readout theme-preset child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared non-popup readout hub and
+re-exports theme preset picker text helpers. `primitives/readout/theme_preset.rs` owns the theme
+picker header, row label, row status text props, and fixed-line tests. Compact header sizing, row
+label/status line boxes, re-export paths, and style/theme picker rendering remain unchanged.
+
+2026-05-31 editor readout theme-preset tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout/theme_preset.rs` now keeps theme-preset readout
+helper implementation and test-owner routing. `primitives/readout/theme_preset/tests.rs` owns
+theme-preset fixed-line coverage. Compact header sizing, fixed row label/status line boxes, fixed
+status slot, re-export paths, and style/theme picker rendering remain unchanged.
+
+2026-05-31 editor input-group tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/input_group.rs` now keeps joined input-group helper
+implementation and test-owner routing. `primitives/input_group/tests.rs` owns value text-role layout
+coverage. Joined frame helpers, segment helpers, axis marker routing, and value text
+shrink/ellipsis policy remain unchanged.
+
+2026-05-31 editor readout tests child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the non-popup readout helper hub and
+child-owner re-exports. `primitives/readout/tests.rs` owns compact readout sizing and editor
+text-role regression tests. Non-popup helper names, text-role layout policy, compact readout
+sizing, and popup/theme-preset child-owner boundaries remain unchanged.
+
+2026-05-31 editor readout feedback child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared readout hub and re-exports
+feedback helpers. `primitives/readout/feedback.rs` owns status badge, inline error, and validation
+message text props. Status badge, inline error, validation message layout semantics, re-export
+paths, and readout regression coverage remain unchanged.
+
+2026-05-31 editor readout property child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared readout hub and re-exports
+property helpers. `primitives/readout/property.rs` owns property group header, inspector title,
+property-row label, and reset glyph text props. Property chrome layout semantics, re-export paths,
+and readout regression coverage remain unchanged.
+
+2026-05-31 editor readout input child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared readout hub and re-exports
+input helpers. `primitives/readout/input.rs` owns inline control label, input segment, input value,
+and axis marker text props. Input/axis layout semantics, re-export paths, and readout regression
+coverage remain unchanged.
+
+2026-05-31 editor readout section child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps the shared readout hub and re-exports
+section helpers. `primitives/readout/section.rs` owns section badge and section heading text props.
+Transform section badge/heading layout semantics, re-export paths, and readout regression coverage
+remain unchanged.
+
+2026-05-31 editor readout surface child-owner result:
+`ecosystem/fret-ui-editor/src/primitives/readout.rs` now keeps only the shared compact readout style
+owner plus child-module re-exports. `primitives/readout/surface.rs` owns preview caption,
+empty-state, and tooltip readout text props. Color popup preview captions, gradient empty-state
+text, color tooltip readout layout semantics, re-export paths, and readout regression coverage
+remain unchanged.
+
+2026-05-30 editor vec-edit axis child-owner result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
+orchestration. `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, reset options,
+reset action packaging, axis group rendering, and the focused axis-outcome test. Public
+constructors, reset options, outcome accessors, transform-edit routing, identity derivation, and
+row/column auto layout remain unchanged.
+
+2026-05-31 editor vec-edit layout child-owner result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now keeps Vec2/Vec3/Vec4 public control
+orchestration and axis group composition. `controls/vec_edit/layout.rs` owns axis token color
+resolution, auto-stack threshold calculation, Row/Column direction selection, grow policy, and
+id-source suffix derivation, while `controls/vec_edit/layout/tests.rs` owns focused layout-policy
+regressions. Public constructors, row/column auto-stack behavior, axis fallback colors, test-id
+derivation, transform-edit routing, and axis group composition remain unchanged.
+
+2026-05-30 editor transform section child-owner result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface,
+Vec3 composition, outcome routing, and linked-scale model/sync logic.
+`controls/transform_edit/sections.rs` owns row/column section chrome, badge/heading text-role
+routing, and link/uniform toggle layout. Public options, Vec3 composition, section text roles,
+link-scale test IDs, row/column selection, and uniform-scale sync remain unchanged.
+
+2026-05-30 editor transform sync child-owner result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now keeps TransformEdit public surface
+and Vec3 composition. `controls/transform_edit/sync.rs` owns linked-scale local model creation,
+sync-slot allocation, uniform-scale projection, model writeback, and focused sync tests. Public
+options, link toggle behavior, single-axis uniform projection, multi-axis edit rejection, and
+near-equal threshold policy remain unchanged.
+
+2026-05-30 editor axis-drag-value model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps the `AxisDragValue<T>` control
+orchestration. `controls/axis_drag_value/model.rs` owns public option/reset/outcome records,
+internal scrub/typing mode/state records, and the focused input text-style test. Public option
+fields, reset action packaging, outcome callback aliases, focus handoff behavior, mode transitions,
+and input text line-box policy remain unchanged.
+
+2026-05-31 editor axis-drag-value tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs` now keeps control orchestration and
+child-owner routing. `controls/axis_drag_value/tests.rs` owns presentation format/parse/chrome-affix
+coverage. `AxisDragValue::from_presentation`, NumericPresentation adoption, axis tint routing, and
+model child-owner boundaries remain unchanged.
+
+2026-05-31 editor axis-drag-value model tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/model.rs` now keeps model/type definitions
+and test-owner routing. `controls/axis_drag_value/model/tests.rs` owns density line-height coverage.
+Typing line-height resolution, default options, reset action packaging, outcome callback aliases,
+and control routing remain unchanged.
+
+2026-05-30 editor slider chrome child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, value flow, pointer/input
+switching, and layout orchestration. `controls/slider/chrome.rs` owns token fallback, color mixing,
+alpha attenuation, resolved chrome fields, and the focused chrome precedence test. Pointer/typing
+behavior, value formatting, theme token precedence, hover/pressed/disabled color mixing, and public
+slider options remain unchanged.
+
+2026-05-31 editor slider chrome tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider/chrome.rs` now keeps slider chrome/color resolution
+implementation and test-owner routing. `controls/slider/chrome/tests.rs` owns chrome precedence
+coverage. Theme token precedence, fallback palette behavior, color mixing, alpha attenuation, and
+slider control routing remain unchanged.
+
+2026-05-30 editor slider value-math child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider state, event handling, typing
+handoff, and layout orchestration. `controls/slider/value_math.rs` owns value quantization,
+normalized progress, pointer-position projection, and focused value-math tests. Pointer-x mapping,
+clamp/step quantization, thumb-radius compensation, track-degenerate behavior, typing fallback, and
+public slider options remain unchanged.
+
+2026-05-31 editor slider value-math tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider/value_math.rs` now keeps value-domain math
+implementation and test-owner routing. `controls/slider/value_math/tests.rs` owns value-math
+coverage. Quantization, normalized progress, thumb-radius pointer projection, degenerate track
+fallback, and slider control routing remain unchanged.
+
+2026-05-31 editor slider pointer projection value-math result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now delegates pointer-down and pointer-move local
+x projection to `controls/slider/value_math.rs::value_from_slider_local_x(...)`. The value-math
+owner now covers value-readout width subtraction, frame padding compensation, pointer clamping,
+thumb-radius mapping, and clamp/step quantization. Pointer down/drag event flow, value display
+layout, and public slider options remain unchanged.
+
+2026-05-31 editor slider presentation tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps slider control orchestration and
+child-owner routing. `controls/slider/tests.rs` owns presentation adoption coverage. Slider public
+constructors, NumericPresentation adoption, duplicate chrome affix suppression, and slider
+chrome/value-math child-owner boundaries remain unchanged.
+
+2026-05-31 editor slider model child-owner result:
+`ecosystem/fret-ui-editor/src/controls/slider.rs` now keeps the slider public surface, control
+orchestration, pointer/input behavior, and child-owner routing. `controls/slider/model.rs` owns
+`SliderMode`, `SliderState`, hidden layout projection, and affixed value composition, while
+`controls/slider/model/tests.rs` owns affixed-value helper coverage. Pointer/typing behavior, focus
+restore, hidden slide/input mounting, duplicate chrome affix suppression, and public slider options
+remain unchanged.
+
+2026-05-30 editor enum-select row child-owner result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options, trigger
+composition, and overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering,
+selection commit policy, item test-id normalization, and the focused row-policy tests. Trigger
+composition, overlay dismissal, filter/search behavior, popup empty-state rendering, row chrome,
+and selected-row reveal remain unchanged.
+
+2026-05-31 editor enum-select row tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/row.rs` now keeps option-row implementation and
+test-owner routing. `controls/enum_select/row/tests.rs` owns commit-policy and item-id coverage.
+Option-row rendering, popup-list row text-role routing, and overlay boundaries remain unchanged.
+
+2026-05-30 editor enum-select overlay child-owner result:
+`ecosystem/fret-ui-editor/src/controls/enum_select.rs` now keeps public control/options and trigger
+composition. `controls/enum_select/overlay.rs` owns overlay request assembly, popup panel/list
+layout, selected-row reveal, close-focus policy, viewport test-id derivation, and overlay helper
+tests. Trigger composition, search/filter behavior, popup placement, dismissal policy, row routing,
+and focus restore remain unchanged.
+
+2026-05-31 editor enum-select overlay tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/enum_select/overlay.rs` now keeps overlay implementation and
+test-owner routing. `controls/enum_select/overlay/tests.rs` owns close-focus, viewport-id, and
+visibility-contract coverage. Overlay request assembly, popup panel/list layout, selected-row
+reveal, viewport test-id derivation, row routing, and focus restore remain unchanged.
+
+2026-05-30 editor theme preset picker render child-owner result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
+installation, theme resolution, and render dispatch only. `render.rs` owns listbox semantics,
+header row, preset rows, and color mixing. Selected preset sync, item test IDs, activation
+behavior, and theme replay semantics remain unchanged.
+
+2026-05-31 editor theme preset picker tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps preset
+installation, theme resolution, render dispatch, and test-owner routing.
+`controls/editor_theme_preset_picker/tests.rs` owns listbox semantics, selected state, click
+activation, and reversible preset replay coverage. Render child-owner boundaries remain unchanged.
+
+2026-06-01 editor theme preset picker row owner-split result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` now keeps listbox
+container semantics, preset iteration, and header text routing. The private
+`controls/editor_theme_preset_picker/render/row.rs` owner contains ListBoxOption semantics,
+pressable activation, row chrome, row test IDs, density status label rendering, and color mixing.
+Listbox semantics, selected-state behavior, click activation, and public picker APIs remain
+unchanged.
+
+2026-05-31 editor numeric-input tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
+orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and
+presentation coverage. NumericInput public options, default selection behavior, validation message
+routing, density-derived edit line boxes, and NumericPresentation adoption remain unchanged.
+
+2026-05-31 editor drag-value tests child-owner result:
+`ecosystem/fret-ui-editor/src/controls/drag_value.rs` now keeps drag-value control orchestration and
+test-owner routing. `controls/drag_value/tests.rs` owns presentation format/parse/chrome-affix
+coverage. `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
+suppression, scrub/typing behavior, and value text-role routing remain unchanged.
+
+2026-05-30 textarea element and props child-owner result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now only owns the public wrapper and
+`ResponseExt` plumbing. `text_controls/textarea/element.rs` owns lifecycle, select-all, policy
+commands, and element mounting, while `text_controls/textarea/props.rs` owns `TextAreaProps` and
+IMUI chrome/style resolution. Facade calls, enabled gating, focus tracking, submit command
+behavior, and textarea layout semantics remain unchanged.
+
+2026-05-30 slider entry element child-owner result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` now owns label identity parsing,
+visible-label suffix stripping, and scoped facade routing only.
+`slider_controls/entry/element.rs` owns slider element construction, response population,
+interaction installation, chrome resolution, and visual child mounting. Slider facade calls,
+push-id scoping, enabled/disabled gating, a11y range semantics, pointer/keyboard behavior, and
+response lifecycle reporting remain unchanged.
+
+2026-05-30 virtual-list rendered-range child-owner result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` now keeps virtual-list element assembly,
+row wrapping, build-focus forwarding, runtime option resolution, and response packaging.
+`virtual_list_controls/range.rs` owns first/last rendered index tracking and rendered-range
+projection. Row height resolution, row test IDs, clipping semantics, and public
+`VirtualListResponse` reporting remain unchanged.
+
+2026-05-30 porting-sugar scoped layout child-owner result:
+`ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` is now a private hub.
+`scoped/flow.rs` owns `items` and `same_line` container routing, while `scoped/indent.rs` owns
+indent spacer/content composition. Item-spacing token behavior, dummy spacer sizing, content test
+IDs, focus forwarding, and public porting-sugar facade behavior remain unchanged.
+
+2026-05-30 floating-window closed response child-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_window.rs` now keeps open-model reads and normal
+floating-area render routing. `floating_window/closed.rs` owns the open=false sentinel response,
+including the zero area id, initial position/size preservation, and inactive
+`FloatingWindowResponse` flags. Normal floating-area routing, on-area chrome rendering, and public
+window response behavior remain unchanged.
+
+2026-05-30 menu item interaction parts child-owner result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now keeps enabled/action gating,
+menubar policy capture, and thin behavior forwarding. `interaction/parts.rs` owns
+`MenuItemInteractionParts`, `MenuItemInteraction`, pressable prop/a11y construction, and runtime
+data packaging. Menu item enabled/action gating, close-popup/action behavior, keyboard wiring,
+active-trigger installation, and response semantics remain unchanged.
+
+2026-05-30 floating-area drag snapshot child-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` now keeps position/test-id
+state reconciliation, scale-factor lookup, device-pixel snapping, and final state readback.
+`drag_state/snapshot.rs` owns active drag lookup, same-window drag filtering, and drag snapshot
+projection. Floating-area drag movement, snapping, test-id refresh, and `FloatingAreaResponse`
+movement semantics remain unchanged.
+
+2026-05-30 button visual content child-owner result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now keeps `ButtonVisual`, chrome
+resolution, and visible/invisible selection only. `button_controls/visual/content.rs` owns
+`ButtonVisualContent`, foreground-aware centered text child construction, and empty invisible-button
+content. Button chrome resolution, variant sizing, arrow glyph labels, centered text mounting, and
+button response behavior remain unchanged.
+
+2026-05-30 child-region resize handle child-owner result:
+`ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now keeps the pointer-region handle
+element assembly, axis layout application, and handle test-id stamping. `handle/events.rs` owns the
+pointer down/move/up drag callbacks, cursor request, thresholded drag movement, and pointer release
+finish call. `handle/drag_state.rs` owns `ResponseExt` population plus started/stopped drag edge
+tracking. Resize handle layout, enabled gating, threshold/cursor behavior, and
+`ChildRegionResponse` resize drag semantics remain unchanged.
+
+2026-05-30 floating-window on-area state child-owner result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_on_area/state.rs` now keeps the on-area state
+preparation flow, resize snapshot/prepare calls, scale-factor lookup, and chrome response assembly.
+`state/collapsed.rs` owns collapsed-model toggle/readback, while `state/position.rs` owns area
+position feedback after resize. Collapsed toggles, resize state preparation, area position feedback,
+and `FloatingWindowChromeResponse` semantics remain unchanged.
+
+2026-05-30 interaction-runtime element-model child-owner result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/models/element.rs` is now a private
+module/re-export hub. `element/context_menu.rs` owns context-menu anchor models,
+`element/press.rs` owns long-press signal and pointer-click modifier models,
+`element/lifecycle.rs` owns lifecycle session models, and `element/floating.rs` owns floating-window
+collapsed models. Public interaction-runtime re-exports and model identity semantics remain
+unchanged.
+
+2026-05-30 table-column visibility menu-items child-owner result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` now keeps header context-menu
+trigger selection and popup orchestration. `menu/items.rs` owns repeated column-menu item
+composition, generated item test IDs, runtime visibility reads, and `TableColumnVisibilityMenuResponse`
+aggregation, while `menu/item.rs` still owns the single checkbox item mutation. Public helper
+forwarding, model updates, filtering, and header context-menu response semantics remain unchanged.
+
+2026-05-30 input-text element child-owner result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` now keeps the public input-text wrapper,
+assistive-semantics re-export, and shared model-changed helper. `input/element.rs` owns
+ElementContext element assembly, response lifecycle population, select-all-on-focus command
+emission, input-text props mounting, and policy-command installation. Input-text facade calls,
+picker assistive semantics, filters, compact chrome/style, and changed/focus response semantics
+remain unchanged.
+
+2026-05-30 submenu clear reset child-owner result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state/clear/reset.rs` is now a
+private reset module/re-export hub. `reset/active.rs` owns active submenu value/trigger/geometry
+clearing, `reset/pending.rs` owns pending-open value/trigger cleanup, and `reset/runtime.rs` owns
+pointer-grace, close/focus/open timer, focus target, and focus retry reset cleanup. Submenu hover,
+shortcut, sibling-switch, and close semantics remain unchanged.
+
+2026-05-30 begin-menu open-policy child-owner result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` is now a private
+module/re-export hub. `open_policy/toggle.rs` owns trigger-click menubar/popup toggling,
+`open_policy/resolve.rs` owns open-request resolution and stale row/popup close cleanup, and
+`open_policy/disabled.rs` owns disabled-popup close cleanup. Menubar open-menu synchronization,
+active-trigger behavior, popup open/close semantics, and `DisclosureResponse` reporting remain
+unchanged.
+
+2026-05-30 table header-row cells child-owner result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now keeps the keyed header row and
+row wrapping only. `header_row/cells.rs` owns visible-header-cell assembly, sortable/plain wrapper
+selection, resize response initialization, `TableHeaderResponse` collection, and prepared-cell
+projection. Header visibility, sort/resize metadata, header test IDs, pinned/horizontal-scroll
+wrapping, and aggregate `TableResponse` semantics remain unchanged.
+
+2026-05-30 floating-window resize state commit output-pack result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now keeps resize state
+lookup, collapsed/non-drag reset, drag application, and device-pixel snapping. The new
+`state/commit/output_pack.rs` owns committed state capture, handle test-id packaging, and
+`FloatingWindowResizeStateOutput` construction. Resize handle IDs, size/position output, and active
+`resizing` semantics remain unchanged.
+
+2026-05-30 debug-draw path-builder arc child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods/arcs.rs` is now a
+private module hub. `arcs/circular.rs` owns `arc_to` and `arc_to_fast`, while
+`arcs/elliptical.rs` owns `elliptical_arc_to`. Method names, invalid-input handling, default
+segment fallback, 12-step fast arc behavior, elliptical rotation handling, and path point storage
+remain unchanged.
+
+2026-05-30 debug-draw rounded rect child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects/rounded.rs` now keeps only
+rounded-rect point append orchestration. `rounded/corners.rs` owns per-corner rounding selection
+and corner arc sampling, while `rounded/geometry.rs` owns rect max-point calculation. Effective
+rounding clamp, fallback square points, corner sample order, and path-builder behavior remain
+unchanged.
+
+2026-05-30 debug-draw filled polygon child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` is now
+a private re-export hub. `polygons/multi.rs` owns convex and concave polygon fill painting, while
+`polygons/primitives.rs` owns quad and triangle fill painting plus degenerate-triangle filtering.
+Filled path command generation, shared fill style, canvas path dispatch, and draw-list behavior
+remain unchanged.
+
+2026-05-30 debug-draw media dispatch child-owner result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/dispatch.rs` is now a private
+dispatch hub for media-command routing. `dispatch/raster_commands.rs` owns image/image-region/
+image-quad routing, `dispatch/rounded_commands.rs` owns rounded image/region routing,
+`dispatch/svg_commands.rs` owns SVG image/mask-icon routing, and `dispatch/non_media.rs` keeps an
+exhaustive non-media no-op guard. Raster, rounded, and SVG paint behavior remains in the existing
+paint owners.
+
+2026-05-30 button root wrapper child-owner result:
+`ecosystem/fret-ui-kit/src/imui/button_controls.rs` is now a private re-export hub for
+public-in-IMUI button wrappers. `button_controls/plain.rs` owns button, small-button, arrow, and
+invisible-button wrapper routing; `button_controls/actions.rs` owns action and payload-action
+wrapper routing. Variant selection, push-id scoping, action payload forwarding, behavior dispatch,
+and response projection remain unchanged.
+
+2026-05-30 popup-modal layer child-owner result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` now keeps layer input/output,
+root-name mounting, stack wiring, and panel-focus handoff. `layer/backdrop.rs` owns modal barrier
+construction and outside-press dismissal plumbing, while `layer/panel.rs` owns panel semantics,
+child `ImUiFacade` mounting, and panel id capture. Modal root naming, layer stack layout, panel
+semantics, focus handoff, and public popup modal facade behavior remain unchanged.
+
+2026-05-30 disclosure entry child-owner result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now keeps public
+collapsing-header/tree-node wrappers, label identity normalization, and aggregate
+`DisclosureResponse` assembly. `entry/state.rs` owns collapsible open-model setup, open reads,
+toggled detection, and enabled gating; `entry/body.rs` owns trigger/content child construction.
+Public disclosure facade calls, root layout, trigger/content mounting, and response semantics remain
+unchanged.
 
 2026-05-29 facade root surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` now keeps the single public
@@ -335,6 +2157,13 @@ and alpha entrypoint re-exports. `picker/alpha.rs` owns horizontal and vertical 
 previews, gradient overlays, thumb overlays, pointer update application, and alpha coordinate/a11y
 helper math.
 
+2026-05-31 color-edit alpha preview child-owner result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha.rs` now keeps horizontal and
+vertical bar pressable interaction, model/draft/error mutation, and alpha helper math.
+`picker/alpha/preview.rs` owns preview stacks, checkerboard-backed alpha gradients, and
+horizontal/vertical thumb overlays. Horizontal/vertical alpha bars, pointer mutation, alpha
+coordinate mapping, checkerboard/gradient/thumb visuals, and picker tests remain unchanged.
+
 2026-05-30 color-edit hue bar owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` keeps color picker composition
 and shared HSV color application. `picker/hue_bar.rs` owns hue bar previews, vertical hue
@@ -633,6 +2462,12 @@ merging.
 disabled alpha, and visual dimensions. `header/resize.rs` keeps pointer-region drag setup, cursor
 behavior, response writeback, drag response edge merging, and test-id attachment.
 
+2026-05-30 table header resize props/behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/props.rs` now owns pointer-region
+sizing and enabled props. `header/resize/behavior.rs` owns pointer down/move/up hooks, cursor
+behavior, and resize drag response edge merging. `header/resize.rs` keeps column identity, keyed
+shell, visual mounting, and test-id attachment.
+
 2026-05-28 debug-draw filled path painter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled/polygons.rs` now owns
 convex/concave/quad/triangle fill painting, and `paint_shapes/paths/filled/round.rs` owns
@@ -671,11 +2506,25 @@ down/move/up drag state transitions, long-press timer coordination, active item 
 drag-started/stopped transients. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers
 and private sub-owner re-exports.
 
+2026-05-30 pressable drag phase child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pressable.rs` is now a private phase hub.
+`pressable/down.rs` owns pointer-down active-item/timer/drag begin setup, `pressable/move_phase.rs`
+owns thresholded move transitions and drag started/stopped transients, and `pressable/up.rs` owns
+pointer-up active-item/timer cleanup and drag cancelation. Drag kind/threshold helpers and public
+response drag state remain unchanged.
+
 2026-05-28 drag-source payload lifecycle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` now owns pointer-move
 active payload tracking, hovered-target preservation, and pointer-up delivery insertion.
 `drag_drop/source/hooks.rs` keeps enabled gating, cross-window drag upgrade policy, and the private
 payload-lifecycle delegation.
+
+2026-05-30 drag-source payload lifecycle child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks/payload_lifecycle.rs` is now a private hook
+installer hub. `payload_lifecycle/move_hook.rs` owns active payload tracking and hovered-target
+preservation, while `payload_lifecycle/up_delivery.rs` owns pointer-up target resolution and
+delivered payload insertion. Cross-window drag upgrade policy and public drag/drop response
+behavior remain unchanged.
 
 2026-05-28 table-column visibility menu-item owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/item.rs` now owns single checkbox item
@@ -706,6 +2555,12 @@ derivation, including explicit row test-id override fallback and default `.row.*
 strings. `builder.rs` keeps public `ImUiTable` / `ImUiTableRow` methods, row/cell collection,
 keyed row scopes, child mounting, and table render handoff.
 
+2026-05-31 table-control test owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs` now keeps shared table test helpers and
+module routing only. `tests/header_text.rs` owns header label/sort indicator text-role coverage,
+while `tests/rendering.rs` owns hidden-column header/body filtering, response filtering, and
+horizontal-scroll wrapping coverage.
+
 2026-05-28 selectable popup-nav owner-split result:
 `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/popup_nav.rs` now owns inherited
 popup menu nav item registration plus Arrow/Up/Home/End focus movement. `keyboard.rs` keeps
@@ -729,6 +2584,12 @@ context-menu anchor model handoff, installation order, and response-owner dispat
 `behavior/activation.rs` owns activate-click toggling, `behavior/keyboard.rs` owns activate
 shortcuts plus ContextMenu/Shift+F10 requests, and `behavior/pointer.rs` owns right-click anchor
 capture plus double-click transient signaling.
+
+2026-05-31 disclosure control test owner split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests.rs` now keeps the shared test harness and
+module routing only. `tests/entry.rs` owns collapsing-header body mounting coverage,
+`tests/tree.rs` owns tree-node semantics/default coverage, and `tests/visual.rs` owns hover palette
+plus tree-row/indicator text-role coverage.
 
 2026-05-28 slider pointer value-update owner-split result:
 `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer/value_update.rs` now owns
@@ -771,8 +2632,10 @@ popup/menubar policy lookup, panel build orchestration, and request owner dispat
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/keyboard_state.rs` now owns text-picker
 keyboard model creation, enabled/empty/exact-match reconciliation, active source projection,
 pending keyboard pick projection, and active descendant element projection. `core.rs` keeps model
-reads, candidate visibility, input-root mounting, open-policy application, popup rendering, and
-pick response merging.
+reads, candidate visibility, input-root mounting, open-policy application, and popup rendering; the
+2026-06-01 follow-up moved popup-result finalization and picked-change response merging into
+`text_picker_controls/response.rs`, then moved popup request/render dispatch into
+`text_picker_controls/core/popup.rs`.
 
 2026-05-28 child-region resize handle owner-split result:
 `ecosystem/fret-ui-kit/src/imui/child_region/resize/handle.rs` now owns the shared pointer-region
@@ -838,6 +2701,12 @@ module/re-export index. `resize/x.rs` owns width-axis response projection and te
 `resize/y.rs` owns height-axis response projection and tests. `ChildRegionResponse` still re-exports
 both public response types from the same public IMUI surface.
 
+2026-05-31 child-region resize response tests child-owner result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize/x.rs` and `resize/y.rs` now
+keep response projection plus test-owner routing. `resize/x/tests.rs` owns width clamp coverage,
+while `resize/y/tests.rs` owns height clamp coverage. Public resize response re-exports,
+enabled/min/max accessors, drag delta/total projection, and clamp-from-start math remain unchanged.
+
 2026-05-28 input-text filter owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` is now a private
 module/re-export index. `filters/builtin.rs` owns `InputTextFilters` plus
@@ -887,6 +2756,27 @@ state, transient consumption, shared-delay flag reads, and `HoverQueryDelayRead`
 `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation, timer
 dispatch, shared-delay delegation, and long-press delegation.
 
+2026-05-31 hovered query pointer/delay owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` keeps the public `hovered_like_imgui` /
+`is_hovered` API and tooltip flag expansion. `response/hover/query/pointer.rs` owns nav override,
+disabled-item, popup-barrier underlay, and active-item pointer gating.
+`response/hover/query/delay.rs` owns stationary, short/normal delay, and shared-delay query
+gating. The Dear ImGui-style `ImUiHoveredFlags` semantics remain unchanged.
+
+2026-05-30 hover active-block/hooks child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/active_block.rs` now owns active-item
+blocking reads. `interaction_runtime/hover/hooks.rs` owns hover-change and timer hook
+installation, stationary/short/normal delay timers, shared-delay delegation, and long-press
+delegation. `interaction_runtime/hover.rs` is now a private module/re-export hub.
+
+2026-05-31 hover hook child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/hooks.rs` now orchestrates shared-delay
+model lookup, child hook installation, and delay reads only.
+`interaction_runtime/hover/hook_hover_change.rs` owns pressable hover-change timer
+setup/cancellation. `interaction_runtime/hover/hook_timer.rs` owns local hover-delay timer
+dispatch, shared-delay timer delegation, and long-press timer delegation. Stationary/short/normal
+hover timing, shared-delay behavior, and `HoverQueryDelayRead` projection remain unchanged.
+
 2026-05-28 layout sugar scoped/spacer owner-split result:
 `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` now owns item-flow, same-line, and indent
 container composition. `ecosystem/fret-ui-kit/src/imui/layout_sugar/spacers.rs` owns dummy/spacing
@@ -900,6 +2790,13 @@ Arrow/Enter navigation and pick handling, repeat/IME/modifier gating, model writ
 Focused gates passed: `cargo fmt -p fret-ui-kit`, `cargo check -p fret-ui-kit --features imui --lib`,
 `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`, source gate, catalog, and
 `git diff --check`.
+
+2026-05-30 text-picker keyboard handler sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs` now keeps key-down
+capture, repeat/IME/modifier gating, and key dispatch. `keyboard/handler/navigation.rs` owns Arrow
+highlight movement through the cmdk active-index helper. `keyboard/handler/pick.rs` owns
+Enter/NumpadEnter highlighted candidate commit, input model writes, popup close, pending pick
+storage, and redraw.
 
 2026-05-28 menu routing dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` now owns
@@ -971,6 +2868,12 @@ four 6 px edge handles and `floating_window_resize/handles/layout/corner.rs` own
 corner handles. `floating_window_resize/handles/pointer.rs` still composes layout, cursor, pointer
 capture, and activation behavior without public IMUI API changes.
 
+2026-05-30 floating-window resize handle pointer-events owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` now owns
+element/layout/cursor composition and bring-to-front handoff. `handles/pointer/events.rs` owns
+pointer hook clearing, down/move/up callbacks, runtime drag begin/update/cancel, pointer capture,
+cursor updates, and resize-handle activation events.
+
 2026-05-28 shared item behavior install owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook clearing,
 active-item/long-press/lifecycle model capture, and assembly. Later pointer-hook sub-owner splits
@@ -1003,10 +2906,20 @@ collection. `items/panel.rs` owns selected tab-panel semantics and panel child m
 `items.rs` keeps `BuiltTabItem`, selected-model normalization, build-focus propagation, final
 column assembly, and `TabBarResponse` construction.
 
+2026-05-30 tab-list child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list.rs` is now a private tab-list hub.
+`list/triggers.rs` owns trigger rendering, selected/first-focusable trigger tracking, and
+`TabTriggerResponse` collection. `list/element.rs` owns tab-list semantics/test id, root row
+layout, and h-flex trigger composition. Public tab-bar APIs and response semantics remain
+unchanged.
+
 2026-05-28 text-picker core owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now owns input-text picker
 orchestration: model reads, candidate visibility, keyboard snapshot reconciliation, input root
-mounting, open-policy application, popup rendering, and pick response merging.
+mounting, open-policy application, popup rendering, and initially pick response merging. The
+2026-06-01 follow-up moved popup-result finalization and picked-change response merging into
+`text_picker_controls/response.rs`, then moved popup request/render dispatch into
+`text_picker_controls/core/popup.rs`.
 `text_picker_controls.rs` is now a private module index and re-export hub for the core picker and
 completion/history entry wrappers.
 
@@ -1014,7 +2927,9 @@ completion/history entry wrappers.
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session.rs` now owns model reads,
 candidate visibility, popup-open model lookup, enabled-scope checks, keyboard snapshot
 reconciliation, popup snapshot reads, and `picker_expanded` derivation. `core.rs` keeps input-root
-mounting, open-policy application, popup rendering, and pick response merging.
+mounting, open-policy application, and popup rendering; the 2026-06-01 follow-up moved
+popup-result finalization and picked-change response merging into `text_picker_controls/response.rs`,
+then moved popup request/render dispatch into `text_picker_controls/core/popup.rs`.
 
 2026-05-27 table header-cell owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs` now owns header cell layout,
@@ -1038,9 +2953,11 @@ construction. The 2026-05-28 follow-ups split the linear and round families into
 `paths/round/{circle,ngon,ellipse}.rs`.
 
 2026-05-27 debug-draw command payload owner-split result:
-`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` now owns the private
-`DebugDrawCommand` payload enum and all draw-list command variants. `debug_draw_controls/commands.rs`
-keeps summary projection wiring plus the parent-visible command re-export.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` is now a private command-type re-export hub.
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` owns
+the private `DebugDrawCommand` payload enum and all draw-list command variants.
+`debug_draw_controls/commands.rs` keeps summary projection wiring plus the parent-visible command
+re-export.
 
 2026-05-27 table builder owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` now owns `ImUiTable` /
@@ -1060,10 +2977,17 @@ wrappers, checkbox/radio/action role selection, noop-hook routing, and identity-
 `menu_controls/routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
 
 2026-05-27 disclosure layout owner-split result:
-`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now owns content container
-composition, body `ImUiFacade` construction, root column layout, and content/root test-id
-application. `disclosure_controls.rs` keeps label identity parsing, open-model reads, trigger
-mounting, and aggregate `DisclosureResponse` writes.
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now owns body `ImUiFacade`
+construction, root/content composition, and content/root test-id application. The 2026-05-31
+follow-up moved content/root props into `disclosure_controls/layout/props.rs`.
+`disclosure_controls.rs` keeps label identity parsing, open-model reads, trigger mounting, and
+aggregate `DisclosureResponse` writes.
+
+2026-05-30 disclosure entry owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now owns collapsing-header/tree-node
+entry wrappers, label identity normalization, open-model setup, trigger/content/root orchestration,
+and aggregate `DisclosureResponse` writes. `disclosure_controls.rs` is now a module/re-export hub
+plus test-only helper imports.
 
 2026-05-27 text-picker entry owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/entry.rs` now owns completion/history wrapper
@@ -1074,6 +2998,13 @@ orchestration and re-exports the entry helpers.
 `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` now owns frame, title-bar, shell
 column, and clipped-body props. `floating_window_shell.rs` keeps shell composition, blocker
 mounting, and resize-stack composition.
+
+2026-05-30 floating-window shell props child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` is now a private hub.
+`props/frame.rs` owns frame size/background/border/radius props, `props/body.rs` owns shell column
+and clipped-body sizing/overflow/radius props, and `props/title_bar.rs` owns title-bar
+clipping/padding/border/radius props. Shell composition, blocker mounting, resize-stack mounting,
+and public IMUI window APIs remain unchanged.
 
 2026-05-27 menu-item routing mount owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs` now owns final menu-item element
@@ -1099,6 +3030,12 @@ dispatch, and final `TableResponse` aggregation.
 `TableColumnVisibilityMenuItemResponse` plus their public accessors. The root
 `table_column_visibility.rs` keeps options, state re-exports, public helper forwarding, and tests.
 
+2026-05-30 table-column visibility options owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/options.rs` now owns
+`TableColumnVisibilityMenuOptions` and `TableColumnVisibilityHeaderContextMenuOptions`, including
+header popup default sizing. The root `table_column_visibility.rs` keeps option/response/state
+re-exports, public helper forwarding, and tests.
+
 2026-05-27 control chrome palette/button/field owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` is now a private module index/re-export
 hub. `control_chrome/chrome/palette.rs` owns `ImUiControlPalette`,
@@ -1112,6 +3049,11 @@ props.
 focus propagation. `containers/linear.rs` owns horizontal/vertical flex composition,
 `containers/scroll.rs` owns scroll-area construction, and `containers/grid.rs` owns grid row
 batching plus keyed row assembly.
+
+2026-05-31 container identity test owner split result:
+`ecosystem/fret-ui-kit/src/imui/containers/tests/identity.rs` now keeps identity test imports and
+module routing only. `identity/outer.rs` owns horizontal/vertical/grid/scroll outer-surface test-id
+coverage, while `identity/viewport.rs` owns inner scroll viewport test-id coverage.
 
 2026-05-27 flow option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` is now a private module/re-export
@@ -1129,6 +3071,12 @@ reads, keepalive updates, nav-state installation, panel id storage, and `PopupMe
 `panel/layout.rs` owns popper placement, menu semantics layout, panel palette/chrome, and column
 props. `panel/content.rs` owns popup/menubar policy provider nesting plus IMUI child mounting.
 
+2026-05-30 popup-menu panel lifecycle/state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/state.rs` now owns popup store reads,
+open/anchor validation, missing-anchor cleanup, keepalive refresh, last-panel-size desired-size
+projection, and panel id writeback. `panel.rs` keeps nav-state installation, content mounting, and
+`PopupMenuBuilt` assembly.
+
 2026-05-27 checkbox behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs` now owns pressable behavior
 installation, activate/shortcut model toggling, context-menu key handling, transient changed reads,
@@ -1141,6 +3089,13 @@ normalization, shared pressable item behavior installation, and owner dispatch o
 `checkbox/behavior/activation.rs` owns click toggling, lifecycle edit marking, and changed
 transient emission. `checkbox/behavior/keyboard.rs` owns activate shortcuts plus
 ContextMenu/Shift+F10 requests. `checkbox/behavior/response.rs` owns changed response projection.
+
+2026-05-30 checkbox entry/props owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` is now a thin module/re-export hub.
+`checkbox/entry.rs` owns label identity, model reads, behavior installation, field chrome, checkbox
+indicator mounting, boolean label mounting, and fill-row visual assembly. `checkbox/props.rs` owns
+`PressableProps` construction plus `SemanticsRole::Checkbox`, checked-state, a11y label, and test-id
+wiring.
 
 2026-05-27 radio behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs` now owns pressable behavior
@@ -1172,6 +3127,12 @@ clip balancing. `paint/media/svg.rs` owns SVG image and mask-icon paint.
 behavior installation, keyboard activation lifecycle marking, clicked transient reads, and
 `ResponseExt` population. `element.rs` keeps canvas composition, fill-layout policy for interactive
 canvases, cache policy, clipping, test-id routing, and debug-draw command painting.
+
+2026-05-30 debug-draw element canvas/pressable owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` now keeps
+interactive/noninteractive element dispatch only. `element/canvas.rs` owns canvas cache policy,
+fill layout, clipping, test-id routing, and command painting. `element/pressable.rs` owns
+pressable props, focus-ring suppression, behavior installation, and interactive canvas embedding.
 
 2026-05-27 table row-group owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` keeps
@@ -1290,6 +3251,12 @@ gating, arrow/page/home/end value edits, snapping, and keyboard lifecycle edit s
 `interaction.rs` keeps handler clearing, active/lifecycle model lookup, shared range input, and
 owner dispatch.
 
+2026-05-30 slider entry/props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/entry.rs` now owns label identity normalization,
+push-id scoping, slider element assembly, interaction/response wiring, and final add.
+`slider_controls/props.rs` owns pressable enabled/focus/layout/a11y props, and
+`slider_controls.rs` is now a private module/re-export hub.
+
 2026-05-27 begin-menu trigger behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` now owns active-trigger
 behavior installation, keyboard activation lifecycle marking, activate shortcut handling, menubar
@@ -1363,6 +3330,13 @@ activation event recording, pointer drag move/up handling, setup callback invoca
 mounting. `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
 layer, and state owners.
 
+2026-05-30 floating drag-surface child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs` now keeps the public entrypoint,
+pointer-region shell, and bring-to-front orchestration. `drag_surface/behavior.rs` owns pointer
+down/move/up drag behavior, double-click dispatch, and activation signals, while
+`drag_surface/content.rs` owns setup callback invocation, key stub installation, and IMUI child
+mounting.
+
 2026-05-27 drag response source/target owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` now owns `DragSourceResponse` storage,
 inactive/new constructors, and source read accessors.
@@ -1419,6 +3393,12 @@ submenu-state reconciliation, stale-open cleanup, and popup open/close anchoring
 keeps public begin-submenu orchestration, state reads, popup mounting, and `DisclosureResponse`
 assembly.
 
+2026-05-30 begin-submenu state/popup child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/state.rs` now owns popup-open and
+was-open snapshot reads plus was-open writeback. `submenu/popup.rs` owns popup menu mounting and
+disabled-popup close. `submenu.rs` keeps disabled gating, popup policy lookup, trigger creation,
+open-policy reconciliation, popup delegation, and `DisclosureResponse` assembly.
+
 2026-05-27 table-column primitive option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` now owns
 `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width
@@ -1438,6 +3418,12 @@ reset policy, device-pixel snapping, resize output assembly, and handle test-id 
 `cx.state_for(...)`, snapshot/collapse orchestration, drag application, device-pixel snapping, and
 output assembly. Resize test-id strings, initial size defaults, handle packaging, and resize
 behavior remain unchanged.
+
+2026-05-30 floating-window resize state commit owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/commit.rs` now owns
+`cx.state_for(...)`, collapsed/non-drag reset policy, drag application, device-pixel snapping, state
+tuple extraction, and `FloatingWindowResizeStateOutput` packaging. `state.rs` keeps the public
+`prepare_resize_state(...)` parameter surface and active `resizing` derivation.
 
 2026-05-27 table-column visibility snapshot owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` now owns
@@ -1491,8 +3477,9 @@ point-count/empty accessors. The public `ImUiDebugDrawPath` API remains unchange
 
 2026-05-27 debug-draw paint media owner split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` delegates media paint behavior
-to private raster, rounded, and SVG owners. Root `paint.rs` keeps clip-stack balancing and
-command-class dispatch to media vs shape painters.
+to private raster, rounded, and SVG owners. Root `paint.rs` initially kept clip-stack balancing and
+command-class dispatch to media vs shape painters; the 2026-06-01 follow-up moved clip-stack
+handling into `paint/clip.rs`.
 Debug-draw scene output and public authoring APIs remain unchanged.
 
 2026-05-30 debug-draw media dispatch owner split result:
@@ -1556,6 +3543,12 @@ synchronization, clicked candidate commits, popup close, and picked-result repor
 candidate/keyboard snapshots, and final `InputTextPickerResponse` merge. The public completion and
 history picker APIs remain unchanged.
 
+2026-05-30 text-picker popup sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs` now keeps popup mounting and
+candidate iteration. `popup/keyboard.rs` owns optional popup-scoped keyboard handler installation.
+`popup/types.rs` owns popup input/result data shapes. `popup/item.rs` keeps selectable candidate
+rows and picked-value commits.
+
 2026-05-27 text-picker input-root owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now owns picker input option/test-id
 preparation, ComboBox semantics normalization, assistive semantics, root fill container
@@ -1575,6 +3568,13 @@ semantics, root container construction, text input mounting, and keyboard handle
 `ecosystem/fret-ui-kit/src/imui/popup_store/lifecycle.rs` now owns stale popup cleanup during
 render-generation preparation. `popup_store.rs` keeps popup store state, generation entry points,
 scoped entry lookup, and explicit scope dropping.
+
+2026-05-31 popup-store state/entry/drop owner split result:
+`ecosystem/fret-ui-kit/src/imui/popup_store.rs` is now a thin private re-export hub.
+`popup_store/state.rs` owns the per-window/per-id storage records and model creation,
+`popup_store/entry.rs` owns render-generation marking plus scoped lookup, and
+`popup_store/drop_scope.rs` owns explicit scope removal/model reset. The stale-generation cleanup
+owner remains `popup_store/lifecycle.rs`.
 
 2026-05-26 disclosure spec owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
@@ -1618,12 +3618,30 @@ trigger `ResponseExt` population, and the open/menu badge chrome. `combo_control
 identity normalization, popup open/close model wiring, popup mounting, and aggregate
 `ComboResponse` open/toggled state. The public combo and combo-model facade APIs remain unchanged.
 
+2026-05-30 combo-model owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs` is now a thin module/re-export hub.
+`combo_model_controls/entry.rs` owns model reads, preview fallback, combo option forwarding, and
+canonical combo mounting. `combo_model_controls/popup_items.rs` owns borrowed item iteration,
+selectable item rows, option test-id suffixes, model updates, and popup close. `response.rs` owns
+changed/edited/deactivated-after-edit response projection.
+
 2026-05-26 boolean visual owner-split result:
-`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
-indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns shared boolean label text and
+re-export routing for checkbox/radio/switch indicator chrome. The 2026-05-31 follow-up moved the
+indicator chrome into `boolean_controls/visual/indicators.rs`. `boolean_controls.rs` keeps
 checkbox/radio pressable orchestration, shortcut/context-menu handling, and response population,
 while `boolean_controls/switch.rs` keeps switch active-trigger behavior and model updates. The
 public checkbox, radio, and switch APIs remain unchanged.
+
+2026-05-30 switch entry/props owner split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` is now a thin module/re-export hub.
+`switch/entry.rs` initially owned label identity, model reads, active-trigger behavior
+installation, field chrome, switch state badge mounting, boolean label mounting, and fill-row
+visual assembly. The 2026-05-31 follow-up moved those render/runtime concerns into
+`switch/entry/render.rs`, leaving `switch/entry.rs` with public entrypoints and label identity
+scoping only.
+`switch/props.rs` owns `PressableProps` construction plus switch a11y label, checked state, and
+test-id wiring.
 
 2026-05-26 hover query owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs` now owns `ImUiHoveredFlags`, while
@@ -1743,6 +3761,13 @@ press dismissal policy, focus handoff, IMUI facade content mounting, and `Overla
 assembly. Modal open/close behavior, barrier semantics, centered placement, and test ids remain
 unchanged.
 
+2026-05-30 popup modal layout child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` is now a private hub.
+`layout/types.rs` owns modal palette resolution, dim color, and centered panel geometry.
+`layout/props.rs` owns absolute layer/backdrop props, dialog semantics layout/test id, panel chrome,
+and full-inset construction. Modal open/close behavior, barrier semantics, centered placement, and
+test ids remain unchanged.
+
 2026-05-26 menu-item interaction owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns menu item enabled/action
 gating, pressable props, activation and shortcut handlers, popup menu roving focus, menubar
@@ -1756,6 +3781,12 @@ point. Public menu item and command menu item facade APIs remain unchanged.
 props, checkbox/radio/submenu indicator selection, label/shortcut/submenu glyph mounting, and
 shortcut test-id stamping. `menu_controls/element.rs` keeps pressable orchestration, interaction
 owner wiring, response population, and the custom `pressable_hook` insertion point.
+
+2026-05-30 menu-item visual-row child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/element/visual_row.rs` now keeps menu-item visual row
+option projection and render orchestration only. `visual_row/layout.rs` owns panel/row props, and
+`visual_row/content.rs` owns checkbox/radio/submenu indicator selection, shortcut mounting, and
+shortcut test-id stamping.
 
 2026-05-26 menu-item keyboard owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` now owns item-local activate shortcut
@@ -1776,7 +3807,8 @@ item, command menu item, submenu, and menubar behavior remain unchanged.
 `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` now owns pressable behavior
 installation, activate-handler popup close/click signaling, keyboard owner delegation, transient
 clicked reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
-`SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+selected/highlighted state reads, behavior wiring, and row visual assembly. The 2026-05-31
+follow-up moved pressable/a11y prop construction into `selectable_controls/props.rs`.
 
 2026-05-26 textarea owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now owns textarea props assembly,
@@ -1784,6 +3816,12 @@ lifecycle/response population, select-all-on-focus command emission, submit/canc
 installation, and text-area chrome/text-style selection. `text_controls.rs` keeps input-text
 assembly plus shared helper routing. Public `textarea_model(...)` and `textarea_model_with_options`
 facade behavior remains unchanged.
+
+2026-05-30 text-control style child-owner split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/style.rs` now keeps input/textarea style assembly
+and public text-style helper routing. `style/palette.rs` owns theme color fallback plus
+selection/preedit derivation, while `style/chrome.rs` owns input padding, border, radius, and fixed
+field layout. Input-text and textarea chrome behavior remains unchanged.
 
 2026-05-26 floating-window resize state owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` now owns active resize snapshot
@@ -2040,10 +4078,12 @@ Exit criteria:
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
   2026-05-14 cleanup result: the unused `apply_editor_theme_patch_v1` compatibility wrapper was
   deleted; explicit preset entry points remain the only editor theme patch authoring path.
-  Current porting-sugar audit result: keep `SameLine` / item-width / label-ID sugar candidate-only
-  until at least two proof surfaces pay the same authoring tax. Prefer typed Fret helpers
-  (`horizontal_with_options`, `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over
-  copying Dear ImGui's mutable cursor, item-width stack, or label suffix parser.
+  Current porting-sugar audit result: `SameLine` is now a narrow proven teaching-surface helper
+  through the existing closure-scoped layout sugar and cookbook payload-row proof. Keep item-width,
+  next-item width, and label-ID sugar candidate-only until at least two proof surfaces pay the same
+  authoring tax. Prefer typed Fret helpers (`horizontal_with_options`,
+  `PropertyGrid::row_with`, explicit `id_source` / `test_id`) over copying Dear ImGui's mutable
+  cursor, item-width stack, or label suffix parser.
   2026-05-14 cleanup result: the unused public `PropertyGridRow` wrapper was deleted so the grid
   row authoring surface stays on the canonical `PropertyGridRowCx::row(...)` / `row_with(...)`
   path instead of growing a second row-policy wrapper.
@@ -3119,3 +5159,123 @@ topic: keep identical plot/table slices, prefer the IMUI worktree's more complet
 layout sugar, canonical workbench, Demo/Metrics/Debug, and style/theme picker work, and leave the
 `main`-only `facade_writer/image_items.rs` slice for a separate evidenced follow-up unless completed
 before checkpointing. The image-items slice was completed before the `main` checkpoint.
+
+2026-06-01 IMUI facade export owner split result:
+`ecosystem/fret-ui-kit/src/imui/exports.rs` now owns the public `fret_ui_kit::imui::*` re-export
+surface. `ecosystem/fret-ui-kit/src/imui.rs` remains the module hub and shared internal-import owner
+and republishes the same public surface through `pub use exports::*;`. This keeps downstream import
+paths stable while removing public API catalog churn from the root implementation hub.
+
+2026-06-01 combo popup state owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/state.rs` now owns popup open-state reads,
+trigger-driven open/close transitions, disabled popup cleanup, toggled detection, and trigger
+response flag mutation. `combo_controls.rs` keeps the higher-level combo flow: label identity,
+trigger option wiring, popup body composition, and final `ComboResponse` assembly.
+
+2026-06-01 floating-window state owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window/state.rs` now owns optional open-model reads and
+chrome-to-`FloatingWindowResponse` assembly. `floating_window.rs` keeps floating-area setup,
+closed-window routing, and render-in-area wiring, while `floating_window/closed.rs` remains the
+closed response sentinel owner.
+
+2026-06-01 active-trigger type owner split result:
+`ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs` now owns the shared
+`ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput` data
+shapes. The root behavior file re-exports those types through the original private module path and
+keeps behavior installation plus response delegation only.
+
+2026-06-01 menubar policy-state owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs` now owns
+`ImUiMenubarPolicyState` and its open-menu/group-active/registry/close-auto-focus model handles.
+`menu_family_controls.rs` re-exports the type through the original private module path and keeps
+menu-bar composition plus child mounting only.
+
+2026-06-01 image-item pressable props owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/props.rs` now owns `PressableProps`
+construction for image items and image buttons, including sanitized size, focusability, key
+activation policy, and a11y role/label/test id propagation. `image_item_controls.rs` keeps the
+identity, behavior, chrome, image props, and response wiring.
+
+2026-06-01 selectable entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/entry.rs` now owns the visible-label selectable
+entry assembly: response initialization, enabled/focusable/selected/highlighted derivation,
+`PressableProps` delegation, `pressable_with_id` mounting, behavior installation, visual row
+mounting, and final response return. `selectable_controls.rs` keeps label identity parsing plus the
+stable `push_id` wrapper.
+
+2026-06-01 ListBox scroll-host and semantics owner split result:
+`ecosystem/fret-ui-kit/src/imui/list_box_controls/scroll_host.rs` now owns ListBox scroll-area
+composition, hosted child focus forwarding, content/root/viewport test-id wiring, scrollbar/handle
+application, and final semantics attachment. `list_box_controls/semantics.rs` owns ListBox role,
+label, and multiselectable semantics construction. `list_box_controls.rs` keeps keyed identity and
+`ListBoxOptions` destructuring only.
+
+2026-06-01 child-region entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/entry.rs` now owns child-region keyed body
+orchestration: resize detection, scroll layout choice, scroll input assembly, resize-vs-scroll root
+test-id routing, response initialization, and resize-stack selection. `child_region.rs` keeps the
+facade-facing keyed wrapper only.
+
+2026-06-01 floating-window in-area assembly owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs` now owns prepared floating
+window state consumption plus title bar, content, and shell assembly for in-area windows.
+`floating_window_on_area.rs` keeps only the facade-facing `with_cx_mut` wrapper, window insertion,
+and chrome response return.
+
+2026-06-01 floating-window shell body owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_shell/body.rs` now owns title/body/clipped-body
+assembly, input blocker mounting, and resize-stack delegation. `floating_window_shell.rs` keeps
+frame palette resolution, frame props, and the outer frame container.
+
+2026-06-01 floating-window entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window/entry.rs` now owns show-with-options
+orchestration: option destructuring, open checks, floating-area mounting, chrome capture, in-area
+render dispatch, and final response assembly delegation. `floating_window.rs` keeps the
+facade-facing helper pair only.
+
+2026-06-01 table-column visibility model owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/model.rs` now owns the controllable-model
+bridge for `ImUiTableColumnVisibilityState`. `table_column_visibility.rs` keeps the public
+`table_column_visibility_use_model(...)` signature as a forwarding helper, plus option/response/
+state re-exports and menu delegation.
+
+2026-06-01 multi-select model owner split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select/model.rs` now owns the controllable-model bridge for
+`ImUiMultiSelectState<K>`. `multi_select.rs` keeps the public `multi_select_use_model(...)`
+signature as a forwarding helper, plus state re-export, click-policy delegation, and selectable
+entry wiring.
+
+2026-06-01 separator-text element owner split result:
+`ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs` now owns section-label element
+construction: text-role label chrome, trailing border rule, row layout, and test-id decoration.
+`separator_text_controls.rs` keeps visible-label identity parsing and facade insertion only.
+
+2026-06-01 menubar root element owner split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs` now owns the named menubar
+element, local policy models, trigger-row registry clearing, child hosting, row layout, and
+`SemanticsRole::MenuBar`. `menu_family_controls.rs` keeps only module routing plus begin-menu/
+submenu exports.
+
+2026-06-01 floating-window title-bar props owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props/drag_surface.rs` now owns
+pointer-region layout and resizable fill/shrink behavior, while
+`floating_window_title_bar_props/close_button.rs` owns close-button a11y/test-id wiring and fixed
+20px sizing. `floating_window_title_bar_props.rs` keeps title-row props plus private re-exports.
+
+2026-06-01 combo entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/entry.rs` now owns the direct combo flow: visible
+label parsing, enabled/open reads, trigger option construction, popup mounting, disabled cleanup,
+and `ComboResponse` open/toggled assembly. `combo_controls.rs` keeps the facade-facing helper
+signature and forwards to the entry owner.
+
+2026-06-01 image-item entry owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/entry.rs` now owns the inner pressable element
+body for image items/buttons: enabled/focusable derivation, pressable props, behavior installation,
+chrome, image props, element insertion, and `ResponseExt` return. `image_item_controls.rs` keeps
+the stable `push_id(("image-item", id), ...)` wrapper.
+
+2026-06-01 active-trigger install owner split result:
+`ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs` now owns hook clearing,
+active/lifecycle/context model lookup, context-menu key handling, pointer handler installation, and
+`ActiveTriggerBehavior` assembly. `active_trigger_behavior.rs` keeps the stable install and
+response-population entry points.

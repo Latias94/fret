@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 ## Worktree Convergence - 2026-05-26
 
@@ -42,8 +42,1542 @@ Last updated: 2026-05-30
       `fret-plot/imui` adapter, and style/theme editing as editor-owned preset tooling exposed by
       the canonical workbench.
 
+## Porting Sugar Proof - 2026-05-31
+
+- [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching
+      surface without adding broad Dear ImGui cursor, item-width stack, next-item width, or
+      label-suffix parsing APIs.
+      Result: `apps/fret-cookbook/examples/imui_action_basics.rs` now uses
+      `ui.same_line_with_options(...)` plus a stable row `test_id` for the IMUI payload action
+      button row. The source gate freezes the cookbook marker and the updated P3 readiness doc keeps
+      item-width and label-ID helpers candidate-only / explicit.
+- [x] Refresh the P0 gap matrix and older workstream status notes after the SameLine proof landed.
+      Result: active docs now treat `SameLine` as a narrow proven teaching-surface helper while
+      keeping item-width, next-item width, and label-ID sugar candidate-only. The source gate rejects
+      the older blanket `SameLine` candidate-only wording.
+
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split editor `TextField` unbuffered multiline Escape-clear key handling into a private
+      element child owner without changing clear-on-Escape behavior, redraw requests, multiline vs
+      single-line cancel routing, buffered commit/cancel key handling, clear-button behavior,
+      focus-selection sync, blur handling, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps TextInput/TextArea assembly, buffered key
+      routing, focus sync, blur handling, and clear-button composition.
+      `controls/text_field/element/escape_clear.rs` owns the unbuffered multiline Escape-clear
+      key capture and key classification test. The source gate prevents Escape-clear policy from
+      drifting back into the element assembly owner.
+- [x] Split editor `TextField` focus-selection value detection into a private element child owner
+      without changing select-all-on-focus behavior, buffered draft vs model value precedence,
+      single-line/multiline focus sync, timer dispatch, buffered commit/cancel key handling,
+      clear-button behavior, blur handling, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps TextInput/TextArea assembly and delegates
+      text-present detection plus shared focus-selection sync to
+      `controls/text_field/element/focus.rs`. The source gate prevents focus-selection value
+      detection from drifting back into the element assembly owner.
+- [x] Split editor `EnumSelect` trigger pressable/visual assembly into a private child owner
+      without changing trigger min-height fallback, a11y combobox state, focus ring geometry,
+      activate toggle behavior, trigger press open-change reason, text/caret layout, caret icon
+      selection, key registration, overlay routing, or public `EnumSelect` options.
+      Result: `controls/enum_select.rs` keeps public control construction, model reads,
+      key-handler registration, and overlay routing. `controls/enum_select/trigger.rs` owns
+      pressable props, activate toggle, frame chrome, readout text, divider, and caret segment
+      assembly. The source gate prevents trigger visual/pressable policy from drifting back into
+      the root control owner.
+- [x] Split editor `EnumSelect` trigger keyboard open/close policy into a private child owner
+      without changing enabled gating, Enter/NumpadEnter/Space/ArrowDown open behavior, Escape
+      close behavior, open-change reason updates, redraw requests, trigger composition, overlay
+      routing, or public `EnumSelect` options.
+      Result: `controls/enum_select.rs` keeps public control construction, trigger visuals, key
+      registration, and overlay routing. `controls/enum_select/trigger_keys.rs` owns trigger
+      keyboard intent classification plus open/escape model updates with focused tests. The source
+      gate prevents trigger key policy from drifting back into the root control owner.
+- [x] Split editor `EnumSelect` overlay selected-row reveal and viewport visibility policy into a
+      private child owner without changing selected-row scroll-into-view behavior, already-visible
+      detection, pending-reveal clearing, viewport test-id derivation, close-focus policy,
+      filtering, row routing, popup/list layout, or public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request/layout orchestration and
+      delegates selected-row reveal plus viewport visibility math to
+      `controls/enum_select/overlay/reveal.rs`. The source gate prevents active-descendant reveal
+      policy from drifting back into the overlay request owner.
+- [x] Split editor `EnumSelect` overlay filtering policy into a private child owner without
+      changing trim/lowercase matching, label/value match coverage, empty-query behavior, overlay
+      request assembly, popup/list layout, row routing, selected-row reveal, close-focus policy, or
+      public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request/layout/reveal orchestration.
+      `controls/enum_select/overlay/filter.rs` owns query normalization and label/value filtering
+      with focused filter tests. The source gate prevents filtering policy from drifting back into
+      the overlay request owner.
+- [x] Split editor `EnumSelect` overlay empty-state rendering into a private child owner without
+      changing empty-filter label text, muted popup empty-text styling, row-height routing, overlay
+      request assembly, popup/list layout, search field routing, row routing, selected-row reveal,
+      close-focus policy, dismiss behavior, or public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request/layout/reveal orchestration.
+      `controls/enum_select/overlay/empty.rs` owns empty result text construction, muted foreground
+      resolution, and row-height routing. The source gate prevents empty-state rendering policy
+      from drifting back into the overlay request owner.
+- [x] Split editor `EnumSelect` overlay list viewport and reveal orchestration into a private child
+      owner without changing filtered item ordering, row routing, empty-state routing, scroll
+      handle usage, viewport test-id propagation, selected-row reveal timing, popup/search layout,
+      close-focus policy, dismiss behavior, or public `EnumSelect` options.
+      Result: `controls/enum_select/overlay.rs` keeps overlay request, anchored panel, search box,
+      close-focus, and dismiss orchestration. `controls/enum_select/overlay/list.rs` owns the
+      scroll viewport, row collection, empty-state branch, selected-row capture, and reveal call.
+      The source gate prevents scroll/list/reveal policy from drifting back into the overlay
+      request owner.
+- [x] Split `fret-ui-kit::imui` debug-draw stroke visibility/path-style projection into a private
+      child owner without changing `DebugDrawStrokeStyle` fields, builders, default values,
+      invalid dash/miter guards, `is_visible(...)`, `path_style(...)`, or public debug-draw option
+      exports.
+      Result: `debug_draw_controls/options/stroke.rs` keeps the public stroke style record,
+      builders, defaults, and method names. `debug_draw_controls/options/stroke/style.rs` owns the
+      internal visibility test and V1/V2 path-style projection. The source gate prevents `StrokeV2`
+      projection policy from drifting back into the option record owner.
+- [x] Split editor `DragValue` keyed element composition into a private child owner without
+      changing public constructors/builders, callsite/id-source keying, model reads, duplicate
+      chrome affix suppression, test-id derivation, scrub/input owner routing, hidden input
+      mounting, or public `DragValue` options.
+      Result: `controls/drag_value.rs` now keeps the public control API, keying wrapper, module
+      declarations, and `DragValueOptions` re-export. `controls/drag_value/element.rs` owns keyed
+      state lookup, current value reads, mode/scrub revision reads, affix/test-id derivation,
+      scrub/input owner routing, and final mounted composition. The source gate prevents element
+      orchestration from drifting back into the root control.
+- [x] Split editor `AxisDragValue` typing key handling into a private element child owner without
+      changing typed commit/cancel behavior, parse/validate/constraint handling, invalid-number
+      reporting, draft/error sync, focus restore to scrub, scrub revision bumping, outcome routing,
+      or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed scrub/typing orchestration,
+      mounted text input props, focus handoff, and frame assembly. The private
+      `controls/axis_drag_value/element/typing_keys.rs` owner contains replace-on-focus key
+      handling plus Enter commit and Escape cancel policy. The source gate prevents key policy from
+      drifting back into the root element owner.
+- [x] Split editor `AxisDragValue` typing TextInput assembly into a private element child owner
+      without changing hidden/active typing layout, enabled/focusable gating, invalid a11y state,
+      joined input chrome, text style, input id/focus reads, focus handoff, typing key handling,
+      scrub mounting, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps scrub/typing orchestration, focus
+      handoff, key handling, and frame routing. `controls/axis_drag_value/element/input.rs` owns
+      TextInputProps assembly, joined chrome, invalid state, test-id routing, input mounting, and
+      focus id reads. The source gate prevents typing input props from drifting back into the root
+      element owner.
+- [x] Split editor `TransformEdit` section-control Vec3 assembly into a private element child owner
+      without changing section presentation formats/parses/chrome affixes, per-section
+      id-source/test-id derivation, linked-scale test-id derivation, axis outcome routing,
+      linked-scale sync, Column/Row layout selection, or public `TransformEdit` options.
+      Result: `controls/transform_edit/element.rs` keeps linked-scale model/sync orchestration,
+      layout variant selection, section row/column mounting, and root test-id decoration.
+      `controls/transform_edit/element/section_control.rs` owns Vec3Edit construction,
+      per-section presentation projection, id/test-id routing, validation forwarding, and axis
+      outcome mapping. The source gate prevents Vec3 section-control policy from drifting back into
+      the element layout owner.
+- [x] Split editor `TextField` text-entry props assembly into a private element child owner without
+      changing single-line/multiline selection, joined field frame mounting, buffered
+      session/key/blur routing, focus-selection sync, clear-button behavior, Escape-clear behavior,
+      assistive semantics, password mode, submit/cancel command forwarding, stable multiline
+      line-box policy, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps keyed construction, joined frame assembly,
+      buffered session orchestration, focus/blur/key handlers, clear-button composition, and entry
+      mounting. `controls/text_field/element/entry_props.rs` owns TextInput/TextArea props,
+      joined chrome, field style resolution, assistive semantics, command forwarding, and
+      multiline min-height/stable line-box policy. The source gate prevents text-entry props
+      policy from drifting back into the element assembly owner.
+- [x] Split editor `TextField` entry mount/session wiring into a private element child owner
+      without changing single-line/multiline selection, draft model selection, buffered session
+      sync, draft-controller binding, buffered key routing, blur commit/cancel handling,
+      focus-selection sync, unbuffered multiline Escape-clear behavior, input-id reporting,
+      clear-button behavior, joined frame mounting, or public `TextField` options.
+      Result: `controls/text_field/element.rs` keeps public construction, keyed state setup,
+      joined frame/chrome orchestration, current draft sync, clear trailing segments, and field id
+      reporting. `controls/text_field/element/entry.rs` owns TextInput/TextArea mounting, input id
+      reporting, buffered session/key/blur wiring, draft-controller binding, focus-selection
+      routing, and unbuffered Escape-clear installation. The source gate prevents entry behavior
+      from drifting back into the root element owner.
+- [x] Split editor `TextField` buffered commit/cancel action finalizers into a private buffered
+      child owner without changing focus transition planning, draft sync, blur timer arming,
+      pending blur dispatch, buffered key routing, draft-controller commit/discard behavior,
+      clear-button reset behavior, outcome emission, submit-command dispatch, redraw requests, or
+      public `TextFieldDraftController` / `TextField` options.
+      Result: `controls/text_field/buffered.rs` keeps buffered state, focus plans, draft model
+      allocation, model-to-draft sync, focus/timer orchestration, blur dispatch, and multiline
+      commit shortcut classification. `controls/text_field/buffered/actions.rs` owns pending-blur
+      clearing, clear-state reset, model/draft commit and cancel finalizers, controller finalizers,
+      outcome emission, submit-command dispatch, and redraw requests. The source gate prevents
+      action finalizer policy from drifting back into the buffered state owner.
+- [x] Split editor `Slider` pressable pointer interaction installation into a private element child
+      owner without changing click-to-update, drag begin/move/up, missed pointer-up cleanup,
+      double-click typing handoff, cursor selection, value math, focus handoff arming, slider frame
+      assembly, NumericInput typing behavior, or public `Slider` options.
+      Result: `controls/slider/element.rs` keeps keyed state lookup, current value reads,
+      quantization, affix/test-id routing, pressable/frame composition, NumericInput typing
+      composition, and focus handoff sync. `controls/slider/element/interaction.rs` owns pointer
+      handler installation, drag state transitions, pointer-to-value updates, double-click typing
+      transition, redraw requests, and col-resize cursor setting. The source gate prevents pointer
+      interaction policy from drifting back into the element assembly owner.
+- [x] Split editor `AxisDragValue` scrub DragValueCore assembly into a private element child owner
+      without changing scrub layout/hidden typing layout, live model updates, constraints,
+      commit/cancel outcome routing, double-click typing handoff, focus handoff arming, scrub frame
+      visuals/test ids/reset action, typing input/key/frame behavior, or public AxisDragValue
+      options.
+      Result: `controls/axis_drag_value/element.rs` keeps scrub/typing orchestration, focus sync,
+      typing input/key/frame routing, error clearing, and final mounting.
+      `controls/axis_drag_value/element/scrub_element.rs` owns DragValueCore options, live model
+      update wiring, commit/cancel callbacks, double-click typing transition, scrub id recording,
+      and scrub frame owner routing. The source gate prevents scrub interaction and frame routing
+      policy from drifting back into the root element owner.
+- [x] Split editor `VecEdit` options/default records into a private child owner without changing
+      public `VecEditOptions` / `VecEditLayoutVariant` import paths, layout defaults, auto-stack
+      defaults, id-source/test-id fields, Vec2/Vec3/Vec4 constructors, or layout/axis assembly.
+      Result: `controls/vec_edit.rs` keeps the public Vec2/Vec3/Vec4 control hub and re-exports the
+      options types. `controls/vec_edit/options.rs` owns option fields, layout variant, and default
+      values. The source gate prevents options/default policy from drifting back into the control
+      hub.
+- [x] Split editor `VecEdit` keyed element assembly into a private element child owner without
+      changing Vec2/Vec3/Vec4 keyed entrypoints, axis ordering, id-source/test-id derivation, auto
+      layout resolution, row/column flex chrome, axis color routing, axis reset routing, numeric
+      format/parse/validate forwarding, axis outcome forwarding, or root test-id mounting.
+      Result: `controls/vec_edit/element.rs` now maps Vec2/Vec3/Vec4 fields to axis descriptors
+      and delegates shared layout/axis assembly to `controls/vec_edit/element/assembly.rs`. The
+      private assembly owner resolves the layout plan, derives per-axis ids/test ids, maps axis
+      colors, builds root flex chrome, mounts axis groups, and preserves root test-id decoration.
+      The source gate prevents layout/axis assembly policy from drifting back into the keyed
+      Vec2/Vec3/Vec4 entrypoint owner.
+- [x] Split editor `EnumSelect` options/default records into a private child owner without
+      changing public `EnumSelectOptions` import paths, layout defaults, placeholder/none labels,
+      max-list-height/test-id fields, keyed state identity, trigger composition, open-key policy, or
+      overlay routing.
+      Result: `controls/enum_select.rs` keeps the item record, control hub, trigger/open-key
+      orchestration, and overlay request routing while re-exporting options.
+      `controls/enum_select/options.rs` owns option fields and defaults. The source gate prevents
+      options/default policy from drifting back into the root control owner.
+- [x] Split editor `TextField` buffered key handling into a private element child owner without
+      changing single-line Enter commit, multiline Ctrl/Cmd+Enter commit, Escape cancel,
+      IME/repeat guards, submit-command forwarding, outcome routing, blur handling, clear button
+      behavior, or text input/area composition.
+      Result: `controls/text_field/element.rs` keeps keyed construction, joined frame/input/area
+      assembly, focus selection sync, blur handler installation, and clear affordance composition.
+      `controls/text_field/element/buffered_keys.rs` owns buffered single-line/multiline
+      commit/cancel key routing. The source gate prevents key policy from drifting back into the
+      element assembly owner.
+- [x] Split editor `TextField` clear-button trailing segment into a private element child owner
+      without changing clear-button visibility, draft/model clearing, buffered session reset,
+      single-line vs multiline clear button chrome, a11y label, test-id routing, or redraw
+      behavior.
+      Result: `controls/text_field/element.rs` keeps input/textarea assembly and delegates clear
+      affordance construction. `controls/text_field/element/clear_button.rs` owns clear visibility
+      reads, buffered draft/model clearing, buffered-state reset, and single-line/multiline clear
+      segment selection. The source gate prevents clear-button policy from drifting back into the
+      element assembly owner.
+- [x] Split editor `Checkbox` options/default records into a private child owner without changing
+      public `CheckboxOptions` import paths, auto layout defaults, enabled/focusable defaults,
+      a11y/test-id fields, bool/optional-bool model behavior, tri-state chrome, token fallback, or
+      pressable activation behavior.
+      Result: `controls/checkbox.rs` keeps model reads, tri-state behavior, chrome resolution,
+      pressable activation, indicator mounting, and chrome regression routing while re-exporting
+      `CheckboxOptions`. `controls/checkbox/options.rs` owns option fields and defaults. The
+      source gate prevents options/default policy from drifting back into the checkbox owner.
+- [x] Split editor `Checkbox` token fallback chrome resolution and regression coverage into a
+      private child owner without changing bool/optional-bool model behavior, tri-state indicator
+      selection, pressable activation, a11y/test-id routing, focus-ring geometry, editor token
+      precedence, generic palette fallback, or checked foreground/background semantics.
+      Result: `controls/checkbox.rs` keeps model reads, a11y, pressable activation, indicator
+      mounting, and root control assembly while delegating token fallback chrome to
+      `controls/checkbox/chrome.rs`. The source gate prevents chrome policy and its regression
+      fixture from drifting back into the checkbox owner.
+- [x] Split editor `Checkbox` model state reads and activation toggling into a private child owner
+      without changing bool vs optional-bool model constructors, tri-state mapping, paint
+      invalidation reads, disabled activation guard, optional-bool toggle progression, redraw
+      request behavior, a11y routing, focus-ring geometry, chrome resolution, or indicator
+      mounting.
+      Result: `controls/checkbox.rs` keeps a11y, pressable props, indicator mounting, and root
+      control assembly while delegating checked-state reads and activation toggling to
+      `controls/checkbox/model.rs`. The source gate prevents model/toggle policy from drifting
+      back into the checkbox owner.
+- [x] Split editor `Checkbox` indicator box and icon assembly into a private child owner without
+      changing tri-state icon selection, checked/indeterminate/unchecked visuals, box size/radius,
+      border width, centered icon layout, icon color, a11y routing, focus-ring geometry, model
+      behavior, chrome resolution, or pressable activation behavior.
+      Result: `controls/checkbox.rs` keeps a11y, pressable props, root control assembly, and
+      visual-state calculation while delegating indicator container/icon mounting to
+      `controls/checkbox/indicator.rs`. The source gate prevents indicator assembly from drifting
+      back into the checkbox owner.
+- [x] Split editor `GradientEditor` stop-row assembly into a private child owner without changing
+      stop sorting, row identity/test-id derivation, position/color editors, remove action routing,
+      row layout, empty-state text role, preview behavior, or public gradient editor options.
+      Result: `composites/gradient_editor.rs` keeps public composition, preview/angle/stops group
+      orchestration, add-stop behavior, and empty-state text role helper.
+      `composites/gradient_editor/stops.rs` owns stop-row PropertyRow assembly, position DragValue,
+      ColorEdit, remove button, and row/field test-id derivation. The source gate prevents stop-row
+      policy from drifting back into the root composite owner.
+- [x] Split editor `GradientEditor` public options/action/binding records into a private child
+      owner without changing public re-export paths, layout defaults, enabled/preview/angle
+      defaults, preview/stops/add-stop test-id fields, stop binding model fields, add/remove action
+      callback types, preview behavior, stop-row ordering, add-stop gating, or empty-state text
+      role behavior.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition, preview/angle/stops
+      group orchestration, add-stop behavior, and empty-state text role helper while re-exporting
+      options. `composites/gradient_editor/options.rs` owns public option/action/binding records
+      and defaults. The source gate prevents options/default policy from drifting back into the
+      root composite owner.
+- [x] Split editor `GradientEditor` angle row assembly into a private child owner without changing
+      `show_angle` gating, angle model routing, derived angle test id, PropertyRow slot width
+      overrides, Angle label text role, DragValue degrees presentation, preview behavior, stop-row
+      ordering, add-stop gating, or public gradient editor options.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition,
+      preview/stops/add-stop orchestration, and empty-state text role helper while delegating angle
+      row construction to `composites/gradient_editor/angle.rs`. The source gate prevents angle row
+      PropertyRow/DragValue policy from drifting back into the root composite owner.
+- [x] Split editor `GradientEditor` Stops group/add-stop/empty-state assembly into a private child
+      owner without changing stop-row sorting, stops group test-id propagation, add-stop max-stop
+      gating, add-stop action routing, PropertyGrid row-option forwarding, stop-row mounting,
+      empty-state text role behavior, preview behavior, angle row behavior, or public gradient
+      editor options.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition, model reads,
+      preview assembly, angle row routing, and root layout while delegating Stops group construction
+      to `composites/gradient_editor/stops_group.rs`. The source gate prevents Stops group,
+      add-stop button, row mounting, and empty-state text policy from drifting back into the root
+      composite owner.
+- [x] Split editor `GradientEditor` stop model read/sort preparation into a private child owner
+      without changing paint-invalidation model reads, transparent color fallback, preview stop
+      clamping, preview stop sorting, stop-row sorting, preview drag stop-model collection, preview
+      assembly, Stops group assembly, angle row behavior, or public gradient editor options.
+      Result: `composites/gradient_editor.rs` keeps keyed element composition and final preview /
+      angle / Stops group / root assembly while delegating stop model reads and derived row data to
+      `composites/gradient_editor/stops_model.rs`. The source gate prevents model read/sort
+      policy from drifting back into the root composite owner.
+- [x] Split editor `InspectorPanel` options/default and search-assist option records into a
+      private child owner without changing public `InspectorPanelOptions` or
+      `InspectorPanelSearchAssistOptions` import paths, layout defaults, enabled/title/test-id
+      defaults, search assist option fields, search fallback behavior, or panel assembly behavior.
+      Result: `composites/inspector_panel.rs` now keeps public cx/control records, builder methods,
+      and child-owner routing while re-exporting options. `composites/inspector_panel/options.rs`
+      owns public option records and defaults. The source gate prevents options/default policy from
+      drifting back into the root composite or element assembly owner.
+- [x] Split editor `InspectorPanel` header/search/content/root element assembly into a private
+      child owner without changing public constructors/builders, `InspectorPanelCx` accessor
+      shape, query trimming/lowercase matching, title text-role behavior, search assist fallback,
+      header/content/root test-id propagation, panel chrome token fallback, or
+      `into_element_in(...)` routing.
+      Result: `composites/inspector_panel.rs` now keeps public options/cx/control records,
+      builder methods, and `into_element_in(...)` routing. `composites/inspector_panel/element.rs`
+      owns scoped panel assembly, theme/chrome resolution, header/title/toolbar layout,
+      search/search-assist element selection, content mounting, and root panel chrome. The source
+      gate prevents element assembly and search fallback policy from drifting back into the root
+      composite owner.
+- [x] Split editor `InspectorPanel` search field fallback/assist routing into a private element
+      child owner without changing search query trimming/lowercase matching, header visibility,
+      enabled/focusable routing, clear-button test ids, `MiniSearchBox` fallback, `TextAssistField`
+      anchored overlay routing, search assist list/empty/key/test/max-height forwarding, or public
+      `InspectorPanel` options.
+      Result: `composites/inspector_panel/element.rs` keeps panel metrics/header/content/root
+      assembly and delegates search field construction to
+      `composites/inspector_panel/element/search.rs`. The source gate prevents search
+      fallback/assist policy from drifting back into the panel element owner.
+- [x] Split editor `PropertyGroup` options/default records into a private child owner without
+      changing public `PropertyGroupOptions` import paths, layout defaults, collapsed model/default
+      behavior, enabled/collapsible defaults, header/content test-id fields, header rendering,
+      content mounting, or toggle callback routing.
+      Result: `composites/property_group.rs` keeps the public group control, collapse/toggle
+      behavior, header/content/root assembly, and re-exports `PropertyGroupOptions`.
+      `composites/property_group/options.rs` owns option fields and defaults. The source gate
+      prevents options/default policy from drifting back into the group owner.
+- [x] Split editor `PropertyGroup` header/content/root element assembly into a private child owner
+      without changing public builders, toggle callback behavior, collapsed model allocation,
+      header/content/root test-id routing, theme metric/color resolution, disclosure icon choice,
+      hover/press header chrome, header actions slot, content visibility, or panel container
+      chrome.
+      Result: `composites/property_group.rs` now delegates keyed element construction to
+      `composites/property_group/element.rs`, while the private element owner handles metrics,
+      collapsed-state reads/toggles, header pressable assembly, content mounting, root flex
+      decoration, and outer panel chrome. The source gate prevents element assembly policy from
+      drifting back into the public group owner.
+- [x] Split editor `PropertyGroup` header pressable assembly into a private element child owner
+      without changing toggle callback behavior, collapsed model mutation/redraw routing,
+      disclosure icon choice, enabled/collapsible gating, hover/press header chrome, header text
+      role, header actions slot, header test-id propagation, content visibility, or panel chrome.
+      Result: `composites/property_group/element.rs` keeps metric/theme resolution,
+      collapsed-state reads, content/root/panel assembly, and delegates header construction to
+      `composites/property_group/element/header.rs`. The source gate prevents header pressable
+      policy from drifting back into the group element owner.
+- [x] Split editor `PropertyRow` row/column element assembly into a private child owner without
+      changing public constructors/builders, explicit id-source keying, label helper behavior,
+      layout resolution, auto row/column switching, value-slot overflow semantics, reset slot
+      wiring, action slot wiring, test-id propagation, or property-row text role behavior.
+      Result: `composites/property_row.rs` now keeps the public composite, label helper,
+      keying/identity wrapper, and public re-exports. `composites/property_row/element.rs` owns
+      row/column flex assembly, layout-query usage, resolved-layout consumption, value-slot marking,
+      reset/action slot mounting, and test-id application. The source gate prevents row/column
+      assembly policy from drifting back into the root composite owner.
+- [x] Split editor `PropertyRow` row-layout branch assembly into a private element child owner
+      without changing row/column/auto layout variant resolution, row label fixed slot width,
+      single-line label line box, row value-slot overflow semantics, reset/action trailing slot
+      wiring, row min-height behavior, test-id propagation, or public property row APIs.
+      Result: `composites/property_row/element.rs` keeps layout-query/resolution, auto dispatch,
+      column branch assembly, and test-id application while delegating row branch construction to
+      `composites/property_row/element/row.rs`. The source gate and overflow guard now track the
+      two marked value slots across root and row owners.
+- [x] Split editor `PropertyRow` column-layout branch assembly into a private element child owner
+      without changing row/column/auto layout variant resolution, column header/value stacking,
+      header label line box, column value-slot overflow semantics, reset/action trailing slot
+      wiring, column stack gap behavior, test-id propagation, or public property row APIs.
+      Result: `composites/property_row/element.rs` now keeps layout-query/resolution, auto
+      dispatch, row/column owner routing, and test-id application while delegating column branch
+      construction to `composites/property_row/element/column.rs`. The source gate and overflow
+      guard now track the two marked value slots across row and column owners.
+- [x] Split editor `PropertyRow` trailing reset/action slot wrapper into a private child owner
+      without changing row/column layout, reset/action visibility, fixed slot width, min row height,
+      clip overflow, end alignment, reset element routing, action element mounting, value-slot
+      overflow semantics, or test-id propagation.
+      Result: `composites/property_row/element.rs` keeps row/column layout and value-slot marking
+      while delegating reset/action trailing slot chrome to `composites/property_row/slot.rs`. The
+      source gate prevents fixed trailing-slot wrapper policy from drifting back into the element
+      owner.
+- [x] Split editor `PropertyGrid` wrapping-layout regression coverage into a private test owner
+      without changing public `PropertyGridOptions`, row option defaults, row-context helpers,
+      row composition, wrapping value text measurement, row separation assertions, or test-id
+      propagation.
+      Result: `composites/property_grid.rs` keeps grid and row-context composition while routing
+      tests through `#[cfg(test)] mod tests;`. `composites/property_grid/tests.rs` owns the
+      wrapping-layout regression, and the source gate prevents layout-test fixtures from drifting
+      back into the grid owner.
+- [x] Split editor `PropertyRow` options/default policy into a private child owner without
+      changing public `PropertyRowOptions` import paths, layout defaults, slot width defaults,
+      auto-stack identity/test-id fields, row/column assembly, reset slot behavior, value-slot
+      marking, or property-row text role behavior.
+      Result: `composites/property_row.rs` keeps the public composite, label helper, keyed row
+      entrypoint, row/column child assembly, value-slot marking, and reset-slot wiring while
+      re-exporting `PropertyRowOptions`. `composites/property_row/options.rs` owns public options
+      fields and defaults. The source gate prevents options/default policy from drifting back into
+      the root composite owner.
+- [x] Split editor `DragValueCore` pointer/key scrub behavior installation into a private child
+      owner without changing public constructors/builders, options/default import paths,
+      pointer-down focus/capture behavior, drag threshold crossing, live value callbacks,
+      unexpected pointer-stream cleanup, pointer-up commit behavior, Escape cancel behavior, or
+      public response accessors.
+      Result: `primitives/drag_value_core.rs` now keeps public API shape, slot-state lookup,
+      layout/a11y setup, current-value synchronization, and response construction.
+      `primitives/drag_value_core/behavior.rs` owns pressable pointer down/move/up handler
+      installation, Escape key capture, capture/release calls, scrub delta calculation, commit and
+      cancel callback dispatch, and live-value constraint application. The source gate prevents
+      handler wiring and scrub move policy from drifting back into the public primitive owner.
+- [x] Split editor `DragValueCore` options/default/theme-resolution policy into a private child
+      owner without changing public `DragValueCoreOptions` import paths, defaults, theme token
+      fallback behavior, finite-value sanitization, drag threshold clamping, or public
+      `DragValueCore` behavior.
+      Result: `primitives/drag_value_core.rs` keeps the public drag-to-edit primitive entrypoint,
+      pressable/key handler wiring, and response construction while re-exporting
+      `DragValueCoreOptions`. `primitives/drag_value_core/options.rs` owns public options,
+      defaults, and theme-token resolution. The source gate prevents options/default policy from
+      drifting back into the public primitive owner.
+- [x] Split editor `DragValueCore` scrub session state into a private child owner without changing
+      public `DragValueCore` constructors/builders, response accessor shape, pointer
+      down/move/up routing, Escape cancel behavior, live value callbacks, commit/cancel callbacks,
+      modifier multipliers, or numeric constraints.
+      Result: `primitives/drag_value_core.rs` keeps the public drag-to-edit primitive entrypoint,
+      pressable/key handler wiring, a11y/layout options, and response construction.
+      `primitives/drag_value_core/state.rs` owns scrub session storage, commit/cancel state
+      mutation, move action classification, and scrub multiplier resolution. The source gate
+      prevents scrub state from drifting back into the public primitive owner.
+- [x] Move docking declarative drop-hint projection back into the private frame owner without
+      changing hover storage, drop-hint root/leaf tab projection, frame output construction, drop
+      hint painting, or public docking APIs.
+      Result: `dock/declarative.rs` no longer owns the drop-hint helper that only serves frame
+      aggregation. `dock/declarative/frame.rs` now owns both `DockSpaceElementFrame` construction
+      and its `DockDropHints` projection. The source gate prevents the helper from drifting back
+      into the declarative orchestration owner.
+- [x] Split docking declarative internal drag/drop resolve and drag-start policy into a private
+      child owner without changing hover/drop target resolution, tab-bar auto-scroll during drag,
+      tear-off handoff, drop intent application, drag diagnostics publication, drag inversion
+      payload flags, policy allow checks, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, event routing, paint ordering,
+      and public entrypoint functions. `dock/declarative/drag_resolve.rs` owns internal drag hover
+      resolution, drop resolution, drop-intent effect projection, drag diagnostics publication,
+      panel/tabs drag allow checks, and cross-window drag session payload startup. The source gate
+      prevents drag/drop resolve policy from drifting back into the declarative orchestration owner.
+- [x] Split docking declarative drag ghost and tab insert preview preparation into a private child
+      owner without changing drag ghost lookup, drag source tab fallback, ghost title fallback,
+      prepared ghost title text, center-zone insert preview titles, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, paint ordering, drop-overlay
+      dispatch, and public entrypoint functions. `dock/declarative/drag_preview.rs` owns drag ghost
+      snapshot lookup, drag source tab lookup, ghost title fallback, drag ghost paint preparation,
+      and tab insert preview title metadata. The source gate prevents drag preview policy from
+      drifting back into the declarative orchestration owner.
+- [x] Split docking declarative floating chrome and title-bar policy into a private child owner
+      without changing floating hover lookup, floating chrome paint input projection, close/title-bar
+      hit tests, title-bar drag target resolution, dock-preview policy checks, or public docking
+      APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, drag/drop event routing,
+      layout/render wiring, and public entrypoint functions. `dock/declarative/floating.rs` owns
+      floating hover lookup, floating hover paint-state projection, floating chrome paint inputs,
+      close/title-bar hit tests, leaf-tabs selection for title-bar drags, and floating title-bar
+      drag target resolution. The source gate prevents floating chrome/title-bar policy from
+      drifting back into the declarative orchestration owner.
+- [x] Split docking declarative geometry and hit-test policy into a private child owner without
+      changing tab close/content hit results, empty tab-bar drag targeting, layout snapshot bounds,
+      split-handle cursor/min-size behavior, viewport hit projection, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, drag/drop event routing,
+      layout/render wiring, and public entrypoint functions. `dock/declarative/geometry.rs` owns
+      declarative tab hit tests, layout snapshot lookup, split-handle hit/min-size geometry,
+      split-handle cursor mapping, pixels-per-point lookup, and active viewport hit-test projection.
+      The source gate prevents geometry/hit-test policy from drifting back into the declarative
+      orchestration owner.
+- [x] Split docking declarative tab overflow menu and tab-strip scroll/hover policy into a private
+      child owner without changing overflow menu opening, active-row scroll positioning, menu row
+      click/close effects, menu wheel scrolling, tab-strip wheel persistence, hover projection,
+      cursor reporting, or public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, layout/render wiring, input
+      event routing, and public entrypoint functions. `dock/declarative/overflow.rs` owns tab
+      overflow menu lookup/opening, menu click handling, menu wheel handling, tab-strip wheel scroll
+      updates, and tab/overflow hover projection. The source gate prevents tab overflow policy from
+      drifting back into the declarative orchestration owner.
+- [x] Split docking declarative tear-off and floating-rect policy into a private child owner
+      without changing panel/tab tear-off eligibility, stable out-of-bounds frame tracking, retry
+      clearing, request-float effects, default floating rect sizing, floating bounds clamping, or
+      public docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, drag/drop event routing,
+      layout/render wiring, and public entrypoint functions. `dock/declarative/tear_off.rs` owns
+      tear-off eligibility checks, out-of-bounds tracking, retry state, request-float effect
+      construction, default floating rect projection, and floating bounds clamping. The source gate
+      prevents tear-off policy from drifting back into the declarative orchestration owner.
+- [x] Split docking declarative frame output aggregation into a private child owner without
+      changing managed dock-space entrypoints, panel layout, tab/floating paint input reuse, drop
+      hint projection, viewport surface input storage, split handle paint input storage, or public
+      docking APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, input routing, layout/render
+      event wiring, and public entrypoint functions. `dock/declarative/frame.rs` owns
+      `DockSpaceElementFrame`, empty-frame construction, layout snapshot projection, cached panel
+      sizes, tab/floating/viewport/split paint input storage, drag ghost storage, and drop-hint
+      derivation. The source gate prevents frame aggregation details from drifting back into the
+      declarative orchestration owner.
+- [x] Split docking declarative registry and panel-root binding into a private child owner without
+      changing public `DockSpaceElementOptions`, `DockPanelElement`,
+      `DockPanelElementRegistry`, `DockPanelElementRegistryService`, `dock_panel_element`, managed
+      dock-space entrypoints, registry fallback content, panel ordering, panel-node binding, or
+      public re-export paths.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, input routing, layout/render
+      assembly, and public entrypoint functions while re-exporting the registry public surface.
+      `dock/declarative/registry.rs` owns registry public types, registry service storage,
+      panel collection/order, missing-panel fallback UI, and panel-node binding helpers. The
+      source gate prevents registry/panel-root policy from drifting back into the declarative
+      orchestration owner.
+- [x] Split docking declarative tab metrics and scroll policy into a private child owner without
+      changing tab title/glyph text preparation, measured/fallback tab width routing, overflow
+      geometry, active-tab visibility clamping, tab-strip wheel scroll persistence, drag
+      auto-scroll insert-index updates, tab detail paint preparation, or public dock-space APIs.
+      Result: `dock/declarative.rs` keeps dock-space orchestration, hit testing, input routing,
+      paint input assembly, and public entrypoints. `dock/declarative/tab_metrics.rs` owns tab
+      text measurement, tab width projection, tab-bar geometry, scroll clamp/sync, and drag
+      auto-scroll helpers. The source gate prevents tab metric/scroll policy from drifting back
+      into the declarative orchestration owner.
+- [x] Split docking declarative interaction state into a private child owner without changing
+      managed dock-space element entrypoints, panel registry APIs, tab/floating hover state,
+      pressed close tracking, floating/divider/panel drag state, viewport capture state,
+      tab-overflow menu state, tab scroll/width persistence, or cross-window docking call paths.
+      Result: `dock/declarative.rs` keeps the managed-surface entrypoint, panel registry,
+      layout/render/input orchestration, and public docking APIs. `dock/declarative/interaction.rs`
+      owns declarative pressed/drag/hover records plus `DeclarativeDockInteractionService` state
+      mutation/query helpers. The source gate prevents interaction state records from drifting
+      back into the declarative orchestration owner.
+- [x] Split docking declarative drag route/session-kind policy into a private child owner without
+      changing internal drag route anchor registration, dock-space node registration, active dock
+      drag invalidation, drop-time dock drag cancellation, or public docking APIs.
+      Result: `dock/declarative.rs` keeps the managed-surface entrypoint, layout/render/input
+      orchestration, and public docking APIs. `dock/declarative/drag_route.rs` owns dock drag route
+      installation, dock drag session-kind checks, active-window invalidation gating, and
+      drop-time dock drag kind detection. The source gate prevents dock drag route/session policy
+      from drifting back into the declarative orchestration owner.
+- [x] Split editor `NumericInput` keyed element and render assembly into a private child owner
+      without changing public constructors/builders, callsite/id-source keying, draft/error model
+      routing, focus target capture, selection replacement behavior, joined-input frame chrome,
+      prefix/suffix affixes, trailing error icon, inline error text, keyboard handler binding, or
+      outcome behavior.
+      Result: `controls/numeric_input.rs` keeps public APIs, options adoption, focus-target
+      plumbing, and keyed identity routing. `controls/numeric_input/element.rs` owns keyed element
+      field assembly, text-input props, affix/error segment rendering, inline error rendering, and
+      keyboard handler installation. The source gate prevents render/field assembly policy from
+      drifting back into the public control owner.
+- [x] Split editor `NumericInput` keyboard commit/cancel policy into a private child owner without
+      changing keyed control identity, draft/error model ownership, focus-entry replacement
+      behavior, Enter commit, Escape cancel, validation/error updates, outcome callbacks,
+      joined-input frame composition, affix rendering, or inline/trailing error presentation.
+      Result: `controls/numeric_input.rs` keeps public control APIs, keyed element assembly, field
+      layout, affix/error rendering, and model/session routing. `controls/numeric_input/keyboard.rs`
+      owns key-down replacement delegation, Enter commit, Escape cancel, validation failure
+      handling, invalid parse errors, last-draft tracking, and outcome emission. The source gate
+      prevents keyboard commit/cancel policy from drifting back into the root control owner.
+- [x] Split editor `NumericInput` error presentation into a private element child owner without
+      changing trailing error icon visibility, inline error visibility, validation message text
+      role, invalid border/foreground theme colors, error icon/test-id routing, inline error
+      test-id/a11y label routing, source text size/line-height adoption, draft/error model reads,
+      keyboard behavior, or public `NumericInput` options.
+      Result: `controls/numeric_input/element.rs` keeps keyed field assembly, affix rendering,
+      draft/focus sync, and keyboard handler wiring while delegating error icon and inline error
+      rendering to `controls/numeric_input/element/error.rs`. The source gate prevents error
+      presentation policy from drifting back into the root element owner.
+- [x] Split editor `NumericInput` text-entry mounting into a private element child owner without
+      changing TextInput props, enabled/focusable/placeholder/test-id routing, invalid a11y state,
+      joined text-input chrome, editor numeric text style, focus-target capture, focus sync,
+      last-draft tracking, key handler installation, draft/error clearing, affix rendering, error
+      presentation, or public `NumericInput` options.
+      Result: `controls/numeric_input/element.rs` keeps keyed field/frame assembly, affix routing,
+      and error owner invocation while delegating text input mounting, focus/key wiring, and
+      draft/error sync to `controls/numeric_input/element/input.rs`. The source gate prevents
+      input-mount behavior from drifting back into the root element owner.
+- [x] Split editor `NumericInput` affix segment rendering into a private element child owner
+      without changing prefix/suffix duplicate suppression, segment order, muted text color,
+      density/frame padding and text-px routing, prefix/suffix test-id routing, a11y labels,
+      trailing error icon composition, text-entry mounting, or public `NumericInput` options.
+      Result: `controls/numeric_input/element.rs` keeps joined field/frame orchestration, input
+      owner invocation, and error owner invocation while delegating prefix/suffix segment chrome to
+      `controls/numeric_input/element/affix.rs`. The source gate prevents affix segment policy from
+      drifting back into the root element owner.
+- [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
+      tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
+      tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,
+      or public tooltip test helpers.
+      Result: `controls/color_edit/popup/tooltip.rs` keeps tooltip overlay request lifecycle,
+      placement, close behavior, and `color_tooltip_lines`. `controls/color_edit/popup/tooltip/panel.rs`
+      owns tooltip panel chrome, preview swatch composition, readout text mounting, and tooltip
+      semantics. The source gate prevents panel rendering policy from drifting back into the
+      overlay request owner.
+- [x] Split editor color-edit popup side-preview cell and restore behavior into a private child
+      owner without changing current/original preview composition, original restore alpha rules,
+      side-preview swatch sizing, preview caption text roles, alpha-preview fill routing, public
+      popup preview imports, or color-edit tests.
+      Result: `controls/color_edit/popup/preview.rs` is now a thin fill/side hub.
+      `controls/color_edit/popup/preview/side.rs` owns side-preview current/original cell assembly,
+      original restore action wiring, side-preview sizing constants, and restore color semantics.
+      The source gate prevents side-preview behavior from drifting back into the preview hub.
+- [x] Split editor color-edit numeric model text and parse helpers into a private child owner
+      without changing numeric mode ordering, RGB/HSV readout formatting, RGB/HSV parser
+      semantics, alpha preservation, HSV conversion routing, hex parsing, HSV geometry helpers, or
+      public model imports.
+      Result: `controls/color_edit/model.rs` keeps hex parsing/formatting, HSV conversion,
+      sanitize/local-coordinate helpers, and hue-wheel re-exports.
+      `controls/color_edit/model/numeric.rs` owns numeric mode records, mode selection, readout
+      formatting, and numeric input parsing. The source gate prevents numeric parser/readout policy
+      from drifting back into the root model owner.
+- [x] Split editor color-edit popup option policy types into a private child owner without changing
+      public `ColorEditOptions` defaults, popup picker/numeric/side-preview enum paths, popup
+      runtime override semantics, `ColorEditPopupRuntimeOptions` crate-visible path, tooltip/copy
+      options, palette/history ownership, or public `ColorEdit` option imports.
+      Result: `controls/color_edit/options.rs` keeps alpha preview, drag/drop, tooltip/copy, and
+      root `ColorEditOptions` ownership while re-exporting popup policy types.
+      `controls/color_edit/options/popup.rs` owns picker/numeric/side-preview/popup defaults and
+      runtime override synchronization. The source gate prevents popup policy from drifting back
+      into the root options owner.
+- [x] Split editor color-edit main swatch context-menu input policy into a private child owner
+      without changing the public swatch entrypoint, popup activation/reference capture,
+      right-click/Ctrl-click copy menu routing, Shift-F10/ContextMenu keyboard routing, tooltip
+      dismissal, copy menu model updates, drag/drop hooks, preview chrome, or a11y value text.
+      Result: `controls/color_edit/swatch.rs` keeps the main swatch model, popup activation,
+      tooltip/drag/drop/chrome/preview ownership. `controls/color_edit/swatch/context_menu.rs`
+      owns pointer and keyboard copy-menu opening policy. The source gate prevents context-menu
+      input policy from drifting back into the root swatch owner.
+- [x] Split editor color-edit popup swatch slot behavior into a private child owner without
+      changing preset/history row entrypoints, row wrapping, stable test-id derivation,
+      pressable/a11y chrome, activation color application, drag source/drop target behavior,
+      palette drop callback routing, or alpha-preserving formatted value text.
+      Result: `controls/color_edit/popup/swatches.rs` keeps preset/history row ownership and
+      derived test-id routing. `controls/color_edit/popup/swatches/slot.rs` owns the individual
+      swatch pressable, drag/drop hooks, callback dispatch, preview fill, and a11y value. The
+      source gate prevents slot behavior from drifting back into the row owner.
+- [x] Split editor color-edit popup body assembly into a private child owner without changing
+      overlay request placement, close-focus behavior, popup open model, picker/runtime option
+      semantics, side preview composition, numeric rows, eyedropper action, swatch/history rows,
+      standalone alpha bar behavior, popup chrome, width policy, or public popup entrypoints.
+      Result: `controls/color_edit/popup.rs` keeps overlay request lifecycle, anchored placement,
+      pointer-region wrapping, and close-on-focus/resize policy. `controls/color_edit/popup/body.rs`
+      owns popup content assembly, picker/body width selection, side-preview row layout, popup
+      chrome, and all child affordance composition. The source gate prevents body assembly from
+      drifting back into the overlay request owner.
+- [x] Split editor color-edit drag source pointer lifecycle into a private child owner without
+      changing drag threshold resolution, local/cross-window drag startup, pointer
+      down/move/up routing, active session payload capture, hover-target preservation, delivery on
+      pointer up, or public swatch/popup drag-drop call paths.
+      Result: `controls/color_edit/drag_drop.rs` keeps store ownership, target hover/delivery
+      consumption, delivered-drop application, payload alpha rules, and root re-exports.
+      `controls/color_edit/drag_drop/source.rs` owns threshold resolution and drag source hook
+      installation. The source gate prevents pointer hook policy from drifting back into the root
+      drag-drop owner.
+- [x] Split IMUI input-text picker popup request/render orchestration into a private core popup
+      owner without changing trigger identity, popup open model forwarding, keyboard handler
+      installation gating, selected candidate routing, picked index/value propagation, or public
+      picker APIs.
+      Result: `text_picker_controls/core.rs` now keeps session/input/open-policy orchestration.
+      `text_picker_controls/core/popup.rs` owns popup request construction and render dispatch,
+      while `text_picker_controls/response.rs` keeps popup-result finalization.
+- [x] Split IMUI input-text picker response finalization out of the core orchestration owner
+      without changing popup open reporting, picked index/value propagation, picked-change merging,
+      edited/deactivated-after-edit flags, or public `InputTextPickerResponse` APIs.
+      Result: `text_picker_controls/core.rs` initially kept session/input/open-policy/popup
+      orchestration; the 2026-06-01 follow-up moved popup request/render dispatch into
+      `text_picker_controls/core/popup.rs`. `text_picker_controls/response.rs` owns popup-result
+      finalization and picked-change response merging. The source gate prevents
+      merge/finalization logic from drifting back into the core owner.
+- [x] Split IMUI debug-draw paint clip-stack balancing into a private paint owner without changing
+      command order, empty clip elision, unmatched pop elision, final clip cleanup, media dispatch,
+      shape dispatch, or public debug-draw drawing APIs.
+      Result: `debug_draw_controls/paint.rs` keeps command iteration and media/shape dispatch.
+      `debug_draw_controls/paint/clip.rs` owns clip push/pop command handling and end-of-pass clip
+      stack cleanup. The source gate prevents clip scene-op writes from drifting back into the
+      paint dispatcher.
+- [x] Split IMUI disclosure visual regression tests into private palette and text-role owners
+      without changing tree-node hover palette assertions, shared list-row text-role assertions,
+      chrome glyph text-role assertions, or shared disclosure test harness helpers.
+      Result: `disclosure_controls/tests/visual.rs` now routes visual regression test modules
+      only. `tests/visual/palette.rs` owns hover palette coverage, while
+      `tests/visual/text_roles.rs` owns row label and disclosure indicator text-role coverage.
+- [x] Split IMUI switch entry rendering into a private owner without changing label identity
+      scoping, model reads, `SwitchOptions` a11y/test-id wiring, active-trigger behavior
+      installation, field chrome, switch state badge mounting, boolean label mounting, or fill-row
+      visual assembly.
+      Result: `switch/entry.rs` now owns public switch model entrypoints and label identity
+      scoping only. `switch/entry/render.rs` owns model reads, pressable props, active-trigger
+      behavior installation, field chrome, switch badge/label mounting, and response return.
+- [x] Split window overlay toast render helpers into a private child owner without changing toast
+      layer request synthesis, viewport pause/focus behavior, action/cancel/close test IDs,
+      Sonner-style typography, icon override routing, stack-shift animation, or toast dismissal
+      behavior.
+      Result: `window_overlays/render.rs` keeps the overlay render orchestration and toast layer
+      assembly. `window_overlays/render/toast_render.rs` owns toast viewport pause state, part
+      test-id derivation, icon override/glyph helpers, Sonner title/description text helpers,
+      alpha blending, and stack-shift state/output calculation. The source gate prevents those
+      helpers from drifting back into the large overlay render owner.
+- [x] Split editor `DragValue` mode/state and session helpers into private child owners without
+      changing keyed control orchestration, hidden scrub/input mounting, numeric input outcome
+      mapping, or public `DragValue` APIs.
+      Result: `controls/drag_value.rs` keeps control orchestration and root public surface.
+      `controls/drag_value/model.rs` owns `DragValueMode` / `DragValueState`, and
+      `controls/drag_value/session.rs` owns hidden layout, numeric-input outcome mapping, and
+      outcome callback emission. The source gate prevents state/session helpers from drifting back
+      into the root control.
+- [x] Split editor `DragValue` scrub frame rendering into a private child owner without changing
+      `DragValueCore` commit/cancel routing, double-click typing handoff, scrub response state
+      mapping, stable test-id routing, or public `DragValue` options.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration, mode switching, live
+      model updates, and `NumericInput` typing routing. `controls/drag_value/scrub.rs` owns scrub
+      frame chrome, prefix/value/suffix segment rendering, and scrub test-id stamping. The source
+      gate prevents frame chrome and value text assembly from drifting back into the root control.
+- [x] Split editor `DragValue` scrub element assembly into a private child owner without changing
+      `DragValueCore` live update wiring, commit/cancel callbacks, scrub layout hiding while
+      typing, double-click typing handoff, focus-handoff arming, scrub id recording, scrub frame
+      state mapping, test-id routing, or public `DragValue` options.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration and scrub/input owner
+      composition. `controls/drag_value/scrub_element.rs` owns `DragValueCore` options and
+      callbacks, double-click typing transition, live model updates, scrub focus id recording, and
+      scrub frame owner routing. The source gate prevents scrub behavior policy from drifting back
+      into the root control.
+- [x] Split editor `DragValue` options/default records into a private child owner without changing
+      public `DragValueOptions` import paths, fill-width/flex defaults, prefix/suffix fields,
+      shared numeric constraints, replace-all typing selection behavior, id-source semantics,
+      test-id routing, keyed control orchestration, scrub frame behavior, or typing input routing.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration, mode switching,
+      `DragValueCore` wiring, live model updates, and `NumericInput` typing routing while
+      re-exporting `DragValueOptions`. `controls/drag_value/options.rs` owns option fields and
+      defaults. The source gate prevents options/default policy from drifting back into the root
+      control.
+- [x] Split editor `DragValue` typing input assembly into a private child owner without changing
+      hidden input mounting, constrained parse, validation, selection behavior, commit/cancel
+      mapping, scrub focus restore, scrub revision bumping, outcome callback emission, redraw,
+      scrub frame behavior, or public `DragValue` options.
+      Result: `controls/drag_value.rs` keeps keyed control orchestration, scrub mode switching,
+      `DragValueCore` wiring, live model updates, and scrub/input composition while delegating
+      `NumericInput` typing assembly to `controls/drag_value/typing.rs`. The source gate prevents
+      typing input policy and focus handoff from drifting back into the root control.
+- [x] Split editor input-group icon/clear-button segment rendering into a private child owner
+      without changing the existing `crate::primitives::input_group::*` helper names or segment
+      call paths.
+      Result: `primitives/input_group/segments.rs` now keeps segment layout, text, value, axis, and
+      derived-test-id helpers plus re-exports the icon segment helpers. `segments/icon.rs` owns
+      icon-button chrome, clear-button routing, multiline clear-button inset layout, and static icon
+      slot rendering. The source gate prevents icon chrome from drifting back into the general
+      segment owner.
+- [x] Split editor theme preset/replay regressions into a private `theme/tests.rs` owner without
+      changing public editor theme preset APIs, installed-preset replay semantics, or host theme
+      sync behavior.
+      Result: `ecosystem/fret-ui-editor/src/theme.rs` now keeps only public preset metadata,
+      install/replay helpers, host-theme sync helpers, and a `#[cfg(test)] mod tests;` route.
+      `ecosystem/fret-ui-editor/src/theme/tests.rs` owns the eight preset/replay regressions, and
+      the source gate prevents those tests from drifting back into the runtime theme entry point.
+- [x] Refresh the `fret-imui` runtime boundary gate so the thin authoring facade cannot drift into
+      kit/editor/docking policy ownership without changing public IMUI facade APIs.
+      Result: `tools/gate_imui_workstream_source.py` now checks `ecosystem/fret-imui/src/lib.rs`
+      for the policy-light authoring facade shape and rejects `fret_ui_kit`, `fret_ui_editor`,
+      `fret_docking`, workspace, plot, shadcn, winit, or wgpu imports from the runtime facade.
+      Fresh audit evidence still reports direct runtime dependencies only on `fret-authoring` and
+      `fret-ui`.
+- [x] Split editor input-group segment/text/axis helper implementation into a private child owner
+      without changing the existing `crate::primitives::input_group::*` call path, frame owner
+      routing, joined-input owner routing, text-role semantics, icon-button chrome, axis marker
+      tinting, derived test-id policy, or crate-visible primitive APIs.
+      Result: `primitives/input_group.rs` is now a thin hub that re-exports frame, joined-input,
+      and segment owner APIs. `primitives/input_group/segments.rs` owns inset/segment/row/divider
+      helpers, icon/clear/text/value segments, derived test-id policy, axis segment composition,
+      and axis tint color mixing.
+- [x] Split editor joined-input frame assembly and pointer pressed-state behavior into a private
+      child owner without changing the existing `crate::primitives::input_group::*` call path, base
+      frame owner routing, segment helpers, text-role helpers, axis segment composition, or
+      crate-visible primitive APIs.
+      Result: `primitives/input_group.rs` keeps segment helpers, text-role helpers, axis segment
+      composition, and re-exports the joined-input owner APIs. `primitives/input_group/joined.rs`
+      owns joined frame composition, leading/input/trailing segment assembly, pointer pressed-state
+      cleanup, pointer down/up/cancel handlers, and frame override handoff.
+- [x] Split editor input-group base frame and frame override policy into a private child owner
+      without changing the existing `crate::primitives::input_group::*` call path, joined-input
+      composition, segment helpers, text-role helpers, pointer pressed behavior, or crate-visible
+      primitive APIs.
+      Result: `primitives/input_group.rs` keeps segment helpers, joined-input assembly,
+      pointer-region behavior, axis segment composition, text-role usage, and re-exports the frame
+      owner APIs. `primitives/input_group/frame.rs` owns `EditorInputGroupFrameOverrides`, base
+      frame construction, min-height fallback, semantic/bg/border override application, and
+      `EditorWidgetVisuals` frame visual resolution.
+- [x] Split editor `TransformEdit` keyed element assembly into a private child owner without
+      changing callsite keying, section layout variants, Vec3Edit composition, linked-scale
+      model/sync behavior, link-toggle test-id derivation, axis outcome routing, or public
+      TransformEdit option/control APIs.
+      Result: `controls/transform_edit.rs` keeps public options, section/outcome records,
+      constructors, presentation adoption, builder methods, and callsite/id-source keying.
+      `controls/transform_edit/element.rs` owns keyed element assembly, per-section presentation
+      projection, linked-scale orchestration, section row/column composition, derived id/test-id
+      routing, and root test-id decoration.
+- [x] Split editor Vec2/Vec3/Vec4 keyed element assembly into a private child owner without
+      changing callsite keying, auto row/column layout resolution, axis group ordering, axis reset
+      forwarding, axis outcome routing, test-id derivation, or public VecEdit option/control APIs.
+      Result: `controls/vec_edit.rs` keeps public options, Vec2/Vec3/Vec4 records, constructors,
+      presentation adoption, builder methods, and callsite/id-source keying.
+      `controls/vec_edit/element.rs` owns keyed element assembly, layout-plan consumption, derived
+      axis id/test-id routing, axis group order, and root test-id decoration.
+- [x] Split editor `AxisDragValue` keyed element assembly into a private child owner without
+      changing callsite keying, scrub/typing mode transitions, focus handoff, commit/cancel outcome
+      routing, reset action wiring, test-id derivation, or public option/outcome APIs.
+      Result: `controls/axis_drag_value.rs` keeps the public control record, constructors,
+      presentation adoption, builder methods, and callsite/id-source keying.
+      `controls/axis_drag_value/element.rs` owns keyed element assembly, scrub and typing frame
+      composition, Enter/Escape handling, focus handoff, reset segments, and error icon chrome.
+- [x] Split editor axis-drag-value typing frame assembly into a private element child owner without
+      changing scrub mounting, key commit/cancel handling, focus handoff, typing test-id routing,
+      invalid-state icon, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, scrub frame,
+      text input props, focus/key handling, and mode transitions. The private
+      `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
+      composition plus axis/prefix/suffix/error/reset segments.
+- [x] Split editor axis-drag-value scrub frame assembly into a private element child owner without
+      changing DragValueCore commit/cancel routing, double-click typing handoff, scrub response
+      state mapping, stable test-id routing, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, DragValueCore
+      wiring, double-click typing transition, and text-entry focus/key policy. The private
+      `controls/axis_drag_value/element/scrub.rs` owner contains scrub input-group frame
+      composition plus axis/value/prefix/suffix/reset segments.
+- [x] Split `imui_editor_proof_demo` proof/readout helpers into a demo-local owner without changing
+      render workflow, docking/window glue, collection module ownership, model factories, or public
+      IMUI/editor APIs.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs` owns proof text-role
+      helpers, numeric presentation adapters, outcome labels, drag preview card composition,
+      outliner helper structs/readouts, and theme diagnostic projection. The top-level proof route
+      keeps workflow rendering and imports `proof_helpers::*`.
+- [x] Split IMUI menu-item behavior activation and response population into private owners without
+      changing active-trigger installation, popup/menubar keyboard installation, close-on-activate,
+      clicked transient delivery, command dispatch source recording, lifecycle edges, or public
+      menu item facade behavior.
+      Result: `menu_controls/interaction/behavior.rs` now owns active-trigger installation and
+      keyboard orchestration only. `behavior/activation.rs` owns activate handling and command
+      dispatch, while `behavior/response.rs` owns clicked transient consumption and response
+      population.
+- [x] Split IMUI checkbox entry rendering into a private owner without changing label identity
+      scoping, model reads, `CheckboxOptions` a11y/test-id wiring, behavior installation, field
+      chrome, visual row assembly, adapter seams, or public checkbox facade behavior.
+      Result: `checkbox/entry.rs` now owns public checkbox model entrypoints and label identity
+      scoping only. `checkbox/entry/render.rs` owns model reads, pressable props, behavior
+      installation, field chrome, indicator/label mounting, and response return.
+- [x] Split IMUI adapter seam signal records into a private child owner without changing public
+      `imui::adapters::*` paths, emitted signal accessors, reporter callback shape, seam options,
+      or `report_adapter_signal(...)` behavior.
+      Result: `adapters.rs` keeps the public seam hub, `AdapterSeamOptions`, and
+      `report_adapter_signal(...)`. `adapters/signal.rs` owns `AdapterSignalMetadata`,
+      `AdapterSignalRecord`, and `AdapterSignalReporter`.
+- [x] Split IMUI tooltip runtime model creation and trigger gate installation into a private owner
+      without changing trigger-id validation, provider option defaults, layout projection,
+      hover/focus interaction updates, overlay request submission, or public tooltip facade
+      behavior.
+      Result: `tooltip_overlay/runtime.rs` now keeps trigger-id validation, provider defaults,
+      layout/interaction/request orchestration, and response return only. `runtime/models.rs` owns
+      local open/panel models, Radix trigger event models, last-pointer tracking, dismiss handler
+      installation, and pointer-move open gate installation.
+- [x] Split IMUI virtual-list keyed element assembly into a private owner without changing
+      facade method names, default scroll-handle slot state, keyed runtime substrate usage,
+      build-focus forwarding, row wrapping, list semantics, or `VirtualListResponse` reporting.
+      Result: `virtual_list_controls.rs` is now a thin module/re-export hub, while
+      `virtual_list_controls/element.rs` owns keyed list assembly, default scroll-handle slot
+      state, focus child mounting, and row wrapping. The perf guard now points at the current
+      virtual-list and floating-layer z-order owner files.
+- [x] Split IMUI virtual-list element output decoration into a private owner without changing
+      facade method names, default scroll-handle slot state, keyed runtime substrate usage,
+      build-focus forwarding, row wrapping, list semantics, or `VirtualListResponse` reporting.
+      Result: `virtual_list_controls/element.rs` keeps keyed runtime assembly and row mounting,
+      while `virtual_list_controls/element/output.rs` owns list-level semantics decoration and
+      `VirtualListResponse` packaging.
+- [x] Split IMUI bullet-text compact paragraph regression coverage into a private text-role owner
+      without changing bullet indicator layout, label test-id forwarding, inherited foreground, or
+      shared compact paragraph semantics.
+      Result: `bullet_text_controls/tests.rs` now keeps shared fixtures and module routing only.
+      `tests/text_role.rs` owns compact paragraph text-role coverage.
+- [x] Split IMUI bullet-text element assembly into a private child owner without changing public
+      bullet text facade behavior, bullet indicator layout, label test-id forwarding, inherited
+      foreground, or compact paragraph text-role semantics.
+      Result: `bullet_text_controls.rs` keeps the immediate-mode entry point and forwards to the
+      element owner. `bullet_text_controls/element.rs` owns bullet indicator/track layout, label
+      semantics/test IDs, inherited foreground, and compact paragraph mounting.
+- [x] Split IMUI drag/drop no-trigger regression coverage into private source and target owners
+      without changing inactive source returns, empty target responses, payload accessors, or
+      no-output behavior.
+      Result: `drag_drop/tests.rs` now keeps the shared `TestWriter` harness and module routing
+      only. `tests/source.rs` owns source fallback coverage, while `tests/target.rs` owns target
+      fallback coverage.
+- [x] Split IMUI label-identity porting-sugar regressions into private double-hash and
+      triple-hash owners without changing visible label extraction, stable identity precedence, or
+      hidden-label behavior.
+      Result: `label_identity/tests.rs` now keeps module routing only. `tests/double_hash.rs` owns
+      plain and `##` identity coverage, while `tests/triple_hash.rs` owns `###` stable identity and
+      precedence coverage.
+- [x] Split IMUI image-item visual helper regressions into private helpers and props owners
+      without changing size/opacity/UV normalization or image props box-fill semantics.
+      Result: `image_item_controls/tests.rs` now keeps shared imports and module routing only.
+      `tests/helpers.rs` owns normalization coverage, while `tests/props.rs` owns image props
+      fill/fit/sampling/UV coverage.
+- [x] Split IMUI radio entry and props owners without changing label identity, `RadioOptions`
+      a11y/test-id wiring, radio behavior installation, field chrome, or visual row layout.
+      Result: `boolean_controls/radio.rs` is now a thin module/re-export hub,
+      `radio/entry.rs` owns label identity, behavior installation, field chrome, and visual row
+      assembly, and `radio/props.rs` owns `PressableProps` plus radio semantics wiring.
+- [x] Split IMUI disclosure visual style into private padding and palette owners without changing
+      content padding, theme fallback order, selected/hover/pressed resolution, or foreground
+      inheritance.
+      Result: `disclosure_controls/visual/style.rs` is now a thin re-export hub.
+      `style/padding.rs` owns content padding by disclosure kind, while `style/palette.rs` owns
+      `DisclosurePalette` and palette resolution.
+- [x] Split IMUI input-text policy command resolution into a private owner without changing
+      completion, history, undo/redo shortcut mapping, repeat gating, IME/meta/alt suppression, or
+      command dispatch.
+      Result: `text_controls/policy_commands/input.rs` now installs the focused key handler and
+      dispatches resolved commands only. `input/resolve.rs` owns command capture, empty-command
+      checks, and key-to-command resolution.
+- [x] Split IMUI table body-row cell preparation into a private owner without changing keyed row
+      wrapping, hidden-column filtering, fallback empty cells, default/explicit test-id precedence,
+      prepared-cell wrapping, row striping/background, or horizontal scroll wrapping.
+      Result: `table_controls/render/body_rows.rs` now keeps row iteration, keying, striping, and
+      row wrapping only. `body_rows/cells.rs` owns per-row cell preparation and test-id resolution.
+- [x] Split IMUI table body wrapper rendering into private row and cell owners without changing
+      wrapper semantics, row striping/background, pinned/grouped row layout, cell padding/layout,
+      or cell test-id/heading semantics.
+      Result: `table_controls/body.rs` is now a thin hub. `body/row.rs` owns row wrapping and
+      grouped row chrome, while `body/cell.rs` owns cell wrapping and semantics decoration.
+- [x] Split IMUI table render planning into a private owner without changing palette resolution,
+      visible-column filtering, horizontal scroll handle allocation, header visibility, column
+      test-id suffixing, or header/body/root assembly.
+      Result: `table_controls/render.rs` now keeps final table assembly only.
+      `render/plan.rs` owns visible-column scanning, scroll-handle planning, header gating, and
+      column test-id suffix preparation.
+- [x] Split IMUI table row-group composition into private pinned and unpinned owners without
+      changing no-pinned fill/scroll behavior, left/center/right pinned assembly, center scroll
+      wrapping, or row outer-group packing.
+      Result: `row_groups.rs` now dispatches only. `row_groups/unpinned.rs` owns the no-pinned
+      fill/scroll path, while `row_groups/pinned.rs` owns split group assembly.
+- [x] Split IMUI floating-window resize drag application into private bounds and handle-mutation
+      owners without changing min/max clamping, last-position delta calculation, left/top origin
+      preservation, corner resizing, or drag lifecycle updates.
+      Result: `floating_window_resize/state/drag_apply.rs` now owns delta calculation and
+      `last_resize_position` updates only. `drag_apply/bounds.rs` owns min/max clamps, while
+      `drag_apply/handles.rs` owns handle-specific size/position mutation.
+- [x] Split IMUI floating-window resize handle mutation into private edge and corner owners without
+      changing left/right/top/bottom edge resizing, corner resizing, clamp usage, or origin
+      preservation.
+      Result: `drag_apply/handles.rs` now dispatches by handle family only.
+      `handles/edge.rs` owns edge-handle mutation, while `handles/corner.rs` owns corner-handle
+      mutation.
+- [x] Split IMUI floating-window resize commit lifecycle mutation into a private owner without
+      changing `cx.state_for(...)`, initial state creation, collapsed reset behavior, drag
+      application, pixel snapping, or output packing.
+      Result: `floating_window_resize/state/commit.rs` now keeps state transaction, pixel snap, and
+      output packing. `commit/mutation.rs` owns collapsed/reset/drag lifecycle mutation.
+- [x] Split IMUI debug-draw path-builder regression coverage into private sub-owners without
+      changing path stroke/fill command recording, rectangle/rounded-rectangle sampling, Bezier
+      defaults, circular/elliptical arc defaults, or invalid finished-path cleanup.
+      Result: `debug_draw_controls/tests/path_builder.rs` is now a thin test hub.
+      `tests/path_builder/commands.rs` owns stroke/fill/invalid-finish coverage,
+      `tests/path_builder/rects.rs` owns rect and rounded-rect coverage,
+      `tests/path_builder/curves.rs` owns Bezier coverage, and
+      `tests/path_builder/arcs.rs` owns circular/elliptical arc coverage.
+- [x] Split IMUI debug-draw draw-list command regression coverage into private sub-owners without
+      changing command insertion order, triangle mesh/image mesh recording, image/SVG overlay
+      recording, or concave polygon fill command storage.
+      Result: `debug_draw_controls/tests/draw_list/commands.rs` is now a thin test hub.
+      `tests/draw_list/commands/core.rs` owns broad command-order coverage,
+      `tests/draw_list/commands/meshes.rs` owns triangle mesh coverage,
+      `tests/draw_list/commands/media.rs` owns image/SVG overlay coverage, and
+      `tests/draw_list/commands/polygons.rs` owns concave fill coverage.
+- [x] Split IMUI debug-draw broad command-order regression coverage into private linear,
+      round/curve, text, and aggregate order owners without changing command insertion order or
+      command-count assertions.
+      Result: `tests/draw_list/commands/core.rs` is now a thin nested hub. `core/linear.rs` owns
+      line/poly/rect/quad/triangle command ordering, `core/round_curve.rs` owns circle/ngon/
+      ellipse/Bezier ordering, `core/text.rs` owns text command ordering, and `core/order.rs`
+      retains the all-command aggregate order proof.
+- [x] Split IMUI debug-draw draw-list summary regression coverage into private merge/counts/clip
+      sub-owners without changing channel merge summary ordering, visible command class counts,
+      effective clip-stack projection, or clip push/pop command recording.
+      Result: `debug_draw_controls/tests/draw_list/summaries.rs` is now a thin test hub.
+      `tests/draw_list/summaries/merge_order.rs` owns command-summary merge ordering,
+      `tests/draw_list/summaries/counts.rs` owns aggregate list-summary counts, and
+      `tests/draw_list/summaries/clip_stack.rs` owns effective clip-stack and clip-command
+      coverage.
+- [x] Split IMUI debug-draw path helper regression coverage into private sub-owners without
+      changing rect/polyline/polygon/triangle/quad path closure, circle/ngon/ellipse path
+      generation, ellipse defaults/rotation, or native Bezier path command routing.
+      Result: `debug_draw_controls/tests/paths.rs` is now a thin test hub.
+      `tests/paths/linear.rs` owns rect/polyline/polygon/triangle/quad coverage,
+      `tests/paths/round.rs` owns circle/ngon/ellipse coverage, and
+      `tests/paths/beziers.rs` owns quadratic/cubic Bezier command coverage.
+- [x] Split IMUI text-field buffered draft/session handling into a private child owner without
+      changing TextField public options, draft-controller support, buffered blur behavior,
+      clear-button reset behavior, or API smoke coverage.
+      Result: `controls/text_field.rs` now keeps the public control/options and layout orchestration
+      only. `controls/text_field/buffered.rs` owns the draft controller, buffered state, session
+      planning, commit/cancel helpers, clear-button session reset, and the buffered unit tests.
+- [x] Split editor text-field draft-controller binding into a private buffered child owner without
+      changing TextField public re-export path, controller commit/discard behavior, buffered
+      session commit/cancel helpers, submit-command dispatch, or buffered unit tests.
+      Result: `controls/text_field/buffered.rs` keeps buffered state, focus/blur planning,
+      session sync, commit/cancel helpers, and tests. `controls/text_field/buffered/controller.rs`
+      owns `TextFieldDraftController`, its private binding, and controller commit/discard routing.
+- [x] Split editor text-field buffered tests into a private test owner without changing focus/blur
+      planning, draft-controller commit/discard coverage, stable line-box defaults, controller
+      visibility, or buffered runtime helpers.
+      Result: `controls/text_field/buffered.rs` keeps buffered runtime state and session helpers.
+      `controls/text_field/buffered/tests.rs` owns focus/blur plan coverage and draft-controller
+      behavior tests.
+- [x] Split editor text-field element assembly into a private child owner without changing public
+      TextField builders, option names/defaults, buffered draft behavior, clear-button reset
+      behavior, multiline shortcuts, password mode, assistive semantics, or IMUI adapter routing.
+      Result: `controls/text_field.rs` keeps the public control/options and draft-controller
+      re-export. `controls/text_field/element.rs` owns keyed element construction, input/textarea
+      assembly, buffered session wiring, clear affordance wiring, and focus-selection handoff.
+- [x] Split editor text-assist field option/model records into a private child owner without
+      changing public option names, default unbuffered input policy, item test-id prefix fallback,
+      rendered panel handoff, inline empty-label behavior, or anchored-overlay height policy.
+      Result: `controls/text_assist_field.rs` keeps control orchestration, panel rendering, overlay
+      request, key handling, and accept commits. `controls/text_assist_field/model.rs` owns
+      `OnTextAssistFieldAccept`, `TextAssistFieldSurface`, `TextAssistFieldOptions`,
+      `RenderedTextAssistPanel`, and the focused option/default tests.
+- [x] Split editor text-assist field model regressions into a private test owner without changing
+      public option names, default unbuffered input policy, item test-id prefix fallback, rendered
+      panel handoff, or root control orchestration.
+      Result: `controls/text_assist_field/model.rs` keeps option/model records plus test-owner
+      routing. `controls/text_assist_field/model/tests.rs` owns option/default coverage.
+- [x] Split editor text-assist anchored-overlay request/placement into a private child owner
+      without changing anchor fallback, popper placement, diagnostics placement recording,
+      dismissible branch wiring, query dismissal writeback, or overlay-open local model behavior.
+      Result: `controls/text_assist_field.rs` keeps input and panel orchestration.
+      `controls/text_assist_field/overlay.rs` owns anchored placement, dismissible popover request,
+      and overlay open-state model creation.
+- [x] Split editor text-assist suggestion panel rendering into a private child owner without
+      changing visible-match listbox semantics, active/disabled row palette, option activation,
+      scroll threshold, popup surface chrome, item test-id derivation, or rendered panel handoff.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration and accept flow.
+      `controls/text_assist_field/panel.rs` owns suggestion panel content, option rows, scroll
+      wrapping, listbox semantics, popup chrome, and rendered panel packaging.
+- [x] Split editor text-assist suggestion option-row assembly into a private panel child owner
+      without changing visible-match listbox semantics, active/disabled row palette, option
+      activation, item test-id derivation, listbox option a11y fields, scroll threshold, popup
+      surface chrome, or rendered panel handoff.
+      Result: `controls/text_assist_field/panel.rs` keeps listbox semantics, scroll wrapping,
+      popup chrome, and rendered panel packaging. `controls/text_assist_field/panel/row.rs` owns
+      suggestion row pressable props, option activation, active/disabled row palette, item test-id
+      derivation, and row text rendering.
+- [x] Split editor text-assist field root helper regressions into a private test owner without
+      changing inline empty-label gating, anchored-overlay default content height, accept commit
+      flow, key handling, panel routing, or overlay routing.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration, accept flow, helper
+      policy, and test-owner routing. `controls/text_assist_field/tests.rs` owns root helper
+      coverage.
+- [x] Split editor text-assist inline empty-label rendering into a private child owner without
+      changing inline empty-label gating, muted popup empty-text styling, density line-height,
+      empty test-id propagation, panel routing, overlay routing, or public TextAssistField options.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration, panel routing, and
+      helper policy. `controls/text_assist_field/empty.rs` owns empty-label text props, muted
+      foreground resolution, density row-height routing, and test-id mounting.
+- [x] Split editor text-assist accept commit flow into a private child owner without changing query
+      model writes, dismissed-query sync, active item-id updates, user accept callback dispatch,
+      redraw requests, root key handling, panel row activation, or public TextAssistField options.
+      Result: `controls/text_assist_field.rs` keeps input/key orchestration, panel routing, and
+      helper policy. `controls/text_assist_field/accept.rs` owns match acceptance model writes,
+      callback dispatch, and redraw requests for both keyboard acceptance and row activation.
+- [x] Split editor-owned property-row reset affordance handling into a private child owner without
+      changing row layout, value-slot growth, reset keying, glyph render, accessibility label, or
+      property chrome semantics.
+      Result: `composites/property_row.rs` now keeps the row layout and value orchestration only.
+      `composites/property_row/reset.rs` owns `OnPropertyRowReset`,
+      `PropertyRowResetOptions`, `PropertyRowReset`, and the reset pressable/activation helpers.
+- [x] Split editor-owned property-row layout policy into a private child owner without changing
+      public row options, row/column/auto variant semantics, theme-derived chrome metrics, slot
+      minimum sizing, fixed label line boxes, value-slot growth, or reset/action slot mounting.
+      Result: `composites/property_row.rs` keeps the public composite and child assembly.
+      `composites/property_row/layout.rs` owns `PropertyRowLayoutVariant`, resolved layout/chrome
+      metrics, auto stack selection, min-height application, and focused layout-policy tests.
+- [x] Split editor-owned property-row wrapping/value-slot regressions into a private test owner
+      without changing public row options, test-facing value-slot marker, label line-box behavior,
+      wrapping value growth, or layout-query coverage.
+      Result: `composites/property_row.rs` keeps implementation only plus `mod tests;`.
+      `composites/property_row/tests.rs` owns the wrapping/value-slot regression harness.
+- [x] Split editor field-status badge palette regressions into a private test owner without
+      changing compact badge text-role routing, short visible labels, status palette mixing,
+      destructive/loading label policy, or badge layout.
+      Result: `controls/field_status.rs` keeps badge implementation and palette resolution plus
+      test-owner routing. `controls/field_status/tests.rs` owns label and luma coverage.
+- [x] Split editor chrome text-field/text-area style regressions into a private test owner without
+      changing editor token precedence, legacy component fallback behavior, line-height policy, or
+      focus ring token routing.
+      Result: `primitives/chrome.rs` keeps editor chrome/style resolution plus test-owner routing.
+      `primitives/chrome/tests.rs` owns text-field/text-area chrome policy coverage.
+- [x] Split editor semantic color fallback regressions into a private test owner without changing
+      editor-owned token precedence, legacy text-field fallback behavior, shared palette fallbacks,
+      invalid lane fallback, or popup/panel fallback order.
+      Result: `primitives/colors.rs` keeps semantic color helper implementation plus test-owner
+      routing. `primitives/colors/tests.rs` owns color fallback policy coverage.
+- [x] Split editor density affordance regression tests into a private test owner without changing
+      editor density defaults, theme metric resolution, non-negative clamping, or hit-target extent
+      policy.
+      Result: `primitives/density.rs` keeps density policy implementation plus test-owner routing.
+      `primitives/density/tests.rs` owns affordance extent coverage.
+- [x] Split editor edit-session dirty-state regressions into a private test owner without changing
+      pre-edit capture, commit/cancel clearing, active-state reporting, or changed-from semantics.
+      Result: `primitives/edit_session.rs` keeps edit-session primitive implementation plus
+      test-owner routing. `primitives/edit_session/tests.rs` owns dirty-state coverage.
+- [x] Split editor numeric-format helper regressions into a private test owner without changing
+      fixed decimal formatting, plain parsing, affix format/parse semantics, duplicate chrome affix
+      suppression, presentation chrome layering, or degrees helper behavior.
+      Result: `primitives/numeric_format.rs` keeps numeric format implementation plus test-owner
+      routing. `primitives/numeric_format/tests.rs` owns formatting and presentation coverage.
+- [x] Split editor numeric-text-entry replacement-plan regressions into a private test owner
+      without changing focus handoff state, replace-on-focus arming, draft/error synchronization,
+      paste/delete/navigation key planning, or text-insertion key detection.
+      Result: `primitives/numeric_text_entry.rs` keeps numeric text-entry policy implementation
+      plus test-owner routing. `primitives/numeric_text_entry/tests.rs` owns replacement-plan
+      coverage.
+- [x] Split editor numeric-value constraint regressions into a private test owner without changing
+      bound normalization, finite-step filtering, clamp ordering, quantization origin, or scalar
+      conversion behavior.
+      Result: `primitives/numeric_value.rs` keeps numeric constraint implementation plus
+      test-owner routing. `primitives/numeric_value/tests.rs` owns bounds and quantization coverage.
+- [x] Split editor popup-surface chrome regressions into a private test owner without changing
+      overlay/inline shadow policy, popup token precedence, radius/shadow metric resolution, shadow
+      color fallback, or dense preset popup chrome.
+      Result: `primitives/popup_surface.rs` keeps popup chrome implementation plus test-owner
+      routing. `primitives/popup_surface/tests.rs` owns popup surface chrome coverage.
+- [x] Split editor popup-list palette/height regressions into a private test owner without
+      changing popup-list state records, row gap/height helpers, default max-height budget,
+      highlight palette, disabled foreground, or text-role ownership in the readout child owner.
+      Result: `primitives/popup_list.rs` keeps popup-list state/dimensions/palette policy plus
+      test-owner routing. `primitives/popup_list/tests.rs` owns palette and height coverage.
+- [x] Split editor widget-visuals selection/focus/invalid/hover regressions into a private test
+      owner without changing shared visual policy, selected-frame fill/foreground behavior,
+      disabled alpha attenuation, invalid chrome routing, or icon-button hover overlay source.
+      Result: `primitives/visuals.rs` keeps editor widget visual policy plus test-owner routing.
+      `primitives/visuals/tests.rs` owns visual-state policy coverage.
+- [x] Split editor drag-value core session/response regressions into a private test owner without
+      changing scrub session commit/cancel semantics, response accessor privacy, or drag-value
+      response construction.
+      Result: `primitives/drag_value_core.rs` keeps drag-to-edit primitive implementation plus
+      test-owner routing. `primitives/drag_value_core/tests.rs` owns session and response coverage.
+- [x] Split editor inspector-panel narrow-header title regression into a private test owner without
+      changing panel composition, title text-role routing, toolbar/body slots, or layout query
+      coverage.
+      Result: `composites/inspector_panel.rs` keeps panel composition only plus test-owner routing.
+      `composites/inspector_panel/tests.rs` owns the single-line title layout regression harness.
+- [x] Split editor gradient empty-state text-role regression into a private test owner without
+      changing gradient stop composition, preview canvas behavior, empty-state copy, or editor
+      readout text-role routing.
+      Result: `composites/gradient_editor.rs` keeps gradient editor composition and preview
+      implementation. `composites/gradient_editor/tests.rs` owns empty-state text-role coverage.
+- [x] Split editor gradient preview canvas into a private child owner without changing public
+      gradient editor builders, stop sorting, preview drag mutation, marker painting, empty-state
+      copy, or IMUI adapter routing.
+      Result: `composites/gradient_editor.rs` keeps public composition and stop rows.
+      `composites/gradient_editor/preview.rs` owns preview drag state, pressable pointer handlers,
+      gradient fill construction, and stop marker painting.
+- [x] Split the shared editor popup-list readout helpers into a private child owner without
+      changing popup row geometry, alignment, empty-state copy, or popup-list text-role coverage.
+      Result: `primitives/readout.rs` now keeps the non-popup editor readout helpers only.
+      `primitives/readout/popup_list.rs` owns the popup-list row, centered-row, option-caption, and
+      empty-state text helpers plus their focused tests.
+- [x] Split the shared editor popup-list readout helper regressions into a private test owner
+      without changing popup row text props, empty text props, centered row alignment, fixed caption
+      line boxes, or direct `TextProps` allowance for the readout child owner.
+      Result: `primitives/readout/popup_list.rs` keeps popup-list readout helper implementation
+      plus test-owner routing. `primitives/readout/popup_list/tests.rs` owns popup-list readout
+      text-role coverage.
+- [x] Split the editor theme-preset picker readout text roles into a private child owner without
+      changing compact header sizing, fixed row label/status line boxes, re-export paths, or
+      style/theme picker rendering.
+      Result: `primitives/readout.rs` now keeps the shared non-popup readout hub and re-exports the
+      theme-preset helpers. `primitives/readout/theme_preset.rs` owns the theme picker header, row
+      label, row status text props, and focused fixed-line tests.
+- [x] Split the editor theme-preset picker readout regressions into a private test owner without
+      changing compact header sizing, fixed row label/status line boxes, fixed status slot,
+      re-export paths, or style/theme picker rendering.
+      Result: `primitives/readout/theme_preset.rs` keeps theme-preset readout helper implementation
+      plus test-owner routing. `primitives/readout/theme_preset/tests.rs` owns theme-preset
+      fixed-line coverage.
+- [x] Split editor input-group value text-role regression into a private test owner without
+      changing joined input frame helpers, segment helpers, axis marker routing, or value text
+      shrink/ellipsis policy.
+      Result: `primitives/input_group.rs` keeps joined input-group helper implementation plus
+      test-owner routing. `primitives/input_group/tests.rs` owns value text-role layout coverage.
+- [x] Split shared editor readout text-role regression tests into a private test owner without
+      changing non-popup readout helper names, text-role layout policy, compact readout sizing, or
+      popup/theme-preset child owner boundaries.
+      Result: `primitives/readout.rs` keeps the non-popup readout helper hub plus child-owner
+      re-exports. `primitives/readout/tests.rs` owns the compact readout and editor text-role
+      regression tests.
+- [x] Split editor feedback readout text props into a private child owner without changing status
+      badge, inline error, validation message layout semantics, re-export paths, or readout
+      regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports feedback helpers.
+      `primitives/readout/feedback.rs` owns status badge, inline error, and validation message text
+      props.
+- [x] Split editor property readout text props into a private child owner without changing property
+      group headers, inspector titles, property-row labels/reset glyph layout semantics,
+      re-export paths, or readout regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports property helpers.
+      `primitives/readout/property.rs` owns property group header, inspector title, property-row
+      label, and reset glyph text props.
+- [x] Split editor input/axis readout text props into a private child owner without changing inline
+      control labels, input segment/value text, axis marker layout semantics, re-export paths, or
+      readout regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports input helpers.
+      `primitives/readout/input.rs` owns inline control label, input segment, input value, and axis
+      marker text props.
+- [x] Split editor section readout text props into a private child owner without changing transform
+      section badge/heading layout semantics, re-export paths, or readout regression coverage.
+      Result: `primitives/readout.rs` keeps the shared readout hub and re-exports section helpers.
+      `primitives/readout/section.rs` owns section badge and section heading text props.
+- [x] Split editor surface readout text props into a private child owner without changing color
+      popup preview captions, gradient empty-state text, color tooltip readout layout semantics,
+      re-export paths, or readout regression coverage.
+      Result: `primitives/readout.rs` keeps only shared compact readout style plus child-module
+      re-exports. `primitives/readout/surface.rs` owns preview caption, empty-state, and tooltip
+      readout text props.
+- [x] Split editor vector axis/reset/outcome policy and axis group rendering into a private child
+      owner without changing Vec2/Vec3/Vec4 public constructors, reset options, axis outcome
+      accessors, transform-edit outcome routing, id-source/test-id derivation, or row/column auto
+      layout policy.
+      Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration.
+      `controls/vec_edit/axis.rs` owns `VecEditAxis`, `VecEditAxisOutcome`, axis reset options,
+      reset action packaging, axis group rendering, and the focused axis-outcome test.
+- [x] Split editor vector auto-layout planning and axis color resolution into a private child owner
+      without changing Vec2/Vec3/Vec4 public constructors, row/column auto-stack thresholds,
+      axis token fallback colors, id-source/test-id derivation, axis group composition, or
+      transform-edit routing.
+      Result: `controls/vec_edit.rs` keeps Vec2/Vec3/Vec4 public control orchestration and axis
+      group composition. `controls/vec_edit/layout.rs` owns axis token colors, auto-stack threshold
+      calculation, Row/Column direction selection, grow policy, and id-source suffix derivation,
+      while `controls/vec_edit/layout/tests.rs` owns the focused layout-policy regressions.
+- [x] Split editor transform section chrome and link-toggle layout into a private child owner
+      without changing TransformEdit public options, Vec3Edit composition, section badge/heading
+      text roles, link-scale test IDs, row/column layout selection, or uniform-scale sync logic.
+      Result: `controls/transform_edit.rs` keeps TransformEdit public surface, Vec3 composition,
+      outcome routing, and linked-scale model/sync. `controls/transform_edit/sections.rs` owns
+      row/column section chrome, badge/heading text-role routing, and link/uniform toggle layout.
+- [x] Split editor transform linked-scale model/slot and uniform-scale synchronization into a
+      private child owner without changing TransformEdit public options, link toggle behavior,
+      single-axis uniform projection, multi-axis edit rejection, or near-equal threshold policy.
+      Result: `controls/transform_edit.rs` keeps TransformEdit public surface and Vec3
+      composition. `controls/transform_edit/sync.rs` owns linked-scale local model creation,
+      sync-slot allocation, uniform-scale projection, model writeback, and focused sync tests.
+- [x] Split editor axis-drag-value options/reset/outcome records and scrub/typing state into a
+      private child owner without changing public option fields, reset action packaging,
+      outcome callback aliases, focus handoff behavior, scrub/typing mode transitions, or
+      input text line-box policy.
+      Result: `controls/axis_drag_value.rs` keeps the `AxisDragValue<T>` control orchestration.
+      `controls/axis_drag_value/model.rs` owns public option/reset/outcome records, internal
+      mode/state records, and the focused input text-style test.
+- [x] Split editor axis-drag-value presentation regression into a private test owner without
+      changing `AxisDragValue::from_presentation`, NumericPresentation adoption, axis tint routing,
+      or axis-drag-value model child-owner boundaries.
+      Result: `controls/axis_drag_value.rs` keeps control orchestration plus child-owner routing.
+      `controls/axis_drag_value/tests.rs` owns presentation format/parse/chrome-affix coverage.
+- [x] Split editor axis-drag-value model regressions into a private test owner without changing
+      typing line-height resolution, default options, reset action, outcome callback, or control
+      routing.
+      Result: `controls/axis_drag_value/model.rs` keeps model/type definitions plus test-owner
+      routing. `controls/axis_drag_value/model/tests.rs` owns density line-height coverage.
+- [x] Split editor axis-drag-value session helpers into a private child owner without changing
+      scrub/typing mounting, hidden layout projection, local draft/error model allocation, outcome
+      callback routing, focus handoff, or public AxisDragValue options.
+      Result: `controls/axis_drag_value.rs` keeps scrub/typing control orchestration.
+      `controls/axis_drag_value/session.rs` owns hidden layout projection, outcome callback emit,
+      and draft/error local model allocation.
+- [x] Split editor axis-drag-value child test-id derivation into a private ids owner without
+      changing scrub/typing/reset test-id strings, explicit reset-id precedence, active typing
+      gating, diagnostics naming, control routing, or public AxisDragValue options.
+      Result: `controls/axis_drag_value.rs` now keeps control orchestration only.
+      `controls/axis_drag_value/ids.rs` owns scrub/typing/reset test-id derivation, with focused
+      coverage in `controls/axis_drag_value/ids/tests.rs`.
+- [x] Split editor axis-drag-value typing frame assembly into a private element child owner without
+      changing scrub mounting, key commit/cancel handling, focus handoff, typing test-id routing,
+      invalid-state icon, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, scrub frame,
+      text input props, focus/key handling, and mode transitions. The private
+      `controls/axis_drag_value/element/typing.rs` owner contains typing input-group frame
+      composition plus axis/prefix/suffix/error/reset segments.
+- [x] Split editor axis-drag-value scrub frame assembly into a private element child owner without
+      changing DragValueCore commit/cancel routing, double-click typing handoff, scrub response
+      state mapping, stable test-id routing, reset affordance, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed owner orchestration, DragValueCore
+      wiring, double-click typing transition, and text-entry focus/key policy. The private
+      `controls/axis_drag_value/element/scrub.rs` owner contains scrub input-group frame
+      composition plus axis/value/prefix/suffix/reset segments.
+- [x] Reuse shared joined text-input chrome policy for editor axis-drag-value typing without
+      changing joined input transparency, borderless chrome, focus-ring suppression, text style,
+      typing field routing, scrub mounting, or public AxisDragValue options.
+      Result: `controls/axis_drag_value.rs` now delegates joined input chrome normalization to
+      `primitives::chrome::joined_text_input_style(...)` instead of carrying a local duplicate.
+- [x] Split editor slider chrome/color resolution into a private child owner without changing
+      pointer/typing behavior, value formatting, theme token precedence, hover/pressed/disabled
+      color mixing, or slider option/public constructor behavior.
+      Result: `controls/slider.rs` keeps slider state, value flow, pointer/input switching, and
+      layout orchestration. `controls/slider/chrome.rs` owns slider token fallback, color mixing,
+      alpha attenuation, resolved chrome fields, and the focused chrome precedence test.
+- [x] Split editor slider chrome precedence regressions into a private test owner without changing
+      theme token precedence, fallback palette behavior, color mixing, alpha attenuation, or slider
+      control routing.
+      Result: `controls/slider/chrome.rs` keeps chrome/color resolution implementation plus
+      test-owner routing. `controls/slider/chrome/tests.rs` owns chrome precedence coverage.
+- [x] Split editor slider value-domain math into a private child owner without changing pointer-x
+      mapping, clamp/step quantization, thumb-radius compensation, track-degenerate behavior,
+      typing fallback, or public slider options.
+      Result: `controls/slider.rs` keeps slider state, event handling, typing handoff, and layout
+      orchestration. `controls/slider/value_math.rs` owns value quantization, normalized progress,
+      pointer-position projection, and focused value-math tests.
+- [x] Split editor slider value-domain math regressions into a private test owner without changing
+      quantization, normalized progress, thumb-radius pointer projection, degenerate track fallback,
+      or slider control routing.
+      Result: `controls/slider/value_math.rs` keeps value-domain math implementation plus
+      test-owner routing. `controls/slider/value_math/tests.rs` owns value-math coverage.
+- [x] Split editor slider pointer-local projection into the value-math owner without changing
+      pointer down/drag event flow, value readout width handling, frame padding compensation,
+      thumb-radius mapping, clamp/step quantization, or public slider options.
+      Result: `controls/slider.rs` now delegates pointer-down and pointer-move local x projection
+      to `controls/slider/value_math.rs::value_from_slider_local_x(...)`. The value-math tests cover
+      value-readout width, frame padding, pointer clamping, thumb radius, and quantization.
+- [x] Split editor slider presentation regression tests into a private test owner without changing
+      slider public constructors, NumericPresentation adoption, duplicate chrome affix suppression,
+      or slider chrome/value-math child owner boundaries.
+      Result: `controls/slider.rs` keeps the slider control orchestration plus child-owner routing.
+      `controls/slider/tests.rs` owns presentation adoption coverage.
+- [x] Split editor slider mode/state, hidden layout, and affixed-value helper into a private model
+      owner without changing pointer/typing behavior, focus restore, hidden slide/input mounting,
+      duplicate chrome affix suppression, or public slider options.
+      Result: `controls/slider.rs` keeps the slider public surface, control orchestration,
+      pointer/input behavior, and child-owner routing. `controls/slider/model.rs` owns
+      `SliderMode`, `SliderState`, hidden layout projection, and affixed value composition, while
+      `controls/slider/model/tests.rs` owns affixed-value helper coverage.
+- [x] Split editor slider public options into the model owner without changing option field names,
+      default values, NumericPresentation adoption, duplicate chrome affix suppression,
+      pointer/typing behavior, or public re-export path.
+      Result: `controls/slider.rs` keeps the Slider public constructor/builder surface and control
+      orchestration. `controls/slider/model.rs` owns `SliderOptions`, its defaults, mode/state,
+      hidden layout projection, and affixed value composition.
+- [x] Split editor slider default format/parse strategy into the model owner without changing
+      `Slider::new`, integer/three-decimal display behavior, trimmed f64 parsing, presentation
+      overrides, pointer/typing behavior, or public `SliderOptions`.
+      Result: `controls/slider.rs` delegates default format/parse construction to
+      `controls/slider/model.rs`; `controls/slider/model/tests.rs` owns the default text strategy
+      coverage alongside affixed-value helper coverage.
+- [x] Split editor slider typing parse/validate adapters into a private owner without changing
+      NumericInput typing mode, clamp/step quantization, unclamped range validation,
+      custom-validator delegation, focus restore, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps NumericInput composition and typing mode lifecycle.
+      `controls/slider/typing.rs` owns parse quantization and validate range/custom delegation,
+      with focused tests in `controls/slider/typing/tests.rs`.
+- [x] Split editor slider pointer/typing state transitions into a private owner without changing
+      double-click typing entry, drag pointer capture, missed-pointer-up cleanup, matching-pointer
+      release, NumericInput commit/cancel reset, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps pointer event wiring and rendering.
+      `controls/slider/pointer.rs` owns slide/typing mode resets plus drag pointer
+      begin/clear/finish/match policy, with focused tests in `controls/slider/pointer/tests.rs`.
+- [x] Split editor slider runtime paint resolution into the chrome owner without changing theme
+      token precedence, hover/pressed color mixing, disabled alpha attenuation, pointer/typing
+      behavior, rendering layout, or public `SliderOptions`.
+      Result: `controls/slider.rs` now asks `controls/slider/chrome.rs` for resolved runtime
+      paint only. `controls/slider/chrome.rs` owns chrome token fallback plus hover/pressed/
+      disabled paint derivation, with focused tests in `controls/slider/chrome/tests.rs`.
+- [x] Split editor slider geometry resolution into the chrome owner without changing track/thumb
+      theme metric precedence, minimum track height, thumb-at-least-track clamp, radius derivation,
+      pointer math, rendering layout, or public `SliderOptions`.
+      Result: `controls/slider.rs` now asks `controls/slider/chrome.rs` for resolved geometry only.
+      `controls/slider/chrome.rs` owns track/thumb metric fallback, clamping, and radius derivation,
+      with focused geometry tests in `controls/slider/chrome/tests.rs`.
+- [x] Split editor slider track/thumb chrome props into the chrome owner without changing track
+      flex sizing, segment fill/track grow layout, left/right segment radii, thumb diameter/border,
+      render order, value display segment layout, pointer math, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps element composition order and value display assembly only.
+      `controls/slider/chrome.rs` owns track flex props, segment container props, and thumb
+      container props, with focused props tests in `controls/slider/chrome/tests.rs`.
+- [x] Split editor slider frame/track/value element assembly into a private frame owner without
+      changing pointer event wiring, typing handoff, resolved paint/geometry policy, value display
+      text/readout behavior, track/thumb render order, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps public Slider orchestration, state, pointer handlers,
+      value math, and NumericInput typing mode. `controls/slider/frame.rs` owns the input-group
+      frame, track/thumb children, optional value display segment, and readout test-id decoration.
+- [x] Split editor slider keyed element assembly into a private element owner without changing
+      public constructors/builders, identity keying, state/focus-handoff storage, pointer event
+      wiring, typing handoff, NumericInput commit/cancel reset, resolved paint/geometry policy,
+      value display text/readout behavior, or public `SliderOptions`.
+      Result: `controls/slider.rs` keeps the public Slider API, `NumericPresentation` adoption,
+      identity keying, and child-owner routing. `controls/slider/element.rs` owns keyed element
+      assembly, slider state/focus-handoff storage, pressable pointer hooks, NumericInput typing
+      composition, focus handoff sync, and frame owner invocation.
+- [x] Split editor enum-select row rendering, selection commit policy, and item test-id
+      sanitization into a private child owner without changing trigger composition, overlay
+      dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row
+      reveal.
+      Result: `controls/enum_select.rs` now keeps public control/options, trigger composition, and
+      overlay orchestration. `controls/enum_select/row.rs` owns option-row rendering, selection
+      commit policy, item test-id normalization, and the focused row-policy tests.
+- [x] Split editor enum-select row policy regressions into a private test owner without changing
+      option-row rendering, selection commit policy, item test-id normalization, popup-list row
+      text-role routing, or overlay boundaries.
+      Result: `controls/enum_select/row.rs` keeps option-row implementation plus test-owner
+      routing. `controls/enum_select/row/tests.rs` owns commit-policy and item-id coverage.
+- [x] Split editor enum-select overlay request, popup panel/list composition, selected-row reveal,
+      and overlay helper tests into a private child owner without changing trigger composition,
+      search/filter behavior, popup placement, dismissal policy, row routing, or focus restore.
+      Result: `controls/enum_select.rs` now keeps public control/options plus trigger composition.
+      `controls/enum_select/overlay.rs` owns overlay request assembly, popup panel/list layout,
+      selected-row reveal, close-focus policy, viewport test-id derivation, and overlay tests.
+- [x] Split editor enum-select overlay helper regressions into a private test owner without
+      changing overlay request assembly, popup panel/list layout, selected-row reveal, close-focus
+      policy, viewport test-id derivation, or row routing.
+      Result: `controls/enum_select/overlay.rs` keeps overlay implementation plus test-owner
+      routing. `controls/enum_select/overlay/tests.rs` owns close-focus, viewport-id, and
+      visibility-contract coverage.
+- [x] Split editor theme preset picker policy/installation from listbox rendering and row chrome
+      assembly without changing preset installation, selected preset sync, label fallback,
+      listbox semantics, preset activation, item test IDs, or theme replay behavior.
+      Result: `editor_theme_preset_picker.rs` now keeps preset installation, theme resolution, and
+      render dispatch only. `editor_theme_preset_picker/render.rs` owns the listbox semantics,
+      header row, preset rows, and color mixing.
+- [x] Split editor theme preset picker behavior regressions into a private test owner without
+      changing preset installation, selected preset sync, listbox semantics, item test IDs, click
+      activation, reversible preset replay, or render dispatch boundaries.
+      Result: `editor_theme_preset_picker.rs` keeps preset installation, theme resolution, and
+      render dispatch plus test-owner routing. `editor_theme_preset_picker/tests.rs` owns listbox
+      semantics and preset replay coverage.
+- [x] Split editor theme preset picker row chrome/activation into a private render child owner
+      without changing listbox semantics, header rendering, row selected state, row item test IDs,
+      click activation, density status labels, hover/pressed/selected color mixing, or public
+      picker APIs.
+      Result: `editor_theme_preset_picker/render.rs` keeps listbox container semantics, preset
+      iteration, and header text routing. `editor_theme_preset_picker/render/row.rs` owns
+      ListBoxOption semantics, pressable activation, row chrome, status label rendering, row test
+      IDs, and color mixing.
+- [x] Split editor numeric-input text-style and presentation regressions into a private test owner
+      without changing NumericInput public options, default selection behavior, validation message
+      routing, density-derived edit line boxes, or NumericPresentation adoption.
+      Result: `controls/numeric_input.rs` keeps numeric input control orchestration plus test-owner
+      routing. `controls/numeric_input/tests.rs` owns edit line-box and presentation coverage.
+- [x] Split editor numeric-input model/session owners without changing public option/type aliases,
+      default selection behavior, validation message routing, density-derived edit line boxes,
+      local draft/error model allocation, or NumericPresentation adoption.
+      Result: `controls/numeric_input.rs` keeps numeric input control orchestration and presentation
+      test routing. `controls/numeric_input/model.rs` owns options/outcomes/type aliases and text
+      style policy, `model/tests.rs` owns line-box coverage, and `session.rs` owns draft/error
+      local models.
+- [x] Split editor drag-value presentation regression into a private test owner without changing
+      `DragValue::from_presentation`, NumericPresentation adoption, duplicate chrome affix
+      suppression, scrub/typing behavior, or drag-value value text-role routing.
+      Result: `controls/drag_value.rs` keeps drag-value control orchestration plus test-owner
+      routing. `controls/drag_value/tests.rs` owns presentation format/parse/chrome-affix coverage.
+- [x] Split IMUI textarea lifecycle/element assembly from textarea props/style resolution without
+      changing textarea facade calls, enabled gating, focus tracking, select-all policy, response
+      lifecycle, submit command behavior, IMUI chrome, or layout semantics.
+      Result: `text_controls/textarea.rs` now only owns the public wrapper and `ResponseExt`
+      plumbing. `text_controls/textarea/element.rs` owns lifecycle, select-all, policy commands,
+      and element mounting, while `text_controls/textarea/props.rs` owns `TextAreaProps` and style
+      resolution.
+- [x] Split IMUI slider entry label-identity routing from element/response assembly without
+      changing slider facade calls, visible-label suffix stripping, push-id scoping, enabled/
+      disabled gating, a11y range semantics, pointer/keyboard handlers, hover query hooks, field
+      chrome, visual children, or response lifecycle reporting.
+      Result: `slider_controls/entry.rs` now owns label identity and scoped facade routing only.
+      `slider_controls/entry/element.rs` owns slider element construction, response population,
+      interaction installation, chrome resolution, and visual child mounting.
+- [x] Split IMUI virtual-list rendered-range tracking out of the root element without changing
+      keyed list assembly, row height resolution, build-focus forwarding, row test IDs, clipping
+      semantics, runtime options, or public `VirtualListResponse` reporting.
+      Result: `virtual_list_controls.rs` keeps virtual-list element assembly, row wrapping, and
+      response packaging. `virtual_list_controls/range.rs` owns first/last rendered index tracking
+      and rendered-range projection.
+- [x] Split IMUI porting-sugar scoped layout helpers into flow and indent child owners without
+      changing `items`, `same_line`, `indent`, item-spacing token use, content test IDs, focus
+      forwarding, dummy spacer composition, or public facade behavior.
+      Result: `layout_sugar/scoped.rs` is now a private hub. `scoped/flow.rs` owns `items` and
+      `same_line` container routing, while `scoped/indent.rs` owns indent spacer/content
+      composition.
+- [x] Split IMUI floating-window closed/open-model response construction out of the root window
+      wrapper without changing open-model read semantics, hidden-window sentinel area id,
+      initial-position/size response preservation, normal floating-area routing, on-area chrome
+      rendering, or public `FloatingWindowResponse` behavior.
+      Result: `floating_window.rs` now keeps open-model reads and normal floating-area render
+      routing. `floating_window/closed.rs` owns the open=false sentinel response.
+- [x] Split IMUI menu-item interaction parts/pressable props out of the interaction hub without
+      changing enabled/action gating, menubar policy capture, close-popup/action runtime data,
+      pressable a11y fields, active-trigger installation, keyboard behavior, or response
+      population.
+      Result: `menu_controls/interaction.rs` now keeps enabled/action gating and behavior
+      forwarding. `interaction/parts.rs` owns `MenuItemInteractionParts`,
+      `MenuItemInteraction`, pressable props, a11y fields, and runtime data packaging.
+- [x] Split IMUI floating-area active drag snapshot discovery out of the drag-state owner without
+      changing same-window drag filtering, dragging flag readback, start/current pointer position
+      reconciliation, device-pixel snapping, test-id refresh, final state readback, or public
+      `FloatingAreaResponse` movement semantics.
+      Result: `floating_surface/area/drag_state.rs` keeps position/test-id state reconciliation and
+      final readback. `drag_state/snapshot.rs` owns active drag lookup and same-window drag snapshot
+      projection.
+- [x] Split IMUI button visual content children out of the visual hub without changing button
+      chrome resolution, variant sizing, visible/invisible visual selection, centered-row text
+      mounting, arrow glyph rendering, or public button response behavior.
+      Result: `button_controls/visual.rs` keeps `ButtonVisual`, chrome resolution, and visible/
+      invisible selection. `button_controls/visual/content.rs` owns `ButtonVisualContent`, text
+      child construction, foreground handling, and empty invisible-button content.
+- [x] Split IMUI child-region resize handle pointer callbacks and drag-response edge tracking into
+      private child owners without changing resize handle layout/test IDs, enabled gating,
+      thresholded drag lifecycle, resize cursor requests, pointer capture/release behavior, or
+      `ChildRegionResponse` resize drag semantics.
+      Result: `child_region/resize/handle.rs` now keeps pointer-region element assembly and test-id
+      stamping. `handle/events.rs` owns pointer down/move/up drag callbacks, while
+      `handle/drag_state.rs` owns response population and started/stopped drag edge tracking.
+- [x] Split IMUI button root wrapper routing into plain and action child owners without changing
+      button/small-button/arrow/invisible/action/payload-action public facade calls, variant
+      selection, push-id scoping, action payload forwarding, command dispatch behavior, or response
+      projection.
+      Result: `button_controls.rs` is now a private re-export hub for button wrappers.
+      `button_controls/plain.rs` owns ordinary button variants, while `button_controls/actions.rs`
+      owns action and payload-action wrappers.
+- [x] Split IMUI popup-modal layer backdrop and panel assembly into private child owners without
+      changing modal root naming, layer stack layout, backdrop barrier dismissal, panel semantics,
+      facade child mounting, focus-state handoff, overlay request assembly, or public popup modal
+      facade behavior.
+      Result: `popup_overlay/modal/layer.rs` keeps layer input/output, root-name mounting, stack
+      wiring, and panel-focus handoff. `layer/backdrop.rs` owns modal barrier construction, while
+      `layer/panel.rs` owns panel semantics, child `ImUiFacade` mounting, and panel id capture.
+- [x] Split IMUI disclosure entry state reads and root-child assembly into private child owners
+      without changing collapsing-header/tree-node label identity parsing, open-model setup,
+      trigger/content mounting, root layout, open/toggled response reporting, or public disclosure
+      facade calls.
+      Result: `disclosure_controls/entry.rs` keeps public entry wrappers and aggregate response
+      assembly. `entry/state.rs` owns open-model reads, toggled detection, and enabled gating,
+      while `entry/body.rs` owns trigger/content child construction.
 - [x] Split remaining IMUI facade root scope/basic/disclosure trait default method declarations out
       of `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` without changing the public
       `UiWriterImUiFacadeExt` trait, caller import behavior, push-id/disabled-scope, text,
@@ -59,6 +1593,12 @@ Last updated: 2026-05-30
       text, wrapped text, and bullet text forwarding; `basic_surface/debug_draw.rs` owns
       debug-draw forwarding; and `basic_surface/separators.rs` owns separator and separator-text
       forwarding.
+- [x] Split IMUI facade writer text regression tests into private text and wrapped owners without
+      changing dense single-line text semantics, explicit wrapped-text semantics, inherited text
+      style assertions, or `UiWriterImUiFacadeExt` forwarding coverage.
+      Result: `facade_writer/tests.rs` now keeps `TestWriter` and module routing only.
+      `tests/text.rs` owns `ui.text(...)` single-line coverage, while `tests/wrapped.rs` owns
+      `ui.text_wrapped(...)` explicit wrapping coverage.
 - [x] Split IMUI facade disclosure surface macro owner into collapsing-header and tree-node child
       owners without changing public trait method names, stable identity/depth docs, response
       returns, macro expansion order, or concrete `disclosure_controls` behavior ownership.
@@ -349,6 +1889,12 @@ Last updated: 2026-05-30
       adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.
       Result: `controls/editor_theme_preset_picker.rs` keeps picker rendering and behavior, while
       `controls/editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions`.
+- [x] Productize the editor-owned IMUI style/theme preset picker rows with stable density status
+      labels without adding Dear ImGui `GetStyle`, `PushStyleVar`, a global style stack, or
+      `fret-ui-kit::imui` theme-editor policy.
+      Result: `EditorThemePresetV1::picker_status_label()` exposes stable row status metadata, and
+      `controls/editor_theme_preset_picker/render.rs` renders `24px`/`22px` density labels in the
+      picker status slot with selected-row accenting.
 - [x] Split editor-owned theme preset patch construction into a private owner without changing
       preset metadata, install/reapply APIs, host theme sync behavior, dense/default token values,
       or style/theme picker proof behavior.
@@ -359,24 +1905,144 @@ Last updated: 2026-05-30
       color-edit popup policy tests.
       Result: `color_edit/popup/picker.rs` keeps picker composition and interactions, while
       `color_edit/popup/picker/hue_wheel.rs` owns hue-wheel canvas painting and geometry helpers.
+- [x] Split editor color-edit numeric/HSV tests into a private test owner without changing RGB/HSV
+      parse/format behavior, alpha preservation rules, popup numeric mode ordering, HSV conversion
+      helpers, picker tests, or popup policy coverage.
+      Result: `controls/color_edit/tests.rs` keeps color-edit policy/picker/preview test routing
+      plus shared HSV assertions. `controls/color_edit/tests/numeric.rs` owns numeric readout,
+      parse, and HSV conversion coverage.
+- [x] Split editor color-edit numeric input field handling into a private child owner without
+      changing RGB/HSV field ordering, draft sync, Enter/Escape commit/cancel behavior, parse/format
+      updates, invalid-state a11y, placeholders, error-line rendering, or numeric tests.
+      Result: `color_edit/popup/numeric.rs` keeps numeric section layout, current value projection,
+      chrome/density resolution, and error-line rendering, while `color_edit/popup/numeric/field.rs`
+      owns text-input props, placeholder policy, draft refresh, and key-driven parse/commit/reset.
+- [x] Split editor color-edit picker/preview/alpha tests into a private test owner without
+      changing SV/hue-wheel/alpha coordinate mapping, preview alpha visibility, original restore
+      component-count rules, shared HSV assertions, or popup policy coverage.
+      Result: `controls/color_edit/tests.rs` keeps color-edit policy/defaults, drag/drop, copy,
+      tooltip, and shared HSV assertion coverage. `controls/color_edit/tests/picker.rs` owns SV
+      picker, hue bar, hue wheel, alpha bar, checkerboard, preview alpha visibility, original
+      restore, and a11y alpha percent coverage.
+- [x] Split editor color-edit popup policy/default/runtime tests into a private test owner without
+      changing popup picker defaults, side preview policy, alpha preview modes, tooltip/copy
+      defaults, swatch visibility counting, runtime override sync, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` keeps palette/history, drag/drop, eyedropper,
+      tooltip/copy payload, and shared HSV assertion coverage.
+      `controls/color_edit/tests/popup_policy.rs` owns popup default, side-preview, alpha-preview,
+      tooltip/copy default, visible-content, and runtime override policy coverage.
+- [x] Split editor color-edit drag/drop tests into a private test owner without changing
+      app-owned palette slot drop defaults, slot metadata preservation, RGB-only palette slot
+      semantics, local payload defaults, COL3F/COL4F alpha rules, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` keeps palette/history, eyedropper, tooltip/copy
+      payload, and shared HSV assertion coverage. `controls/color_edit/tests/drag_drop.rs` owns
+      palette slot drop defaults/events and color drag/drop payload shape/application coverage.
+- [x] Split editor color-edit palette/history tests into a private test owner without changing
+      built-in preset uniqueness/hex formatting, default palette source, app-owned palette/history
+      slots, drag/drop payload tests, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` keeps eyedropper, tooltip/copy payload, and shared HSV
+      assertion coverage. `controls/color_edit/tests/palette.rs` owns preset uniqueness/default
+      palette source and app-owned palette/history slot coverage.
+- [x] Split editor color-edit eyedropper/tooltip/copy affordance tests into a private test owner
+      without changing app-owned eyedropper defaults, sample alpha application, tooltip preview
+      text, copy-as payload formats, or shared HSV assertions.
+      Result: `controls/color_edit/tests.rs` is now a test hub with module routing plus the shared
+      HSV assertion helper. `controls/color_edit/tests/affordances.rs` owns eyedropper,
+      tooltip-preview, and copy payload coverage.
+- [x] Split editor color-edit copy payload entries into a private child owner without changing
+      copy-menu overlay behavior, clipboard write effects, menu row chrome, Dear ImGui-style
+      float/int/hex payload text, or affordance tests.
+      Result: `color_edit/popup/copy.rs` keeps overlay, panel, row pressable, focus restore, and
+      clipboard-effect orchestration, while `color_edit/popup/copy/entries.rs` owns
+      `ColorEditCopyFormat`, `ColorEditCopyEntry`, channel conversion, finite-value fallback, and
+      `color_copy_entries(...)`.
+- [x] Split editor color-edit copy menu row pressable into a private child owner without changing
+      copy-menu overlay behavior, clipboard write effects, row chrome, menu item a11y, row test
+      IDs, or affordance tests.
+      Result: `color_edit/popup/copy.rs` keeps overlay/panel assembly and focus restore, while
+      `color_edit/popup/copy/row.rs` owns row pressable/a11y/palette/text, clipboard write effect,
+      and close-on-copy model update.
+- [x] Split editor color-edit copy menu panel assembly into a private child owner without changing
+      overlay placement/focus restore, copy payload generation, row test-id derivation, menu
+      semantics, row chrome, or clipboard write behavior.
+      Result: `color_edit/popup/copy.rs` now keeps anchored overlay request orchestration only,
+      while `color_edit/popup/copy/panel.rs` owns popup chrome, density lookup, entry-to-row
+      mapping, menu semantics, and row test-id derivation.
 - [x] Split editor color-edit alpha bar previews and interaction into a private owner without
       changing horizontal/vertical alpha bars, alpha coordinate mapping, popup picker composition,
       color-edit helper tests, or color-edit popup policy tests.
       Result: `color_edit/popup/picker.rs` keeps picker composition and entrypoint re-exports,
       while `color_edit/popup/picker/alpha.rs` owns alpha gradients, thumb overlays, pointer
       updates, and alpha helper math.
+- [x] Split editor color-edit alpha preview rendering into a private child owner without changing
+      horizontal/vertical alpha bars, pressable pointer mutation, alpha coordinate mapping,
+      checkerboard/gradient/thumb visuals, or color-edit picker tests.
+      Result: `color_edit/popup/picker/alpha.rs` keeps horizontal/vertical bar pressable
+      interaction, model/draft/error mutation, and alpha helper math. `alpha/preview.rs` owns
+      preview stacks, checkerboard-backed alpha gradients, and horizontal/vertical thumb overlays.
+- [x] Split editor color-edit alpha bar position mutation into a private child owner without
+      changing horizontal/vertical alpha bar entrypoints, pointer capture/release behavior, alpha
+      coordinate mapping, draft/error updates, preview stacks, or popup policy tests.
+      Result: `color_edit/popup/picker/alpha.rs` keeps horizontal/vertical bar entrypoints,
+      pressable wiring, a11y values, preview stack calls, and public alpha coordinate helpers,
+      while `color_edit/popup/picker/alpha/interaction.rs` owns alpha value application plus
+      model/draft/error mutation.
+- [x] Split editor color-edit alpha bar entry rendering into a private child owner without
+      changing horizontal/vertical alpha bar import paths, pressable pointer lifecycle, focused
+      border/ring chrome, preview stack routing, alpha a11y value text, or popup policy tests.
+      Result: `color_edit/popup/picker/alpha.rs` is now a module hub plus public alpha coordinate
+      helper owner. `color_edit/popup/picker/alpha/bar.rs` owns horizontal/vertical alpha bar
+      pressable entry rendering and chrome assembly.
 - [x] Split editor color-edit hue bar previews and interaction into a private owner without
       changing HSV hue-bar picker entrypoints, option thumbnails, hue coordinate mapping, shared
       HSV color application, or color-edit popup policy tests.
       Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
       while `color_edit/popup/picker/hue_bar.rs` owns hue-bar gradients, thumb overlays, pointer
       updates, and vertical hue helper wiring.
+- [x] Split editor color-edit hue-bar preview stack into a private child owner without changing
+      hue-bar pressable behavior, pointer capture/release, hue coordinate mapping, gradient colors,
+      thumb placement, option thumbnails, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker/hue_bar.rs` keeps pressable/pointer interaction and shared
+      HSV apply wiring, while `color_edit/popup/picker/hue_bar/preview.rs` owns the hue gradient,
+      preview stack, thumb overlay, and spacer layout.
+- [x] Split editor color-edit hue-bar position mutation into a private child owner without
+      changing hue-bar entrypoint, pointer capture/release behavior, hue coordinate mapping, shared
+      HSV color application, preview stack routing, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_bar.rs` keeps the pressable entrypoint, a11y value text,
+      focused border/ring chrome, and preview stack routing, while
+      `color_edit/popup/picker/hue_bar/interaction.rs` owns local y to hue mutation and shared HSV
+      apply dispatch.
+- [x] Split editor color-edit hue-bar entry rendering into a private child owner without changing
+      hue-bar import paths, pressable pointer lifecycle, focused border/ring chrome, preview stack
+      routing, hue a11y value text, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_bar.rs` is now a module hub and re-export owner.
+      `color_edit/popup/picker/hue_bar/bar.rs` owns hue-bar pressable entry rendering and chrome
+      assembly.
 - [x] Split editor color-edit saturation/value picker previews and interaction into a private
       owner without changing HSV hue-bar picker composition, option thumbnails, SV coordinate
       mapping, shared HSV color application, or color-edit popup policy tests.
       Result: `color_edit/popup/picker.rs` keeps picker composition and shared HSV apply logic,
       while `color_edit/popup/picker/sv.rs` owns the SV grid, thumb overlay, pointer updates, and
       SV helper wiring.
+- [x] Split editor color-edit SV picker preview stack into a private child owner without changing
+      SV picker pressable behavior, pointer capture/release, SV coordinate mapping, preview grid
+      colors, thumb placement, option thumbnails, or color-edit popup policy tests.
+      Result: `color_edit/popup/picker/sv.rs` keeps pressable/pointer interaction and shared HSV
+      apply wiring, while `color_edit/popup/picker/sv/preview.rs` owns the SV grid, preview stack,
+      thumb overlay, and spacer layout.
+- [x] Split editor color-edit SV picker position mutation into a private child owner without
+      changing SV picker entrypoint, pointer capture/release behavior, local coordinate mapping,
+      shared HSV color application, preview stack routing, or popup policy tests.
+      Result: `color_edit/popup/picker/sv.rs` keeps the pressable entrypoint, a11y value text,
+      focused border/ring chrome, and preview stack routing, while
+      `color_edit/popup/picker/sv/interaction.rs` owns local x/y to HSV mutation and shared HSV
+      apply dispatch.
+- [x] Split editor color-edit SV picker entry rendering into a private child owner without
+      changing SV picker import paths, pressable pointer lifecycle, focused border/ring chrome,
+      preview stack routing, a11y value text, or popup policy tests.
+      Result: `color_edit/popup/picker/sv.rs` is now a module hub and re-export owner.
+      `color_edit/popup/picker/sv/bar.rs` owns SV picker pressable entry rendering and chrome
+      assembly.
 - [x] Split editor color-edit hue-wheel picker interaction into a private owner without changing
       hue-wheel picker composition, pure canvas painting ownership, hue-wheel target math, shared
       HSV color application, or color-edit popup policy tests.
@@ -384,6 +2050,62 @@ Last updated: 2026-05-30
       `color_edit/popup/picker/hue_wheel.rs` remains the pure canvas owner, and
       `color_edit/popup/picker/hue_wheel_picker.rs` owns pressable drag target tracking and HSV
       update wiring.
+- [x] Split editor color-edit hue-wheel canvas path helpers into a private child owner without
+      changing ring paint, triangle paint, cursor paint, canvas keying, gradient stops, hue-wheel
+      target math, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry and paint orchestration,
+      while `color_edit/popup/picker/hue_wheel/path.rs` owns circle/triangle path construction,
+      absolute point projection, triangle grid barycentric steps, and triangle local projection.
+- [x] Split editor color-edit hue-wheel triangle painting into a private child owner without
+      changing triangle cell tessellation, barycentric color projection, border stroke, canvas
+      keying, ring/cursor paint, hue-wheel target math, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry plus ring/cursor paint
+      orchestration, while `color_edit/popup/picker/hue_wheel/triangle.rs` owns triangle mesh
+      painting, border painting, and triangle-cell color projection.
+- [x] Split editor color-edit hue-wheel ring painting into a private child owner without changing
+      sweep-gradient stops, ring stroke style, canvas keying, triangle/cursor paint, hue-wheel
+      target math, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry and paint dispatch, while
+      `color_edit/popup/picker/hue_wheel/ring.rs` owns ring center/radius projection, sweep-gradient
+      stop construction, stroke style, and ring path paint emission.
+- [x] Split editor color-edit hue-wheel cursor painting into a private child owner without
+      changing hue/SV cursor position, cursor ring strokes, canvas keying, ring/triangle paint,
+      hue-wheel target math, or popup policy tests.
+      Result: `color_edit/popup/picker/hue_wheel.rs` keeps canvas entry and paint dispatch, while
+      `color_edit/popup/picker/hue_wheel/cursor.rs` owns hue/SV cursor projection plus cursor
+      circle fill/outer/inner stroke paint.
+- [x] Split editor color-edit hue-wheel model math into a private child owner without changing
+      hue-wheel public-in-color-edit import paths, target hit-testing, rotated triangle geometry,
+      SV cursor projection, HSV update math, numeric input parsing, or picker tests.
+      Result: `color_edit/model.rs` keeps numeric text/parse helpers, RGB/HSV conversion, SV/hue
+      bar helpers, and root re-exports. `color_edit/model/hue_wheel.rs` owns hue-wheel geometry,
+      target selection, barycentric triangle math, cursor projection, and hue-wheel HSV updates.
+- [x] Split editor color-edit picker-option thumbnail rendering into a private child owner without
+      changing picker option card sizing, HSV hue-bar/wheel previews, alpha option toggling,
+      popup runtime option mutation, or popup policy tests.
+      Result: `color_edit/popup/options.rs` keeps picker/alpha option row orchestration and
+      activation policy, while `color_edit/popup/options/thumbnail.rs` owns the thumbnail clip
+      frames plus hue-bar, SV-grid, and hue-wheel preview composition.
+- [x] Split editor color-edit popup option button chrome into a private child owner without
+      changing alpha option toggling, Eyedropper action reuse, option row a11y roles, centered row
+      text, or popup policy tests.
+      Result: `color_edit/popup/options.rs` keeps picker/alpha option orchestration and re-exports
+      the shared button path, while `color_edit/popup/options/button.rs` owns the generic option
+      row pressable, palette, centered text, border, and checked-state chrome.
+- [x] Split editor color-edit picker option card rendering into a private child owner without
+      changing Hue Bar/Hue Wheel runtime mutation, option-card sizing, thumbnail reuse, radio a11y,
+      caption text, or popup policy tests.
+      Result: `color_edit/popup/options.rs` keeps popup option composition and alpha option
+      forwarding, while `color_edit/popup/options/picker.rs` owns the picker row, picker card
+      pressables, HSV snapshot conversion, thumbnail insertion, caption text, and picker-model
+      writeback.
+- [x] Split editor color-edit side-preview fill rendering into a private child owner without
+      changing current/original preview cells, original restore semantics, checkerboard alpha
+      preview behavior, tooltip/swatch preview reuse, or popup policy tests.
+      Result: `color_edit/popup/preview.rs` keeps side-preview cell/caption orchestration and
+      original restore policy, while `color_edit/popup/preview/fill.rs` owns
+      `color_preview_stack(...)`, checkerboard/fill layout helpers, alpha preview fill variants,
+      and pure preview color helpers.
 - [x] Split editor color-edit option records and runtime popup defaults into a private owner
       without changing public `ColorEditOptions` / popup option names, default values, runtime
       override semantics, palette/payload/request ownership, or popup policy tests.
@@ -538,6 +2260,9 @@ Last updated: 2026-05-30
       Result: `debug_draw_controls/paths/rects.rs` is now a private re-export hub.
       `rects/plain.rs` owns plain closed rect path commands and `rects/rounded.rs` owns
       rounded-rect point generation plus corner arc sampling.
+      2026-05-30 follow-up: `rects/rounded.rs` now keeps rounded-rect point append
+      orchestration only. `rounded/corners.rs` owns per-corner rounding selection and corner arc
+      sampling, while `rounded/geometry.rs` owns rect max-point calculation.
 - [x] Split IMUI debug-draw linear path construction into polyline, polygon fill, and primitive
       private owners without changing open/closed stroke point requirements, polyline command
       ordering, convex/concave fill forwarding, triangle/quad closure, paint-shape call sites, path
@@ -658,6 +2383,14 @@ Last updated: 2026-05-30
       optional outside press, and default prevention. `popup_overlay/modal.rs` keeps open-state
       gating, keep-alive writeback, layer/panel assembly, overlay request assembly, and focus
       initialization.
+- [x] Split IMUI popup-modal layout owner into palette/geometry and element-props child owners
+      without changing modal palette tokens, dim opacity, centered panel geometry, absolute
+      layer/backdrop sizing, dialog semantics test id, panel chrome, or public popup modal facade
+      behavior.
+      Result: `popup_overlay/modal/layout.rs` is now a private re-export hub.
+      `layout/types.rs` owns modal palette resolution and centered panel geometry, while
+      `layout/props.rs` owns modal stack/backdrop props, dialog semantics layout, panel chrome, and
+      full-inset construction.
 - [x] Split IMUI button pressable props and a11y assembly into a private owner without changing
       enabled/focusable projection, variant layout application, button a11y metadata, chrome
       assembly, activation/keyboard/response dispatch, or public button facade behavior.
@@ -727,12 +2460,23 @@ Last updated: 2026-05-30
       Result: `table_controls/header/resize/visual.rs` owns resize grip color, disabled alpha, and
       visual dimensions. `header/resize.rs` keeps pointer-region drag setup, response writeback,
       and test-id attachment.
+- [x] Split IMUI table header resize pointer props and drag behavior into private child owners
+      without changing pointer region hit width, resize drag lifecycle hooks, cursor behavior,
+      drag response edge merging, resize test-id attachment, or table column resize public
+      behavior.
+      Result: `table_controls/header/resize/props.rs` owns pointer-region sizing/enabled props,
+      `resize/behavior.rs` owns pointer down/move/up hooks and resize drag response edge merging,
+      and `header/resize.rs` keeps column identity, keyed shell, visual mounting, and test-id
+      attachment.
 - [x] Split IMUI debug-draw filled path painters into polygon-fill and round-fill private owners
       without changing public draw-list commands, path command generation, shared fill style,
       canvas path dispatch, summaries, or debug-draw smoke behavior.
       Result: `paint_shapes/paths/filled/polygons.rs` owns convex/concave/quad/triangle fills and
       `paint_shapes/paths/filled/round.rs` owns circle/ngon/ellipse fills. `filled.rs` keeps the
       shared fill style plus private re-exports.
+      2026-05-30 follow-up: `paint_shapes/paths/filled/polygons.rs` is now itself a private
+      re-export hub. `polygons/multi.rs` owns convex/concave polygon fills, while
+      `polygons/primitives.rs` owns quad/triangle fills and degenerate-triangle filtering.
 - [x] Split IMUI disclosure header indicator, padding, and border metrics into a private owner
       without changing header row composition, palette resolution, indicator glyph text role, tree
       row label text role, or tree-node/collapsing-header public behavior.
@@ -775,6 +2519,14 @@ Last updated: 2026-05-30
       Result: `interaction_runtime/drag/pressable.rs` owns pressable pointer down/move/up drag
       state transitions. `interaction_runtime/drag.rs` keeps drag kind/threshold helpers and
       private sub-owner re-exports.
+- [x] Split IMUI pressable drag pointer phases into down, move, and up child owners without
+      changing active item marking/cleanup, long-press timer arming/cancelation, thresholded move
+      transitions, drag started/stopped transient events, pointer-up cleanup, drag kind/threshold
+      helpers, or public response drag state.
+      Result: `interaction_runtime/drag/pressable.rs` is now a private phase hub.
+      `pressable/down.rs` owns pointer-down active-item/timer/drag begin setup,
+      `pressable/move_phase.rs` owns thresholded move transitions and started/stopped transients,
+      and `pressable/up.rs` owns pointer-up cleanup and drag cancelation.
 - [x] Split IMUI drag-source payload lifecycle hooks into a private owner without changing
       drag-source trigger-id gating, enabled/cross-window pointer-down policy, active payload
       tracking, hovered-target preservation, drop delivery writeback, or public drag/drop response
@@ -782,6 +2534,14 @@ Last updated: 2026-05-30
       Result: `drag_drop/source/hooks/payload_lifecycle.rs` owns pointer-move active payload
       tracking and pointer-up delivery insertion. `drag_drop/source/hooks.rs` keeps enabled gating,
       cross-window drag upgrade policy, and the private payload-lifecycle delegation.
+- [x] Split IMUI drag-source payload lifecycle owner into pointer-move and pointer-up child owners
+      without changing drag-session filtering, active payload publication, hovered-target
+      preservation, delivered payload insertion, tick/position/source metadata, cross-window drag
+      upgrade policy, or public drag/drop response behavior.
+      Result: `drag_drop/source/hooks/payload_lifecycle.rs` is now a private hook installer hub.
+      `payload_lifecycle/move_hook.rs` owns active payload tracking and hovered-target
+      preservation, while `payload_lifecycle/up_delivery.rs` owns pointer-up target resolution and
+      delivered payload insertion.
 - [x] Split IMUI table-column visibility menu-item toggle behavior into a private owner without
       changing header context-menu trigger selection, menu item group composition, test-id suffix
       generation, shared visibility state updates, changed/edited response flags, or public
@@ -814,6 +2574,12 @@ Last updated: 2026-05-30
       Result: `table_controls/builder/test_ids.rs` owns row/cell test-id derivation. `builder.rs`
       keeps row/cell collection, keyed row scopes, child mounting, and public table-builder
       methods.
+- [x] Split IMUI table-control regression tests into private header-text and rendering owners
+      without changing header label/sort-indicator text-role coverage, hidden-column header/body
+      filtering, table response filtering, or horizontal-scroll wrapping assertions.
+      Result: `table_controls/tests.rs` now keeps the shared table test helpers and module routing
+      only. `tests/header_text.rs` owns header label/sort indicator text-role coverage, while
+      `tests/rendering.rs` owns hidden-column and horizontal-scroll render coverage.
 - [x] Split IMUI selectable popup-menu keyboard navigation into a private owner without changing
       selectable shortcut activation, popup close-on-shortcut, context-menu key handling, inherited
       popup menu item registration, Arrow/Home/End focus movement, or public selectable/menu-item
@@ -840,6 +2606,12 @@ Last updated: 2026-05-30
       Result: `disclosure_controls/trigger/behavior.rs` now only clears/reinstalls the trigger
       hook family in order and delegates to `behavior/activation.rs`, `behavior/keyboard.rs`,
       `behavior/pointer.rs`, and `behavior/response.rs`.
+- [x] Split IMUI disclosure control regression tests into private entry/tree/visual owners without
+      changing collapsing-header body mounting coverage, tree-item semantics/defaults, hover
+      palette precedence, tree-row text role, or disclosure indicator text-role assertions.
+      Result: `disclosure_controls/tests.rs` now keeps the shared test harness and module routing
+      only. `tests/entry.rs` owns collapsing-header body mounting coverage, `tests/tree.rs` owns
+      tree-node semantics/defaults, and `tests/visual.rs` owns palette and text-role coverage.
 - [x] Split IMUI slider pointer value-update logic into a private owner without changing pointer
       down/move/up capture, active-item mutation, lifecycle activation/deactivation, changed
       response emission, or slider pointer behavior.
@@ -907,6 +2679,14 @@ Last updated: 2026-05-30
       reset.
       Result: `submenu_state/clear.rs` keeps the public-in-menu-family clear flow, while
       `submenu_state/clear/reset.rs` owns active, pending, and runtime submenu model resets.
+- [x] Split IMUI submenu reset owner into active, pending, and runtime child owners without
+      changing active submenu value/trigger matching, optional geometry clearing, pending-open
+      cleanup, pointer-grace cleanup, close/focus/open timer cleanup, focus target cleanup, or
+      focus retry reset.
+      Result: `submenu_state/clear/reset.rs` is now a private reset re-export hub.
+      `reset/active.rs` owns active submenu value/trigger/geometry clearing,
+      `reset/pending.rs` owns pending-open value/trigger cleanup, and `reset/runtime.rs` owns
+      pointer-grace/timer/focus retry runtime cleanup.
 - [x] Split IMUI menu-item keyboard behavior into private popup-menu and menubar owners without
       changing popup item nav registration, Arrow/Home/End focus movement, shortcut activation,
       popup-close-on-key activation, lifecycle instant marking, menubar horizontal-arrow
@@ -922,6 +2702,14 @@ Last updated: 2026-05-30
       Result: `interaction_runtime/models.rs` is now a private module/re-export index.
       `models/element.rs`, `models/window.rs`, `models/scope.rs`, and `models/state.rs` own the
       respective helper families and state shapes.
+- [x] Split IMUI interaction-runtime element-scoped model helpers into context-menu, press,
+      lifecycle, and floating child owners without changing context-menu anchor model creation,
+      long-press signal storage, pointer-click modifier storage, lifecycle session storage,
+      float-window collapsed storage, or public interaction runtime re-exports.
+      Result: `interaction_runtime/models/element.rs` is now a private module/re-export hub.
+      `element/context_menu.rs` owns context-menu anchor models, `element/press.rs` owns
+      long-press and pointer-click modifier models, `element/lifecycle.rs` owns lifecycle session
+      models, and `element/floating.rs` owns floating-window collapsed models.
 - [x] Split IMUI input-text props and assistive-semantics assembly into a private owner without
       changing model reads, response lifecycle population, select-all-on-focus effect dispatch,
       input filters/custom filter ordering, password mode, accessibility metadata, placeholder/
@@ -941,9 +2729,23 @@ Last updated: 2026-05-30
       filtering, last-entry-wins behavior, snapshot roundtrips, table-column visibility application,
       or opaque state storage.
       Result: `table_column_visibility/state.rs` now owns only the state/override storage shape and
-      public snapshot re-export. `state/overrides.rs` owns runtime override mutation/query,
+      public snapshot re-export. `state/overrides.rs` owns runtime override construction/query,
       `state/snapshot_io.rs` owns snapshot conversion/restoration, and `state/columns.rs` owns
-      `TableColumn` application.
+      `TableColumn` application. A 2026-06-01 follow-up below moved mutation into a child owner.
+- [x] Split IMUI table-column visibility override mutation out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/overrides.rs` into a private
+      mutation owner without changing public state constructors/accessors, empty-id filtering,
+      last-entry-wins behavior, show/hide/toggle/remove/clear semantics, snapshot restoration, or
+      table-column visibility application.
+      Result: `table_column_visibility/state/mutation.rs` owns `set_visible`, `show`, `hide`,
+      `toggle`, `remove`, and `clear`; `state/overrides.rs` now owns only construction plus
+      read-side override queries.
+- [x] Split IMUI table-column visibility regression tests into private state and menu owners
+      without changing runtime override, snapshot roundtrip, last-entry-wins, stable menu-column id,
+      visible label, or test-id suffix assertions.
+      Result: `table_column_visibility/tests.rs` now keeps imports and module routing only.
+      `tests/state.rs` owns override/snapshot/application coverage, while `tests/menu.rs` owns
+      menu identity and suffix coverage.
 - [x] Split IMUI child-region resize responses into private X/Y response owners without changing
       public `ChildRegionResizeXResponse` / `ChildRegionResizeYResponse` re-exports, enabled/min/
       max accessors, drag edge accessors, drag delta/total projection, clamp-from-start helpers, or
@@ -951,6 +2753,12 @@ Last updated: 2026-05-30
       Result: `response/widgets/child_region/resize.rs` is now a private module/re-export index.
       `resize/x.rs` owns width-axis response projection and tests, while `resize/y.rs` owns
       height-axis response projection and tests.
+- [x] Split IMUI child-region resize response clamp regressions into private X/Y test owners
+      without changing public resize response re-exports, enabled/min/max accessors, drag
+      delta/total projection, clamp-from-start math, or opaque response fields.
+      Result: `resize/x.rs` and `resize/y.rs` keep response projection plus test-owner routing.
+      `resize/x/tests.rs` owns width clamp coverage, while `resize/y/tests.rs` owns height clamp
+      coverage.
 - [x] Split IMUI input-text filter options into private built-in and custom-filter owners without
       changing `InputTextFilters` constructors, public filter flags, character filtering,
       uppercase/no-blank behavior, `InputTextCustomFilter` closure storage, debug output, or public
@@ -990,6 +2798,9 @@ Last updated: 2026-05-30
       `shape_methods/rects.rs` owns rect and rounded-rect point appending,
       `shape_methods/beziers.rs` owns quadratic/cubic Bezier sampling, and
       `shape_methods/arcs.rs` owns circular, fast 12-step, and elliptical arc sampling.
+      2026-05-30 follow-up: `shape_methods/arcs.rs` is now itself a private module hub.
+      `arcs/circular.rs` owns `arc_to` and `arc_to_fast`, while `arcs/elliptical.rs` owns
+      `elliptical_arc_to`.
 - [x] Split IMUI shared hover-delay state/store/model lookup out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` into a private
       state owner without changing window-scoped shared-delay model allocation, short/normal delay
@@ -1016,6 +2827,30 @@ Last updated: 2026-05-30
       consumption, shared-delay flag reads, and `HoverQueryDelayRead` projection.
       `interaction_runtime/hover.rs` keeps active-item blocking, hover-change hook installation,
       timer dispatch, shared-delay delegation, and long-press delegation.
+- [x] Split IMUI hovered query pointer and delay gates into private child owners without changing
+      `hovered_like_imgui`, `FOR_TOOLTIP` expansion, disabled-item hover policy, popup-barrier
+      underlay hover, active-item blocking, nav override behavior, stationary requirements,
+      short/normal delay handling, or `NO_SHARED_DELAY` behavior.
+      Result: `response/hover/query.rs` keeps the public query API and tooltip flag expansion.
+      `response/hover/query/pointer.rs` owns nav, disabled, popup barrier, and active-item
+      pointer gating. `response/hover/query/delay.rs` owns stationary, short/normal, and shared
+      delay query gating.
+- [x] Split IMUI hover active-item blocking and hook installation into private child owners
+      without changing hover blocked-by-active-item semantics, stationary/short/normal delay timers,
+      shared-delay timers, long-press timer handling, transient consumption, or
+      `HoverQueryDelayRead` values.
+      Result: `interaction_runtime/hover/active_block.rs` owns active-item blocking reads,
+      `interaction_runtime/hover/hooks.rs` owns hover-change and timer hook installation, and
+      `interaction_runtime/hover.rs` is now a private module/re-export hub.
+- [x] Split IMUI hover hook installation into hover-change and timer child owners without changing
+      stationary/short/normal hover timers, hover-leave timer cancellation, shared-delay
+      delegation, long-press timer dispatch, transient event recording, or
+      `HoverQueryDelayRead` projection.
+      Result: `interaction_runtime/hover/hooks.rs` now orchestrates shared-delay model lookup,
+      child hook installation, and delay reads only. `hover/hook_hover_change.rs` owns
+      pressable hover-change timer setup/cancellation, while `hover/hook_timer.rs` owns
+      local hover-delay timer dispatch, shared-delay timer delegation, and long-press timer
+      delegation.
 - [x] Split IMUI porting layout sugar into private scoped-layout and spacer owners without
       changing `items`, `same_line`, `dummy`, `spacing`, `indent`, layout-token defaults,
       explicit dummy sizing, indent composition, test-id stamping, or public-in-IMUI APIs.
@@ -1030,6 +2865,13 @@ Last updated: 2026-05-30
       Result: `text_picker_controls/keyboard/handler.rs` owns key-down capture plus Arrow/Enter
       model writes. `text_picker_controls/keyboard.rs` keeps keyboard pick/state/snapshot storage
       and reconciliation.
+- [x] Split IMUI input-text picker keyboard handler into navigation and commit child owners without
+      changing key-down capture, repeat/IME/modifier gating, Arrow highlight movement, Enter/
+      NumpadEnter pick handling, popup close, model writes, or picker response projection.
+      Result: `text_picker_controls/keyboard/handler.rs` keeps capture/gating and key dispatch.
+      `text_picker_controls/keyboard/handler/navigation.rs` owns Arrow highlight movement.
+      `text_picker_controls/keyboard/handler/pick.rs` owns highlighted candidate commit, model
+      writes, popup close, pending pick storage, and redraw.
 - [x] Split IMUI menu item routing dispatch into private entry and core owners without changing
       menu item method names, checkbox/radio/action semantics roles, action forwarding,
       label-identity scoping, pressable hook injection, mount routing, response population, or
@@ -1168,14 +3010,24 @@ Last updated: 2026-05-30
       `items/panel.rs` owns selected tab-panel semantics and panel child mounting. `items.rs`
       keeps `BuiltTabItem`, selected-model normalization, build-focus propagation, final column
       assembly, and `TabBarResponse` construction.
+- [x] Split IMUI tab-list owner into trigger collection and list element child owners without
+      changing tab trigger rendering, selected/first-focusable trigger tracking,
+      `TabTriggerResponse` collection, tab-list semantics/test id, row/h-flex layout, or public
+      tab-bar APIs.
+      Result: `tab_family_controls/items/list.rs` is now a private tab-list hub.
+      `list/triggers.rs` owns trigger rendering and response bookkeeping, while
+      `list/element.rs` owns tab-list semantics, root row layout, and trigger h-flex composition.
 - [x] Split IMUI input-text picker core orchestration out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private core owner without
       changing completion/history wrapper calls, candidate filtering, keyboard navigation, input
       root semantics, popup open policy, popup pick handling, or `InputTextPickerResponse`.
       Result: `text_picker_controls/core.rs` owns model reads, candidate visibility, keyboard
       snapshot reconciliation, input root mounting, open-policy application, popup rendering, and
-      pick response merging. `text_picker_controls.rs` is now a private module index and re-export
-      hub for core and entry wrappers.
+      initially pick response merging; the 2026-06-01 follow-up moved popup-result finalization
+      and picked-change merging into `text_picker_controls/response.rs`, then moved popup
+      request/render dispatch into `text_picker_controls/core/popup.rs`.
+      `text_picker_controls.rs` is now a private module index and re-export hub for core and entry
+      wrappers.
 - [x] Split IMUI input-text picker session preparation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` into a private session owner
       without changing model reads, candidate visibility, input enabled-scope checks, keyboard
@@ -1183,7 +3035,9 @@ Last updated: 2026-05-30
       mounting, popup open policy, popup rendering, or `InputTextPickerResponse`.
       Result: `text_picker_controls/core/session.rs` owns model/candidate/popup/keyboard snapshot
       preparation and `picker_expanded` derivation. `core.rs` keeps input-root mounting,
-      open-policy application, popup rendering, and pick response merging.
+      open-policy application, and popup rendering; the 2026-06-01 follow-up moved popup-result
+      finalization and picked-change merging into `text_picker_controls/response.rs`, then moved
+      popup request/render dispatch into `text_picker_controls/core/popup.rs`.
 - [x] Split IMUI table header cell layout/resize wrapping out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private cell owner without
       changing sortable/plain header behavior, resize handle wiring, header test IDs, table layout,
@@ -1213,9 +3067,16 @@ Last updated: 2026-05-30
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` into a private payload
       owner without changing command variant names, draw-list recording paths, summary projection,
       paint dispatch, public debug-draw summaries, or facade APIs.
-      Result: `debug_draw_controls/commands/types.rs` owns private `DebugDrawCommand` payload
+      Result: `debug_draw_controls/commands/types.rs` is now a private command-type re-export hub,
+      while `debug_draw_controls/commands/types/command.rs` owns private `DebugDrawCommand` payload
       variants. `commands.rs` keeps command module wiring, summary projection installation, and the
       parent-visible `DebugDrawCommand` re-export.
+- [x] Split IMUI debug-draw command type hub from the payload enum without changing command variant
+      names, draw-list recording paths, summary projection, paint dispatch, public debug-draw
+      summaries, facade APIs, or parent-visible `DebugDrawCommand` routing.
+      Result: `debug_draw_controls/commands/types.rs` keeps only private module routing and
+      re-export, while `debug_draw_controls/commands/types/command.rs` owns the payload enum and all
+      draw-list command variants.
 - [x] Split IMUI debug-draw media paint behavior behind
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into private raster,
       rounded, and SVG owner modules without changing image/region/quad/SVG paint behavior, opacity
@@ -1231,6 +3092,18 @@ Last updated: 2026-05-30
       Result: `paint/media/dispatch.rs` owns `paint_debug_draw_media_command(...)` media match
       routing. `paint/media.rs` is now only the media paint module/type hub for `MediaPaintKey`,
       `RasterImage`, `RasterUvRect`, and child owner wiring.
+      2026-05-30 follow-up: `paint/media/dispatch.rs` is now itself a dispatch hub.
+      `dispatch/raster_commands.rs` owns image/image-region/image-quad routing,
+      `dispatch/rounded_commands.rs` owns rounded image/region routing,
+      `dispatch/svg_commands.rs` owns SVG image/mask-icon routing, and
+      `dispatch/non_media.rs` keeps the exhaustive non-media no-op guard.
+- [x] Split IMUI debug-draw residual shape paint dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` into a private residual
+      owner without changing path-command routing, filled-rect paint, vertex-color rect paint,
+      triangle mesh paint, image triangle mesh paint, text paint, or non-shape no-op behavior.
+      Result: `paint_shapes.rs` now keeps order/key setup plus path-vs-residual dispatch, while
+      `paint_shapes/residual.rs` owns filled rect, mesh/image-mesh, text, and exhaustive no-op
+      routing for commands already handled elsewhere.
 - [x] Split IMUI debug-draw pressable element behavior out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` into a private owner module
       without changing noninteractive canvas output, pressable canvas wrapping, keyboard activation
@@ -1240,6 +3113,13 @@ Last updated: 2026-05-30
       keyboard activation lifecycle marking, clicked transient reads, and `ResponseExt` population.
       `element.rs` keeps canvas composition, fill-layout policy for interactive canvases, cache
       policy, clipping, test-id routing, and debug-draw command painting.
+- [x] Split IMUI debug-draw element canvas and pressable composition owners without changing
+      noninteractive canvas output, pressable canvas wrapping, fill-layout policy, cache policy,
+      clipping, test-id routing, paint routing, or pressable behavior installation.
+      Result: `debug_draw_controls/element.rs` now keeps interactive/noninteractive element
+      dispatch only. `element/canvas.rs` owns canvas cache policy, fill layout, clipping, test-id
+      routing, and command painting. `element/pressable.rs` owns pressable props, focus-ring
+      suppression, behavior installation, and interactive canvas embedding.
 - [x] Split IMUI table row-group pinned-cell splitting, row flex layout, and horizontal-scroll
       wrapper helpers out of `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` into
       private owner modules without changing table row/header layout, pinned-column ordering,
@@ -1353,6 +3233,12 @@ Last updated: 2026-05-30
       Result: `menu_controls/routing/dispatch.rs` owns public menu-item entry wrappers,
       checkbox/radio/action role selection, noop-hook routing, and identity-to-mount dispatch.
       `routing.rs` is now a private dispatch/identity/mount module index and re-export hub.
+- [x] Split IMUI menu-control regression tests into private text-role and root owners without
+      changing menu item label/shortcut/indicator text-role coverage, root pressable ownership,
+      test-id forwarding, or visible child mounting assertions.
+      Result: `menu_controls/tests.rs` now keeps shared helpers and module routing only.
+      `tests/text_roles.rs` owns label/shortcut/indicator text-role coverage, while
+      `tests/root.rs` owns root pressable and visible child mounting coverage.
 - [x] Split IMUI container child building, linear layout, scroll, and grid element composition out
       of `ecosystem/fret-ui-kit/src/imui/containers.rs` into private owner modules without
       changing horizontal/vertical/grid/scroll facade helpers, option forwarding, test-id
@@ -1361,6 +3247,12 @@ Last updated: 2026-05-30
       `containers/linear.rs` owns horizontal/vertical flex containers, `containers/scroll.rs` owns
       scroll-area construction, and `containers/grid.rs` owns grid row batching/keyed rows. The
       root `containers.rs` is now a thin module/re-export index plus tests.
+- [x] Split IMUI container identity regression tests into private outer-surface and scroll
+      viewport owners without changing horizontal/vertical/grid/scroll test-id placement or inner
+      scroll viewport test-id assertions.
+      Result: `containers/tests/identity.rs` now keeps identity test imports and module routing
+      only. `identity/outer.rs` owns outer-surface test-id coverage, while `identity/viewport.rs`
+      owns scroll viewport test-id coverage.
 - [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
       `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
       without changing active-item lifecycle, right-click context-menu signaling, keyboard
@@ -1423,6 +3315,12 @@ Last updated: 2026-05-30
       `chrome/button.rs` owns button theme resolution and chrome props, `chrome/field.rs` owns
       field theme resolution and chrome props, and `chrome.rs` is now a private module/re-export
       index.
+- [x] Split IMUI control chrome regression tests into private text-role and layout owners without
+      changing control/fill text shrink semantics, inherited foreground assertions, row/stack
+      direction, fill-width behavior, gap tokens, justification, or alignment coverage.
+      Result: `control_chrome/tests.rs` now keeps shared imports and `test_bounds` only.
+      `tests/text_roles.rs` owns control/fill text coverage, while `tests/layout.rs` owns
+      row/stack dense layout coverage.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.
@@ -1437,6 +3335,12 @@ Last updated: 2026-05-30
       handler installation, candidate selectable rows, active-element synchronization, click commit,
       popup close, and picked-result reporting. The root file keeps input composition, assistive
       semantics, open/close policy, candidate/keyboard snapshots, and final response merge.
+- [x] Split IMUI input-text picker popup keyboard and data-shape owners without changing popup
+      mounting, popup-scoped keyboard installation, selectable item rendering, pick reporting, or
+      completion/history picker behavior.
+      Result: `text_picker_controls/popup.rs` keeps popup mounting and candidate iteration,
+      `popup/keyboard.rs` owns optional popup-scoped keyboard handler installation, and
+      `popup/types.rs` owns popup input/result data shapes.
 - [x] Split IMUI input-text picker input-root composition out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
       changing completion/history picker behavior, ComboBox semantics, test-id derivation, active
@@ -1452,9 +3356,18 @@ Last updated: 2026-05-30
       without changing test-id fallback, `.input` suffix derivation, TextField-to-ComboBox role
       normalization, assistive semantics, root fill sizing, or keyboard handler installation.
       Result: `text_picker_controls/input/options.rs` owns `PreparedInputTextPickerInput` and
-      `prepare_text_picker_input_options(...)`; `input.rs` keeps input-root request/result shapes,
+      `prepare_text_picker_input_options(...)`; `input.rs` kept input-root request/result shapes,
       assistive semantics, root container construction, text input mounting, and keyboard handler
-      installation.
+      installation until the follow-up child-owner split below.
+- [x] Split IMUI input-text picker input-root assistive semantics and input-focused keyboard
+      handler installation out of `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs`
+      into private child owners without changing ComboBox active-descendant/controls/expanded
+      semantics, root fill sizing, text input mounting, keyboard-navigation gating, candidate
+      forwarding, popup-open state, or completion/history picker behavior.
+      Result: `text_picker_controls/input/semantics.rs` owns the assistive semantics projection,
+      `text_picker_controls/input/keyboard.rs` owns the focused-input keyboard handler gating and
+      candidate forwarding, and `input.rs` now keeps request/result shapes plus text input/root
+      container construction.
 - [x] Split IMUI popup-store stale-generation cleanup out of
       `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into a private lifecycle owner without
       changing per-window state shape, popup open/anchor drop semantics, keep-alive generation
@@ -1462,6 +3375,14 @@ Last updated: 2026-05-30
       Result: `popup_store/lifecycle.rs` owns stale popup cleanup during render generation
       preparation. `popup_store.rs` keeps popup store state, generation entry points, scoped entry
       lookup, and explicit scope dropping.
+- [x] Split IMUI popup-store state, entry, and explicit drop behavior out of
+      `ecosystem/fret-ui-kit/src/imui/popup_store.rs` into private child owners without changing
+      per-window state shape, popup model identity, render-generation preparation, scoped entry
+      lookup, or explicit scope-drop redraw requests.
+      Result: `popup_store.rs` is now a thin re-export hub. `popup_store/state.rs` owns the
+      per-window/per-id storage and new-entry model creation; `popup_store/entry.rs` owns render
+      generation marking and scoped lookup; `popup_store/drop_scope.rs` owns explicit popup scope
+      removal and model reset; `popup_store/lifecycle.rs` keeps stale popup cleanup.
 - [x] Split IMUI input-text picker popup open policy out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
       changing popup open/panel-id reads, active-descendant wiring, open-on-focus behavior,
@@ -1504,6 +3425,27 @@ Last updated: 2026-05-30
       response lifecycle population, select-all command emission, input filters, policy-command
       installation, and compact input chrome/style selection. `text_controls.rs` is now a private
       focus/input/policy/style/textarea module index and re-export hub.
+- [x] Split IMUI input-text ElementContext assembly out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` into a private element owner without
+      changing input-text facade calls, text-picker assistive semantics, response lifecycle
+      population, select-all-on-focus command emission, input filters, submit/cancel command
+      policy, compact chrome, or text style selection.
+      Result: `text_controls/input.rs` keeps the public input-text wrapper, assistive-semantics
+      re-export, and shared model-changed helper. `text_controls/input/element.rs` owns
+      ElementContext assembly, response population, select-all command emission, props mounting,
+      and policy-command installation.
+- [x] Split IMUI text-control style palette and chrome/layout details into private child owners
+      without changing input-text or textarea chrome, field layout, theme token fallback,
+      selection/preedit color derivation, text style selection, or facade APIs.
+      Result: `text_controls/style.rs` keeps style assembly and public text-style helper routing.
+      `style/palette.rs` owns theme color fallback and selection/preedit derivation, while
+      `style/chrome.rs` owns input padding, border, radius, and fixed field layout.
+- [x] Split IMUI text-control chrome regression tests into private input and textarea owners
+      without changing input-text fixed-height chrome, textarea fill-width chrome, focus-ring,
+      border, padding, radius, response-id, or element lookup assertions.
+      Result: `text_controls/tests.rs` now keeps `TestWriter`, element lookup helpers, and module
+      routing only. `tests/input_chrome.rs` owns input-text chrome coverage, while
+      `tests/textarea_chrome.rs` owns textarea chrome coverage.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.
@@ -1531,10 +3473,24 @@ Last updated: 2026-05-30
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private layout owner without
       changing label identity parsing, open-model reads, trigger mounting, content body building,
       content/root test IDs, open/toggled response population, or public disclosure facade calls.
-      Result: `disclosure_controls/layout.rs` owns content container composition, body `ImUiFacade`
-      construction, root column layout, and content/root test-id application. The root file keeps
-      label identity parsing, open-model reads, trigger mounting, and aggregate `DisclosureResponse`
-      writes.
+      Result: `disclosure_controls/layout.rs` owns body `ImUiFacade` construction, root/content
+      composition, and content/root test-id application. The 2026-05-31 follow-up moved content/root
+      props into `disclosure_controls/layout/props.rs`. The root file keeps label identity parsing,
+      open-model reads, trigger mounting, and aggregate `DisclosureResponse` writes.
+- [x] Split IMUI disclosure content/root layout props out of the layout composition owner without
+      changing fill-width/auto-height layout, visible overflow, zero-gap column packing, content
+      padding, body `ImUiFacade` mounting, root/content test-id routing, or public disclosure
+      facade calls.
+      Result: `disclosure_controls/layout.rs` keeps composition and test-id routing, while
+      `disclosure_controls/layout/props.rs` owns content container props, content column props, and
+      root column props.
+- [x] Split IMUI disclosure entry/open-state assembly into a private entry owner without changing
+      collapsing-header/tree-node label identity parsing, open-model reads, trigger mounting,
+      content body building, open/toggled response population, or public disclosure facade calls.
+      Result: `disclosure_controls/entry.rs` owns collapsing-header/tree-node entry wrappers,
+      label identity normalization, open-model setup, trigger/content/root orchestration, and
+      aggregate `DisclosureResponse` writes. `disclosure_controls.rs` is now a module/re-export hub
+      plus test-only helper imports.
 - [x] Split IMUI disclosure header-row visual construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` into a private owner module
       without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label
@@ -1562,6 +3518,13 @@ Last updated: 2026-05-30
       shortcut activation, context-menu request handling, trigger `ResponseExt` population, and
       open/menu badge visual assembly. The root file keeps label identity, popup open/close model
       wiring, popup mounting, and aggregate `ComboResponse` open/toggled state.
+- [x] Split IMUI combo-model wrapper into entry, popup-items, and response owners without changing
+      borrowed item iteration, canonical `combo_with_options` reuse, option picking, popup close,
+      trigger test-id option suffixes, or changed/edited/deactivated-after-edit response semantics.
+      Result: `combo_model_controls.rs` is now a thin module/re-export hub,
+      `combo_model_controls/entry.rs` owns model reads, preview fallback, combo option forwarding,
+      and canonical combo mounting, `popup_items.rs` owns selectable item rows plus model/popup
+      updates, and `response.rs` owns changed response projection.
 - [x] Split IMUI combo trigger behavior out of
       `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` into a private owner module
       without changing trigger props, ComboBox semantics, a11y label derivation, shortcut
@@ -1590,9 +3553,16 @@ Last updated: 2026-05-30
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.
-      Result: `boolean_controls/visual.rs` owns checkbox badges, radio indicators, switch state
-      badges, and shared boolean label text. The root checkbox/radio file and `switch.rs` keep
+      Result: `boolean_controls/visual.rs` owns shared boolean label text and re-export routing for
+      checkbox/radio/switch indicator chrome. The 2026-05-31 follow-up moved indicator chrome into
+      `boolean_controls/visual/indicators.rs`. The root checkbox/radio file and `switch.rs` keep
       pressable behavior, shortcut handling, model updates, and response population.
+- [x] Split IMUI boolean-control indicator chrome out of the shared visual owner without changing
+      checkbox badge text, radio ring/dot sizing, switch badge text, palette channel selection,
+      shared boolean label mounting, or public checkbox/radio/switch behavior.
+      Result: `boolean_controls/visual.rs` keeps shared boolean label text and re-export routing,
+      while `boolean_controls/visual/indicators.rs` owns checkbox, radio, and switch indicator
+      chrome.
 - [x] Split IMUI checkbox/radio boolean-control behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` into private owner modules without
       changing the public checkbox/radio/switch facade surface.
@@ -1619,6 +3589,13 @@ Last updated: 2026-05-30
       item behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
       `behavior/keyboard.rs` owns shortcut/context-menu key handling, and `behavior/response.rs`
       owns changed response projection.
+- [x] Split IMUI checkbox entry and props owners without changing label identity, model reads,
+      `CheckboxOptions` a11y/test-id wiring, checkbox behavior installation, field chrome, or
+      visual row layout.
+      Result: `boolean_controls/checkbox.rs` is now a thin module/re-export hub,
+      `checkbox/entry.rs` owns label identity, model read, behavior installation, field chrome, and
+      visual row assembly, and `checkbox/props.rs` owns `PressableProps` plus checkbox semantics
+      wiring.
 - [x] Split IMUI radio pressable behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` into a private owner module
       without changing label identity, radio a11y, shortcut gating, context-menu keyboard
@@ -1654,6 +3631,15 @@ Last updated: 2026-05-30
       behavior installation, and owner dispatch. `behavior/activation.rs` owns click toggling,
       `behavior/keyboard.rs` owns shortcut key handling, and `behavior/response.rs` owns
       active-trigger response projection.
+- [x] Split IMUI switch entry and props owners without changing label identity, model reads,
+      `SwitchOptions` a11y/test-id wiring, active-trigger behavior installation, field chrome, or
+      visual row layout.
+      Result: `boolean_controls/switch.rs` is now a thin module/re-export hub,
+      `switch/entry.rs` initially owned label identity, model read, behavior installation, field
+      chrome, and visual row assembly, and `switch/props.rs` owns `PressableProps` plus switch
+      semantics wiring. The 2026-05-31 follow-up moved switch model reads, behavior installation,
+      field chrome, and visual row assembly into `switch/entry/render.rs`, leaving `switch/entry.rs`
+      with public entrypoints and label identity scoping only.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.
@@ -1676,6 +3662,13 @@ Last updated: 2026-05-30
       `slider_controls/interaction.rs` owns pointer/key model editing and lifecycle signals, and
       `slider_controls/visual.rs` owns track/fill/value badge assembly. The root slider file keeps
       label identity, option normalization, response population, and final element assembly.
+- [x] Split IMUI slider entry assembly and pressable props into private child owners without
+      changing label identity, push-id scoping, a11y semantics, hover/changed response population,
+      interaction handler installation, field chrome, or visual assembly.
+      Result: `slider_controls/entry.rs` owns label identity normalization, push-id scoping, slider
+      element assembly, interaction/response wiring, and final add. `slider_controls/props.rs` owns
+      pressable enabled/focus/layout/a11y props, while `slider_controls.rs` is now a private
+      module/re-export hub.
 - [x] Split IMUI slider pointer and keyboard interaction out of
       `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` into private owner modules
       without changing pointer capture, active-item state, pointer model editing, keyboard
@@ -1705,13 +3698,19 @@ Last updated: 2026-05-30
 - [x] Split IMUI widget response types out of
       `ecosystem/fret-ui-kit/src/imui/response/widgets.rs` into private owner modules without
       changing response type names or accessors.
-      Result: `response/widgets/open.rs` owns disclosure/combo responses,
+      Result: `response/widgets/open.rs` routes disclosure/combo response owners,
       `response/widgets/text_picker.rs` owns input text picker responses,
       `response/widgets/tabs.rs` owns tab responses, `response/widgets/table.rs` owns table
       response aggregation, `response/widgets/table/header.rs` owns table header responses,
       `response/widgets/table/resize.rs` owns table resize responses, and
       `response/widgets/virtual_list.rs` owns virtual-list responses. The root
       `widgets.rs` file is now a thin module/re-export index beside the existing child-region owner.
+- [x] Split IMUI open response structs out of
+      `ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` into private child owners without
+      changing public response type names, accessors, crate-visible field access, or re-export
+      paths.
+      Result: `response/widgets/open.rs` is now a thin hub. `response/widgets/open/disclosure.rs`
+      owns `DisclosureResponse` and `response/widgets/open/combo.rs` owns `ComboResponse`.
 - [x] Split IMUI text-control option types out of
       `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
@@ -1753,6 +3752,15 @@ Last updated: 2026-05-30
       Result: `table_column_visibility/menu/identity.rs` owns stable menu column id extraction,
       visible menu label parsing, and slug-like test-id suffix generation. `menu.rs` keeps header
       context-menu composition, menu item/group rendering, model updates, and response population.
+- [x] Split IMUI table-column visibility repeated menu item composition out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` into a private items owner
+      without changing stable column-id filtering, visible-label filtering, generated test-id
+      suffixes, menu item state updates, runtime visibility reads, response aggregation, or header
+      context-menu behavior.
+      Result: `table_column_visibility/menu.rs` keeps header context-menu trigger selection and
+      popup orchestration. `table_column_visibility/menu/items.rs` owns repeated menu item
+      composition, generated item test IDs, runtime visibility reads, and
+      `TableColumnVisibilityMenuResponse` aggregation.
 - [x] Split IMUI table-column visibility response structs/accessors out of
       `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into a private response owner
       without changing public response type names, accessors, changed/clicked semantics, opaque
@@ -1761,6 +3769,13 @@ Last updated: 2026-05-30
       `TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and
       `TableColumnVisibilityMenuItemResponse`. The root file keeps options, state re-exports,
       public helper forwarding, and test wiring.
+- [x] Split IMUI table-column visibility option types out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into a private options owner
+      without changing public option type names, fields, defaults, popup sizing, menu policy, helper
+      forwarding, or re-export paths.
+      Result: `table_column_visibility/options.rs` owns
+      `TableColumnVisibilityMenuOptions` and `TableColumnVisibilityHeaderContextMenuOptions`; the
+      root file keeps option/response/state re-exports, public helper forwarding, and test wiring.
 - [x] Split IMUI container/layout option types out of
       `ecosystem/fret-ui-kit/src/imui/options/containers.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
@@ -1802,9 +3817,20 @@ Last updated: 2026-05-30
       changing drag snapshot matching, device-pixel snapping, test-id overrides, child window
       resize feedback, or `FloatingAreaResponse` dragging/position semantics.
       Result: `floating_surface/area/drag_state.rs` owns drag snapshot discovery,
-      drag-position reconciliation, scale-factor snapping, test-id state updates, and final
-      placement readback. `floating_surface/area.rs` now only orchestrates layer registration,
+      scale-factor reads, and final placement readback. A 2026-06-01 follow-up below moved
+      drag-position reconciliation, scale-factor snapping, and test-id state updates into a
+      child commit owner. `floating_surface/area.rs` now only orchestrates layer registration,
       context creation, IMUI child mounting, layout shell creation, and response assembly.
+- [x] Split IMUI floating-area drag-state commit out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/area/drag_state.rs` into a private child
+      owner without changing drag snapshot discovery, device-pixel snapping, test-id overrides,
+      drag-position delta application, last-drag-position cleanup, child window resize feedback, or
+      `FloatingAreaResponse` dragging/position semantics.
+      Result: `floating_surface/area/drag_state/commit.rs` owns `cx.state_for(...)`,
+      initial/test-id state construction, drag delta application, snapping, and last-drag-position
+      reset, while `floating_surface/area/drag_state/final_state.rs` owns final placement readback.
+      `drag_state.rs` keeps snapshot discovery, scale-factor lookup, prepared output assembly, and
+      final-state re-export routing.
 - [x] Split IMUI floating-area drag-surface behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
       changing drag setup delegation, focusable key stub installation, double-click hooks,
@@ -1814,6 +3840,13 @@ Last updated: 2026-05-30
       move/up handling, setup callback invocation, and IMUI child mounting. The root
       `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
       layer, and state owners.
+- [x] Split IMUI floating-area drag-surface pointer behavior and content setup into private child
+      owners without changing drag setup delegation, focusable key stub installation,
+      double-click hooks, activation signals, drag threshold handling, or IMUI child mounting.
+      Result: `floating_surface/drag_surface.rs` keeps the public entrypoint, pointer-region shell,
+      and bring-to-front orchestration. `drag_surface/behavior.rs` owns pointer down/move/up drag
+      behavior, double-click dispatch, and activation signals, while `drag_surface/content.rs` owns
+      setup callback invocation, key stub installation, and IMUI child mounting.
 - [x] Split IMUI floating-window resize state/snapshot ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private owner module
       without changing resize handles, left/right/top/bottom/corner resize behavior, collapse
@@ -1845,6 +3878,17 @@ Last updated: 2026-05-30
       resize/title/close test-id construction, `state/output.rs` owns
       `FloatingWindowResizeStateOutput`, and `state.rs` keeps `cx.state_for(...)`, snapshot/collapse
       orchestration, pixel snapping, drag application, and output assembly.
+- [x] Split IMUI floating-window resize state commit out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` into a private owner module
+      without changing resize state lookup, collapsed reset policy, drag application, device-pixel
+      snapping, handle test-id packaging, or resize output semantics.
+      Result: `floating_window_resize/state/commit.rs` owns `cx.state_for(...)`, reset/snap/drag
+      orchestration, state tuple extraction, and output packaging. `state.rs` now keeps public
+      `prepare_resize_state(...)` parameters plus active `resizing` derivation.
+      2026-05-30 follow-up: `state/commit/output_pack.rs` now owns committed-state capture,
+      handle test-id packaging, and `FloatingWindowResizeStateOutput` construction, while
+      `state/commit.rs` keeps `cx.state_for(...)`, reset/snap/drag orchestration, and resize
+      mutation only.
 - [x] Split IMUI floating-window resize handle layout and pointer behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
       without changing resize handle placement, cursors, drag lifecycle, activation handoff, or
@@ -1853,6 +3897,14 @@ Last updated: 2026-05-30
       `floating_window_resize/handles/pointer.rs` owns pointer-region wiring, pointer capture,
       runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now
       only stacks the body/blocker with the eight resize handles.
+- [x] Split IMUI floating-window resize handle pointer events out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` into a private
+      owner module without changing pointer down/move/up semantics, cursor updates, drag lifecycle,
+      pointer capture/release, activation handoff, or front-most layer ordering.
+      Result: `floating_window_resize/handles/pointer.rs` now owns element/layout/cursor
+      composition and bring-to-front handoff; `handles/pointer/events.rs` owns pointer hook
+      clearing, down/move/up callbacks, runtime drag begin/update/cancel, pointer capture, cursor
+      updates, and resize-handle activation events.
 - [x] Split IMUI floating-window resize cursor mapping out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` into a private
       owner module without changing handle placement, cursor icons, pointer capture/release,
@@ -1882,7 +3934,27 @@ Last updated: 2026-05-30
       Result: `selectable_controls/behavior.rs` owns pressable behavior installation,
       activate-handler popup close/click signaling, keyboard owner delegation, transient clicked
       reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
-      `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+      selected/highlighted state reads, behavior wiring, and row visual assembly. The 2026-05-31
+      follow-up moved pressable/a11y prop construction into `selectable_controls/props.rs`.
+- [x] Split IMUI selectable pressable/a11y props out of the selectable root owner without changing
+      label identity, enabled/focusable gating, fill-width/auto-height sizing, default listbox
+      option role fallback, a11y label/test-id/selected forwarding, behavior installation, or row
+      visual composition.
+      Result: `selectable_controls.rs` keeps label identity, option state reads, behavior wiring,
+      and row visual assembly. `selectable_controls/props.rs` owns pressable props,
+      `PressableProps`, and `PressableA11y` construction.
+- [x] Split IMUI selectable regression tests into private palette and row-text owners without
+      changing selected/hover/disabled palette resolution, highlight semantics, shared list-row
+      text role layout, or inherited foreground assertions.
+      Result: `selectable_controls/tests.rs` now keeps shared helpers and module routing only.
+      `tests/palette.rs` owns palette policy coverage, while `tests/row_text.rs` owns row label
+      text-role coverage.
+- [x] Split IMUI selectable visual palette resolution out of the row visual owner without changing
+      selected/hover/pressed/disabled palette fallback order, highlight semantics, row padding,
+      shared list-row text role mounting, inherited foreground, or public selectable behavior.
+      Result: `selectable_controls/visual.rs` keeps row composition and text-role mounting, while
+      `selectable_controls/visual/palette.rs` owns `SelectablePalette` and
+      `resolve_selectable_palette(...)`.
 - [x] Split IMUI child-region resize handle/drag ownership out of
       `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private owner module without
       changing the public child-region facade or response surface.
@@ -1913,6 +3985,12 @@ Last updated: 2026-05-30
       content column assembly, `tooltip_overlay/runtime.rs` owns tooltip lifecycle, interaction
       bounds, update, dismissal, and request orchestration, and the root file is now a thin module
       index.
+- [x] Split IMUI tooltip regression tests into private mount, text-role, and options owners
+      without changing no-trigger false/no-output behavior, body compact paragraph layout, or
+      default top-center placement/delay/test-id assertions.
+      Result: `tooltip_overlay/tests.rs` now keeps `TestWriter` and module routing only.
+      `tests/mount.rs` owns no-trigger mount behavior, `tests/text_role.rs` owns body text-role
+      coverage, and `tests/options.rs` owns default options coverage.
 - [x] Split IMUI menu/popup/tab/tooltip option types out of
       `ecosystem/fret-ui-kit/src/imui/options/menus.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
@@ -1930,6 +4008,14 @@ Last updated: 2026-05-30
       models, menubar open-menu synchronization, active trigger state writes, open-request
       resolution, disabled-popup cleanup, and render-state recording. `menu.rs` now keeps public
       flow orchestration plus trigger and popup mounting.
+- [x] Split IMUI begin-menu open-request popup bridge out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` into a private child owner
+      without changing menubar open-request resolution, active-trigger synchronization, trigger-rect
+      popup opening, popup body mounting, disabled-popup cleanup, or `DisclosureResponse`
+      open/toggled semantics.
+      Result: `menu_family_controls/menu/open.rs` owns resolve-open-request, menubar active-trigger
+      activation, and `ui.open_popup_at(...)` dispatch. `menu.rs` keeps trigger mounting, popup body
+      mounting, disabled cleanup routing, and final response assembly.
 - [x] Split IMUI begin-menu state capture/read helpers out of
       `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` into a private owner
       module without changing row/popup/was-open model identity, render-state recording, or menubar
@@ -1953,6 +4039,24 @@ Last updated: 2026-05-30
       synchronization, post-trigger reconciliation, and `MenubarActiveTrigger` writes.
       `open_policy.rs` now keeps trigger-click toggling, open-request resolution,
       disabled-popup cleanup, and the private owner re-export.
+- [x] Split remaining IMUI begin-menu open-policy responsibilities out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` into
+      trigger-click toggle, open-request resolve, and disabled-popup cleanup child owners without
+      changing menubar open-menu toggling, stale-open close behavior, disabled menu cleanup, popup
+      close calls, or begin-menu response reporting.
+      Result: `menu_family_controls/menu_state/open_policy.rs` is now a private re-export hub.
+      `open_policy/toggle.rs` owns trigger-click menubar/popup toggling,
+      `open_policy/resolve.rs` owns open-request resolution and stale row/popup close cleanup, and
+      `open_policy/disabled.rs` owns disabled-popup close cleanup.
+- [x] Split IMUI begin-menu active-trigger read and activation writes out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+      into private child owners without changing active-trigger synchronization, menubar open-menu
+      updates, group-active writes, row-open activation, post-trigger reconciliation, or begin-menu
+      response semantics.
+      Result: `open_policy/active_trigger/read.rs` owns group-active readback for the current
+      trigger, `open_policy/active_trigger/activate.rs` owns `MenubarActiveTrigger` plus row-open
+      activation writes, and `active_trigger.rs` now keeps guard/orchestration plus reconcile
+      re-export.
 - [x] Split IMUI begin-submenu trigger wiring and open-policy reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` into private owner modules
       without changing submenu trigger geometry hints, hover/shortcut behavior, sibling switching,
@@ -1962,6 +4066,19 @@ Last updated: 2026-05-30
       geometry hints. `menu_family_controls/submenu/open_policy.rs` owns clicked-trigger
       submenu-state reconciliation, stale-open cleanup, and popup open/close anchoring. The root
       `submenu.rs` keeps the public flow, state reads, popup mounting, and response assembly.
+- [x] Split IMUI begin-submenu open-policy readback out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` into a private
+      read owner without changing clicked-trigger submenu-state reconciliation, stale-open cleanup,
+      popup close/open anchoring, or begin-submenu response semantics.
+      Result: `menu_family_controls/submenu/open_policy/read.rs` owns `open_value` readback, while
+      `submenu/open_policy.rs` keeps clicked-trigger reconciliation, stale close cleanup, and
+      popup close/open dispatch.
+- [x] Split IMUI begin-submenu open-state reads/writeback and popup mounting into child owners
+      without changing disabled gating, popup policy lookup, trigger creation, open-policy
+      reconciliation, popup open/close semantics, or `DisclosureResponse` open/toggled reporting.
+      Result: `menu_family_controls/submenu/state.rs` owns popup-open/was-open snapshot reads and
+      was-open writeback, while `menu_family_controls/submenu/popup.rs` owns popup menu mounting
+      and disabled-popup close. `submenu.rs` keeps public begin-submenu orchestration only.
 - [x] Split IMUI begin-menu trigger behavior out of
       `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs` into a private owner module
       without changing menu trigger a11y, label identity, activate shortcut gating, keyboard
@@ -1990,6 +4107,10 @@ Last updated: 2026-05-30
       collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
       header-presence decisions plus body rows, root chrome, semantics, and final response
       assembly.
+      2026-05-30 follow-up: `table_controls/header_row.rs` now keeps keyed header-row wrapping
+      only. `header_row/cells.rs` owns visible-header-cell assembly, sortable/plain wrapper
+      selection, resize response initialization, `TableHeaderResponse` collection, and
+      prepared-cell projection.
 - [x] Split IMUI table body-row preparation out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing hidden-column filtering, fallback empty cells, default/explicit test-id
@@ -2098,6 +4219,14 @@ Last updated: 2026-05-30
       popup/menubar policy provider nesting and IMUI child mounting. The root `panel.rs` keeps
       open/anchor lifecycle reads, keepalive updates, nav-state installation, panel id storage, and
       `PopupMenuBuilt` assembly.
+- [x] Split IMUI popup-menu panel lifecycle/state out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` into a private state owner
+      without changing open/anchor validation, missing-anchor close cleanup, keepalive refresh,
+      last-panel-size reuse, panel id storage, nav-state installation, or `PopupMenuBuilt`
+      assembly.
+      Result: `popup_overlay/menu/panel/state.rs` owns popup store reads, missing-anchor cleanup,
+      keepalive refresh, desired panel size projection, and panel id writeback. The root
+      `panel.rs` keeps nav-state installation and panel assembly.
 - [x] Split IMUI popup modal layout/chrome construction out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` into a private owner module without
       changing modal open/keepalive policy, Escape/outside-press dismissal, barrier behavior,
@@ -2122,6 +4251,13 @@ Last updated: 2026-05-30
       label/shortcut/submenu glyph mounting, and shortcut test-id stamping. `element.rs` now keeps
       pressable orchestration, interaction-owner wiring, response population, and the custom
       `pressable_hook` insertion point.
+- [x] Split IMUI menu-item visual-row layout and content details into private child owners without
+      changing menu item row structure, checkbox/radio/submenu indicators, shortcut semantics,
+      shortcut test-id derivation, text-role helpers, pressable behavior, or facade APIs.
+      Result: `menu_controls/element/visual_row.rs` keeps option projection and render
+      orchestration. `visual_row/layout.rs` owns panel/row props, while
+      `visual_row/content.rs` owns checkbox/radio/submenu indicator selection, shortcut mounting,
+      and shortcut test-id stamping.
 - [x] Split IMUI menu-item keyboard/navigation behavior out of
       `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a private owner module
       without changing popup menu roving focus, shortcut, or menubar horizontal-arrow behavior.
@@ -2151,7 +4287,21 @@ Last updated: 2026-05-30
       Result: `multi_select/state.rs` owns `ImUiMultiSelectState` storage and read-only accessors,
       while `multi_select/state/selection.rs` owns selected-order normalization, anchor repair,
       crate-local mutation helpers, and `is_selected(...)`. The root `multi_select.rs` keeps model
-      hook, selectable response wiring, click-modifier policy, and response changed reporting.
+      hook, selectable response wiring, and response changed reporting.
+- [x] Split IMUI multi-select click-modifier policy out of
+      `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private child owner without changing
+      model hook behavior, selectable response wiring, selection mutation semantics, read-only state
+      storage, or regression test routing.
+      Result: `multi_select.rs` keeps model hooks, selected-state reads, selectable response wiring,
+      and changed-signal propagation. `multi_select/interaction.rs` owns `apply_click(...)` and
+      primary modifier detection.
+- [x] Split IMUI multi-select regression tests into private click-policy and ordered-selection
+      owners without changing plain click, primary-modifier toggle, shift range, no-anchor fallback,
+      collection-order normalization, deduplication, external-key retention, or anchor repair
+      assertions.
+      Result: `multi_select/tests.rs` now keeps key fixtures and module routing only.
+      `tests/clicks.rs` owns click-modifier coverage, while `tests/ordered_selection.rs` owns
+      ordered-selection normalization and anchor repair coverage.
 - [x] Split IMUI virtual-list runtime projection and row mechanics out of
       `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` into private owner modules without
       changing the facade virtual-list API or row clipping semantics.
@@ -2159,6 +4309,12 @@ Last updated: 2026-05-30
       `virtual_list_controls/row.rs` owns row packing, test-id suffixing, row-height resolution,
       striped row chrome, and fixed-height clipping. The root file keeps keyed list assembly,
       render-range tracking, focus child mounting, and list-level semantics.
+- [x] Split IMUI virtual-list regression tests into private fixed/known and measured owners without
+      changing fixed-height clipping, known-height clipping, measured overflow visibility, or
+      row-height helper assertions.
+      Result: `virtual_list_controls/tests.rs` now keeps `bounds`, oversized-content fixtures, and
+      module routing only. `tests/fixed_known.rs` owns fixed and known row clipping coverage, while
+      `tests/measured.rs` owns measured overflow visibility coverage.
 
 ## P0 - Source Baseline
 
@@ -2338,7 +4494,8 @@ Readiness order for the next locally testable review slices:
    2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` kept
    media command routing while `paint/media/raster.rs`, `paint/media/rounded.rs`, and
    `paint/media/svg.rs` took image, rounded-image, SVG image, and SVG mask-icon paint behavior.
-   Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
+   Root `paint.rs` initially kept clip-stack balancing and media/shape command dispatch; the
+   2026-06-01 follow-up moved clip-stack handling into `paint/clip.rs`.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
@@ -3400,13 +5557,14 @@ Readiness order for the next locally testable review slices:
    narrow follow-on with evidence.
    2026-05-14 cleanup: the unused `apply_editor_theme_patch_v1` compatibility wrapper was deleted;
    apps and tests now stay on explicit preset entry points.
-4. Porting sugar readiness: `SameLine`/item-width/label-ID helpers only if two proof surfaces pay
-   the same tax. Current proof surfaces already keep most of that tax local with
-   `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, and
-   explicit `id_source` / `test_id` wiring.
-   Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen sugar until a
-   second surface repeats the same pattern; do not copy Dear ImGui's string-label parser or
-   stack/next-item width grammar into Fret by default.
+4. Porting sugar readiness: `SameLine` is now a narrow proven helper through the closure-scoped
+   `same_line` layout sugar and cookbook payload-row proof; item-width, next-item width, and
+   label-ID helpers still need two proof surfaces before widening. Current proof surfaces already
+   keep most of that tax local with `PropertyGrid`, `row_with`, `horizontal_with_options`,
+   `child_region_with_options`, and explicit `id_source` / `test_id` wiring.
+   Current readiness audit: `P3_PORTING_SUGAR_READINESS_2026-05-06.md`. Do not widen remaining
+   sugar until a second surface repeats the same pattern; do not copy Dear ImGui's string-label
+   parser or stack/next-item width grammar into Fret by default.
    2026-05-14 cleanup: the unused `PropertyGridRow` wrapper was deleted so property-grid row
    authoring stays on `PropertyGridRowCx::row(...)` / `row_with(...)` plus raw `PropertyRow` for
    genuinely custom rows.
@@ -3535,6 +5693,14 @@ opening the slice.
       collapse toggle/readback, scale-factor lookup, resize owner calls, area position feedback,
       and chrome response assembly. `floating_window_on_area.rs` now only wires the prepared state
       into title bar, content, shell, and facade output.
+- [x] Split floating-window on-area state collapsed and position feedback details into private
+      child owners without changing collapsed toggle/readback behavior, resize-state preparation,
+      area position feedback after resize, scale-factor lookup, or `FloatingWindowChromeResponse`
+      semantics.
+      Result: `floating_window_on_area/state.rs` keeps the on-area preparation flow,
+      resize snapshot/prepare calls, scale-factor lookup, and chrome response assembly.
+      `state/collapsed.rs` owns collapsed-model toggle/readback, while `state/position.rs` owns
+      resize-driven area position feedback.
 - [x] Split the floating-window shell/container composition out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
       without changing the public IMUI surface.
@@ -3564,6 +5730,14 @@ opening the slice.
       Result: `floating_window_shell/props.rs` owns `window_frame_props(...)`,
       `shell_column_props(...)`, `title_bar_container_props(...)`, and `clipped_body_props(...)`.
       `floating_window_shell.rs` now keeps shell composition only.
+- [x] Split IMUI floating-window shell props owner into frame, body, and title-bar child owners
+      without changing frame sizing, shell column fill/auto sizing, clipped body overflow/radius,
+      title-bar clipping/padding/border radii, blocker mounting, resize-stack composition, or
+      public IMUI surface.
+      Result: `floating_window_shell/props.rs` is now a private re-export hub.
+      `props/frame.rs` owns `window_frame_props(...)`, `props/body.rs` owns
+      `shell_column_props(...)` and `clipped_body_props(...)`, and `props/title_bar.rs` owns
+      `title_bar_container_props(...)`.
 - [x] Split the floating-window title-bar `RowProps` / drag-surface `PointerRegionProps` /
       close-button props construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs::floating_window_title_bar_row(...)`
@@ -3576,8 +5750,15 @@ opening the slice.
       without changing the public IMUI surface.
       Result: `floating_window_title_bar/behavior.rs` now owns double-click collapse event
       recording, title-bar Escape close key behavior, close-button activation wiring, and model
-      update/notify calls. `floating_window_title_bar.rs` keeps row composition, title text-role
-      selection, close-button prop selection, and close-glyph text construction.
+      update/notify calls. `floating_window_title_bar.rs` keeps owner routing and close-glyph text
+      construction.
+- [x] Split the floating-window title-bar row composition out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` into a private row owner without
+      changing title text-role selection, drag-surface behavior hooks, close-button behavior wiring,
+      close-glyph text-role helper, or public floating-window facade behavior.
+      Result: `floating_window_title_bar.rs` now keeps owner routing and close-glyph text
+      construction. `floating_window_title_bar/row.rs` owns row composition, title text mounting,
+      drag-surface setup, close-button prop selection, and behavior owner calls.
 - [x] Split the floating-window content scroll/container layout construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs::floating_window_content_element(...)`
       into private helpers without changing the public IMUI surface.
@@ -3659,3 +5840,168 @@ opening the slice.
       commit `dee3d48f44` are recorded in `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` and
       `EVIDENCE_AND_GATES.md`. The merged tree keeps the editor-grade facade/container/listbox
       organization, preserves the `main` image-item owner split, and continues only from `main`.
+- [x] Split the IMUI root public re-export surface out of
+      `ecosystem/fret-ui-kit/src/imui.rs` into a dedicated facade export owner without changing
+      public `fret_ui_kit::imui::*` import paths, `fret-imui` thinness, or kit-owned policy
+      boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/exports.rs` now owns the public debug draw, facade,
+      floating, options, response, table, tab, list, multi-select, and virtual-list re-exports.
+      `imui.rs` stays a private module hub plus shared internal imports and only republishes
+      `exports::*`; the source gate rejects the old public re-export blocks from drifting back into
+      the root hub.
+- [x] Split IMUI combo popup state orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private state owner without
+      changing combo trigger rendering, popup body composition, disabled popup closure, open/toggled
+      response semantics, or public `ComboResponse` behavior.
+      Result: `ecosystem/fret-ui-kit/src/imui/combo_controls/state.rs` owns enabled checks, popup
+      open reads, trigger-driven open/close transitions, disabled popup cleanup, toggled detection,
+      and trigger response flag mutation. `combo_controls.rs` keeps label identity parsing, trigger
+      option wiring, popup body mounting, and final response assembly.
+- [x] Split IMUI floating-window open-state and response assembly out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window.rs` into a private state owner without
+      changing closed-window behavior, floating-area wiring, on-area window rendering, or public
+      `FloatingWindowResponse` accessors.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window/state.rs` owns optional open-model
+      reads and chrome-to-response assembly. `floating_window.rs` keeps option destructuring,
+      closed-window routing, floating-area options, and render-in-area composition.
+- [x] Split IMUI shared active-trigger type definitions out of
+      `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into a private type owner without
+      changing the `active_trigger_behavior::ActiveTrigger*` call surface, lifecycle model access,
+      pointer/key behavior, or response population.
+      Result: `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs` owns
+      `ActiveTriggerBehavior`, `ActiveTriggerBehaviorOptions`, and `ActiveTriggerResponseInput`.
+      The root behavior file now re-exports those types privately and keeps only behavior
+      installation plus response delegation.
+- [x] Split IMUI menubar policy state out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` into a private policy-state owner
+      without changing provided-state lookup, menu trigger policy, popup/menu integration, or
+      menubar close-auto-focus suppression behavior.
+      Result: `ecosystem/fret-ui-kit/src/imui/menu_family_controls/policy_state.rs` owns
+      `ImUiMenubarPolicyState` and its model fields with the same `crate::imui` visibility.
+      `menu_family_controls.rs` re-exports the type privately and keeps menu bar composition.
+- [x] Split IMUI image-item pressable props out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private props owner without
+      changing image-vs-button semantics, focusability, a11y role/label/test id propagation, size
+      sanitization, or image visual/behavior ownership.
+      Result: `ecosystem/fret-ui-kit/src/imui/image_item_controls/props.rs` owns the
+      `PressableProps` construction. `image_item_controls.rs` now keeps only item identity,
+      enabled/focusable derivation, chrome/behavior wiring, image props mounting, and response
+      assembly.
+- [x] Split IMUI selectable visible-label pressable entry assembly out of
+      `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private entry owner without
+      changing label identity, `push_id` scope, selectable props/behavior/visual ownership, popup
+      close policy, shortcut activation, or response semantics.
+      Result: `ecosystem/fret-ui-kit/src/imui/selectable_controls/entry.rs` owns `ResponseExt`
+      initialization, enabled/focusable/selected/highlighted derivation, `pressable_with_id`
+      assembly, behavior installation, visual row mounting, and final response return.
+      `selectable_controls.rs` keeps label identity parsing and the stable `push_id` wrapper.
+- [x] Split IMUI ListBox scroll-host and semantics assembly out of
+      `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` into private owner modules without
+      changing keyed identity, scroll/layout merging, viewport/content/root test IDs, hosted
+      children focus forwarding, ListBox semantics, or the container boundary that excludes
+      selection, filtering, and active-descendant policy.
+      Result: `list_box_controls/scroll_host.rs` owns scroll-area composition, child hosting,
+      scrollbar/handle/test-id wiring, and final semantics attachment; `list_box_controls/semantics.rs`
+      owns `SemanticsRole::ListBox`, optional label, and multiselectable flag
+      construction. `list_box_controls.rs` now keeps only keyed wrapper orchestration and
+      `ListBoxOptions` destructuring.
+- [x] Split IMUI child-region keyed body orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private entry owner without changing
+      keyed identity, scroll layout selection, resize-vs-scroll root test-id routing, child focus
+      forwarding, resize stack integration, or `ChildRegionResponse` population.
+      Result: `ecosystem/fret-ui-kit/src/imui/child_region/entry.rs` owns resize detection,
+      scroll input assembly, response initialization, and resize-stack selection. `child_region.rs`
+      now keeps only the facade-facing keyed wrapper and owner module declarations.
+- [x] Split IMUI floating-window in-area assembly out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a private assembly owner
+      without changing area identity, prepared resize/collapse state, title-bar wiring, content
+      mounting, shell construction, resize-handle test IDs, or `FloatingWindowChromeResponse`
+      propagation.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area/assembly.rs` owns prepared
+      state consumption plus title bar/content/shell assembly. `floating_window_on_area.rs` keeps
+      only the facade-facing `ui.with_cx_mut` wrapper, `ui.add(window)`, and chrome return.
+- [x] Split IMUI floating-window shell body assembly out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs` into a private body owner without
+      changing frame props, title-bar container props, collapsed body selection, input blocker
+      wiring, resize-stack integration, activation-on-click policy, or resize handle test IDs.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window_shell/body.rs` owns title/body/
+      clipped-body assembly, input blocker mounting, and resize-stack delegation.
+      `floating_window_shell.rs` keeps frame palette resolution, frame props, and outer container
+      mounting.
+- [x] Split IMUI floating-window show-with-options orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window.rs` into a private entry owner without
+      changing default forwarding, open-model short-circuit behavior, floating-area options,
+      chrome capture, in-area rendering, or final `FloatingWindowResponse` assembly.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window/entry.rs` owns option destructuring,
+      open checks, floating-area mounting, chrome capture, and in-area render dispatch.
+      `floating_window.rs` keeps the facade-facing public helper pair and delegates the options
+      path to the entry owner.
+- [x] Split IMUI table-column visibility controllable-model hook out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` into a private model owner
+      without changing the public helper signature, caller-owned visibility state, or the menu/
+      header context-menu policy owners.
+      Result: `ecosystem/fret-ui-kit/src/imui/table_column_visibility/model.rs` owns the
+      `use_controllable_model(...)` bridge for `ImUiTableColumnVisibilityState`.
+      `table_column_visibility.rs` keeps the public forwarding helper plus option/response/state
+      re-exports and menu delegation.
+- [x] Split IMUI multi-select controllable-model hook out of
+      `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private model owner without changing
+      the public helper signature, selected-state storage, click-modifier policy, or selectable
+      response wiring.
+      Result: `ecosystem/fret-ui-kit/src/imui/multi_select/model.rs` owns the
+      `use_controllable_model(...)` bridge for `ImUiMultiSelectState<K>`.
+      `multi_select.rs` keeps the public forwarding helper, state re-export, click-policy
+      delegation, and selectable entry wiring.
+- [x] Split IMUI separator-text element construction out of
+      `ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs` into a private element owner
+      without changing visible-label identity parsing, label text-role chrome, trailing rule
+      styling, test-id suffixes, or facade entry wiring.
+      Result: `ecosystem/fret-ui-kit/src/imui/separator_text_controls/element.rs` owns label/line
+      element construction, border-theme lookup, row layout, and test-id decoration.
+      `separator_text_controls.rs` keeps only the IMUI helper entry, visible-label parsing, and
+      `ui.add(...)` insertion.
+- [x] Split IMUI menu-bar root element assembly out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` into a private menubar owner without
+      changing menubar policy-state creation, trigger-row registry reset, hosted child focus
+      forwarding, menu-bar semantics, or begin-menu/submenu boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_bar.rs` owns the named
+      menubar element, local policy models, registry clearing, child hosting, and row semantics.
+      `menu_family_controls.rs` keeps only module routing plus begin-menu/submenu exports.
+- [x] Split floating-window title-bar drag-surface and close-button props out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs` into private prop owners
+      without changing title-row sizing, drag-surface fill/shrink behavior, close-button
+      semantics/test id, or `floating_window_title_bar/row.rs` call paths.
+      Result: `floating_window_title_bar_props/drag_surface.rs` owns pointer-region layout and
+      resizable flex behavior; `floating_window_title_bar_props/close_button.rs` owns close-button
+      a11y and fixed sizing. The root props file keeps only row props plus private re-exports.
+- [x] Split IMUI combo popup/trigger orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private entry owner without
+      changing label identity parsing, enabled/open state reads, trigger options, popup mounting,
+      disabled-popup cleanup, or `ComboResponse` open/toggled semantics.
+      Result: `ecosystem/fret-ui-kit/src/imui/combo_controls/entry.rs` owns the direct combo
+      trigger/popup/response flow. `combo_controls.rs` keeps the facade-facing helper signature and
+      delegates to the entry owner.
+- [x] Split IMUI image-item pressable entry orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private entry owner without
+      changing stable `push_id` scoping, enabled/disabled derivation, pressable props, behavior
+      installation, image chrome, image props, or response delivery.
+      Result: `ecosystem/fret-ui-kit/src/imui/image_item_controls/entry.rs` owns the inner
+      pressable element body. `image_item_controls.rs` keeps only the public helper and
+      `push_id(("image-item", id), ...)` scope.
+- [x] Split shared active-trigger install orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into a private install owner
+      without changing pointer/key hook clearing, active/lifecycle/context model lookup, keyboard
+      context-menu handling, pointer handler installation, or response population boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/install.rs` owns active
+      trigger installation. `active_trigger_behavior.rs` keeps the stable install/populate entry
+      points and delegates installation to the owner.
+- [x] Split IMUI popup-menu panel assembly out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` into a private assembly owner
+      without changing popup keep-alive state reads, anchored layout placement, panel palette and
+      semantics, menu-nav state initialization, stored panel id, first-item detection, content
+      focus tracking, or popup-policy / menubar-policy provider boundaries.
+      Result: `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/assembly.rs` now owns the
+      root-name wiring, nav-item state setup, semantics-with-id assembly, stored panel-id update,
+      and `PopupMenuBuilt` return shaping. `popup_overlay/menu/panel.rs` keeps the stable
+      build-entry signature, state gating, anchored layout, palette resolution, and delegates final
+      panel assembly to the private owner.

@@ -2,6 +2,9 @@ use fret_core::Px;
 
 use super::super::super::super::drag::DragResponse;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone, Default)]
 pub struct ChildRegionResizeXResponse {
     pub(crate) enabled: bool,
@@ -47,36 +50,5 @@ impl ChildRegionResizeXResponse {
         let min = self.min_width.map(|width| width.0).unwrap_or(0.0).max(0.0);
         let max = self.max_width.map(|width| width.0).unwrap_or(f32::INFINITY);
         Px((start_width.0 + self.drag_total_x()).clamp(min, max.max(min)))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use fret_core::Point;
-
-    #[test]
-    fn child_region_resize_x_width_from_start_clamps_to_min_and_max() {
-        let mut response = ChildRegionResizeXResponse {
-            min_width: Some(Px(80.0)),
-            max_width: Some(Px(320.0)),
-            ..Default::default()
-        };
-
-        response
-            .drag
-            .set_motion(Point::new(Px(0.0), Px(0.0)), Point::new(Px(24.0), Px(0.0)));
-        assert_eq!(response.width_from_start(Px(160.0)), Px(184.0));
-
-        response.drag.set_motion(
-            Point::new(Px(0.0), Px(0.0)),
-            Point::new(Px(-120.0), Px(0.0)),
-        );
-        assert_eq!(response.width_from_start(Px(160.0)), Px(80.0));
-
-        response
-            .drag
-            .set_motion(Point::new(Px(0.0), Px(0.0)), Point::new(Px(240.0), Px(0.0)));
-        assert_eq!(response.width_from_start(Px(160.0)), Px(320.0));
     }
 }

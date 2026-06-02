@@ -2,6 +2,7 @@
 fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
 
     for needle in [
         "mod collection;",
@@ -30,12 +31,21 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
+        "mod geometry;",
+    ] {
+        assert!(
+            collection_source.contains(needle),
+            "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
         "#[cfg(test)]",
         "fn proof_collection_drag_rect_normalizes_drag_direction() {",
     ] {
         assert!(
-            collection_source.contains(needle),
-            "the demo-local collection module should keep the modularized implementation and test floor explicit; missing `{needle}`"
+            geometry_source.contains(needle),
+            "the demo-local collection geometry owner should keep the pure geometry test floor explicit; missing `{needle}`"
         );
     }
 }

@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-11",
   "scope_kind": "execution",
+  "lane_slug": "shadcn-parity",
   "problem": "Expand the completed shadcn parity discovery harness into a coverage-driven sweep that prioritizes the highest-risk component/state/viewport combinations, finds new layout/rendering/overlay/responsive mismatches proactively, and turns confirmed findings into reusable regression gates.",
   "authoritative_docs": [
     {

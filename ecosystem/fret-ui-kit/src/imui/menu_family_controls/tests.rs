@@ -1,5 +1,7 @@
 use super::*;
 
+use std::sync::Arc;
+
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size, TextOverflow, TextWrap};
 use fret_ui::element::{ElementKind, PressableState};

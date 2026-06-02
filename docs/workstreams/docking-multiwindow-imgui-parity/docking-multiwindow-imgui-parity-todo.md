@@ -158,6 +158,13 @@ Each TODO is labeled:
         capability posture, in-window fallback behavior, IMUI source guard, catalog, and diff
         checks passed locally.
       - This remains non-acceptance evidence; manual Wayland compositor acceptance is still open.
+    - [x] 2026-05-31 local Wayland guard refresh reran the same local source/policy/capability/
+      fallback proof surface without recording acceptance:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`
+      - Source guards, `--reuse-built` policy-skip matrix, Wayland campaign validation, Linux
+        capability posture, in-window fallback behavior, IMUI source guard, catalog, JSON shape,
+        and diff checks passed locally.
+      - This remains non-acceptance evidence; manual Wayland compositor acceptance is still open.
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
@@ -375,6 +382,101 @@ Each TODO is labeled:
       - The local proof reran source guards, `--reuse-built` policy-skip matrix, campaign
         validation, Linux capability posture, and fallback behavior, but still did not run on a
         qualifying Linux Wayland compositor.
+    - [x] 2026-05-31 local Wayland guard refresh keeps the acceptance boundary current:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`
+      - The local proof reran source guards, `--reuse-built` policy-skip matrix, campaign
+        validation, Linux capability posture, fallback behavior, IMUI source guard, catalog, JSON
+        shape, and diff checks, but still did not run on a qualifying Linux Wayland compositor.
+    - [x] 2026-05-31 docking runtime tear-off owner split keeps the fallback boundary smaller:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M23_DOCKING_RUNTIME_TEAR_OFF_OWNER_SPLIT_2026-05-31.md`
+      - `ecosystem/fret-docking/src/runtime.rs` keeps DockOp orchestration and public runtime
+        hooks, while `ecosystem/fret-docking/src/runtime/tear_off.rs` owns the dock-floating
+        OS-window registry plus pending tear-off correlation/cancellation state.
+      - Focused compile, fallback regression, source gate, JSON shape, and diff checks passed
+        locally without recording Wayland compositor acceptance.
+    - [x] 2026-05-31 docking runtime in-window fallback owner split keeps recovery/fallback
+      geometry out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M24_DOCKING_RUNTIME_IN_WINDOW_OWNER_SPLIT_2026-05-31.md`
+      - `ecosystem/fret-docking/src/runtime/in_window.rs` owns default in-window float placement,
+        visible-bounds fallback, rectangle clamping, and `recenter_in_window_floatings(...)`.
+      - Focused fallback regressions, editor proof demo compile, source gate, JSON shape, and diff
+        checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-01 docking runtime tear-off create-request owner split keeps DockFloating
+      OS-window request construction out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M25_DOCKING_RUNTIME_TEAR_OFF_CREATE_REQUEST_OWNER_SPLIT_2026-06-01.md`
+      - `ecosystem/fret-docking/src/runtime/tear_off.rs` owns the capability predicate and
+        `WindowRequest::Create(CreateWindowKind::DockFloating { .. })` request construction.
+      - Focused fallback regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-01 docking runtime tear-off cancellation owner split keeps pending-window
+      cancellation policy out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M26_DOCKING_RUNTIME_TEAR_OFF_CANCELLATION_OWNER_SPLIT_2026-06-01.md`
+      - `ecosystem/fret-docking/src/runtime/tear_off.rs` owns
+        `prune_and_cancel_for_op(...)`, single-panel cancellation, tabs-node cancellation, and
+        TTL pruning before graph mutation.
+      - Focused cancellation regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime window-created owner split keeps created-window completion out
+      of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M27_DOCKING_RUNTIME_WINDOW_CREATED_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/window_created.rs` owns
+        `complete_for_create_request(...)`, cancel-and-close handling, panel/tabs window graph
+        update, active drag source/current window remap, invalidation, and DockFloating registry
+        registration.
+      - Focused window-created/drag remap regressions, source gate, JSON shape, catalog, and diff
+        checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime before-close owner split keeps OS close merge policy out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M28_DOCKING_RUNTIME_BEFORE_CLOSE_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/before_close.rs` owns DockFloating registry removal,
+        closing-window root check, target tab lookup, `MergeWindowInto` application, viewport
+        layout cleanup, and target invalidation.
+      - Focused before-close regression, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime auto-close owner split keeps empty DockFloating close effects out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M29_DOCKING_RUNTIME_AUTO_CLOSE_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/auto_close.rs` owns DockFloating registry scanning,
+        empty-window detection, close logging, registry removal, and `WindowRequest::Close`
+        emission for dock-owned floating OS windows.
+      - Focused empty-window auto-close regression, source gate, JSON shape, catalog, and diff
+        checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime request owner split keeps tear-off request/fallback policy out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/request.rs` owns `RequestFloatPanelToNewWindow` and
+        `RequestFloatTabsToNewWindow` capability fallback, active drag pointer correlation,
+        pending request registration, and DockFloating create-request trigger policy.
+      - Focused request/create/fallback/idempotence regressions, source gate, JSON shape, catalog,
+        and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime layout invalidation owner split keeps DockOp post-mutation
+      viewport cleanup out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/layout_invalidation.rs` owns per-op viewport layout
+        cleanup, `DockInvalidationService::bump_windows(...)`, and whole-graph invalidation for
+        tab/split fraction changes.
+      - Focused request/fallback/window-created/before-close/auto-close regressions, source gate,
+      JSON shape, catalog, and diff checks passed locally without recording Wayland compositor
+      acceptance.
+    - [x] 2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration
+      out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M44_DOCKING_RUNTIME_APPLY_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/apply.rs` owns tear-off-machine prune/cancel, graph
+        mutation, cross-window mutation logging, empty DockFloating close scan collection, and
+        invalidation/close-effect orchestration for non-request `DockOp`s.
+      - Focused docking runtime regressions, source gate, JSON shape, catalog, and diff checks
+        passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking runtime test owner split keeps focused regression bodies out of the
+      runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/tests.rs` owns the request/fallback/window-created/
+        before-close/auto-close regressions that were previously inline in `runtime.rs`.
+      - Focused runtime regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative tab paint-state owner split keeps tab-hover/menu paint
+      projection out of the dock-space assembly shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M33_DOCKING_DECLARATIVE_TAB_PAINT_STATE_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/tab_paint_state.rs` owns tab hover lookup and
+        `TabChromePaintInput` / `TabDetailPaintInput` hover/menu state projection.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
@@ -398,7 +500,8 @@ Each TODO is labeled:
 
 - [x] DW-P1-ux-002 Recovery: provide a “recenter floatings” helper for off-screen/overlapped floatings.
   - Evidence anchors:
-    - Helper: `ecosystem/fret-docking/src/runtime.rs` (`recenter_in_window_floatings`)
+    - Public re-export: `ecosystem/fret-docking/src/runtime.rs` (`recenter_in_window_floatings`)
+    - Helper owner: `ecosystem/fret-docking/src/runtime/in_window.rs` (`recenter_in_window_floatings`)
   - Acceptance:
     - If floatings are off-screen or stacked, calling the helper brings them back into view.
 
@@ -422,7 +525,7 @@ Each TODO is labeled:
   - Evidence anchors:
     - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)
     - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
-    - Docking create request wiring: `ecosystem/fret-docking/src/runtime.rs` (`WindowRequest::Create` for `DockFloating`)
+    - Docking create request wiring: `ecosystem/fret-docking/src/runtime/tear_off.rs` (`WindowRequest::Create` for `DockFloating`)
     - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
     - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Desktop runner runtime patch handling: `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`WindowRequest::SetStyle`)

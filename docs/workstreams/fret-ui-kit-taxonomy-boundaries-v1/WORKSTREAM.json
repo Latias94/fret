@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "follow_on_of": "imui-kit-owner-split-v1",
   "problem": "Make `fret-ui-kit` owner categories explicit so style, headless engines, primitives, declarative adapters, IMUI helpers, and recipes do not trade policy/mechanism responsibilities by accident.",
   "authoritative_docs": [

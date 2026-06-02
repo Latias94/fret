@@ -66,6 +66,12 @@ Status note (2026-05-21): selected-summary follow-up history now also restores r
 currently selected bundle in Regression Workspace, so cross-bundle evidence does not masquerade as
 the active summary's latest result.
 
+Status note (2026-05-31): the Demo/Metrics/Debug action metadata table now lives in
+`apps/fret-devtools/src/demo_metrics_debug.rs`. The native GUI shell remains the renderer and
+state owner for selected-bundle readiness, while the private module owns command bundle,
+metadata, and readiness text projections. The P2 first-open and IMUI product-chain gates both
+source-check this owner split.
+
 # Diagnostics DevTools GUI Refresh v1
 
 This workstream defines a focused product/UX refresh for `apps/fret-devtools`.

@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "problem": "Coordinate the six fearless architecture cuts without reopening closed broad lanes or mixing runtime mechanisms, ecosystem policy, low-level adapters, and launch posture into one unreviewable refactor.",
   "authoritative_docs": [
     {

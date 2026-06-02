@@ -1,5 +1,9 @@
 use fret_core::scene::DashPatternV1;
-use fret_core::{PathStyle, Px, StrokeCapV1, StrokeJoinV1, StrokeStyle, StrokeStyleV2};
+use fret_core::{PathStyle, Px, StrokeCapV1, StrokeJoinV1};
+
+mod style;
+
+use style::{debug_draw_stroke_is_visible, debug_draw_stroke_path_style};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DebugDrawStrokeStyle {
@@ -50,25 +54,11 @@ impl DebugDrawStrokeStyle {
     }
 
     pub(in crate::imui::debug_draw_controls) fn is_visible(self) -> bool {
-        self.width.0 > 0.0
+        debug_draw_stroke_is_visible(self)
     }
 
     pub(in crate::imui::debug_draw_controls) fn path_style(self) -> PathStyle {
-        if self.join == StrokeJoinV1::Miter
-            && self.cap == StrokeCapV1::Butt
-            && self.miter_limit == 4.0
-            && self.dash.is_none()
-        {
-            PathStyle::Stroke(StrokeStyle { width: self.width })
-        } else {
-            PathStyle::StrokeV2(StrokeStyleV2 {
-                width: self.width,
-                join: self.join,
-                cap: self.cap,
-                miter_limit: self.miter_limit,
-                dash: self.dash,
-            })
-        }
+        debug_draw_stroke_path_style(self)
     }
 }
 

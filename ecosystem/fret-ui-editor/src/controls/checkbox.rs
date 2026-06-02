@@ -3,93 +3,26 @@
 //! This intentionally keeps styling conservative and token-driven, so higher-level style adapters
 //! can override tokens without pulling in a full design system dependency.
 
-use std::sync::Arc;
+mod chrome;
+mod indicator;
+mod model;
+mod options;
 
-use fret_core::{Axis, Color, Corners, Edges, Point, Px, Rect, Size};
+use fret_core::{Corners, Point, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, OnActivate};
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
-};
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_headless::boolean_control::{
-    checkbox_checked_state_from_optional_bool, checkbox_toggle_optional_bool,
-};
+use fret_ui::element::{AnyElement, Length, PressableProps, RingPlacement, RingStyle};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::checked_state::CheckedState;
-use fret_ui_kit::ColorRef;
 use fret_ui_kit::primitives::checkbox::checkbox_a11y;
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
+use chrome::resolve_checkbox_chrome;
+use indicator::checkbox_indicator_element;
+use model::{CheckboxModel, checkbox_checked_state, checkbox_on_activate};
 
-#[derive(Debug, Clone)]
-pub struct CheckboxOptions {
-    pub layout: LayoutStyle,
-    pub enabled: bool,
-    pub focusable: bool,
-    pub a11y_label: Option<Arc<str>>,
-    pub test_id: Option<Arc<str>>,
-}
-
-impl Default for CheckboxOptions {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Auto,
-                    height: Length::Auto,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            enabled: true,
-            focusable: true,
-            a11y_label: None,
-            test_id: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum CheckboxModel {
-    Bool(Model<bool>),
-    OptionalBool(Model<Option<bool>>),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct ResolvedCheckboxChrome {
-    bg_unchecked: Color,
-    bg_checked: Color,
-    fg_checked: Color,
-    ring_color: Color,
-}
-
-fn resolve_checkbox_chrome(theme: &Theme, fallback_bg: Color) -> ResolvedCheckboxChrome {
-    let bg_unchecked = theme
-        .color_by_key(EditorTokenKeys::CHECKBOX_BG)
-        .or_else(|| theme.color_by_key("component.checkbox.bg"))
-        .or_else(|| theme.color_by_key("component.input.bg"))
-        .unwrap_or(fallback_bg);
-    let bg_checked = theme
-        .color_by_key(EditorTokenKeys::CHECKBOX_CHECKED_BG)
-        .unwrap_or_else(|| theme.color_token("primary"));
-    let fg_checked = theme
-        .color_by_key(EditorTokenKeys::CHECKBOX_CHECKED_FG)
-        .unwrap_or_else(|| theme.color_token("primary-foreground"));
-    let ring_color = theme
-        .color_by_key(EditorTokenKeys::CHECKBOX_RING)
-        .or_else(|| theme.color_by_key("ring"))
-        .unwrap_or_else(|| theme.color_token("primary"));
-
-    ResolvedCheckboxChrome {
-        bg_unchecked,
-        bg_checked,
-        fg_checked,
-        ring_color,
-    }
-}
+pub use options::CheckboxOptions;
 
 #[derive(Clone)]
 pub struct Checkbox {
@@ -138,32 +71,7 @@ impl Checkbox {
 
         let chrome = resolve_checkbox_chrome(theme, frame_chrome.bg);
 
-        let checked_state = match &self.model {
-            CheckboxModel::Bool(model) => {
-                let v = cx
-                    .get_model_copied(model, Invalidation::Paint)
-                    .unwrap_or(false);
-                if v {
-                    CheckedState::Checked
-                } else {
-                    CheckedState::Unchecked
-                }
-            }
-            CheckboxModel::OptionalBool(model) => {
-                let v = cx
-                    .get_model_cloned(model, Invalidation::Paint)
-                    .unwrap_or(None);
-                checkbox_checked_state_from_optional_bool(v)
-            }
-        };
-
-        let icon_id = match checked_state {
-            CheckedState::Checked => Some(fret_icons::ids::ui::CHECK),
-            CheckedState::Indeterminate => Some(fret_icons::ids::ui::MINUS),
-            CheckedState::Unchecked => None,
-        };
-
-        let icon_px = Px((checkbox_size.0 - 4.0).max(8.0));
+        let checked_state = checkbox_checked_state(cx, &self.model);
 
         let mut layout = self.options.layout;
         if layout.size.width == Length::Auto {
@@ -191,24 +99,7 @@ impl Checkbox {
 
         let a11y = checkbox_a11y(self.options.a11y_label.clone(), checked_state);
 
-        let (model_for_activate, enabled_for_activate) = (self.model.clone(), self.options.enabled);
-        let on_activate: OnActivate = Arc::new(move |host, action_cx: ActionCx, _reason| {
-            if !enabled_for_activate {
-                return;
-            }
-
-            match &model_for_activate {
-                CheckboxModel::Bool(model) => {
-                    let _ = host.models_mut().update(model, |v| *v = !*v);
-                }
-                CheckboxModel::OptionalBool(model) => {
-                    let _ = host
-                        .models_mut()
-                        .update(model, |v| *v = checkbox_toggle_optional_bool(*v));
-                }
-            }
-            host.request_redraw(action_cx.window);
-        });
+        let on_activate = checkbox_on_activate(self.model.clone(), self.options.enabled);
 
         let enabled_for_paint = self.options.enabled;
         let mut el = cx.pressable(
@@ -248,74 +139,13 @@ impl Checkbox {
                     checked_state != CheckedState::Unchecked,
                 );
 
-                let box_el = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(checkbox_size),
-                                height: Length::Px(checkbox_size),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        background: Some(visuals.bg),
-                        border: Edges::all(frame_chrome.border_width),
-                        border_color: Some(visuals.border),
-                        corner_radii: Corners::all(checkbox_radius),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let Some(icon) = icon_id else {
-                            return vec![];
-                        };
-
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                direction: Axis::Horizontal,
-                                gap: SpacingLength::Px(Px(0.0)),
-                                padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                vec![fret_ui_kit::declarative::icon::icon_with(
-                                    cx,
-                                    icon,
-                                    Some(icon_px),
-                                    Some(ColorRef::Color(visuals.icon)),
-                                )]
-                            },
-                        )]
-                    },
-                );
-
-                vec![cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Horizontal,
-                        gap: SpacingLength::Px(Px(0.0)),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Center,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| vec![box_el],
+                vec![checkbox_indicator_element(
+                    cx,
+                    checked_state,
+                    visuals,
+                    checkbox_size,
+                    checkbox_radius,
+                    frame_chrome.border_width,
                 )]
             },
         );
@@ -324,56 +154,5 @@ impl Checkbox {
             el = el.test_id(test_id.clone());
         }
         el
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::resolve_checkbox_chrome;
-    use crate::primitives::EditorTokenKeys;
-    use fret_app::App;
-    use fret_core::Color;
-    use fret_ui::{Theme, ThemeConfig};
-
-    #[test]
-    fn checkbox_chrome_prefers_editor_owned_tokens_over_generic_palette() {
-        let mut app = App::new();
-        Theme::with_global_mut(&mut app, |theme| {
-            let mut cfg = ThemeConfig::default();
-            cfg.colors.insert(
-                EditorTokenKeys::CHECKBOX_BG.to_string(),
-                "#141b24".to_string(),
-            );
-            cfg.colors.insert(
-                EditorTokenKeys::CHECKBOX_CHECKED_BG.to_string(),
-                "#355a86".to_string(),
-            );
-            cfg.colors.insert(
-                EditorTokenKeys::CHECKBOX_CHECKED_FG.to_string(),
-                "#edf3fa".to_string(),
-            );
-            cfg.colors.insert(
-                EditorTokenKeys::CHECKBOX_RING.to_string(),
-                "#7faee8".to_string(),
-            );
-            cfg.colors
-                .insert("component.checkbox.bg".to_string(), "#ff0000".to_string());
-            cfg.colors
-                .insert("component.input.bg".to_string(), "#00ff00".to_string());
-            cfg.colors
-                .insert("primary".to_string(), "#123456".to_string());
-            cfg.colors
-                .insert("primary-foreground".to_string(), "#654321".to_string());
-            cfg.colors.insert("ring".to_string(), "#888888".to_string());
-            theme.apply_config_patch(&cfg);
-        });
-
-        let theme = Theme::global(&app);
-        let chrome = resolve_checkbox_chrome(theme, Color::from_srgb_hex_rgb(0x0c_11_18));
-
-        assert_eq!(chrome.bg_unchecked, Color::from_srgb_hex_rgb(0x14_1b_24));
-        assert_eq!(chrome.bg_checked, Color::from_srgb_hex_rgb(0x35_5a_86));
-        assert_eq!(chrome.fg_checked, Color::from_srgb_hex_rgb(0xed_f3_fa));
-        assert_eq!(chrome.ring_color, Color::from_srgb_hex_rgb(0x7f_ae_e8));
     }
 }

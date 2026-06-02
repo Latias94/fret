@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 mod columns;
+mod mutation;
 mod overrides;
 mod snapshot;
 mod snapshot_io;

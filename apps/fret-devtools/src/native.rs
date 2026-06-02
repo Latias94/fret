@@ -11,9 +11,8 @@ use fret_diag::devtools::DevtoolsOps;
 use fret_diag::{
     DevtoolsGatePerfThresholdCommandInputV1, DevtoolsGateScriptTargetCommandInputV1,
     DevtoolsGateResourceFootprintThresholdCommandInputV1, devtools_gate_perf_threshold_command,
-    devtools_gate_profile_lines, devtools_gate_profiles_v1,
-    devtools_gate_resource_footprint_threshold_command, devtools_gate_script_target_command,
-    devtools_gate_script_target_profile_ids_v1,
+    devtools_gate_profiles_v1, devtools_gate_resource_footprint_threshold_command,
+    devtools_gate_script_target_command,
 };
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
@@ -43,14 +42,65 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
+mod demo_metrics_debug;
 mod followup;
 mod gate_run;
+#[path = "native/gate_profile_state.rs"]
+mod gate_profile_state;
+#[path = "native/guide_reference_panels.rs"]
+mod guide_reference_panels;
+#[path = "native/guide_recent_evidence_state.rs"]
+mod guide_recent_evidence_state;
+#[path = "native/header_state.rs"]
+mod header_state;
 mod pack;
+#[path = "native/workflow_panel_state.rs"]
+mod workflow_panel_state;
+#[path = "native/discovery_lines.rs"]
+mod discovery_lines;
+#[path = "native/recent_evidence.rs"]
+mod recent_evidence;
 mod script_studio;
 mod semantics;
 mod summarize;
 mod workflow_run;
 mod ws;
+
+use demo_metrics_debug::{
+    demo_metrics_debug_action_command_for_copy_command, demo_metrics_debug_action_command_text,
+    devtools_demo_metrics_debug_panel,
+};
+use gate_profile_state::{collect_gate_profile_panel_state, gate_profile_select_items};
+use guide_reference_panels::{dogfood_reference_panel, first_open_reference_panel};
+use guide_recent_evidence_state::collect_guide_recent_evidence_state;
+use header_state::{collect_header_diagnostics_state, header_next_action_lines};
+use discovery_lines::{
+    devtools_dogfood_workflow_lines, devtools_first_open_lines,
+    devtools_first_open_next_action_lines, devtools_gate_command_lines,
+    devtools_workflow_commands, devtools_workflow_run_lines, workflow_handoff_readiness_lines,
+};
+use recent_evidence::{
+    RecentEvidenceRerunCommand, RecentEvidenceTarget,
+    devtools_recent_evidence_lines_with_workflow_commands,
+    devtools_recent_evidence_selection_effect, devtools_recent_failed_evidence_target,
+    recent_failed_evidence_bundle_dir,
+    recent_failed_evidence_rerun_command_from_state,
+    recent_failed_evidence_rerun_unavailable_reason_from_state,
+};
+use workflow_panel_state::collect_workflow_panel_state;
+#[cfg(test)]
+use recent_evidence::{
+    devtools_recent_evidence_lines, recent_evidence_status_failed,
+    recent_failed_evidence_rerun_command, recent_failed_evidence_rerun_line,
+};
+#[cfg(test)]
+use demo_metrics_debug::{
+    demo_metrics_debug_action_copy_command_lines, demo_metrics_debug_action_metadata_lines,
+    demo_metrics_debug_action_readiness_lines, demo_metrics_debug_workflow_artifact_action_lines,
+    demo_metrics_debug_workflow_readiness_lines, demo_metrics_debug_workflow_result_action_lines,
+    demo_metrics_debug_workflow_status_lines, devtools_demo_metrics_debug_lines,
+    devtools_demo_metrics_debug_lines_with_state,
+};
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
 const CMD_COPY_TOKEN: &str = "fret.devtools.copy_token";
@@ -220,101 +270,10 @@ const DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND: &str =
     "python tools/diag_gate_docking_wayland_policy_skip.py";
 const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =
     "fret.devtools.demo_metrics_debug.copy_actions";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct DemoMetricsDebugActionSpec {
-    id: &'static str,
-    label: &'static str,
-    command: &'static str,
-    category: &'static str,
-    requires_bundle: bool,
-    primary: bool,
-}
-
-const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
-    DemoMetricsDebugActionSpec {
-        id: "open_workbench",
-        label: "open workbench",
-        command: DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: true,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "product_discovery",
-        label: "run product discovery",
-        command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
-        category: "product-gate",
-        requires_bundle: false,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "inspect_metrics_stats",
-        label: "inspect metrics stats",
-        command: DEVTOOLS_METRICS_STATS_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "inspect_debug_trace",
-        label: "inspect debug trace",
-        command: DEVTOOLS_DEBUG_TRACE_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "validate_docking_campaign",
-        label: "validate docking campaign",
-        command: DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-];
-
-fn demo_metrics_debug_action_command_text() -> String {
-    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
-        .iter()
-        .map(|action| format!("{}: {}", action.label, action.command))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn demo_metrics_debug_action_metadata_lines() -> Vec<String> {
-    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
-        .iter()
-        .map(|action| {
-            format!(
-                "action metadata: {} | id={} | category={} | primary={} | requires_bundle={}",
-                action.label, action.id, action.category, action.primary, action.requires_bundle
-            )
-        })
-        .collect()
-}
-
-fn demo_metrics_debug_action_readiness_lines(selected_bundle_count: usize) -> Vec<String> {
-    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
-        .iter()
-        .map(|action| {
-            let runnable = !action.requires_bundle || selected_bundle_count > 0;
-            let reason = if action.requires_bundle {
-                if selected_bundle_count > 0 {
-                    "selected bundle evidence available"
-                } else {
-                    "select a regression bundle"
-                }
-            } else {
-                "no bundle required"
-            };
-            format!(
-                "action readiness: {} | id={} | category={} | runnable={} | reason={}",
-                action.label, action.id, action.category, runnable, reason
-            )
-        })
-        .collect()
-}
+const CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW: &str =
+    "fret.devtools.demo_metrics_debug.run_docking_workflow";
+const CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW: &str =
+    "fret.devtools.demo_metrics_debug.run_perf_workflow";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -1352,29 +1311,7 @@ fn header_bar(
         .models()
         .read(&st.sessions, |sessions| sessions.len())
         .unwrap_or(0);
-    let scripts_count = cx
-        .app
-        .models()
-        .read(&st.script_library, |scripts| scripts.len())
-        .unwrap_or(0);
-    let regression_loaded = cx
-        .app
-        .models()
-        .read(&st.regression_loaded_dir, |dir| dir.is_some())
-        .unwrap_or(false);
-    let regression_selected_summary_loaded = cx
-        .app
-        .models()
-        .read(&st.regression_selected_summary_json, |value| !value.trim().is_empty())
-        .unwrap_or(false);
-    let selected_followup_result_loaded = selected_followup_result_loaded_from_state(cx.app, st);
-    let regression_failing_count = cx
-        .app
-        .models()
-        .read(&st.regression_index_json, |index_json| {
-            regression_failing_summary_rows(index_json, 10).len()
-        })
-        .unwrap_or(0);
+    let header = collect_header_diagnostics_state(cx.app, st);
     let session_items = cx
         .app
         .models()
@@ -1439,75 +1376,13 @@ fn header_bar(
         "Artifacts root: {} | token: {} | port: {}",
         st.cfg.fs_out_dir, st.cfg.token, st.cfg.ws_port
     ));
-    let gate_run_result_history = cx
-        .app
-        .models()
-        .read(&st.gate_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let workflow_run_result_history = cx
-        .app
-        .models()
-        .read(&st.workflow_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let followup_result_history = cx
-        .app
-        .models()
-        .read(&st.followup_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let recent_failed_evidence_target = devtools_recent_failed_evidence_target(
-        &gate_run_result_history,
-        &workflow_run_result_history,
-        &followup_result_history,
-    );
-    let recent_workflow_commands = devtools_workflow_commands_from_state(cx.app, st);
-    let recent_failed_evidence_rerunnable_kind = recent_failed_evidence_target
-        .as_ref()
-        .and_then(|target| {
-            recent_failed_evidence_rerun_command_from_state(target, &recent_workflow_commands)
-        })
-        .map(|command| command.kind());
-    let recent_failed_evidence_rerun_reason =
-        recent_failed_evidence_target.as_ref().and_then(|target| {
-            recent_failed_evidence_rerun_unavailable_reason_from_state(
-                target,
-                &recent_workflow_commands,
-            )
-        });
-    let recent_failing_count = recent_evidence_failing_count(
-        &gate_run_result_history,
-        &workflow_run_result_history,
-        &followup_result_history,
-    );
-    let recent_evidence_empty = gate_run_result_history.is_empty()
-        && workflow_run_result_history.is_empty()
-        && followup_result_history.is_empty();
-    let recent_evidence_next = recent_evidence_next_action(
-        recent_failing_count,
-        recent_evidence_empty,
-        recent_failed_evidence_target.as_ref(),
-        &recent_workflow_commands,
-    );
     let first_open_recent_evidence_actions = first_open_recent_evidence_action_specs(
-        recent_failed_evidence_target.is_some(),
-        recent_failed_evidence_rerunnable_kind.is_some(),
+        header.recent_failed_evidence_target.is_some(),
+        header.recent_failed_evidence_rerunnable_kind.is_some(),
     );
 
     let mut next_action_rows = Vec::new();
-    for line in devtools_first_open_next_action_lines(
-        has_session,
-        session_count,
-        selected_session.as_deref(),
-        scripts_count,
-        regression_loaded,
-        regression_selected_summary_loaded,
-        selected_followup_result_loaded,
-        regression_failing_count,
-        st.cfg.fs_out_dir.as_ref(),
-        recent_failed_evidence_target.as_ref(),
-        recent_failed_evidence_rerunnable_kind,
-        recent_failed_evidence_rerun_reason.as_deref(),
-        &recent_evidence_next,
-    ) {
+    for line in header_next_action_lines(st, &header) {
         next_action_rows.push(cx.text(line));
     }
     next_action_rows.push(first_open_recent_evidence_action_row(
@@ -1820,22 +1695,6 @@ fn first_open_recent_evidence_action_row(
         .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx)
-}
-
-fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    ui::h_row(|cx| {
-        [
-            shadcn::Button::new("Copy Demo/Metrics/Debug actions")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
-                .into_element(cx),
-        ]
-    })
-    .gap(fret_ui_kit::Space::N2)
-    .items_center()
-    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx)
 }
 
 fn resizable_body(
@@ -3257,37 +3116,7 @@ fn right_panel(
 }
 
 fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let gate_run_result_history = cx
-        .app
-        .models()
-        .read(&st.gate_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let workflow_run_result_history = cx
-        .app
-        .models()
-        .read(&st.workflow_run_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let followup_result_history = cx
-        .app
-        .models()
-        .read(&st.followup_result_history, |v| v.clone())
-        .unwrap_or_default();
-    let recent_failed_evidence_target = devtools_recent_failed_evidence_target(
-        &gate_run_result_history,
-        &workflow_run_result_history,
-        &followup_result_history,
-    );
-    let recent_failed_evidence_bundle_dir_available = recent_failed_evidence_target
-        .as_ref()
-        .and_then(recent_failed_evidence_bundle_dir)
-        .is_some();
-    let recent_workflow_commands = devtools_workflow_commands_from_state(cx.app, st);
-    let recent_failed_evidence_rerunnable = recent_failed_evidence_target
-        .as_ref()
-        .and_then(|target| {
-            recent_failed_evidence_rerun_command_from_state(target, &recent_workflow_commands)
-        })
-        .is_some();
+    let recent = collect_guide_recent_evidence_state(cx.app, st);
     let recent_evidence_actions = ui::h_row(|cx| {
         [
             shadcn::Button::new("Copy recent evidence report")
@@ -3298,43 +3127,43 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
             shadcn::Button::new("Select failed evidence")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_SELECT_RECENT_FAILED_EVIDENCE)
                 .into_element(cx),
             shadcn::Button::new("Rerun failed evidence")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(!recent_failed_evidence_rerunnable)
+                .disabled(!recent.rerunnable)
                 .on_click(CMD_RERUN_RECENT_FAILED_EVIDENCE)
                 .into_element(cx),
             shadcn::Button::new("Copy failed evidence path")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_PATH)
                 .into_element(cx),
             shadcn::Button::new("Copy failed bundle dir")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(!recent_failed_evidence_bundle_dir_available)
+                .disabled(!recent.bundle_dir_available)
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_BUNDLE_DIR)
                 .into_element(cx),
             shadcn::Button::new("Copy failed evidence command")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_COMMAND)
                 .into_element(cx),
             shadcn::Button::new("Copy failed evidence JSON")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_JSON)
                 .into_element(cx),
             shadcn::Button::new("Open failed evidence JSON")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
-                .disabled(recent_failed_evidence_target.is_none())
+                .disabled(recent.target.is_none())
                 .on_click(CMD_OPEN_RECENT_FAILED_EVIDENCE_JSON)
                 .into_element(cx),
         ]
@@ -3345,13 +3174,7 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
     .into_element(cx);
     let recent_evidence_blob = text_blob_sized(
         cx,
-        devtools_recent_evidence_lines_with_workflow_commands(
-            &gate_run_result_history,
-            &workflow_run_result_history,
-            &followup_result_history,
-            &recent_workflow_commands,
-        )
-        .join("\n"),
+        recent.report_text,
         Px(132.0),
     );
     let recent_evidence_panel = diag_section(
@@ -3360,45 +3183,9 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
         "Latest GUI-launched gate, workflow, and follow-up artifacts restored from the shared diagnostics histories.",
         vec![recent_evidence_actions, recent_evidence_blob],
     );
-    let mut first_open_rows = Vec::new();
-    for line in devtools_first_open_lines(st.cfg.fs_out_dir.as_ref()) {
-        first_open_rows.push(cx.text(line));
-    }
-    let first_open_panel = diag_section(
-        cx,
-        "First-open Evidence Path",
-        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
-        first_open_rows,
-    );
-    let mut dogfood_workflow_rows = Vec::new();
-    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
-        dogfood_workflow_rows.push(cx.text(line));
-    }
-    let dogfood_workflow_panel = diag_section(
-        cx,
-        "Dogfood Workflow",
-        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
-        dogfood_workflow_rows,
-    );
-    let mut demo_metrics_debug_rows = Vec::new();
-    let demo_metrics_debug_selected_bundle_count = cx
-        .app
-        .models()
-        .read(&st.regression_selected_bundle_dirs, |v| v.len())
-        .unwrap_or(0);
-    for line in devtools_demo_metrics_debug_lines_with_state(
-        st.cfg.fs_out_dir.as_ref(),
-        demo_metrics_debug_selected_bundle_count,
-    ) {
-        demo_metrics_debug_rows.push(cx.text(line));
-    }
-    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx));
-    let demo_metrics_debug_panel = diag_section(
-        cx,
-        "Demo / Metrics / Debug Routes",
-        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
-        demo_metrics_debug_rows,
-    );
+    let first_open_panel = first_open_reference_panel(cx, st);
+    let dogfood_workflow_panel = dogfood_reference_panel(cx, st);
+    let demo_metrics_debug_panel = devtools_demo_metrics_debug_panel(cx, st);
     let mut workflow_run_rows = Vec::new();
     for line in devtools_workflow_run_lines(st.cfg.fs_out_dir.as_ref()) {
         workflow_run_rows.push(cx.text(line));
@@ -3410,8 +3197,12 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
         "First-class campaign validation and selected-session suite runs reuse the shared diag command path from the GUI shell.",
         workflow_run_rows,
     );
+    let gate_panel = collect_gate_profile_panel_state(cx.app, st);
     let mut gate_command_rows = Vec::new();
     for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
+        gate_command_rows.push(cx.text(line));
+    }
+    for line in gate_panel.gate_profile_lines {
         gate_command_rows.push(cx.text(line));
     }
     gate_command_rows.push(devtools_gate_profile_command_builder(cx, st));
@@ -5556,644 +5347,6 @@ fn short_followup_result_path(path: &str) -> String {
     short_artifact_result_path(path)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct RecentEvidenceTarget {
-    kind: &'static str,
-    id: String,
-    status: String,
-    result_path: String,
-    result_json: String,
-    command_line: String,
-    bundle_dir: Option<String>,
-}
-
-impl RecentEvidenceTarget {
-    fn from_gate(entry: &gate_run::GateRunResultHistoryEntry) -> Self {
-        Self {
-            kind: "gate",
-            id: entry.id.clone(),
-            status: entry.status.clone(),
-            result_path: entry.result_path.clone(),
-            result_json: entry.result_json.clone(),
-            command_line: entry.command_line.clone(),
-            bundle_dir: None,
-        }
-    }
-
-    fn from_workflow(entry: &workflow_run::WorkflowRunResultHistoryEntry) -> Self {
-        Self {
-            kind: "workflow",
-            id: entry.id.clone(),
-            status: entry.status.clone(),
-            result_path: entry.result_path.clone(),
-            result_json: entry.result_json.clone(),
-            command_line: entry.command_line.clone(),
-            bundle_dir: None,
-        }
-    }
-
-    fn from_followup(entry: &followup::FollowupResultHistoryEntry) -> Self {
-        Self {
-            kind: "follow-up",
-            id: entry.id.clone(),
-            status: entry.status.clone(),
-            result_path: entry.result_path.clone(),
-            result_json: entry.result_json.clone(),
-            command_line: entry.command_line.clone(),
-            bundle_dir: entry.bundle_dir.clone(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum RecentEvidenceKindOrder {
-    Followup = 0,
-    Workflow = 1,
-    Gate = 2,
-}
-
-impl RecentEvidenceKindOrder {
-    fn from_kind(kind: &str) -> Self {
-        match kind {
-            "workflow" => Self::Workflow,
-            "follow-up" => Self::Followup,
-            _ => Self::Gate,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct RecentEvidenceSelectionEffect {
-    details_tab: &'static str,
-    selected_path: String,
-    selected_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum RecentEvidenceRerunCommand {
-    Gate(fret_diag::DevtoolsGateCommandV1),
-    Workflow(workflow_run::DevtoolsWorkflowRunCommandV1),
-    Followup(RegressionBundleFollowupCommandV1),
-}
-
-fn devtools_recent_evidence_selection_effect(
-    target: &RecentEvidenceTarget,
-) -> RecentEvidenceSelectionEffect {
-    let details_tab = if target.kind == "follow-up" {
-        "regression"
-    } else {
-        "guide"
-    };
-    RecentEvidenceSelectionEffect {
-        details_tab,
-        selected_path: target.result_path.clone(),
-        selected_bundle_dir: target.bundle_dir.clone(),
-    }
-}
-
-#[cfg(test)]
-fn devtools_recent_evidence_lines(
-    gate_entries: &[gate_run::GateRunResultHistoryEntry],
-    workflow_entries: &[workflow_run::WorkflowRunResultHistoryEntry],
-    followup_entries: &[followup::FollowupResultHistoryEntry],
-) -> Vec<String> {
-    devtools_recent_evidence_lines_with_workflow_commands(
-        gate_entries,
-        workflow_entries,
-        followup_entries,
-        &[],
-    )
-}
-
-fn devtools_recent_evidence_lines_with_workflow_commands(
-    gate_entries: &[gate_run::GateRunResultHistoryEntry],
-    workflow_entries: &[workflow_run::WorkflowRunResultHistoryEntry],
-    followup_entries: &[followup::FollowupResultHistoryEntry],
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> Vec<String> {
-    let failed_target =
-        devtools_recent_failed_evidence_target(gate_entries, workflow_entries, followup_entries);
-    let mut lines = vec![format!(
-        "recent evidence: gates={} workflows={} followups={}",
-        gate_entries.len(),
-        workflow_entries.len(),
-        followup_entries.len()
-    )];
-    lines.push(recent_gate_evidence_line(gate_entries.first()));
-    lines.push(recent_workflow_evidence_line(workflow_entries.first()));
-    lines.push(recent_followup_evidence_line(followup_entries.first()));
-    let failing_count =
-        recent_evidence_failing_count(gate_entries, workflow_entries, followup_entries);
-    lines.push(format!("recent failing evidence: {failing_count}"));
-    lines.push(recent_failed_evidence_target_line(failed_target.as_ref()));
-    lines.push(recent_failed_evidence_path_line(failed_target.as_ref()));
-    lines.push(recent_failed_evidence_bundle_line(failed_target.as_ref()));
-    lines.push(recent_failed_evidence_command_line(failed_target.as_ref()));
-    lines.push(recent_failed_evidence_rerun_line_with_workflow_commands(
-        failed_target.as_ref(),
-        workflow_commands,
-    ));
-    lines.push(recent_failed_evidence_rerun_reason_line_with_workflow_commands(
-        failed_target.as_ref(),
-        workflow_commands,
-    ));
-    let next_action = recent_evidence_next_action(
-        failing_count,
-        gate_entries.is_empty() && workflow_entries.is_empty() && followup_entries.is_empty(),
-        failed_target.as_ref(),
-        workflow_commands,
-    );
-    lines.push(format!("recent_evidence_next_action: {next_action}"));
-    lines
-}
-
-fn recent_evidence_status_failed(status: &str) -> bool {
-    let status = status.trim();
-    !status.is_empty() && status != "-" && !status.eq_ignore_ascii_case("passed")
-}
-
-fn recent_evidence_failing_count(
-    gate_entries: &[gate_run::GateRunResultHistoryEntry],
-    workflow_entries: &[workflow_run::WorkflowRunResultHistoryEntry],
-    followup_entries: &[followup::FollowupResultHistoryEntry],
-) -> usize {
-    gate_entries
-        .iter()
-        .filter(|entry| recent_evidence_status_failed(&entry.status))
-        .count()
-        + workflow_entries
-            .iter()
-            .filter(|entry| recent_evidence_status_failed(&entry.status))
-            .count()
-        + followup_entries
-            .iter()
-            .filter(|entry| recent_evidence_status_failed(&entry.status))
-            .count()
-}
-
-fn recent_evidence_next_action(
-    failing_count: usize,
-    evidence_empty: bool,
-    failed_target: Option<&RecentEvidenceTarget>,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> String {
-    if failing_count == 0 {
-        return if evidence_empty {
-            "run a workflow or generated gate".to_string()
-        } else {
-            "continue from latest passing evidence".to_string()
-        };
-    }
-
-    let Some(target) = failed_target else {
-        return "inspect failed recent evidence history".to_string();
-    };
-
-    match recent_failed_evidence_rerun_status_from_state(target, workflow_commands) {
-        RecentEvidenceRerunStatus::Available(command) => {
-            format!("rerun failed {} evidence", command.kind())
-        }
-        RecentEvidenceRerunStatus::Unavailable(reason)
-            if reason == "missing current selected-session" =>
-        {
-            "select a diagnostics session, then rerun failed workflow evidence".to_string()
-        }
-        RecentEvidenceRerunStatus::Unavailable(reason)
-            if reason == "workflow commands unavailable" =>
-        {
-            "refresh current workflow commands, then rerun failed workflow evidence".to_string()
-        }
-        RecentEvidenceRerunStatus::Unavailable(reason)
-            if reason.starts_with("workflow command ")
-                && reason.ends_with(" is no longer registered") =>
-        {
-            "run a current workflow for fresh evidence".to_string()
-        }
-        RecentEvidenceRerunStatus::Unavailable(_) => {
-            format!("select failed {} evidence and inspect result JSON", target.kind)
-        }
-    }
-}
-
-fn devtools_recent_failed_evidence_target(
-    gate_entries: &[gate_run::GateRunResultHistoryEntry],
-    workflow_entries: &[workflow_run::WorkflowRunResultHistoryEntry],
-    followup_entries: &[followup::FollowupResultHistoryEntry],
-) -> Option<RecentEvidenceTarget> {
-    let mut candidates = Vec::new();
-    candidates.extend(
-        gate_entries
-            .iter()
-            .filter(|entry| recent_evidence_status_failed(&entry.status))
-            .enumerate()
-            .map(|(index, entry)| (index, RecentEvidenceTarget::from_gate(entry))),
-    );
-    candidates.extend(
-        workflow_entries
-            .iter()
-            .filter(|entry| recent_evidence_status_failed(&entry.status))
-            .enumerate()
-            .map(|(index, entry)| (index, RecentEvidenceTarget::from_workflow(entry))),
-    );
-    candidates.extend(
-        followup_entries
-            .iter()
-            .filter(|entry| recent_evidence_status_failed(&entry.status))
-            .enumerate()
-            .map(|(index, entry)| (index, RecentEvidenceTarget::from_followup(entry))),
-    );
-
-    candidates
-        .iter()
-        .filter_map(|(index, target)| {
-            recent_evidence_result_sort_timestamp(target)
-                .map(|timestamp| (timestamp, *index, target))
-        })
-        .max_by_key(|(timestamp, index, target)| {
-            (
-                *timestamp,
-                std::cmp::Reverse(*index),
-                RecentEvidenceKindOrder::from_kind(target.kind),
-            )
-        })
-        .map(|(_, _, target)| target.clone())
-        .or_else(|| {
-            recent_failed_evidence_target_lane_order_fallback(
-                gate_entries,
-                workflow_entries,
-                followup_entries,
-            )
-        })
-}
-
-fn recent_failed_evidence_target_lane_order_fallback(
-    gate_entries: &[gate_run::GateRunResultHistoryEntry],
-    workflow_entries: &[workflow_run::WorkflowRunResultHistoryEntry],
-    followup_entries: &[followup::FollowupResultHistoryEntry],
-) -> Option<RecentEvidenceTarget> {
-    if let Some(target) = gate_entries
-        .first()
-        .filter(|entry| recent_evidence_status_failed(&entry.status))
-        .map(RecentEvidenceTarget::from_gate)
-        .or_else(|| {
-            workflow_entries
-                .first()
-                .filter(|entry| recent_evidence_status_failed(&entry.status))
-                .map(RecentEvidenceTarget::from_workflow)
-        })
-        .or_else(|| {
-            followup_entries
-                .first()
-                .filter(|entry| recent_evidence_status_failed(&entry.status))
-                .map(RecentEvidenceTarget::from_followup)
-        })
-    {
-        return Some(target);
-    }
-
-    gate_entries
-        .iter()
-        .skip(1)
-        .find(|entry| recent_evidence_status_failed(&entry.status))
-        .map(RecentEvidenceTarget::from_gate)
-        .or_else(|| {
-            workflow_entries
-                .iter()
-                .skip(1)
-                .find(|entry| recent_evidence_status_failed(&entry.status))
-                .map(RecentEvidenceTarget::from_workflow)
-        })
-        .or_else(|| {
-            followup_entries
-                .iter()
-                .skip(1)
-                .find(|entry| recent_evidence_status_failed(&entry.status))
-                .map(RecentEvidenceTarget::from_followup)
-        })
-}
-
-fn recent_evidence_result_path_timestamp(path: &str) -> Option<u64> {
-    Path::new(path)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .and_then(|file_name| file_name.split_once('-'))
-        .and_then(|(prefix, _)| prefix.parse::<u64>().ok())
-}
-
-fn recent_evidence_result_sort_timestamp(target: &RecentEvidenceTarget) -> Option<u64> {
-    recent_evidence_result_json_timestamp(&target.result_json)
-        .or_else(|| recent_evidence_result_path_timestamp(&target.result_path))
-}
-
-fn recent_evidence_result_json_timestamp(result_json: &str) -> Option<u64> {
-    let value = serde_json::from_str::<serde_json::Value>(result_json).ok()?;
-    value
-        .get("finished_unix_ms")
-        .and_then(|value| value.as_u64())
-        .or_else(|| {
-            value
-                .get("started_unix_ms")
-                .and_then(|value| value.as_u64())
-        })
-}
-
-fn recent_failed_evidence_target_line(target: Option<&RecentEvidenceTarget>) -> String {
-    match target {
-        Some(target) => format!(
-            "failed_evidence_target: {} | {} | {} | {}",
-            target.kind,
-            target.status,
-            target.id,
-            short_artifact_result_path(&target.result_path)
-        ),
-        None => "failed_evidence_target: <none>".to_string(),
-    }
-}
-
-fn recent_failed_evidence_command_line(target: Option<&RecentEvidenceTarget>) -> String {
-    match target {
-        Some(target) => format!("failed_evidence_command: {}", target.command_line),
-        None => "failed_evidence_command: <none>".to_string(),
-    }
-}
-
-#[cfg(test)]
-fn recent_failed_evidence_rerun_line(target: Option<&RecentEvidenceTarget>) -> String {
-    recent_failed_evidence_rerun_line_with_workflow_commands(target, &[])
-}
-
-fn recent_failed_evidence_rerun_line_with_workflow_commands(
-    target: Option<&RecentEvidenceTarget>,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> String {
-    match target {
-        Some(target) => match recent_failed_evidence_rerun_status_from_state(target, workflow_commands)
-        {
-            RecentEvidenceRerunStatus::Available(command) => {
-                format!("failed_evidence_rerunnable: {}", command.kind())
-            }
-            RecentEvidenceRerunStatus::Unavailable(reason) => {
-                format!("failed_evidence_rerunnable: no ({reason})")
-            }
-        },
-        None => "failed_evidence_rerunnable: <none>".to_string(),
-    }
-}
-
-fn recent_failed_evidence_rerun_reason_line_with_workflow_commands(
-    target: Option<&RecentEvidenceTarget>,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> String {
-    match target.and_then(|target| {
-        recent_failed_evidence_rerun_unavailable_reason_from_state(target, workflow_commands)
-    }) {
-        Some(reason) => format!("failed_evidence_rerun_unavailable_reason: {reason}"),
-        None => "failed_evidence_rerun_unavailable_reason: <none>".to_string(),
-    }
-}
-
-fn recent_failed_evidence_path_line(target: Option<&RecentEvidenceTarget>) -> String {
-    match target {
-        Some(target) => format!("failed_evidence_path: {}", target.result_path),
-        None => "failed_evidence_path: <none>".to_string(),
-    }
-}
-
-fn recent_failed_evidence_bundle_dir(target: &RecentEvidenceTarget) -> Option<&str> {
-    target
-        .bundle_dir
-        .as_deref()
-        .filter(|bundle_dir| !bundle_dir.trim().is_empty())
-}
-
-fn recent_failed_evidence_bundle_line(target: Option<&RecentEvidenceTarget>) -> String {
-    match target.and_then(recent_failed_evidence_bundle_dir) {
-        Some(bundle_dir) if !bundle_dir.trim().is_empty() => {
-            format!("failed_evidence_bundle_dir: {bundle_dir}")
-        }
-        _ => "failed_evidence_bundle_dir: <none>".to_string(),
-    }
-}
-
-impl RecentEvidenceRerunCommand {
-    fn kind(&self) -> &'static str {
-        match self {
-            Self::Gate(_) => "gate",
-            Self::Workflow(_) => "workflow",
-            Self::Followup(_) => "follow-up",
-        }
-    }
-}
-
-enum RecentEvidenceRerunStatus {
-    Available(RecentEvidenceRerunCommand),
-    Unavailable(String),
-}
-
-fn recent_failed_evidence_rerun_command(
-    target: &RecentEvidenceTarget,
-) -> Option<RecentEvidenceRerunCommand> {
-    let diag_args = recent_evidence_diag_args_from_result_json(&target.result_json).ok()?;
-    if !recent_evidence_diag_args_are_rerunnable(&diag_args) {
-        return None;
-    }
-    match target.kind {
-        "gate" => Some(RecentEvidenceRerunCommand::Gate(
-            fret_diag::DevtoolsGateCommandV1 {
-                id: target.id.clone(),
-                label: format!("Rerun failed evidence {}", target.id),
-                command_line: target.command_line.clone(),
-                diag_args,
-                missing_inputs: Vec::new(),
-            },
-        )),
-        "follow-up" => Some(RecentEvidenceRerunCommand::Followup(
-            RegressionBundleFollowupCommandV1 {
-                id: target.id.clone(),
-                label: format!("Rerun failed evidence {}", target.id),
-                command_line: target.command_line.clone(),
-                diag_args,
-                requires_baseline: false,
-                target_bundle_dir: target.bundle_dir.clone(),
-            },
-        )),
-        _ => None,
-    }
-}
-
-fn recent_failed_evidence_rerun_command_from_state(
-    target: &RecentEvidenceTarget,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> Option<RecentEvidenceRerunCommand> {
-    match recent_failed_evidence_rerun_status_from_state(target, workflow_commands) {
-        RecentEvidenceRerunStatus::Available(command) => Some(command),
-        RecentEvidenceRerunStatus::Unavailable(_) => None,
-    }
-}
-
-fn recent_failed_evidence_rerun_unavailable_reason_from_state(
-    target: &RecentEvidenceTarget,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> Option<String> {
-    match recent_failed_evidence_rerun_status_from_state(target, workflow_commands) {
-        RecentEvidenceRerunStatus::Available(_) => None,
-        RecentEvidenceRerunStatus::Unavailable(reason) => Some(reason),
-    }
-}
-
-fn recent_failed_evidence_rerun_status_from_state(
-    target: &RecentEvidenceTarget,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> RecentEvidenceRerunStatus {
-    if target.kind == "workflow" {
-        return recent_failed_workflow_rerun_status_from_state(target, workflow_commands);
-    }
-    recent_failed_evidence_rerun_command(target)
-        .map(RecentEvidenceRerunStatus::Available)
-        .unwrap_or_else(|| {
-            RecentEvidenceRerunStatus::Unavailable(recent_evidence_diag_args_unavailable_reason(
-                &target.result_json,
-            ))
-        })
-}
-
-fn recent_failed_workflow_rerun_command_from_state(
-    target: &RecentEvidenceTarget,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> Option<RecentEvidenceRerunCommand> {
-    if target.kind != "workflow" {
-        return None;
-    }
-    workflow_commands
-        .iter()
-        .find(|command| command.id == target.id)
-        .filter(|command| command.is_runnable())
-        .cloned()
-        .map(RecentEvidenceRerunCommand::Workflow)
-}
-
-fn recent_failed_workflow_rerun_status_from_state(
-    target: &RecentEvidenceTarget,
-    workflow_commands: &[workflow_run::DevtoolsWorkflowRunCommandV1],
-) -> RecentEvidenceRerunStatus {
-    if let Some(command) = recent_failed_workflow_rerun_command_from_state(target, workflow_commands)
-    {
-        return RecentEvidenceRerunStatus::Available(command);
-    }
-
-    if let Some(command) = workflow_commands
-        .iter()
-        .find(|command| command.id == target.id)
-    {
-        if !command.missing_inputs.is_empty() {
-            return RecentEvidenceRerunStatus::Unavailable(format!(
-                "missing current {}",
-                command.missing_inputs.join(", ")
-            ));
-        }
-        return RecentEvidenceRerunStatus::Unavailable("current workflow has no diag_args".to_string());
-    }
-
-    if workflow_commands.is_empty() {
-        return RecentEvidenceRerunStatus::Unavailable("workflow commands unavailable".to_string());
-    }
-
-    RecentEvidenceRerunStatus::Unavailable(format!(
-        "workflow command {} is no longer registered",
-        target.id
-    ))
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum RecentEvidenceDiagArgsIssue {
-    InvalidJson,
-    Missing,
-    NotArray,
-    NonString,
-}
-
-fn recent_evidence_diag_args_from_result_json(
-    result_json: &str,
-) -> Result<Vec<String>, RecentEvidenceDiagArgsIssue> {
-    let value = serde_json::from_str::<serde_json::Value>(result_json)
-        .map_err(|_| RecentEvidenceDiagArgsIssue::InvalidJson)?;
-    let Some(args) = value.get("diag_args") else {
-        return Err(RecentEvidenceDiagArgsIssue::Missing);
-    };
-    let Some(args) = args.as_array() else {
-        return Err(RecentEvidenceDiagArgsIssue::NotArray);
-    };
-    let args = args
-        .iter()
-        .map(|value| value.as_str().map(ToOwned::to_owned))
-        .collect::<Option<Vec<_>>>()
-        .ok_or(RecentEvidenceDiagArgsIssue::NonString)?;
-    Ok(args)
-}
-
-fn recent_evidence_diag_args_are_rerunnable(args: &[String]) -> bool {
-    !args.is_empty()
-        && args
-            .iter()
-            .all(|arg| !arg.trim().is_empty() && arg.trim() != "<redacted>")
-}
-
-fn recent_evidence_diag_args_unavailable_reason(result_json: &str) -> String {
-    match recent_evidence_diag_args_from_result_json(result_json) {
-        Ok(args) if args.is_empty() => "diag_args empty".to_string(),
-        Ok(args)
-            if args
-                .iter()
-                .any(|arg| arg.trim().is_empty() || arg.trim() == "<redacted>") =>
-        {
-            "diag_args missing or redacted".to_string()
-        }
-        Ok(_) => "unsupported evidence kind".to_string(),
-        Err(RecentEvidenceDiagArgsIssue::InvalidJson) => "result JSON invalid".to_string(),
-        Err(RecentEvidenceDiagArgsIssue::Missing) => "diag_args missing".to_string(),
-        Err(RecentEvidenceDiagArgsIssue::NotArray) => "diag_args is not an array".to_string(),
-        Err(RecentEvidenceDiagArgsIssue::NonString) => "diag_args contains non-string values".to_string(),
-    }
-}
-
-fn recent_gate_evidence_line(entry: Option<&gate_run::GateRunResultHistoryEntry>) -> String {
-    match entry {
-        Some(entry) => format!(
-            "latest gate: {} | {} | {}",
-            entry.status,
-            entry.id,
-            short_artifact_result_path(&entry.result_path)
-        ),
-        None => "latest gate: <none>".to_string(),
-    }
-}
-
-fn recent_workflow_evidence_line(
-    entry: Option<&workflow_run::WorkflowRunResultHistoryEntry>,
-) -> String {
-    match entry {
-        Some(entry) => format!(
-            "latest workflow: {} | {} | {}",
-            entry.status,
-            entry.id,
-            short_artifact_result_path(&entry.result_path)
-        ),
-        None => "latest workflow: <none>".to_string(),
-    }
-}
-
-fn recent_followup_evidence_line(entry: Option<&followup::FollowupResultHistoryEntry>) -> String {
-    match entry {
-        Some(entry) => format!(
-            "latest follow-up: {} | {} | {} | bundle={}",
-            entry.status,
-            entry.id,
-            short_artifact_result_path(&entry.result_path),
-            entry.bundle_dir.as_deref().unwrap_or("-")
-        ),
-        None => "latest follow-up: <none>".to_string(),
-    }
-}
 
 fn short_artifact_result_path(path: &str) -> String {
     Path::new(path)
@@ -6858,9 +6011,17 @@ fn selected_workflow_run_command_from_state(
         .ok()
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from(DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID));
+    workflow_run_command_by_id_from_state(app, st, selected_workflow_id.as_ref())
+}
+
+fn workflow_run_command_by_id_from_state(
+    app: &App,
+    st: &State,
+    workflow_id: &str,
+) -> Option<workflow_run::DevtoolsWorkflowRunCommandV1> {
     devtools_workflow_commands_from_state(app, st)
         .into_iter()
-        .find(|command| command.id == selected_workflow_id.as_ref())
+        .find(|command| command.id == workflow_id)
 }
 
 fn generated_gate_command_from_state(
@@ -7126,6 +6287,16 @@ fn on_command(
 ) {
     ws::sync_selected_session_to_client(app, st);
 
+    if let Some(text) = demo_metrics_debug_action_command_for_copy_command(cmd.as_str()) {
+        let token = app.next_clipboard_token();
+        app.push_effect(Effect::ClipboardWriteText {
+            window,
+            token,
+            text,
+        });
+        return;
+    }
+
     match cmd.as_str() {
         CMD_COPY_WS_URL => {
             let text = format!(
@@ -7155,6 +6326,48 @@ fn on_command(
                 token,
                 text: demo_metrics_debug_action_command_text(),
             });
+        }
+        CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW => {
+            let Some(command) =
+                workflow_run_command_by_id_from_state(app, st, DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID)
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "demo metrics debug workflow refused (missing IMUI P3 docking workflow)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = workflow_run::start_workflow_run(app, st, command) {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("demo metrics debug workflow refused: {err}"),
+                );
+            }
+            app.request_redraw(window);
+        }
+        CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW => {
+            let Some(command) =
+                workflow_run_command_by_id_from_state(app, st, DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "demo metrics debug workflow refused (missing perf docking workflow)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = workflow_run::start_workflow_run(app, st, command) {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("demo metrics debug perf workflow refused: {err}"),
+                );
+            }
+            app.request_redraw(window);
         }
         CMD_INSPECT_ENABLE | CMD_INSPECT_DISABLE => {
             if !ws::require_session_selected(app, st) {
@@ -9401,324 +8614,6 @@ fn build_regression_dashboard_human(
     dashboard_human_lines_from_projection(index_path, &projection).join("\n")
 }
 
-fn devtools_first_open_next_action_lines(
-    has_session: bool,
-    session_count: usize,
-    selected_session_id: Option<&str>,
-    scripts_count: usize,
-    regression_loaded: bool,
-    selected_summary_loaded: bool,
-    selected_followup_result_loaded: bool,
-    failing_count: usize,
-    artifacts_root: &str,
-    recent_failed_evidence: Option<&RecentEvidenceTarget>,
-    recent_failed_evidence_rerunnable_kind: Option<&'static str>,
-    recent_failed_evidence_rerun_unavailable_reason: Option<&str>,
-    recent_evidence_next_action: &str,
-) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
-    };
-    let target = if has_session {
-        "target: session selected; inspect, pick, dump, and screenshot actions are ready".to_string()
-    } else if session_count > 0 {
-        format!("target: {session_count} session(s) available; select one before inspecting")
-    } else {
-        "target: no session yet; launch a Fret app with diagnostics enabled".to_string()
-    };
-    let session_scope = if has_session {
-        let selected = selected_session_id
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or("<selected>");
-        if session_count > 1 {
-            format!(
-                "session scope: selected {selected}; {session_count} sessions connected, use the Session selector to retarget inspect, bundle, screenshot, and selected-session suite actions"
-            )
-        } else {
-            format!(
-                "session scope: selected {selected}; actions target the current diagnostics session"
-            )
-        }
-    } else if session_count > 0 {
-        "session scope: choose one available session before sending inspect, bundle, screenshot, or selected-session suite actions".to_string()
-    } else {
-        "session scope: waiting for the first diagnostics session".to_string()
-    };
-    let regression = if regression_loaded {
-        format!("regression: aggregate loaded with {failing_count} non-passing summary row(s)")
-    } else if selected_summary_loaded && selected_followup_result_loaded {
-        "regression: selected follow-up result loaded; inspect Follow-up Result Summary/History"
-            .to_string()
-    } else if selected_summary_loaded {
-        "regression: selected summary loaded; follow-up actions can use selected bundle evidence"
-            .to_string()
-    } else {
-        "regression: no aggregate loaded; run a script, then Refresh or Summarize".to_string()
-    };
-    let recent_evidence = recent_failed_evidence
-        .map(|target| {
-            format!(
-                "recent evidence: failed {} {} ({})",
-                target.kind,
-                target.id,
-                short_artifact_result_path(&target.result_path)
-            )
-        })
-        .unwrap_or_else(|| "recent evidence: no failed restored GUI-launched evidence".to_string());
-    let recent_command = recent_failed_evidence
-        .map(|target| format!("recent evidence command: {}", target.command_line))
-        .unwrap_or_else(|| {
-            "recent evidence command: <none; run a workflow or generated gate>".to_string()
-        });
-    let recent_rerun = match (recent_failed_evidence, recent_failed_evidence_rerunnable_kind) {
-        (Some(_), Some(kind)) => format!("recent evidence rerun: available ({kind})"),
-        (Some(_), None) => recent_failed_evidence_rerun_unavailable_reason
-            .map(|reason| format!("recent evidence rerun: unavailable ({reason})"))
-            .unwrap_or_else(|| "recent evidence rerun: unavailable".to_string()),
-        (None, _) => "recent evidence rerun: <none>".to_string(),
-    };
-    vec![
-        target,
-        session_scope,
-        format!("scripts: {scripts_count} available in Script Studio"),
-        regression,
-        recent_evidence,
-        recent_command,
-        recent_rerun,
-        format!("recent evidence next: {recent_evidence_next_action}"),
-        format!("artifacts root: {artifacts_root}"),
-        "guide: open Evidence & Results -> Guide for docs, dogfood, workflow runs, demo/metrics, and gate commands".to_string(),
-    ]
-}
-
-fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
-    };
-    vec![
-        format!("first-open: {DEVTOOLS_FIRST_OPEN_DOC}"),
-        format!("gui branch: {DEVTOOLS_GUI_BRANCH_DOC}"),
-        format!("repo preflight: {DEVTOOLS_REPO_PREFLIGHT_COMMAND}"),
-        format!("repo preflight json: {DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND}"),
-        format!("artifacts root: {artifacts_root}"),
-        "direct loop: diag run -> diag latest -> diag compare".to_string(),
-        format!(
-            "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard"
-        ),
-        format!("gate: {DEVTOOLS_FIRST_OPEN_GATE_COMMAND}"),
-        format!("product workflow: {IMUI_PRODUCT_WORKFLOW_ID}"),
-        format!("product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}"),
-        format!("product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
-        format!("product workflow launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}"),
-        format!("product workflow suite: {IMUI_PRODUCT_WORKFLOW_SUITE}"),
-        format!("product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}"),
-        format!(
-            "product workflow artifacts: {}",
-            IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(", ")
-        ),
-    ]
-}
-
-fn devtools_dogfood_workflow_lines(artifacts_root: &str) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
-    };
-    vec![
-        format!("dogfood workflow: {DEVTOOLS_DOGFOOD_WORKFLOW_ID}"),
-        format!("dogfood docs: {DEVTOOLS_GUI_BRANCH_DOC}"),
-        format!("artifacts root: {artifacts_root}"),
-        format!("open ui gallery: {DEVTOOLS_DOGFOOD_TARGET_COMMAND}"),
-        "pick target: enable inspect -> Pick -> click a Button page control".to_string(),
-        "preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}".to_string(),
-        format!("base script: {DEVTOOLS_DOGFOOD_BASE_SCRIPT}"),
-        format!("button script: {DEVTOOLS_DOGFOOD_BUTTON_SCRIPT}"),
-        format!("generate script from pick: {DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND}"),
-        format!("apply pick to script: {DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND}"),
-        format!("run and pack: {DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND}"),
-        format!("pack selected bundle: {DEVTOOLS_DOGFOOD_PACK_COMMAND}"),
-        format!("open viewer: {DEVTOOLS_DOGFOOD_VIEWER_COMMAND}"),
-        "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
-            .to_string(),
-    ]
-}
-
-fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
-    devtools_demo_metrics_debug_lines_with_state(artifacts_root, 0)
-}
-
-fn devtools_demo_metrics_debug_lines_with_state(
-    artifacts_root: &str,
-    selected_bundle_count: usize,
-) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
-    };
-    let mut lines = vec![
-        format!("route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}"),
-        format!("route owner: {DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC}"),
-        format!("action metadata owner: {DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC}"),
-        format!("docking owner: {DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}"),
-        format!("wayland acceptance: {DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}"),
-        format!("artifacts root: {artifacts_root}"),
-        "route surface: Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell."
-            .to_string(),
-        "action surface: dedicated DevTools guide panel + copyable action command bundle"
-            .to_string(),
-        "command palette: deferred until DevTools has a shared command palette contract".to_string(),
-        format!("action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
-        format!("action: run product discovery -> {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
-        format!("action: inspect metrics stats -> {DEVTOOLS_METRICS_STATS_COMMAND}"),
-        format!("action: inspect debug trace -> {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
-        format!("action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
-    ];
-    lines.extend(demo_metrics_debug_action_metadata_lines());
-    lines.extend(demo_metrics_debug_action_readiness_lines(
-        selected_bundle_count,
-    ));
-    lines.extend([
-        format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
-        format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
-        format!("demo editor notes: {DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND}"),
-        format!("demo device shell: {DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND}"),
-        format!("metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}"),
-        format!("metrics layout perf: {DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND}"),
-        format!("metrics memory: {DEVTOOLS_METRICS_MEMORY_COMMAND}"),
-        format!("debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}"),
-        format!("debug hotspots: {DEVTOOLS_DEBUG_HOTSPOTS_COMMAND}"),
-        format!("debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
-        format!("docking arbitration supporting: {DEVTOOLS_DOCKING_ARBITRATION_COMMAND}"),
-        format!("docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
-        format!("docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}"),
-    ]);
-    lines
-}
-
-fn devtools_workflow_run_lines(artifacts_root: &str) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
-    };
-    vec![
-        format!("workflow route: {DEVTOOLS_WORKFLOW_ROUTE_ID}"),
-        format!("artifacts root: {artifacts_root}"),
-        format!("result artifacts: .fret/diag/workflow-runs/*.json"),
-        "handoff: load suite regression.summary.json into Regression Workspace".to_string(),
-        "handoff: run workflow summarize to create regression.index.json when missing".to_string(),
-        format!(
-            "campaign validate: cargo run -p fretboard-dev -- diag campaign validate {DEVTOOLS_WORKFLOW_FIRST_OPEN_CAMPAIGN_MANIFEST} --json"
-        ),
-        format!(
-            "imui p3 validate: cargo run -p fretboard-dev -- diag campaign validate {DEVTOOLS_WORKFLOW_IMUI_P3_CAMPAIGN_MANIFEST} --json"
-        ),
-        format!(
-            "suite ws: cargo run -p fretboard-dev -- diag suite {DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE} --dir {artifacts_root}/devtools-workflows/perf-docking --devtools-ws-url <devtools-ws-url> --devtools-token <redacted> --devtools-session-id <selected-session> --json"
-        ),
-    ]
-}
-
-fn devtools_workflow_commands(
-    artifacts_root: &str,
-    ws_url: &str,
-    token: &str,
-    selected_session_id: Option<&str>,
-) -> Vec<workflow_run::DevtoolsWorkflowRunCommandV1> {
-    let workflow_out_dir = workflow_run_artifacts_dir(artifacts_root);
-    let selected_session = selected_session_id
-        .map(str::trim)
-        .filter(|value| !value.is_empty());
-    let selected_session_or_placeholder = selected_session.unwrap_or("<selected-session>");
-    let mut suite_missing_inputs = Vec::new();
-    if selected_session.is_none() {
-        suite_missing_inputs.push("selected-session".to_string());
-    }
-
-    vec![
-        workflow_campaign_validate_command(
-            DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID,
-            "Validate devtools first-open campaign",
-            DEVTOOLS_WORKFLOW_FIRST_OPEN_CAMPAIGN_MANIFEST,
-        ),
-        workflow_campaign_validate_command(
-            DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID,
-            "Validate IMUI P3 multi-window campaign",
-            DEVTOOLS_WORKFLOW_IMUI_P3_CAMPAIGN_MANIFEST,
-        ),
-        workflow_run::DevtoolsWorkflowRunCommandV1 {
-            id: DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID.to_string(),
-            label: "Run perf docking suite over selected session".to_string(),
-            command_line: format!(
-                "cargo run -p fretboard-dev -- diag suite {DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE} --dir {workflow_out_dir} --devtools-ws-url {ws_url} --devtools-token <redacted> --devtools-session-id {selected_session_or_placeholder} --json"
-            ),
-            diag_args: selected_session
-                .map(|session_id| {
-                    vec![
-                        "suite".to_string(),
-                        DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE.to_string(),
-                        "--dir".to_string(),
-                        workflow_out_dir.clone(),
-                        "--devtools-ws-url".to_string(),
-                        ws_url.to_string(),
-                        "--devtools-token".to_string(),
-                        token.to_string(),
-                        "--devtools-session-id".to_string(),
-                        session_id.to_string(),
-                        "--json".to_string(),
-                    ]
-                })
-                .unwrap_or_default(),
-            missing_inputs: suite_missing_inputs,
-        },
-    ]
-}
-
-fn workflow_campaign_validate_command(
-    id: &str,
-    label: &str,
-    manifest: &str,
-) -> workflow_run::DevtoolsWorkflowRunCommandV1 {
-    workflow_run::DevtoolsWorkflowRunCommandV1 {
-        id: id.to_string(),
-        label: label.to_string(),
-        command_line: format!(
-            "cargo run -p fretboard-dev -- diag campaign validate {manifest} --json"
-        ),
-        diag_args: vec![
-            "campaign".to_string(),
-            "validate".to_string(),
-            manifest.to_string(),
-            "--json".to_string(),
-        ],
-        missing_inputs: Vec::new(),
-    }
-}
-
-fn workflow_run_artifacts_dir(artifacts_root: &str) -> String {
-    let root = artifacts_root.trim();
-    let root = if root.is_empty() {
-        "target/fret-diag"
-    } else {
-        root
-    };
-    format!(
-        "{}/devtools-workflows/perf-docking",
-        root.trim_end_matches(['/', '\\'])
-    )
-}
-
 fn devtools_workflow_commands_from_state(
     app: &App,
     st: &State,
@@ -9736,122 +8631,10 @@ fn devtools_workflow_commands_from_state(
     )
 }
 
-fn workflow_handoff_readiness_lines(
-    workflow_run_in_flight: bool,
-    selected_result_loaded: bool,
-    regression_summary_path: Option<&str>,
-    loaded_regression_summary_path: Option<&str>,
-    aggregate_index_ready: bool,
-    aggregate_index_loaded: bool,
-) -> Vec<String> {
-    let selected_state = if workflow_run_in_flight {
-        "in_flight"
-    } else if selected_result_loaded {
-        "loaded"
-    } else {
-        "none"
-    };
-    let artifact = regression_summary_path
-        .map(str::trim)
-        .filter(|value| !value.is_empty());
-    let loaded = loaded_regression_summary_path
-        .map(str::trim)
-        .filter(|value| !value.is_empty());
-    let already_loaded = artifact
-        .zip(loaded)
-        .is_some_and(|(artifact, loaded)| {
-            normalize_workflow_artifact_path(artifact) == normalize_workflow_artifact_path(loaded)
-        });
-
-    let mut lines = vec![
-        format!("selected_workflow_result: {selected_state}"),
-        format!(
-            "regression_summary_artifact: {}",
-            artifact.unwrap_or("<none>")
-        ),
-        format!(
-            "aggregate_index_ready: {}",
-            if aggregate_index_ready { "true" } else { "false" }
-        ),
-        format!(
-            "aggregate_index_loaded: {}",
-            if aggregate_index_loaded {
-                "true"
-            } else {
-                "false"
-            }
-        ),
-    ];
-    if already_loaded {
-        lines.push("regression_workspace: selected summary loaded from workflow".to_string());
-    } else if artifact.is_some() {
-        lines.push("regression_workspace: not loaded from workflow".to_string());
-    } else {
-        lines.push("regression_workspace: <not applicable>".to_string());
-    }
-    if aggregate_index_loaded {
-        lines.push("aggregate_workspace: workflow index loaded".to_string());
-    } else if aggregate_index_ready {
-        lines.push("aggregate_workspace: index ready but not loaded".to_string());
-    } else {
-        lines.push("aggregate_workspace: <not applicable>".to_string());
-    }
-
-    let next_action = if workflow_run_in_flight {
-        "wait for workflow result artifact"
-    } else if !selected_result_loaded {
-        "run selected workflow"
-    } else if artifact.is_some() && !aggregate_index_ready {
-        "Run workflow summarize"
-    } else if already_loaded {
-        "use Regression Workspace follow-up actions"
-    } else if artifact.is_some() {
-        "Load workflow regression summary"
-    } else {
-        "selected workflow result has no regression.summary.json artifact"
-    };
-    lines.push(format!("next_action: {next_action}"));
-    let aggregate_next_action = if workflow_run_in_flight {
-        "wait for workflow result artifact"
-    } else if !selected_result_loaded {
-        "run selected workflow"
-    } else if aggregate_index_loaded {
-        "aggregate index already loaded"
-    } else if aggregate_index_ready {
-        "Load workflow regression index"
-    } else if artifact.is_some() {
-        "Run workflow summarize"
-    } else {
-        "selected workflow result has no regression.index.json artifact"
-    };
-    lines.push(format!("aggregate_next_action: {aggregate_next_action}"));
-    lines
-}
-
-fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
-    devtools_gate_profile_lines(artifacts_root)
-}
-
 fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let selected_workflow_id = cx
-        .app
-        .models()
-        .read(&st.workflow_run_selected_id, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from(DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID));
-    let commands = devtools_workflow_commands_from_state(cx.app, st);
-    let selected_command = commands
-        .iter()
-        .find(|command| command.id == selected_workflow_id.as_ref())
-        .or_else(|| commands.first());
-    let command_preview = selected_command
-        .map(|command| command.command_line.clone())
-        .unwrap_or_else(|| "No workflow command available.".to_string());
-    let selected_command_label = selected_command
-        .map(|command| format!("{} ({})", command.label, command.id))
-        .unwrap_or_else(|| selected_workflow_id.to_string());
-    let workflow_items = commands
+    let panel = collect_workflow_panel_state(cx.app, st);
+    let workflow_items = panel
+        .commands
         .iter()
         .map(|command| shadcn::SelectItem::new(command.id.clone(), format!("{} ({})", command.label, command.id)))
         .collect::<Vec<_>>();
@@ -9864,31 +8647,6 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
     .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(340.0)))
     .into_element(cx);
 
-    let command_state_line = selected_command
-        .map(|command| {
-            if command.is_runnable() {
-                let redacted = workflow_run::redact_workflow_diag_args(&command.diag_args);
-                format!("diag args: {}", redacted.join(" "))
-            } else if command.missing_inputs.is_empty() {
-                "diag args: <not runnable>".to_string()
-            } else {
-                format!("missing inputs: {}", command.missing_inputs.join(", "))
-            }
-        })
-        .unwrap_or_else(|| "diag args: <unsupported workflow>".to_string());
-    let run_enabled = selected_command.is_some_and(|command| command.is_runnable());
-    let workflow_run_in_flight = cx
-        .app
-        .models()
-        .read(&st.workflow_run_in_flight, |v| *v)
-        .unwrap_or(false);
-    let workflow_run_result_path = cx
-        .app
-        .models()
-        .read(&st.workflow_run_last_result_path, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|v| v.to_string());
     let workflow_run_error = cx
         .app
         .models()
@@ -9896,132 +8654,14 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
         .ok()
         .flatten()
         .map(|v| v.to_string());
-    let workflow_run_result_json = cx
-        .app
-        .models()
-        .read(&st.workflow_run_last_result_json, |v| v.clone())
-        .unwrap_or_default();
     let workflow_run_result_history = cx
         .app
         .models()
         .read(&st.workflow_run_result_history, |v| v.clone())
         .unwrap_or_default();
-    let workflow_run_selected_result_path = cx
-        .app
-        .models()
-        .read(&st.workflow_run_selected_result_path, |v| v.clone())
-        .ok()
-        .flatten();
-    let selected_workflow_run_result_entry =
-        workflow_run::workflow_run_result_history_selected_or_latest_entry(
-            &workflow_run_result_history,
-            workflow_run_selected_result_path.as_deref(),
-        );
-    let selected_workflow_run_result_path = selected_workflow_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_path.clone());
-    let selected_workflow_run_result_json = selected_workflow_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_json.clone())
-        .unwrap_or_else(|| workflow_run_result_json.clone());
-    let selected_workflow_regression_summary_path = workflow_run::workflow_run_regression_summary_artifact_path_from_result_json(
-        &selected_workflow_run_result_json,
-    );
-    let selected_workflow_suite_summary_path =
-        workflow_run::workflow_run_output_artifact_path_from_result_json(
-            &selected_workflow_run_result_json,
-            "suite.summary.json",
-        );
-    let selected_workflow_regression_summary_resolved_path =
-        selected_workflow_regression_summary_path.as_ref().map(|path| {
-            let repo_root = repo_root_from_script_paths(&st.script_paths);
-            resolve_repo_or_abs_path(&repo_root, path)
-                .to_string_lossy()
-                .to_string()
-        });
-    let selected_workflow_summarize_command = selected_workflow_regression_summary_resolved_path
-        .as_deref()
-        .and_then(workflow_summarize_command_from_summary_path);
-    let selected_workflow_regression_index_resolved_path =
-        workflow_run::workflow_run_regression_index_artifact_path_from_result_json(
-            &selected_workflow_run_result_json,
-        )
-        .map(|path| {
-            let repo_root = repo_root_from_script_paths(&st.script_paths);
-            resolve_repo_or_abs_path(&repo_root, &path)
-                .to_string_lossy()
-                .to_string()
-        })
-        .or_else(|| {
-            selected_workflow_regression_summary_resolved_path
-                .as_ref()
-                .and_then(|path| {
-                    Path::new(path).parent().map(|parent| {
-                        parent
-                            .join(DIAG_REGRESSION_INDEX_FILENAME_V1)
-                            .to_string_lossy()
-                            .to_string()
-                    })
-                })
-        });
-    let selected_workflow_regression_index_ready = selected_workflow_regression_index_resolved_path
-        .as_ref()
-        .is_some_and(|path| Path::new(path).is_file());
-    let loaded_regression_dir = cx
-        .app
-        .models()
-        .read(&st.regression_loaded_dir, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|path| path.to_string());
-    let regression_index_loaded = cx
-        .app
-        .models()
-        .read(&st.regression_index_json, |v| !v.trim().is_empty())
-        .unwrap_or(false);
-    let selected_workflow_aggregate_index_loaded = workflow_aggregate_index_loaded(
-        selected_workflow_regression_index_resolved_path.as_deref(),
-        loaded_regression_dir.as_deref(),
-        regression_index_loaded,
-    );
-    let loaded_regression_summary_path = cx
-        .app
-        .models()
-        .read(&st.regression_selected_summary_path, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|path| path.to_string());
-    let workflow_handoff_readiness = workflow_handoff_readiness_lines(
-        workflow_run_in_flight,
-        selected_workflow_run_result_entry.is_some(),
-        selected_workflow_regression_summary_resolved_path.as_deref(),
-        loaded_regression_summary_path.as_deref(),
-        selected_workflow_regression_index_ready,
-        selected_workflow_aggregate_index_loaded,
-    );
-    let workflow_summarize_preview = selected_workflow_summarize_command
-        .as_ref()
-        .map(|command| {
-            let index_path = selected_workflow_regression_index_resolved_path
-                .as_deref()
-                .unwrap_or("-");
-            format!(
-                "command: {}\naggregate_index: {}\nready: {}",
-                command.command_line,
-                index_path,
-                if selected_workflow_regression_index_ready {
-                    "true"
-                } else {
-                    "false"
-                }
-            )
-        })
-        .unwrap_or_else(|| {
-            "No workflow regression.summary.json artifact selected yet.".to_string()
-        });
     let workflow_result_actions = ui::h_row(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
-        if selected_workflow_run_result_path.is_some() {
+        if panel.selected_workflow_run_result_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow result")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10037,7 +8677,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                     .into_element(cx),
             );
         }
-        if selected_workflow_run_result_entry.is_some() {
+        if panel.selected_workflow_run_result_entry.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow command")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10046,7 +8686,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                     .into_element(cx),
             );
         }
-        if !selected_workflow_run_result_json.trim().is_empty() {
+        if !panel.selected_workflow_run_result_json.trim().is_empty() {
             out.push(
                 shadcn::Button::new("Copy workflow JSON")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10055,7 +8695,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                 .into_element(cx),
             );
         }
-        if selected_workflow_suite_summary_path.is_some() {
+        if panel.selected_workflow_suite_summary_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow suite summary")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10071,7 +8711,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                     .into_element(cx),
             );
         }
-        if selected_workflow_regression_summary_path.is_some() {
+        if panel.selected_workflow_regression_summary_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow regression summary")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10104,12 +8744,12 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                 shadcn::Button::new("Run workflow summarize")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
-                    .disabled(workflow_run_in_flight)
+                    .disabled(panel.workflow_run_in_flight)
                     .on_click(CMD_RUN_WORKFLOW_SUMMARIZE)
                     .into_element(cx),
             );
         }
-        if selected_workflow_regression_index_ready {
+        if panel.selected_workflow_regression_index_ready {
             out.push(
                 shadcn::Button::new("Copy workflow regression index")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10141,24 +8781,24 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
     let workflow_result_details = text_blob_sized(
         cx,
         workflow_run::workflow_run_result_history_entry_detail_lines(
-            selected_workflow_run_result_entry.as_ref(),
+            panel.selected_workflow_run_result_entry.as_ref(),
         )
         .join("\n"),
         Px(78.0),
     );
     let workflow_result_summary = text_blob_sized(
         cx,
-        workflow_run::workflow_run_result_summary_lines(&selected_workflow_run_result_json)
+        workflow_run::workflow_run_result_summary_lines(&panel.selected_workflow_run_result_json)
             .join("\n"),
         Px(92.0),
     );
     let workflow_handoff_readiness_blob = text_blob_sized(
         cx,
-        workflow_handoff_readiness.join("\n"),
+        panel.workflow_handoff_readiness.join("\n"),
         Px(76.0),
     );
     let workflow_summarize_handoff_blob =
-        text_blob_sized(cx, workflow_summarize_preview, Px(76.0));
+        text_blob_sized(cx, panel.workflow_summarize_preview.clone(), Px(76.0));
     let workflow_result_history_summary = text_blob_sized(
         cx,
         workflow_run::workflow_run_result_history_summary_lines(&workflow_run_result_history)
@@ -10169,15 +8809,15 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
         cx,
         &st.workflow_run_selected_result_path,
         &workflow_run_result_history,
-        selected_workflow_run_result_path.as_deref(),
+        panel.selected_workflow_run_result_path.as_deref(),
     );
     let workflow_run_status_line = format!(
         "workflow_run_in_flight={} last_workflow_result={} last_workflow_error={}",
-        workflow_run_in_flight,
-        workflow_run_result_path.as_deref().unwrap_or("-"),
+        panel.workflow_run_in_flight,
+        panel.selected_workflow_run_result_path.as_deref().unwrap_or("-"),
         workflow_run_error.as_deref().unwrap_or("-")
     );
-    let command_line_for_copy = command_preview.clone();
+    let command_line_for_copy = panel.command_preview.clone();
     let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
         let token = host.next_clipboard_token();
         host.push_effect(Effect::ClipboardWriteText {
@@ -10190,13 +8830,13 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
     let copy_button = shadcn::Button::new("Copy workflow command")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(selected_command.is_none())
+        .disabled(panel.commands.is_empty())
         .on_activate(on_copy)
         .into_element(cx);
     let run_button = shadcn::Button::new("Run workflow")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(!run_enabled || workflow_run_in_flight)
+        .disabled(!panel.run_enabled || panel.workflow_run_in_flight)
         .on_click(CMD_WORKFLOW_RUN_SELECTED)
         .into_element(cx);
     let controls = ui::h_row(|_cx| [workflow_select, copy_button, run_button])
@@ -10204,21 +8844,21 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
         .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx);
-    let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    let preview = text_blob_sized(cx, panel.command_preview.clone(), Px(58.0));
     let result_preview = text_blob_sized(
         cx,
-        if selected_workflow_run_result_json.trim().is_empty() {
+        if panel.selected_workflow_run_result_json.trim().is_empty() {
             "<no workflow run result yet>".to_string()
         } else {
-            selected_workflow_run_result_json
+            panel.selected_workflow_run_result_json.clone()
         },
         Px(92.0),
     );
     ui::v_stack(|cx| {
         [
-            cx.text(format!("Runnable workflow: {selected_command_label}")),
+            cx.text(format!("Runnable workflow: {}", panel.selected_command_label)),
             controls,
-            cx.text(command_state_line),
+            cx.text(panel.command_state_line.clone()),
             cx.text(workflow_run_status_line),
             preview,
             diag_section(
@@ -10263,32 +8903,10 @@ fn devtools_gate_profile_command_builder(
     cx: &mut ElementContext<'_, App>,
     st: &State,
 ) -> AnyElement {
-    let selected_profile_id = cx
-        .app
-        .models()
-        .read(&st.gate_profile_selected_id, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
-    let generated_command = generated_gate_command_from_state(cx.app, st);
-    let command_preview = generated_command
-        .as_ref()
-        .map(|command| command.command_line.clone())
-        .unwrap_or_else(|| "Select a script-target gate profile.".to_string());
-    let selected_profile_label = devtools_gate_profiles_v1()
-        .iter()
-        .find(|profile| profile.id == selected_profile_id.as_ref())
-        .map(|profile| format!("{} ({})", profile.label, profile.id))
-        .unwrap_or_else(|| selected_profile_id.to_string());
-
-    let profile_items = devtools_gate_profiles_v1()
-        .iter()
-        .filter(|profile| {
-            devtools_gate_script_target_profile_ids_v1().contains(&profile.id)
-                || profile.id == "perf-thresholds"
-                || profile.id == "resource-footprint-thresholds"
-        })
-        .map(|profile| shadcn::SelectItem::new(profile.id, format!("{} ({})", profile.label, profile.id)))
+    let panel = collect_gate_profile_panel_state(cx.app, st);
+    let profile_items = gate_profile_select_items()
+        .into_iter()
+        .map(|(id, label)| shadcn::SelectItem::new(id, label))
         .collect::<Vec<_>>();
     let profile_select =
         shadcn::Select::new(st.gate_profile_selected_id.clone(), st.gate_profile_open.clone())
@@ -10296,32 +8914,11 @@ fn devtools_gate_profile_command_builder(
             .items(profile_items)
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(260.0)))
             .into_element(cx);
-    let gate_inputs = match selected_profile_id.as_ref() {
+    let gate_inputs = match panel.selected_profile_id.as_ref() {
         "perf-thresholds" => perf_threshold_gate_inputs(cx, st),
         "resource-footprint-thresholds" => resource_footprint_threshold_gate_inputs(cx, st),
         _ => script_target_gate_inputs(cx, st),
     };
-    let command_state_line = generated_command
-        .as_ref()
-        .map(|command| {
-            if command.is_runnable() {
-                format!("diag args: {}", command.diag_args.join(" "))
-            } else if command.missing_inputs.is_empty() {
-                "diag args: <not runnable>".to_string()
-            } else {
-                format!("missing inputs: {}", command.missing_inputs.join(", "))
-            }
-        })
-        .unwrap_or_else(|| "diag args: <unsupported profile>".to_string());
-    let copy_enabled = generated_command.is_some();
-    let run_enabled = generated_command
-        .as_ref()
-        .is_some_and(|command| command.is_runnable());
-    let gate_run_in_flight = cx
-        .app
-        .models()
-        .read(&st.gate_run_in_flight, |v| *v)
-        .unwrap_or(false);
     let gate_run_result_path = cx
         .app
         .models()
@@ -10336,36 +8933,14 @@ fn devtools_gate_profile_command_builder(
         .ok()
         .flatten()
         .map(|v| v.to_string());
-    let gate_run_result_json = cx
-        .app
-        .models()
-        .read(&st.gate_run_last_result_json, |v| v.clone())
-        .unwrap_or_default();
     let gate_run_result_history = cx
         .app
         .models()
         .read(&st.gate_run_result_history, |v| v.clone())
         .unwrap_or_default();
-    let gate_run_selected_result_path = cx
-        .app
-        .models()
-        .read(&st.gate_run_selected_result_path, |v| v.clone())
-        .ok()
-        .flatten();
-    let selected_gate_run_result_entry = gate_run::gate_run_result_history_selected_or_latest_entry(
-        &gate_run_result_history,
-        gate_run_selected_result_path.as_deref(),
-    );
-    let selected_gate_run_result_path = selected_gate_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_path.clone());
-    let selected_gate_run_result_json = selected_gate_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_json.clone())
-        .unwrap_or_else(|| gate_run_result_json.clone());
     let gate_result_actions = ui::h_row(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
-        if selected_gate_run_result_path.is_some() {
+        if panel.selected_gate_run_result_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy gate result")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10381,7 +8956,7 @@ fn devtools_gate_profile_command_builder(
                     .into_element(cx),
             );
         }
-        if selected_gate_run_result_entry.is_some() {
+        if panel.selected_gate_run_result_entry.is_some() {
             out.push(
                 shadcn::Button::new("Copy gate command")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10390,7 +8965,7 @@ fn devtools_gate_profile_command_builder(
                     .into_element(cx),
             );
         }
-        if !selected_gate_run_result_json.trim().is_empty() {
+        if !panel.selected_gate_run_result_json.trim().is_empty() {
             out.push(
                 shadcn::Button::new("Copy gate JSON")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -10408,14 +8983,14 @@ fn devtools_gate_profile_command_builder(
     let gate_result_details = text_blob_sized(
         cx,
         gate_run::gate_run_result_history_entry_detail_lines(
-            selected_gate_run_result_entry.as_ref(),
+            panel.selected_gate_run_result_entry.as_ref(),
         )
         .join("\n"),
         Px(78.0),
     );
     let gate_result_summary = text_blob_sized(
         cx,
-        gate_run::gate_run_result_summary_lines(&selected_gate_run_result_json).join("\n"),
+        gate_run::gate_run_result_summary_lines(&panel.selected_gate_run_result_json).join("\n"),
         Px(92.0),
     );
     let gate_result_history_summary = text_blob_sized(
@@ -10427,15 +9002,15 @@ fn devtools_gate_profile_command_builder(
         cx,
         &st.gate_run_selected_result_path,
         &gate_run_result_history,
-        selected_gate_run_result_path.as_deref(),
+        panel.selected_gate_run_result_path.as_deref(),
     );
     let gate_run_status_line = format!(
         "gate_run_in_flight={} last_gate_result={} last_gate_error={}",
-        gate_run_in_flight,
+        panel.gate_run_in_flight,
         gate_run_result_path.as_deref().unwrap_or("-"),
         gate_run_error.as_deref().unwrap_or("-")
     );
-    let command_line_for_copy = command_preview.clone();
+    let command_line_for_copy = panel.command_preview.clone();
     let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
         let token = host.next_clipboard_token();
         host.push_effect(Effect::ClipboardWriteText {
@@ -10448,13 +9023,13 @@ fn devtools_gate_profile_command_builder(
     let copy_button = shadcn::Button::new("Copy generated command")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(!copy_enabled)
+        .disabled(!panel.copy_enabled)
         .on_activate(on_copy)
         .into_element(cx);
     let run_button = shadcn::Button::new("Run generated command")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(!run_enabled || gate_run_in_flight)
+        .disabled(!panel.run_enabled || panel.gate_run_in_flight)
         .on_click(CMD_GATE_RUN_GENERATED)
         .into_element(cx);
     let controls = ui::h_row(|_cx| [profile_select, copy_button, run_button])
@@ -10462,24 +9037,25 @@ fn devtools_gate_profile_command_builder(
     .items_center()
     .layout(fret_ui_kit::LayoutRefinement::default().w_full())
     .into_element(cx);
-    let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    let preview = text_blob_sized(cx, panel.command_preview.clone(), Px(58.0));
     let result_preview = text_blob_sized(
         cx,
-        if selected_gate_run_result_json.trim().is_empty() {
+        if panel.selected_gate_run_result_json.trim().is_empty() {
             "<no generated gate result yet>".to_string()
         } else {
-            selected_gate_run_result_json
+            panel.selected_gate_run_result_json.clone()
         },
         Px(92.0),
     );
     ui::v_stack(|cx| {
         [
             cx.text(format!(
-                "Runnable generated gate: {selected_profile_label}"
+                "Runnable generated gate: {}",
+                panel.selected_profile_label
             )),
             controls,
             gate_inputs,
-            cx.text(command_state_line),
+            cx.text(panel.command_state_line.clone()),
             cx.text(gate_run_status_line),
             preview,
             diag_section(
@@ -10894,2039 +9470,5 @@ fn env_transport_kind(key: &str) -> Option<DiagTransportKind> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn resolve_repo_or_abs_path_resolves_relative_input() {
-        let resolved = resolve_repo_or_abs_path(
-            Path::new("F:/repo"),
-            "target/fret-diag/campaigns/ui-gallery-pr",
-        );
-        assert_eq!(
-            resolved,
-            PathBuf::from("F:/repo").join("target/fret-diag/campaigns/ui-gallery-pr")
-        );
-    }
-
-    #[test]
-    fn file_url_from_path_projects_native_artifact_paths() {
-        assert_eq!(
-            file_url_from_path("F:\\repo\\.fret\\diag\\followups\\10-stats.json"),
-            "file:///F:/repo/.fret/diag/followups/10-stats.json"
-        );
-        assert_eq!(
-            file_url_from_path("/tmp/fret/diag/followups/10-stats.json"),
-            "file:///tmp/fret/diag/followups/10-stats.json"
-        );
-        assert_eq!(
-            file_url_from_path("F:\\repo\\.fret\\diag\\followups\\10 stats#failed.json"),
-            "file:///F:/repo/.fret/diag/followups/10%20stats%23failed.json"
-        );
-        assert_eq!(
-            file_url_from_path("/tmp/fret/diag/followups/结果.json"),
-            "file:///tmp/fret/diag/followups/%E7%BB%93%E6%9E%9C.json"
-        );
-    }
-
-    #[test]
-    fn file_url_from_path_projects_trace_artifact_paths() {
-        assert_eq!(
-            file_url_from_path("F:\\repo\\target\\fret-diag\\run-a\\trace.chrome.json"),
-            "file:///F:/repo/target/fret-diag/run-a/trace.chrome.json"
-        );
-        assert_eq!(
-            file_url_from_path("/tmp/fret/target/fret-diag/run a/trace.chrome.json"),
-            "file:///tmp/fret/target/fret-diag/run%20a/trace.chrome.json"
-        );
-    }
-
-    #[test]
-    fn file_url_from_path_projects_workflow_artifact_paths() {
-        assert_eq!(
-            file_url_from_path(
-                "F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking\\regression.summary.json"
-            ),
-            "file:///F:/repo/target/fret-diag/devtools-workflows/perf-docking/regression.summary.json"
-        );
-        assert_eq!(
-            file_url_from_path(
-                "/tmp/fret/target/fret-diag/devtools-workflows/perf docking/regression.summary.json"
-            ),
-            "file:///tmp/fret/target/fret-diag/devtools-workflows/perf%20docking/regression.summary.json"
-        );
-    }
-
-    #[test]
-    fn inspect_hover_bounds_lines_project_bounds_and_selector() {
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "window": 7,
-            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
-            "scale_factor": 1.0,
-            "hovered": {
-                "node_id": 42,
-                "role": "button",
-                "test_id": "save",
-                "selector_json": "{\"kind\":\"test_id\",\"id\":\"save\"}",
-                "bounds": { "x_px": 12.0, "y_px": 24.0, "w_px": 96.0, "h_px": 32.0 },
-                "root": 1,
-                "root_z_index": 3
-            },
-            "overlay_hook": {
-                "kind": "hovered-node-bounds",
-                "coordinate_space": "window_logical_px",
-                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
-                "target_bounds": { "x_px": 12.0, "y_px": 24.0, "w_px": 96.0, "h_px": 32.0 },
-                "target_node_id": 42
-            }
-        })
-        .to_string();
-
-        let lines = inspect_hover_bounds_lines(&payload).join("\n");
-        assert!(lines.contains("hover window=7"));
-        assert!(lines.contains("hovered node: node=42 role=button test_id=save"));
-        assert!(lines.contains("hover bounds: x=12.0 y=24.0 w=96.0 h=32.0"));
-        assert!(lines.contains("selector_json: {\"kind\":\"test_id\",\"id\":\"save\"}"));
-    }
-
-    #[test]
-    fn inspect_hover_bounds_lines_missing_bounds_returns_none() {
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "window": 7,
-            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
-            "scale_factor": 1.0,
-            "hovered": {
-                "node_id": 42,
-                "role": "button",
-                "selector_json": "{\"kind\":\"node_id\",\"node\":42}"
-            },
-            "overlay_hook": {
-                "kind": "hovered-node-bounds",
-                "coordinate_space": "window_logical_px",
-                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
-            }
-        })
-        .to_string();
-
-        let lines = inspect_hover_bounds_lines(&payload).join("\n");
-        assert_eq!(lines, "hover: <none>\nhover bounds: <none>");
-    }
-
-    #[test]
-    fn inspect_overlay_hook_lines_project_overlay_summary() {
-        let hover = serde_json::json!({
-            "schema_version": 1,
-            "window": 7,
-            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
-            "scale_factor": 1.0,
-            "hovered": null,
-            "overlay_hook": {
-                "kind": "hovered-node-bounds",
-                "coordinate_space": "window_logical_px",
-                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
-            }
-        })
-        .to_string();
-        let focus = serde_json::json!({
-            "schema_version": 1,
-            "window": 7,
-            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
-            "scale_factor": 1.0,
-            "focused": null,
-            "summary": "focus: button node=42 test_id=save",
-            "path": "window > button(save)",
-            "overlay_hook": {
-                "kind": "focused-node-bounds",
-                "coordinate_space": "window_logical_px",
-                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
-            }
-        })
-        .to_string();
-        let overlay = serde_json::json!({
-            "schema_version": 1,
-            "window": 7,
-            "barrier_root": 9,
-            "focus_barrier_root": 10,
-            "blocking_roots": [
-                { "root": 9, "visible": true, "blocks_underlay_input": true, "hit_testable": true, "z_index": 12 }
-            ],
-            "topmost_interactive_root": {
-                "root": 9,
-                "visible": true,
-                "blocks_underlay_input": true,
-                "hit_testable": true,
-                "z_index": 12
-            }
-        })
-        .to_string();
-
-        let lines = inspect_overlay_hook_lines(&hover, &focus, &overlay).join("\n");
-        assert!(lines.contains("hover overlay hook: kind=hovered-node-bounds"));
-        assert!(lines.contains("focus summary: focus: button node=42 test_id=save"));
-        assert!(lines.contains("overlay barrier root: 9"));
-        assert!(lines.contains("overlay blocking roots: 1"));
-        assert!(lines.contains("topmost interactive root=9 z=12"));
-    }
-
-    #[test]
-    fn devtools_first_open_lines_surface_canonical_paths() {
-        let lines = devtools_first_open_lines("target/fret-diag");
-        let text = lines.join("\n");
-        assert!(text.contains("first-open: docs/diagnostics-first-open.md"));
-        assert!(text.contains(
-            "gui branch: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
-        ));
-        assert!(text.contains("repo preflight: cargo run -p fretboard-dev -- diag doctor campaigns"));
-        assert!(text.contains(
-            "repo preflight json: cargo run -p fretboard-dev -- diag doctor campaigns --json"
-        ));
-        assert!(text.contains("artifacts root: target/fret-diag"));
-        assert!(text.contains("direct loop: diag run -> diag latest -> diag compare"));
-        assert!(text.contains(
-            "campaign loop: diag campaign run devtools-first-open-smoke -> diag summarize -> diag dashboard"
-        ));
-        assert!(text.contains("gate: python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke"));
-        assert!(text.contains("product workflow: imui-product-chain"));
-        assert!(text.contains("product workflow command: python tools/diag_gate_imui_product_chain.py"));
-        assert!(text.contains(
-            "product workflow focused: python tools/diag_gate_imui_product_chain.py --only discovery"
-        ));
-        assert!(text.contains(
-            "product workflow launched: python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
-        ));
-        assert!(text.contains(
-            "product workflow suite: tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
-        ));
-        assert!(text.contains(
-            "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
-        ));
-        assert!(text.contains(
-            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json, perf-docking/*/trace.chrome.json"
-        ));
-    }
-
-    #[test]
-    fn devtools_first_open_next_action_lines_prioritize_stateful_workflow() {
-        let empty =
-            devtools_first_open_next_action_lines(
-                false,
-                0,
-                None,
-                12,
-                false,
-                false,
-                false,
-                0,
-                "target/fret-diag",
-                None,
-                None,
-                None,
-                "run a workflow or generated gate",
-            )
-            .join("\n");
-        assert!(empty.contains("target: no session yet"));
-        assert!(empty.contains("session scope: waiting for the first diagnostics session"));
-        assert!(empty.contains("scripts: 12 available"));
-        assert!(empty.contains("regression: no aggregate loaded"));
-        assert!(empty.contains("recent evidence: no failed restored GUI-launched evidence"));
-        assert!(
-            empty.contains("recent evidence command: <none; run a workflow or generated gate>")
-        );
-        assert!(empty.contains("recent evidence rerun: <none>"));
-        assert!(empty.contains("artifacts root: target/fret-diag"));
-        assert!(empty.contains("Evidence & Results -> Guide"));
-        assert!(empty.contains("workflow runs"));
-
-        let ready =
-            devtools_first_open_next_action_lines(
-                true,
-                2,
-                Some("session-b"),
-                8,
-                true,
-                false,
-                true,
-                3,
-                "target/fret-diag",
-                None,
-                None,
-                None,
-                "continue from latest passing evidence",
-            )
-            .join("\n");
-        assert!(ready.contains("target: session selected"));
-        assert!(ready.contains(
-            "session scope: selected session-b; 2 sessions connected, use the Session selector to retarget inspect, bundle, screenshot, and selected-session suite actions"
-        ));
-        assert!(ready.contains("regression: aggregate loaded with 3 non-passing"));
-
-        let awaiting_selection = devtools_first_open_next_action_lines(
-            false,
-            2,
-            None,
-            8,
-            false,
-            false,
-            false,
-            0,
-            "target/fret-diag",
-            None,
-            None,
-            None,
-            "run a workflow or generated gate",
-        )
-        .join("\n");
-        assert!(awaiting_selection.contains(
-            "session scope: choose one available session before sending inspect, bundle, screenshot, or selected-session suite actions"
-        ));
-
-        let selected_summary = devtools_first_open_next_action_lines(
-            true,
-            1,
-            Some("session-a"),
-            8,
-            false,
-            true,
-            false,
-            0,
-            "target/fret-diag",
-            None,
-            None,
-            None,
-            "continue from latest passing evidence",
-        )
-        .join("\n");
-        assert!(selected_summary.contains(
-            "session scope: selected session-a; actions target the current diagnostics session"
-        ));
-        assert!(selected_summary.contains("regression: selected summary loaded"));
-        assert!(selected_summary.contains("follow-up actions can use selected bundle evidence"));
-
-        let selected_followup = devtools_first_open_next_action_lines(
-            true,
-            1,
-            Some("session-a"),
-            8,
-            false,
-            true,
-            true,
-            0,
-            "target/fret-diag",
-            None,
-            None,
-            None,
-            "continue from selected follow-up result",
-        )
-        .join("\n");
-        assert!(selected_followup.contains("regression: selected follow-up result loaded"));
-        assert!(selected_followup.contains("Follow-up Result Summary/History"));
-
-        let failed_evidence = RecentEvidenceTarget {
-            kind: "workflow",
-            id: "perf-docking-suite-ws".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/400-fresh.json".to_string(),
-            result_json: "{\"status\":\"failed\"}".to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --json".to_string(),
-            bundle_dir: None,
-        };
-        let with_failed_evidence = devtools_first_open_next_action_lines(
-            true,
-            1,
-            Some("session-a"),
-            8,
-            false,
-            false,
-            false,
-            0,
-            "target/fret-diag",
-            Some(&failed_evidence),
-            None,
-            Some("missing current selected-session"),
-            "select a diagnostics session, then rerun failed workflow evidence",
-        )
-        .join("\n");
-        assert!(with_failed_evidence.contains(
-            "recent evidence: failed workflow perf-docking-suite-ws (400-fresh.json)"
-        ));
-        assert!(with_failed_evidence.contains(
-            "recent evidence command: cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --json"
-        ));
-        assert!(with_failed_evidence
-            .contains("recent evidence rerun: unavailable (missing current selected-session)"));
-        assert!(with_failed_evidence.contains(
-            "recent evidence next: select a diagnostics session, then rerun failed workflow evidence"
-        ));
-
-        let with_rerunnable_failed_evidence = devtools_first_open_next_action_lines(
-            true,
-            1,
-            Some("session-a"),
-            8,
-            false,
-            false,
-            false,
-            0,
-            "target/fret-diag",
-            Some(&failed_evidence),
-            Some("workflow"),
-            None,
-            "rerun failed workflow evidence",
-        )
-        .join("\n");
-        assert!(
-            with_rerunnable_failed_evidence
-                .contains("recent evidence rerun: available (workflow)")
-        );
-        assert!(with_rerunnable_failed_evidence
-            .contains("recent evidence next: rerun failed workflow evidence"));
-    }
-
-    #[test]
-    fn first_open_recent_evidence_action_specs_gate_disabled_states() {
-        let empty = first_open_recent_evidence_action_specs(false, false);
-        assert_eq!(empty.len(), 3);
-        assert_eq!(empty[0].label, "Copy recent evidence report");
-        assert_eq!(empty[0].command, CMD_COPY_RECENT_EVIDENCE_REPORT);
-        assert!(!empty[0].disabled);
-        assert_eq!(empty[1].label, "Select failed evidence");
-        assert_eq!(empty[1].command, CMD_SELECT_RECENT_FAILED_EVIDENCE);
-        assert!(empty[1].disabled);
-        assert_eq!(empty[2].label, "Rerun failed evidence");
-        assert_eq!(empty[2].command, CMD_RERUN_RECENT_FAILED_EVIDENCE);
-        assert!(empty[2].disabled);
-
-        let has_failure = first_open_recent_evidence_action_specs(true, false);
-        assert!(!has_failure[1].disabled);
-        assert!(has_failure[2].disabled);
-
-        let rerunnable = first_open_recent_evidence_action_specs(true, true);
-        assert!(!rerunnable[1].disabled);
-        assert!(!rerunnable[2].disabled);
-    }
-
-    #[test]
-    fn recent_evidence_status_failed_ignores_empty_placeholder_and_passed_case() {
-        assert!(!recent_evidence_status_failed(""));
-        assert!(!recent_evidence_status_failed("   "));
-        assert!(!recent_evidence_status_failed("-"));
-        assert!(!recent_evidence_status_failed("passed"));
-        assert!(!recent_evidence_status_failed("Passed"));
-        assert!(!recent_evidence_status_failed("PASSED"));
-        assert!(recent_evidence_status_failed("failed"));
-        assert!(recent_evidence_status_failed("error"));
-    }
-
-    #[test]
-    fn devtools_recent_evidence_lines_surface_restored_histories() {
-        let gate_entries = vec![
-            gate_run::GateRunResultHistoryEntry {
-                id: "pixels-changed".to_string(),
-                label: "Pixels changed".to_string(),
-                command_line: "cargo run -p fretboard-dev -- diag run smoke.json --json"
-                    .to_string(),
-                result_path: "F:\\repo\\.fret\\diag\\gate-runs\\100-pixels.json".to_string(),
-                result_json: "{}".to_string(),
-                status: "passed".to_string(),
-                error: None,
-            },
-            gate_run::GateRunResultHistoryEntry {
-                id: "stale-paint-scene".to_string(),
-                label: "Stale paint/scene".to_string(),
-                command_line: "cargo run -p fretboard-dev -- diag run stale.json --json"
-                    .to_string(),
-                result_path: "F:\\repo\\.fret\\diag\\gate-runs\\090-stale.json".to_string(),
-                result_json: "{}".to_string(),
-                status: "failed".to_string(),
-                error: Some("stale scene".to_string()),
-            },
-        ];
-        let workflow_entries = vec![workflow_run::WorkflowRunResultHistoryEntry {
-            id: "perf-docking-suite-ws".to_string(),
-            label: "Run perf docking suite over selected session".to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --json"
-                .to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/200-workflow.json".to_string(),
-            result_json: "{}".to_string(),
-            status: "failed".to_string(),
-            error: Some("threshold failed".to_string()),
-        }];
-        let followup_entries = vec![followup::FollowupResultHistoryEntry {
-            id: "trace".to_string(),
-            label: "Trace".to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag trace bundle --json".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/300-trace.json".to_string(),
-            result_json: "{}".to_string(),
-            bundle_dir: Some("target/fret-diag/run/bundle".to_string()),
-            status: "passed".to_string(),
-            error: None,
-        }];
-
-        let text =
-            devtools_recent_evidence_lines(&gate_entries, &workflow_entries, &followup_entries)
-                .join("\n");
-        assert!(text.contains("recent evidence: gates=2 workflows=1 followups=1"));
-        assert!(text.contains("latest gate: passed | pixels-changed | 100-pixels.json"));
-        assert!(
-            text.contains("latest workflow: failed | perf-docking-suite-ws | 200-workflow.json")
-        );
-        assert!(
-            text.contains("latest follow-up: passed | trace | 300-trace.json | bundle=target/fret-diag/run/bundle")
-        );
-        assert!(text.contains("recent failing evidence: 2"));
-        assert!(
-            text.contains("failed_evidence_target: workflow | failed | perf-docking-suite-ws | 200-workflow.json")
-        );
-        assert!(text.contains(
-            "failed_evidence_path: F:/repo/.fret/diag/workflow-runs/200-workflow.json"
-        ));
-        assert!(text.contains("failed_evidence_bundle_dir: <none>"));
-        assert!(text.contains("failed_evidence_command: cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --json"));
-        assert!(text.contains("failed_evidence_rerunnable: no"));
-        assert!(
-            text.contains("failed_evidence_rerun_unavailable_reason: workflow commands unavailable")
-        );
-        assert!(text.contains(
-            "recent_evidence_next_action: refresh current workflow commands, then rerun failed workflow evidence"
-        ));
-
-        let empty = devtools_recent_evidence_lines(&[], &[], &[]).join("\n");
-        assert!(empty.contains("latest gate: <none>"));
-        assert!(empty.contains("latest workflow: <none>"));
-        assert!(empty.contains("latest follow-up: <none>"));
-        assert!(empty.contains("failed_evidence_target: <none>"));
-        assert!(empty.contains("failed_evidence_path: <none>"));
-        assert!(empty.contains("failed_evidence_bundle_dir: <none>"));
-        assert!(empty.contains("failed_evidence_command: <none>"));
-        assert!(empty.contains("failed_evidence_rerunnable: <none>"));
-        assert!(empty.contains("failed_evidence_rerun_unavailable_reason: <none>"));
-        assert!(empty.contains("recent_evidence_next_action: run a workflow or generated gate"));
-    }
-
-    #[test]
-    fn recent_evidence_next_action_projects_rerun_and_repair_steps() {
-        let gate = RecentEvidenceTarget {
-            kind: "gate",
-            id: "stale".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/gate-runs/100-stale.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": ["run", "tools/diag-scripts/smoke.json", "--json"]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag run tools/diag-scripts/smoke.json --json".to_string(),
-            bundle_dir: None,
-        };
-        assert_eq!(
-            recent_evidence_next_action(1, false, Some(&gate), &[]),
-            "rerun failed gate evidence"
-        );
-
-        let workflow = RecentEvidenceTarget {
-            kind: "workflow",
-            id: DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID.to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/200-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": [
-                    "suite",
-                    DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE,
-                    "--devtools-token",
-                    "<redacted>",
-                    "--json"
-                ]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --devtools-token <redacted> --json".to_string(),
-            bundle_dir: None,
-        };
-        let missing_session_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            None,
-        );
-        assert_eq!(
-            recent_evidence_next_action(1, false, Some(&workflow), &missing_session_commands),
-            "select a diagnostics session, then rerun failed workflow evidence"
-        );
-
-        let current_session_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            Some("session-1"),
-        );
-        assert_eq!(
-            recent_evidence_next_action(1, false, Some(&workflow), &current_session_commands),
-            "rerun failed workflow evidence"
-        );
-
-        let old_workflow = RecentEvidenceTarget {
-            id: "old-workflow".to_string(),
-            ..workflow.clone()
-        };
-        assert_eq!(
-            recent_evidence_next_action(1, false, Some(&old_workflow), &current_session_commands),
-            "run a current workflow for fresh evidence"
-        );
-
-        let followup = RecentEvidenceTarget {
-            kind: "follow-up",
-            id: "trace".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-trace.json".to_string(),
-            result_json: "{}".to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag trace bundle --json".to_string(),
-            bundle_dir: Some("target/fret-diag/run-bundle".to_string()),
-        };
-        assert_eq!(
-            recent_evidence_next_action(1, false, Some(&followup), &[]),
-            "select failed follow-up evidence and inspect result JSON"
-        );
-    }
-
-    #[test]
-    fn devtools_recent_evidence_lines_surface_failed_followup_bundle_dir() {
-        let followup_entries = vec![followup::FollowupResultHistoryEntry {
-            id: "trace".to_string(),
-            label: "Trace".to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag trace bundle --json".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-trace.json".to_string(),
-            result_json: "{}".to_string(),
-            bundle_dir: Some("target/fret-diag/run-bundle".to_string()),
-            status: "failed".to_string(),
-            error: Some("trace failed".to_string()),
-        }];
-
-        let text = devtools_recent_evidence_lines(&[], &[], &followup_entries).join("\n");
-        assert!(text.contains(
-            "failed_evidence_target: follow-up | failed | trace | 500-trace.json"
-        ));
-        assert!(
-            text.contains("failed_evidence_path: F:/repo/.fret/diag/followups/500-trace.json")
-        );
-        assert!(text.contains("failed_evidence_bundle_dir: target/fret-diag/run-bundle"));
-    }
-
-    #[test]
-    fn recent_failed_evidence_bundle_dir_filters_empty_bundle_dir() {
-        let with_bundle = RecentEvidenceTarget {
-            kind: "follow-up",
-            id: "trace".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-trace.json".to_string(),
-            result_json: "{}".to_string(),
-            command_line: "trace fresh".to_string(),
-            bundle_dir: Some("target/fret-diag/run-bundle".to_string()),
-        };
-        assert_eq!(
-            recent_failed_evidence_bundle_dir(&with_bundle),
-            Some("target/fret-diag/run-bundle")
-        );
-
-        let empty_bundle = RecentEvidenceTarget {
-            bundle_dir: Some("   ".to_string()),
-            ..with_bundle
-        };
-        assert!(recent_failed_evidence_bundle_dir(&empty_bundle).is_none());
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_command_uses_structured_diag_args() {
-        let gate = RecentEvidenceTarget {
-            kind: "gate",
-            id: "stale".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/gate-runs/100-stale.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": ["run", "tools/diag-scripts/smoke.json", "--check-stale-paint", "button.ok", "--json"]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag run tools/diag-scripts/smoke.json --check-stale-paint button.ok --json".to_string(),
-            bundle_dir: None,
-        };
-        let Some(RecentEvidenceRerunCommand::Gate(command)) =
-            recent_failed_evidence_rerun_command(&gate)
-        else {
-            panic!("expected rerunnable gate command");
-        };
-        assert_eq!(command.id, "stale");
-        assert_eq!(
-            command.diag_args,
-            vec![
-                "run",
-                "tools/diag-scripts/smoke.json",
-                "--check-stale-paint",
-                "button.ok",
-                "--json"
-            ]
-        );
-        assert!(command.is_runnable());
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_command_rejects_redacted_workflow_args() {
-        let workflow = RecentEvidenceTarget {
-            kind: "workflow",
-            id: "perf-docking-suite-ws".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/200-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": [
-                    "suite",
-                    "perf-docking-arbitration-steady",
-                    "--devtools-token",
-                    "<redacted>",
-                    "--json"
-                ]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --devtools-token <redacted> --json".to_string(),
-            bundle_dir: None,
-        };
-
-        assert!(recent_failed_evidence_rerun_command(&workflow).is_none());
-        assert!(recent_failed_evidence_rerun_line(Some(&workflow))
-            .contains("failed_evidence_rerunnable: no"));
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_reason_reports_diag_args_issues() {
-        let gate = RecentEvidenceTarget {
-            kind: "gate",
-            id: "stale".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/gate-runs/100-stale.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": ["run", "<redacted>", "--json"]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag run <redacted> --json".to_string(),
-            bundle_dir: None,
-        };
-        assert_eq!(
-            recent_failed_evidence_rerun_unavailable_reason_from_state(&gate, &[]).as_deref(),
-            Some("diag_args missing or redacted")
-        );
-        assert!(recent_failed_evidence_rerun_line(Some(&gate))
-            .contains("failed_evidence_rerunnable: no (diag_args missing or redacted)"));
-
-        let missing_args = RecentEvidenceTarget {
-            result_json: "{}".to_string(),
-            ..gate
-        };
-        assert_eq!(
-            recent_failed_evidence_rerun_unavailable_reason_from_state(&missing_args, &[])
-                .as_deref(),
-            Some("diag_args missing")
-        );
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_command_recovers_redacted_workflow_from_current_state() {
-        let workflow = RecentEvidenceTarget {
-            kind: "workflow",
-            id: DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID.to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/200-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": [
-                    "suite",
-                    DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE,
-                    "--devtools-token",
-                    "<redacted>",
-                    "--json"
-                ]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --devtools-token <redacted> --json".to_string(),
-            bundle_dir: None,
-        };
-        let workflow_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            Some("session-1"),
-        );
-        let Some(RecentEvidenceRerunCommand::Workflow(command)) =
-            recent_failed_evidence_rerun_command_from_state(&workflow, &workflow_commands)
-        else {
-            panic!("expected current-state workflow fallback");
-        };
-        assert_eq!(command.id, DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID);
-        assert!(command.is_runnable());
-        assert!(command.diag_args.contains(&"secret-token".to_string()));
-        assert!(command.diag_args.contains(&"session-1".to_string()));
-        assert!(!command.diag_args.contains(&"<redacted>".to_string()));
-
-        let missing_session_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            None,
-        );
-        assert!(
-            recent_failed_evidence_rerun_command_from_state(&workflow, &missing_session_commands)
-                .is_none()
-        );
-        assert_eq!(
-            recent_failed_evidence_rerun_unavailable_reason_from_state(
-                &workflow,
-                &missing_session_commands
-            )
-            .as_deref(),
-            Some("missing current selected-session")
-        );
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_command_uses_current_workflow_state_over_stored_args() {
-        let workflow = RecentEvidenceTarget {
-            kind: "workflow",
-            id: DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID.to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/250-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": [
-                    "suite",
-                    DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE,
-                    "--dir",
-                    "target/fret-diag/old-workflow",
-                    "--devtools-ws-url",
-                    "ws://127.0.0.1:7331/",
-                    "--devtools-token",
-                    "old-token",
-                    "--devtools-session-id",
-                    "old-session",
-                    "--json"
-                ]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --devtools-token old-token --devtools-session-id old-session --json".to_string(),
-            bundle_dir: None,
-        };
-        assert!(recent_failed_evidence_rerun_command(&workflow).is_none());
-
-        let workflow_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "current-token",
-            Some("current-session"),
-        );
-        let Some(RecentEvidenceRerunCommand::Workflow(command)) =
-            recent_failed_evidence_rerun_command_from_state(&workflow, &workflow_commands)
-        else {
-            panic!("expected current-state workflow command");
-        };
-        assert!(command.diag_args.contains(&"current-token".to_string()));
-        assert!(command.diag_args.contains(&"current-session".to_string()));
-        assert!(!command.diag_args.contains(&"old-token".to_string()));
-        assert!(!command.diag_args.contains(&"old-session".to_string()));
-    }
-
-    #[test]
-    fn devtools_recent_evidence_lines_use_current_workflow_state_for_rerunnable_status() {
-        let workflow_entries = vec![workflow_run::WorkflowRunResultHistoryEntry {
-            id: DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID.to_string(),
-            label: "Run perf docking suite over selected session".to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --devtools-token <redacted> --json".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/200-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": [
-                    "suite",
-                    DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE,
-                    "--devtools-token",
-                    "<redacted>",
-                    "--json"
-                ]
-            })
-            .to_string(),
-            status: "failed".to_string(),
-            error: Some("threshold failed".to_string()),
-        }];
-        let without_state = devtools_recent_evidence_lines(&[], &workflow_entries, &[]).join("\n");
-        assert!(without_state.contains("failed_evidence_rerunnable: no"));
-        assert!(without_state
-            .contains("failed_evidence_rerun_unavailable_reason: workflow commands unavailable"));
-
-        let missing_session_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            None,
-        );
-        let missing_session = devtools_recent_evidence_lines_with_workflow_commands(
-            &[],
-            &workflow_entries,
-            &[],
-            &missing_session_commands,
-        )
-        .join("\n");
-        assert!(missing_session
-            .contains("failed_evidence_rerunnable: no (missing current selected-session)"));
-        assert!(missing_session
-            .contains("failed_evidence_rerun_unavailable_reason: missing current selected-session"));
-
-        let workflow_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            Some("session-1"),
-        );
-        let with_state = devtools_recent_evidence_lines_with_workflow_commands(
-            &[],
-            &workflow_entries,
-            &[],
-            &workflow_commands,
-        )
-        .join("\n");
-        assert!(with_state.contains("failed_evidence_rerunnable: workflow"));
-        assert!(with_state.contains("failed_evidence_rerun_unavailable_reason: <none>"));
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_reason_reports_unregistered_workflow() {
-        let workflow = RecentEvidenceTarget {
-            kind: "workflow",
-            id: "old-workflow".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/200-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": [
-                    "suite",
-                    "old-suite",
-                    "--devtools-token",
-                    "<redacted>",
-                    "--json"
-                ]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag suite old-suite --json".to_string(),
-            bundle_dir: None,
-        };
-        let workflow_commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            Some("session-1"),
-        );
-
-        assert_eq!(
-            recent_failed_evidence_rerun_unavailable_reason_from_state(
-                &workflow,
-                &workflow_commands
-            )
-            .as_deref(),
-            Some("workflow command old-workflow is no longer registered")
-        );
-    }
-
-    #[test]
-    fn recent_failed_evidence_rerun_command_projects_followup_bundle() {
-        let followup = RecentEvidenceTarget {
-            kind: "follow-up",
-            id: "trace".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-trace.json".to_string(),
-            result_json: serde_json::json!({
-                "diag_args": ["trace", "target/fret-diag/run-bundle", "--json"]
-            })
-            .to_string(),
-            command_line: "cargo run -p fretboard-dev -- diag trace target/fret-diag/run-bundle --json".to_string(),
-            bundle_dir: Some("target/fret-diag/run-bundle".to_string()),
-        };
-        let Some(RecentEvidenceRerunCommand::Followup(command)) =
-            recent_failed_evidence_rerun_command(&followup)
-        else {
-            panic!("expected rerunnable follow-up command");
-        };
-        assert_eq!(command.id, "trace");
-        assert_eq!(
-            command.diag_args,
-            vec!["trace", "target/fret-diag/run-bundle", "--json"]
-        );
-        assert_eq!(
-            command.target_bundle_dir.as_deref(),
-            Some("target/fret-diag/run-bundle")
-        );
-        assert!(!command.requires_baseline);
-        assert!(recent_failed_evidence_rerun_line(Some(&followup))
-            .contains("failed_evidence_rerunnable: follow-up"));
-    }
-
-    #[test]
-    fn devtools_recent_failed_evidence_target_prefers_visible_latest_then_history() {
-        let gate_entries = vec![
-            gate_run::GateRunResultHistoryEntry {
-                id: "fresh-gate".to_string(),
-                label: "Fresh gate".to_string(),
-                command_line: "gate fresh".to_string(),
-                result_path: "F:/repo/.fret/diag/gate-runs/300-fresh-gate.json".to_string(),
-                result_json: "{}".to_string(),
-                status: "passed".to_string(),
-                error: None,
-            },
-            gate_run::GateRunResultHistoryEntry {
-                id: "old-gate".to_string(),
-                label: "Old gate".to_string(),
-                command_line: "gate old".to_string(),
-                result_path: "F:/repo/.fret/diag/gate-runs/100-old-gate.json".to_string(),
-                result_json: "{}".to_string(),
-                status: "failed".to_string(),
-                error: Some("old failure".to_string()),
-            },
-        ];
-        let workflow_entries = vec![workflow_run::WorkflowRunResultHistoryEntry {
-            id: "fresh-workflow".to_string(),
-            label: "Fresh workflow".to_string(),
-            command_line: "workflow fresh".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/400-fresh-workflow.json".to_string(),
-            result_json: "{}".to_string(),
-            status: "FAILED".to_string(),
-            error: Some("fresh workflow failure".to_string()),
-        }];
-        let followup_entries = vec![followup::FollowupResultHistoryEntry {
-            id: "fresh-followup".to_string(),
-            label: "Fresh follow-up".to_string(),
-            command_line: "followup fresh".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-fresh-followup.json".to_string(),
-            result_json: "{}".to_string(),
-            bundle_dir: None,
-            status: "failed".to_string(),
-            error: Some("fresh follow-up failure".to_string()),
-        }];
-
-        let visible = devtools_recent_failed_evidence_target(
-            &gate_entries,
-            &workflow_entries,
-            &followup_entries,
-        )
-        .expect("latest failed follow-up target");
-        assert_eq!(visible.kind, "follow-up");
-        assert_eq!(visible.id, "fresh-followup");
-        assert_eq!(visible.result_path, "F:/repo/.fret/diag/followups/500-fresh-followup.json");
-        assert_eq!(visible.command_line, "followup fresh");
-        assert_eq!(visible.result_json, "{}");
-
-        let older = devtools_recent_failed_evidence_target(&gate_entries, &[], &[])
-            .expect("older failed gate target");
-        assert_eq!(older.kind, "gate");
-        assert_eq!(older.id, "old-gate");
-        assert_eq!(older.command_line, "gate old");
-
-        assert!(devtools_recent_failed_evidence_target(&[], &[], &[]).is_none());
-    }
-
-    #[test]
-    fn devtools_recent_failed_evidence_target_falls_back_to_lane_order_without_timestamps() {
-        let gate_entries = vec![gate_run::GateRunResultHistoryEntry {
-            id: "failed-gate".to_string(),
-            label: "Failed gate".to_string(),
-            command_line: "gate failed".to_string(),
-            result_path: "F:/repo/.fret/diag/gate-runs/failed-gate.json".to_string(),
-            result_json: "{}".to_string(),
-            status: "failed".to_string(),
-            error: Some("gate failed".to_string()),
-        }];
-        let workflow_entries = vec![workflow_run::WorkflowRunResultHistoryEntry {
-            id: "failed-workflow".to_string(),
-            label: "Failed workflow".to_string(),
-            command_line: "workflow failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/failed-workflow.json".to_string(),
-            result_json: "{}".to_string(),
-            status: "failed".to_string(),
-            error: Some("workflow failed".to_string()),
-        }];
-        let followup_entries = vec![followup::FollowupResultHistoryEntry {
-            id: "failed-followup".to_string(),
-            label: "Failed follow-up".to_string(),
-            command_line: "followup failed".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/failed-followup.json".to_string(),
-            result_json: "{}".to_string(),
-            bundle_dir: None,
-            status: "failed".to_string(),
-            error: Some("follow-up failed".to_string()),
-        }];
-
-        let target = devtools_recent_failed_evidence_target(
-            &gate_entries,
-            &workflow_entries,
-            &followup_entries,
-        )
-        .expect("fallback failed evidence target");
-
-        assert_eq!(target.kind, "gate");
-        assert_eq!(target.id, "failed-gate");
-    }
-
-    #[test]
-    fn devtools_recent_failed_evidence_target_prefers_result_json_time_over_path_time() {
-        let workflow_entries = vec![workflow_run::WorkflowRunResultHistoryEntry {
-            id: "long-workflow".to_string(),
-            label: "Long workflow".to_string(),
-            command_line: "workflow long".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/100-long-workflow.json".to_string(),
-            result_json: serde_json::json!({
-                "started_unix_ms": 100,
-                "finished_unix_ms": 900,
-                "status": "failed"
-            })
-            .to_string(),
-            status: "failed".to_string(),
-            error: Some("workflow failed after follow-up started".to_string()),
-        }];
-        let followup_entries = vec![followup::FollowupResultHistoryEntry {
-            id: "trace".to_string(),
-            label: "Trace".to_string(),
-            command_line: "trace failed".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-trace.json".to_string(),
-            result_json: serde_json::json!({
-                "started_unix_ms": 500,
-                "finished_unix_ms": 600,
-                "status": "failed"
-            })
-            .to_string(),
-            bundle_dir: None,
-            status: "failed".to_string(),
-            error: Some("trace failed".to_string()),
-        }];
-
-        let target =
-            devtools_recent_failed_evidence_target(&[], &workflow_entries, &followup_entries)
-                .expect("latest failed evidence target");
-
-        assert_eq!(target.kind, "workflow");
-        assert_eq!(target.id, "long-workflow");
-    }
-
-    #[test]
-    fn devtools_recent_failed_evidence_target_carries_result_json_payload() {
-        let gate_entries = vec![gate_run::GateRunResultHistoryEntry {
-            id: "failed-gate".to_string(),
-            label: "Failed gate".to_string(),
-            command_line: "gate failed".to_string(),
-            result_path: "F:/repo/.fret/diag/gate-runs/100-failed.json".to_string(),
-            result_json: "{\"status\":\"failed\",\"error\":\"stale\"}".to_string(),
-            status: "failed".to_string(),
-            error: Some("stale".to_string()),
-        }];
-
-        let target = devtools_recent_failed_evidence_target(&gate_entries, &[], &[])
-            .expect("failed gate target");
-        assert_eq!(
-            target.result_json,
-            "{\"status\":\"failed\",\"error\":\"stale\"}"
-        );
-    }
-
-    #[test]
-    fn devtools_recent_evidence_selection_effect_routes_to_existing_history_state() {
-        let gate = RecentEvidenceTarget {
-            kind: "gate",
-            id: "old-gate".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/gate-runs/100-old.json".to_string(),
-            result_json: "{\"kind\":\"gate\"}".to_string(),
-            command_line: "gate old".to_string(),
-            bundle_dir: None,
-        };
-        let gate_effect = devtools_recent_evidence_selection_effect(&gate);
-        assert_eq!(gate_effect.details_tab, "guide");
-        assert_eq!(
-            gate_effect.selected_path,
-            "F:/repo/.fret/diag/gate-runs/100-old.json"
-        );
-        assert!(gate_effect.selected_bundle_dir.is_none());
-
-        let workflow = RecentEvidenceTarget {
-            kind: "workflow",
-            id: "fresh-workflow".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/workflow-runs/400-fresh.json".to_string(),
-            result_json: "{\"kind\":\"workflow\"}".to_string(),
-            command_line: "workflow fresh".to_string(),
-            bundle_dir: None,
-        };
-        let workflow_effect = devtools_recent_evidence_selection_effect(&workflow);
-        assert_eq!(workflow_effect.details_tab, "guide");
-        assert_eq!(
-            workflow_effect.selected_path,
-            "F:/repo/.fret/diag/workflow-runs/400-fresh.json"
-        );
-
-        let followup = RecentEvidenceTarget {
-            kind: "follow-up",
-            id: "trace".to_string(),
-            status: "failed".to_string(),
-            result_path: "F:/repo/.fret/diag/followups/500-trace.json".to_string(),
-            result_json: "{\"kind\":\"follow-up\"}".to_string(),
-            command_line: "trace fresh".to_string(),
-            bundle_dir: Some("target/fret-diag/run-bundle".to_string()),
-        };
-        let followup_effect = devtools_recent_evidence_selection_effect(&followup);
-        assert_eq!(followup_effect.details_tab, "regression");
-        assert_eq!(
-            followup_effect.selected_path,
-            "F:/repo/.fret/diag/followups/500-trace.json"
-        );
-        assert_eq!(
-            followup_effect.selected_bundle_dir.as_deref(),
-            Some("target/fret-diag/run-bundle")
-        );
-    }
-
-    #[test]
-    fn devtools_dogfood_workflow_lines_surface_ui_gallery_loop() {
-        let lines = devtools_dogfood_workflow_lines("target/fret-diag");
-        let text = lines.join("\n");
-        assert!(text.contains("dogfood workflow: ui-gallery-button-dogfood"));
-        assert!(text.contains(
-            "dogfood docs: docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
-        ));
-        assert!(text.contains("artifacts root: target/fret-diag"));
-        assert!(text.contains("open ui gallery: cargo run -p fret-ui-gallery --release"));
-        assert!(
-            text.contains("pick target: enable inspect -> Pick -> click a Button page control")
-        );
-        assert!(
-            text.contains("preferred selector: {\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-button\"}")
-        );
-        assert!(text.contains("base script: tools/diag-scripts/ui-gallery-lite-smoke.json"));
-        assert!(text.contains(
-            "button script: tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json"
-        ));
-        assert!(text.contains("generate script from pick: cargo run -p fretboard-dev -- diag pick-script --pick-script-out target/fret-diag/picked.script.json"));
-        assert!(text.contains("apply pick to script: cargo run -p fretboard-dev -- diag pick-apply tools/diag-scripts/ui-gallery-lite-smoke.json --ptr /steps/12/target --out target/fret-diag/ui-gallery-picked.script.json"));
-        assert!(text.contains("run and pack: cargo run -p fretboard-dev -- diag run target/fret-diag/ui-gallery-picked.script.json --pack --include-all --pack-schema2-only --launch -- cargo run -p fret-ui-gallery --release"));
-        assert!(text.contains(
-            "pack selected bundle: cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only"
-        ));
-        assert!(text.contains("open viewer: pnpm -C tools/fret-bundle-viewer dev"));
-        assert!(text.contains(
-            "viewer input: drag bundle.json, bundle.schema2.json, or the packed zip into the offline viewer"
-        ));
-    }
-
-    #[test]
-    fn devtools_demo_metrics_debug_lines_surface_canonical_routes() {
-        let lines = devtools_demo_metrics_debug_lines("target/fret-diag");
-        let text = lines.join("\n");
-        assert!(text.contains("route: demo-metrics-debug"));
-        assert!(text.contains(
-            "route owner: docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
-        ));
-        assert!(text.contains(
-            "action metadata owner: docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json"
-        ));
-        assert!(text.contains(
-            "docking owner: docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
-        ));
-        assert!(text.contains(
-            "wayland acceptance: docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
-        ));
-        assert!(text.contains("artifacts root: target/fret-diag"));
-        assert!(text.contains(
-            "action surface: dedicated DevTools guide panel + copyable action command bundle"
-        ));
-        assert!(text.contains(
-            "command palette: deferred until DevTools has a shared command palette contract"
-        ));
-        assert!(text.contains(
-            "action: open workbench -> cargo run -p fret-demo --bin imui_editor_workbench_demo"
-        ));
-        assert!(text.contains(
-            "action: run product discovery -> python tools/diag_gate_imui_product_chain.py --only discovery"
-        ));
-        assert!(text.contains(
-            "action: inspect metrics stats -> cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
-        ));
-        assert!(text.contains(
-            "action: inspect debug trace -> cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
-        ));
-        assert!(text.contains(
-            "action: validate docking campaign -> cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
-        ));
-        assert!(text.contains(
-            "action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false"
-        ));
-        assert!(text.contains(
-            "action metadata: inspect debug trace | id=inspect_debug_trace | category=debug | primary=false | requires_bundle=true"
-        ));
-        assert!(text.contains(
-            "action readiness: open workbench | id=open_workbench | category=demo | runnable=true | reason=no bundle required"
-        ));
-        assert!(text.contains(
-            "action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle"
-        ));
-        assert!(text.contains("demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"));
-        assert!(text.contains(
-            "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo"
-        ));
-        assert!(text.contains("demo editor notes: cargo run -p fret-demo --bin editor_notes_demo"));
-        assert!(text.contains(
-            "demo device shell: cargo run -p fret-demo --bin editor_notes_device_shell_demo"
-        ));
-        assert!(
-            text.contains("metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json")
-        );
-        assert!(text.contains(
-            "metrics layout perf: cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json"
-        ));
-        assert!(
-            text.contains("metrics memory: cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json")
-        );
-        assert!(
-            text.contains("debug triage: cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json")
-        );
-        assert!(
-            text.contains("debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json")
-        );
-        assert!(
-            text.contains("debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json")
-        );
-        assert!(text.contains(
-            "docking arbitration supporting: cargo run -p fret-demo --bin docking_arbitration_demo"
-        ));
-        assert!(text.contains(
-            "docking campaign validate: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
-        ));
-        assert!(text.contains(
-            "docking policy-skip local: python tools/diag_gate_docking_wayland_policy_skip.py"
-        ));
-    }
-
-    #[test]
-    fn demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates() {
-        let text = demo_metrics_debug_action_command_text();
-        let lines = text.lines().collect::<Vec<_>>();
-        assert_eq!(
-            lines.first(),
-            Some(&"open workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo")
-        );
-        assert!(lines.contains(
-            &"run product discovery: python tools/diag_gate_imui_product_chain.py --only discovery"
-        ));
-        assert!(lines.contains(
-            &"inspect metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
-        ));
-        assert!(lines.contains(
-            &"inspect debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
-        ));
-        assert!(lines.contains(
-            &"validate docking campaign: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
-        ));
-        assert_eq!(
-            CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS,
-            "fret.devtools.demo_metrics_debug.copy_actions"
-        );
-        let metadata = demo_metrics_debug_action_metadata_lines();
-        assert!(metadata.contains(&"action metadata: open workbench | id=open_workbench | category=demo | primary=true | requires_bundle=false".to_string()));
-        assert!(metadata.contains(&"action metadata: inspect metrics stats | id=inspect_metrics_stats | category=metrics | primary=false | requires_bundle=true".to_string()));
-        let no_bundle = demo_metrics_debug_action_readiness_lines(0);
-        assert!(no_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=false | reason=select a regression bundle".to_string()));
-        let with_bundle = demo_metrics_debug_action_readiness_lines(1);
-        assert!(with_bundle.contains(&"action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=true | reason=selected bundle evidence available".to_string()));
-    }
-
-    #[test]
-    fn demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle() {
-        let text = devtools_demo_metrics_debug_lines_with_state("target/fret-diag", 2).join("\n");
-        assert!(text.contains(
-            "action readiness: inspect metrics stats | id=inspect_metrics_stats | category=metrics | runnable=true | reason=selected bundle evidence available"
-        ));
-        assert!(text.contains(
-            "action readiness: inspect debug trace | id=inspect_debug_trace | category=debug | runnable=true | reason=selected bundle evidence available"
-        ));
-    }
-
-    #[test]
-    fn devtools_workflow_run_lines_surface_campaign_and_suite_entrypoints() {
-        let lines = devtools_workflow_run_lines("target/fret-diag");
-        let text = lines.join("\n");
-        assert!(text.contains("workflow route: workflow-runs"));
-        assert!(text.contains("artifacts root: target/fret-diag"));
-        assert!(text.contains("result artifacts: .fret/diag/workflow-runs/*.json"));
-        assert!(text.contains(
-            "handoff: load suite regression.summary.json into Regression Workspace"
-        ));
-        assert!(text.contains(
-            "handoff: run workflow summarize to create regression.index.json when missing"
-        ));
-        assert!(text.contains(
-            "campaign validate: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/devtools-first-open-smoke.json --json"
-        ));
-        assert!(text.contains(
-            "imui p3 validate: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
-        ));
-        assert!(text.contains(
-            "suite ws: cargo run -p fretboard-dev -- diag suite perf-docking-arbitration-steady --dir target/fret-diag/devtools-workflows/perf-docking --devtools-ws-url <devtools-ws-url> --devtools-token <redacted> --devtools-session-id <selected-session> --json"
-        ));
-    }
-
-    #[test]
-    fn devtools_workflow_commands_mark_suite_ws_missing_without_session() {
-        let commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            None,
-        );
-        let campaign = commands
-            .iter()
-            .find(|command| command.id == DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID)
-            .expect("first-open campaign command");
-        assert!(campaign.is_runnable());
-        assert_eq!(
-            campaign.diag_args,
-            vec![
-                "campaign",
-                "validate",
-                "tools/diag-campaigns/devtools-first-open-smoke.json",
-                "--json",
-            ]
-        );
-
-        let suite = commands
-            .iter()
-            .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
-            .expect("suite command");
-        assert!(!suite.is_runnable());
-        assert_eq!(suite.missing_inputs, vec!["selected-session"]);
-        assert!(suite.diag_args.is_empty());
-        assert!(suite.command_line.contains("--devtools-token <redacted>"));
-        assert!(suite.command_line.contains("--devtools-session-id <selected-session>"));
-        assert!(!suite.command_line.contains("secret-token"));
-    }
-
-    #[test]
-    fn devtools_workflow_commands_include_selected_session_for_suite_ws() {
-        let commands = devtools_workflow_commands(
-            "target/fret-diag",
-            "ws://127.0.0.1:7331/",
-            "secret-token",
-            Some("session-1"),
-        );
-        let suite = commands
-            .iter()
-            .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
-            .expect("suite command");
-        assert!(suite.is_runnable());
-        assert!(suite.missing_inputs.is_empty());
-        assert_eq!(
-            suite.diag_args,
-            vec![
-                "suite",
-                "perf-docking-arbitration-steady",
-                "--dir",
-                "target/fret-diag/devtools-workflows/perf-docking",
-                "--devtools-ws-url",
-                "ws://127.0.0.1:7331/",
-                "--devtools-token",
-                "secret-token",
-                "--devtools-session-id",
-                "session-1",
-                "--json",
-            ]
-        );
-        assert!(suite.command_line.contains("--devtools-token <redacted>"));
-        assert!(suite.command_line.contains("--devtools-session-id session-1"));
-        assert!(!suite.command_line.contains("secret-token"));
-    }
-
-    #[test]
-    fn workflow_summarize_command_from_summary_path_targets_same_dir() {
-        let command = workflow_summarize_command_from_summary_path(
-            "target/fret-diag/devtools workflows/perf-docking/regression.summary.json",
-        )
-        .expect("summarize command");
-
-        assert_eq!(command.id, "summarize-workflow-regression-index");
-        assert!(command.is_runnable());
-        assert_eq!(
-            command.diag_args,
-            vec![
-                "summarize",
-                "target/fret-diag/devtools workflows/perf-docking/regression.summary.json",
-                "--dir",
-                "target/fret-diag/devtools workflows/perf-docking",
-                "--json",
-            ]
-        );
-        assert!(command.command_line.contains(
-            "diag summarize 'target/fret-diag/devtools workflows/perf-docking/regression.summary.json' --dir 'target/fret-diag/devtools workflows/perf-docking' --json"
-        ));
-        assert!(workflow_summarize_command_from_summary_path("").is_none());
-        assert!(workflow_summarize_command_from_summary_path("regression.summary.json").is_none());
-    }
-
-    #[test]
-    fn workflow_regression_index_parent_dir_targets_artifact_root() {
-        assert_eq!(
-            workflow_regression_index_parent_dir(
-                "target/fret-diag/devtools-workflows/perf-docking/regression.index.json",
-            ),
-            Some("target/fret-diag/devtools-workflows/perf-docking".to_string())
-        );
-        assert_eq!(
-            workflow_regression_index_parent_dir(
-                "F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking\\regression.index.json",
-            ),
-            Some("F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking".to_string())
-        );
-        assert!(workflow_regression_index_parent_dir("").is_none());
-        assert!(workflow_regression_index_parent_dir("regression.index.json").is_none());
-    }
-
-    #[test]
-    fn workflow_aggregate_index_loaded_matches_loaded_artifact_root() {
-        assert!(workflow_aggregate_index_loaded(
-            Some("F:/repo/target/fret-diag/devtools-workflows/perf-docking/regression.index.json"),
-            Some("F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking\\"),
-            true,
-        ));
-        assert!(!workflow_aggregate_index_loaded(
-            Some("target/fret-diag/devtools-workflows/perf-docking/regression.index.json"),
-            Some("target/fret-diag/devtools-workflows/other"),
-            true,
-        ));
-        assert!(!workflow_aggregate_index_loaded(
-            Some("target/fret-diag/devtools-workflows/perf-docking/regression.index.json"),
-            Some("target/fret-diag/devtools-workflows/perf-docking"),
-            false,
-        ));
-    }
-
-    #[test]
-    fn workflow_regression_index_action_ids_cover_copy_open_load() {
-        assert_eq!(
-            CMD_COPY_WORKFLOW_SUITE_SUMMARY_PATH,
-            "fret.devtools.workflow.copy_suite_summary_path"
-        );
-        assert_eq!(
-            CMD_OPEN_WORKFLOW_SUITE_SUMMARY,
-            "fret.devtools.workflow.open_suite_summary"
-        );
-        assert_eq!(
-            CMD_COPY_WORKFLOW_REGRESSION_INDEX_PATH,
-            "fret.devtools.workflow.copy_regression_index_path"
-        );
-        assert_eq!(
-            CMD_OPEN_WORKFLOW_REGRESSION_INDEX,
-            "fret.devtools.workflow.open_regression_index"
-        );
-        assert_eq!(
-            CMD_LOAD_WORKFLOW_REGRESSION_INDEX,
-            "fret.devtools.workflow.load_regression_index"
-        );
-    }
-
-    #[test]
-    fn workflow_handoff_readiness_lines_project_next_action() {
-        let empty =
-            workflow_handoff_readiness_lines(false, false, None, None, false, false).join("\n");
-        assert!(empty.contains("selected_workflow_result: none"));
-        assert!(empty.contains("next_action: run selected workflow"));
-
-        let ready = workflow_handoff_readiness_lines(
-            false,
-            true,
-            Some("F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking\\regression.summary.json"),
-            None,
-            false,
-            false,
-        )
-        .join("\n");
-        assert!(ready.contains("selected_workflow_result: loaded"));
-        assert!(ready.contains("aggregate_index_ready: false"));
-        assert!(ready.contains("aggregate_index_loaded: false"));
-        assert!(ready.contains("next_action: Run workflow summarize"));
-        assert!(ready.contains("aggregate_next_action: Run workflow summarize"));
-
-        let indexed = workflow_handoff_readiness_lines(
-            false,
-            true,
-            Some("F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking\\regression.summary.json"),
-            None,
-            true,
-            false,
-        )
-        .join("\n");
-        assert!(indexed.contains("aggregate_index_ready: true"));
-        assert!(indexed.contains("aggregate_index_loaded: false"));
-        assert!(indexed.contains("regression_workspace: not loaded from workflow"));
-        assert!(indexed.contains("aggregate_workspace: index ready but not loaded"));
-        assert!(indexed.contains("next_action: Load workflow regression summary"));
-        assert!(indexed.contains("aggregate_next_action: Load workflow regression index"));
-
-        let loaded = workflow_handoff_readiness_lines(
-            false,
-            true,
-            Some("F:/repo/target/fret-diag/devtools-workflows/perf-docking/regression.summary.json"),
-            Some("F:\\repo\\target\\fret-diag\\devtools-workflows\\perf-docking\\regression.summary.json"),
-            true,
-            false,
-        )
-        .join("\n");
-        assert!(loaded.contains("regression_workspace: selected summary loaded from workflow"));
-        assert!(loaded.contains("next_action: use Regression Workspace follow-up actions"));
-        assert!(loaded.contains("aggregate_next_action: Load workflow regression index"));
-
-        let aggregate_loaded = workflow_handoff_readiness_lines(
-            false,
-            true,
-            Some("F:/repo/target/fret-diag/devtools-workflows/perf-docking/regression.summary.json"),
-            None,
-            true,
-            true,
-        )
-        .join("\n");
-        assert!(aggregate_loaded.contains("aggregate_index_loaded: true"));
-        assert!(aggregate_loaded.contains("aggregate_workspace: workflow index loaded"));
-        assert!(aggregate_loaded.contains("aggregate_next_action: aggregate index already loaded"));
-
-        let running =
-            workflow_handoff_readiness_lines(true, true, None, None, false, false).join("\n");
-        assert!(running.contains("selected_workflow_result: in_flight"));
-        assert!(running.contains("next_action: wait for workflow result artifact"));
-    }
-
-    #[test]
-    fn devtools_gate_command_lines_surface_first_class_gates() {
-        let lines = devtools_gate_command_lines("target/fret-diag");
-        let text = lines.join("\n");
-        assert!(text.contains("gate route: first-class-gates"));
-        assert!(text.contains("artifacts root: target/fret-diag"));
-        assert!(text.contains(
-            "stale paint/scene: cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json"
-        ));
-        assert!(text.contains(
-            "pixels changed: cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json"
-        ));
-        assert!(text.contains(
-            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-top-layout-us <us> --max-top-solve-us <us>"
-        ));
-        assert!(text.contains("--max-pointer-move-global-changes <count>"));
-        assert!(text.contains("--max-renderer-encode-scene-text-ops <ops> --json"));
-        assert!(text.contains(
-            "resource footprint thresholds: cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>"
-        ));
-        assert!(text.contains(
-            "resource footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json"
-        ));
-        assert!(text.contains("check.pixels_changed.json"));
-        assert!(text.contains("check.perf_thresholds.json"));
-        assert!(text.contains("check.resource_footprint.json"));
-        assert!(text.contains("resource.footprint.json"));
-    }
-
-    #[test]
-    fn build_regression_dashboard_human_includes_totals_and_reason_codes() {
-        let payload = serde_json::json!({
-            "kind": "diag_regression_index",
-            "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
-            "summaries": [
-                { "items_total": 2 },
-                { "items_total": 4 }
-            ],
-            "counters": {
-                "by_status": { "passed": 4, "failed_deterministic": 2 },
-                "by_lane": { "smoke": 1 },
-                "by_tool": { "suite": 1 }
-            },
-            "top_reason_codes": [
-                { "reason_code": "pixel_diff", "count": 2 }
-            ],
-            "failing_summaries": [
-                { "path": "runs/a/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 4 }
-            ]
-        });
-
-        let human = build_regression_dashboard_human(
-            Path::new("F:/repo/target/fret-diag/campaigns/ui-gallery-pr/regression.index.json"),
-            &payload,
-            5,
-        );
-
-        assert!(human.contains("summaries_total: 2"));
-        assert!(human.contains("items_total: 6"));
-        assert!(human.contains("top reason codes:"));
-        assert!(human.contains("pixel_diff: 2"));
-    }
-
-    #[test]
-    fn regression_failing_summary_rows_reads_ranked_rows() {
-        let rows = regression_failing_summary_rows(
-            &serde_json::json!({
-                "failing_summaries": [
-                    { "path": "a/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 4 },
-                    { "path": "b/regression.summary.json", "lane": "perf", "failures": 1, "items_total": 3 }
-                ]
-            })
-            .to_string(),
-            1,
-        );
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].path, "a/regression.summary.json");
-        assert_eq!(rows[0].lane, "smoke");
-    }
-
-    #[test]
-    fn load_regression_summary_drilldown_collects_failed_bundle_dirs() {
-        let dir = std::env::temp_dir().join(format!(
-            "fret-devtools-regression-drilldown-{}-{}",
-            std::process::id(),
-            now_unix_ms()
-        ));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("regression.summary.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "kind": "diag_regression_summary",
-            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
-            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
-            "totals": { "items_total": 2, "passed": 1, "failed_deterministic": 1, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 0, "quarantined": 0 },
-            "items": [
-                { "item_id": "a", "kind": "script", "name": "a", "status": "passed", "lane": "smoke" },
-                {
-                    "item_id": "b",
-                    "kind": "script",
-                    "name": "b",
-                    "status": "failed_deterministic",
-                    "lane": "smoke",
-                    "evidence": { "bundle_dir": "target/fret-diag/runs/bundle-a" }
-                },
-                {
-                    "item_id": "c",
-                    "kind": "script",
-                    "name": "c",
-                    "status": "failed_tooling",
-                    "lane": "smoke",
-                    "evidence": { "bundle_dir": "target/fret-diag/runs/bundle-a" }
-                }
-            ]
-        });
-        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
-
-        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
-        assert!(data.summary_json.contains("failed_deterministic"));
-        assert_eq!(
-            data.bundle_dirs,
-            vec!["target/fret-diag/runs/bundle-a".to_string()]
-        );
-        assert!(data.capability_sources.is_empty());
-        assert!(data.capabilities_check_paths.is_empty());
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn load_regression_summary_drilldown_collects_policy_skip_capability_checks() {
-        let dir = std::env::temp_dir().join(format!(
-            "fret-devtools-regression-drilldown-policy-{}-{}",
-            std::process::id(),
-            now_unix_ms()
-        ));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("regression.summary.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "kind": "diag_regression_summary",
-            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
-            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
-            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
-            "items": [
-                {
-                    "item_id": "capability-check",
-                    "kind": "script",
-                    "name": "capability-check",
-                    "status": "skipped_policy",
-                    "lane": "smoke",
-                    "reason_code": "capability.missing",
-                    "evidence": {
-                        "extra": {
-                            "capability_source": {
-                                "kind": "filesystem",
-                                "path": "target/fret-diag/capabilities.json",
-                                "label": "filesystem:target/fret-diag/capabilities.json",
-                                "transport": "filesystem",
-                                "session_id": null
-                            },
-                            "capabilities_check_path": "target/fret-diag/campaigns/ui-gallery/check.capabilities.json"
-                        }
-                    }
-                }
-            ]
-        });
-        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
-
-        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
-        assert!(data.bundle_dirs.is_empty());
-        assert_eq!(
-            data.capability_sources,
-            vec!["target/fret-diag/capabilities.json".to_string()]
-        );
-        assert_eq!(
-            data.capabilities_check_paths,
-            vec!["target/fret-diag/campaigns/ui-gallery/check.capabilities.json".to_string()]
-        );
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn load_regression_summary_drilldown_collects_perf_evidence() {
-        let dir = std::env::temp_dir().join(format!(
-            "fret-devtools-regression-drilldown-perf-{}-{}",
-            std::process::id(),
-            now_unix_ms()
-        ));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("regression.summary.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "kind": "diag_regression_summary",
-            "campaign": { "name": "perf-docking", "lane": "perf" },
-            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "fretboard-dev diag perf" },
-            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 1, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 0, "quarantined": 0 },
-            "items": [
-                {
-                    "item_id": "perf-case",
-                    "kind": "perf_case",
-                    "name": "docking steady drag",
-                    "status": "failed_deterministic",
-                    "lane": "perf",
-                    "evidence": {
-                        "bundle_artifact": "target/fret-diag/perf-docking/run-a/bundle.schema2.json",
-                        "triage_artifact": "target/fret-diag/perf-docking/run-a/triage.json",
-                        "script_result": "target/fret-diag/perf-docking/run-a/script.result.json",
-                        "screenshots_manifest": "target/fret-diag/perf-docking/run-a/screenshots.manifest.json",
-                        "share_artifact": "target/fret-diag/perf-docking/share/perf-case.ai.zip",
-                        "perf_summary_json": "target/fret-diag/perf-docking/layout.perf.summary.v1.json",
-                        "compare_json": "target/fret-diag/perf-docking/check.perf_thresholds.json",
-                        "extra": {
-                            "metrics": {
-                                "top_total_time_us": 24000,
-                                "top_renderer_encode_scene_us": 6000,
-                                "top_renderer_instance_bytes": 700000,
-                                "stats": {
-                                    "total_time_us": 24000,
-                                    "top_renderer_encode_scene_us": 6000
-                                }
-                            },
-                            "threshold_failures": [
-                                {
-                                    "metric": "top_total_time_us",
-                                    "observed": 24000,
-                                    "threshold": 20000,
-                                    "evidence_bundle": "target/fret-diag/perf-docking/run-threshold/bundle.schema2.json"
-                                }
-                            ]
-                        }
-                    }
-                }
-            ]
-        });
-        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
-
-        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
-        assert_eq!(
-            data.bundle_dirs,
-            vec![
-                "target/fret-diag/perf-docking/run-threshold".to_string(),
-                "target/fret-diag/perf-docking/run-a".to_string(),
-            ]
-        );
-        let text = data.perf_evidence_lines.join("\n");
-        assert!(text.contains(
-            "docking steady drag [failed_deterministic] perf_summary_json: target/fret-diag/perf-docking/layout.perf.summary.v1.json"
-        ));
-        assert!(text.contains(
-            "docking steady drag [failed_deterministic] compare_json: target/fret-diag/perf-docking/check.perf_thresholds.json"
-        ));
-        assert!(text.contains(
-            "docking steady drag [failed_deterministic] metric top_total_time_us: 24000"
-        ));
-        assert!(text.contains(
-            "docking steady drag [failed_deterministic] metric top_renderer_encode_scene_us: 6000"
-        ));
-        assert!(text.contains(
-            "docking steady drag [failed_deterministic] metric top_renderer_instance_bytes: 700000"
-        ));
-        assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
-        assert!(text.contains("threshold_failures_json"));
-        let first_open_text = data.first_open_evidence_lines.join("\n");
-        assert!(first_open_text.contains(
-            "docking steady drag [failed_deterministic] triage_artifact: target/fret-diag/perf-docking/run-a/triage.json"
-        ));
-        assert!(first_open_text.contains(
-            "docking steady drag [failed_deterministic] script_result: target/fret-diag/perf-docking/run-a/script.result.json"
-        ));
-        assert!(first_open_text.contains(
-            "docking steady drag [failed_deterministic] screenshots_manifest: target/fret-diag/perf-docking/run-a/screenshots.manifest.json"
-        ));
-        assert!(first_open_text.contains(
-            "docking steady drag [failed_deterministic] share_artifact: target/fret-diag/perf-docking/share/perf-case.ai.zip"
-        ));
-        assert_eq!(
-            data.share_artifacts,
-            vec!["target/fret-diag/perf-docking/share/perf-case.ai.zip".to_string()]
-        );
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn runnable_followup_command_action_lines_surface_indexed_bundle_commands() {
-        let commands = regression_bundle_followup_commands([
-            "target/fret-diag/perf-docking/run-threshold",
-            "target/fret-diag/perf-docking/run-a",
-        ]);
-
-        let lines = runnable_followup_command_action_lines(&commands);
-        assert!(lines.contains(&"diag stats (stats)".to_string()));
-        assert!(lines.contains(&"triage (triage)".to_string()));
-        assert!(lines.contains(&"trace (trace)".to_string()));
-        assert!(lines.contains(&"diag stats [2] (stats-2)".to_string()));
-        assert!(lines.contains(&"triage [2] (triage-2)".to_string()));
-        assert!(lines.contains(&"trace [2] (trace-2)".to_string()));
-        assert!(
-            !lines
-                .iter()
-                .any(|line| line.contains("visual compare") || line.contains("footprint compare"))
-        );
-    }
-
-    #[test]
-    fn selected_followup_readiness_lines_summarize_next_runnable_command() {
-        let commands =
-            regression_bundle_followup_commands(["target/fret-diag/perf-docking/run-threshold"]);
-
-        let lines = selected_followup_readiness_lines(1, &commands, "", "");
-        let text = lines.join("\n");
-
-        assert!(text.contains("selected_bundle_dirs: 1"));
-        assert!(text.contains("runnable_followups: 6"));
-        assert!(text.contains("manual_compare_followups: 2"));
-        assert!(text.contains("visual_compare_ready: false"));
-        assert!(text.contains("footprint_compare_ready: false"));
-        assert!(text.contains("first_runnable: diag stats (stats)"));
-        assert!(text.contains("diag stats target/fret-diag/perf-docking/run-threshold --json"));
-
-        let ready = selected_followup_readiness_lines(
-            1,
-            &commands,
-            "target/fret-diag/baseline/bundle.schema2.json",
-            "target/fret-diag/baseline-session",
-        )
-        .join("\n");
-        assert!(ready.contains("visual_compare_ready: true"));
-        assert!(ready.contains("footprint_compare_ready: true"));
-    }
-
-    #[test]
-    fn materialize_baseline_compare_followup_command_fills_diag_args() {
-        let commands =
-            regression_bundle_followup_commands(["target/fret-diag/perf-docking/run-candidate"]);
-        let visual = commands
-            .iter()
-            .find(|command| command.id == "visual-compare")
-            .expect("visual compare command");
-        let visual = materialize_baseline_compare_followup_command(
-            visual,
-            "target/fret-diag/baseline/bundle schema2.json",
-        )
-        .expect("visual command");
-        assert!(!visual.requires_baseline);
-        assert_eq!(
-            visual.diag_args,
-            vec![
-                "compare".to_string(),
-                "target/fret-diag/baseline/bundle schema2.json".to_string(),
-                "target/fret-diag/perf-docking/run-candidate".to_string(),
-                "--json".to_string(),
-            ]
-        );
-        assert!(visual.command_line.contains(
-            "diag compare 'target/fret-diag/baseline/bundle schema2.json' target/fret-diag/perf-docking/run-candidate --json"
-        ));
-
-        let footprint = commands
-            .iter()
-            .find(|command| command.id == "footprint-compare")
-            .expect("footprint compare command");
-        let footprint = materialize_baseline_compare_followup_command(
-            footprint,
-            "target/fret-diag/baseline-session",
-        )
-        .expect("footprint command");
-        assert!(!footprint.requires_baseline);
-        assert_eq!(
-            footprint.diag_args,
-            vec![
-                "compare".to_string(),
-                "target/fret-diag/baseline-session".to_string(),
-                "target/fret-diag/perf-docking/run-candidate".to_string(),
-                "--footprint".to_string(),
-                "--json".to_string(),
-            ]
-        );
-        assert!(footprint.command_line.contains("--footprint --json"));
-    }
-
-    #[test]
-    fn load_regression_summary_drilldown_falls_back_to_capability_source_label() {
-        let dir = std::env::temp_dir().join(format!(
-            "fret-devtools-regression-drilldown-source-label-{}-{}",
-            std::process::id(),
-            now_unix_ms()
-        ));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("regression.summary.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "kind": "diag_regression_summary",
-            "campaign": { "name": "ui-gallery-pr", "lane": "smoke" },
-            "run": { "run_id": "run-1", "created_unix_ms": 1, "tool": "suite" },
-            "totals": { "items_total": 1, "passed": 0, "failed_deterministic": 0, "failed_flaky": 0, "failed_tooling": 0, "failed_timeout": 0, "skipped_policy": 1, "quarantined": 0 },
-            "items": [
-                {
-                    "item_id": "capability-check",
-                    "kind": "script",
-                    "name": "capability-check",
-                    "status": "skipped_policy",
-                    "lane": "smoke",
-                    "reason_code": "capability.missing",
-                    "source": {
-                        "metadata": {
-                            "capability_source": {
-                                "kind": "transport_session",
-                                "path": null,
-                                "label": "devtools_ws:session-123",
-                                "transport": "devtools_ws",
-                                "session_id": "session-123"
-                            }
-                        }
-                    }
-                }
-            ]
-        });
-        std::fs::write(&path, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
-
-        let data = load_regression_summary_drilldown(&path).expect("load drilldown");
-        assert!(data.bundle_dirs.is_empty());
-        assert_eq!(
-            data.capability_sources,
-            vec!["devtools_ws:session-123".to_string()]
-        );
-        assert!(data.capabilities_check_paths.is_empty());
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-}
+#[path = "native/tests.rs"]
+mod tests;

@@ -1,12 +1,19 @@
 # P3 Porting Sugar Readiness - 2026-05-06
 
-Status: readiness audit; no porting-sugar follow-on opened yet
-Last updated: 2026-05-13
+Status: narrow SameLine proof promoted; broad porting sugar remains candidate-only
+Last updated: 2026-05-31
 
 ## Decision
 
 Do not add broad Dear ImGui porting-sugar APIs to `fret-imui` or `fret-ui-kit::imui` from this
 source-audit lane.
+
+2026-05-31 follow-up: the existing closure-scoped `ui.same_line(...)` /
+`ui.same_line_with_options(...)` helpers are now allowed in first-party teaching surfaces for dense
+inline continuation rows. `apps/fret-cookbook/examples/imui_action_basics.rs` now uses
+`ui.same_line_with_options(...)` for the payload action button row, backed by the existing
+`fret-imui` layout token test. This is not a broad Dear ImGui mutable cursor surface, and
+item-width and label-ID helpers remain candidate-only / explicit.
 
 The current Fret proof surfaces already cover the common authoring pressure without needing a
 public mirror of Dear ImGui's cursor and label grammar:
@@ -20,8 +27,8 @@ public mirror of Dear ImGui's cursor and label grammar:
   focused inherent wrappers without adding Dear ImGui-style mutable cursor sugar.
 - `ecosystem/fret-ui-kit/src/imui/options/containers.rs` keeps horizontal layout explicit through
   `HorizontalOptions` (`layout`, `gap`, `justify`, `items`, `wrap`, `test_id`).
-- `apps/fret-cookbook/examples/imui_action_basics.rs` uses `ui.horizontal(...)` for small inline
-  command groups.
+- `apps/fret-cookbook/examples/imui_action_basics.rs` uses `ui.same_line_with_options(...)` for a
+  small inline command group with a stable row `test_id`.
 - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs` and
   `apps/fret-examples/src/imui_editor_proof_demo.rs` use explicit `id_source` / `test_id` fields
   on editor controls instead of label-string suffix parsing.
@@ -51,17 +58,18 @@ the same authoring tax in at least two places.
 
 ## Current Fret Read
 
-- Confident: inline layout is already covered for current teaching surfaces.
-  Evidence: `ui.row(...)`, `ui.horizontal(...)`, and `horizontal_with_options(...)` cover the
-  current cookbook and proof needs without a mutable `SameLine()` cursor operation.
+- Confident: inline layout is covered for current teaching surfaces without a mutable cursor API.
+  Evidence: `ui.row(...)`, `ui.horizontal(...)`, `horizontal_with_options(...)`, and the narrow
+  closure-scoped `ui.same_line(...)` / `ui.same_line_with_options(...)` helpers cover the current
+  cookbook and proof needs without exposing Dear ImGui's per-window cursor mutation model.
 - Confident: editor label/value layout should stay component-owned for now.
   Evidence: `PropertyGrid::row_with(...)` expresses the "label plus control plus optional trailing
   affordance" shape directly, avoiding per-control item-width stack state.
 - Confident: label and identity must stay explicit, not string-parsed.
   Evidence: Fret controls expose `id_source`, `test_id`, `a11y_label`, row/test id options, and
   `ui.push_id(...)`; current proofs use those fields repeatedly.
-- Likely: a small `same_line`-style alias would be weaker than the existing typed layout helpers.
-  It would add Dear ImGui vocabulary without solving a repeated Fret-specific pain point.
+- Confident: `same_line` should stay closure-scoped sugar over Fret layout containers, not a
+  free-standing "place the next item here" operation.
 - Likely: a future item-width helper, if justified, should be an editor/property-row or control
   sizing option rather than a global stack/next-item API.
 - Unclear: whether a migration shim for raw Dear ImGui snippets is worth supporting. No current
@@ -74,8 +82,8 @@ first-party proof surfaces with a runnable repro and gate.
 
 Candidate follow-ons, in priority order:
 
-1. **Inline layout alias**: only if two proof surfaces repeatedly need one-item horizontal
-   continuation and `horizontal_with_options(...)` is visibly too heavy.
+1. **Further inline layout expansion**: only if two proof surfaces need behavior that the existing
+   closure-scoped `same_line` helpers cannot express.
 2. **Property-row width policy**: only if two editor/property surfaces need the same label width,
    control width, right-alignment, or trailing affordance policy and `PropertyGrid::row_with(...)`
    cannot express it cleanly.
@@ -89,7 +97,7 @@ Candidate follow-ons, in priority order:
 
 Do not open this follow-on for any of these reasons alone:
 
-- a single cookbook example uses `ui.horizontal(...)`,
+- a single call site would be shorter with a Dear ImGui `SameLine()` cursor call,
 - app code repeats `id_source` and `test_id` once per control,
 - one proof has many `PropertyGrid::row_with(...)` calls,
 - a Dear ImGui demo snippet would be shorter with `SameLine()`,
@@ -97,11 +105,12 @@ Do not open this follow-on for any of these reasons alone:
 
 ## Recommended Next Slice
 
-Keep `porting sugar readiness` candidate-only for now.
+Keep broad `porting sugar readiness` candidate-only for now. The narrow SameLine teaching-surface
+proof is closed by the existing closure-scoped helpers; item-width stacks, next-item width defaults,
+and label-suffix identity parsing remain out of scope.
 
 If this becomes active, start with the smallest named pain point:
 
-- `imui-inline-layout-alias-v1` for a proven two-surface inline layout tax, or
 - `imui-property-row-width-policy-v1` for a proven editor/property-grid sizing tax.
 
 Do not start with a broad `imgui-porting-sugar` crate or a direct mirror of

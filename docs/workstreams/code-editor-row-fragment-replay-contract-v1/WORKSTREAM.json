@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-16",
   "scope_kind": "execution",
+  "lane_slug": "editor-canvas",
   "follow_on_of": "ui-perf-zed-smoothness-v1",
   "problem": "Reduce residual code-editor row-scene prepaint planning cost after local editor-paint attribution proved the remaining owner is per-row cache probing and replay-plan assembly, not renderer text prepare or key comparison.",
   "authoritative_docs": [

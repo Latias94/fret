@@ -2,9 +2,9 @@ use fret_core::DrawOrder;
 use fret_ui::canvas::CanvasPainter;
 
 use super::DebugDrawCommand;
-use super::geometry::rect_is_empty;
 use super::paint_shapes::paint_debug_draw_shape_command;
 
+mod clip;
 mod media;
 
 pub(super) fn paint_debug_draw_commands(
@@ -16,23 +16,11 @@ pub(super) fn paint_debug_draw_commands(
     for (index, command) in commands.iter().enumerate() {
         let order = DrawOrder(index as u32);
         let key = painter.key(&("fret-ui-kit.imui.debug_draw.command", index));
+        if clip::paint_debug_draw_clip_command(painter, command, &mut open_clip_depth) {
+            continue;
+        }
+
         match command {
-            DebugDrawCommand::PushClipRect { rect } => {
-                if rect_is_empty(*rect) {
-                    continue;
-                }
-                painter
-                    .scene()
-                    .push(fret_core::SceneOp::PushClipRect { rect: *rect });
-                open_clip_depth += 1;
-            }
-            DebugDrawCommand::PopClipRect => {
-                if open_clip_depth == 0 {
-                    continue;
-                }
-                painter.scene().push(fret_core::SceneOp::PopClip);
-                open_clip_depth -= 1;
-            }
             DebugDrawCommand::Image { .. }
             | DebugDrawCommand::ImageRegion { .. }
             | DebugDrawCommand::ImageQuad { .. }
@@ -66,10 +54,9 @@ pub(super) fn paint_debug_draw_commands(
             | DebugDrawCommand::Text { .. } => {
                 paint_debug_draw_shape_command(painter, index, command, scale);
             }
+            DebugDrawCommand::PushClipRect { .. } | DebugDrawCommand::PopClipRect => {}
         }
     }
 
-    for _ in 0..open_clip_depth {
-        painter.scene().push(fret_core::SceneOp::PopClip);
-    }
+    clip::close_debug_draw_clip_stack(painter, open_clip_depth);
 }

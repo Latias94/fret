@@ -1,8 +1,31 @@
 use fret_ui::UiHost;
 
-use super::super::{ResponseExt, UiWriterImUiFacadeExt, model_value_changed_for};
+use super::super::{
+    InputTextPickerResponse, ResponseExt, UiWriterImUiFacadeExt, model_value_changed_for,
+};
+use super::popup::InputTextPickerPopupResult;
 
-pub(super) fn merge_text_picker_pick_response<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+pub(super) fn finish_text_picker_response<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    model: &fret_runtime::Model<String>,
+    mut input: ResponseExt,
+    popup: InputTextPickerPopupResult,
+) -> InputTextPickerResponse {
+    let InputTextPickerPopupResult {
+        opened,
+        picked_index,
+        picked,
+    } = popup;
+    merge_text_picker_pick_response(ui, model, &mut input, picked.is_some());
+    InputTextPickerResponse {
+        input,
+        open: opened,
+        picked_index,
+        picked,
+    }
+}
+
+fn merge_text_picker_pick_response<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     model: &fret_runtime::Model<String>,
     input: &mut ResponseExt,

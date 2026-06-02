@@ -13,11 +13,12 @@ current sequencing and active cross-workstream stance, start with:
 - `docs/workstreams/standalone/ecosystem-status.md`
 - `docs/workstreams/standalone/icon-system-status.md`
 - `docs/todo-tracker.md`
+- `docs/architecture/LANES.md` for multi-terminal planner routing
 
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 540
+- Dedicated directories: 541
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2237,7 +2238,7 @@ Rule:
 - `docs/workstreams/imui-stack-fearless-refactor-v2/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the immediate-mode doc reset, editor adapter closure, and proof-surface cleanup lane)
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
 - `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
-- `docs/workstreams/jellyflow-package-split-v1/` — first n/a, latest n/a, 5 markdown docs (active Jellyflow package-boundary split for separating reusable headless node/flow graph engine crates from the Fret UI adapter; includes `WORKSTREAM.json`)
+- `docs/workstreams/jellyflow-package-split-v1/` — first 2026-05-30, latest 2026-05-30, 5 markdown docs (active Jellyflow package-boundary split for separating reusable headless node/flow graph engine crates from the Fret UI adapter; includes `WORKSTREAM.json`)
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs
 - `docs/workstreams/length-percentage-semantics-v1/` — first 2026-02-23, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/localization-i18n-v1/` — first 2026-02-06, latest 2026-02-07, 2 markdown docs

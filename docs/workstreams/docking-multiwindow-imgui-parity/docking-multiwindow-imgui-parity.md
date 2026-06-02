@@ -33,9 +33,70 @@ Platform note:
   (proves every non-qualifying Wayland campaign admission predicate stops at `skipped_policy`
   before script execution)
 - Latest local Wayland guard refresh:
-  `docs/workstreams/docking-multiwindow-imgui-parity/M21_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-30.md`
+  `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`
   (reruns local source, policy-skip, campaign validate, capability posture, and fallback gates
   while preserving the Wayland acceptance boundary)
+- Latest docking runtime owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M23_DOCKING_RUNTIME_TEAR_OFF_OWNER_SPLIT_2026-05-31.md`
+  (moves tear-off registry and pending state into a private runtime child owner without changing
+  fallback behavior or the Wayland acceptance boundary)
+- Latest docking runtime fallback owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M24_DOCKING_RUNTIME_IN_WINDOW_OWNER_SPLIT_2026-05-31.md`
+  (moves in-window fallback and recovery geometry into a private runtime child owner without
+  changing public recovery hook paths or the Wayland acceptance boundary)
+- Latest docking runtime create-request owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M25_DOCKING_RUNTIME_TEAR_OFF_CREATE_REQUEST_OWNER_SPLIT_2026-06-01.md`
+  (moves DockFloating OS-window create request construction into the private tear-off owner without
+  changing in-window fallback behavior or the Wayland acceptance boundary)
+- Latest docking runtime cancellation owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M26_DOCKING_RUNTIME_TEAR_OFF_CANCELLATION_OWNER_SPLIT_2026-06-01.md`
+  (moves pending tear-off cancellation policy into the private tear-off owner without changing
+  created-window completion behavior or the Wayland acceptance boundary)
+- Latest docking runtime window-created owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M27_DOCKING_RUNTIME_WINDOW_CREATED_OWNER_SPLIT_2026-06-02.md`
+  (moves created-window completion, drag-source remapping, and registry registration into a
+  private runtime child owner without changing create/cancel/fallback behavior or the Wayland
+  acceptance boundary)
+- Latest docking runtime before-close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M28_DOCKING_RUNTIME_BEFORE_CLOSE_OWNER_SPLIT_2026-06-02.md`
+  (moves DockFloating OS close merge-back policy into a private runtime child owner without
+  changing create/cancel/fallback/window-created behavior or the Wayland acceptance boundary)
+- Latest docking runtime auto-close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M29_DOCKING_RUNTIME_AUTO_CLOSE_OWNER_SPLIT_2026-06-02.md`
+  (moves empty DockFloating OS-window scanning and close effects into a private runtime child owner
+  without changing graph mutation, invalidation, or the Wayland acceptance boundary)
+- Latest docking runtime request owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`
+  (moves DockFloating request-to-new-window capability fallback, pending correlation, and create
+  request trigger policy into a private runtime child owner without changing public hook behavior)
+- Latest docking runtime layout invalidation owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`
+  (moves DockOp post-mutation viewport cleanup and invalidation into a private runtime child owner
+  without changing graph mutation or the Wayland acceptance boundary)
+- Latest docking runtime apply owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M44_DOCKING_RUNTIME_APPLY_OWNER_SPLIT_2026-06-02.md`
+  (moves the ordinary DockOp mutation/logging/auto-close orchestration into a private runtime child
+  owner without changing request handling or the Wayland acceptance boundary)
+- Latest docking runtime test owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`
+  (moves focused runtime regression coverage into a private runtime child owner without changing
+  runtime behavior or the Wayland acceptance boundary)
+- Latest docking declarative tab paint-state owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M33_DOCKING_DECLARATIVE_TAB_PAINT_STATE_OWNER_SPLIT_2026-06-02.md`
+  (moves tab hover/menu paint-state projection into a private declarative child owner without
+  changing docking render behavior or the Wayland acceptance boundary)
+- Latest docking declarative event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M45_DOCKING_DECLARATIVE_EVENT_OWNER_SPLIT_2026-06-02.md`
+  (moves managed-surface event orchestration into a private declarative child owner without
+  changing docking interaction behavior or the Wayland acceptance boundary)
+- Latest docking declarative InternalDrag event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M46_DOCKING_DECLARATIVE_INTERNAL_DRAG_EVENT_OWNER_SPLIT_2026-06-02.md`
+  (moves InternalDrag hover/drop/cancel routing into a private event child owner without changing
+  docking drag behavior or the Wayland acceptance boundary)
+- Latest docking declarative PointerDown event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M47_DOCKING_DECLARATIVE_POINTER_DOWN_EVENT_OWNER_SPLIT_2026-06-02.md`
+  (moves PointerDown overflow/floating/split/viewport/tab-drag activation into a private event child
+  owner without changing docking interaction behavior or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -183,7 +244,8 @@ Rationale:
 Non-normative summary of the current layering:
 
 - Docking UI emits `DockOp` transactions (including `RequestFloatPanelToNewWindow`).
-- Docking runtime translates create requests into `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`.
+- Docking runtime routes tear-off ops; the private tear-off owner translates supported requests into
+  `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`.
 - Runner owns OS window lifecycle and cross-window internal-drag routing via screen-space cursor tracking.
 - UI runtime enforces overlay/docking arbitration (Escape cancel, overlay suppression, etc.).
 
@@ -268,7 +330,27 @@ Current policy (Wayland):
 - Latest acceptance-open source guard:
   `docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md`.
 - Latest local Wayland guard refresh:
-  `docs/workstreams/docking-multiwindow-imgui-parity/M21_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-30.md`.
+  `docs/workstreams/docking-multiwindow-imgui-parity/M22_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-31.md`.
+- Latest docking runtime window-created owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M27_DOCKING_RUNTIME_WINDOW_CREATED_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime before-close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M28_DOCKING_RUNTIME_BEFORE_CLOSE_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime auto-close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M29_DOCKING_RUNTIME_AUTO_CLOSE_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime request owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M30_DOCKING_RUNTIME_REQUEST_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime layout invalidation owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking runtime test owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking declarative tab paint-state owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M33_DOCKING_DECLARATIVE_TAB_PAINT_STATE_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking declarative event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M45_DOCKING_DECLARATIVE_EVENT_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking declarative InternalDrag event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M46_DOCKING_DECLARATIVE_INTERNAL_DRAG_EVENT_OWNER_SPLIT_2026-06-02.md`.
+- Latest docking declarative PointerDown event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M47_DOCKING_DECLARATIVE_POINTER_DOWN_EVENT_OWNER_SPLIT_2026-06-02.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

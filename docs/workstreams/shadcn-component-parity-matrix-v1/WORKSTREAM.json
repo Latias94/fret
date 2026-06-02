@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-27",
   "scope_kind": "execution",
+  "lane_slug": "shadcn-parity",
   "problem": "Fret's shadcn parity tracking still mixes human visual review with automated harness evidence. This lane records how far self-rendered component parity can be proven automatically across source refs, upstream DOM/CSS snapshots, Fret layout, semantics, text/paint, behavior scripts, responsive coverage, and repair queues.",
   "authoritative_docs": [
     {

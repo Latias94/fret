@@ -2,6 +2,427 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI drag preview cross-window owner split - 2026-06-02
+
+This maintenance slice keeps the drag-preview recipe aligned with the Dear ImGui-style editor goal
+without moving preview policy into the thin `fret-imui` facade or the lower `fret-ui-kit::imui`
+mechanism layer:
+
+- `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs` now stays as the recipe facade for
+  options, same-window tooltip overlay presentation, anchor policy, and public re-exports.
+- `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview/cross_window.rs` now owns the cross-window
+  descriptor store, publish helpers, current-window render loop, and stale-session pruning.
+- The public API remains under `fret_ui_kit::recipes::imui_drag_preview::{...}` through re-exports,
+  preserving existing proof surfaces and app call sites.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so the facade cannot silently
+  absorb the cross-window store again and the cross-window owner cannot absorb same-window overlay
+  policy.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_preview_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui ghost_anchor_ --no-fail-fast` - passed, 2 tests.
+- `cargo nextest run -p fret-imui drag_preview_ghost_follows_pointer_and_clears_on_release cross_window_drag_preview_ghost_transfers_between_windows --no-fail-fast` - passed, 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+
+## DevTools native regression test owner split - 2026-06-02
+
+This maintenance slice keeps the DevTools GUI source file reviewable while preserving the existing
+first-open, recent-evidence, workflow-run, and Demo/Metrics/Debug proof pressure:
+
+- `apps/fret-devtools/src/native.rs` now keeps only the bin-root GUI shell and an explicit
+  `#[path = "native/tests.rs"]` test module hook.
+- `apps/fret-devtools/src/native/tests.rs` owns the former inline regression tests for first-open
+  evidence, recent evidence, workflow handoff, file URL projection, regression summary drilldown,
+  and Demo/Metrics/Debug route projection.
+- The IMUI source gate now treats `native/tests.rs` as the additional DevTools native test owner
+  instead of forcing all test markers to stay in the main GUI source file.
+- The DevTools first-open and product-chain gates now include the split test source in their
+  combined source validation, so route/runtime markers and regression-test markers still drift
+  together.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools --no-fail-fast` - passed, 92 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## DevTools Demo/Metrics/Debug workflow artifact load handoff - 2026-06-02
+
+This refresh keeps perf workflow artifact handoff close to the Demo/Metrics/Debug workflow controls:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now reuses the existing
+  `Load workflow regression summary` and `Load workflow regression index` commands from the
+  always-visible Demo/Metrics/Debug panel.
+- The guide projection now emits `workflow artifact action` rows that show whether the selected
+  workflow result has regression summary/index artifacts ready to load.
+- The implementation still relies on the existing selected workflow result helpers and Regression
+  Workspace loaders in `apps/fret-devtools/src/native.rs`; no artifact parser or runner fork was
+  added to the Demo/Metrics/Debug owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+
+## DevTools Demo/Metrics/Debug workflow result handoff - 2026-06-02
+
+This refresh keeps workflow execution and result handoff in the same always-visible
+Demo/Metrics/Debug route:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now reuses the existing Workflow Runs commands for
+  `Copy workflow result` and `Open workflow JSON` directly from the Demo/Metrics/Debug panel.
+- The result buttons are disabled until a workflow result artifact exists, and the guide projection
+  records `workflow result action` rows with the copied/opened command ids and availability reason.
+- No parallel runner or command parser was added; result handoff still flows through the existing
+  workflow result selection and platform URL handlers in `apps/fret-devtools/src/native.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+
+## DevTools Demo/Metrics/Debug workflow status loop - 2026-06-02
+
+This refresh makes the Demo/Metrics/Debug route a clearer workflow handoff loop instead of a
+button-only launch surface:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now projects workflow readiness for
+  `campaign-validate-imui-p3-multiwindow` and `perf-docking-suite-ws` into the same always-visible
+  Demo/Metrics/Debug panel.
+- The readiness rows report in-flight blocking, missing selected-session state, and selected-session
+  availability from the same `devtools_workflow_commands_from_state(...)` source used by the run
+  buttons.
+- The panel now also projects `workflow status` with in-flight state, last workflow result path, and
+  last workflow error so users can see the immediate result handoff without leaving the route.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+
+## DevTools Demo/Metrics/Debug perf workflow run entry - 2026-06-02
+
+This refresh extends the Demo/Metrics/Debug route from docking workflow execution to the existing
+perf-docking workflow surface:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now surfaces a `Run perf workflow` button and a
+  `workflow handoff` line for `perf-docking-suite-ws`.
+- The button is disabled when a workflow is already in flight or when no selected session makes the
+  perf workflow runnable.
+- `apps/fret-devtools/src/native.rs` routes
+  `fret.devtools.demo_metrics_debug.run_perf_workflow` through the same
+  `workflow_run::start_workflow_run(...)` path as the Workflow Runs panel.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## DevTools Demo/Metrics/Debug docking workflow run entry - 2026-06-02
+
+This refresh moves the Demo/Metrics/Debug route from copy-only diagnostics toward an executable
+DevTools workflow entry:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now surfaces a `Run docking workflow` button and a
+  `workflow handoff` line for the existing `campaign-validate-imui-p3-multiwindow` workflow.
+- `apps/fret-devtools/src/native.rs` routes
+  `fret.devtools.demo_metrics_debug.run_docking_workflow` through the existing
+  `workflow_run::start_workflow_run(...)` path instead of adding a parallel process runner.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` now source-check the stateful action-row signature and
+  the docking workflow button.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## DevTools Demo/Metrics/Debug per-action copy commands - 2026-06-02
+
+This refresh keeps the Demo/Metrics/Debug route always available in the DevTools GUI while making
+each canonical action individually copyable:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns stable
+  `fret.devtools.demo_metrics_debug.copy_action.*` command ids, per-action copy command projection,
+  and GUI buttons for each action in addition to the full action-bundle copy button.
+- `apps/fret-devtools/src/native.rs` routes those dynamic action-copy command ids to clipboard
+  writes without claiming a shared DevTools command palette contract.
+- The existing first-open/product-chain discovery gates keep their original route-surface marker
+  and now also cover the per-action copy command GUI source.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## IMUI facade trait roster owner split - 2026-06-02
+
+This refresh continues the `fret-ui-kit::imui` file split by moving the public writer extension
+trait roster out of the facade writer hub without changing the public import path:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/trait_ext.rs` now owns the
+  `UiWriterImUiFacadeExt` macro roster and blanket `UiWriter` implementation.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` keeps module declarations, and
+  `facade_writer.rs` remains the public re-export hub for `ImUiFacade` and
+  `UiWriterImUiFacadeExt`.
+- `tools/gate_imui_workstream_source.py` now checks `trait_ext.rs` as the roster owner and rejects
+  the extension trait returning to `facade_writer.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui imui_text --no-fail-fast` - passed.
+
+## Fret Plot declarative panel entrypoint owner split - 2026-06-02
+
+This refresh follows the plot props split by moving the public declarative panel adapters out of
+the root implementation file without changing the retained-free plot rendering path:
+
+- `ecosystem/fret-plot/src/declarative/panels.rs` now owns the public `*_plot_panel` entrypoints
+  and `*_plot_panel_in` wrappers for line, error-bars, histogram, bars, candlestick, heatmap,
+  histogram2d, area, shaded, and stems plot panels.
+- The private normalized panel model and retained-free paint/event core stay in `declarative.rs`,
+  including grid/axes, overlays, readout, interaction output, and tests.
+- `ecosystem/fret-plot/src/declarative/props.rs` remains the public props/builder owner, so the
+  optional `fret-plot/imui` adapter continues to delegate through declarative panel entrypoints.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot` - passed with existing dead-code warnings in `plot/view.rs`.
+- `cargo check -p fret-plot --features imui` - passed with the same existing warnings.
+- `cargo nextest run -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## Fret Plot declarative props owner split - 2026-06-02
+
+This refresh keeps the retained-canvas-free optional IMUI plot adapter declarative-only while
+reducing the remaining `fret-plot` declarative implementation file:
+
+- `ecosystem/fret-plot/src/declarative/props.rs` now owns the public `*PlotPanelProps` types and
+  builder methods for line, error-bars, histogram, bars, candlestick, heatmap, histogram2d, area,
+  shaded, and stems plot panels.
+- `ecosystem/fret-plot/src/declarative.rs` keeps the private normalized panel model, public panel
+  entrypoints, retained-free canvas painting, event handling, readout, and test coverage.
+- `ecosystem/fret-plot/src/imui.rs` remains a thin optional `UiWriter` adapter over the
+  declarative panel entrypoints, so plot ergonomics do not move into `fret-imui` or
+  `fret-ui-kit::imui`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot` - passed with existing dead-code warnings in `plot/view.rs`.
+- `cargo check -p fret-plot --features imui` - passed with the same existing warnings.
+- `cargo nextest run -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only line_chart_builder_stays_model_only_on_default_surface --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## DevTools Demo/Metrics/Debug line projection owner split - 2026-06-02
+
+This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while
+reducing the remaining `native.rs` GUI shell file:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns action metadata, action command text,
+  selected-bundle readiness projection, full route/metrics/debug guide line projection, GUI panel
+  assembly, and the copy-action button row.
+- `apps/fret-devtools/src/native.rs` keeps the surrounding Guide tab composition and command
+  dispatch for copying the generated action bundle.
+- `tools/gate_imui_workstream_source.py` now rejects the Demo/Metrics/Debug guide projection from
+  drifting back into `native.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## TextAssistField element owner split - 2026-06-02
+
+This refresh keeps editor completion policy in `fret-ui-editor` while reducing another root control
+module:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs` now owns child-module wiring, public
+  re-exports, and the narrow helper functions shared by element/panel/tests.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs` now owns
+  `TextAssistField`, constructor/options/accept builders, caller-keyed `into_element(...)`, input
+  assist semantics, input-owned key policy, inline/anchored overlay handoff, and final root layout.
+- Existing owners remain unchanged: `model.rs` owns options/records, `panel.rs` owns listbox
+  rendering, `overlay.rs` owns anchored overlay placement/dismissal, `empty.rs` owns empty state,
+  and `accept.rs` owns accept mutation.
+- `tools/gate_imui_workstream_source.py` now rejects the public element definition and assembly body
+  from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui text_assist --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## ColorEdit element owner split - 2026-06-02
+
+This refresh keeps editor color picking policy in `fret-ui-editor` while reducing the remaining
+ColorEdit root file ownership:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit.rs` now owns only child-module wiring, public
+  re-exports, and shared color-edit constants used by child modules.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now owns `ColorEdit`, constructor
+  and options builder methods, caller-keyed `into_element(...)`, root input/swatch assembly,
+  drag-drop delivery, popup/tooltip/copy overlay requests, and final layout handoff.
+- Existing focused owners remain unchanged: `input.rs` owns hex input, `swatch.rs` owns swatch
+  behavior, `layout.rs` owns root layout, `state.rs` owns popup/draft/error models, and `popup/*`
+  owns popup content.
+- `tools/gate_imui_workstream_source.py` now rejects ColorEdit public element definitions and
+  element assembly bodies from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## TransformEdit model owner split - 2026-06-02
+
+This refresh keeps transform editing policy in `fret-ui-editor` while reducing the remaining
+TransformEdit root file ownership:
+
+- `ecosystem/fret-ui-editor/src/controls/transform_edit.rs` now owns only module wiring, public
+  re-exports, layout/options types, section identity, and read-only axis outcome vocabulary.
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/model.rs` now owns `TransformEdit`,
+  `TransformEditPresentations`, constructor/presentation adapters, builder methods, caller-keyed
+  `into_element(...)`, and the presentation adoption test.
+- `ecosystem/fret-ui-editor/src/controls/transform_edit/element.rs` remains the keyed element
+  assembly handoff, while section rendering, section controls, and linked-scale synchronization stay
+  in their existing owners.
+- `tools/gate_imui_workstream_source.py` now rejects TransformEdit public model definitions and
+  presentation tests from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui transform_edit --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## VecEdit model owner split - 2026-06-02
+
+This refresh keeps editor controls in `fret-ui-editor` while reducing the remaining VecEdit root
+file ownership:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit.rs` now owns only VecEdit child-module wiring and
+  the stable public re-exports for axis, model, and options types.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now owns `Vec2Edit`, `Vec3Edit`,
+  `Vec4Edit`, their constructors, `NumericPresentation` adapters, builder methods, caller-keyed
+  `into_element(...)` entrypoints, and the presentation adoption test.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` remains the keyed element assembly
+  handoff, while `axis.rs`, `layout.rs`, and `options.rs` keep their existing owners.
+- `tools/gate_imui_workstream_source.py` now rejects VecEdit public model definitions and
+  presentation tests from drifting back into the root module.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui vec_edit --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+## DevTools Demo/Metrics/Debug action metadata owner split - 2026-05-31
+
+This refresh keeps the Demo/Metrics/Debug route productized while reducing the size and ownership
+load of `apps/fret-devtools/src/native.rs`:
+
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns the action metadata table plus command,
+  metadata, and selected-bundle readiness projections.
+- `apps/fret-devtools/src/native.rs` keeps the GUI row, copy command dispatch, stateful
+  selected-bundle count, and guide-panel rendering.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` read the new module as part of their DevTools GUI source
+  checks.
+- `tools/gate_imui_workstream_source.py` source-checks both the private metadata owner and the thin
+  GUI consumer boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `python -m py_compile tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+
 ## Maintenance gate refresh - 2026-05-15
 
 DevTools full clippy is now a current maintenance gate for the P2 diagnostics/devtools surface:
@@ -205,6 +626,10 @@ DevTools full clippy is now a current maintenance gate for the P2 diagnostics/de
 - `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs`
 - `ecosystem/fret-ui-editor/src/imui.rs`
 - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
+- `ecosystem/fret-ui-editor/src/controls/drag_value/element.rs`
+- `ecosystem/fret-ui-editor/src/controls/drag_value/options.rs`
+- `ecosystem/fret-ui-editor/src/controls/drag_value/scrub_element.rs`
+- `ecosystem/fret-ui-editor/src/controls/drag_value/typing.rs`
 - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
 - `ecosystem/fret-ui-editor/src/controls/slider.rs`
 - `ecosystem/fret-imui/src/tests/mod.rs`
@@ -3924,6 +4349,75 @@ Result: passed locally. The focused `fret-ui-kit` nextest gate reported
 for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
 `git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
 `apps/fret-examples/src/lib.rs`.
+
+## IMUI editor proof collection geometry owner split - 2026-06-02
+
+Scope: keep the canonical editor proof collection surface app-owned while splitting pure
+collection geometry, layout, drag-rect, and primary-wheel zoom math out of the large
+`collection.rs` render/command owner.
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` now owns collection grid
+  fallback constants, layout metrics, drag-rect normalization, rect intersection, local rect
+  projection, primary-wheel zoom anchoring, and the focused geometry test floor.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` keeps collection assets, models,
+  render assembly, command package behavior, inline rename, context menu, drag/drop, and drop
+  status wiring.
+- `tools/gate_imui_workstream_source.py` now rejects the geometry helper bodies and geometry tests
+  returning to the parent collection module while source-checking the split geometry owner.
+- This remains a demo-local proof-surface refactor: no public `fret-imui`, `fret-ui-kit::imui`,
+  `fret-ui-editor`, docking, runner, or diagnostics API changed.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-examples
+cargo check -p fret-examples
+cargo nextest run -p fret-examples proof_collection --no-fail-fast
+cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. `cargo check -p fret-examples` reported only the existing unrelated
+`fret-plot` / `fret-chart` dead-code warnings.
+
+## IMUI editor proof collection readout owner split - 2026-06-02
+
+Scope: keep the canonical editor proof collection surface app-owned while splitting pure
+collection readout/status string construction out of the large `collection.rs` behavior and render
+owner.
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` now owns selection,
+  visible-order, active-tile, asset-count, command-package, select-all, inline-rename,
+  duplicate, and delete readout/status strings.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` keeps collection assets, selection
+  mutation, keyboard navigation, command behavior, inline rename behavior, context menu behavior,
+  drag/drop, and render assembly.
+- `tools/gate_imui_workstream_source.py` now requires the `readouts` child module and rejects the
+  moved readout/status function bodies returning to the parent collection module.
+- This remains a demo-local proof-surface refactor: no public `fret-imui`, `fret-ui-kit::imui`,
+  `fret-ui-editor`, docking, runner, or diagnostics API changed.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-examples
+cargo check -p fret-examples
+cargo nextest run -p fret-examples proof_collection --no-fail-fast
+cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The first concurrent nextest attempt timed out while both commands compiled
+`fret_examples`; the cargo/rustc child processes were allowed to exit naturally, then the gates were
+rerun serially. `proof_collection` reported `26 tests run: 26 passed`; the modularization surface
+test reported `1 test run: 1 passed`. `cargo check -p fret-examples` reported only the existing
+unrelated `fret-chart` and `fret-plot` dead-code warnings.
 
 ## Fresh resume verification for closed 2026-05-25 IMUI slices - 2026-05-25
 

@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-11",
   "scope_kind": "execution",
+  "lane_slug": "shadcn-parity",
   "problem": "Build a proactive shadcn parity discovery loop that maps upstream shadcn facts to Fret UI Gallery evidence and classifies drift before users have to report screenshots by hand.",
   "authoritative_docs": [
     {

@@ -2,11 +2,10 @@ use fret_core::Size;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+mod body;
 mod props;
 
-use props::{
-    clipped_body_props, shell_column_props, title_bar_container_props, window_frame_props,
-};
+use props::window_frame_props;
 
 pub(super) fn floating_window_shell_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -33,39 +32,18 @@ pub(super) fn floating_window_shell_element<H: UiHost>(
         window_frame_props(window_size, resizable_layout, collapsed, popover, border);
 
     cx.container(window_props, move |cx| {
-        let col = shell_column_props(resizable_layout, collapsed);
-
-        let title_bar = cx.container(
-            title_bar_container_props(resizable_layout, muted, border),
-            move |_cx| vec![title_bar_row],
-        );
-
-        let body = if collapsed {
-            title_bar
-        } else {
-            cx.column(col, move |_cx| vec![title_bar, content])
-        };
-
-        let clipped_body = cx.container(
-            clipped_body_props(resizable_layout, collapsed),
-            move |_cx| vec![body],
-        );
-
-        let blocker = super::floating_window_blocker::floating_window_blocker_element(
-            cx,
-            options.inputs_enabled,
-        );
-
-        let stacked_body = super::floating_window_resize::resize_stack_element(
+        let stacked_body = body::floating_window_shell_body_element(
             cx,
             window_id,
-            clipped_body,
-            blocker,
+            title_bar_row,
+            content,
             resizable_layout,
             collapsed,
             resize_enabled,
-            options.activate_on_click,
+            options,
             handle_test_ids,
+            muted,
+            border,
         );
 
         vec![stacked_body]

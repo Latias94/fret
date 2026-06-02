@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
+  "lane_slug": "framework-boundaries",
   "follow_on_of": "fret-launch-app-surface-fearless-refactor-v1",
   "problem": "Keep the launch root surface and examples converged on `FnDriver` as the preferred advanced route while treating direct `WinitAppDriver` usage as an explicit compatibility exception.",
   "authoritative_docs": [

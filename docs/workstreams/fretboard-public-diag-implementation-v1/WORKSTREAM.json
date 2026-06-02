@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-04-09",
   "scope_kind": "execution",
+  "lane_slug": "diagnostics-performance",
   "problem": "Implement the first shipped public `fretboard diag` surface as a project-facing diagnostics core without leaking repo suite/campaign/registry taxonomy, repo-only branding, or unpublished implementation assumptions into the public CLI contract.",
   "authoritative_docs": [
     {

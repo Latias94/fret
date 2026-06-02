@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::{CollapsingHeaderOptions, TreeNodeOptions};
+use super::super::{CollapsingHeaderOptions, TreeNodeOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DisclosureKind {

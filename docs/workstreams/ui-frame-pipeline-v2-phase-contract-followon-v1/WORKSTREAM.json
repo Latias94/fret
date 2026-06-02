@@ -5,6 +5,7 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
+  "lane_slug": "ui-frame-overlay",
   "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1",
   "problem": "Extend the accepted Frame Pipeline v2 contract with one narrow proof that build, layout, prepaint, paint, and commit responsibilities remain explicit outside the original closeout surfaces.",
   "authoritative_docs": [
