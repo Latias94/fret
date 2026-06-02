@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor AxisDragValue Typing Focus Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor AxisDragValue typing focus lifecycle moved out of
+`controls/axis_drag_value/element.rs` into private
+`controls/axis_drag_value/element/typing_focus.rs` without changing focus-driven return-to-scrub
+behavior, replace-on-focus synchronization, focus-handoff timer arming, last-draft refresh,
+draft-change error clearing, typing key registration order, scrub/typing frame routing, public
+AxisDragValue APIs, or IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` keeps keyed scrub/typing
+  orchestration, input and frame routing, test-id routing, style/density resolution, and
+  key-handler installation.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_focus.rs` owns
+  focus-driven return-to-scrub behavior, shared numeric focus sync, focus-handoff timer arming,
+  last-draft refresh while unfocused, and draft-change error clearing.
+- `tools/gate_imui_workstream_source.py` tracks root element and typing-focus owners separately,
+  and rejects focus sync and draft-change error clearing policy from drifting back into the root
+  element owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new typing-focus owner
+  file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui axis_drag_value --no-fail-fast`: pass, 5 tests.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Caller-Keying Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor color-edit caller-keyed root mounting moved out of

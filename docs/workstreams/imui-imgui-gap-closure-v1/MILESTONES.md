@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 editor AxisDragValue typing focus owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed scrub/typing
+orchestration, input and frame routing, and key-handler installation while delegating typing focus
+lifecycle to `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_focus.rs`. The
+private focus owner preserves focus-driven return-to-scrub behavior, shared numeric focus sync,
+focus-handoff timer arming, last-draft refresh while unfocused, and draft-change error clearing.
+Typing key registration order, scrub/typing frame routing, public AxisDragValue behavior, and IMUI
+adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor ColorEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now keeps public `ColorEdit`,
 state/model setup, input/swatch construction, delivered-drop application, overlay requests, test-id

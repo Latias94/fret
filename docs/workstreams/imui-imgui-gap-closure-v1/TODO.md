@@ -235,6 +235,14 @@ Last updated: 2026-06-02
       `controls/axis_drag_value/element/typing_keys.rs` owner contains replace-on-focus key
       handling plus Enter commit and Escape cancel policy. The source gate prevents key policy from
       drifting back into the root element owner.
+- [x] Split editor `AxisDragValue` typing focus lifecycle into a private element child owner
+      without changing focus-driven return-to-scrub behavior, replace-on-focus synchronization,
+      focus-handoff timer arming, last-draft refresh, draft-change error clearing, typing key
+      registration order, scrub/typing frame routing, or public AxisDragValue options.
+      Result: `controls/axis_drag_value/element.rs` keeps keyed scrub/typing orchestration, input
+      and frame routing, and key-handler installation while delegating typing focus lifecycle to
+      `controls/axis_drag_value/element/typing_focus.rs`. The source gate prevents focus sync and
+      draft-change error clearing policy from drifting back into the root element owner.
 - [x] Split editor `AxisDragValue` typing TextInput assembly into a private element child owner
       without changing hidden/active typing layout, enabled/focusable gating, invalid a11y state,
       joined input chrome, text style, input id/focus reads, focus handoff, typing key handling,

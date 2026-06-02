@@ -8,9 +8,7 @@ use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, clear_numeric_error_when_draft_changes,
-    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
-    sync_numeric_text_entry_focus_handoff,
+    NumericTextEntryFocusHandoffState, numeric_text_entry_focus_state,
 };
 use crate::primitives::style::EditorStyle;
 
@@ -23,11 +21,16 @@ mod input;
 mod scrub;
 mod scrub_element;
 mod typing;
+mod typing_focus;
 mod typing_keys;
 
 use input::{AxisDragValueTypingInputArgs, axis_drag_value_typing_input};
 use scrub_element::{AxisDragValueScrubElementArgs, axis_drag_value_scrub_element};
 use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
+use typing_focus::{
+    AxisDragValueTypingFocusArgs, axis_drag_value_clear_typing_error_when_draft_changes,
+    axis_drag_value_sync_typing_focus,
+};
 use typing_keys::{AxisDragValueTypingKeyHandlerArgs, axis_drag_value_add_typing_key_handler};
 
 impl<T> AxisDragValue<T>
@@ -165,39 +168,22 @@ where
         let input_id = typing_input.input_id;
         let is_focused = typing_input.is_focused;
 
-        // Drive mode transitions from focus: if the user clicks away after the input actually
-        // became focused, return to scrub mode.
-        if typing {
-            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-            if is_focused {
-                st.seen_input_focus = true;
-            } else if st.seen_input_focus {
-                st.mode = AxisDragValueMode::Scrub;
-            }
-        }
-
-        sync_numeric_text_entry_focus(
+        axis_drag_value_sync_typing_focus(
             cx,
-            &focus_state,
-            is_focused,
-            &value_text,
-            &draft,
-            &error,
-            self.options.selection_behavior,
+            AxisDragValueTypingFocusArgs {
+                state: state.clone(),
+                focus_state: focus_state.clone(),
+                focus_handoff: focus_handoff.clone(),
+                draft: draft.clone(),
+                error: error.clone(),
+                last_draft_text: last_draft_text.clone(),
+                value_text: value_text.clone(),
+                typing,
+                input_id,
+                is_focused,
+                selection_behavior: self.options.selection_behavior,
+            },
         );
-        sync_numeric_text_entry_focus_handoff(
-            cx,
-            input_id,
-            &focus_handoff,
-            typing,
-            input_id,
-            is_focused,
-        );
-
-        if !is_focused {
-            let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
-            *last = value_text.as_ref().to_string();
-        }
 
         axis_drag_value_add_typing_key_handler(
             cx,
@@ -217,7 +203,13 @@ where
             },
         );
 
-        clear_numeric_error_when_draft_changes(cx, is_focused, &draft, &error, &last_draft_text);
+        axis_drag_value_clear_typing_error_when_draft_changes(
+            cx,
+            is_focused,
+            &draft,
+            &error,
+            &last_draft_text,
+        );
 
         let typing_field = axis_drag_value_typing_field(
             cx,
