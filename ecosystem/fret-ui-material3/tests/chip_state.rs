@@ -363,6 +363,58 @@ fn chips_expose_material_roles_and_checked_state() {
 }
 
 #[test]
+fn chip_set_disabled_state_is_owned_by_child_chips() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "root",
+        |cx| {
+            let set = ChipSet::new(vec![
+                ChipSetItem::from(
+                    SuggestionChip::new("Disabled")
+                        .disabled(true)
+                        .test_id("m3-chip-disabled"),
+                ),
+                ChipSetItem::from(SuggestionChip::new("Enabled").test_id("m3-chip-enabled")),
+            ])
+            .a11y_label("Material chip set")
+            .test_id("m3-chip-set-contract")
+            .into_element(cx);
+
+            vec![with_padding(cx, Px(32.0), set)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+    let chip_set = semantics_node(&ui, "m3-chip-set-contract");
+    assert_eq!(chip_set.role, SemanticsRole::Group);
+    assert!(
+        !chip_set.flags.disabled,
+        "ChipSet is a grouping/roving container; disable individual chips instead"
+    );
+
+    let disabled = semantics_node(&ui, "m3-chip-disabled");
+    assert!(disabled.flags.disabled);
+
+    let enabled = semantics_node(&ui, "m3-chip-enabled");
+    assert!(!enabled.flags.disabled);
+}
+
+#[test]
 fn chips_route_primary_and_trailing_activation() {
     let ChipHarness {
         mut app,

@@ -17,6 +17,7 @@ that a chip trailing action can take focus without breaking ChipSet roving.
 - ArrowLeft/ArrowRight and Home/End roving remain stable and RTL-aware.
 - Multi-action chips keep their internal primary/trailing focus handoff without confusing the
   parent roving container.
+- Disabled state stays on individual chips; ChipSet is not a container-level disabled surface.
 - The policy stays recipe-owned until another design-system consumer proves a kit abstraction is
   needed.
 
@@ -32,8 +33,8 @@ that a chip trailing action can take focus without breaking ChipSet roving.
 
 - `ecosystem/fret-ui-material3/src/chip_set.rs`: group semantics, gap/wrap defaults, roving
   navigation, RTL-aware arrow mapping, loop behavior, and root selector.
-- Individual chip recipe files: chip semantics, chrome, trailing actions, and roving tab-stop
-  delegation.
+- Individual chip recipe files: chip semantics, disabled state, chrome, trailing actions, and
+  roving tab-stop delegation.
 - `fret-ui` roving primitives: existing mechanism substrate only.
 - `fret-ui-kit`: no extraction in this packet; future follow-on only if another design system needs
   the same reusable container policy.
@@ -47,7 +48,7 @@ that a chip trailing action can take focus without breaking ChipSet roving.
 
 ## Out Of Scope
 
-- New ChipSet public API.
+- New ChipSet public API, including container-level disabled state.
 - Moving roving policy into `fret-ui-kit`.
 - New `crates/*` focus or semantics mechanisms.
 - Pixel-perfect chip group visual comparison against upstream screenshots.
