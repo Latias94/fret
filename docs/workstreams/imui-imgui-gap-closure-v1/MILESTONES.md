@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 editor VecEdit caller-keying owner-split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
+records, constructors, builder-style setters, and presentation affix adoption while delegating
+caller-keyed `into_element(...)` routing to
+`ecosystem/fret-ui-editor/src/controls/vec_edit/model/keying.rs`. The private keying owner captures
+Vec2/Vec3/Vec4 model-id tuples, preserves explicit `id_source` precedence and
+`#[track_caller]` callsite fallback behavior, and mounts through the existing keyed element
+entrypoints. Public VecEdit APIs, keyed element assembly, axis ordering, and layout semantics remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 editor ColorEdit popup body layout owner-split result:
 `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup model reads,
 effective option resolution, and picker/numeric/swatches/eyedropper element creation while

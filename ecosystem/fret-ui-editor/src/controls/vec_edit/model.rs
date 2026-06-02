@@ -1,7 +1,5 @@
 //! VecEdit public model owner.
 
-use std::panic::Location;
-
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -12,6 +10,10 @@ use crate::primitives::drag_value_core::DragValueScalar;
 
 use super::axis::{AxisReset, OnVecEditAxisOutcome};
 use super::options::VecEditOptions;
+
+mod keying;
+
+use keying::{vec2_edit_into_element, vec3_edit_into_element, vec4_edit_into_element};
 
 #[derive(Clone)]
 pub struct Vec2Edit<T> {
@@ -88,23 +90,7 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let x_id = self.x.id();
-        let y_id = self.y.id();
-        let model_ids = (x_id, y_id);
-
-        let loc = Location::caller();
-        let callsite = (loc.file(), loc.line(), loc.column());
-
-        let id_source = self.options.id_source.clone();
-        if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(("fret-ui-editor.vec2_edit", id_source, model_ids), |cx| {
-                self.into_element_keyed(cx)
-            })
-        } else {
-            cx.keyed(("fret-ui-editor.vec2_edit", callsite, model_ids), |cx| {
-                self.into_element_keyed(cx)
-            })
-        }
+        vec2_edit_into_element(self, cx)
     }
 }
 
@@ -194,24 +180,7 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let x_id = self.x.id();
-        let y_id = self.y.id();
-        let z_id = self.z.id();
-        let model_ids = (x_id, y_id, z_id);
-
-        let loc = Location::caller();
-        let callsite = (loc.file(), loc.line(), loc.column());
-
-        let id_source = self.options.id_source.clone();
-        if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(("fret-ui-editor.vec3_edit", id_source, model_ids), |cx| {
-                self.into_element_keyed(cx)
-            })
-        } else {
-            cx.keyed(("fret-ui-editor.vec3_edit", callsite, model_ids), |cx| {
-                self.into_element_keyed(cx)
-            })
-        }
+        vec3_edit_into_element(self, cx)
     }
 }
 
@@ -312,25 +281,7 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let x_id = self.x.id();
-        let y_id = self.y.id();
-        let z_id = self.z.id();
-        let w_id = self.w.id();
-        let model_ids = (x_id, y_id, z_id, w_id);
-
-        let loc = Location::caller();
-        let callsite = (loc.file(), loc.line(), loc.column());
-
-        let id_source = self.options.id_source.clone();
-        if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(("fret-ui-editor.vec4_edit", id_source, model_ids), |cx| {
-                self.into_element_keyed(cx)
-            })
-        } else {
-            cx.keyed(("fret-ui-editor.vec4_edit", callsite, model_ids), |cx| {
-                self.into_element_keyed(cx)
-            })
-        }
+        vec4_edit_into_element(self, cx)
     }
 }
 

@@ -315,6 +315,17 @@ Last updated: 2026-06-02
       colors, builds root flex chrome, mounts axis groups, and preserves root test-id decoration.
       The source gate prevents layout/axis assembly policy from drifting back into the keyed
       Vec2/Vec3/Vec4 entrypoint owner.
+- [x] Split editor `VecEdit` caller-keyed routing into a private model child owner without changing
+      Vec2/Vec3/Vec4 public records, constructors/builders, presentation affix adoption, explicit
+      `id_source` precedence, callsite fallback keying, model-id key tuples, or keyed element
+      mounting.
+      Result: `controls/vec_edit/model.rs` keeps the public Vec2/Vec3/Vec4 records and builder
+      APIs while delegating `into_element(...)` routing to `controls/vec_edit/model/keying.rs`.
+      The private keying owner captures Vec2/Vec3/Vec4 model-id tuples, preserves
+      `#[track_caller]` callsite fallback behavior, applies explicit `id_source` overrides, and
+      mounts through the existing keyed element entrypoints. The source gate prevents
+      `Location::caller`, `cx.keyed`, and VecEdit key namespaces from drifting back into the public
+      model owner.
 - [x] Split editor `EnumSelect` options/default records into a private child owner without
       changing public `EnumSelectOptions` import paths, layout defaults, placeholder/none labels,
       max-list-height/test-id fields, keyed state identity, trigger composition, open-key policy, or

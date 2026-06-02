@@ -1389,6 +1389,8 @@
     "ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field/panel/row.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs",
+    "ecosystem/fret-ui-editor/src/controls/vec_edit/model/keying.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit/element/assembly.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit/axis.rs",

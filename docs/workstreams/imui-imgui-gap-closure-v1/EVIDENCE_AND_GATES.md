@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Editor VecEdit Caller-Keying Owner-Split Evidence - 2026-06-02
+
+Claim verified: editor `VecEdit` caller-keyed routing moved out of
+`controls/vec_edit/model.rs` into private `controls/vec_edit/model/keying.rs` without changing
+Vec2/Vec3/Vec4 public records, constructors/builders, presentation affix adoption, explicit
+`id_source` precedence, callsite fallback keying, model-id key tuples, or keyed element mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` keeps the public Vec2/Vec3/Vec4 model
+  records, constructor/builder methods, presentation helpers, and thin `into_element(...)`
+  delegation.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model/keying.rs` owns Vec2/Vec3/Vec4 model-id
+  tuple capture, explicit `id_source` keying, `#[track_caller]` callsite fallback capture, key
+  namespaces, and calls into the existing keyed element entrypoints.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/element.rs` remains the keyed element entrypoint
+  owner, and `controls/vec_edit/element/assembly.rs` remains the shared layout/axis assembly owner.
+- `tools/gate_imui_workstream_source.py` tracks the public model owner and private keying owner
+  separately, and rejects `Location::caller`, `cx.keyed`, VecEdit key namespaces, and
+  `self.into_element_keyed(cx)` from drifting back into the public model owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new keying owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo test -p fret-ui-editor --features imui vec_edit --no-fail-fast`: pass, 4 tests.
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Chrome Input Resolver Owner-Split Evidence - 2026-06-02
 
 Claim verified: editor chrome text-field input token resolution moved out of `primitives/chrome.rs`
