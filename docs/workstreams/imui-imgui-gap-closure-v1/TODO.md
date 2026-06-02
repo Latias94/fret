@@ -58,6 +58,14 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split DevTools Demo/Metrics/Debug action catalog, copy command ids, command bundle text,
+      metadata lines, and selected-bundle readiness projection out of
+      `apps/fret-devtools/src/demo_metrics_debug.rs` into a private child owner without changing
+      the always-visible route, workflow readiness/status/result/artifact handoff lines, runtime
+      state reads, panel assembly, action-row UI, or the internal call names used by `native.rs`.
+      Result: `demo_metrics_debug/actions.rs` owns action catalog and copy/readiness projection.
+      `demo_metrics_debug.rs` keeps route/workflow projection, runtime state reads, panel/action-row
+      assembly, and thin root functions. DevTools source gates now include both owners.
 - [x] Split IMUI debug-draw triangle mesh and image triangle mesh command payload variants out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
       private child owner without changing public `ImUiDebugDrawList` mesh methods, command

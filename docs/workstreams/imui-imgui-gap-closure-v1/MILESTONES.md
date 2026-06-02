@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 DevTools Demo/Metrics/Debug action-catalog owner-split result:
+`apps/fret-devtools/src/demo_metrics_debug/actions.rs` now owns the Demo/Metrics/Debug action
+catalog, per-action copy command ids, action command bundle text, metadata lines, and
+selected-bundle readiness projection.
+`apps/fret-devtools/src/demo_metrics_debug.rs` keeps the always-visible route line projection,
+workflow readiness/status/result/artifact handoff lines, runtime state reads, panel assembly,
+action-row UI, and thin root functions used by `native.rs`. Existing route behavior remains
+unchanged, and the DevTools source gates now read both owners.
+
 2026-06-03 IMUI debug-draw mesh-command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/mesh.rs` now owns
 triangle mesh and image triangle mesh debug-draw command payload variants.

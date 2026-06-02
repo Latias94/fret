@@ -2,6 +2,40 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## DevTools Demo/Metrics/Debug action catalog owner split - 2026-06-03
+
+This maintenance slice keeps the Demo/Metrics/Debug route productized while reducing the route
+root owner:
+
+- `apps/fret-devtools/src/demo_metrics_debug/actions.rs` now owns the action catalog, per-action
+  copy command ids, action command bundle text, metadata lines, and selected-bundle readiness
+  projection.
+- `apps/fret-devtools/src/demo_metrics_debug.rs` keeps the always-visible route line projection,
+  workflow readiness/status/result/artifact handoff lines, runtime state reads, panel assembly, and
+  action-row UI.
+- Evidence anchor: action catalog, per-action copy command ids.
+- Evidence anchor: route line projection, workflow readiness/status/result/artifact handoff lines.
+- Evidence anchor: full route/metrics/debug guide line projection.
+- Existing public/internal call names used by `apps/fret-devtools/src/native.rs` remain available
+  through thin root functions.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` now include the action owner in their DevTools GUI
+  source bundles.
+- `tools/gate_imui_workstream_source.py` now rejects action catalog/readiness/copy projection from
+  drifting back into the route root owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools -- --check` - passed.
+- `cargo check -p fret-devtools` - passed.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI debug draw mesh command payload owner split - 2026-06-03
 
 This maintenance slice separates mesh command payload ownership from the root debug-draw command
@@ -2090,9 +2124,10 @@ Fresh gates:
 This refresh keeps the Dear ImGui-style Demo/Metrics/Debug route productized in DevTools while
 reducing the remaining `native.rs` GUI shell file:
 
-- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns action metadata, action command text,
-  selected-bundle readiness projection, full route/metrics/debug guide line projection, GUI panel
-  assembly, and the copy-action button row.
+- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns full route/metrics/debug guide line
+  projection, GUI panel assembly, and the copy-action button row, while
+  `apps/fret-devtools/src/demo_metrics_debug/actions.rs` owns action metadata, action command text,
+  and selected-bundle readiness projection.
 - `apps/fret-devtools/src/native.rs` keeps the surrounding Guide tab composition and command
   dispatch for copying the generated action bundle.
 - `tools/gate_imui_workstream_source.py` now rejects the Demo/Metrics/Debug guide projection from
@@ -2219,8 +2254,8 @@ Fresh gates:
 This refresh keeps the Demo/Metrics/Debug route productized while reducing the size and ownership
 load of `apps/fret-devtools/src/native.rs`:
 
-- `apps/fret-devtools/src/demo_metrics_debug.rs` now owns the action metadata table plus command,
-  metadata, and selected-bundle readiness projections.
+- `apps/fret-devtools/src/demo_metrics_debug/actions.rs` now owns the action metadata table plus
+  command, metadata, and selected-bundle readiness projections.
 - `apps/fret-devtools/src/native.rs` keeps the GUI row, copy command dispatch, stateful
   selected-bundle count, and guide-panel rendering.
 - `tools/diag_gate_imui_p2_devtools_first_open.py` and

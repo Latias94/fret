@@ -128,7 +128,18 @@ DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
+DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE = "apps/fret-devtools/src/native/discovery_lines.rs"
+DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
+    "apps/fret-devtools/src/native/guide_reference_panels.rs"
+)
+DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.rs"
+DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE = "apps/fret-devtools/src/native/gate_profile_state.rs"
+DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE = "apps/fret-devtools/src/native/workflow_panel_state.rs"
+DEVTOOLS_GUI_RECENT_EVIDENCE_SOURCE = "apps/fret-devtools/src/native/recent_evidence.rs"
 DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE = "apps/fret-devtools/src/demo_metrics_debug.rs"
+DEVTOOLS_GUI_DEMO_METRICS_DEBUG_ACTIONS_SOURCE = (
+    "apps/fret-devtools/src/demo_metrics_debug/actions.rs"
+)
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
 BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
@@ -495,7 +506,16 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
+    discovery_lines_path = repo_root / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
+    guide_reference_panels_path = repo_root / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
+    header_state_path = repo_root / DEVTOOLS_GUI_HEADER_STATE_SOURCE
+    gate_profile_state_path = repo_root / DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE
+    workflow_panel_state_path = repo_root / DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE
+    recent_evidence_path = repo_root / DEVTOOLS_GUI_RECENT_EVIDENCE_SOURCE
     demo_metrics_debug_path = repo_root / DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE
+    demo_metrics_debug_actions_path = (
+        repo_root / DEVTOOLS_GUI_DEMO_METRICS_DEBUG_ACTIONS_SOURCE
+    )
     gate_profile_path = repo_root / DEVTOOLS_GATE_PROFILE_SOURCE
     protocol_path = repo_root / DEVTOOLS_PROTOCOL_SOURCE
     bootstrap_ws_path = repo_root / BOOTSTRAP_DEVTOOLS_WS_SOURCE
@@ -508,7 +528,20 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
+        discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
+        guide_reference_panels_source = guide_reference_panels_path.read_text(
+            encoding="utf-8"
+        )
+        header_state_source = header_state_path.read_text(encoding="utf-8")
+        gate_profile_state_source = gate_profile_state_path.read_text(encoding="utf-8")
+        workflow_panel_state_source = workflow_panel_state_path.read_text(
+            encoding="utf-8"
+        )
+        recent_evidence_source = recent_evidence_path.read_text(encoding="utf-8")
         demo_metrics_debug_source = demo_metrics_debug_path.read_text(encoding="utf-8")
+        demo_metrics_debug_actions_source = demo_metrics_debug_actions_path.read_text(
+            encoding="utf-8"
+        )
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
         protocol_source = protocol_path.read_text(encoding="utf-8")
         bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
@@ -523,7 +556,14 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             ws_source,
             semantics_source,
             gate_run_source,
+            discovery_lines_source,
+            guide_reference_panels_source,
+            header_state_source,
+            gate_profile_state_source,
+            workflow_panel_state_source,
+            recent_evidence_source,
             demo_metrics_debug_source,
+            demo_metrics_debug_actions_source,
             gate_profile_source,
             protocol_source,
             bootstrap_ws_source,
@@ -715,7 +755,6 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
         "gate_command_rows.push(devtools_gate_profile_command_builder(cx, st))",
         "devtools_gate_profile_lines(artifacts_root)",
-        "generated_gate_command_from_state(cx.app, st)",
         "generated_gate_command_from_state(app, st)",
         "devtools_gate_perf_threshold_command(input)",
         "devtools_gate_profile_action_rows(cx)",

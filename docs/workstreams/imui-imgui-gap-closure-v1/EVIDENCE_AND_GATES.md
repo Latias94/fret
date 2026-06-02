@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-03
 
+## DevTools Demo/Metrics/Debug Action Catalog Owner Split - 2026-06-03
+
+Claim verified: Demo/Metrics/Debug action catalog, copy command ids, action command bundle text,
+metadata lines, and selected-bundle readiness projection moved out of
+`apps/fret-devtools/src/demo_metrics_debug.rs` into private
+`apps/fret-devtools/src/demo_metrics_debug/actions.rs` without changing the always-visible
+Demo/Metrics/Debug route, workflow readiness/status/result/artifact handoff lines, runtime state
+reads, panel assembly, action-row UI, or the internal call names used by `native.rs`.
+
+Evidence:
+
+- `apps/fret-devtools/src/demo_metrics_debug/actions.rs` owns the action catalog and
+  copy/readiness line projection.
+- `apps/fret-devtools/src/demo_metrics_debug.rs` keeps route/workflow line projection, runtime
+  state reads, panel assembly, action-row UI, and thin root functions for native integration.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` now include the action owner in their DevTools GUI source
+  bundles.
+- `tools/gate_imui_workstream_source.py` source-checks the split so the action catalog cannot
+  drift back into the route root owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-devtools -- --check`: pass.
+- `cargo check -p fret-devtools`: pass.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`: pass.
+- `python tools\diag_gate_imui_product_chain.py --only discovery`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug Draw Mesh Command Payload Owner Split - 2026-06-03
 
 Claim verified: triangle mesh and image triangle mesh debug-draw command payload variants moved

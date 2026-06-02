@@ -1565,6 +1565,8 @@
     "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
     "tools/diag_gate_imui_product_chain.py",
+    "apps/fret-devtools/src/demo_metrics_debug.rs",
+    "apps/fret-devtools/src/demo_metrics_debug/actions.rs",
     "apps/fret-demo/src/bin/imui_editor_proof_demo.rs",
     "tools/gate_imui_editor_collection_source.py",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs",
