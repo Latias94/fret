@@ -71,10 +71,9 @@
       "id": "chip_set",
       "source": "src/chip_set.rs",
       "token_visual_component": null,
-      "headless_golden_suites": [],
+      "headless_golden_suites": ["chip_set"],
       "behavior_tests": ["automation_surface.rs", "chip_state.rs", "material3_choice_action_interactions.rs"],
-      "proof_status": "behavior_only",
-      "known_gap": "ChipSet is a policy/layout container with no Material token module, but it still needs a headless golden for roving focus and wrap layout scene stability."
+      "proof_status": "headless_golden"
     },
     {
       "id": "date_picker",

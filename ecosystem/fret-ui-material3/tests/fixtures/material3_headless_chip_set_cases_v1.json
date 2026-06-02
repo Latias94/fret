@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-chip-set-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 ChipSet grouping, roving-friendly chip composition, wrap layout, hover, focus-visible, and RTL presentation.",
+  "bounds": [760.0, 320.0],
+  "cases": [
+    {
+      "id": "idle_ltr_matrix",
+      "kind": "idle",
+      "layout_direction": "ltr",
+      "settle_from_frame": 40,
+      "total_frames": 64
+    },
+    {
+      "id": "assist_hover",
+      "kind": "hover",
+      "layout_direction": "ltr",
+      "target_test_id": "chip-set-assist",
+      "settle_from_frame": 40,
+      "total_frames": 64
+    },
+    {
+      "id": "input_focus_visible",
+      "kind": "focus_visible",
+      "layout_direction": "ltr",
+      "target_test_id": "chip-set-input",
+      "settle_from_frame": 40,
+      "total_frames": 64
+    },
+    {
+      "id": "idle_rtl_matrix",
+      "kind": "idle",
+      "layout_direction": "rtl",
+      "settle_from_frame": 40,
+      "total_frames": 64
+    }
+  ]
+}

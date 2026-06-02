@@ -24,6 +24,11 @@ fn material3_headless_segmented_button_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_chip_set_suite_goldens_v1() {
+    support::headless_golden_runners::chip_set::run_material3_headless_chip_set_suite_goldens_v1();
+}
+
+#[test]
 fn material3_headless_radio_suite_goldens_v1() {
     support::headless_golden_runners::radio::run_material3_headless_radio_suite_goldens_v1();
 }

@@ -2,6 +2,7 @@ pub(crate) mod autocomplete;
 pub(crate) mod badge;
 pub(crate) mod bottom_sheet;
 pub(crate) mod carousel_item;
+pub(crate) mod chip_set;
 pub(crate) mod controls;
 pub(crate) mod date_picker;
 pub(crate) mod divider;
