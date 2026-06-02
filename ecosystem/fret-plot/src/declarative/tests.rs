@@ -16,8 +16,9 @@ use crate::state::{
 use fret_core::{
     AppWindowId, Event, FrameId, ImageId, MaterialDescriptor, MaterialId,
     MaterialRegistrationError, MaterialService, Modifiers, MouseButton, MouseButtons, PathCommand,
-    PathConstraints, PathId, PathMetrics, PathService, PointerEvent, PointerId, PointerType, Scene,
-    SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService, UvRect,
+    PathConstraints, PathId, PathMetrics, PathService, PointerEvent, PointerId, PointerType, Rect,
+    Scene, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+    TextService, UvRect,
 };
 use fret_runtime::{
     ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,

@@ -1,9 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use fret_core::{
-    Color, Corners, DrawOrder, Edges, Paint, PathStyle, Point, Px, Rect, Size, StrokeStyle,
-};
+use fret_core::{Color, Corners, DrawOrder, Edges, Paint, PathStyle, Point, Px, StrokeStyle};
 use fret_runtime::Model;
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, CanvasProps, Length, ManagedSurfaceProps};
@@ -18,6 +16,7 @@ use crate::style::LinePlotStyle;
 
 mod axis_labels;
 mod commands;
+mod geometry;
 mod grid_axes;
 mod heatmap;
 mod interaction;
@@ -39,6 +38,7 @@ use commands::{
     line_plot_shaded_lower_path_key, shaded_band_commands_from_series, stems_commands_from_points,
     step_commands_from_polyline,
 };
+use geometry::{line_plot_inner_rect, line_plot_view_bounds_for_y_axis};
 use grid_axes::paint_line_plot_grid_and_axes;
 use heatmap::{paint_line_plot_heatmap, paint_line_plot_heatmap_colorbar};
 use interaction::{
@@ -1047,15 +1047,6 @@ fn paint_line_plot_panel(
     );
 }
 
-fn line_plot_view_bounds_for_y_axis(primary: DataRect, axis_bounds: DataRect) -> DataRect {
-    DataRect {
-        x_min: primary.x_min,
-        x_max: primary.x_max,
-        y_min: axis_bounds.y_min,
-        y_max: axis_bounds.y_max,
-    }
-}
-
 fn axis_tick_label_text(
     scale: AxisScale,
     formatter: &AxisLabelFormatter,
@@ -1066,21 +1057,6 @@ fn axis_tick_label_text(
         return log10_tick_label_or_empty(value);
     }
     formatter.format(value, span)
-}
-
-fn line_plot_inner_rect(bounds: Rect, style: LinePlotStyle) -> Rect {
-    let pad = style.padding.0.max(0.0);
-    let axis_gap = style.axis_gap.0.max(0.0);
-    Rect::new(
-        Point::new(
-            Px(bounds.origin.x.0 + pad + axis_gap),
-            Px(bounds.origin.y.0 + pad),
-        ),
-        Size::new(
-            Px((bounds.size.width.0 - pad * 2.0 - axis_gap).max(0.0)),
-            Px((bounds.size.height.0 - pad * 2.0 - axis_gap).max(0.0)),
-        ),
-    )
 }
 
 fn series_color(style: LinePlotStyle, series_index: usize, series_count: usize) -> Color {

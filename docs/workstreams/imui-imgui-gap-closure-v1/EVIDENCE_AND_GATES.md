@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Geometry Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative shared inner-rect and y-axis view-bounds geometry moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/geometry.rs` without changing panel assembly, paint
+orchestration, formatting, series color policy, event routing, output publication, public panel
+props, optional IMUI adapter routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/geometry.rs` is the shared inner-rect and y-axis
+  view-bounds geometry owner.
+- Axis labels, interaction, output, and overlay owners import geometry explicitly.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, formatting
+  helpers, series color policy, and plot state model wiring, but no longer owns shared geometry
+  helpers.
+- `tools/gate_imui_workstream_source.py` rejects `line_plot_inner_rect` and
+  `line_plot_view_bounds_for_y_axis` from drifting back into the root implementation owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new geometry owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_uses_controlled_view_bounds --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_updates_output_cursor --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_right_axis_series_with_right_axis_bounds --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_image_overlay --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Paint Primitives Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative shared Quad primitive helpers moved out of
@@ -17,8 +55,9 @@ Evidence:
   line and filled-rect paint helpers.
 - Grid, readout, heatmap, and overlay owners import primitives explicitly from
   `paint_primitives.rs`.
-- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, shared
-  geometry helpers, and plot state model wiring, but no longer owns shared Quad primitive helpers.
+- `ecosystem/fret-plot/src/declarative.rs` kept panel assembly, paint orchestration, shared
+  geometry helpers, and plot state model wiring for this slice, but no longer owned shared Quad
+  primitive helpers. The later geometry owner split above narrows that current root role.
 - `tools/gate_imui_workstream_source.py` rejects `push_vertical_line`, `push_horizontal_line`, and
   `push_filled_rect` from drifting back into the root implementation owner.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new paint primitive
@@ -56,7 +95,7 @@ Evidence:
   baseline axis painting, and the primary-axis tick label paint call.
 - `ecosystem/fret-plot/src/declarative.rs` kept panel assembly, paint orchestration, shared paint
   primitives, shared geometry helpers, and plot state model wiring for this slice; the later paint
-  primitive owner split narrows that current root role.
+  primitive and geometry owner splits narrow that current root role.
 - Shared paint primitives stayed in `declarative.rs` at this slice because readout, heatmap, and
   overlay owners still shared those helpers; the later paint primitive owner makes that sharing
   explicit.

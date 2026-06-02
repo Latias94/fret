@@ -6033,6 +6033,14 @@ opening the slice.
       and filled-rect helpers; grid, readout, heatmap, and overlay owners import those primitives
       explicitly, while `declarative.rs` keeps panel assembly, paint orchestration, shared geometry
       helpers, and plot state model wiring.
+- [x] Split Fret Plot declarative shared geometry out of the implementation root without changing
+      panel assembly, paint orchestration, formatting, series color policy, event routing, output
+      publication, public panel props, optional IMUI adapter routing, or plot model projection
+      behavior.
+      Result: `ecosystem/fret-plot/src/declarative/geometry.rs` owns shared inner-rect and y-axis
+      view-bounds projection; axis labels, interaction, output, and overlay owners import geometry
+      explicitly, while `declarative.rs` keeps panel assembly, paint orchestration, formatting
+      helpers, series color policy, and plot state model wiring.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

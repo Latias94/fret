@@ -5282,6 +5282,12 @@ lines, horizontal lines, and filled rectangles. Grid, readout, heatmap, and over
 those primitives explicitly, and the declarative root keeps panel assembly, paint orchestration,
 shared geometry helpers, and plot state model wiring.
 
+Fret Plot declarative geometry owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/geometry.rs` now owns shared inner-rect and y-axis view-bounds
+projection. Axis labels, interaction, output, and overlay owners import geometry explicitly, and the
+declarative root keeps panel assembly, paint orchestration, formatting helpers, series color policy,
+and plot state model wiring.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

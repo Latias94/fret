@@ -18,9 +18,10 @@ use crate::series::SeriesId;
 use crate::state::{PlotDragOutput, PlotDragPhase, PlotOutputSnapshot, PlotState};
 use crate::style::LinePlotStyle;
 
+use super::geometry::{line_plot_inner_rect, line_plot_view_bounds_for_y_axis};
 use super::legend::{LinePlotLegendHit, line_plot_legend_hit};
+use super::model::PlotPanelModel;
 use super::output::{line_plot_current_view_bounds_for_event, line_plot_pointer_output_snapshot};
-use super::{line_plot_inner_rect, line_plot_view_bounds_for_y_axis, model::PlotPanelModel};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct LinePlotPanSession {

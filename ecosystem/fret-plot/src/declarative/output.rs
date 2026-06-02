@@ -9,7 +9,8 @@ use crate::plot::view::sanitize_data_rect_scaled;
 use crate::state::{PlotDragOutput, PlotOutput, PlotOutputSnapshot, PlotState};
 use crate::style::LinePlotStyle;
 
-use super::{line_plot_inner_rect, model::PlotPanelModel};
+use super::geometry::line_plot_inner_rect;
+use super::model::PlotPanelModel;
 
 pub(super) fn publish_line_plot_panel_output<H: UiHost>(
     app: &mut H,
