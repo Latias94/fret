@@ -29,6 +29,11 @@ fn material3_headless_radio_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_tabs_suite_goldens_v1() {
+    support::headless_golden_runners::tabs::run_material3_headless_tabs_suite_goldens_v1();
+}
+
+#[test]
 fn material3_headless_badge_suite_goldens_v1() {
     support::headless_golden_runners::badge::run_material3_headless_badge_suite_goldens_v1();
 }

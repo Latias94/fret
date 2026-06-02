@@ -289,10 +289,9 @@
       "id": "tabs",
       "source": "src/tabs.rs",
       "token_visual_component": "tabs",
-      "headless_golden_suites": [],
+      "headless_golden_suites": ["tabs"],
       "behavior_tests": ["automation_surface.rs", "material3_choice_action_interactions.rs", "minimum_touch_target.rs", "tabs_state.rs"],
-      "proof_status": "behavior_only",
-      "known_gap": "Tabs has state, automation-surface, touch-target, and interaction coverage, but no fixture-driven headless golden suite for indicator and panel scene stability."
+      "proof_status": "headless_golden"
     },
     {
       "id": "text_field",

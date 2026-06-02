@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-tabs-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 Tabs primary/secondary, fixed/scrollable, icon placement, panel, hover, focus-visible, and RTL presentation.",
+  "bounds": [760.0, 420.0],
+  "cases": [
+    {
+      "id": "idle_ltr_matrix",
+      "kind": "idle",
+      "layout_direction": "ltr",
+      "settle_from_frame": 72,
+      "total_frames": 96
+    },
+    {
+      "id": "secondary_hover",
+      "kind": "hover",
+      "layout_direction": "ltr",
+      "target_test_id": "tabs-secondary-fixed-profile",
+      "settle_from_frame": 72,
+      "total_frames": 96
+    },
+    {
+      "id": "primary_focus_visible",
+      "kind": "focus_visible",
+      "layout_direction": "ltr",
+      "target_test_id": "tabs-primary-fixed-overview",
+      "settle_from_frame": 72,
+      "total_frames": 96
+    },
+    {
+      "id": "idle_rtl_matrix",
+      "kind": "idle",
+      "layout_direction": "rtl",
+      "settle_from_frame": 72,
+      "total_frames": 96
+    }
+  ]
+}

@@ -19,6 +19,7 @@ pub(crate) mod search_view;
 pub(crate) mod segmented_button;
 pub(crate) mod slider;
 pub(crate) mod snackbar;
+pub(crate) mod tabs;
 pub(crate) mod text_field;
 pub(crate) mod time_picker;
 pub(crate) mod top_app_bar;

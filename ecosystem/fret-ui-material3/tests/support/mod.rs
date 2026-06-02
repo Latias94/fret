@@ -17,6 +17,7 @@ pub(crate) mod headless_radio_cases;
 pub(crate) mod headless_search_cases;
 pub(crate) mod headless_slider_cases;
 pub(crate) mod headless_snackbar_cases;
+pub(crate) mod headless_tabs_cases;
 pub(crate) mod headless_text_field_cases;
 pub(crate) mod host;
 pub(crate) mod interaction_harness;
