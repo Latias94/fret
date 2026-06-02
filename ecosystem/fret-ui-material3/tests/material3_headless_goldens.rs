@@ -19,6 +19,9 @@ use support::goldens::{
     write_or_assert_material3_suite_v1,
 };
 use support::headless_autocomplete_cases::load_material3_autocomplete_golden_suite_v1;
+use support::headless_menu_dialog_style_cases::{
+    Material3MenuDialogStyleGoldenCaseKindV1, load_material3_menu_dialog_style_golden_suite_v1,
+};
 use support::headless_search_cases::load_material3_search_golden_suite_v1;
 use support::headless_snackbar_cases::load_material3_snackbar_golden_suite_v1;
 use support::host::{FakeUiServices, TestHost};
@@ -3789,11 +3792,9 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
 
 #[test]
 fn material3_headless_menu_dialog_style_suite_goldens_v1() {
-    use fret_core::{Color, Corners};
     use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, Length, MainAlign};
-    use fret_ui_kit::{ColorRef, WidgetStateProperty};
-    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuStyle};
-    use fret_ui_material3::{Button, Dialog, DialogAction, DialogStyle};
+    use fret_ui_material3::menu::Menu;
+    use fret_ui_material3::{Button, Dialog};
 
     let schemes = [
         (
@@ -3817,6 +3818,7 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
             "light.expressive",
         ),
     ];
+    let style_suite = load_material3_menu_dialog_style_golden_suite_v1();
 
     for scale_factor in [1.0, 1.25, 2.0] {
         let scale = scale_segment(scale_factor);
@@ -3831,6 +3833,8 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
 
             // Menu: default vs override (in the same scene).
             {
+                let menu_case = style_suite
+                    .case(Material3MenuDialogStyleGoldenCaseKindV1::MenuDefaultVsOverride);
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3840,36 +3844,8 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 let mut ui: UiTree<TestHost> = UiTree::new();
                 ui.set_window(window);
 
-                let override_bg = Color {
-                    r: 0.9,
-                    g: 0.1,
-                    b: 0.2,
-                    a: 1.0,
-                };
-                let override_label = Color {
-                    r: 0.1,
-                    g: 0.8,
-                    b: 0.3,
-                    a: 1.0,
-                };
-
-                let style = MenuStyle::default()
-                    .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
-                        override_bg,
-                    ))))
-                    .container_corner_radii(WidgetStateProperty::new(Some(Corners::all(Px(0.0)))))
-                    .container_elevation(WidgetStateProperty::new(Some(Px(12.0))))
-                    .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
-                        override_label,
-                    ))));
-
-                let entries = vec![
-                    MenuEntry::Item(MenuItem::new("A").test_id("menu-item-a")),
-                    MenuEntry::Item(MenuItem::new("B").test_id("menu-item-b")),
-                    MenuEntry::Item(MenuItem::new("C (disabled)").disabled(true)),
-                    MenuEntry::Separator,
-                    MenuEntry::Item(MenuItem::new("D").test_id("menu-item-d")),
-                ];
+                let style = menu_case.menu_style();
+                let entries = style_suite.menu_entries();
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -3919,18 +3895,19 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 };
 
                 let message = format!(
-                    "expected the Material3 menu style scene to be stable ({label}, {scale})"
+                    "expected the Material3 menu style scene to be stable ({label}, {scale}, {})",
+                    menu_case.id()
                 );
                 cases.insert(
-                    "menu_default_vs_override".to_string(),
+                    menu_case.id().to_string(),
                     settle_material3_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
                         &mut services,
                         bounds,
                         scale_factor,
-                        7,
-                        9,
+                        menu_case.settle_from_frame(),
+                        menu_case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -3939,6 +3916,8 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
 
             // Dialog: default open state (modal overlay).
             {
+                let dialog_case =
+                    style_suite.case(Material3MenuDialogStyleGoldenCaseKindV1::DialogDefault);
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3949,6 +3928,9 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 ui.set_window(window);
 
                 let open = app.models_mut().insert(true);
+                let headline = dialog_case.headline().to_string();
+                let supporting_text = dialog_case.supporting_text().to_string();
+                let actions = dialog_case.dialog_actions();
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -3962,9 +3944,9 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                         "root",
                         |cx| {
                             let dialog = Dialog::new(open.clone())
-                                .headline("Dialog")
-                                .supporting_text("Body")
-                                .actions(vec![DialogAction::new("OK")])
+                                .headline(headline.clone())
+                                .supporting_text(supporting_text.clone())
+                                .actions(actions.clone())
                                 .test_id("dialog-default")
                                 .into_element(
                                     cx,
@@ -3983,10 +3965,11 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 };
 
                 let message = format!(
-                    "expected the Material3 dialog default scene to be stable after animations settle ({label}, {scale})"
+                    "expected the Material3 dialog default scene to be stable after animations settle ({label}, {scale}, {})",
+                    dialog_case.id()
                 );
                 cases.insert(
-                    "dialog_default".to_string(),
+                    dialog_case.id().to_string(),
                     settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
@@ -3994,8 +3977,8 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                         window,
                         bounds,
                         scale_factor,
-                        44,
-                        80,
+                        dialog_case.settle_from_frame(),
+                        dialog_case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -4004,6 +3987,8 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
 
             // Dialog: override surface + text colors.
             {
+                let dialog_case =
+                    style_suite.case(Material3MenuDialogStyleGoldenCaseKindV1::DialogOverride);
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -4014,38 +3999,10 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 ui.set_window(window);
 
                 let open = app.models_mut().insert(true);
-
-                let override_bg = Color {
-                    r: 0.2,
-                    g: 0.2,
-                    b: 0.9,
-                    a: 1.0,
-                };
-                let override_headline = Color {
-                    r: 0.9,
-                    g: 0.9,
-                    b: 0.2,
-                    a: 1.0,
-                };
-                let override_supporting = Color {
-                    r: 0.8,
-                    g: 0.2,
-                    b: 0.8,
-                    a: 1.0,
-                };
-
-                let style = DialogStyle::default()
-                    .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
-                        override_bg,
-                    ))))
-                    .container_corner_radii(WidgetStateProperty::new(Some(Corners::all(Px(0.0)))))
-                    .container_elevation(WidgetStateProperty::new(Some(Px(12.0))))
-                    .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
-                        override_headline,
-                    ))))
-                    .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
-                        override_supporting,
-                    ))));
+                let headline = dialog_case.headline().to_string();
+                let supporting_text = dialog_case.supporting_text().to_string();
+                let actions = dialog_case.dialog_actions();
+                let style = dialog_case.dialog_style();
 
                 let render = move |ui: &mut UiTree<TestHost>,
                                    app: &mut TestHost,
@@ -4059,9 +4016,9 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                         "root",
                         |cx| {
                             let dialog = Dialog::new(open.clone())
-                                .headline("Dialog")
-                                .supporting_text("Body")
-                                .actions(vec![DialogAction::new("OK")])
+                                .headline(headline.clone())
+                                .supporting_text(supporting_text.clone())
+                                .actions(actions.clone())
                                 .style(style.clone())
                                 .test_id("dialog-override")
                                 .into_element(
@@ -4081,10 +4038,11 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                 };
 
                 let message = format!(
-                    "expected the Material3 dialog override scene to be stable after animations settle ({label}, {scale})"
+                    "expected the Material3 dialog override scene to be stable after animations settle ({label}, {scale}, {})",
+                    dialog_case.id()
                 );
                 cases.insert(
-                    "dialog_override".to_string(),
+                    dialog_case.id().to_string(),
                     settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
                         &mut ui,
@@ -4092,8 +4050,8 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
                         window,
                         bounds,
                         scale_factor,
-                        44,
-                        80,
+                        dialog_case.settle_from_frame(),
+                        dialog_case.total_frames(),
                         &message,
                         &render,
                     ),
@@ -4101,8 +4059,9 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
             }
 
             let suite = Material3HeadlessSuiteV1 { cases };
-            write_or_assert_material3_suite_v1(
+            write_or_assert_material3_suite_for_test_v1(
                 &format!("material3-menu-dialog-style.{scale}.{label}"),
+                "material3_headless_menu_dialog_style_suite_goldens_v1",
                 &suite,
             );
         }
