@@ -6,6 +6,7 @@ mod pointer_cancel;
 mod pointer_down;
 mod pointer_move;
 mod pointer_up;
+mod pointer_wheel;
 
 pub(super) fn handle_declarative_event<H: UiHost + 'static>(
     cx: &mut ManagedSurfaceEventCx<'_, '_, H>,
@@ -31,6 +32,9 @@ pub(super) fn handle_declarative_event<H: UiHost + 'static>(
         }
         fret_core::Event::Pointer(event @ fret_core::PointerEvent::Up { .. }) => {
             pointer_up::handle_pointer_up_event(cx, event, window);
+        }
+        fret_core::Event::Pointer(event @ fret_core::PointerEvent::Wheel { .. }) => {
+            pointer_wheel::handle_pointer_wheel_event(cx, event, window);
         }
         fret_core::Event::PointerCancel(cancel) => {
             pointer_cancel::handle_pointer_cancel_event(cx, cancel, window);

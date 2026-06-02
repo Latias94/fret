@@ -500,58 +500,11 @@ where
     cx.managed_surface_on_event_for(element.id, move |cx, event| match event {
         fret_core::Event::InternalDrag(_)
         | fret_core::Event::Pointer(fret_core::PointerEvent::Down { .. })
+        | fret_core::Event::Pointer(fret_core::PointerEvent::Move { .. })
         | fret_core::Event::Pointer(fret_core::PointerEvent::Up { .. })
+        | fret_core::Event::Pointer(fret_core::PointerEvent::Wheel { .. })
         | fret_core::Event::PointerCancel(_) => {
             handle_declarative_event(cx, event, window, allow_multi_window_tear_off);
-        }
-        fret_core::Event::Pointer(fret_core::PointerEvent::Move { .. }) => {
-            handle_declarative_event(cx, event, window, allow_multi_window_tear_off);
-        }
-        fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
-            position, delta, ..
-        }) => {
-            let bounds = cx.bounds();
-            let Some(snapshot) = declarative_layout_snapshot_for_bounds(cx.app(), window, bounds)
-            else {
-                return;
-            };
-            let theme = cx.theme().snapshot();
-            if let Some(menu) = declarative_tab_overflow_menu_for_window(cx.app(), window) {
-                let (handled, next_menu) = declarative_handle_tab_overflow_menu_wheel(
-                    cx.app(),
-                    menu,
-                    &snapshot.layout_all,
-                    theme.clone(),
-                    *position,
-                    *delta,
-                );
-                if handled {
-                    cx.app().with_global_mut(
-                        DeclarativeDockInteractionService::default,
-                        |service, _app| service.set_tab_overflow_menu(window, next_menu),
-                    );
-                    cx.request_redraw();
-                    cx.stop_propagation();
-                    return;
-                }
-            }
-            if let Some(next_scroll) = declarative_handle_tab_strip_wheel(
-                cx.app(),
-                window,
-                &snapshot.layout_all,
-                theme,
-                *position,
-                *delta,
-            ) {
-                declarative_sync_tab_scroll_for_window(
-                    cx.app(),
-                    window,
-                    &next_scroll,
-                    snapshot.layout_all.keys().copied(),
-                );
-                cx.request_redraw();
-                cx.stop_propagation();
-            }
         }
         _ => {}
     });

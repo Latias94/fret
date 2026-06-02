@@ -486,6 +486,14 @@ Each TODO is labeled:
         hover/cursor projection.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-02 docking declarative PointerWheel event owner split keeps overflow-menu and
+      tab-strip scroll handling out of the event router:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M51_DOCKING_DECLARATIVE_POINTER_WHEEL_EVENT_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/dock/declarative/events/pointer_wheel.rs` owns overflow menu
+        wheel scrolling, tab strip wheel scrolling, scroll state sync, redraw requests, and
+        propagation stopping.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
