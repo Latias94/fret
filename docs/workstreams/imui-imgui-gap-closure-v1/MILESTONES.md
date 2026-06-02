@@ -12,6 +12,17 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 plot histogram2d props builder owner-split result:
+`ecosystem/fret-plot/src/declarative/props.rs` now declares the private histogram2d, heatmap,
+candlestick, bars, histogram, error-bars, and line builder owners, re-exports public prop records,
+and keeps remaining plot prop builders while
+`ecosystem/fret-plot/src/declarative/props/histogram2d.rs` owns `Histogram2DPlotPanelProps`
+construction, the `style.heatmap_show_colorbar = true` default, and
+output/state/style/axis-label/axis-scale/step-mode builder methods. Public prop type names,
+builder signatures/defaults, panel entrypoints, optional IMUI adapter routing, paint/event owners,
+output publication, and plot model projection remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-03 plot heatmap props builder owner-split result:
 `ecosystem/fret-plot/src/declarative/props.rs` now declares the private heatmap, candlestick, bars,
 histogram, error-bars, and line builder owners, re-exports public prop records, and keeps remaining
