@@ -47,6 +47,8 @@ mod followup;
 mod gate_run;
 #[path = "native/gate_profile_state.rs"]
 mod gate_profile_state;
+#[path = "native/guide_reference_panels.rs"]
+mod guide_reference_panels;
 #[path = "native/guide_recent_evidence_state.rs"]
 mod guide_recent_evidence_state;
 #[path = "native/header_state.rs"]
@@ -69,6 +71,7 @@ use demo_metrics_debug::{
     devtools_demo_metrics_debug_panel,
 };
 use gate_profile_state::{collect_gate_profile_panel_state, gate_profile_select_items};
+use guide_reference_panels::{dogfood_reference_panel, first_open_reference_panel};
 use guide_recent_evidence_state::collect_guide_recent_evidence_state;
 use header_state::{collect_header_diagnostics_state, header_next_action_lines};
 use discovery_lines::{
@@ -3180,26 +3183,8 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
         "Latest GUI-launched gate, workflow, and follow-up artifacts restored from the shared diagnostics histories.",
         vec![recent_evidence_actions, recent_evidence_blob],
     );
-    let mut first_open_rows = Vec::new();
-    for line in devtools_first_open_lines(st.cfg.fs_out_dir.as_ref()) {
-        first_open_rows.push(cx.text(line));
-    }
-    let first_open_panel = diag_section(
-        cx,
-        "First-open Evidence Path",
-        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
-        first_open_rows,
-    );
-    let mut dogfood_workflow_rows = Vec::new();
-    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
-        dogfood_workflow_rows.push(cx.text(line));
-    }
-    let dogfood_workflow_panel = diag_section(
-        cx,
-        "Dogfood Workflow",
-        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
-        dogfood_workflow_rows,
-    );
+    let first_open_panel = first_open_reference_panel(cx, st);
+    let dogfood_workflow_panel = dogfood_reference_panel(cx, st);
     let demo_metrics_debug_panel = devtools_demo_metrics_debug_panel(cx, st);
     let mut workflow_run_rows = Vec::new();
     for line in devtools_workflow_run_lines(st.cfg.fs_out_dir.as_ref()) {
