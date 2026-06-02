@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Annotation Overlay Helper Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative annotation tokens, annotation labels, text-box emission,
+tag marker boxes, and plot-bound clamping moved out of
+`ecosystem/fret-plot/src/declarative/overlays.rs` into private
+`ecosystem/fret-plot/src/declarative/overlays/annotation.rs` without changing reference-line
+rectangles, draggable shapes, image overlay, draggable labels, tag overlays, text overlays, panel
+paint orchestration, event routing, output publication, public panel props, optional IMUI adapter
+routing, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/overlays/annotation.rs` is the annotation token and marker
+  paint helper owner.
+- `overlays.rs` re-exports annotation helpers for the tag, text, and draggable-label child owners
+  while keeping overlay paint owner re-exports.
+- The annotation owner imports only theme tokens, text measurement/emission, filled-rect marker
+  primitives, and plot-bound clamping, staying event-free, output-free, state-model-free,
+  overlay-record-free, image-overlay-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` rejects annotation helper bodies from drifting back into
+  `overlays.rs` and rejects overlay projection concerns from `overlays/annotation.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new annotation helper
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_tag_x_and_y_overlays --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_text_overlay --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_draggable_overlay_labels --no-fail-fast`:
+  pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Draggable Shape Overlay Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative draggable point and draggable rectangle projection moved out
@@ -785,17 +826,19 @@ Focused gates:
 
 ## Fret Plot Declarative Overlay Paint Owner Split - 2026-06-02
 
-Claim verified: Fret Plot declarative reference, draggable, image, tag, and text overlay painting
-moved out of `ecosystem/fret-plot/src/declarative.rs` into private
-`ecosystem/fret-plot/src/declarative/overlays.rs` without changing multi-axis overlay projection,
-annotation token resolution, draggable label value formatting, image layer routing, plot tag
-placement, text overlay clamping, public panel props, or optional IMUI adapter routing.
+Claim verified: Fret Plot declarative overlay painting moved out of
+`ecosystem/fret-plot/src/declarative.rs`; after follow-on splits,
+`ecosystem/fret-plot/src/declarative/overlays.rs` is the overlay re-export hub for annotation and
+paint owners without changing multi-axis overlay projection, annotation token resolution,
+draggable label value formatting, image layer routing, plot tag placement, text overlay clamping,
+public panel props, or optional IMUI adapter routing.
 
 Evidence:
 
-- `ecosystem/fret-plot/src/declarative/overlays.rs` owns the reference, draggable, image, tag, and text overlay paint owner,
-  including annotation tokens, text boxes, tag markers, plot-image regions, and overlay label
-  clamping.
+- `ecosystem/fret-plot/src/declarative/overlays.rs` is the overlay re-export hub for annotation
+  and paint owners.
+- Private child owners now carry annotation helpers, reference lines, draggable shapes, image
+  overlays, draggable labels, tag overlays, and text overlays.
 - `ecosystem/fret-plot/src/declarative.rs` keeps panel paint orchestration, draggable overlay event
   routing, output publication, and plot state handling while delegating overlay paint to the
   private owner.

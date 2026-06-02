@@ -1884,6 +1884,7 @@
     "ecosystem/fret-plot/src/declarative/legend.rs",
     "ecosystem/fret-plot/src/declarative/model.rs",
     "ecosystem/fret-plot/src/declarative/overlays.rs",
+    "ecosystem/fret-plot/src/declarative/overlays/annotation.rs",
     "ecosystem/fret-plot/src/declarative/overlays/draggable_labels.rs",
     "ecosystem/fret-plot/src/declarative/overlays/draggable_shapes.rs",
     "ecosystem/fret-plot/src/declarative/overlays/images.rs",

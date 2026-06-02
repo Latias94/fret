@@ -12,9 +12,18 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot annotation overlay helper owner-split result:
+`ecosystem/fret-plot/src/declarative/overlays.rs` is now an overlay re-export hub while
+`ecosystem/fret-plot/src/declarative/overlays/annotation.rs` owns shared annotation token
+resolution, annotation label formatting, text-box emission, tag marker boxes, and plot-bound
+clamping for tag, text, and draggable-label owners. Reference-line, draggable-shape, image, tag,
+text, draggable-label, panel orchestration, event routing, public panel props, plot model
+projection, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot draggable-shape overlay paint owner-split result:
-`ecosystem/fret-plot/src/declarative/overlays.rs` now keeps overlay re-exports and shared
-annotation helpers while delegating draggable point and rectangle projection to
+`ecosystem/fret-plot/src/declarative/overlays.rs` now keeps overlay re-exports while delegating
+draggable point and rectangle projection to
 `ecosystem/fret-plot/src/declarative/overlays/draggable_shapes.rs`. The private draggable-shape
 owner owns point/rect transform projection, right-axis view-bound routing, style fallback colors,
 and direct quad emission. Reference-line, image, draggable-label, tag, text, panel orchestration,
@@ -22,8 +31,8 @@ event routing, public panel props, plot model projection, and optional IMUI adap
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
 
 2026-06-02 plot reference-line overlay paint owner-split result:
-`ecosystem/fret-plot/src/declarative/overlays.rs` now keeps overlay re-exports and shared
-annotation helpers while delegating infinite-line and draggable-line rectangle projection to
+`ecosystem/fret-plot/src/declarative/overlays.rs` now keeps overlay re-exports while delegating
+infinite-line and draggable-line rectangle projection to
 `ecosystem/fret-plot/src/declarative/overlays/reference_lines.rs`. The private reference-line owner
 owns x/y reference line transform projection, right-axis view-bound routing, style crosshair
 fallback, and filled-rect emission. Image, draggable-label, tag, text, panel orchestration, event

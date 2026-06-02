@@ -2,6 +2,34 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative annotation overlay helper owner split - 2026-06-02
+
+This maintenance slice keeps annotation token resolution and marker/text-box helpers out of the
+overlay root while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/overlays/annotation.rs` is the annotation token and marker paint helper owner.
+- `overlays.rs` re-exports annotation helpers and overlay paint owner entrypoints.
+- Evidence anchor: annotation token and marker paint helper owner.
+- Evidence anchor: Overlays root re-exports annotation helpers.
+- The annotation owner stays event-free, output-free, state-model-free, overlay-record-free,
+  image-overlay-free, authoring-free, and retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so annotation helper bodies
+  cannot drift back into `overlays.rs` and overlay projection concerns cannot drift into
+  `overlays/annotation.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_tag_x_and_y_overlays --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_text_overlay --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_draggable_overlay_labels --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative draggable shape overlay paint owner split - 2026-06-02
 
 This maintenance slice keeps draggable point and rectangle projection out of the shared overlay
@@ -956,9 +984,11 @@ Fresh gates:
 This refresh keeps the optional IMUI plot adapter declarative-only while moving overlay painting out
 of the retained-free paint/event root:
 
-- `ecosystem/fret-plot/src/declarative/overlays.rs` now owns the reference, draggable, image, tag, and text overlay paint owner,
-  including annotation tokens, overlay text boxes, tag markers, plot-image regions, and label
-  clamping.
+- `ecosystem/fret-plot/src/declarative/overlays.rs` is now the overlay re-export hub for
+  annotation and paint owners.
+- Evidence anchor: overlay re-export hub for annotation and paint owners.
+- Private child owners carry annotation helpers, reference lines, draggable shapes, image overlays,
+  draggable labels, tag overlays, and text overlays.
 - `ecosystem/fret-plot/src/declarative.rs` imports overlay paint entrypoints while panel paint
   orchestration, draggable overlay event routing, output publication, and plot state handling stay
   in the root.
