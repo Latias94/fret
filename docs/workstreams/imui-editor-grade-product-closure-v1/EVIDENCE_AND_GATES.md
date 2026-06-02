@@ -382,6 +382,35 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## Fret Plot declarative interaction owner split - 2026-06-02
+
+This refresh keeps the optional IMUI plot adapter declarative-only while moving event routing out of
+the implementation root:
+
+- `ecosystem/fret-plot/src/declarative/interaction.rs` now owns the legend, draggable, query, box-zoom, pan, and wheel event routing owner,
+  including interaction session records, selection overlay records, legend hover projection, and
+  pointer-event snapshot projection.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, output publication stays in `declarative.rs`,
+  view/output snapshot records, shared geometry helpers, and plot state model wiring.
+- Paint owners stay event-free, and no public props, optional IMUI adapter policy, retained plot
+  bridge, or crate layering changed in this slice.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `plot/view.rs`.
+- `cargo test -p fret-plot --lib line_plot_panel_legend --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_query_drag --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_box_zoom --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_pan --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_wheel_zoom --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative tests owner split - 2026-06-02
 
 This refresh keeps the optional IMUI plot adapter declarative-only while moving the plot panel

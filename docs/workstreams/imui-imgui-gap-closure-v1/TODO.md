@@ -6005,6 +6005,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/tests.rs` owns the `TestHost`, scene helpers,
       paint regressions, drag output regressions, and linked-cursor/readout regressions;
       `declarative.rs` keeps `#[cfg(test)] mod tests;` only.
+- [x] Split Fret Plot declarative interaction event routing out of the implementation root without
+      changing paint owners, output publication, public panel props, optional IMUI adapter routing,
+      or state model ownership.
+      Result: `ecosystem/fret-plot/src/declarative/interaction.rs` owns legend, draggable, query,
+      box-zoom, pan, and wheel event routing plus interaction session records; `declarative.rs`
+      keeps panel assembly, paint orchestration, output publication, view/output snapshot records,
+      shared geometry helpers, and plot state model wiring.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Interaction Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative legend, draggable, query, box-zoom, pan, and wheel event
+routing moved out of `ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/interaction.rs` without changing paint owners, output
+publication, public panel props, optional IMUI adapter routing, or state model ownership.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/interaction.rs` owns the interaction session records,
+  selection overlay records, legend event routing, draggable overlay event routing, query drag,
+  box zoom, pan, wheel zoom, legend hover projection, and pointer-event snapshot projection.
+- `ecosystem/fret-plot/src/declarative.rs` keeps panel assembly, paint orchestration, output
+  publication, view/output snapshot records, shared geometry helpers, and plot state model wiring.
+- Paint owners stay event-free, and `tools/gate_imui_workstream_source.py` rejects interaction
+  event handlers from drifting back into the root implementation owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new interaction owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_legend --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_drags --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_query_drag --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_box_zoom --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_pan --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_wheel_zoom --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Tests Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative plot panel regression tests moved out of

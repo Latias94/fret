@@ -5258,6 +5258,12 @@ Fret Plot declarative tests owner split - 2026-06-02:
 including `TestHost`, scene helpers, paint regressions, drag output regressions, and
 linked-cursor/readout regressions. The implementation root keeps `#[cfg(test)] mod tests;` only.
 
+Fret Plot declarative interaction owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/interaction.rs` now owns legend, draggable, query, box-zoom,
+pan, and wheel event routing plus interaction session records. The declarative root keeps panel
+assembly, paint orchestration, output publication, view/output snapshot records, shared geometry
+helpers, and plot state model wiring.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,
