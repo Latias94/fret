@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative image overlay paint owner split - 2026-06-02
+
+This maintenance slice keeps caller-owned `PlotImage` layer filtering, multi-axis projection,
+clipping, opacity filtering, and `ImageRegion` scene emission out of the shared overlay owner while
+preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/overlays/images.rs` is the caller-owned `PlotImage`
+  `ImageRegion` paint owner.
+- `overlays.rs` re-exports image overlay painting and keeps non-image overlay paint concerns.
+- Evidence anchor: caller-owned PlotImage ImageRegion paint owner.
+- Evidence anchor: Overlays root re-exports image overlay painting.
+- The image owner stays event-free, output-free, state-model-free, authoring-free, and
+  retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so image scene-emission
+  details cannot drift back into `overlays.rs` and non-image overlay concerns cannot drift into
+  `overlays/images.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_plot_image_overlay --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_right_axis_plot_image_overlays --no-fail-fast` - passed.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_tag_x_and_y_overlays --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative line/area/stems series paint owner split - 2026-06-02
 
 This maintenance slice keeps line, area-fill, and stems stroke path drawing out of the shared

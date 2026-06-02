@@ -5253,6 +5253,12 @@ paint, image layer painting, draggable labels, tag overlays, and text overlays. 
 keeps panel paint orchestration, draggable overlay event routing, output publication, and plot state
 handling, so overlay paint stays state-free and event-free.
 
+Fret Plot declarative image overlay paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/overlays/images.rs` now owns caller-owned `PlotImage` layer
+filtering, multi-axis projection, clipping, opacity filtering, and `ImageRegion` scene emission.
+`overlays.rs` re-exports image overlay painting and keeps reference lines, draggable shapes,
+draggable labels, tag overlays, text overlays, and annotation text box helpers.
+
 Fret Plot declarative tests owner split - 2026-06-02:
 `ecosystem/fret-plot/src/declarative/tests.rs` now owns the declarative plot panel regression tests,
 including `TestHost`, scene helpers, paint regressions, drag output regressions, and

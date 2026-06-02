@@ -5999,6 +5999,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/overlays.rs` owns reference, draggable, image,
       tag, and text overlay painting; `declarative.rs` keeps panel paint orchestration, draggable
       overlay event routing, output publication, and plot state handling.
+- [x] Split Fret Plot declarative image overlay painting out of the overlay paint owner without
+      changing reference lines, draggable point/rect paint, draggable labels, tag overlays, text
+      overlays, multi-axis projection, panel paint orchestration, public panel props, optional IMUI
+      adapter routing, or plot model projection.
+      Result: `ecosystem/fret-plot/src/declarative/overlays/images.rs` owns caller-owned
+      `PlotImage` layer filtering, clipping, opacity filtering, and `ImageRegion` emission;
+      `overlays.rs` re-exports image overlay painting and keeps non-image overlay paint concerns.
 - [x] Split Fret Plot declarative plot panel regression tests out of the implementation root
       without changing implementation code, public panel props, optional IMUI adapter routing, test
       host behavior, or declarative paint/drag coverage.
