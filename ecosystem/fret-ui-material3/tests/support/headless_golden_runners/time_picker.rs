@@ -1,0 +1,309 @@
+use std::collections::BTreeMap;
+
+use fret_core::{AppWindowId, Point, Px, Rect, Size, UiServices};
+use fret_runtime::{ModelHost, PlatformCapabilities};
+use fret_ui::UiTree;
+use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
+
+use super::scale_segment;
+use crate::support::{
+    goldens::{
+        Material3HeadlessGoldenV1, Material3HeadlessSuiteV1,
+        settle_material3_overlay_scene_snapshot_v1, settle_material3_scene_snapshot_v1,
+        write_or_assert_material3_suite_for_test_v1,
+    },
+    host::{FakeUiServices, TestHost},
+    layout::with_padding,
+    theme::apply_material_theme,
+};
+
+pub(crate) fn run_material3_headless_time_picker_suite_goldens_v1() {
+    use fret_ui_material3::{
+        Button, ButtonVariant, DockedTimePicker, TimePickerDialog, TimePickerDisplayMode,
+    };
+    use time::Time;
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // Docked picker: non-overlay surface.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices;
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let picker = DockedTimePicker::new(time.clone())
+                                .test_id("time-picker-docked")
+                                .into_element(cx);
+                            vec![with_padding(cx, Px(24.0), picker)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 docked time picker scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "docked".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        2,
+                        6,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Docked picker: input mode.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices;
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let picker = DockedTimePicker::new(time.clone())
+                                .display_mode(TimePickerDisplayMode::Input)
+                                .test_id("time-picker-docked-input")
+                                .into_element(cx);
+                            vec![with_padding(cx, Px(24.0), picker)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 docked time picker input scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "docked_input".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        2,
+                        6,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Modal picker: overlay + scrim + focus trap.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices;
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = TimePickerDialog::new(open.clone(), time.clone())
+                                .open_duration_ms(Some(1))
+                                .close_duration_ms(Some(1))
+                                .test_id("time-picker-modal")
+                                .into_element(cx, |cx| {
+                                    Button::new("Underlay probe")
+                                        .variant(ButtonVariant::Outlined)
+                                        .test_id("time-picker-underlay-probe")
+                                        .into_element(cx)
+                                });
+                            vec![with_padding(cx, Px(24.0), dialog)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 time picker modal overlay scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_open".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Modal picker: input mode.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices;
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = TimePickerDialog::new(open.clone(), time.clone())
+                                .initial_display_mode(TimePickerDisplayMode::Input)
+                                .open_duration_ms(Some(1))
+                                .close_duration_ms(Some(1))
+                                .test_id("time-picker-modal-input")
+                                .into_element(cx, |cx| {
+                                    Button::new("Underlay probe")
+                                        .variant(ButtonVariant::Outlined)
+                                        .test_id("time-picker-underlay-probe")
+                                        .into_element(cx)
+                                });
+                            vec![with_padding(cx, Px(24.0), dialog)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 time picker modal overlay input scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_open_input".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_for_test_v1(
+                &format!("material3-time-picker.{scale}.{label}"),
+                "material3_headless_time_picker_suite_goldens_v1",
+                &suite,
+            );
+        }
+    }
+}
