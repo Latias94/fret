@@ -3,6 +3,7 @@ use super::header_state::{
     HeaderDiagnosticsState, header_next_action_lines_for_artifacts_root,
 };
 use super::recent_evidence::recent_evidence_next_action;
+use super::workflow_panel_state::collect_workflow_panel_state;
 
 #[test]
 fn resolve_repo_or_abs_path_resolves_relative_input() {
@@ -1538,6 +1539,31 @@ fn devtools_workflow_commands_include_selected_session_for_suite_ws() {
     assert!(suite.command_line.contains("--devtools-token <redacted>"));
     assert!(suite.command_line.contains("--devtools-session-id session-1"));
     assert!(!suite.command_line.contains("secret-token"));
+}
+
+#[test]
+fn workflow_panel_state_marks_suite_ws_missing_without_session() {
+    let mut app = App::new();
+    app.set_global(DevtoolsConfig {
+        transport: DiagTransportKind::WebSocket,
+        ws_url: Arc::<str>::from("ws://127.0.0.1:7331/diag"),
+        token: Arc::<str>::from("secret-token"),
+        fs_out_dir: Arc::<str>::from("target/fret-diag"),
+        ws_port: 7331,
+    });
+    let st = init_window(&mut app, AppWindowId::default());
+    let panel = collect_workflow_panel_state(&app, &st);
+    assert_eq!(
+        panel.selected_workflow_id.as_ref(),
+        DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID
+    );
+    let suite = panel
+        .commands
+        .iter()
+        .find(|command| command.id == DEVTOOLS_WORKFLOW_PERF_DOCKING_WS_ID)
+        .expect("suite workflow command");
+    assert!(!suite.is_runnable());
+    assert_eq!(suite.missing_inputs, vec!["selected-session"]);
 }
 
 #[test]

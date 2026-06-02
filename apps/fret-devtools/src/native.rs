@@ -49,6 +49,8 @@ mod gate_run;
 #[path = "native/header_state.rs"]
 mod header_state;
 mod pack;
+#[path = "native/workflow_panel_state.rs"]
+mod workflow_panel_state;
 #[path = "native/discovery_lines.rs"]
 mod discovery_lines;
 #[path = "native/recent_evidence.rs"]
@@ -77,6 +79,7 @@ use recent_evidence::{
     recent_failed_evidence_rerun_command_from_state,
     recent_failed_evidence_rerun_unavailable_reason_from_state,
 };
+use workflow_panel_state::collect_workflow_panel_state;
 #[cfg(test)]
 use recent_evidence::{
     devtools_recent_evidence_lines, recent_evidence_status_failed,
@@ -8671,25 +8674,9 @@ fn devtools_workflow_commands_from_state(
 }
 
 fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let selected_workflow_id = cx
-        .app
-        .models()
-        .read(&st.workflow_run_selected_id, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from(DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID));
-    let commands = devtools_workflow_commands_from_state(cx.app, st);
-    let selected_command = commands
-        .iter()
-        .find(|command| command.id == selected_workflow_id.as_ref())
-        .or_else(|| commands.first());
-    let command_preview = selected_command
-        .map(|command| command.command_line.clone())
-        .unwrap_or_else(|| "No workflow command available.".to_string());
-    let selected_command_label = selected_command
-        .map(|command| format!("{} ({})", command.label, command.id))
-        .unwrap_or_else(|| selected_workflow_id.to_string());
-    let workflow_items = commands
+    let panel = collect_workflow_panel_state(cx.app, st);
+    let workflow_items = panel
+        .commands
         .iter()
         .map(|command| shadcn::SelectItem::new(command.id.clone(), format!("{} ({})", command.label, command.id)))
         .collect::<Vec<_>>();
@@ -8702,31 +8689,6 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
     .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(340.0)))
     .into_element(cx);
 
-    let command_state_line = selected_command
-        .map(|command| {
-            if command.is_runnable() {
-                let redacted = workflow_run::redact_workflow_diag_args(&command.diag_args);
-                format!("diag args: {}", redacted.join(" "))
-            } else if command.missing_inputs.is_empty() {
-                "diag args: <not runnable>".to_string()
-            } else {
-                format!("missing inputs: {}", command.missing_inputs.join(", "))
-            }
-        })
-        .unwrap_or_else(|| "diag args: <unsupported workflow>".to_string());
-    let run_enabled = selected_command.is_some_and(|command| command.is_runnable());
-    let workflow_run_in_flight = cx
-        .app
-        .models()
-        .read(&st.workflow_run_in_flight, |v| *v)
-        .unwrap_or(false);
-    let workflow_run_result_path = cx
-        .app
-        .models()
-        .read(&st.workflow_run_last_result_path, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|v| v.to_string());
     let workflow_run_error = cx
         .app
         .models()
@@ -8734,132 +8696,14 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
         .ok()
         .flatten()
         .map(|v| v.to_string());
-    let workflow_run_result_json = cx
-        .app
-        .models()
-        .read(&st.workflow_run_last_result_json, |v| v.clone())
-        .unwrap_or_default();
     let workflow_run_result_history = cx
         .app
         .models()
         .read(&st.workflow_run_result_history, |v| v.clone())
         .unwrap_or_default();
-    let workflow_run_selected_result_path = cx
-        .app
-        .models()
-        .read(&st.workflow_run_selected_result_path, |v| v.clone())
-        .ok()
-        .flatten();
-    let selected_workflow_run_result_entry =
-        workflow_run::workflow_run_result_history_selected_or_latest_entry(
-            &workflow_run_result_history,
-            workflow_run_selected_result_path.as_deref(),
-        );
-    let selected_workflow_run_result_path = selected_workflow_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_path.clone());
-    let selected_workflow_run_result_json = selected_workflow_run_result_entry
-        .as_ref()
-        .map(|entry| entry.result_json.clone())
-        .unwrap_or_else(|| workflow_run_result_json.clone());
-    let selected_workflow_regression_summary_path = workflow_run::workflow_run_regression_summary_artifact_path_from_result_json(
-        &selected_workflow_run_result_json,
-    );
-    let selected_workflow_suite_summary_path =
-        workflow_run::workflow_run_output_artifact_path_from_result_json(
-            &selected_workflow_run_result_json,
-            "suite.summary.json",
-        );
-    let selected_workflow_regression_summary_resolved_path =
-        selected_workflow_regression_summary_path.as_ref().map(|path| {
-            let repo_root = repo_root_from_script_paths(&st.script_paths);
-            resolve_repo_or_abs_path(&repo_root, path)
-                .to_string_lossy()
-                .to_string()
-        });
-    let selected_workflow_summarize_command = selected_workflow_regression_summary_resolved_path
-        .as_deref()
-        .and_then(workflow_summarize_command_from_summary_path);
-    let selected_workflow_regression_index_resolved_path =
-        workflow_run::workflow_run_regression_index_artifact_path_from_result_json(
-            &selected_workflow_run_result_json,
-        )
-        .map(|path| {
-            let repo_root = repo_root_from_script_paths(&st.script_paths);
-            resolve_repo_or_abs_path(&repo_root, &path)
-                .to_string_lossy()
-                .to_string()
-        })
-        .or_else(|| {
-            selected_workflow_regression_summary_resolved_path
-                .as_ref()
-                .and_then(|path| {
-                    Path::new(path).parent().map(|parent| {
-                        parent
-                            .join(DIAG_REGRESSION_INDEX_FILENAME_V1)
-                            .to_string_lossy()
-                            .to_string()
-                    })
-                })
-        });
-    let selected_workflow_regression_index_ready = selected_workflow_regression_index_resolved_path
-        .as_ref()
-        .is_some_and(|path| Path::new(path).is_file());
-    let loaded_regression_dir = cx
-        .app
-        .models()
-        .read(&st.regression_loaded_dir, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|path| path.to_string());
-    let regression_index_loaded = cx
-        .app
-        .models()
-        .read(&st.regression_index_json, |v| !v.trim().is_empty())
-        .unwrap_or(false);
-    let selected_workflow_aggregate_index_loaded = workflow_aggregate_index_loaded(
-        selected_workflow_regression_index_resolved_path.as_deref(),
-        loaded_regression_dir.as_deref(),
-        regression_index_loaded,
-    );
-    let loaded_regression_summary_path = cx
-        .app
-        .models()
-        .read(&st.regression_selected_summary_path, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|path| path.to_string());
-    let workflow_handoff_readiness = workflow_handoff_readiness_lines(
-        workflow_run_in_flight,
-        selected_workflow_run_result_entry.is_some(),
-        selected_workflow_regression_summary_resolved_path.as_deref(),
-        loaded_regression_summary_path.as_deref(),
-        selected_workflow_regression_index_ready,
-        selected_workflow_aggregate_index_loaded,
-    );
-    let workflow_summarize_preview = selected_workflow_summarize_command
-        .as_ref()
-        .map(|command| {
-            let index_path = selected_workflow_regression_index_resolved_path
-                .as_deref()
-                .unwrap_or("-");
-            format!(
-                "command: {}\naggregate_index: {}\nready: {}",
-                command.command_line,
-                index_path,
-                if selected_workflow_regression_index_ready {
-                    "true"
-                } else {
-                    "false"
-                }
-            )
-        })
-        .unwrap_or_else(|| {
-            "No workflow regression.summary.json artifact selected yet.".to_string()
-        });
     let workflow_result_actions = ui::h_row(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
-        if selected_workflow_run_result_path.is_some() {
+        if panel.selected_workflow_run_result_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow result")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -8875,7 +8719,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                     .into_element(cx),
             );
         }
-        if selected_workflow_run_result_entry.is_some() {
+        if panel.selected_workflow_run_result_entry.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow command")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -8884,7 +8728,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                     .into_element(cx),
             );
         }
-        if !selected_workflow_run_result_json.trim().is_empty() {
+        if !panel.selected_workflow_run_result_json.trim().is_empty() {
             out.push(
                 shadcn::Button::new("Copy workflow JSON")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -8893,7 +8737,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                 .into_element(cx),
             );
         }
-        if selected_workflow_suite_summary_path.is_some() {
+        if panel.selected_workflow_suite_summary_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow suite summary")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -8909,7 +8753,7 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                     .into_element(cx),
             );
         }
-        if selected_workflow_regression_summary_path.is_some() {
+        if panel.selected_workflow_regression_summary_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy workflow regression summary")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -8942,12 +8786,12 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
                 shadcn::Button::new("Run workflow summarize")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
-                    .disabled(workflow_run_in_flight)
+                    .disabled(panel.workflow_run_in_flight)
                     .on_click(CMD_RUN_WORKFLOW_SUMMARIZE)
                     .into_element(cx),
             );
         }
-        if selected_workflow_regression_index_ready {
+        if panel.selected_workflow_regression_index_ready {
             out.push(
                 shadcn::Button::new("Copy workflow regression index")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -8979,24 +8823,24 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
     let workflow_result_details = text_blob_sized(
         cx,
         workflow_run::workflow_run_result_history_entry_detail_lines(
-            selected_workflow_run_result_entry.as_ref(),
+            panel.selected_workflow_run_result_entry.as_ref(),
         )
         .join("\n"),
         Px(78.0),
     );
     let workflow_result_summary = text_blob_sized(
         cx,
-        workflow_run::workflow_run_result_summary_lines(&selected_workflow_run_result_json)
+        workflow_run::workflow_run_result_summary_lines(&panel.selected_workflow_run_result_json)
             .join("\n"),
         Px(92.0),
     );
     let workflow_handoff_readiness_blob = text_blob_sized(
         cx,
-        workflow_handoff_readiness.join("\n"),
+        panel.workflow_handoff_readiness.join("\n"),
         Px(76.0),
     );
     let workflow_summarize_handoff_blob =
-        text_blob_sized(cx, workflow_summarize_preview, Px(76.0));
+        text_blob_sized(cx, panel.workflow_summarize_preview.clone(), Px(76.0));
     let workflow_result_history_summary = text_blob_sized(
         cx,
         workflow_run::workflow_run_result_history_summary_lines(&workflow_run_result_history)
@@ -9007,15 +8851,15 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
         cx,
         &st.workflow_run_selected_result_path,
         &workflow_run_result_history,
-        selected_workflow_run_result_path.as_deref(),
+        panel.selected_workflow_run_result_path.as_deref(),
     );
     let workflow_run_status_line = format!(
         "workflow_run_in_flight={} last_workflow_result={} last_workflow_error={}",
-        workflow_run_in_flight,
-        workflow_run_result_path.as_deref().unwrap_or("-"),
+        panel.workflow_run_in_flight,
+        panel.selected_workflow_run_result_path.as_deref().unwrap_or("-"),
         workflow_run_error.as_deref().unwrap_or("-")
     );
-    let command_line_for_copy = command_preview.clone();
+    let command_line_for_copy = panel.command_preview.clone();
     let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
         let token = host.next_clipboard_token();
         host.push_effect(Effect::ClipboardWriteText {
@@ -9028,13 +8872,13 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
     let copy_button = shadcn::Button::new("Copy workflow command")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(selected_command.is_none())
+        .disabled(panel.commands.is_empty())
         .on_activate(on_copy)
         .into_element(cx);
     let run_button = shadcn::Button::new("Run workflow")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .disabled(!run_enabled || workflow_run_in_flight)
+        .disabled(!panel.run_enabled || panel.workflow_run_in_flight)
         .on_click(CMD_WORKFLOW_RUN_SELECTED)
         .into_element(cx);
     let controls = ui::h_row(|_cx| [workflow_select, copy_button, run_button])
@@ -9042,21 +8886,21 @@ fn devtools_workflow_run_panel(cx: &mut ElementContext<'_, App>, st: &State) -> 
         .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx);
-    let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    let preview = text_blob_sized(cx, panel.command_preview.clone(), Px(58.0));
     let result_preview = text_blob_sized(
         cx,
-        if selected_workflow_run_result_json.trim().is_empty() {
+        if panel.selected_workflow_run_result_json.trim().is_empty() {
             "<no workflow run result yet>".to_string()
         } else {
-            selected_workflow_run_result_json
+            panel.selected_workflow_run_result_json.clone()
         },
         Px(92.0),
     );
     ui::v_stack(|cx| {
         [
-            cx.text(format!("Runnable workflow: {selected_command_label}")),
+            cx.text(format!("Runnable workflow: {}", panel.selected_command_label)),
             controls,
-            cx.text(command_state_line),
+            cx.text(panel.command_state_line.clone()),
             cx.text(workflow_run_status_line),
             preview,
             diag_section(
