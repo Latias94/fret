@@ -25904,3 +25904,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-02 IMUI floating-window resize pointer event phase owner split:
+
+- Claim: floating-window resize pointer down/move/up event handling moved from
+  `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer/events.rs` into private
+  phase owners without changing pointer capture, optional activation, immediate resize drag
+  movement, cancel-on-mouse-up, or resize handle public behavior.
+- Evidence anchors: `floating_window_resize/handles/pointer/events.rs` declares `mod down;`,
+  `mod move_phase;`, and `mod up;`, keeps `ResizeHandlePointerInput`, clears existing pointer hooks,
+  and delegates phase installation; `events/down.rs` owns left-button gating, focus/capture,
+  drag start, cursor update, and `KEY_FLOAT_WINDOW_ACTIVATE`; `events/move_phase.rs` owns
+  drag-kind/source-window filtering, `update_immediate_move(...)`, canceled-drag cleanup, and
+  notification; `events/up.rs` owns matching mouse-up drag cancellation, pointer-capture release,
+  and notification; the source gate rejects these phase details drifting back into the event hub.
+- Passed: `cargo fmt --package fret-ui-kit`.
+- Passed: `cargo check -p fret-ui-kit --features imui`.
+- Passed:
+  `cargo test -p fret-ui-kit --features imui --test imui_floating_window_options_smoke --no-fail-fast`.
+- Passed: `cargo test -p fret-imui floating_window --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `cargo fmt --package fret-ui-kit -- --check`.
+- Passed: `git diff --check`.

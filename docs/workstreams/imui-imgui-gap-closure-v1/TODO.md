@@ -6005,3 +6005,12 @@ opening the slice.
       and `PopupMenuBuilt` return shaping. `popup_overlay/menu/panel.rs` keeps the stable
       build-entry signature, state gating, anchored layout, palette resolution, and delegates final
       panel assembly to the private owner.
+- [x] Split IMUI floating-window resize pointer event phase owners out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer/events.rs` into
+      private down/move/up owners without changing pointer capture, activation, drag movement,
+      cancel-on-mouse-up, or resize handle public behavior.
+      Result: `floating_window_resize/handles/pointer/events.rs` keeps only
+      `ResizeHandlePointerInput`, hook clearing, and phase installation; `events/down.rs` owns
+      left-button capture and optional activation; `events/move_phase.rs` owns immediate resize
+      drag movement and cancel cleanup; `events/up.rs` owns mouse-up drag cancellation and pointer
+      release.
