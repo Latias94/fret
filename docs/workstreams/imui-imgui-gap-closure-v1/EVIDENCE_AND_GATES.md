@@ -3,18 +3,59 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Candlestick Series Paint Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative candlestick wick/body drawing moved out of
+`ecosystem/fret-plot/src/declarative/series_paint.rs` into private
+`ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs` without changing series routing,
+line/area/shaded/stems/histogram/bars/error-bar painting, panel paint orchestration, event routing,
+output publication, public panel props, optional IMUI adapter routing, or plot model projection
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs` is the candlestick wick/body
+  command paint owner.
+- Series paint router delegates candlestick drawing and keeps non-candlestick series routing.
+- The candlestick owner imports only candlestick command/path helpers and shared style fallback,
+  staying event-free, output-free, overlay-free, axis-routing-free, authoring-free, and
+  retained-free.
+- `tools/gate_imui_workstream_source.py` rejects candlestick command/path logic from drifting back
+  into `series_paint.rs` and rejects non-candlestick series concerns from `candlestick.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new candlestick series
+  paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib candlestick_plot_panel_paints_wicks_and_up_down_bodies --no-fail-fast`:
+  pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_seeded_line --no-fail-fast`: pass.
+- `cargo test -p fret-plot --lib line_plot_panel_paints_series_legend --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Series Paint Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative series-specific paint routing moved out of
 `ecosystem/fret-plot/src/declarative/panel_paint.rs` into private
 `ecosystem/fret-plot/src/declarative/series_paint.rs` without changing panel background/grid,
 heatmap, overlay, legend, selection, readout, event routing, output publication, public panel props,
-optional IMUI adapter routing, or plot model projection behavior.
+optional IMUI adapter routing, or plot model projection behavior. The later candlestick owner split
+above moves current candlestick wick/body drawing into
+`ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs`.
 
 Evidence:
 
-- `ecosystem/fret-plot/src/declarative/series_paint.rs` is the line, area, shaded, stems,
-  histogram, bars, candlestick, and error-bar series paint owner.
+- At that slice, `ecosystem/fret-plot/src/declarative/series_paint.rs` was the line, area, shaded,
+  stems, histogram, bars, candlestick, and error-bar series paint owner; the current candlestick
+  drawing owner is `series_paint/candlestick.rs`.
 - Panel paint owner keeps background, grid, overlays, legend, selection, and readout orchestration.
 - The series paint owner imports command builders, geometry, and style helpers explicitly and stays
   event-free, output-free, overlay-free, authoring-free, and retained-free.

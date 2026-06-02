@@ -5304,9 +5304,16 @@ responsibility.
 
 Fret Plot declarative series paint owner split - 2026-06-02:
 `ecosystem/fret-plot/src/declarative/series_paint.rs` now owns line, area, shaded, stems,
-histogram, bars, candlestick, and error-bar series painting. `panel_paint.rs` keeps background,
-grid, heatmap, right-axis labels, overlays, legend, selection/readout, and panel-level paint
-orchestration, while the source gate keeps event/output/overlay concerns out of the series owner.
+histogram, bars, candlestick, and error-bar series painting at that slice. `panel_paint.rs` keeps
+background, grid, heatmap, right-axis labels, overlays, legend, selection/readout, and panel-level
+paint orchestration, while the source gate keeps event/output/overlay concerns out of the series
+owner. The later candlestick owner split narrows current series router responsibility.
+
+Fret Plot declarative candlestick series paint owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs` now owns candlestick wick/body
+command painting. `series_paint.rs` delegates candlestick drawing and keeps line, area, shaded,
+stems, histogram, bars, and error-bar series routing, while the source gate keeps non-candlestick
+series concerns out of the candlestick owner.
 
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style

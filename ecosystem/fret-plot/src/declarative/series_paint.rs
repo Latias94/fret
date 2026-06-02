@@ -1,6 +1,6 @@
 //! Declarative line-plot series paint owner.
 
-use fret_core::{Color, DrawOrder, PathStyle, Point, Px, StrokeStyle};
+use fret_core::{DrawOrder, PathStyle, Point, Px, StrokeStyle};
 use fret_ui::canvas::CanvasPainter;
 
 use crate::cartesian::{PlotTransform, polyline_commands};
@@ -9,15 +9,18 @@ use crate::series::SeriesId;
 use crate::style::LinePlotStyle;
 
 use super::commands::{
-    area_fill_commands_from_polyline, bars_commands_from_series, candlestick_commands_from_series,
-    error_bars_commands_from_series, histogram_commands_from_series, line_plot_area_fill_path_key,
-    line_plot_candlestick_down_path_key, line_plot_series_path_key,
+    area_fill_commands_from_polyline, bars_commands_from_series, error_bars_commands_from_series,
+    histogram_commands_from_series, line_plot_area_fill_path_key, line_plot_series_path_key,
     line_plot_shaded_lower_path_key, shaded_band_commands_from_series, stems_commands_from_points,
     step_commands_from_polyline,
 };
 use super::geometry::line_plot_view_bounds_for_y_axis;
 use super::model::PlotPanelModel;
 use super::style_helpers::series_color;
+
+mod candlestick;
+
+use candlestick::paint_line_plot_candlestick_series;
 
 pub(super) fn paint_line_plot_series(
     painter: &mut CanvasPainter<'_>,
@@ -66,81 +69,17 @@ pub(super) fn paint_line_plot_series(
             YAxis::Right3 => right3_transform.unwrap_or(transform),
         };
         if let Some(candlestick) = &series.candlestick {
-            let stroke_width = series.stroke_width.unwrap_or(style.stroke_width);
-            let (wick_commands, up_body_commands, down_body_commands) =
-                candlestick_commands_from_series(
-                    series_transform,
-                    candlestick,
-                    stroke_width,
-                    raster_scale_factor,
-                );
-            if wick_commands.is_empty()
-                && up_body_commands.is_empty()
-                && down_body_commands.is_empty()
-            {
-                continue;
-            }
-
-            let mut wick_color = candlestick
-                .wick_color
-                .or(series.stroke_color)
-                .unwrap_or_else(|| series_color(style, index, series_count));
-            let mut up_fill = candlestick.up_fill.unwrap_or(Color {
-                r: 0.25,
-                g: 0.80,
-                b: 0.45,
-                a: 0.85,
-            });
-            let mut down_fill = candlestick.down_fill.unwrap_or(Color {
-                r: 0.90,
-                g: 0.35,
-                b: 0.45,
-                a: 0.85,
-            });
-            if let Some(emphasized) = emphasized_series
-                && series.id != emphasized
-            {
-                let dim = style.dimmed_series_alpha.clamp(0.0, 1.0);
-                wick_color.a *= dim;
-                up_fill.a *= dim;
-                down_fill.a *= dim;
-            }
-
-            if !up_body_commands.is_empty() {
-                painter.path(
-                    line_plot_area_fill_path_key(series.id.0),
-                    DrawOrder(19),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &up_body_commands,
-                    PathStyle::Fill(fret_core::FillStyle::default()),
-                    up_fill,
-                    raster_scale_factor,
-                );
-            }
-            if !down_body_commands.is_empty() {
-                painter.path(
-                    line_plot_candlestick_down_path_key(series.id.0),
-                    DrawOrder(19),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &down_body_commands,
-                    PathStyle::Fill(fret_core::FillStyle::default()),
-                    down_fill,
-                    raster_scale_factor,
-                );
-            }
-            if wick_commands.len() >= 2 {
-                painter.path(
-                    line_plot_series_path_key(series.id.0),
-                    DrawOrder(20),
-                    Point::new(Px(0.0), Px(0.0)),
-                    &wick_commands,
-                    PathStyle::Stroke(StrokeStyle {
-                        width: stroke_width,
-                    }),
-                    wick_color,
-                    raster_scale_factor,
-                );
-            }
+            paint_line_plot_candlestick_series(
+                painter,
+                series,
+                candlestick,
+                series_transform,
+                style,
+                index,
+                series_count,
+                emphasized_series,
+                raster_scale_factor,
+            );
             continue;
         }
         if let Some(bars) = &series.bars {

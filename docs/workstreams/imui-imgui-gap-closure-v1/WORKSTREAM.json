@@ -1890,6 +1890,7 @@
     "ecosystem/fret-plot/src/declarative/readout.rs",
     "ecosystem/fret-plot/src/declarative/selection.rs",
     "ecosystem/fret-plot/src/declarative/series_paint.rs",
+    "ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs",
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
     "ecosystem/fret-docking/src/dock/declarative.rs",

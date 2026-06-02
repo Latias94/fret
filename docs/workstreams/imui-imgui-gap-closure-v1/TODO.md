@@ -6064,7 +6064,15 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/series_paint.rs` owns line, area, shaded,
       stems, histogram, bars, candlestick, and error-bar series painting; `panel_paint.rs` keeps
       background, grid, heatmap, right-axis labels, overlays, legend, selection/readout, and panel
-      paint orchestration.
+      paint orchestration at that slice. The later candlestick owner split moves current
+      candlestick wick/body drawing into `series_paint/candlestick.rs`.
+- [x] Split Fret Plot declarative candlestick series painting out of the series paint router
+      without changing non-candlestick series routing, panel paint orchestration, event routing,
+      output publication, public panel props, optional IMUI adapter routing, or plot model
+      projection.
+      Result: `ecosystem/fret-plot/src/declarative/series_paint/candlestick.rs` owns
+      candlestick wick/body command painting; `series_paint.rs` delegates candlestick drawing and
+      keeps line, area, shaded, stems, histogram, bars, and error-bar series routing.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
