@@ -5977,6 +5977,13 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/readout.rs` owns cursor/linked-cursor readout
       paint plus row projection; `declarative.rs` keeps shared axis label formatting, event output
       publication, and plot state handling.
+- [x] Split Fret Plot declarative axis tick label painting out of the retained-free paint/event
+      root without changing grid/axis line painting, primary axis labels, y2/y3/y4 right-axis label
+      projection, shared axis label formatting, public panel props, or optional IMUI adapter
+      routing.
+      Result: `ecosystem/fret-plot/src/declarative/axis_labels.rs` owns primary and right-axis
+      label painting; `declarative.rs` keeps grid/baseline painting, shared axis label formatting,
+      view-bounds orchestration, event output publication, and plot state handling.
 - [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
       filtering, active-descendant, command package, or collection policy into the container.
       Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll

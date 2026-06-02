@@ -5234,6 +5234,13 @@ overlay placement, series row projection, and pinned-series filtering. The decla
 shared axis label formatting, event output publication, and plot state handling, so readout
 presentation stays declarative and out of the optional IMUI adapter.
 
+Fret Plot declarative axis label owner split - 2026-06-02:
+`ecosystem/fret-plot/src/declarative/axis_labels.rs` now owns primary and right-axis tick label
+painting, including y2/y3/y4 lane offsets, text constraints, and stable canvas text keys. The
+declarative root keeps grid/baseline axis painting, shared axis label formatting, data/view bounds
+orchestration, event output publication, and plot state handling, so axis labels stay declarative
+and out of the optional IMUI adapter.
+
 2026-05-25 ListBox container proof result:
 `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
 semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,

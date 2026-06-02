@@ -1875,6 +1875,7 @@
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs",
     "ecosystem/fret-plot/src/declarative.rs",
+    "ecosystem/fret-plot/src/declarative/axis_labels.rs",
     "ecosystem/fret-plot/src/declarative/commands.rs",
     "ecosystem/fret-plot/src/declarative/legend.rs",
     "ecosystem/fret-plot/src/declarative/model.rs",

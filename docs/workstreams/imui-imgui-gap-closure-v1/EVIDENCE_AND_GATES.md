@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Axis Label Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative primary and right-axis tick label painting moved out of
+`ecosystem/fret-plot/src/declarative.rs` into private
+`ecosystem/fret-plot/src/declarative/axis_labels.rs` without changing grid/axis line painting,
+primary axis labels, y2/y3/y4 right-axis label projection, shared axis label formatting, public
+panel props, or optional IMUI adapter routing.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/axis_labels.rs` owns the axis tick label paint owner for
+  primary and right-axis label painting, including text keys, text constraints, and y2/y3/y4 lane
+  offsets.
+- `ecosystem/fret-plot/src/declarative.rs` keeps grid and baseline axis painting, shared axis
+  label formatting, data/view bounds orchestration, event output publication, and plot state
+  handling while delegating tick label paint to the private owner.
+- `tools/gate_imui_workstream_source.py` tracks root, axis label, readout, selection, commands,
+  legend, model, panels, and props owners separately and rejects axis label paint bodies from
+  drifting back into the root paint/event owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new axis label owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast`:
+  pass, 1 test.
+- `cargo test -p fret-plot --lib line_chart_builder_stays_model_only_on_default_surface --no-fail-fast`:
+  pass, 1 test.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Readout Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative cursor and linked-cursor readout painting moved out of
