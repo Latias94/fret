@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-overlays-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 overlay visuals: tooltip+menu stacking and Select overlay states.",
+  "cases": [
+    {
+      "id": "both_open",
+      "kind": "tooltip_menu",
+      "bounds": [860.0, 520.0],
+      "padding": 24.0,
+      "open_wait_frames": 12,
+      "settle_from_frame": 96,
+      "total_frames": 160,
+      "tooltip": {
+        "kind": "plain",
+        "trigger_label": "Tooltip",
+        "trigger_test_id": "tooltip-trigger",
+        "supporting_text": "Tip"
+      },
+      "menu": {
+        "a11y_label": "menu",
+        "test_id": "dropdown",
+        "trigger_label": "Menu",
+        "trigger_test_id": "dropdown-trigger",
+        "entries": [
+          { "label": "A", "test_id": "dropdown-item-a" },
+          { "label": "B", "test_id": "dropdown-item-b" },
+          { "label": "C", "test_id": "dropdown-item-c" }
+        ]
+      }
+    },
+    {
+      "id": "rich_both_open",
+      "kind": "tooltip_menu",
+      "bounds": [860.0, 520.0],
+      "padding": 24.0,
+      "open_wait_frames": 12,
+      "settle_from_frame": 96,
+      "total_frames": 160,
+      "tooltip": {
+        "kind": "rich",
+        "trigger_label": "Rich tooltip",
+        "trigger_test_id": "tooltip-trigger",
+        "title": "Title",
+        "supporting_text": "Supporting text"
+      },
+      "menu": {
+        "a11y_label": "menu",
+        "test_id": "dropdown",
+        "trigger_label": "Menu",
+        "trigger_test_id": "dropdown-trigger",
+        "entries": [
+          { "label": "A", "test_id": "dropdown-item-a" },
+          { "label": "B", "test_id": "dropdown-item-b" },
+          { "label": "C", "test_id": "dropdown-item-c" }
+        ]
+      }
+    },
+    {
+      "id": "select.open",
+      "kind": "select",
+      "bounds": [860.0, 520.0],
+      "open_wait_frames": 12,
+      "open_settle_from_frame": 96,
+      "open_total_frames": 160,
+      "trigger_settle_from_frame": 96,
+      "trigger_total_frames": 160,
+      "hover_settle_from_frame": 96,
+      "hover_total_frames": 160,
+      "snapshots": {
+        "open": "select_open",
+        "trigger": "select_open_trigger",
+        "hover_selected": "select_open_hover_selected"
+      },
+      "select": {
+        "selected_value": "beta",
+        "error_selected_value": null,
+        "trigger": {
+          "leading_icon": "search",
+          "label": "Label",
+          "supporting_text": "Supporting text",
+          "a11y_label": "select",
+          "placeholder": "Pick one",
+          "test_id": "material3-select-trigger"
+        },
+        "error_trigger": {
+          "leading_icon": "settings",
+          "label": "Label",
+          "supporting_text": "Error supporting text",
+          "a11y_label": "select error",
+          "placeholder": "Pick one",
+          "test_id": "material3-select-trigger-error",
+          "error": true
+        },
+        "hover_selected_item_test_id": "select-item-beta",
+        "items": [
+          {
+            "value": "alpha",
+            "label": "Alpha",
+            "leading_icon": "search",
+            "trailing_icon": "chevron_right",
+            "test_id": "select-item-alpha"
+          },
+          {
+            "value": "beta",
+            "label": "Beta",
+            "leading_icon": "settings",
+            "trailing_icon": "chevron_right",
+            "test_id": "select-item-beta"
+          },
+          {
+            "value": "charlie",
+            "label": "Charlie (disabled)",
+            "disabled": true,
+            "leading_icon": "search",
+            "test_id": "select-item-charlie-disabled"
+          }
+        ]
+      }
+    }
+  ]
+}
