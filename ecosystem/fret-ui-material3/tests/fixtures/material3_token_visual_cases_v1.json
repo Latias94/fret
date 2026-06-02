@@ -1045,6 +1045,28 @@
       ]
     },
     {
+      "id": "dialog-action-hovered-light",
+      "component": "dialog",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "basic", "interaction": "hovered" },
+      "assertions": [
+        { "role": "action_label_color", "kind": "color", "token": "md.comp.dialog.action.hover.label-text.color" },
+        { "role": "action_state_layer_color", "kind": "color", "token": "md.comp.dialog.action.hover.state-layer.color" },
+        { "role": "action_state_layer_opacity", "kind": "number", "token": "md.comp.dialog.action.hover.state-layer.opacity" }
+      ]
+    },
+    {
+      "id": "dialog-action-focused-light",
+      "component": "dialog",
+      "scheme": { "mode": "light", "variant": "tonal_spot" },
+      "input": { "variant": "basic", "interaction": "focused" },
+      "assertions": [
+        { "role": "action_label_color", "kind": "color", "token": "md.comp.dialog.action.focus.label-text.color" },
+        { "role": "action_state_layer_color", "kind": "color", "token": "md.comp.dialog.action.focus.state-layer.color" },
+        { "role": "action_state_layer_opacity", "kind": "number", "token": "md.comp.dialog.action.focus.state-layer.opacity" }
+      ]
+    },
+    {
       "id": "bottom-sheet-modal-open-light",
       "component": "bottom_sheet",
       "scheme": { "mode": "light", "variant": "tonal_spot" },
