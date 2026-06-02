@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-02
 
+## Fret Plot Declarative Candlestick Command Owner Split - 2026-06-02
+
+Claim verified: Fret Plot declarative candlestick wick/body command projection moved out of
+`ecosystem/fret-plot/src/declarative/commands.rs` into private
+`ecosystem/fret-plot/src/declarative/commands/candlestick.rs` without changing candlestick path
+keys, wick stroke commands, up/down body fill commands, device-width point budgeting, public plot
+panel props, panel entrypoints, optional IMUI adapter routing, paint owners, event owners, output
+publication, or plot model projection behavior.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/commands/candlestick.rs` owns candlestick down-body path-key
+  projection, wick/body path command construction, rectangle body closure, and device point budget.
+- `commands.rs` re-exports the candlestick command entrypoints and keeps shared line/area/shaded
+  keys plus non-candlestick command builders.
+- `series_paint/candlestick.rs` still owns paint colors, draw order, and painter dispatch while
+  importing the same candlestick command entrypoints from the command owner.
+- `tools/gate_imui_workstream_source.py` rejects candlestick command construction from drifting
+  back into `commands.rs` and rejects non-candlestick command builders from drifting into the
+  candlestick owner.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new candlestick command
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass.
+- `cargo test -p fret-plot --lib candlestick_plot_panel --no-fail-fast`: pass.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Prop Records Owner Split - 2026-06-02
 
 Claim verified: Fret Plot declarative public `*PlotPanelProps` record definitions moved out of

@@ -12,6 +12,15 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-02 plot candlestick command owner-split result:
+`ecosystem/fret-plot/src/declarative/commands.rs` now re-exports candlestick command entrypoints
+and keeps shared line/area/shaded keys plus non-candlestick command builders while
+`ecosystem/fret-plot/src/declarative/commands/candlestick.rs` owns candlestick down-body path-key
+projection, wick/body command construction, rectangle body closure, and device point budgeting.
+Candlestick painter dispatch, colors, draw order, public panel props, panel entrypoints, optional
+IMUI adapter routing, paint/event owners, output publication, and plot model projection remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-02 plot prop records owner-split result:
 `ecosystem/fret-plot/src/declarative/props.rs` now re-exports public plot panel prop records and
 keeps builder methods plus heatmap colorbar defaults while

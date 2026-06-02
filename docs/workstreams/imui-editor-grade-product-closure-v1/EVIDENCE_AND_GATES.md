@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## Fret Plot declarative candlestick command owner split - 2026-06-02
+
+This maintenance slice keeps candlestick path-command construction out of the shared command root
+while preserving the opt-in IMUI plot adapter behavior:
+
+- `ecosystem/fret-plot/src/declarative/commands/candlestick.rs` owns candlestick wick/body command
+  projection, down-body path key projection, rectangle body closure, and device point budgeting.
+- `commands.rs` re-exports candlestick command entrypoints and keeps non-candlestick command
+  builders plus shared path keys.
+- Evidence anchor: candlestick wick/body command projection owner.
+- Evidence anchor: Commands root re-exports candlestick command entrypoints.
+- `series_paint/candlestick.rs` remains the paint owner for colors, draw order, and painter
+  dispatch.
+- The candlestick command owner stays paint-free, event-free, output-free, authoring-free, and
+  retained-free.
+- `tools/gate_imui_workstream_source.py` now source-checks the split so candlestick command logic
+  cannot drift back into `commands.rs` and other series command builders cannot drift into the
+  candlestick owner.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo test -p fret-plot --lib candlestick_plot_panel --no-fail-fast` - passed.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## Fret Plot declarative prop records owner split - 2026-06-02
 
 This maintenance slice keeps public plot panel prop records out of the builder-method owner while

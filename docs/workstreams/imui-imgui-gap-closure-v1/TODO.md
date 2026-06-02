@@ -5970,6 +5970,14 @@ opening the slice.
       Result: `ecosystem/fret-plot/src/declarative/commands.rs` owns the private path-command
       projection owner; `declarative.rs` keeps paint/event orchestration and imports only command
       projection entrypoints.
+- [x] Split Fret Plot declarative candlestick path-command projection out of the shared command
+      owner without changing candlestick down-body path keys, wick stroke commands, up/down body
+      fill commands, device point budgeting, painter dispatch, public panel props, panel
+      entrypoints, optional IMUI adapter routing, paint owners, event owners, output publication, or
+      plot model projection behavior.
+      Result: `ecosystem/fret-plot/src/declarative/commands/candlestick.rs` owns candlestick
+      wick/body command construction and device point budgeting; `commands.rs` re-exports
+      candlestick command entrypoints and keeps non-candlestick command builders.
 - [x] Split Fret Plot declarative selection overlay paint and tooltip geometry out of the
       retained-free paint/event root without changing query/box-zoom rectangles, tooltip placement,
       tooltip text formatting, persisted query rendering, active selection rendering,
