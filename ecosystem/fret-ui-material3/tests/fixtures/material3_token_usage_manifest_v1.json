@@ -258,12 +258,7 @@
       "id": "time_picker",
       "layer": "recipe",
       "path": "src/time_picker.rs",
-      "tokens": [
-        "md.sys.color.scrim",
-        "md.sys.fret.material.time-picker.scrim.opacity",
-        "md.sys.motion.duration.medium2",
-        "md.sys.motion.easing.emphasized"
-      ]
+      "tokens": []
     },
     {
       "id": "tooltip",
@@ -1961,9 +1956,13 @@
         "md.sys.color.on-surface-variant",
         "md.sys.color.primary",
         "md.sys.color.primary-container",
+        "md.sys.color.scrim",
         "md.sys.color.surface-container-high",
         "md.sys.color.surface-container-highest",
         "md.sys.fret.material.time-picker.display-separator.width",
+        "md.sys.fret.material.time-picker.scrim.opacity",
+        "md.sys.motion.duration.medium2",
+        "md.sys.motion.easing.emphasized",
         "md.sys.shape.corner.extra-large",
         "md.sys.shape.corner.full",
         "md.sys.shape.corner.small",

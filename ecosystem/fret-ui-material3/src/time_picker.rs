@@ -54,7 +54,6 @@ use crate::foundation::strings::{
 };
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::part_test_id;
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::icon_button::{IconButton, IconButtonVariant};
 use crate::motion::{self, SpringAnimator, SpringSpec};
 use crate::tokens::time_input as time_input_tokens;
@@ -325,7 +324,7 @@ impl TimePickerDialog {
             scrim_opacity: 0.32,
             open_duration_ms: None,
             close_duration_ms: None,
-            easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
+            easing_key: None,
             on_dismiss_request: None,
             test_id: None,
         }
@@ -465,25 +464,19 @@ impl TimePickerDialog {
                     .update(&models.input_minute, |v| *v = format!("{minute:02}"));
             }
 
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-
             let (open_ms, close_ms, bezier, scrim_base) = {
                 let theme = Theme::global(&*cx.app);
-                let tokens = MaterialTokenResolver::new(theme);
 
                 let open_ms = self
                     .open_duration_ms
-                    .unwrap_or_else(|| tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300));
+                    .unwrap_or_else(|| time_tokens::modal_open_duration_ms(theme));
                 let close_ms = self
                     .close_duration_ms
-                    .unwrap_or_else(|| tokens.duration_ms_sys("md.sys.motion.duration.medium2", 300));
+                    .unwrap_or_else(|| time_tokens::modal_close_duration_ms(theme));
 
-                let bezier = tokens.easing_optional_or_linear(Some(easing_key.as_ref()));
+                let bezier = time_tokens::modal_easing(theme, self.easing_key.as_deref());
 
-                let scrim_base = tokens.color_sys("md.sys.color.scrim");
+                let scrim_base = time_tokens::modal_scrim_color(theme);
 
                 (open_ms, close_ms, bezier, scrim_base)
             };
@@ -508,12 +501,8 @@ impl TimePickerDialog {
                 let open_model_for_request = self.open.clone();
                 let open_model_for_overlay = self.open.clone();
 
-                let scrim_opacity = MaterialTokenResolver::new(Theme::global(&*cx.app))
-                    .number_optional(
-                        Some("md.sys.fret.material.time-picker.scrim.opacity"),
-                        self.scrim_opacity,
-                    )
-                    .clamp(0.0, 1.0);
+                let scrim_opacity =
+                    time_tokens::modal_scrim_opacity(Theme::global(&*cx.app), self.scrim_opacity);
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);

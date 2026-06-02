@@ -3,7 +3,7 @@
 //! Reference: Material Web v30 `md.comp.time-picker.*` tokens.
 
 use fret_core::{Color, Corners, Px, TextStyle};
-use fret_ui::Theme;
+use fret_ui::{Theme, theme::CubicBezier};
 
 use crate::foundation::interaction::PressableInteraction;
 
@@ -192,6 +192,26 @@ pub(crate) fn period_selector_state_layer_opacity(
     implementation::period_selector_state_layer_opacity(theme, COMPONENT_PREFIX, interaction)
 }
 
+pub(crate) fn modal_open_duration_ms(theme: &Theme) -> u32 {
+    implementation::modal_motion_duration_ms(theme)
+}
+
+pub(crate) fn modal_close_duration_ms(theme: &Theme) -> u32 {
+    implementation::modal_motion_duration_ms(theme)
+}
+
+pub(crate) fn modal_easing(theme: &Theme, easing_key: Option<&str>) -> CubicBezier {
+    implementation::modal_motion_easing(theme, easing_key)
+}
+
+pub(crate) fn modal_scrim_color(theme: &Theme) -> Color {
+    implementation::modal_scrim_color(theme)
+}
+
+pub(crate) fn modal_scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
+    implementation::modal_scrim_opacity(theme, fallback)
+}
+
 mod implementation {
     //! Local token fallback helpers for Material 3 time picker surfaces.
     //!
@@ -199,7 +219,7 @@ mod implementation {
     //! component-facing `tokens::time_picker` interface.
 
     use fret_core::{Color, Corners, Px, TextStyle};
-    use fret_ui::Theme;
+    use fret_ui::{Theme, theme::CubicBezier};
     use fret_ui_kit::typography::TextIntent;
 
     use crate::foundation::interaction::PressableInteraction;
@@ -219,6 +239,9 @@ mod implementation {
     const DEFAULT_DISPLAY_SEPARATOR_WIDTH: Px = Px(24.0);
     const DEFAULT_TIME_SELECTOR_STATE_LAYER_OPACITY: f32 = 0.0;
     const DEFAULT_PERIOD_SELECTOR_CONTAINER_HEIGHT: Px = Px(80.0);
+    const MODAL_MOTION_DURATION_KEY: &str = "md.sys.motion.duration.medium2";
+    const MODAL_MOTION_EASING_KEY: &str = "md.sys.motion.easing.emphasized";
+    const MODAL_SCRIM_OPACITY_KEY: &str = "md.sys.fret.material.time-picker.scrim.opacity";
 
     pub(crate) fn container_color(theme: &Theme, component_prefix: &str) -> Color {
         MaterialTokenResolver::new(theme).color_comp_or_sys(
@@ -609,6 +632,25 @@ mod implementation {
         time_period_common::state_layer_opacity(theme, component_prefix, interaction)
     }
 
+    pub(crate) fn modal_motion_duration_ms(theme: &Theme) -> u32 {
+        MaterialTokenResolver::new(theme).duration_ms_sys(MODAL_MOTION_DURATION_KEY, 300)
+    }
+
+    pub(crate) fn modal_motion_easing(theme: &Theme, easing_key: Option<&str>) -> CubicBezier {
+        MaterialTokenResolver::new(theme)
+            .easing_optional_or_linear(Some(easing_key.unwrap_or(MODAL_MOTION_EASING_KEY)))
+    }
+
+    pub(crate) fn modal_scrim_color(theme: &Theme) -> Color {
+        MaterialTokenResolver::new(theme).color_sys("md.sys.color.scrim")
+    }
+
+    pub(crate) fn modal_scrim_opacity(theme: &Theme, fallback: f32) -> f32 {
+        MaterialTokenResolver::new(theme)
+            .number_optional(Some(MODAL_SCRIM_OPACITY_KEY), fallback)
+            .clamp(0.0, 1.0)
+    }
+
     fn full_shape_or_token(theme: &Theme, component_prefix: &str, suffix: &str) -> Corners {
         let key = token_key(component_prefix, suffix);
         MaterialTokenResolver::new(theme).corners_chain_or(
@@ -756,6 +798,44 @@ mod implementation {
                 ),
                 0.13
             );
+        }
+
+        #[test]
+        fn time_picker_modal_tokens_prefer_theme_values() {
+            let mut patch = ThemeConfig::default();
+            patch
+                .durations_ms
+                .insert(MODAL_MOTION_DURATION_KEY.to_string(), 180);
+            patch.easings.insert(
+                "md.sys.motion.easing.test-time-picker".to_string(),
+                CubicBezier {
+                    x1: 0.1,
+                    y1: 0.2,
+                    x2: 0.3,
+                    y2: 0.4,
+                },
+            );
+            patch
+                .numbers
+                .insert(MODAL_SCRIM_OPACITY_KEY.to_string(), 0.24);
+            let scrim = Color::from_srgb_hex_rgb(0x11_22_33);
+            patch
+                .colors
+                .insert("md.sys.color.scrim".to_string(), "#112233".to_string());
+            let (_app, theme) = theme_with_patch(patch);
+
+            assert_eq!(modal_motion_duration_ms(&theme), 180);
+            assert_eq!(
+                modal_motion_easing(&theme, Some("md.sys.motion.easing.test-time-picker")),
+                CubicBezier {
+                    x1: 0.1,
+                    y1: 0.2,
+                    x2: 0.3,
+                    y2: 0.4,
+                }
+            );
+            assert_eq!(modal_scrim_color(&theme), scrim);
+            assert_eq!(modal_scrim_opacity(&theme, 0.32), 0.24);
         }
     }
 }
