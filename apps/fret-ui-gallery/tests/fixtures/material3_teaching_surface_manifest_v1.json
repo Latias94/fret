@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "suite": "material3-teaching-surface-manifest-v1",
+  "notes": "Maps public fret-ui-material3 recipe proof entries to UI Gallery teaching surfaces. Dedicated pages are preferred, but family pages and the Material 3 State Matrix are valid when they teach a component family or compact supporting surface.",
+  "entries": [
+    {
+      "id": "autocomplete",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["autocomplete"],
+      "page_ids": ["material3_autocomplete"],
+      "evidence_terms": ["Autocomplete::"]
+    },
+    {
+      "id": "badge",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["badge"],
+      "page_ids": ["material3_badge"],
+      "evidence_terms": ["Badge::"]
+    },
+    {
+      "id": "bottom_sheet",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["bottom_sheet"],
+      "page_ids": ["material3_bottom_sheet"],
+      "evidence_terms": ["ModalBottomSheet::"]
+    },
+    {
+      "id": "button",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["button"],
+      "page_ids": ["material3_button"],
+      "evidence_terms": ["Button::"]
+    },
+    {
+      "id": "card",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["Card::"]
+    },
+    {
+      "id": "carousel_item",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["CarouselItem::"]
+    },
+    {
+      "id": "checkbox",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["checkbox"],
+      "page_ids": ["material3_checkbox"],
+      "evidence_terms": ["Checkbox::"]
+    },
+    {
+      "id": "chip",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["AssistChip::"]
+    },
+    {
+      "id": "chip_set",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["ChipSet::"]
+    },
+    {
+      "id": "date_picker",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["date_picker"],
+      "page_ids": ["material3_date_picker"],
+      "evidence_terms": ["DatePicker::"]
+    },
+    {
+      "id": "dialog",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["dialog"],
+      "page_ids": ["material3_dialog"],
+      "evidence_terms": ["Dialog::"]
+    },
+    {
+      "id": "divider",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["Divider::"]
+    },
+    {
+      "id": "dropdown_menu",
+      "coverage": "family_page",
+      "snippet_modules": ["menu", "state_matrix"],
+      "page_ids": ["material3_menu", "material3_state_matrix"],
+      "evidence_terms": ["DropdownMenu::"]
+    },
+    {
+      "id": "exposed_dropdown",
+      "coverage": "family_page",
+      "snippet_modules": ["autocomplete"],
+      "page_ids": ["material3_autocomplete"],
+      "evidence_terms": ["ExposedDropdown::"]
+    },
+    {
+      "id": "fab",
+      "coverage": "state_matrix",
+      "snippet_modules": ["gallery", "state_matrix"],
+      "page_ids": ["material3_gallery", "material3_state_matrix"],
+      "evidence_terms": ["Fab::"]
+    },
+    {
+      "id": "filter_chip",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["FilterChip::"]
+    },
+    {
+      "id": "icon_button",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["icon_button"],
+      "page_ids": ["material3_icon_button"],
+      "evidence_terms": ["IconButton::"]
+    },
+    {
+      "id": "input_chip",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["InputChip::"]
+    },
+    {
+      "id": "list",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["list"],
+      "page_ids": ["material3_list"],
+      "evidence_terms": ["List::"]
+    },
+    {
+      "id": "menu",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["menu", "state_matrix"],
+      "page_ids": ["material3_menu", "material3_state_matrix"],
+      "evidence_terms": ["MenuItem::"]
+    },
+    {
+      "id": "modal_navigation_drawer",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["modal_navigation_drawer"],
+      "page_ids": ["material3_modal_navigation_drawer"],
+      "evidence_terms": ["ModalNavigationDrawer::"]
+    },
+    {
+      "id": "navigation_bar",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["navigation_bar"],
+      "page_ids": ["material3_navigation_bar"],
+      "evidence_terms": ["NavigationBar::"]
+    },
+    {
+      "id": "navigation_drawer",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["navigation_drawer"],
+      "page_ids": ["material3_navigation_drawer"],
+      "evidence_terms": ["NavigationDrawer::"]
+    },
+    {
+      "id": "navigation_rail",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["navigation_rail"],
+      "page_ids": ["material3_navigation_rail"],
+      "evidence_terms": ["NavigationRail::"]
+    },
+    {
+      "id": "progress_indicator",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["LinearProgressIndicator::", "CircularProgressIndicator::"]
+    },
+    {
+      "id": "radio",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["radio"],
+      "page_ids": ["material3_radio"],
+      "evidence_terms": ["RadioGroup::"]
+    },
+    {
+      "id": "search_bar",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["SearchBar::"]
+    },
+    {
+      "id": "search_view",
+      "coverage": "family_page",
+      "snippet_modules": ["menu", "state_matrix"],
+      "page_ids": ["material3_menu", "material3_state_matrix"],
+      "evidence_terms": ["SearchView::"]
+    },
+    {
+      "id": "segmented_button",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["segmented_button"],
+      "page_ids": ["material3_segmented_button"],
+      "evidence_terms": ["SegmentedButtonSet::", "SegmentedButtonItem::"]
+    },
+    {
+      "id": "select",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["select"],
+      "page_ids": ["material3_select"],
+      "evidence_terms": ["Select::"]
+    },
+    {
+      "id": "slider",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["slider"],
+      "page_ids": ["material3_slider"],
+      "evidence_terms": ["Slider::"]
+    },
+    {
+      "id": "snackbar",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["snackbar"],
+      "page_ids": ["material3_snackbar"],
+      "evidence_terms": ["Snackbar"]
+    },
+    {
+      "id": "suggestion_chip",
+      "coverage": "state_matrix",
+      "snippet_modules": ["state_matrix"],
+      "page_ids": ["material3_state_matrix"],
+      "evidence_terms": ["SuggestionChip::"]
+    },
+    {
+      "id": "switch",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["switch"],
+      "page_ids": ["material3_switch"],
+      "evidence_terms": ["Switch::"]
+    },
+    {
+      "id": "tabs",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["tabs"],
+      "page_ids": ["material3_tabs"],
+      "evidence_terms": ["Tabs::"]
+    },
+    {
+      "id": "text_field",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["text_field"],
+      "page_ids": ["material3_text_field"],
+      "evidence_terms": ["TextField::"]
+    },
+    {
+      "id": "time_picker",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["time_picker"],
+      "page_ids": ["material3_time_picker"],
+      "evidence_terms": ["TimePicker::"]
+    },
+    {
+      "id": "tooltip",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["tooltip"],
+      "page_ids": ["material3_tooltip"],
+      "evidence_terms": ["PlainTooltip::", "RichTooltip::"]
+    },
+    {
+      "id": "top_app_bar",
+      "coverage": "dedicated_page",
+      "snippet_modules": ["top_app_bar"],
+      "page_ids": ["material3_top_app_bar"],
+      "evidence_terms": ["TopAppBar::"]
+    }
+  ]
+}

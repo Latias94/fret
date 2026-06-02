@@ -97,6 +97,28 @@ The suite name uses underscores in runner and test names. Golden file stems use 
 9. If the source is a public non-rendered helper, classify it as `supporting_api`, explain
    `known_gap`, and extend the allowlist only when the exception is intentional.
 
+## Teaching Surface Follow-up
+
+Gallery teaching surfaces are tracked separately from recipe proof artifacts:
+
+- Manifest:
+  `apps/fret-ui-gallery/tests/fixtures/material3_teaching_surface_manifest_v1.json`
+- Gate:
+  `apps/fret-ui-gallery/tests/material3_teaching_surface_manifest.rs`
+
+That app-side manifest maps every rendered public recipe proof entry, excluding `supporting_api`
+entries such as `motion`, to a `dedicated_page`, `family_page`, or `state_matrix` teaching surface.
+The gate verifies that each mapping has:
+
+- a declared `snippets::material3::<module>` module,
+- a copyable snippet source with `SOURCE` and `pub fn render`,
+- at least one source evidence term proving the recipe appears in the snippet,
+- a registered Material3 `PageSpec`, and
+- a render dispatch in `apps/fret-ui-gallery/src/ui/content.rs`.
+
+New rendered recipes should update both manifests: the recipe proof manifest for correctness gates
+and the teaching surface manifest for user-facing discoverability.
+
 ## Proof
 
 Recommended gates for this closure layer:
@@ -105,6 +127,7 @@ Recommended gates for this closure layer:
 cargo test -p fret-ui-material3 --test material3_recipe_proof_manifest material3_recipe_proof_manifest_tracks_public_recipe_coverage_v1 -- --nocapture
 cargo test -p fret-ui-material3 --test material3_headless_goldens material3_headless_tabs_suite_goldens_v1 -- --nocapture
 cargo test -p fret-ui-material3 --test material3_headless_goldens material3_headless_chip_set_suite_goldens_v1 -- --nocapture
+cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- --nocapture
 ```
 
 Full component changes should still run their focused behavior tests plus `cargo check` and `cargo
@@ -118,5 +141,7 @@ clippy` for `fret-ui-material3`.
   standalone rendered recipe suite.
 - ChipSet would benefit from a future `Toolbar` semantics follow-up if the core semantics vocabulary
   is expanded; that should be a separate mechanism/a11y lane.
-- Gallery snippets and rustdoc examples are not closed by this proof layer. They should be audited
-  next against the manifest so the teaching surface matches the tested recipe surface.
+- Gallery teaching-surface coverage is text-gated, not a visual proof. It prevents missing
+  copyable examples and page wiring, but does not replace diagnostics screenshots or layout bundles.
+- Rustdoc examples are not closed by this proof layer. They should be audited next so the crate API
+  surface teaches the same recipes as the gallery.

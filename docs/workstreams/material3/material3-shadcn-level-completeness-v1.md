@@ -265,14 +265,25 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
     `ecosystem/fret-ui-material3/tests/material3_headless_goldens.rs`,
     `ecosystem/fret-ui-material3/tests/fixtures/material3_recipe_proof_manifest_v1.json`,
     `ecosystem/fret-ui-material3/tests/support/headless_golden_runners/mod.rs`.
+- 2026-06-02 Gallery teaching-surface closure:
+  - `apps/fret-ui-gallery/tests/fixtures/material3_teaching_surface_manifest_v1.json` now maps all
+    rendered public recipe proof entries to Material3 gallery teaching surfaces. The only excluded
+    proof entry is the `motion` supporting API.
+  - The app-side gate verifies each mapping has a snippet module, copyable `SOURCE`, `pub fn render`,
+    source evidence terms, a registered Material3 `PageSpec`, and a content render dispatch.
+  - The Material3 State Matrix now teaches compact examples for `CarouselItem`, `Divider`,
+    `LinearProgressIndicator` / `CircularProgressIndicator`, and standalone `SearchBar`, closing
+    concrete gallery gaps found during the manifest audit.
+  - Gates:
+    `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- --nocapture`.
 
 ## Next Recommended Focus
 
-1. Audit gallery snippets and first-party examples against the recipe proof manifest, prioritizing
-   components whose tested surface is richer than their teaching surface.
-2. Run a rustdoc/API ergonomics pass for Material recipes, especially style builders, slot APIs,
+1. Run a rustdoc/API ergonomics pass for Material recipes, especially style builders, slot APIs,
    stable `test_id` parts, and component-family composition examples.
-3. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
+2. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
    vocabulary is expanded.
+3. Add diagnostics screenshots or layout bundles for the compact State Matrix examples if visual
+   teaching-surface parity becomes product-critical.
 4. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
    after concrete product gates prove those conditional risks matter.
