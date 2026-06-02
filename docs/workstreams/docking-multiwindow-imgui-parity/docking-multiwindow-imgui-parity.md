@@ -73,6 +73,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M31_DOCKING_RUNTIME_LAYOUT_INVALIDATION_OWNER_SPLIT_2026-06-02.md`
   (moves DockOp post-mutation viewport cleanup and invalidation into a private runtime child owner
   without changing graph mutation or the Wayland acceptance boundary)
+- Latest docking runtime apply owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M44_DOCKING_RUNTIME_APPLY_OWNER_SPLIT_2026-06-02.md`
+  (moves the ordinary DockOp mutation/logging/auto-close orchestration into a private runtime child
+  owner without changing request handling or the Wayland acceptance boundary)
 - Latest docking runtime test owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`
   (moves focused runtime regression coverage into a private runtime child owner without changing

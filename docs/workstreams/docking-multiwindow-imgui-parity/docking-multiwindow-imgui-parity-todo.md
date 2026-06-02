@@ -453,8 +453,16 @@ Each TODO is labeled:
         cleanup, `DockInvalidationService::bump_windows(...)`, and whole-graph invalidation for
         tab/split fraction changes.
       - Focused request/fallback/window-created/before-close/auto-close regressions, source gate,
-        JSON shape, catalog, and diff checks passed locally without recording Wayland compositor
-        acceptance.
+      JSON shape, catalog, and diff checks passed locally without recording Wayland compositor
+      acceptance.
+    - [x] 2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration
+      out of the runtime shell:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M44_DOCKING_RUNTIME_APPLY_OWNER_SPLIT_2026-06-02.md`
+      - `ecosystem/fret-docking/src/runtime/apply.rs` owns tear-off-machine prune/cancel, graph
+        mutation, cross-window mutation logging, empty DockFloating close scan collection, and
+        invalidation/close-effect orchestration for non-request `DockOp`s.
+      - Focused docking runtime regressions, source gate, JSON shape, catalog, and diff checks
+        passed locally without recording Wayland compositor acceptance.
     - [x] 2026-06-02 docking runtime test owner split keeps focused regression bodies out of the
       runtime shell:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M32_DOCKING_RUNTIME_TEST_OWNER_SPLIT_2026-06-02.md`
