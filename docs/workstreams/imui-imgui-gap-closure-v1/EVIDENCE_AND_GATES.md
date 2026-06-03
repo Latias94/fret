@@ -30321,3 +30321,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot shaded model owner split:
+
+- Claim: `ShadedSeries` and `ShadedPlotModel` moved from `ecosystem/fret-plot/src/models.rs` into
+  `ecosystem/fret-plot/src/models/shaded.rs` without changing
+  `crate::models::{ShadedSeries, ShadedPlotModel}` import paths, public record fields/builders,
+  upper/lower band inputs, fill/stroke options, primary/Y2/Y3/Y4 bounds projection, declarative
+  shaded plot panels, or optional IMUI adapter routing.
+- Evidence anchors: `models.rs` declares `mod shaded;`, re-exports `ShadedSeries` and
+  `ShadedPlotModel`, and keeps shared `YAxis`, `MarkerShape`, non-shaded model records, and shared
+  bounds helpers; `models/shaded.rs` owns shaded series fields/builders, `upper`/`lower` band
+  storage, `fill_alpha(...)`, `ShadedPlotModel` fields, `from_series(...)`,
+  `from_series_with_bounds(...)`, and shaded-specific upper/lower bounds union helpers. The source
+  gate rejects shaded records drifting back into `models.rs` and rejects area, line, scatter,
+  stems, error-bars, candlestick, bars, histogram, and heatmap model records drifting into
+  `models/shaded.rs`.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed:
+  `cargo nextest run -p fret-plot --features imui shaded_plot_panel_paints_band_fill_and_two_strokes_on_declarative_path --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

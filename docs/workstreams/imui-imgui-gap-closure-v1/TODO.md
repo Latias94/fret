@@ -7018,3 +7018,13 @@ opening the slice.
       baseline policy, area plot model records, explicit-bounds construction, and primary/Y2/Y3/Y4
       baseline-expanded bounds construction. The IMUI source gate freezes the root re-export hub
       and area owner boundary.
+- [x] Split Fret Plot shaded series/model records out of the root plot model file without changing
+      `crate::models::{ShadedSeries, ShadedPlotModel}` import paths, upper/lower band inputs,
+      fill/stroke options, multi-axis bounds projection, declarative shaded panel behavior, or
+      optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod shaded;`, re-exports
+      `ShadedSeries` and `ShadedPlotModel`, and keeps shared axes plus non-shaded model records.
+      `ecosystem/fret-plot/src/models/shaded.rs` owns shaded series fields/builders, upper/lower
+      bounds union policy, shaded plot model records, explicit-bounds construction, and
+      primary/Y2/Y3/Y4 bounds construction. The IMUI source gate freezes the root re-export hub and
+      shaded owner boundary.

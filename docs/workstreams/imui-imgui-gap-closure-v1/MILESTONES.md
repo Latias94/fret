@@ -6208,3 +6208,12 @@ policy, area plot model records, caller-supplied bounds construction, and primar
 baseline-expanded data-bound projection. Public `crate::models::{AreaSeries, AreaPlotModel}`
 imports, declarative area plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 Fret Plot shaded model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-shaded model records, shared
+bounds helpers, and the stable public re-export for `ShadedSeries` / `ShadedPlotModel`.
+`ecosystem/fret-plot/src/models/shaded.rs` owns shaded series fields/builders, upper/lower band
+bounds union policy, shaded plot model records, caller-supplied bounds construction, and
+primary/Y2/Y3/Y4 data-bound projection. Public `crate::models::{ShadedSeries, ShadedPlotModel}`
+imports, declarative shaded plot panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

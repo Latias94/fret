@@ -1912,6 +1912,7 @@
     "ecosystem/fret-plot/src/models/area.rs",
     "ecosystem/fret-plot/src/models/line.rs",
     "ecosystem/fret-plot/src/models/scatter.rs",
+    "ecosystem/fret-plot/src/models/shaded.rs",
     "ecosystem/fret-plot/src/models/stems.rs",
     "ecosystem/fret-plot/src/declarative.rs",
     "ecosystem/fret-plot/src/declarative/axis_labels.rs",
