@@ -2301,6 +2301,13 @@ construction and outside-press dismissal plumbing, while `layer/panel.rs` owns p
 child `ImUiFacade` mounting, and panel id capture. Modal root naming, layer stack layout, panel
 semantics, focus handoff, and public popup modal facade behavior remain unchanged.
 
+2026-06-03 popup-modal layer carrier owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` now keeps modal root/backdrop/panel
+assembly only. `layer/focus.rs` owns the modal focus-state factory, and `layer/types.rs` owns modal
+layer input/output carrier records with visibility limited to the modal subtree. Modal root naming,
+layer stack layout, panel semantics, focus handoff, and public popup modal facade behavior remain
+unchanged.
+
 2026-05-30 disclosure entry child-owner result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs` now keeps public
 collapsing-header/tree-node wrappers, label identity normalization, and aggregate

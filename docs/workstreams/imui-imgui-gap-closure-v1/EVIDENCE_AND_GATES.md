@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Popup Modal Layer Carrier Owner Split - 2026-06-03
+
+Claim verified: popup modal layer focus factory and layer input/output carrier records moved behind
+private child owners without changing modal root naming, layer stack layout, backdrop barrier
+dismissal, panel semantics, facade child mounting, focus-state handoff, overlay request assembly, or
+public popup modal facade behavior.
+
+Evidence:
+
+- IMUI popup modal layer carrier owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` keeps modal root/backdrop/panel
+  assembly only.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/focus.rs` owns the modal focus-state
+  factory.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/types.rs` owns modal layer input/output
+  carrier records with visibility limited to the modal subtree.
+- Evidence anchor: layer.rs keeps modal root/backdrop/panel assembly only.
+- Evidence anchor: modal focus state factory.
+- Evidence anchor: modal layer input/output carrier records.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui popup_modal --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Button Control Chrome Child Owner Split - 2026-06-03
 
 Claim verified: button control chrome theme resolution and container props moved behind dedicated

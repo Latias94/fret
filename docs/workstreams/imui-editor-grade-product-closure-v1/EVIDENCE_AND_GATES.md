@@ -2,6 +2,35 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI popup modal layer carrier owner split - 2026-06-03
+
+This maintenance slice keeps popup modal layer assembly focused while preserving modal behavior:
+
+- IMUI popup modal layer carrier owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs` keeps modal root/backdrop/panel
+  assembly only.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/focus.rs` owns the modal focus-state
+  factory.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/types.rs` owns modal layer input/output
+  carrier records with visibility limited to the modal subtree.
+- Evidence anchor: layer.rs keeps modal root/backdrop/panel assembly only.
+- Evidence anchor: modal focus state factory.
+- Evidence anchor: modal layer input/output carrier records.
+- Modal root naming, layer stack layout, backdrop barrier dismissal, panel semantics, facade child
+  mounting, focus-state handoff, overlay request assembly, and public popup modal facade behavior
+  remain unchanged.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_popup_options_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-imui popup_modal --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI button control chrome child owner split - 2026-06-03
 
 This maintenance slice keeps shared IMUI button chrome readable without changing the caller-facing

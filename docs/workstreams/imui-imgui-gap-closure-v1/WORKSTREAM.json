@@ -781,6 +781,8 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/dismiss.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/focus.rs",
+    "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/types.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/backdrop.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layer/panel.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs",

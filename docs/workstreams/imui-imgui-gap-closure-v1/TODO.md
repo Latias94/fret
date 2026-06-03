@@ -1867,6 +1867,13 @@ Last updated: 2026-06-03
       Result: `popup_overlay/modal/layer.rs` keeps layer input/output, root-name mounting, stack
       wiring, and panel-focus handoff. `layer/backdrop.rs` owns modal barrier construction, while
       `layer/panel.rs` owns panel semantics, child `ImUiFacade` mounting, and panel id capture.
+- [x] Split IMUI popup-modal layer focus factory and carrier records into private child owners
+      without changing modal root naming, layer stack layout, backdrop barrier dismissal, panel
+      semantics, facade child mounting, focus-state handoff, overlay request assembly, or public
+      popup modal facade behavior.
+      Result: `popup_overlay/modal/layer.rs` keeps modal root/backdrop/panel assembly only.
+      `layer/focus.rs` owns the modal focus-state factory, and `layer/types.rs` owns modal layer
+      input/output carrier records with visibility limited to the modal subtree.
 - [x] Split IMUI disclosure entry state reads and root-child assembly into private child owners
       without changing collapsing-header/tree-node label identity parsing, open-model setup,
       trigger/content mounting, root layout, open/toggled response reporting, or public disclosure

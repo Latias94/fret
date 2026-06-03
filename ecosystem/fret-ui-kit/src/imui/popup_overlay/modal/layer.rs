@@ -1,37 +1,15 @@
-use std::cell::Cell;
-use std::rc::Rc;
-
-use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
-use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 mod backdrop;
+mod focus;
 mod panel;
+mod types;
 
-use super::layout::{self, PopupModalPalette, PopupModalPanelLayout};
+pub(super) use focus::modal_focus_state;
+pub(super) use types::{PopupModalLayerBuilt, PopupModalLayerInput};
+
+use super::layout;
 use crate::imui::popup_overlay::ImUiFacade;
-
-pub(super) struct PopupModalLayerInput<'a, Build> {
-    pub(super) id: &'a str,
-    pub(super) root_name: &'a str,
-    pub(super) open: Model<bool>,
-    pub(super) palette: PopupModalPalette,
-    pub(super) panel_layout: PopupModalPanelLayout,
-    pub(super) close_on_outside_press: bool,
-    pub(super) on_dismiss_request: OnDismissRequest,
-    pub(super) focus_state_for_build: Rc<Cell<Option<GlobalElementId>>>,
-    pub(super) build: Build,
-}
-
-pub(super) struct PopupModalLayerBuilt {
-    pub(super) layer: AnyElement,
-    pub(super) panel_id_for_focus: Option<GlobalElementId>,
-}
-
-pub(super) fn modal_focus_state() -> Rc<Cell<Option<GlobalElementId>>> {
-    Rc::new(Cell::new(None::<GlobalElementId>))
-}
 
 pub(super) fn build_popup_modal_layer<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
