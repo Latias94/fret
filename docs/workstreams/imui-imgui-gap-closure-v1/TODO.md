@@ -6754,3 +6754,10 @@ opening the slice.
       above `IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180`. This keeps the already-split kit IMUI
       implementation from regressing back into large policy/assembly files while leaving tests and
       behavior unchanged.
+- [x] Split `fret-imui` layout-collection table proof tests into a private owner module.
+      Result: `ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs` now owns
+      table layout, hidden/runtime visibility, visibility-menu, header-context-menu, pinned-column,
+      keyboard context-menu, and background override tests plus `first_solid_quad_index(...)`.
+      The root `layout_collections.rs` keeps container/menu/tab/virtual-list/separator/bullet
+      composition tests and declares `mod table;`; the IMUI source gate rejects table helper drift
+      back into the mixed root file.

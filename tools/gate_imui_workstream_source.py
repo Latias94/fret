@@ -3090,6 +3090,10 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md"),
             required=[
+                "Fret IMUI Layout Collection Table Test Owner Split - 2026-06-03",
+                "table helper proof surface",
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs",
+                "rejects table helper",
                 "Kit IMUI Source Thinness Guard - 2026-06-03",
                 "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
                 "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",
@@ -12164,10 +12168,12 @@ def main() -> None:
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
             required=[
                 "mod region_containers;",
-                "fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells()",
+                "mod table;",
                 "fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row()",
             ],
             forbidden=[
+                "fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells()",
+                "fn first_solid_quad_index(",
                 "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
                 "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
                 "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
@@ -12175,6 +12181,31 @@ def main() -> None:
                 "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
                 "fn child_region_without_height_constraint_auto_sizes_to_content()",
                 "fn child_region_without_width_constraint_auto_sizes_to_content()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs"),
+            required=[
+                "use super::*;",
+                "fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells()",
+                "fn table_helper_skips_hidden_columns_in_header_and_body()",
+                "fn table_helper_pins_left_and_right_columns_while_center_columns_scroll()",
+                "fn table_helper_applies_runtime_column_visibility_state()",
+                "fn table_column_visibility_menu_item_updates_visibility_state()",
+                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
+                "fn table_plain_header_left_click_does_not_activate_or_click()",
+                "fn table_plain_header_reports_context_menu_request_from_keyboard_without_clicking()",
+                "fn table_sortable_header_reports_context_menu_request_on_right_click()",
+                "fn table_sortable_header_reports_context_menu_request_from_keyboard()",
+                "fn table_helper_applies_explicit_row_and_cell_background_overrides()",
+                "fn first_solid_quad_index(",
+            ],
+            forbidden=[
+                "fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row()",
+                "fn separator_text_helper_renders_label_with_trailing_rule()",
+                "fn bullet_text_helper_renders_indicator_before_wrapped_label()",
             ],
         ),
         SourceCheck(
@@ -14260,7 +14291,7 @@ def main() -> None:
             forbidden=["fret-plot"],
         ),
         SourceCheck(
-            Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
+            Path("ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs"),
             required=[
                 "fn table_helper_skips_hidden_columns_in_header_and_body()",
                 "TableColumn::px(\"Status\", Px(96.0)).hidden()",

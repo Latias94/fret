@@ -3,6 +3,31 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Fret IMUI Layout Collection Table Test Owner Split - 2026-06-03
+
+Claim verified: the large `fret-imui` layout-collection composition proof file no longer owns the
+table helper proof surface; table layout, visibility, header-context-menu, pinned-column, and
+background override tests live in a private `layout_collections/table.rs` owner.
+
+Evidence:
+
+- Fret IMUI layout collection table test owner split - 2026-06-03.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` declares `mod table;` and keeps
+  container/menu/tab/virtual-list/separator/bullet composition tests.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs` owns table helper tests
+  plus `first_solid_quad_index(...)`.
+- `tools/gate_imui_workstream_source.py` now requires the table owner and rejects table helper
+  drift back into the mixed layout-collection root file.
+
+Focused gates:
+
+- `cargo fmt --package fret-imui`: pass.
+- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass, 28 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI Source Thinness Guard - 2026-06-03
 
 Claim verified: `ecosystem/fret-ui-kit/src/imui` production files stay below 180 lines so the
