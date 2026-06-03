@@ -1,14 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use crate::controls::numeric_input::{
-    NumericInput, NumericInputErrorDisplay, NumericInputOptions, NumericInputOutcome,
-};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
-use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, sync_numeric_text_entry_focus_handoff,
-};
+use crate::primitives::numeric_text_entry::NumericTextEntryFocusHandoffState;
 use crate::primitives::style::EditorStyle;
 use fret_ui::element::{AnyElement, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -18,12 +13,13 @@ use super::chrome::{resolve_slider_geometry, resolve_slider_paint};
 use super::frame::{SliderFrameArgs, slider_frame};
 use super::model::{SliderMode, compose_affixed_value_text, hidden_layout};
 use super::pointer::reset_slider_interaction;
-use super::typing::{slider_typing_parse, slider_typing_validate};
 use super::value_math::{quantize_value, t_from_value};
 
 mod interaction;
+mod typing_input;
 
 use interaction::{SliderInteractionHandlersArgs, install_slider_interaction_handlers};
+use typing_input::{SliderTypingInputArgs, slider_typing_input};
 
 pub(super) fn slider_into_element_keyed<T, H>(
     slider: Slider<T>,
@@ -198,59 +194,28 @@ where
         slider_el = slider_el.test_id(test_id.clone());
     }
 
-    let parse_for_input = slider_typing_parse(parse.clone(), min, max, clamp, step);
-    let validate_for_input = slider_typing_validate(validate.clone(), min, max, clamp);
-
-    let state_for_input = state.clone();
-    let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
-        Arc::new(Mutex::new(None));
-    let input = NumericInput::new(model.clone(), format.clone(), parse_for_input)
-        .validate(validate_for_input)
-        .focus_target(input_focus_target.clone())
-        .options(NumericInputOptions {
-            layout: input_layout,
-            enabled: enabled && typing,
-            focusable: enabled && typing,
+    let input = slider_typing_input(
+        cx,
+        SliderTypingInputArgs {
+            model: model.clone(),
+            format: format.clone(),
+            parse: parse.clone(),
+            validate: validate.clone(),
+            state: state.clone(),
+            focus_handoff: focus_handoff.clone(),
+            min,
+            max,
+            clamp,
+            step,
+            enabled,
+            typing,
+            input_layout,
             prefix: prefix.clone(),
             suffix: suffix.clone(),
             selection_behavior: options.selection_behavior,
-            test_id: active_typing_test_id,
-            // Avoid growing the row height when a commit-time validation error occurs.
-            // A small trailing status icon keeps the inspector layout stable.
-            error_display: NumericInputErrorDisplay::TrailingIcon,
-            ..Default::default()
-        })
-        .on_outcome(Some(Arc::new(move |host, action_cx, outcome| {
-            if matches!(
-                outcome,
-                NumericInputOutcome::Committed | NumericInputOutcome::Canceled
-            ) {
-                let mut st = state_for_input.lock().unwrap_or_else(|e| e.into_inner());
-                reset_slider_interaction(&mut st);
-                if let Some(slider_id) = st.slider_id {
-                    host.request_focus(slider_id);
-                }
-                host.request_redraw(action_cx.window);
-            }
-        })))
-        .into_element(cx);
-
-    if let Some(input_id) = input_focus_target
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .as_ref()
-        .copied()
-    {
-        let is_focused = cx.is_focused_element(input_id);
-        sync_numeric_text_entry_focus_handoff(
-            cx,
-            input.id,
-            &focus_handoff,
-            typing,
-            input_id,
-            is_focused,
-        );
-    }
+            active_typing_test_id,
+        },
+    );
 
     cx.container(Default::default(), move |_cx| vec![slider_el, input])
 }

@@ -1748,6 +1748,15 @@ Last updated: 2026-06-03
       identity keying, and child-owner routing. `controls/slider/element.rs` owns keyed element
       assembly, slider state/focus-handoff storage, pressable pointer hooks, NumericInput typing
       composition, focus handoff sync, and frame owner invocation.
+- [x] Split editor slider typing input assembly into a private child owner without changing
+      NumericInput typing visibility, parse/validate adapter behavior, trailing-icon validation
+      error display, commit/cancel reset and slider focus restore, focus handoff sync, or
+      pressable slider shell behavior.
+      Result: `controls/slider/element.rs` keeps keyed state/focus-handoff lookup, current value
+      reads, layout switching, pressable slider assembly, and child-owner routing.
+      `controls/slider/element/typing_input.rs` owns NumericInput construction, parse/validate
+      adapter wiring, trailing-icon error policy, commit/cancel reset plus slider focus return,
+      and focus handoff sync.
 - [x] Split editor enum-select row rendering, selection commit policy, and item test-id
       sanitization into a private child owner without changing trigger composition, overlay
       dismissal, filter/search behavior, popup empty-state rendering, row chrome, or selected-row

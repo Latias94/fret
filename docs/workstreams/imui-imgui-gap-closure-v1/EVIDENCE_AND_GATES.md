@@ -29615,3 +29615,32 @@ Focused gates:
 - Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --test imui_adapter_smoke --no-fail-fast`.
 - Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\gate_imui_workstream_source.py`.
+
+2026-06-03 editor slider typing-input owner split:
+
+- Claim: slider NumericInput typing assembly moved from
+  `ecosystem/fret-ui-editor/src/controls/slider/element.rs` into
+  `ecosystem/fret-ui-editor/src/controls/slider/element/typing_input.rs` without changing typing
+  visibility, parse/validate adapter behavior, trailing-icon validation error display,
+  commit/cancel reset and slider focus restore, focus handoff sync, or pressable slider shell
+  behavior.
+- Evidence anchors: `element.rs` declares `mod typing_input;`, imports
+  `SliderTypingInputArgs` / `slider_typing_input(...)`, keeps keyed state and focus-handoff lookup,
+  current value reads, layout switching, pressable slider assembly, and delegates the typing branch
+  through `slider_typing_input(...)`; `element/typing_input.rs` owns
+  `slider_typing_parse(...)` / `slider_typing_validate(...)` wiring, `NumericInput::new(...)`,
+  trailing-icon error policy, commit/cancel reset plus slider focus return, and
+  `sync_numeric_text_entry_focus_handoff(...)`; `tools/gate_imui_workstream_source.py` now rejects
+  NumericInput and focus-handoff implementation details drifting back into the root element owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-editor slider_geometry_uses_default_track_and_thumb_metrics slider_geometry_clamps_track_and_keeps_thumb_at_least_track_height slider_track_props_encode_fill_track_layout_and_shape slider_thumb_props_encode_fixed_diameter_border_and_shape slider_chrome_prefers_editor_owned_tokens_over_generic_palette slider_paint_applies_disabled_alpha_to_all_chrome_channels slider_paint_mixes_hover_and_pressed_track_fill_when_enabled default_slider_format_uses_integer_or_three_decimal_text default_slider_parse_accepts_trimmed_f64_text slider_from_presentation_adopts_format_parse_and_chrome_affixes slider_typing_parse_quantizes_and_clamps_parsed_values slider_typing_validate_adds_range_check_only_when_unclamped slider_typing_validate_delegates_custom_validator_inside_range slider_t_from_value_returns_zero_for_degenerate_ranges slider_t_from_value_clamps_when_requested slider_value_from_x_accounts_for_thumb_radius_and_step_quantization slider_value_from_x_returns_quantized_min_when_track_has_no_available_width slider_value_from_local_x_accounts_for_value_readout_and_padding slider_value_from_local_x_clamps_pointer_inside_track_region --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

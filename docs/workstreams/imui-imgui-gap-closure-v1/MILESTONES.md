@@ -6022,3 +6022,11 @@ finite-size sanitization, and wheel/triangle radius projection. `model/hue_wheel
 closest-point helpers. `model/hue_wheel/interaction.rs` owns `HueWheelDragTarget`, pointer hit
 testing, and position-to-HSV mapping. Public editor/IMUI adapter APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor slider typing-input owner split result:
+`ecosystem/fret-ui-editor/src/controls/slider/element.rs` now keeps keyed slider state and
+focus-handoff lookup, current value reads, layout switching, pressable slider assembly, and
+child-owner routing only. `controls/slider/element/typing_input.rs` owns NumericInput
+construction, parse/validate adapter wiring, trailing-icon validation error policy, commit/cancel
+reset plus slider focus restore, and focus handoff sync. Public editor/IMUI adapter APIs remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
