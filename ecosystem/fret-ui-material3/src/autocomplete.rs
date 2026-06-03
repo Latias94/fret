@@ -1323,11 +1323,6 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                 move |_cx| vec![text],
                             );
 
-                            let mut chrome = child;
-                            if let Some(test_id) = option_chrome_test_id.clone() {
-                                chrome = chrome.test_id(test_id);
-                            }
-
                             let mut inset = FlexProps::default();
                             inset.direction = Axis::Horizontal;
                             inset.justify = MainAlign::Start;
@@ -1343,7 +1338,12 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             }
                             .into();
 
-                            (props, vec![cx.flex(inset, move |_cx| vec![chrome])])
+                            let mut chrome_shell = cx.flex(inset, move |_cx| vec![child]);
+                            if let Some(test_id) = option_chrome_test_id.clone() {
+                                chrome_shell = chrome_shell.test_id(test_id);
+                            }
+
+                            (props, vec![chrome_shell])
                         });
 
                         out.push(row);

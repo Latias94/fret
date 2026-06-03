@@ -18,6 +18,9 @@ const CHECKBOX_TRISTATE_DIAG: &str = include_str!(
 const AUTOCOMPLETE_LEADING_ICON_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/forms/ui-gallery-material3-autocomplete-leading-icon-screenshots.json"
 );
+const AUTOCOMPLETE_OPTION_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-option-chrome-fill.json"
+);
 const TEXT_FIELD_ICONS_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/forms/ui-gallery-material3-text-field-icons-screenshots.json"
 );
@@ -26,6 +29,9 @@ const AUTOCOMPLETE_DIALOG_NESTED_OVERLAY_DIAG: &str = include_str!(
 );
 const DIALOG_FOCUS_TRAP_RESTORE_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json"
+);
+const DIALOG_SELECT_NESTED_OVERLAY_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-select-nested-overlay.json"
 );
 const SELECT_A11Y_PARITY_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-a11y-parity-bundle.json"
@@ -38,6 +44,12 @@ const SELECT_RICH_OPTIONS_DIAG: &str = include_str!(
 );
 const SELECT_POSITIONING_TRANSFORM_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-positioning-transform-screenshots.json"
+);
+const SELECT_MENU_WIDTH_FLOOR_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-width-floor-screenshots.json"
+);
+const SELECT_TYPEAHEAD_DELAY_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-typeahead-delay.json"
 );
 
 #[test]
@@ -61,6 +73,11 @@ fn material3_field_surface_diags_use_direct_start_pages() {
         (
             "autocomplete leading icon",
             AUTOCOMPLETE_LEADING_ICON_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_autocomplete\"",
+        ),
+        (
+            "autocomplete option chrome",
+            AUTOCOMPLETE_OPTION_CHROME_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_autocomplete\"",
         ),
         (
@@ -89,6 +106,11 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_dialog\"",
         ),
         (
+            "dialog select nested overlay",
+            DIALOG_SELECT_NESTED_OVERLAY_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_dialog\"",
+        ),
+        (
             "select a11y parity",
             SELECT_A11Y_PARITY_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
@@ -106,6 +128,16 @@ fn material3_field_surface_diags_use_direct_start_pages() {
         (
             "select positioning transform",
             SELECT_POSITIONING_TRANSFORM_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
+        ),
+        (
+            "select menu width floor",
+            SELECT_MENU_WIDTH_FLOOR_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
+        ),
+        (
+            "select typeahead delay",
+            SELECT_TYPEAHEAD_DELAY_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
         ),
     ] {
@@ -128,6 +160,12 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
         (
             "autocomplete leading icon",
             AUTOCOMPLETE_LEADING_ICON_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
+            "\"id\": \"ui-gallery-material3-autocomplete\"",
+        ),
+        (
+            "autocomplete option chrome",
+            AUTOCOMPLETE_OPTION_CHROME_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
             "\"id\": \"ui-gallery-material3-autocomplete\"",
         ),
@@ -162,6 +200,12 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"id\": \"ui-gallery-material3-dialog-open\"",
         ),
         (
+            "dialog select nested overlay",
+            DIALOG_SELECT_NESTED_OVERLAY_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
+            "\"id\": \"ui-gallery-material3-dialog-open\"",
+        ),
+        (
             "select a11y parity",
             SELECT_A11Y_PARITY_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
@@ -185,6 +229,18 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
             "\"id\": \"ui-gallery-material3-select-transformed\"",
         ),
+        (
+            "select menu width floor",
+            SELECT_MENU_WIDTH_FLOOR_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-select-unclamped\"",
+        ),
+        (
+            "select typeahead delay",
+            SELECT_TYPEAHEAD_DELAY_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-select-typeahead-delay-1000\"",
+        ),
     ] {
         assert!(
             script.contains("\"type\": \"scroll_into_view\""),
@@ -207,12 +263,20 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
         ("button sizes", BUTTON_SIZES_DIAG),
         ("checkbox tristate", CHECKBOX_TRISTATE_DIAG),
         ("autocomplete leading icon", AUTOCOMPLETE_LEADING_ICON_DIAG),
+        (
+            "autocomplete option chrome",
+            AUTOCOMPLETE_OPTION_CHROME_DIAG,
+        ),
         ("text field icons", TEXT_FIELD_ICONS_DIAG),
         (
             "autocomplete dialog nested overlay",
             AUTOCOMPLETE_DIALOG_NESTED_OVERLAY_DIAG,
         ),
         ("dialog focus trap restore", DIALOG_FOCUS_TRAP_RESTORE_DIAG),
+        (
+            "dialog select nested overlay",
+            DIALOG_SELECT_NESTED_OVERLAY_DIAG,
+        ),
         (
             "text field hover label color",
             TEXT_FIELD_HOVER_LABEL_COLOR_DIAG,
@@ -224,6 +288,8 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
             "select positioning transform",
             SELECT_POSITIONING_TRANSFORM_DIAG,
         ),
+        ("select menu width floor", SELECT_MENU_WIDTH_FLOOR_DIAG),
+        ("select typeahead delay", SELECT_TYPEAHEAD_DELAY_DIAG),
     ] {
         assert!(
             !script.contains("\"id\": \"ui-gallery-nav-search\""),
