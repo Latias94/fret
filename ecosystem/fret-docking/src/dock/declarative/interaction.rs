@@ -1,76 +1,18 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, PanelKey, Rect};
+use fret_core::AppWindowId;
 
 use super::super::tab_overflow::TabOverflowMenuState;
-use super::super::types::DividerDragState;
 use super::super::viewport::ViewportCaptureState;
 
-#[derive(Debug, Clone)]
-pub(super) struct DeclarativePressedTabClose {
-    pub(super) pointer_id: fret_core::PointerId,
-    pub(super) tabs: fret_core::DockNodeId,
-    pub(super) index: usize,
-    pub(super) panel: PanelKey,
-    pub(super) start: fret_core::Point,
-}
+mod types;
 
-#[derive(Debug, Clone)]
-pub(super) struct DeclarativePressedFloatingClose {
-    pub(super) pointer_id: fret_core::PointerId,
-    pub(super) floating: fret_core::DockNodeId,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct DeclarativeFloatingDrag {
-    pub(super) pointer_id: fret_core::PointerId,
-    pub(super) floating: fret_core::DockNodeId,
-    pub(super) grab_offset: fret_core::Point,
-    pub(super) start_rect: Rect,
-    pub(super) start: fret_core::Point,
-    pub(super) start_tick: fret_runtime::TickId,
-    pub(super) activated: bool,
-    pub(super) dock_previews_enabled: bool,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct DeclarativeDividerDrag {
-    pub(super) pointer_id: fret_core::PointerId,
-    pub(super) handle: DividerDragState,
-    pub(super) min_px: Vec<fret_core::Px>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub(super) struct DeclarativeFloatingHover {
-    pub(super) close: Option<fret_core::DockNodeId>,
-    pub(super) title_bar: Option<fret_core::DockNodeId>,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct DeclarativePendingDockDrag {
-    pub(super) pointer_id: fret_core::PointerId,
-    pub(super) start: fret_core::Point,
-    pub(super) panel: PanelKey,
-    pub(super) grab_offset: fret_core::Point,
-    pub(super) start_tick: fret_runtime::TickId,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct DeclarativePendingDockTabsDrag {
-    pub(super) pointer_id: fret_core::PointerId,
-    pub(super) start: fret_core::Point,
-    pub(super) tabs: fret_core::DockNodeId,
-    pub(super) grab_offset: fret_core::Point,
-    pub(super) start_tick: fret_runtime::TickId,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub(super) struct DeclarativeTabHover {
-    pub(super) tab: Option<(fret_core::DockNodeId, usize)>,
-    pub(super) tab_close: bool,
-    pub(super) overflow_button: Option<fret_core::DockNodeId>,
-}
+pub(super) use types::{
+    DeclarativeDividerDrag, DeclarativeFloatingDrag, DeclarativeFloatingHover,
+    DeclarativePendingDockDrag, DeclarativePendingDockTabsDrag, DeclarativePressedFloatingClose,
+    DeclarativePressedTabClose, DeclarativeTabHover,
+};
 
 #[derive(Default)]
 pub(super) struct DeclarativeDockInteractionService {

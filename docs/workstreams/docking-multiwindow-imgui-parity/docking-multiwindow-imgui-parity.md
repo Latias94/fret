@@ -144,6 +144,10 @@ Platform note:
   (moves PointerMove pending tabs-group drag activation, hover clearing, capture release, and
   propagation stop into a private pending-tabs-group-drag owner without changing docking
   interaction behavior or the Wayland acceptance boundary)
+- Latest docking declarative interaction type owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M58_DOCKING_DECLARATIVE_INTERACTION_TYPE_OWNER_SPLIT_2026-06-03.md`
+  (moves declarative docking interaction record types into a private `interaction/types.rs` owner
+  without changing service methods, caller paths, field access, or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

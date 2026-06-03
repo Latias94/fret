@@ -547,6 +547,15 @@ Each TODO is labeled:
         propagation stop.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 docking declarative interaction type owner split keeps declarative
+      interaction records out of the service/storage owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M58_DOCKING_DECLARATIVE_INTERACTION_TYPE_OWNER_SPLIT_2026-06-03.md`
+      - `ecosystem/fret-docking/src/dock/declarative/interaction/types.rs` owns pressed-tab-close,
+        pressed-floating-close, floating-drag, divider-drag, hover, and pending drag records.
+      - `ecosystem/fret-docking/src/dock/declarative/interaction.rs` keeps
+        `DeclarativeDockInteractionService` and begin/take/set/cache methods.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

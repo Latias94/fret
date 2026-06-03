@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Docking Declarative Interaction Type Owner Split - 2026-06-03
+
+Claim verified: declarative docking interaction record types moved into a private
+`interaction/types.rs` owner without changing caller paths, service methods, field access, active
+drag lifecycle, hover projection, tab overflow state, viewport capture state, or the Wayland
+acceptance boundary.
+
+Evidence:
+
+- Docking declarative interaction type owner split - 2026-06-03.
+- `ecosystem/fret-docking/src/dock/declarative/interaction/types.rs` owns the pressed close,
+  floating drag, divider drag, hover, pending panel drag, and pending tabs-group drag records.
+- `ecosystem/fret-docking/src/dock/declarative/interaction.rs` keeps
+  `DeclarativeDockInteractionService` plus begin/take/set/cache methods.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M58_DOCKING_DECLARATIVE_INTERACTION_TYPE_OWNER_SPLIT_2026-06-03.md`
+  records this as local owner-split evidence, not Wayland compositor acceptance.
+- Evidence anchor: docking declarative interaction record type owner.
+- Evidence anchor: interaction.rs keeps service storage and methods.
+
+Focused gates:
+
+- `cargo fmt --package fret-docking`: pass.
+- `cargo check -p fret-docking`: pass.
+- `cargo nextest run -p fret-docking --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\gate_docking_multiwindow_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_docking_multiwindow_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Demo/Metrics/Debug P0 Gap Matrix Refresh - 2026-06-03
 
 Claim verified: the active P0 gap matrix now treats the Demo/Metrics/Debug route/product action
