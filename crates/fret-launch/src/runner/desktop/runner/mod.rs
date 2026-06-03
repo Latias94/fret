@@ -178,6 +178,7 @@ mod run;
 mod shell_effects;
 mod streaming_effects;
 mod streaming_images;
+mod surface_lifecycle;
 mod text_effects;
 mod timers;
 mod webview;

@@ -869,6 +869,17 @@ Each TODO is labeled:
         points, redraw execution, and `ApplicationHandler` wiring.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner surface lifecycle owner split keeps deferred surface lifecycle helpers
+      out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M90_RUNNER_SURFACE_LIFECYCLE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` owns screenshot surface
+        usage selection, deferred missing-surface creation, composited-alpha surface configuration,
+        surface bootstrap redraw/RAF scheduling, and surface destroy cleanup.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the winit
+        `can_create_surfaces`/`destroy_surfaces` hooks, redraw execution, and
+        `ApplicationHandler` wiring.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
