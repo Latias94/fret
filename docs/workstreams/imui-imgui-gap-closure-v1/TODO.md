@@ -5932,6 +5932,10 @@ Readiness order for the next locally testable review slices:
    `first_open_routes` with grouped demo, metrics, and debug commands, including `diag trace`.
    This keeps the Dear
    ImGui-style Demo/Metrics/Debug entry discoverable before a maintainer opens the DevTools GUI.
+   2026-06-03 P0 refresh: the D/M/D product route is closed for CLI/DevTools GUI/MCP first-open
+   discovery and copyable product actions. Remaining diagnostics work is broader DevTools GUI
+   maturity, command-palette integration, and evidence-browser polish on the diagnostics-consumer
+   lane, not an IMUI/runtime widening target.
 6. Collection helper readiness: keep app-owned until both proof surfaces require one helper.
    Current readiness audit: `P3_COLLECTION_HELPER_READINESS_2026-05-06.md`. The collection proof is
    editor-grade, but most behavior remains app-owned; the already-extracted shared pieces are

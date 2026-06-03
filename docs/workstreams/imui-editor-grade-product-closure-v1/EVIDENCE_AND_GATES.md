@@ -2,6 +2,28 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI Demo/Metrics/Debug P0 gap matrix refresh - 2026-06-03
+
+This maintenance slice keeps the product-closure read aligned with the closed
+`imui-demo-metrics-debug-devtools-v1` owner lane:
+
+- IMUI Demo/Metrics/Debug P0 gap matrix refresh - 2026-06-03.
+- The Demo/Metrics/Debug route/product action surface is closed for CLI/DevTools GUI/MCP
+  first-open discovery and copyable product actions.
+- Broader DevTools GUI maturity, command-palette integration, and evidence-browser polish remain
+  diagnostics-consumer follow-ons rather than `fret-imui` or runtime API widening.
+- Evidence anchor: D/M/D product route closed for CLI/GUI/MCP first-open discovery.
+- Evidence anchor: broader DevTools GUI maturity stays on diagnostics-consumer follow-ons.
+
+Fresh gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_product_chain.py tools\diag_gate_imui_p2_devtools_first_open.py` - passed.
+- `python tools\diag_gate_imui_product_chain.py --only discovery` - passed.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI active teaching direct-crate drift guard - 2026-06-03
 
 This maintenance slice keeps the canonical editor workbench and cookbook/docs teaching path on the

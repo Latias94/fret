@@ -75,9 +75,9 @@ understates several areas:
 | P0 | Source-of-truth drift | Old parity notes and current source have diverged. | docs/workstreams | `python tools/check_workstream_catalog.py` |
 | P1 | Fearless cleanup/deletion | The stack has many narrow closeouts; stale teaching paths can keep old surfaces alive by accident. | docs + examples + ecosystem owners | `python tools/gate_imui_facade_teaching_source.py` |
 | P2 | User-usable golden path | Closed on the IMUI side: `imui_editor_workbench_demo` is the canonical product-facing editor route, with cookbook/docs/discovery pointing to it and older proof demos demoted to supporting surfaces. | `fret`, cookbook, `fret-ui-editor`, examples | `imui_editor_workbench_golden_path_surface` + `cargo check -p fret-demo --bin imui_editor_workbench_demo` |
-| P2 | Workbench product closure | The workbench route, style/theme picker integration, Demo/Metrics/Debug route, ListBox, plot adapter, and table owner slices are closed with evidence; full Dear ImGui-class product closure still depends on external owner lanes for real-host Wayland, broader DevTools GUI maturity, perf/smoothness attribution, and broad porting sugar. | workspace/docking/editor/devtools/perf | product-chain gates + owner-lane closeout audits |
+| P2 | Workbench product closure | The workbench route, style/theme picker integration, Demo/Metrics/Debug route/product action surface, ListBox, plot adapter, and table owner slices are closed with evidence; full Dear ImGui-class product closure still depends on external owner lanes for real-host Wayland, broader DevTools GUI maturity, perf/smoothness attribution, and broad porting sugar. | workspace/docking/editor/devtools/perf | product-chain gates + owner-lane closeout audits |
 | P3 | Multi-window/backend hand-feel | Still a top parity risk: hovered viewport, peek-behind, transparent payload, mixed-DPI, release/cancel paths. | runner/backend + `fret-docking` | `imui-p3-multiwindow-parity` campaign |
-| P3 | Diagnostics ambient usability | Scripted diagnostics are strong, but the always-open Demo/Metrics/Debug culture is less immediate than Dear ImGui. | `fret-diag`, `fret-devtools`, bootstrap | devtools first-open smoke |
+| P3 | Diagnostics ambient usability | Demo/Metrics/Debug route/product action surface is closed for CLI/DevTools GUI/MCP first-open discovery through `imui-demo-metrics-debug-devtools-v1`; remaining debt is broader day-to-day DevTools GUI maturity, not an IMUI/runtime gap. | `fret-diag`, `fret-devtools`, bootstrap | devtools first-open smoke + diagnostics GUI follow-ons |
 | P3 | Porting ergonomics | Current proof surfaces already cover most authoring friction with explicit `PropertyGrid`, `row_with`, `horizontal_with_options`, `child_region_with_options`, closure-scoped `same_line` helpers, and stable `id_source` / `test_id` wiring. `SameLine` is now a narrow proven teaching-surface helper; item-width stacks, next-item width defaults, and label-ID sugar remain candidate-only. | `fret-imui` / `fret-ui-kit::imui` | same-line cookbook proof + two-proof helper-readiness rule |
 | P3 | Child-region depth | Fret has child region chrome, but not full `BeginChild()` semantics such as axis-specific resize, clipping return, and nav flattening. | `fret-ui-kit::imui` if proven | child-region focused tests |
 | P3 | Collection helper readiness | The editor collection proof is strong but app-owned. Current shared pieces are already narrow (`ImUiMultiSelectState`, sortable row recipe, drag-preview recipe). `fret-node` has marquee/multi-selection behavior, but its graph-space node/edge/group semantics are not a second IMUI collection proof. | app proof first, shared helper later | collection proof-surface gates |
@@ -108,10 +108,10 @@ These are candidates, not approved edits. Each requires a narrow follow-on with 
 3. P3 porting sugar proposal: keep the closure-scoped `same_line` helper narrow; only after two
    product surfaces show repeated friction, propose item-width, next-item width, or label-ID sugar
    in `fret-ui-kit::imui`.
-4. P3 diagnostics proposal: use the existing
-   `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` follow-on to keep the
-   `ShowDemoWindow + ShowMetricsWindow` equivalent on the diagnostics-consumer lane, not as
-   runtime clutter.
+4. P3 diagnostics follow-on: the D/M/D product route is closed; use the existing
+   `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` follow-on for richer always-open
+   GUI execution controls, command-palette integration, and evidence browsers on the
+   diagnostics-consumer lane, not as `fret-imui` or runtime clutter.
 5. P3 multi-window follow-on: continue in `docking-multiwindow-imgui-parity`, not in generic IMUI.
 
 ## Decision

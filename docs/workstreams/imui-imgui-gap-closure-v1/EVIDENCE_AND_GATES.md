@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Demo/Metrics/Debug P0 Gap Matrix Refresh - 2026-06-03
+
+Claim verified: the active P0 gap matrix now treats the Demo/Metrics/Debug route/product action
+surface as closed for CLI/DevTools GUI/MCP first-open discovery, while keeping richer DevTools GUI
+maturity as a diagnostics-consumer follow-on instead of widening `fret-imui` or runtime contracts.
+
+Evidence:
+
+- IMUI Demo/Metrics/Debug P0 gap matrix refresh - 2026-06-03.
+- `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` now says the Demo/Metrics/Debug route/product action
+  surface is closed through `imui-demo-metrics-debug-devtools-v1`.
+- Remaining diagnostics debt is broader day-to-day DevTools GUI maturity, command-palette
+  integration, and evidence-browser polish on the diagnostics-consumer lane.
+- The refresh preserves the existing external-owner blockers for real-host Wayland,
+  perf/smoothness attribution, and broad porting sugar.
+- Evidence anchor: D/M/D product route closed for CLI/GUI/MCP first-open discovery.
+- Evidence anchor: broader DevTools GUI maturity stays on diagnostics-consumer follow-ons.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_product_chain.py tools\diag_gate_imui_p2_devtools_first_open.py`: pass.
+- `python tools\diag_gate_imui_product_chain.py --only discovery`: pass.
+- `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Active Teaching Direct-Crate Drift Guard - 2026-06-03
 
 Claim verified: active IMUI teaching/docs surfaces are now guarded against drifting back to direct
