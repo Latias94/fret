@@ -1301,6 +1301,17 @@ RAF requests. Runtime behavior and public effect surfaces remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
 gate.
 
+2026-06-04 desktop runner clipboard effects owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the generic effect loop and
+delegates clipboard diagnostics, clipboard write/read, and primary-selection effect branches to
+`crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs`. `clipboard_effects.rs` owns
+diagnostics-forced clipboard unavailable state, clipboard completion events, primary selection
+capability gating, primary selection unavailable events, and platform clipboard error logging.
+The source gate explicitly tracks primary selection capability gating.
+Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

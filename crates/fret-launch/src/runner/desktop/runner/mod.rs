@@ -154,6 +154,7 @@ mod scheduling_diagnostics;
 #[cfg(windows)]
 mod windows_menu;
 
+mod clipboard_effects;
 mod event_loop;
 mod macos_cursor;
 mod platform_capabilities;

@@ -29533,6 +29533,32 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-04 Desktop runner clipboard effects owner split:
+
+- Claim: clipboard diagnostics, clipboard write/read, and primary-selection effect handling moved
+  from `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs` without changing
+  diagnostics-forced unavailable behavior, clipboard completion events, primary selection
+  capability gating, primary selection unavailable events, or platform clipboard error logging.
+- Evidence anchors: `mod.rs` declares `mod clipboard_effects;`; `clipboard_effects.rs` owns
+  `apply_diag_clipboard_force_unavailable`, `handle_clipboard_write_text`,
+  `handle_clipboard_read_text`, `handle_primary_selection_set_text`, and
+  `handle_primary_selection_get_text`; `effects.rs` keeps the effect queue loop and only delegates
+  the clipboard and primary-selection effect branches.
+  `M69_RUNNER_CLIPBOARD_EFFECTS_OWNER_SPLIT_2026-06-04.md` records the matching docking
+  multiwindow lane evidence without claiming Wayland acceptance.
+- Passed: `cargo fmt --package fret-launch -- --check`.
+- Passed: `cargo check -p fret-launch --lib`.
+- Passed:
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`.
+- Passed: `python tools\gate_docking_multiwindow_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-03 editor TransformEdit section chrome row/column owner split:
 
 - Claim: TransformEdit section row and column chrome moved from

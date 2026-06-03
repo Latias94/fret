@@ -963,6 +963,17 @@ Last updated: 2026-06-03
       The docking source gate freezes the owner split in
       `M68_RUNNER_WINDOW_METRICS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
       acceptance.
+- [x] Split desktop runner clipboard and primary-selection effect handling into a private
+      clipboard owner without changing diagnostics-forced unavailable behavior, clipboard
+      completion events, primary selection capability gating, primary selection unavailable events,
+      or platform clipboard error logging.
+      Result: `crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs` owns
+      `apply_diag_clipboard_force_unavailable`, `handle_clipboard_write_text`,
+      `handle_clipboard_read_text`, `handle_primary_selection_set_text`, and
+      `handle_primary_selection_get_text`; `effects.rs` keeps the effect loop and delegates the
+      clipboard and primary-selection effect branches. The docking source gate freezes the owner
+      split in `M69_RUNNER_CLIPBOARD_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+      compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.

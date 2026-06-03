@@ -196,6 +196,11 @@ Platform note:
   (moves `Effect::WindowMetricsSetInsets` and `Effect::WindowMetricsSetPreferences` service
   updates into `window_metrics.rs` without changing diagnostic override, known-state, redraw, or
   RAF behavior)
+- Latest runner clipboard effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M69_RUNNER_CLIPBOARD_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves clipboard diagnostics, clipboard read/write, and primary-selection effect handling into
+  `clipboard_effects.rs` without changing unavailable, completion-event, capability-gating, or
+  platform-error behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

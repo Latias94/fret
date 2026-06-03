@@ -7,7 +7,6 @@ use super::streaming_images::{
 use fret_app::Effect;
 use fret_core::Event;
 use fret_core::time::Instant;
-use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
 use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
@@ -693,12 +692,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::DiagClipboardForceUnavailable { window, enabled } => {
-                        if enabled {
-                            self.diag_clipboard_force_unavailable_windows.insert(window);
-                        } else {
-                            self.diag_clipboard_force_unavailable_windows
-                                .remove(&window);
-                        }
+                        self.apply_diag_clipboard_force_unavailable(window, enabled);
                     }
                     Effect::DiagIncomingOpenInject { window, items } => {
                         let token = self.allocate_incoming_open_token();
@@ -747,125 +741,16 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         token,
                         text,
                     } => {
-                        let outcome = if self
-                            .diag_clipboard_force_unavailable_windows
-                            .contains(&window)
-                        {
-                            fret_core::ClipboardWriteOutcome::Failed {
-                                error: fret_core::ClipboardAccessError {
-                                    kind: fret_core::ClipboardAccessErrorKind::Unavailable,
-                                    message: Some(
-                                        "diagnostics forced clipboard unavailable".to_string(),
-                                    ),
-                                },
-                            }
-                        } else {
-                            match self.clipboard.set_text(&text) {
-                                Ok(()) => fret_core::ClipboardWriteOutcome::Succeeded,
-                                Err(error) => {
-                                    tracing::debug!(?error, "failed to set clipboard text");
-                                    fret_core::ClipboardWriteOutcome::Failed { error }
-                                }
-                            }
-                        };
-
-                        self.deliver_window_event_now(
-                            window,
-                            &Event::ClipboardWriteCompleted { token, outcome },
-                        );
+                        self.handle_clipboard_write_text(window, token, text);
                     }
                     Effect::ClipboardReadText { window, token } => {
-                        if self
-                            .diag_clipboard_force_unavailable_windows
-                            .contains(&window)
-                        {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ClipboardReadFailed {
-                                    token,
-                                    error: fret_core::ClipboardAccessError {
-                                        kind: fret_core::ClipboardAccessErrorKind::Unavailable,
-                                        message: Some(
-                                            "diagnostics forced clipboard unavailable".to_string(),
-                                        ),
-                                    },
-                                },
-                            );
-                            continue;
-                        }
-
-                        match self.clipboard.get_text() {
-                            Ok(Some(text)) => self.deliver_window_event_now(
-                                window,
-                                &Event::ClipboardReadText { token, text },
-                            ),
-                            Ok(None) => self.deliver_window_event_now(
-                                window,
-                                &Event::ClipboardReadFailed {
-                                    token,
-                                    error: fret_core::ClipboardAccessError {
-                                        kind: fret_core::ClipboardAccessErrorKind::Unavailable,
-                                        message: None,
-                                    },
-                                },
-                            ),
-                            Err(error) => {
-                                tracing::debug!(?error, "failed to read clipboard text");
-                                self.deliver_window_event_now(
-                                    window,
-                                    &Event::ClipboardReadFailed { token, error },
-                                );
-                            }
-                        }
+                        self.handle_clipboard_read_text(window, token);
                     }
                     Effect::PrimarySelectionSetText { text } => {
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.clipboard.primary_text {
-                            continue;
-                        }
-                        if let Err(err) = self.clipboard.set_primary_text(&text) {
-                            tracing::debug!(?err, "failed to set primary selection text");
-                        }
+                        self.handle_primary_selection_set_text(text);
                     }
                     Effect::PrimarySelectionGetText { window, token } => {
-                        if self
-                            .diag_clipboard_force_unavailable_windows
-                            .contains(&window)
-                        {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::PrimarySelectionTextUnavailable { token },
-                            );
-                            continue;
-                        }
-
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.clipboard.primary_text {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::PrimarySelectionTextUnavailable { token },
-                            );
-                            continue;
-                        }
-
-                        match self.clipboard.get_primary_text() {
-                            Ok(Some(text)) => self.deliver_window_event_now(
-                                window,
-                                &Event::PrimarySelectionText { token, text },
-                            ),
-                            Ok(None) | Err(_) => self.deliver_window_event_now(
-                                window,
-                                &Event::PrimarySelectionTextUnavailable { token },
-                            ),
-                        }
+                        self.handle_primary_selection_get_text(window, token);
                     }
                     Effect::ExternalDropReadAll { window, token } => {
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
