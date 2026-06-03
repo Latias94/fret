@@ -7059,3 +7059,13 @@ opening the slice.
       records, baseline-aware primary/Y2/Y3/Y4 bounds construction, and the declarative bars panel
       proof continues to cover the behavior. The IMUI source gate freezes the root re-export hub
       and bars owner boundary.
+- [x] Split Fret Plot histogram records out of the root plot model file without changing
+      `crate::models::{HistogramSeries, HistogramPlotModel}` import paths, bin/range/gap/fill
+      options, multi-axis bounds projection from histogram bins, declarative histogram panel
+      behavior, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod histogram;`, re-exports
+      `HistogramSeries` and `HistogramPlotModel`, and keeps shared axes plus non-histogram model
+      records. `ecosystem/fret-plot/src/models/histogram.rs` owns histogram sample payloads,
+      series fields/builders, histogram plot model records, bins-backed primary/Y2/Y3/Y4 bounds
+      construction, and the declarative histogram panel proof continues to cover the behavior. The
+      IMUI source gate freezes the root re-export hub and histogram owner boundary.

@@ -6247,3 +6247,13 @@ baseline-aware primary/Y2/Y3/Y4 data-bound projection. Public
 `crate::models::{BarSeries, CategoryBarSeries, BarsPlotModel}` imports, declarative bars plot
 panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 Fret Plot histogram model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-histogram model records,
+shared bounds helpers, and the stable public re-export for `HistogramSeries` and
+`HistogramPlotModel`. `ecosystem/fret-plot/src/models/histogram.rs` owns histogram sample payloads,
+bin/range/gap/fill series builders, histogram plot model records, and bins-backed
+primary/Y2/Y3/Y4 data-bound projection. Public
+`crate::models::{HistogramSeries, HistogramPlotModel}` imports, declarative histogram plot panels,
+and optional IMUI adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
