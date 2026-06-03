@@ -556,6 +556,15 @@ Each TODO is labeled:
         `DeclarativeDockInteractionService` and begin/take/set/cache methods.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 docking declarative interaction drag-session owner split keeps drag/capture
+      session maps out of the service root:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M66_DOCKING_DECLARATIVE_INTERACTION_DRAG_SESSION_OWNER_SPLIT_2026-06-03.md`
+      - `ecosystem/fret-docking/src/dock/declarative/interaction/drag_sessions.rs` owns floating,
+        divider, pending panel/tabs, and viewport-capture sessions.
+      - `ecosystem/fret-docking/src/dock/declarative/interaction.rs` keeps close/menu/scroll/hover
+        helpers plus the `DeclarativeDockInteractionService` state fields.
+      - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [x] 2026-06-03 runner DockFloating follow owner split keeps follow movement out of the
       dock-drag pointer/poll-up owner:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M59_RUNNER_DOCKING_FOLLOW_OWNER_SPLIT_2026-06-03.md`

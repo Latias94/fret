@@ -148,6 +148,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M58_DOCKING_DECLARATIVE_INTERACTION_TYPE_OWNER_SPLIT_2026-06-03.md`
   (moves declarative docking interaction record types into a private `interaction/types.rs` owner
   without changing service methods, caller paths, field access, or the Wayland acceptance boundary)
+- Latest docking declarative interaction drag-session owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M66_DOCKING_DECLARATIVE_INTERACTION_DRAG_SESSION_OWNER_SPLIT_2026-06-03.md`
+  (moves drag/capture session map helpers into `interaction/drag_sessions.rs` without changing
+  sibling event call paths, session cleanup behavior, or the Wayland acceptance boundary)
 - Latest runner DockFloating follow owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M59_RUNNER_DOCKING_FOLLOW_OWNER_SPLIT_2026-06-03.md`
   (moves desktop runner DockFloating follow movement and transparent-payload style patching into

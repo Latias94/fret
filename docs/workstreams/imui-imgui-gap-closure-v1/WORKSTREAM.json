@@ -1989,6 +1989,7 @@
     "ecosystem/fret-docking/src/dock/declarative/floating.rs",
     "ecosystem/fret-docking/src/dock/declarative/geometry.rs",
     "ecosystem/fret-docking/src/dock/declarative/interaction.rs",
+    "ecosystem/fret-docking/src/dock/declarative/interaction/drag_sessions.rs",
     "ecosystem/fret-docking/src/dock/declarative/overflow.rs",
     "ecosystem/fret-docking/src/dock/declarative/registry.rs",
     "ecosystem/fret-docking/src/dock/declarative/tab_metrics.rs",

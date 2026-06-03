@@ -935,6 +935,15 @@ Last updated: 2026-06-03
       owns declarative pressed/drag/hover records plus `DeclarativeDockInteractionService` state
       mutation/query helpers. The source gate prevents interaction state records from drifting
       back into the declarative orchestration owner.
+- [x] Split docking declarative drag/capture session map helpers out of
+      `ecosystem/fret-docking/src/dock/declarative/interaction.rs` into a private child owner
+      without changing floating title-bar drag, divider drag, panel/tabs pending drag,
+      viewport-capture storage, per-window/per-pointer cleanup, or sibling `events.rs` call paths.
+      Result: `dock/declarative/interaction.rs` keeps the interaction service state fields plus
+      close/menu/scroll/hover helpers. `dock/declarative/interaction/drag_sessions.rs` owns the
+      floating, divider, pending panel/tabs, and viewport-capture session mutations with visibility
+      limited to `crate::dock::declarative`. The source gate prevents drag/capture session helpers
+      from drifting back into the interaction service root.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.

@@ -29460,6 +29460,29 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-03 Fret Docking declarative interaction drag-session owner split:
+
+- Claim: floating drag, divider drag, pending panel/tabs drag, and viewport-capture session map
+  helpers moved from `ecosystem/fret-docking/src/dock/declarative/interaction.rs` into
+  `ecosystem/fret-docking/src/dock/declarative/interaction/drag_sessions.rs` without changing
+  per-window/per-pointer session storage, cleanup-on-take behavior, sibling `events.rs` call paths,
+  or public docking APIs.
+- Evidence anchors: `interaction.rs` declares `mod drag_sessions;` and keeps interaction service
+  state fields plus close/menu/scroll/hover helpers; `interaction/drag_sessions.rs` owns
+  floating/divider/pending-panel/pending-tabs/viewport-capture begin/query/take helpers with
+  `pub(in crate::dock::declarative)` visibility; `M66_DOCKING_DECLARATIVE_INTERACTION_DRAG_SESSION_OWNER_SPLIT_2026-06-03.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+- Passed: `cargo fmt --package fret-docking -- --check`.
+- Passed: `cargo check -p fret-docking`.
+- Passed: `cargo nextest run -p fret-docking --no-fail-fast` (90 passed).
+- Passed: `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`.
+- Passed: `python tools\gate_docking_multiwindow_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-03 editor TransformEdit section chrome row/column owner split:
 
 - Claim: TransformEdit section row and column chrome moved from

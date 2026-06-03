@@ -1272,6 +1272,15 @@ records plus the `DeclarativeDockInteractionService` helpers. Managed dock-space
 cross-window docking call paths remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
 
+2026-06-03 docking declarative interaction drag-session owner-split result:
+`ecosystem/fret-docking/src/dock/declarative/interaction.rs` now keeps the interaction service
+state fields plus pressed-close, tab-overflow, tab-scroll/width, auto-scroll gate, tab-hover, and
+floating-hover helpers. `ecosystem/fret-docking/src/dock/declarative/interaction/drag_sessions.rs`
+owns floating drag, divider drag, pending panel/tabs drag, and viewport-capture session map
+mutation/query/take helpers with visibility limited to `crate::dock::declarative`. Public
+dock-space APIs and sibling `events.rs` call paths remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

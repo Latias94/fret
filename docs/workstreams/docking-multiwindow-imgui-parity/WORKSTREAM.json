@@ -242,6 +242,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M66_DOCKING_DECLARATIVE_INTERACTION_DRAG_SESSION_OWNER_SPLIT_2026-06-03.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M59_RUNNER_DOCKING_FOLLOW_OWNER_SPLIT_2026-06-03.md"
     },
     {
@@ -444,6 +448,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M56_DOCKING_DECLARATIVE_POINTER_MOVE_PENDING_PANEL_DRAG_OWNER_SPLIT_2026-06-02.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M57_DOCKING_DECLARATIVE_POINTER_MOVE_PENDING_TABS_GROUP_DRAG_OWNER_SPLIT_2026-06-02.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M58_DOCKING_DECLARATIVE_INTERACTION_TYPE_OWNER_SPLIT_2026-06-03.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M66_DOCKING_DECLARATIVE_INTERACTION_DRAG_SESSION_OWNER_SPLIT_2026-06-03.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M59_RUNNER_DOCKING_FOLLOW_OWNER_SPLIT_2026-06-03.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M60_RUNNER_DOCKING_POINTER_POLL_UP_OWNER_SPLIT_2026-06-03.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M61_RUNNER_PLATFORM_CAPABILITY_OWNER_SPLIT_2026-06-03.md",
@@ -524,6 +529,7 @@
     "ecosystem/fret-docking/src/dock/declarative/frame_state.rs",
     "ecosystem/fret-docking/src/dock/declarative/tab_paint_state.rs",
     "ecosystem/fret-docking/src/dock/declarative/interaction/types.rs",
+    "ecosystem/fret-docking/src/dock/declarative/interaction/drag_sessions.rs",
     "ecosystem/fret-docking/src/dock/paint.rs",
     "ecosystem/fret-docking/src/dock/paint/drag_ghost.rs",
     "ecosystem/fret-docking/src/dock/paint/drop_hints.rs",
