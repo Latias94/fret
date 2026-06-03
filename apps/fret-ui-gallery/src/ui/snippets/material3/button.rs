@@ -8,7 +8,9 @@ use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let sizes_with_icons = |cx: &mut AppComponentCx<'_>, variant: material3::ButtonVariant| {
+    let sizes_with_icons = |cx: &mut AppComponentCx<'_>,
+                            variant: material3::ButtonVariant,
+                            id_prefix: &'static str| {
         ui::h_row(move |cx| {
             vec![
                 material3::Button::new("XS")
@@ -16,35 +18,35 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .size(material3::ButtonSize::XSmall)
                     .leading_icon(fret_icons::ids::ui::SEARCH)
                     .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
-                    .test_id("ui-gallery-material3-button-size-xsmall")
+                    .test_id(format!("{id_prefix}-xsmall"))
                     .into_element(cx),
                 material3::Button::new("S")
                     .variant(variant)
                     .size(material3::ButtonSize::Small)
                     .leading_icon(fret_icons::ids::ui::SEARCH)
                     .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
-                    .test_id("ui-gallery-material3-button-size-small")
+                    .test_id(format!("{id_prefix}-small"))
                     .into_element(cx),
                 material3::Button::new("M")
                     .variant(variant)
                     .size(material3::ButtonSize::Medium)
                     .leading_icon(fret_icons::ids::ui::SEARCH)
                     .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
-                    .test_id("ui-gallery-material3-button-size-medium")
+                    .test_id(format!("{id_prefix}-medium"))
                     .into_element(cx),
                 material3::Button::new("L")
                     .variant(variant)
                     .size(material3::ButtonSize::Large)
                     .leading_icon(fret_icons::ids::ui::SEARCH)
                     .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
-                    .test_id("ui-gallery-material3-button-size-large")
+                    .test_id(format!("{id_prefix}-large"))
                     .into_element(cx),
                 material3::Button::new("XL")
                     .variant(variant)
                     .size(material3::ButtonSize::XLarge)
                     .leading_icon(fret_icons::ids::ui::SEARCH)
                     .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
-                    .test_id("ui-gallery-material3-button-size-xlarge")
+                    .test_id(format!("{id_prefix}-xlarge"))
                     .into_element(cx),
             ]
         })
@@ -114,8 +116,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         vec![
             cx.text("Material 3 Buttons: token-driven colors + state layer + bounded ripple."),
             cx.text("Sizes (xsmall..xlarge) + leading/trailing icons:"),
-            sizes_with_icons(cx, material3::ButtonVariant::Filled),
-            sizes_with_icons(cx, material3::ButtonVariant::Outlined),
+            sizes_with_icons(
+                cx,
+                material3::ButtonVariant::Filled,
+                "ui-gallery-material3-button-size-filled",
+            ),
+            sizes_with_icons(
+                cx,
+                material3::ButtonVariant::Outlined,
+                "ui-gallery-material3-button-size-outlined",
+            ),
             variant_row(
                 cx,
                 material3::ButtonVariant::Filled,

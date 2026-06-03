@@ -61,7 +61,7 @@
       "timeout_frames": 600,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-material3-button-size-xsmall" }
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-button-size-filled-xsmall" }
       }
     },
     { "type": "wait_frames", "n": 10 },

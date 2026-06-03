@@ -1,6 +1,9 @@
 {
   "schema_version": 2,
   "meta": {
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_autocomplete"
+    },
     "required_launch_features": ["gallery-material3"],
     "name": "ui-gallery-material3-autocomplete-filtering",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
@@ -18,11 +21,20 @@
     { "type": "wait_frames", "n": 30 },
 
     {
-      "type": "ensure_visible",
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete" },
-      "within_window": true,
-      "padding_px": 8.0,
-      "timeout_frames": 600
+      "delta_y": -160.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "padding_insets_px": {
+        "left_px": 16.0,
+        "top_px": 16.0,
+        "right_px": 16.0,
+        "bottom_px": 40.0
+      },
+      "timeout_frames": 1800
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-autocomplete" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
