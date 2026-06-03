@@ -100,6 +100,18 @@ fn live_test_id_bounds(
         .unwrap_or_else(|| panic!("expected live bounds for test_id {id}"))
 }
 
+fn live_test_id_visual_bounds(
+    ui: &UiTree<TestHost>,
+    app: &TestHost,
+    window: AppWindowId,
+    id: &str,
+) -> Rect {
+    fret_ui::declarative::live_test_id_matches_for_window(app, window, id)
+        .into_iter()
+        .find_map(|m| ui.debug_node_visual_bounds(m.node))
+        .unwrap_or_else(|| panic!("expected live visual bounds for test_id {id}"))
+}
+
 fn live_test_id_exists(
     ui: &UiTree<TestHost>,
     app: &TestHost,
@@ -148,6 +160,28 @@ fn assert_height_close(bounds: Rect, expected: f32, context: &str) {
         delta <= 0.5,
         "{context}: expected {expected}px height, got {}px",
         bounds.size.height.0
+    );
+}
+
+fn assert_min_size(bounds: Rect, min_width: f32, min_height: f32, context: &str) {
+    assert!(
+        bounds.size.width.0 >= min_width && bounds.size.height.0 >= min_height,
+        "{context}: expected at least {min_width}x{min_height}px, got {}x{}px",
+        bounds.size.width.0,
+        bounds.size.height.0
+    );
+}
+
+fn assert_bounds_close(actual: Rect, expected: Rect, context: &str) {
+    let dx = (actual.origin.x.0 - expected.origin.x.0).abs();
+    let dy = (actual.origin.y.0 - expected.origin.y.0).abs();
+    let dw = (actual.size.width.0 - expected.size.width.0).abs();
+    let dh = (actual.size.height.0 - expected.size.height.0).abs();
+    assert!(
+        dx <= 0.5 && dy <= 0.5 && dw <= 0.5 && dh <= 0.5,
+        "{context}: expected bounds {:?}, got {:?}",
+        expected,
+        actual
     );
 }
 
@@ -240,6 +274,14 @@ fn list_two_line_item_uses_material_height_and_slot_part_ids() {
         live_test_id_bounds(&ui, &app, window, "m3-list-alpha.chrome"),
         72.0,
         "two-line list item chrome",
+    );
+    let item_visual = live_test_id_visual_bounds(&ui, &app, window, "m3-list-alpha");
+    let chrome_visual = live_test_id_visual_bounds(&ui, &app, window, "m3-list-alpha.chrome");
+    assert_min_size(chrome_visual, 120.0, 40.0, "two-line list item chrome");
+    assert_bounds_close(
+        item_visual,
+        chrome_visual,
+        "two-line list item root should match chrome bounds",
     );
 
     for id in [

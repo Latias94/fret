@@ -54,6 +54,27 @@ const SELECT_MENU_WIDTH_FLOOR_DIAG: &str = include_str!(
 const SELECT_TYPEAHEAD_DELAY_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-typeahead-delay.json"
 );
+const LIST_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-list-item-chrome-fill.json"
+);
+const MENU_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-item-chrome-fill.json"
+);
+const NAVIGATION_BAR_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-item-chrome-fill.json"
+);
+const NAVIGATION_DRAWER_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-drawer-item-chrome-fill.json"
+);
+const NAVIGATION_RAIL_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-item-chrome-fill.json"
+);
+const TABS_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-item-chrome-fill.json"
+);
+const TIME_PICKER_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json"
+);
 
 #[test]
 fn material3_field_surface_diags_use_direct_start_pages() {
@@ -147,6 +168,41 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "select typeahead delay",
             SELECT_TYPEAHEAD_DELAY_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
+        ),
+        (
+            "list item chrome",
+            LIST_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_list\"",
+        ),
+        (
+            "menu item chrome",
+            MENU_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_menu\"",
+        ),
+        (
+            "navigation bar item chrome",
+            NAVIGATION_BAR_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_bar\"",
+        ),
+        (
+            "navigation drawer item chrome",
+            NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_drawer\"",
+        ),
+        (
+            "navigation rail item chrome",
+            NAVIGATION_RAIL_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_rail\"",
+        ),
+        (
+            "tabs item chrome",
+            TABS_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_tabs\"",
+        ),
+        (
+            "time picker chrome",
+            TIME_PICKER_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_time_picker\"",
         ),
     ] {
         assert!(
@@ -255,6 +311,48 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
             "\"id\": \"ui-gallery-material3-select-typeahead-delay-1000\"",
         ),
+        (
+            "list item chrome",
+            LIST_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-standard-list-item-alpha\"",
+        ),
+        (
+            "menu item chrome",
+            MENU_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-menu-trigger\"",
+        ),
+        (
+            "navigation bar item chrome",
+            NAVIGATION_BAR_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-nav-search\"",
+        ),
+        (
+            "navigation drawer item chrome",
+            NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-drawer-search\"",
+        ),
+        (
+            "navigation rail item chrome",
+            NAVIGATION_RAIL_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-rail-search\"",
+        ),
+        (
+            "tabs item chrome",
+            TABS_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-tab-overview\"",
+        ),
+        (
+            "time picker chrome",
+            TIME_PICKER_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-time-picker-open\"",
+        ),
     ] {
         assert!(
             script.contains("\"type\": \"scroll_into_view\""),
@@ -308,6 +406,22 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
         ),
         ("select menu width floor", SELECT_MENU_WIDTH_FLOOR_DIAG),
         ("select typeahead delay", SELECT_TYPEAHEAD_DELAY_DIAG),
+        ("list item chrome", LIST_ITEM_CHROME_DIAG),
+        ("menu item chrome", MENU_ITEM_CHROME_DIAG),
+        (
+            "navigation bar item chrome",
+            NAVIGATION_BAR_ITEM_CHROME_DIAG,
+        ),
+        (
+            "navigation drawer item chrome",
+            NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
+        ),
+        (
+            "navigation rail item chrome",
+            NAVIGATION_RAIL_ITEM_CHROME_DIAG,
+        ),
+        ("tabs item chrome", TABS_ITEM_CHROME_DIAG),
+        ("time picker chrome", TIME_PICKER_CHROME_DIAG),
     ] {
         assert!(
             !script.contains("\"id\": \"ui-gallery-nav-search\""),
