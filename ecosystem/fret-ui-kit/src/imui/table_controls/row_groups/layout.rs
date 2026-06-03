@@ -1,10 +1,12 @@
 use fret_core::Px;
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SpacingEdges, SpacingLength,
-};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{AnyElement, LayoutStyle, Length};
+use fret_ui::{ElementContext, UiHost};
 
 use crate::imui::TableOptions;
+
+mod horizontal;
+
+use horizontal::table_h_flex;
 
 pub(super) fn table_row_outer_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -59,26 +61,5 @@ pub(super) fn table_scroll_content_row_group<H: UiHost>(
         cells,
         options.column_gap.clone(),
         LayoutStyle::default(),
-    )
-}
-
-fn table_h_flex<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: Vec<AnyElement>,
-    gap: crate::MetricRef,
-    layout: LayoutStyle,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
-    cx.flex(
-        FlexProps {
-            layout,
-            direction: fret_core::Axis::Horizontal,
-            gap: SpacingLength::Px(gap.resolve(theme)),
-            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
-            justify: MainAlign::Start,
-            align: CrossAlign::Stretch,
-            wrap: false,
-        },
-        |_cx| children,
     )
 }

@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 IMUI table row-group horizontal flex owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs` now keeps only semantic
+row-group entrypoints for outer, fill, pinned, and scroll-content table row groups.
+`row_groups/layout/horizontal.rs` owns the shared horizontal flex chrome, including `FlexProps`
+assembly, gap token resolution, zero padding, start justification, stretch alignment, and no-wrap
+policy. Table row/header layout, pinned-column ordering, horizontal scroll wrapping, public IMUI
+table APIs, and `fret-imui` table facade behavior remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split across all repeated row-group source
+checks.
+
 2026-06-03 editor AxisDragValue typing branch owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed state lookup,
 current value reads, mode/test-id/theme projection, scrub owner routing, typing owner routing, and

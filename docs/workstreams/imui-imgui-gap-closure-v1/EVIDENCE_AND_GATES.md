@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI Table Row-Group Horizontal Flex Owner Split Evidence - 2026-06-03
+
+Claim verified: IMUI table row-group horizontal flex chrome moved out of
+`table_controls/row_groups/layout.rs` into private `table_controls/row_groups/layout/horizontal.rs`
+without changing outer/fill/pinned/scroll row-group semantics, column-gap resolution, fill/grow/
+shrink layout projection, pinned shrink behavior, horizontal row alignment, or public table facade
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs` now keeps semantic row-group
+  entrypoints for outer, fill, pinned, and scroll-content table row groups only.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout/horizontal.rs` owns shared
+  horizontal `FlexProps` assembly, gap token resolution, zero padding, start justification, stretch
+  alignment, and no-wrap policy.
+- `row_groups/unpinned.rs`, `row_groups/pinned.rs`, and `row_groups/scroll.rs` keep their existing
+  split/scroll routing responsibilities; no pinned-column, scroll-host, cell, header, or semantics
+  policy moved into the layout owner.
+- `tools/gate_imui_workstream_source.py` now requires the semantic layout hub and horizontal flex
+  owner separately in each repeated table row-group source-check block.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls --no-fail-fast`: pass,
+  7 tests.
+- `cargo nextest run -p fret-imui layout_collections::table --no-fail-fast`: pass, 13 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor AxisDragValue Typing Branch Owner Split Evidence - 2026-06-03
 
 Claim verified: editor `AxisDragValue` typing branch orchestration moved out of

@@ -1325,6 +1325,13 @@ Last updated: 2026-06-03
       wrapping, or row outer-group packing.
       Result: `row_groups.rs` now dispatches only. `row_groups/unpinned.rs` owns the no-pinned
       fill/scroll path, while `row_groups/pinned.rs` owns split group assembly.
+- [x] Split IMUI table row-group horizontal flex chrome into a private layout owner without
+      changing outer/fill/pinned/scroll row-group semantics, column gap resolution, fill/grow/shrink
+      layout projection, pinned shrink behavior, or horizontal row alignment.
+      Result: `row_groups/layout.rs` keeps the semantic row-group entrypoints only.
+      `row_groups/layout/horizontal.rs` owns shared horizontal `FlexProps` assembly, gap
+      resolution, zero padding, start justification, stretch alignment, and no-wrap policy. The
+      source gate prevents horizontal flex chrome from drifting back into the semantic layout hub.
 - [x] Split IMUI floating-window resize drag application into private bounds and handle-mutation
       owners without changing min/max clamping, last-position delta calculation, left/top origin
       preservation, corner resizing, or drag lifecycle updates.
