@@ -322,6 +322,7 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/driver_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/file_transfer_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/frame_effects.rs",
@@ -403,6 +404,7 @@ def _check_docs(failures: list[str]) -> None:
             "`M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner command effect ownership",
             "`M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner menu effect ownership",
             "`M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md` records desktop runner change propagation ownership",
+            "`M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner driver-facing effect dispatch ownership",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -497,6 +499,9 @@ def _check_docs(failures: list[str]) -> None:
             "Latest runner change propagation owner split:",
             "M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md",
             "change_propagation.rs",
+            "Latest runner driver effects owner split:",
+            "M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "driver_effects.rs",
         ],
         failures=failures,
     )
@@ -647,6 +652,8 @@ def _check_docs(failures: list[str]) -> None:
             "unsupported-target",
             "2026-06-04 runner change propagation owner split keeps model/global change fan-out out",
             "M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md",
+            "2026-06-04 runner driver effects owner split keeps viewport-input and Dock driver",
+            "M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "font-family sync",
             "locale",
             "2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration",
@@ -1633,12 +1640,46 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/mod.rs",
+            "crates/fret-launch/src/runner/desktop/runner/driver_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effects.rs",
+            "handle_viewport_input_effect",
+            "handle_dock_effect",
+            "Effect::ViewportInput",
+            "Effect::Dock",
+            "driver-facing effect dispatch",
+            "DockFloating tear-off log",
+            "DockOp::RequestFloatPanelToNewWindow",
+            "mod driver_effects;",
+            "cargo fmt --package fret-launch -- --check",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "gate_docking_multiwindow_workstream_source.py",
+            "gate_imui_workstream_source.py",
+            "WORKSTREAM.json",
+            "git diff --check",
+            "does not close",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod change_propagation;",
             "mod clipboard_effects;",
             "mod command_effects;",
             "mod cursor_effects;",
+            "mod driver_effects;",
             "mod incoming_open_effects;",
             "mod file_transfer_effects;",
             "mod frame_effects;",
@@ -1792,6 +1833,21 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/driver_effects.rs"),
+        required=[
+            "pub(super) fn handle_viewport_input_effect",
+            "pub(super) fn handle_dock_effect",
+            "self.driver.viewport_input(&mut self.app, event);",
+            "self.driver.dock_op(&mut self.app, op);",
+            "dock_tearoff_log(format_args!(\"[effect-dock] {:?}\", op));",
+            "fret_core::DockOp::RequestFloatPanelToNewWindow",
+        ],
+        forbidden=[
+            "pub fn ",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/frame_effects.rs"),
         required=[
             "pub(super) fn handle_effect_redraw",
@@ -1861,6 +1917,9 @@ def _check_docs(failures: list[str]) -> None:
             "self.app.take_changed_globals()",
             "sync_renderer_font_families_from_globals",
             "sync_renderer_locale_from_globals",
+            "self.driver.viewport_input(&mut self.app, event);",
+            "self.driver.dock_op(&mut self.app, op);",
+            "dock_tearoff_log(format_args!(\"[effect-dock] {:?}\", op));",
             "WinitWindowContext",
         ],
         failures=failures,

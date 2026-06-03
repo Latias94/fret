@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use super::macos_cursor::dock_tearoff_log;
 use fret_app::Effect;
 use fret_core::Event;
 use fret_core::time::Instant;
@@ -338,13 +337,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.handle_image_unregister(image);
                     }
                     Effect::ViewportInput(event) => {
-                        self.driver.viewport_input(&mut self.app, event);
+                        self.handle_viewport_input_effect(event);
                     }
                     Effect::Dock(op) => {
-                        if matches!(op, fret_core::DockOp::RequestFloatPanelToNewWindow { .. }) {
-                            dock_tearoff_log(format_args!("[effect-dock] {:?}", op));
-                        }
-                        self.driver.dock_op(&mut self.app, op);
+                        self.handle_dock_effect(op);
                     }
                     Effect::Window(req) => {
                         if self.handle_window_request_effect(event_loop, req, now) {

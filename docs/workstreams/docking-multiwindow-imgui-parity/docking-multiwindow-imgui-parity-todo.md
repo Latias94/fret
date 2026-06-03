@@ -808,6 +808,16 @@ Each TODO is labeled:
         calls the change propagation owner after effect dispatch.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner driver effects owner split keeps viewport-input and Dock driver
+      dispatch out of the general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/driver_effects.rs` owns `Effect::ViewportInput`
+        forwarding, `Effect::Dock` forwarding, and the existing DockFloating tear-off log for
+        `DockOp::RequestFloatPanelToNewWindow`.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        delegates the driver-facing effect branches.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

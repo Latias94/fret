@@ -29647,6 +29647,18 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner driver effects owner split:
+
+- Claim: viewport-input and Dock effect dispatch moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/driver_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod driver_effects;`; `driver_effects.rs` owns
+  `handle_viewport_input_effect` and `handle_dock_effect`; `effects.rs` keeps the effect queue loop
+  and only delegates `Effect::ViewportInput` and `Effect::Dock` to the driver-effects owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

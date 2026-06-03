@@ -256,6 +256,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md`
   (moves model/global change propagation, menu sync, and renderer font/locale sync into
   `change_propagation.rs` without changing runtime behavior)
+- Latest runner driver effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves viewport-input and Dock effect driver dispatch into `driver_effects.rs` without changing
+  runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
