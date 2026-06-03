@@ -6217,3 +6217,13 @@ bounds union policy, shaded plot model records, caller-supplied bounds construct
 primary/Y2/Y3/Y4 data-bound projection. Public `crate::models::{ShadedSeries, ShadedPlotModel}`
 imports, declarative shaded plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 Fret Plot error-bars model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-error-bars model records,
+shared bounds helpers, and the stable public re-export for `ErrorBar`, `ErrorBarsSeries`, and
+`ErrorBarsPlotModel`. `ecosystem/fret-plot/src/models/error_bars.rs` owns error-bar payloads,
+error-bars series fields/builders, cap/marker policy, error-bars plot model records, and
+primary/Y2/Y3/Y4 error-expanded data-bound projection. Public
+`crate::models::{ErrorBar, ErrorBarsSeries, ErrorBarsPlotModel}` imports, declarative error-bars
+plot panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

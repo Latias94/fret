@@ -7028,3 +7028,13 @@ opening the slice.
       bounds union policy, shaded plot model records, explicit-bounds construction, and
       primary/Y2/Y3/Y4 bounds construction. The IMUI source gate freezes the root re-export hub and
       shaded owner boundary.
+- [x] Split Fret Plot error-bars records out of the root plot model file without changing
+      `crate::models::{ErrorBar, ErrorBarsSeries, ErrorBarsPlotModel}` import paths, per-point
+      X/Y error storage, cap/marker options, multi-axis error-expanded bounds projection,
+      declarative error-bars panel behavior, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod error_bars;`, re-exports
+      `ErrorBar`, `ErrorBarsSeries`, and `ErrorBarsPlotModel`, and keeps shared axes plus
+      non-error-bars model records. `ecosystem/fret-plot/src/models/error_bars.rs` owns error-bar
+      payloads, error-bars series fields/builders, cap/marker policy, model records, and
+      primary/Y2/Y3/Y4 error-expanded bounds construction. The IMUI source gate freezes the root
+      re-export hub and error-bars owner boundary.

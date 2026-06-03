@@ -30347,3 +30347,30 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot error-bars model owner split:
+
+- Claim: `ErrorBar`, `ErrorBarsSeries`, and `ErrorBarsPlotModel` moved from
+  `ecosystem/fret-plot/src/models.rs` into `ecosystem/fret-plot/src/models/error_bars.rs` without
+  changing `crate::models::{ErrorBar, ErrorBarsSeries, ErrorBarsPlotModel}` import paths, public
+  record fields/builders, per-point X/Y error storage, cap/marker options, primary/Y2/Y3/Y4
+  error-expanded bounds projection, declarative error-bars plot panels, or optional IMUI adapter
+  routing.
+- Evidence anchors: `models.rs` declares `mod error_bars;`, re-exports `ErrorBar`,
+  `ErrorBarsSeries`, and `ErrorBarsPlotModel`, and keeps shared `YAxis`, `MarkerShape`,
+  non-error-bars model records, and shared bounds helpers; `models/error_bars.rs` owns error-bar
+  payload fields/builders, error-bars series cap/marker options, `ErrorBarsPlotModel` fields,
+  `from_series(...)`, and the per-point X/Y error-expanded bounds helper. The source gate rejects
+  error-bars records drifting back into `models.rs` and rejects area, line, scatter, shaded,
+  stems, candlestick, bars, histogram, and heatmap model records drifting into
+  `models/error_bars.rs`.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed:
+  `cargo nextest run -p fret-plot --features imui error_bars_plot_panel_paints_x_y_errors_caps_and_markers_on_declarative_path --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
