@@ -205,6 +205,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   (moves diagnostic incoming-open injection, read limit capping, path payload reads, unavailable
   events, and release cleanup into `incoming_open_effects.rs` without changing runtime behavior)
+- Latest runner file-transfer effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M71_RUNNER_FILE_TRANSFER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves external-drop and file-dialog completion handling into `file_transfer_effects.rs` without
+  changing read, selection/cancel, capability-gating, or release behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

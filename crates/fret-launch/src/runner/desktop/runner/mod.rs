@@ -156,6 +156,7 @@ mod windows_menu;
 
 mod clipboard_effects;
 mod event_loop;
+mod file_transfer_effects;
 mod incoming_open_effects;
 mod macos_cursor;
 mod platform_capabilities;

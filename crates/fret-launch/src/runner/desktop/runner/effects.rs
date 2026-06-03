@@ -7,12 +7,8 @@ use super::streaming_images::{
 use fret_app::Effect;
 use fret_core::Event;
 use fret_core::time::Instant;
-use fret_platform::external_drop::ExternalDropProvider as _;
-use fret_platform::file_dialog::FileDialogProvider as _;
 use fret_platform::open_url::OpenUrl as _;
-use fret_platform_native::external_drop::NativeExternalDrop;
-use fret_platform_native::file_dialog::NativeFileDialog;
-use fret_runtime::{PlatformCapabilities, PlatformCompletion};
+use fret_runtime::PlatformCapabilities;
 use winit::event_loop::ActiveEventLoop;
 
 use super::{WinitCommandContext, WinitGlobalContext, WinitRunner, WinitWindowContext};
@@ -549,54 +545,17 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.handle_primary_selection_get_text(window, token);
                     }
                     Effect::ExternalDropReadAll { window, token } => {
-                        let limits = fret_platform::external_drop::ExternalDropReadLimits {
-                            max_total_bytes: self.config.external_drop_max_total_bytes,
-                            max_file_bytes: self.config.external_drop_max_file_bytes,
-                            max_files: self.config.external_drop_max_files,
-                        };
-
-                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec())
-                            && self.spawn_platform_completion_task(window, move || {
-                                let event = NativeExternalDrop::read_paths(token, paths, limits);
-                                PlatformCompletion::ExternalDropData(event)
-                            })
-                        {
-                            continue;
-                        }
-
-                        let Some(event) = self.external_drop.read_all(token, limits) else {
-                            continue;
-                        };
-                        self.deliver_window_event_now(window, &Event::ExternalDropData(event));
+                        self.handle_external_drop_read_all(window, token);
                     }
                     Effect::ExternalDropReadAllWithLimits {
                         window,
                         token,
                         limits,
                     } => {
-                        let cap = fret_platform::external_drop::ExternalDropReadLimits {
-                            max_total_bytes: self.config.external_drop_max_total_bytes,
-                            max_file_bytes: self.config.external_drop_max_file_bytes,
-                            max_files: self.config.external_drop_max_files,
-                        };
-                        let limits = limits.capped_by(cap);
-
-                        if let Some(paths) = self.external_drop.paths(token).map(|p| p.to_vec())
-                            && self.spawn_platform_completion_task(window, move || {
-                                let event = NativeExternalDrop::read_paths(token, paths, limits);
-                                PlatformCompletion::ExternalDropData(event)
-                            })
-                        {
-                            continue;
-                        }
-
-                        let Some(event) = self.external_drop.read_all(token, limits) else {
-                            continue;
-                        };
-                        self.deliver_window_event_now(window, &Event::ExternalDropData(event));
+                        self.handle_external_drop_read_all_with_limits(window, token, limits);
                     }
                     Effect::ExternalDropRelease { token } => {
-                        self.external_drop.release(token);
+                        self.handle_external_drop_release(token);
                     }
                     Effect::OpenUrl { url, .. } => {
                         let caps = self
@@ -643,111 +602,20 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         );
                     }
                     Effect::FileDialogOpen { window, options } => {
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.fs.file_dialogs {
-                            continue;
-                        }
-                        match self.file_dialog.open_files(&options) {
-                            Ok(Some(selection)) => {
-                                self.deliver_platform_completion_now(
-                                    window,
-                                    PlatformCompletion::FileDialogSelection(selection),
-                                );
-                            }
-                            Ok(None) => {
-                                self.deliver_platform_completion_now(
-                                    window,
-                                    PlatformCompletion::FileDialogCanceled,
-                                );
-                            }
-                            Err(err) => {
-                                tracing::debug!(?err, "file dialog open failed");
-                            }
-                        }
+                        self.handle_file_dialog_open(window, options);
                     }
                     Effect::FileDialogReadAll { window, token } => {
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.fs.file_dialogs {
-                            continue;
-                        }
-                        let limits = fret_platform::external_drop::ExternalDropReadLimits {
-                            max_total_bytes: self.config.file_dialog_max_total_bytes,
-                            max_file_bytes: self.config.file_dialog_max_file_bytes,
-                            max_files: self.config.file_dialog_max_files,
-                        };
-
-                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec())
-                            && self.spawn_platform_completion_task(window, move || {
-                                let data = NativeFileDialog::read_paths(token, paths, limits);
-                                PlatformCompletion::FileDialogData(data)
-                            })
-                        {
-                            continue;
-                        }
-
-                        let Some(data) = self.file_dialog.read_all(token, limits) else {
-                            continue;
-                        };
-                        self.deliver_platform_completion_now(
-                            window,
-                            PlatformCompletion::FileDialogData(data),
-                        );
+                        self.handle_file_dialog_read_all(window, token);
                     }
                     Effect::FileDialogReadAllWithLimits {
                         window,
                         token,
                         limits,
                     } => {
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.fs.file_dialogs {
-                            continue;
-                        }
-                        let cap = fret_platform::external_drop::ExternalDropReadLimits {
-                            max_total_bytes: self.config.file_dialog_max_total_bytes,
-                            max_file_bytes: self.config.file_dialog_max_file_bytes,
-                            max_files: self.config.file_dialog_max_files,
-                        };
-                        let limits = limits.capped_by(cap);
-
-                        if let Some(paths) = self.file_dialog.paths(token).map(|p| p.to_vec())
-                            && self.spawn_platform_completion_task(window, move || {
-                                let data = NativeFileDialog::read_paths(token, paths, limits);
-                                PlatformCompletion::FileDialogData(data)
-                            })
-                        {
-                            continue;
-                        }
-
-                        let Some(data) = self.file_dialog.read_all(token, limits) else {
-                            continue;
-                        };
-                        self.deliver_platform_completion_now(
-                            window,
-                            PlatformCompletion::FileDialogData(data),
-                        );
+                        self.handle_file_dialog_read_all_with_limits(window, token, limits);
                     }
                     Effect::FileDialogRelease { token } => {
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.fs.file_dialogs {
-                            continue;
-                        }
-                        self.file_dialog.release(token);
+                        self.handle_file_dialog_release(token);
                     }
                     Effect::IncomingOpenReadAll { window, token } => {
                         self.handle_incoming_open_read_all(window, token);

@@ -984,6 +984,18 @@ Last updated: 2026-06-03
       freezes the owner split in
       `M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
       compositor acceptance.
+- [x] Split desktop runner external-drop and file-dialog effect handling into a private file-
+      transfer owner without changing external-drop read completion, file-dialog open
+      selection/cancel, read-limit capping, capability gating, release cleanup, or public effect
+      surfaces.
+      Result: `crates/fret-launch/src/runner/desktop/runner/file_transfer_effects.rs` owns
+      `handle_external_drop_read_all`, `handle_external_drop_read_all_with_limits`,
+      `handle_external_drop_release`, `handle_file_dialog_open`, `handle_file_dialog_read_all`,
+      `handle_file_dialog_read_all_with_limits`, and `handle_file_dialog_release`; `effects.rs`
+      keeps the effect loop and delegates external-drop and file-dialog effect branches. The docking
+      source gate freezes the owner split in
+      `M71_RUNNER_FILE_TRANSFER_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+      compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.
