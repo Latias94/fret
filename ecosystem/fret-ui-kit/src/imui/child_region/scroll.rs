@@ -1,23 +1,13 @@
-use std::cell::Cell;
-use std::rc::Rc;
-use std::sync::Arc;
-
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
-use super::super::{
-    ChildRegionChrome, ImUiFacade, ScrollOptions, containers::build_imui_children_with_focus,
-};
+use super::super::{ImUiFacade, containers::build_imui_children_with_focus};
 
-pub(super) struct ChildRegionScrollInput<Build> {
-    pub(super) build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
-    pub(super) build: Build,
-    pub(super) chrome: ChildRegionChrome,
-    pub(super) scroll_layout: crate::LayoutRefinement,
-    pub(super) scroll_options: ScrollOptions,
-    pub(super) root_test_id: Option<Arc<str>>,
-    pub(super) content_test_id: Option<Arc<str>>,
-}
+mod chrome;
+mod types;
+
+use chrome::apply_child_region_scroll_chrome;
+pub(super) use types::ChildRegionScrollInput;
 
 pub(super) fn child_region_scroll_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -34,7 +24,7 @@ pub(super) fn child_region_scroll_element<H: UiHost>(
     } = input;
 
     let viewport_test_id = scroll_options.viewport_test_id.clone();
-    let mut builder = crate::ui::scroll_area_build(move |cx, out| {
+    let builder = crate::ui::scroll_area_build(move |cx, out| {
         let mut content = crate::ui::v_flex_build(move |cx, out| {
             build_imui_children_with_focus(cx, out, build_focus, build);
         })
@@ -53,20 +43,7 @@ pub(super) fn child_region_scroll_element<H: UiHost>(
     )
     .layout(scroll_layout);
 
-    if chrome == ChildRegionChrome::Framed {
-        builder = builder
-            .p_2()
-            .rounded_md()
-            .border_1()
-            .bg(crate::ColorRef::Token {
-                key: "card",
-                fallback: crate::ColorFallback::ThemePanelBackground,
-            })
-            .border_color(crate::ColorRef::Token {
-                key: "border",
-                fallback: crate::ColorFallback::ThemePanelBorder,
-            });
-    }
+    let mut builder = apply_child_region_scroll_chrome(builder, chrome);
 
     if let Some(handle) = scroll_options.handle {
         builder = builder.handle(handle);

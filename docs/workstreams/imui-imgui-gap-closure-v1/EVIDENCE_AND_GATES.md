@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Child-Region Scroll Carrier/Chrome Owner Split - 2026-06-03
+
+Claim verified: child-region scroll input carriers and framed scroll chrome moved behind private
+child owners without changing content mounting, scroll-axis/show-scrollbar policy, resize-stack
+handoff, root/content/viewport test-id propagation, scroll-handle forwarding, or public
+`child_region_with_options` behavior.
+
+Evidence:
+
+- IMUI child-region scroll carrier/chrome owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs` keeps scroll-area builder orchestration,
+  child IMUI content mounting, scroll-handle forwarding, and test-id routing.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll/types.rs` owns child-region scroll input
+  carrier records with visibility limited to the child-region subtree.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll/chrome.rs` owns framed child-region scroll
+  chrome.
+- Evidence anchor: child_region/scroll.rs keeps scroll builder and content mounting only.
+- Evidence anchor: child-region scroll input carrier records.
+- Evidence anchor: framed child-region scroll chrome.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui child_region --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Popup Modal Layer Carrier Owner Split - 2026-06-03
 
 Claim verified: popup modal layer focus factory and layer input/output carrier records moved behind

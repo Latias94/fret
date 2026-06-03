@@ -12,6 +12,16 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-06-03 IMUI child-region scroll carrier/chrome owner-split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/scroll/types.rs` now owns the child-region scroll input
+carrier records with visibility limited to the child-region subtree, and
+`ecosystem/fret-ui-kit/src/imui/child_region/scroll/chrome.rs` owns framed child-region scroll
+chrome. `ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs` keeps scroll-area builder
+orchestration, child IMUI content mounting, scroll axis/show-scrollbar layout, scroll-handle
+forwarding, viewport/root/content test-id routing, and element landing. Public
+`child_region_with_options` behavior remains unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-03 IMUI debug-draw round-command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command/round.rs` now owns
 circle/ngon/ellipse debug-draw command payload variants, including filled circle, filled ngon, and

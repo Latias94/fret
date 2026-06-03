@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI child-region scroll carrier/chrome owner split - 2026-06-03
+
+This maintenance slice keeps child-region scroll assembly focused while preserving current
+`BeginChild()`-adjacent behavior:
+
+- IMUI child-region scroll carrier/chrome owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll.rs` keeps scroll-area builder orchestration,
+  child IMUI content mounting, scroll-handle forwarding, and test-id routing.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll/types.rs` owns child-region scroll input
+  carrier records with visibility limited to the child-region subtree.
+- `ecosystem/fret-ui-kit/src/imui/child_region/scroll/chrome.rs` owns framed child-region scroll
+  chrome.
+- Evidence anchor: child_region/scroll.rs keeps scroll builder and content mounting only.
+- Evidence anchor: child-region scroll input carrier records.
+- Evidence anchor: framed child-region scroll chrome.
+- Content mounting, scroll-axis/show-scrollbar policy, resize-stack handoff, root/content/viewport
+  test-id propagation, scroll-handle forwarding, and public `child_region_with_options` behavior
+  remain unchanged.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --no-fail-fast` - passed.
+- `cargo nextest run -p fret-imui child_region --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI popup modal layer carrier owner split - 2026-06-03
 
 This maintenance slice keeps popup modal layer assembly focused while preserving modal behavior:

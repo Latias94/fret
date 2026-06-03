@@ -58,6 +58,14 @@ Last updated: 2026-06-03
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI child-region scroll carrier and framed chrome into private child owners without
+      changing content mounting, scroll-axis/show-scrollbar policy, resize-stack handoff,
+      root/content/viewport test-id propagation, scroll-handle forwarding, or public
+      `child_region_with_options` behavior.
+      Result: `child_region/scroll.rs` keeps scroll-area builder orchestration, child IMUI content
+      mounting, handle forwarding, and test-id routing. `child_region/scroll/types.rs` owns the
+      scroll input carrier with visibility limited to the child-region subtree, while
+      `child_region/scroll/chrome.rs` owns framed child-region scroll chrome.
 - [x] Split IMUI debug-draw round geometry command payload variants out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types/command.rs` into a
       private child owner without changing public `ImUiDebugDrawList` circle/ngon/ellipse methods,
