@@ -1,5 +1,8 @@
 {
   "meta": {
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_button"
+    },
     "required_launch_features": ["gallery-material3"],
     "name": "ui-gallery-material3-button-sizes-screenshots",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
@@ -10,7 +13,10 @@
     {
       "type": "wait_until",
       "timeout_frames": 600,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } }
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-button" }
+      }
     },
     {
       "type": "wait_until",
@@ -40,22 +46,6 @@
     },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "click", "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    {
-      "type": "press_key",
-      "key": "a",
-      "repeat": false,
-      "modifiers": { "ctrl": true, "shift": false, "alt": false, "meta": false }
-    },
-    { "type": "press_key", "key": "backspace", "repeat": false, "modifiers": { "ctrl": false, "shift": false, "alt": false, "meta": false } },
-    { "type": "type_text", "text": "material3 button" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-button" } },
-    {
-      "type": "wait_until",
-      "timeout_frames": 600,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-material3-button" } }
-    },
     {
       "type": "wait_until",
       "timeout_frames": 600,
