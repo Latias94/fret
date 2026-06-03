@@ -30401,3 +30401,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot bars model owner split:
+
+- Claim: `BarSeries`, `CategoryBarSeries`, and `BarsPlotModel` moved from
+  `ecosystem/fret-plot/src/models.rs` into `ecosystem/fret-plot/src/models/bars.rs` without
+  changing `crate::models::{BarSeries, CategoryBarSeries, BarsPlotModel}` import paths, public
+  record fields/builders, baseline and per-index baseline storage, grouped/stacked category
+  helpers, primary/Y2/Y3/Y4 bounds projection, declarative bars plot panels, or optional IMUI
+  adapter routing.
+- Evidence anchors: `models.rs` declares `mod bars;`, re-exports `BarSeries`,
+  `CategoryBarSeries`, and `BarsPlotModel`, and keeps shared `YAxis`, `MarkerShape`, `StepMode`,
+  non-bar model records, and shared bounds helpers; `models/bars.rs` owns bar/category payloads,
+  `BarSeries` and `CategoryBarSeries` builders, `BarsPlotModel::{from_series,
+  from_series_with_bounds, grouped_categories, stacked_categories}`, baseline-aware bounds
+  construction, and the source gate rejects bar records drifting back into `models.rs` or into
+  other plot model owners.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed:
+  `cargo nextest run -p fret-plot --features imui bars_plot_panel_paints_grouped_and_stacked_closed_fill_paths_on_declarative_path --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

@@ -7048,3 +7048,14 @@ opening the slice.
       payloads, close-series adapter storage, candlestick series fields/builders, candlestick plot
       model records, candle-width bounds construction, and the focused bounds unit test. The IMUI
       source gate freezes the root re-export hub and candlestick owner boundary.
+- [x] Split Fret Plot bar records out of the root plot model file without changing
+      `crate::models::{BarSeries, CategoryBarSeries, BarsPlotModel}` import paths, baseline and
+      per-index baseline storage, grouped/stacked category helpers, multi-axis bounds projection,
+      declarative bars panel behavior, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod bars;`, re-exports
+      `BarSeries`, `CategoryBarSeries`, and `BarsPlotModel`, and keeps shared axes plus
+      non-bar model records. `ecosystem/fret-plot/src/models/bars.rs` owns bar/category payloads,
+      bar series fields/builders, grouped/stacked category model construction, bar plot model
+      records, baseline-aware primary/Y2/Y3/Y4 bounds construction, and the declarative bars panel
+      proof continues to cover the behavior. The IMUI source gate freezes the root re-export hub
+      and bars owner boundary.

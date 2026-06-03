@@ -1910,6 +1910,7 @@
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs",
     "ecosystem/fret-plot/src/models.rs",
     "ecosystem/fret-plot/src/models/area.rs",
+    "ecosystem/fret-plot/src/models/bars.rs",
     "ecosystem/fret-plot/src/models/candlestick.rs",
     "ecosystem/fret-plot/src/models/error_bars.rs",
     "ecosystem/fret-plot/src/models/line.rs",

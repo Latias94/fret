@@ -6237,3 +6237,13 @@ candle-width bounds construction, and the focused bounds unit test. Public
 `crate::models::{OhlcPoint, CandlestickSeries, CandlestickPlotModel}` imports, declarative
 candlestick plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 Fret Plot bars model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-bar model records, shared
+bounds helpers, and the stable public re-export for `BarSeries`, `CategoryBarSeries`, and
+`BarsPlotModel`. `ecosystem/fret-plot/src/models/bars.rs` owns bar/category payloads, bar series
+fields/builders, grouped and stacked category helpers, bars plot model records, and
+baseline-aware primary/Y2/Y3/Y4 data-bound projection. Public
+`crate::models::{BarSeries, CategoryBarSeries, BarsPlotModel}` imports, declarative bars plot
+panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
