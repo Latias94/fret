@@ -27,6 +27,18 @@ const AUTOCOMPLETE_DIALOG_NESTED_OVERLAY_DIAG: &str = include_str!(
 const DIALOG_FOCUS_TRAP_RESTORE_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json"
 );
+const SELECT_A11Y_PARITY_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-a11y-parity-bundle.json"
+);
+const SELECT_ITEM_CHROME_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-item-chrome-fill.json"
+);
+const SELECT_RICH_OPTIONS_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-rich-options-screenshots.json"
+);
+const SELECT_POSITIONING_TRANSFORM_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-select-menu-positioning-transform-screenshots.json"
+);
 
 #[test]
 fn material3_field_surface_diags_use_direct_start_pages() {
@@ -75,6 +87,26 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "dialog focus trap restore",
             DIALOG_FOCUS_TRAP_RESTORE_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_dialog\"",
+        ),
+        (
+            "select a11y parity",
+            SELECT_A11Y_PARITY_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
+        ),
+        (
+            "select item chrome",
+            SELECT_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
+        ),
+        (
+            "select rich options",
+            SELECT_RICH_OPTIONS_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
+        ),
+        (
+            "select positioning transform",
+            SELECT_POSITIONING_TRANSFORM_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_select\"",
         ),
     ] {
         assert!(
@@ -129,6 +161,30 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
             "\"id\": \"ui-gallery-material3-dialog-open\"",
         ),
+        (
+            "select a11y parity",
+            SELECT_A11Y_PARITY_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-select-typeahead\"",
+        ),
+        (
+            "select item chrome",
+            SELECT_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
+            "\"id\": \"ui-gallery-material3-select\"",
+        ),
+        (
+            "select rich options",
+            SELECT_RICH_OPTIONS_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-select-rich\"",
+        ),
+        (
+            "select positioning transform",
+            SELECT_POSITIONING_TRANSFORM_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-select-transformed\"",
+        ),
     ] {
         assert!(
             script.contains("\"type\": \"scroll_into_view\""),
@@ -160,6 +216,13 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
         (
             "text field hover label color",
             TEXT_FIELD_HOVER_LABEL_COLOR_DIAG,
+        ),
+        ("select a11y parity", SELECT_A11Y_PARITY_DIAG),
+        ("select item chrome", SELECT_ITEM_CHROME_DIAG),
+        ("select rich options", SELECT_RICH_OPTIONS_DIAG),
+        (
+            "select positioning transform",
+            SELECT_POSITIONING_TRANSFORM_DIAG,
         ),
     ] {
         assert!(
