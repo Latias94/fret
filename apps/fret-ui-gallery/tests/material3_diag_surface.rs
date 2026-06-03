@@ -30,6 +30,9 @@ const TEXT_FIELD_ICONS_DIAG: &str = include_str!(
 const AUTOCOMPLETE_DIALOG_NESTED_OVERLAY_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-dialog-nested-overlay.json"
 );
+const BOTTOM_SHEET_FIELDS_NESTED_OVERLAYS_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-bottom-sheet-fields-nested-overlays.json"
+);
 const DIALOG_FOCUS_TRAP_RESTORE_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json"
 );
@@ -59,6 +62,12 @@ const LIST_ITEM_CHROME_DIAG: &str = include_str!(
 );
 const MENU_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-item-chrome-fill.json"
+);
+const MENU_FOCUS_DISMISS_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-focus-dismiss.json"
+);
+const SEARCH_MENU_SIBLING_POPOVERS_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-menu-sibling-popovers.json"
 );
 const NAVIGATION_BAR_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-item-chrome-fill.json"
@@ -139,6 +148,11 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_autocomplete\"",
         ),
         (
+            "bottom sheet fields nested overlays",
+            BOTTOM_SHEET_FIELDS_NESTED_OVERLAYS_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_bottom_sheet\"",
+        ),
+        (
             "dialog focus trap restore",
             DIALOG_FOCUS_TRAP_RESTORE_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_dialog\"",
@@ -186,6 +200,16 @@ fn material3_field_surface_diags_use_direct_start_pages() {
         (
             "menu item chrome",
             MENU_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_menu\"",
+        ),
+        (
+            "menu focus dismiss",
+            MENU_FOCUS_DISMISS_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_menu\"",
+        ),
+        (
+            "search menu sibling popovers",
+            SEARCH_MENU_SIBLING_POPOVERS_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_menu\"",
         ),
         (
@@ -288,6 +312,12 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"id\": \"ui-gallery-material3-autocomplete-dialog-open\"",
         ),
         (
+            "bottom sheet fields nested overlays",
+            BOTTOM_SHEET_FIELDS_NESTED_OVERLAYS_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-bottom-sheet-open\"",
+        ),
+        (
             "dialog focus trap restore",
             DIALOG_FOCUS_TRAP_RESTORE_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
@@ -346,6 +376,18 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             MENU_ITEM_CHROME_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
             "\"id\": \"ui-gallery-material3-menu-trigger\"",
+        ),
+        (
+            "menu focus dismiss",
+            MENU_FOCUS_DISMISS_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-menu-trigger\"",
+        ),
+        (
+            "search menu sibling popovers",
+            SEARCH_MENU_SIBLING_POPOVERS_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-menu-search\"",
         ),
         (
             "navigation bar item chrome",
@@ -430,6 +472,10 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
             "autocomplete dialog nested overlay",
             AUTOCOMPLETE_DIALOG_NESTED_OVERLAY_DIAG,
         ),
+        (
+            "bottom sheet fields nested overlays",
+            BOTTOM_SHEET_FIELDS_NESTED_OVERLAYS_DIAG,
+        ),
         ("dialog focus trap restore", DIALOG_FOCUS_TRAP_RESTORE_DIAG),
         (
             "dialog select nested overlay",
@@ -450,6 +496,11 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
         ("select typeahead delay", SELECT_TYPEAHEAD_DELAY_DIAG),
         ("list item chrome", LIST_ITEM_CHROME_DIAG),
         ("menu item chrome", MENU_ITEM_CHROME_DIAG),
+        ("menu focus dismiss", MENU_FOCUS_DISMISS_DIAG),
+        (
+            "search menu sibling popovers",
+            SEARCH_MENU_SIBLING_POPOVERS_DIAG,
+        ),
         (
             "navigation bar item chrome",
             NAVIGATION_BAR_ITEM_CHROME_DIAG,
