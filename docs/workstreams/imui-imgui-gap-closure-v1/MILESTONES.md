@@ -1473,6 +1473,15 @@ quantization, phase tracing spans, and elapsed timing to
 surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
 docking multiwindow source gate.
 
+2026-06-04 desktop runner monitor topology owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps winit event routing,
+surface lifecycle entry points, redraw execution, and `ApplicationHandler` wiring while delegating
+monitor enumeration, scale-factor fallback, stable monitor sorting, virtual desktop bounds
+construction, and topology diagnostics publication to
+`crates/fret-launch/src/runner/desktop/runner/monitor_topology.rs`. Runtime behavior and public
+effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
+through the docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

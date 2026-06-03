@@ -274,6 +274,9 @@ Platform note:
 - Latest runner redraw hitch owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M88_RUNNER_REDRAW_HITCH_OWNER_SPLIT_2026-06-04.md`
   (moves redraw hitch diagnostics into `redraw_hitch.rs` without changing runtime behavior)
+- Latest runner monitor topology owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M89_RUNNER_MONITOR_TOPOLOGY_OWNER_SPLIT_2026-06-04.md`
+  (moves monitor topology diagnostics into `monitor_topology.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
