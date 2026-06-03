@@ -674,6 +674,16 @@ Each TODO is labeled:
         delegates the clipboard and primary-selection effect branches.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner incoming-open effects owner split keeps incoming-open payload handling
+      out of the general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs` owns diagnostic
+        incoming-open injection, read limit capping, diagnostic/path payload reads, unavailable
+        events, and release cleanup.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        delegates incoming-open effect branches.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

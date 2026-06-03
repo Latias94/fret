@@ -974,6 +974,16 @@ Last updated: 2026-06-03
       clipboard and primary-selection effect branches. The docking source gate freezes the owner
       split in `M69_RUNNER_CLIPBOARD_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
       compositor acceptance.
+- [x] Split desktop runner incoming-open effect handling into a private incoming-open owner without
+      changing diagnostic incoming-open injection, read limit capping, diagnostic/path payload
+      reads, unavailable events, release cleanup, or public effect surfaces.
+      Result: `crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs` owns
+      `handle_diag_incoming_open_inject`, `handle_incoming_open_read_all`,
+      `handle_incoming_open_read_all_with_limits`, and `handle_incoming_open_release`; `effects.rs`
+      keeps the effect loop and delegates incoming-open effect branches. The docking source gate
+      freezes the owner split in
+      `M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+      compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.

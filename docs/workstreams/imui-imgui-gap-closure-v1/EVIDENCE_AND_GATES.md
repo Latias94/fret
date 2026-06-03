@@ -29559,6 +29559,33 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-04 Desktop runner incoming-open effects owner split:
+
+- Claim: diagnostic incoming-open injection, incoming-open read limit capping, diagnostic/path
+  payload reads, unavailable-event delivery, and release cleanup moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod incoming_open_effects;`;
+  `incoming_open_effects.rs` owns `handle_diag_incoming_open_inject`,
+  `handle_incoming_open_read_all`, `handle_incoming_open_read_all_with_limits`, and
+  `handle_incoming_open_release`; `effects.rs` keeps the effect queue loop and only delegates the
+  `Effect::IncomingOpenReadAll`, `Effect::IncomingOpenReadAllWithLimits`, and
+  `Effect::IncomingOpenRelease` branches.
+  `M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md` records the matching docking
+  multiwindow lane evidence without claiming Wayland acceptance.
+- Passed: `cargo fmt --package fret-launch -- --check`.
+- Passed: `cargo check -p fret-launch --lib`.
+- Passed:
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`.
+- Passed: `python tools\gate_docking_multiwindow_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-03 editor TransformEdit section chrome row/column owner split:
 
 - Claim: TransformEdit section row and column chrome moved from

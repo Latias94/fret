@@ -201,6 +201,10 @@ Platform note:
   (moves clipboard diagnostics, clipboard read/write, and primary-selection effect handling into
   `clipboard_effects.rs` without changing unavailable, completion-event, capability-gating, or
   platform-error behavior)
+- Latest runner incoming-open effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves diagnostic incoming-open injection, read limit capping, path payload reads, unavailable
+  events, and release cleanup into `incoming_open_effects.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
