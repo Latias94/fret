@@ -234,17 +234,17 @@ const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/check.perf_thresholds.json",
     "perf-docking/*/trace.chrome.json",
 ];
-const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;
 const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND: &str =
-    "cargo run -p fret-demo --bin imui_editor_workbench_demo";
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_WORKBENCH_COMMAND;
 const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =
-    "cargo run -p fret-demo --bin imui_editor_proof_demo";
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_PROOF_COMMAND;
 const DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND: &str =
-    "cargo run -p fret-demo --bin editor_notes_demo";
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_NOTES_COMMAND;
 const DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND: &str =
-    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
+    fret_first_open::demo_metrics_debug::DEMO_DEVICE_SHELL_COMMAND;
 const DEVTOOLS_METRICS_STATS_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+    fret_first_open::demo_metrics_debug::METRICS_STATS_COMMAND;
 const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
 const DEVTOOLS_METRICS_MEMORY_COMMAND: &str =
@@ -254,20 +254,21 @@ const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
 const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
 const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+    fret_first_open::demo_metrics_debug::DEBUG_TRACE_COMMAND;
 const DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC: &str =
-    "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+    fret_first_open::demo_metrics_debug::OWNER_DOC;
 const DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =
-    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json";
+    fret_first_open::demo_metrics_debug::ACTION_METADATA_DOC;
 const DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
-    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
+    fret_first_open::demo_metrics_debug::DOCKING_OWNER_DOC;
 const DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =
-    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
+    fret_first_open::demo_metrics_debug::WAYLAND_ACCEPTANCE_DOC;
 const DEVTOOLS_DOCKING_ARBITRATION_COMMAND: &str =
-    "cargo run -p fret-demo --bin docking_arbitration_demo";
-const DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str = "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json";
+    fret_first_open::demo_metrics_debug::DOCKING_ARBITRATION_COMMAND;
+const DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DOCKING_CAMPAIGN_VALIDATE_COMMAND;
 const DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND: &str =
-    "python tools/diag_gate_docking_wayland_policy_skip.py";
+    fret_first_open::demo_metrics_debug::DOCKING_POLICY_SKIP_COMMAND;
 const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =
     "fret.devtools.demo_metrics_debug.copy_actions";
 const CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW: &str =

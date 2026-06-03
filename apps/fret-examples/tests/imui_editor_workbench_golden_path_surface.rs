@@ -1,10 +1,12 @@
 #[test]
 fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     let route_source = include_str!("../src/imui_editor_workbench_demo.rs");
+    let shared_first_open_source = include_str!("../../fret-first-open/src/lib.rs");
     let editor_notes_source = include_str!("../src/editor_notes_demo.rs");
     let lib_source = include_str!("../src/lib.rs");
     let bin_source = include_str!("../../fret-demo/src/bin/imui_editor_workbench_demo.rs");
     let demo_main_source = include_str!("../../fret-demo/src/main.rs");
+    let workbench_contract_source = format!("{route_source}\n{shared_first_open_source}");
 
     for needle in [
         "Canonical IMUI editor workbench route.",
@@ -75,7 +77,7 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         ".test_id(TEST_ID_ACTION_COPY_STATUS)",
     ] {
         assert!(
-            route_source.contains(needle),
+            workbench_contract_source.contains(needle),
             "canonical workbench route should keep Demo/Metrics/Debug quick actions resident in first-open chrome; missing `{needle}`"
         );
     }
@@ -120,10 +122,12 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
     let cookbook_readme = include_str!("../../fret-cookbook/README.md");
     let cookbook_examples = include_str!("../../fret-cookbook/EXAMPLES.md");
     let diagnostics_first_open = include_str!("../../../docs/diagnostics-first-open.md");
+    let shared_first_open_source = include_str!("../../fret-first-open/src/lib.rs");
     let fretboard_demos = include_str!("../../fretboard/src/demos.rs");
     let devtools_native = include_str!("../../fret-devtools/src/native.rs");
     let devtools_demo_metrics_debug = include_str!("../../fret-devtools/src/demo_metrics_debug.rs");
     let product_chain_gate = include_str!("../../../tools/diag_gate_imui_product_chain.py");
+    let shared_discovery_contract = format!("{fretboard_demos}\n{shared_first_open_source}");
 
     for (name, source) in [
         ("docs/examples/README.md", examples_readme),
@@ -172,7 +176,10 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
     }
 
     for (name, source) in [
-        ("apps/fretboard/src/demos.rs", fretboard_demos),
+        (
+            "apps/fretboard/src/demos.rs",
+            shared_discovery_contract.as_str(),
+        ),
         ("tools/diag_gate_imui_product_chain.py", product_chain_gate),
     ] {
         assert!(
@@ -189,7 +196,9 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
 
     assert!(
         devtools_native.contains("const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND")
-            && devtools_native.contains("cargo run -p fret-demo --bin imui_editor_workbench_demo"),
-        "apps/fret-devtools/src/native.rs should keep the shared canonical workbench command constant"
+            && shared_first_open_source.contains("pub const DEMO_EDITOR_WORKBENCH_COMMAND: &str =")
+            && shared_first_open_source
+                .contains("cargo run -p fret-demo --bin imui_editor_workbench_demo"),
+        "apps/fret-devtools/src/native.rs should keep the shared canonical workbench command alias and shared contract owner"
     );
 }

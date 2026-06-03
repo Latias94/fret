@@ -64,6 +64,16 @@ Last updated: 2026-06-03
       currently selected Demo/Metrics/Debug command or the full command bundle through the existing
       runtime `Effect::ClipboardWriteText` boundary while keeping execution in DevTools and
       fretboard.
+- [x] Factor the static Demo/Metrics/Debug first-open route contract into an app-level shared owner
+      so fretboard, DevTools GUI, MCP, and the canonical workbench stop duplicating route/action
+      command strings and route metadata.
+      Result: `apps/fret-first-open/src/lib.rs` now owns the shared
+      `demo_metrics_debug::{RouteCommand, FirstOpenRoute}` contract plus stable demo/metrics/debug/
+      handoff/action command constants. `apps/fretboard/src/demos.rs`,
+      `apps/fret-devtools/src/native.rs`, `apps/fret-devtools/src/demo_metrics_debug/actions.rs`,
+      `apps/fret-devtools-mcp/src/native.rs`, and
+      `apps/fret-examples/src/imui_editor_workbench_demo.rs` now alias that shared owner, while the
+      IMUI source gate and the workbench surface test freeze the extraction.
 
 ## Porting Sugar Proof - 2026-05-31
 

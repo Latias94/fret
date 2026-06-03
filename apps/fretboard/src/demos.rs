@@ -87,192 +87,26 @@ const IMUI_DOCKING_PERF_ARTIFACTS: &[&str] = &[
     "perf-docking/check.perf_thresholds.json",
     "perf-docking/*/trace.chrome.json",
 ];
-const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
-const DEMO_METRICS_DEBUG_DOC: &str = DIAG_FIRST_OPEN_DOC;
-const DEMO_METRICS_DEBUG_OWNER_DOC: &str =
-    "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;
+const DEMO_METRICS_DEBUG_DOC: &str = fret_first_open::demo_metrics_debug::ROUTE_DOC;
+const DEMO_METRICS_DEBUG_OWNER_DOC: &str = fret_first_open::demo_metrics_debug::OWNER_DOC;
 const DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =
-    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json";
+    fret_first_open::demo_metrics_debug::ACTION_METADATA_DOC;
 const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
-    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
-const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
-const DEMO_METRICS_DEBUG_PURPOSE: &str =
-    "Dear ImGui-style demo, metrics, and debug first-open route";
-const DEMO_EDITOR_WORKBENCH_COMMAND: &str =
-    "cargo run -p fret-demo --bin imui_editor_workbench_demo";
-const DEMO_EDITOR_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
-const DEMO_EDITOR_NOTES_COMMAND: &str = "cargo run -p fret-demo --bin editor_notes_demo";
-const DEMO_DEVICE_SHELL_COMMAND: &str =
-    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
-const DEMO_DOCKING_ARBITRATION_COMMAND: &str =
-    "cargo run -p fret-demo --bin docking_arbitration_demo";
-const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str = "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json";
-const DOCKING_POLICY_SKIP_COMMAND: &str = "python tools/diag_gate_docking_wayland_policy_skip.py";
-const METRICS_STATS_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
-const METRICS_LAYOUT_PERF_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
-const METRICS_MEMORY_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json";
-const DEBUG_TRIAGE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
-const DEBUG_HOTSPOTS_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
-const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
-const DEMO_METRICS_DEBUG_DEMO_COMMANDS: &[RouteCommand] = &[
-    RouteCommand {
-        id: "imui_editor_workbench",
-        label: "demo editor workbench",
-        command: DEMO_EDITOR_WORKBENCH_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: true,
-    },
-    RouteCommand {
-        id: "imui_editor_proof_supporting",
-        label: "demo editor proof supporting",
-        command: DEMO_EDITOR_PROOF_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: false,
-    },
-    RouteCommand {
-        id: "editor_notes",
-        label: "demo editor notes",
-        command: DEMO_EDITOR_NOTES_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: false,
-    },
-    RouteCommand {
-        id: "editor_notes_device_shell",
-        label: "demo device shell",
-        command: DEMO_DEVICE_SHELL_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: false,
-    },
-];
-const DEMO_METRICS_DEBUG_METRICS_COMMANDS: &[RouteCommand] = &[
-    RouteCommand {
-        id: "metrics_stats",
-        label: "metrics stats",
-        command: METRICS_STATS_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-    RouteCommand {
-        id: "metrics_layout_perf",
-        label: "metrics layout perf",
-        command: METRICS_LAYOUT_PERF_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-    RouteCommand {
-        id: "metrics_memory",
-        label: "metrics memory",
-        command: METRICS_MEMORY_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-];
-const DEMO_METRICS_DEBUG_DEBUG_COMMANDS: &[RouteCommand] = &[
-    RouteCommand {
-        id: "debug_triage",
-        label: "debug triage",
-        command: DEBUG_TRIAGE_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-    RouteCommand {
-        id: "debug_hotspots",
-        label: "debug hotspots",
-        command: DEBUG_HOTSPOTS_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-    RouteCommand {
-        id: "debug_trace",
-        label: "debug trace",
-        command: DEBUG_TRACE_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-];
-const DEMO_METRICS_DEBUG_HANDOFF_COMMANDS: &[RouteCommand] = &[
-    RouteCommand {
-        id: "docking_arbitration_supporting",
-        label: "docking arbitration supporting",
-        command: DEMO_DOCKING_ARBITRATION_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-    RouteCommand {
-        id: "docking_campaign_validate",
-        label: "docking campaign validate",
-        command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-    RouteCommand {
-        id: "docking_policy_skip_local",
-        label: "docking policy-skip local",
-        command: DOCKING_POLICY_SKIP_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-];
-const DEMO_METRICS_DEBUG_ACTION_COMMANDS: &[RouteCommand] = &[
-    RouteCommand {
-        id: "open_workbench",
-        label: "open workbench",
-        command: DEMO_EDITOR_WORKBENCH_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: true,
-    },
-    RouteCommand {
-        id: "product_discovery",
-        label: "run product discovery",
-        command: IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND,
-        category: "product-gate",
-        requires_bundle: false,
-        primary: false,
-    },
-    RouteCommand {
-        id: "inspect_metrics_stats",
-        label: "inspect metrics stats",
-        command: METRICS_STATS_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-    RouteCommand {
-        id: "inspect_debug_trace",
-        label: "inspect debug trace",
-        command: DEBUG_TRACE_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-    RouteCommand {
-        id: "validate_docking_campaign",
-        label: "validate docking campaign",
-        command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-];
+    fret_first_open::demo_metrics_debug::DOCKING_OWNER_DOC;
+const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =
+    fret_first_open::demo_metrics_debug::WAYLAND_ACCEPTANCE_DOC;
+const DEMO_METRICS_DEBUG_PURPOSE: &str = fret_first_open::demo_metrics_debug::PURPOSE;
+const DEMO_METRICS_DEBUG_DEMO_COMMANDS: &[RouteCommand] =
+    fret_first_open::demo_metrics_debug::DEMO_COMMANDS;
+const DEMO_METRICS_DEBUG_METRICS_COMMANDS: &[RouteCommand] =
+    fret_first_open::demo_metrics_debug::METRICS_COMMANDS;
+const DEMO_METRICS_DEBUG_DEBUG_COMMANDS: &[RouteCommand] =
+    fret_first_open::demo_metrics_debug::DEBUG_COMMANDS;
+const DEMO_METRICS_DEBUG_HANDOFF_COMMANDS: &[RouteCommand] =
+    fret_first_open::demo_metrics_debug::HANDOFF_COMMANDS;
+const DEMO_METRICS_DEBUG_ACTION_COMMANDS: &[RouteCommand] =
+    fret_first_open::demo_metrics_debug::ACTION_COMMANDS;
 
 pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
     let output_json = parse_tool_apps_json_flag(args)?;
@@ -387,30 +221,8 @@ struct ToolApp {
     gate: &'static str,
 }
 
-#[derive(Clone, Copy)]
-struct RouteCommand {
-    id: &'static str,
-    label: &'static str,
-    command: &'static str,
-    category: &'static str,
-    requires_bundle: bool,
-    primary: bool,
-}
-
-struct FirstOpenRoute {
-    id: &'static str,
-    purpose: &'static str,
-    docs: &'static str,
-    owner_doc: &'static str,
-    action_metadata_doc: &'static str,
-    docking_owner_doc: &'static str,
-    wayland_acceptance_doc: &'static str,
-    demo_commands: &'static [RouteCommand],
-    metrics_commands: &'static [RouteCommand],
-    debug_commands: &'static [RouteCommand],
-    handoff_commands: &'static [RouteCommand],
-    action_commands: &'static [RouteCommand],
-}
+type RouteCommand = fret_first_open::demo_metrics_debug::RouteCommand;
+type FirstOpenRoute = fret_first_open::demo_metrics_debug::FirstOpenRoute;
 
 struct ProductWorkflow {
     id: &'static str,

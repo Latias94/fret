@@ -33,10 +33,11 @@ const TEST_ID_ACTION_METRICS: &str = "imui-editor-workbench.action.metrics";
 const TEST_ID_ACTION_DEBUG: &str = "imui-editor-workbench.action.debug";
 const TEST_ID_ACTION_WAYLAND: &str = "imui-editor-workbench.action.wayland";
 
-const WORKBENCH_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_workbench_demo";
-const SUPPORTING_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
-const METRICS_COMMAND: &str = "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
-const DEBUG_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+const WORKBENCH_COMMAND: &str = fret_first_open::demo_metrics_debug::DEMO_EDITOR_WORKBENCH_COMMAND;
+const SUPPORTING_PROOF_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_PROOF_COMMAND;
+const METRICS_COMMAND: &str = fret_first_open::demo_metrics_debug::METRICS_STATS_COMMAND;
+const DEBUG_COMMAND: &str = fret_first_open::demo_metrics_debug::DEBUG_TRACE_COMMAND;
 const WAYLAND_ACCEPTANCE_COMMAND: &str = "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag campaign run imui-p3-wayland-real-host --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release";
 
 pub(crate) mod act {

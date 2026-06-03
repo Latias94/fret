@@ -76,15 +76,16 @@ const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/check.perf_thresholds.json",
     "perf-docking/*/trace.chrome.json",
 ];
-const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;
 const DEMO_EDITOR_WORKBENCH_COMMAND: &str =
-    "cargo run -p fret-demo --bin imui_editor_workbench_demo";
-const DEMO_EDITOR_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
-const DEMO_EDITOR_NOTES_COMMAND: &str = "cargo run -p fret-demo --bin editor_notes_demo";
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_WORKBENCH_COMMAND;
+const DEMO_EDITOR_PROOF_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_PROOF_COMMAND;
+const DEMO_EDITOR_NOTES_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DEMO_EDITOR_NOTES_COMMAND;
 const DEMO_DEVICE_SHELL_COMMAND: &str =
-    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
-const METRICS_STATS_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+    fret_first_open::demo_metrics_debug::DEMO_DEVICE_SHELL_COMMAND;
+const METRICS_STATS_COMMAND: &str = fret_first_open::demo_metrics_debug::METRICS_STATS_COMMAND;
 const METRICS_LAYOUT_PERF_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
 const METRICS_MEMORY_COMMAND: &str =
@@ -93,68 +94,23 @@ const DEBUG_TRIAGE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
 const DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
-const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
-const DEMO_METRICS_DEBUG_OWNER_DOC: &str =
-    "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEBUG_TRACE_COMMAND: &str = fret_first_open::demo_metrics_debug::DEBUG_TRACE_COMMAND;
+const DEMO_METRICS_DEBUG_OWNER_DOC: &str = fret_first_open::demo_metrics_debug::OWNER_DOC;
 const DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =
-    "docs/workstreams/imui-demo-metrics-debug-action-metadata-v1/WORKSTREAM.json";
+    fret_first_open::demo_metrics_debug::ACTION_METADATA_DOC;
 const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
-    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
-const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
-const DOCKING_ARBITRATION_COMMAND: &str = "cargo run -p fret-demo --bin docking_arbitration_demo";
-const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str = "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json";
-const DOCKING_POLICY_SKIP_COMMAND: &str = "python tools/diag_gate_docking_wayland_policy_skip.py";
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct DemoMetricsDebugActionSpec {
-    id: &'static str,
-    label: &'static str,
-    command: &'static str,
-    category: &'static str,
-    requires_bundle: bool,
-    primary: bool,
-}
-const DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
-    DemoMetricsDebugActionSpec {
-        id: "open_workbench",
-        label: "open workbench",
-        command: DEMO_EDITOR_WORKBENCH_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: true,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "product_discovery",
-        label: "run product discovery",
-        command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
-        category: "product-gate",
-        requires_bundle: false,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "inspect_metrics_stats",
-        label: "inspect metrics stats",
-        command: METRICS_STATS_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "inspect_debug_trace",
-        label: "inspect debug trace",
-        command: DEBUG_TRACE_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "validate_docking_campaign",
-        label: "validate docking campaign",
-        command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-];
+    fret_first_open::demo_metrics_debug::DOCKING_OWNER_DOC;
+const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =
+    fret_first_open::demo_metrics_debug::WAYLAND_ACCEPTANCE_DOC;
+const DOCKING_ARBITRATION_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DOCKING_ARBITRATION_COMMAND;
+const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DOCKING_CAMPAIGN_VALIDATE_COMMAND;
+const DOCKING_POLICY_SKIP_COMMAND: &str =
+    fret_first_open::demo_metrics_debug::DOCKING_POLICY_SKIP_COMMAND;
+type DemoMetricsDebugActionSpec = fret_first_open::demo_metrics_debug::RouteCommand;
+const DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] =
+    fret_first_open::demo_metrics_debug::ACTION_COMMANDS;
 const RECENT_EVIDENCE_GATE_RUNS_DIR: &str = ".fret/diag/gate-runs";
 const RECENT_EVIDENCE_WORKFLOW_RUNS_DIR: &str = ".fret/diag/workflow-runs";
 const RECENT_EVIDENCE_FOLLOWUPS_DIR: &str = ".fret/diag/followups";

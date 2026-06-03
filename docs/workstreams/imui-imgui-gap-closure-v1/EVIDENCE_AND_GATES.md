@@ -3,6 +3,51 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Demo/Metrics/Debug First-Open Shared Contract Evidence - 2026-06-03
+
+Claim verified: the static Demo/Metrics/Debug first-open discovery contract no longer lives as
+duplicated local string bags across fretboard, DevTools GUI, MCP, and the canonical workbench.
+It now has an app-level shared owner that keeps the route metadata and command descriptors aligned
+without moving diagnostics execution or IMUI/runtime policy into the wrong layer.
+
+Evidence:
+
+- `apps/fret-first-open/src/lib.rs` now owns the shared
+  `demo_metrics_debug::{RouteCommand, FirstOpenRoute}` contract, route metadata, shared command
+  constants, and action lookup/text helpers.
+- `apps/fretboard/src/demos.rs` now aliases the shared route/action/demo/metrics/debug/handoff
+  command descriptors instead of re-declaring a second `RouteCommand` bag for the
+  `fretboard_tool_apps` discovery JSON.
+- `apps/fret-devtools/src/native.rs` and `apps/fret-devtools-mcp/src/native.rs` now alias the
+  shared route metadata and command constants, while
+  `apps/fret-devtools/src/demo_metrics_debug/actions.rs` aliases the shared action catalog and keeps
+  only DevTools-specific copy-command/readiness projection.
+- `apps/fret-examples/src/imui_editor_workbench_demo.rs` now reads its shared workbench/proof/
+  metrics/debug command strings from the same owner while keeping the workbench-only Wayland
+  acceptance handoff local.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` and
+  `tools/gate_imui_workstream_source.py` now read the shared owner alongside the consumer sources,
+  freezing the extraction so the canonical workbench and first-open discovery surfaces cannot drift
+  independently.
+
+Focused gates:
+
+- `cargo check -p fret-first-open`: pass.
+- `cargo check -p fret-devtools`: pass.
+- `cargo check -p fret-devtools-mcp`: pass.
+- `cargo check -p fretboard-dev`: pass.
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass with existing warnings from
+  `fret-chart` and `fret-plot`.
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
+  pass, 2 tests.
+- `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast`:
+  pass, 3 tests.
+- `cargo nextest run -p fretboard-dev demos::tests::tool_apps_list_names_first_open_routes demos::tests::tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast`:
+  pass, 2 tests.
+- `cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast`:
+  pass, 1 test.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Canonical Workbench Copy-Affordance Evidence - 2026-06-03
 
 Claim verified: the canonical IMUI editor workbench quick-action strip is no longer display-only;

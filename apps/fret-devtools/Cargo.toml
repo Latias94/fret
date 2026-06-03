@@ -19,6 +19,7 @@ serde.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 
+fret-first-open = { path = "../fret-first-open" }
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }

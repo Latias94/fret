@@ -22,6 +22,15 @@ selected Demo/Metrics/Debug command or the full command bundle through the exist
 `Effect::ClipboardWriteText` boundary while keeping execution with DevTools and fretboard. The
 editor workflow remains mounted under `imui-editor-workbench.workflow`.
 
+2026-06-03 Demo/Metrics/Debug first-open shared contract result:
+`apps/fret-first-open/src/lib.rs` now owns the static `demo_metrics_debug` first-open route
+contract, including route docs/owner metadata plus the shared demo, metrics, debug, handoff, and
+action command descriptors. `apps/fretboard/src/demos.rs`, `apps/fret-devtools/src/native.rs`,
+`apps/fret-devtools/src/demo_metrics_debug/actions.rs`, `apps/fret-devtools-mcp/src/native.rs`,
+and `apps/fret-examples/src/imui_editor_workbench_demo.rs` now alias the shared owner instead of
+repeating local string bags. The source gate and workbench golden-path surface test now freeze the
+extraction so first-open discovery and the canonical workbench stop drifting independently.
+
 2026-06-03 IMUI ResponseExt type owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover.rs` now keeps the hover response module declarations
 and public re-exports only. `response/hover/types.rs` owns the `ResponseExt` field record with

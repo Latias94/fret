@@ -2115,6 +2115,7 @@ dependencies = [
  "fret-diag",
  "fret-diag-protocol",
  "fret-diag-ws",
+ "fret-first-open",
  "fret-launch",
  "fret-runtime",
  "fret-ui",
@@ -2134,6 +2135,7 @@ dependencies = [
  "fret-diag",
  "fret-diag-protocol",
  "fret-diag-ws",
+ "fret-first-open",
  "rmcp",
  "schemars",
  "serde",
@@ -2261,6 +2263,7 @@ dependencies = [
  "fret-editor",
  "fret-examples-imui",
  "fret-executor",
+ "fret-first-open",
  "fret-fonts",
  "fret-genui-core",
  "fret-genui-shadcn",
@@ -2331,6 +2334,10 @@ dependencies = [
  "tokio",
  "wasm-bindgen-futures",
 ]
+
+[[package]]
+name = "fret-first-open"
+version = "0.1.0"
 
 [[package]]
 name = "fret-fonts"
@@ -3289,6 +3296,7 @@ dependencies = [
  "clap",
  "fret-assets",
  "fret-diag",
+ "fret-first-open",
  "fret-ui",
  "fret-vscode-theme",
  "fretboard",

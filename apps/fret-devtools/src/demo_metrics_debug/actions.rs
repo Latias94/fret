@@ -1,75 +1,17 @@
 use fret_app::CommandId;
 
-use super::super::{
-    DEVTOOLS_DEBUG_TRACE_COMMAND, DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
-    DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND, DEVTOOLS_METRICS_STATS_COMMAND,
-    IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
-};
-
 const DEVTOOLS_DEMO_METRICS_DEBUG_COPY_ACTION_PREFIX: &str =
     "fret.devtools.demo_metrics_debug.copy_action.";
 
 // This file owns the Demo/Metrics/Debug action catalog plus copy/readiness line projection.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct DemoMetricsDebugActionSpec {
-    pub(super) id: &'static str,
-    pub(super) label: &'static str,
-    command: &'static str,
-    pub(super) category: &'static str,
-    requires_bundle: bool,
-    primary: bool,
-}
+pub(super) type DemoMetricsDebugActionSpec = fret_first_open::demo_metrics_debug::RouteCommand;
 
-pub(super) const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
-    DemoMetricsDebugActionSpec {
-        id: "open_workbench",
-        label: "open workbench",
-        command: DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
-        category: "demo",
-        requires_bundle: false,
-        primary: true,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "product_discovery",
-        label: "run product discovery",
-        command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
-        category: "product-gate",
-        requires_bundle: false,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "inspect_metrics_stats",
-        label: "inspect metrics stats",
-        command: DEVTOOLS_METRICS_STATS_COMMAND,
-        category: "metrics",
-        requires_bundle: true,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "inspect_debug_trace",
-        label: "inspect debug trace",
-        command: DEVTOOLS_DEBUG_TRACE_COMMAND,
-        category: "debug",
-        requires_bundle: true,
-        primary: false,
-    },
-    DemoMetricsDebugActionSpec {
-        id: "validate_docking_campaign",
-        label: "validate docking campaign",
-        command: DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND,
-        category: "handoff",
-        requires_bundle: false,
-        primary: false,
-    },
-];
+pub(super) const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] =
+    fret_first_open::demo_metrics_debug::ACTION_COMMANDS;
 
 pub(crate) fn demo_metrics_debug_action_command_text() -> String {
-    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
-        .iter()
-        .map(|action| format!("{}: {}", action.label, action.command))
-        .collect::<Vec<_>>()
-        .join("\n")
+    fret_first_open::demo_metrics_debug::action_command_text()
 }
 
 pub(crate) fn demo_metrics_debug_action_copy_command_id(action_id: &str) -> CommandId {
@@ -82,9 +24,7 @@ pub(crate) fn demo_metrics_debug_action_command_for_copy_command(
     command_id: &str,
 ) -> Option<String> {
     let action_id = command_id.strip_prefix(DEVTOOLS_DEMO_METRICS_DEBUG_COPY_ACTION_PREFIX)?;
-    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
-        .iter()
-        .find(|action| action.id == action_id)
+    fret_first_open::demo_metrics_debug::action_by_id(action_id)
         .map(|action| action.command.to_string())
 }
 
