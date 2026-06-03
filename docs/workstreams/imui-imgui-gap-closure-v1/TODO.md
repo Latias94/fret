@@ -355,6 +355,18 @@ Last updated: 2026-06-03
       reporting, buffered session/key/blur wiring, draft-controller binding, focus-selection
       routing, and unbuffered Escape-clear installation. The source gate prevents entry behavior
       from drifting back into the root element owner.
+- [x] Split editor `TextField` entry single-line and multiline mount/session branches into private
+      child owners without changing draft model selection, buffered session sync, draft-controller
+      binding, buffered key routing, blur commit/cancel handling, focus-selection sync, unbuffered
+      multiline Escape-clear behavior, input-id reporting, password/assistive semantics, or public
+      `TextField` options.
+      Result: `controls/text_field/element/entry.rs` now keeps only the shared entry args and the
+      multiline-vs-single-line dispatch. `controls/text_field/element/entry/multiline.rs` owns the
+      TextArea props call, mount, buffered multiline session/key/blur wiring, focus-selection
+      routing, and Escape-clear installation. `controls/text_field/element/entry/single_line.rs`
+      owns the TextInput props call, mount, buffered single-line session/key/blur wiring,
+      submit-command-aware key mode, and focus-selection routing. The source gate prevents
+      branch-specific wiring from drifting back into `entry.rs`.
 - [x] Split editor `TextField` buffered commit/cancel action finalizers into a private buffered
       child owner without changing focus transition planning, draft sync, blur timer arming,
       pending blur dispatch, buffered key routing, draft-controller commit/discard behavior,

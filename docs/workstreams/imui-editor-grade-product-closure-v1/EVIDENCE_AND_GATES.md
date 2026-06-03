@@ -6553,6 +6553,23 @@ for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead co
 `git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
 `apps/fret-examples/src/lib.rs`.
 
+## TextField entry branch owner split - 2026-06-03
+
+Scope: keep `text_field/element/entry.rs` as a route-only shell while moving single-line and
+multiline branch-specific mount/session wiring into dedicated private owners.
+
+- `ecosystem/fret-ui-editor/src/controls/text_field/element/entry.rs` is now a
+  `text_field_entry(...)` route-only shell with shared args and multiline-vs-single-line dispatch.
+- `entry/multiline.rs` and `entry/single_line.rs` own branch-specific mount/session wiring,
+  including the TextArea/TextInput mount path, buffered session/key/blur routing, and the
+  multiline Escape-clear vs single-line submit-command distinction.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-ui-editor text_field_defaults_to_stable_line_boxes text_field_escape_clear_handles_escape_only text_field_option_defaults_match_buffered_plain_text_baseline --no-fail-fast
+```
+
 ## IMUI editor proof collection geometry owner split - 2026-06-02
 
 Scope: keep the canonical editor proof collection surface app-owned while splitting pure

@@ -6030,3 +6030,13 @@ child-owner routing only. `controls/slider/element/typing_input.rs` owns Numeric
 construction, parse/validate adapter wiring, trailing-icon validation error policy, commit/cancel
 reset plus slider focus restore, and focus handoff sync. Public editor/IMUI adapter APIs remain
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor TextField entry branch owner split result:
+`ecosystem/fret-ui-editor/src/controls/text_field/element/entry.rs` now keeps only the shared
+entry args plus multiline-vs-single-line routing. `controls/text_field/element/entry/multiline.rs`
+owns the TextArea props call, mount, buffered multiline session/key/blur wiring, focus-selection
+routing, and unbuffered Escape-clear installation. `controls/text_field/element/entry/single_line.rs`
+owns the TextInput props call, mount, buffered single-line session/key/blur wiring,
+submit-command-aware key mode, and focus-selection routing. Public `TextField` options and
+editor/IMUI adapter APIs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.

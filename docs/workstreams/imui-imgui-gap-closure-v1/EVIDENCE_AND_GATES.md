@@ -29031,6 +29031,70 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-03 editor TextField entry branch owner split:
+
+- Claim: editor `TextField` entry single-line and multiline mount/session branches moved from
+  `ecosystem/fret-ui-editor/src/controls/text_field/element/entry.rs` into
+  `ecosystem/fret-ui-editor/src/controls/text_field/element/entry/multiline.rs` and
+  `ecosystem/fret-ui-editor/src/controls/text_field/element/entry/single_line.rs` without
+  changing draft model selection, buffered session sync, draft-controller binding, buffered key
+  routing, blur commit/cancel handling, focus-selection sync, unbuffered multiline Escape-clear
+  behavior, input-id reporting, password/assistive semantics, or public `TextField` options.
+- Evidence anchors: `entry.rs` declares `mod multiline;` and `mod single_line;`, keeps
+  `TextFieldEntryArgs`, and routes only through `text_field_multiline_entry(...)` and
+  `text_field_single_line_entry(...)`; `entry/multiline.rs` owns `text_field_area_props(...)`,
+  `cx.text_area(props)`, buffered multiline session sync, `controller.bind(..., None)`,
+  `TextFieldBufferedKeyMode::Multiline`, blur-handler installation, focus-selection routing, and
+  Escape-clear installation; `entry/single_line.rs` owns `text_field_input_props(...)`,
+  `cx.text_input(props)`, buffered single-line session sync, submit-command-aware
+  `controller.bind(...)`, `TextFieldBufferedKeyMode::SingleLine`, blur-handler installation, and
+  focus-selection routing. `tools/gate_imui_workstream_source.py` now rejects branch-specific
+  wiring from drifting back into `entry.rs`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-editor text_field_defaults_to_stable_line_boxes text_field_escape_clear_handles_escape_only text_field_option_defaults_match_buffered_plain_text_baseline --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
+2026-06-03 editor TextField entry branch owner split:
+
+- Claim: `TextField` entry single-line and multiline mount/session branches moved from
+  `ecosystem/fret-ui-editor/src/controls/text_field/element/entry.rs` into
+  `ecosystem/fret-ui-editor/src/controls/text_field/element/entry/multiline.rs` and
+  `ecosystem/fret-ui-editor/src/controls/text_field/element/entry/single_line.rs` without changing
+  draft model selection, buffered session sync, draft-controller binding, buffered key routing,
+  blur commit/cancel handling, focus-selection sync, unbuffered multiline Escape-clear behavior,
+  input-id reporting, password/assistive semantics, or public `TextField` options.
+- Evidence anchors: `entry.rs` declares `mod multiline;` and `mod single_line;`, keeps
+  `TextFieldEntryArgs`, and delegates only via `text_field_multiline_entry(...)` /
+  `text_field_single_line_entry(...)`; `entry/multiline.rs` owns `text_field_area_props(...)`,
+  `cx.text_area(props)`, buffered multiline session sync, `controller.bind(..., None)`,
+  `TextFieldBufferedKeyMode::Multiline`, blur handler installation, focus-selection sync, and
+  `install_text_field_escape_clear_handler(...)`; `entry/single_line.rs` owns
+  `text_field_input_props(...)`, `cx.text_input(props)`, buffered single-line session sync,
+  `controller.bind(..., submit_command.clone())`, `TextFieldBufferedKeyMode::SingleLine`,
+  blur handler installation, and focus-selection sync. `tools/gate_imui_workstream_source.py` now
+  rejects branch-specific wiring from drifting back into `entry.rs`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-editor text_field_defaults_to_stable_line_boxes text_field_escape_clear_handles_escape_only text_field_option_defaults_match_buffered_plain_text_baseline --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-01 IMUI active-trigger type owner split:
 
 - Claim: shared active-trigger type definitions moved from
