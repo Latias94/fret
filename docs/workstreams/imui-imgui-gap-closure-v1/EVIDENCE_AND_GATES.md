@@ -29031,6 +29031,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-03 editor TransformEdit section chrome row/column owner split:
+
+- Claim: TransformEdit section row and column chrome moved from
+  `ecosystem/fret-ui-editor/src/controls/transform_edit/sections.rs` into
+  `ecosystem/fret-ui-editor/src/controls/transform_edit/sections/row.rs` and
+  `ecosystem/fret-ui-editor/src/controls/transform_edit/sections/column.rs` without changing
+  section badge/heading text roles, Link/Uniform toggle behavior, linked-scale test-id routing,
+  Column/Row layout selection, Vec3Edit composition, uniform-scale sync, or public
+  `TransformEdit` options.
+- Evidence anchors: `sections.rs` now declares `mod row;` and `mod column;` and only re-exports
+  `section_row(...)`, `section_col(...)`, and `section_col_with_link(...)`; `sections/row.rs`
+  owns `editor_section_badge_text_props(...)`, badge container chrome, the row `Checkbox::new(...)`
+  Link toggle, and `Arc::from("Link")`; `sections/column.rs` owns
+  `editor_section_heading_text_props(...)`, the column `Checkbox::new(...)` Uniform toggle row, and
+  `Arc::from("Uniform")`; `tools/gate_imui_workstream_source.py` rejects row/column chrome details
+  drifting back into the hub.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor transform_edit --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-03 editor ColorEdit swatch visual owner split:
 
 - Claim: color-edit main swatch visual/tooltip-state projection moved from

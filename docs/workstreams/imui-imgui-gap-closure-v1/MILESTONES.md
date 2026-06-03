@@ -6048,3 +6048,12 @@ visual child-owner routing only. `controls/color_edit/swatch/visual.rs` owns too
 synchronization, `EditorWidgetVisuals` frame projection, clipped preview container assembly, and
 `color_preview_stack(...)` mounting. Public `ColorEdit` behavior and editor/IMUI adapter APIs
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor TransformEdit section chrome row/column owner split result:
+`ecosystem/fret-ui-editor/src/controls/transform_edit/sections.rs` now keeps only the section
+chrome owner hub and private row/column module routing. `controls/transform_edit/sections/row.rs`
+owns horizontal badge chrome plus the row Link toggle, while
+`controls/transform_edit/sections/column.rs` owns column heading chrome plus the Uniform toggle
+row. Section text roles, link-scale test IDs, Column/Row layout selection, Vec3Edit composition,
+uniform-scale sync, public `TransformEdit` options, and editor/IMUI adapter APIs remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split.

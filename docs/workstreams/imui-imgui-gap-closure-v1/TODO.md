@@ -968,6 +968,15 @@ Last updated: 2026-06-03
       frame visual projection, clipped preview container assembly, and `color_preview_stack(...)`
       mounting. The source gate and `imui_surface_policy` anchors prevent visual state from
       drifting back into the root swatch owner.
+- [x] Split editor `TransformEdit` section chrome row/column assembly into private child owners
+      without changing section badge/heading text roles, Link/Uniform toggle behavior,
+      linked-scale test-id routing, Column/Row layout selection, Vec3Edit composition, uniform-scale
+      sync, or public `TransformEdit` options.
+      Result: `controls/transform_edit/sections.rs` now keeps only the section chrome owner hub.
+      `controls/transform_edit/sections/row.rs` owns horizontal section badge chrome and the row
+      Link toggle, while `controls/transform_edit/sections/column.rs` owns column heading chrome
+      and the Uniform toggle row. The source gate freezes the split and rejects row/column chrome
+      details drifting back into the hub.
 - [x] Split editor color-edit root test-id derivation into a private child owner without changing
       explicit child test-id precedence, fallback derivation from the root test id, input/swatch
       assignment, popup/tooltip/copy/eyedropper overlay ids, caller-keyed element identity,
