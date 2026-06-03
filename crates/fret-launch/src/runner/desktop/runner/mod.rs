@@ -155,6 +155,7 @@ mod scheduling_diagnostics;
 mod windows_menu;
 
 mod clipboard_effects;
+mod command_effects;
 mod cursor_effects;
 mod event_loop;
 mod file_transfer_effects;

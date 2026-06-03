@@ -1025,6 +1025,9 @@ Last updated: 2026-06-03
 - [x] Split desktop runner quit-app effect handling into a private quit owner without changing runtime behavior or public effect surfaces. The docking source gate
   freezes the owner split in `M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming
   Wayland compositor acceptance.
+- [x] Split desktop runner command effect handling into a private command owner without changing runtime behavior or public effect surfaces. The docking source gate
+  freezes the owner split in `M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming
+  Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

@@ -779,6 +779,15 @@ Each TODO is labeled:
         delegates the quit-app effect branch.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner command effects owner split keeps command context assembly out of the
+      general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/command_effects.rs` owns window-scoped command
+        delivery, global command delivery, UI services selection, and driver callback routing.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        delegates the command effect branch.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

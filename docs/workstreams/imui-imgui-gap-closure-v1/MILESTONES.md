@@ -1408,6 +1408,13 @@ behavior, dispatcher shutdown, and event-loop exit. Runtime behavior and public 
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
 multiwindow source gate.
 
+2026-06-04 desktop runner command effects owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the generic effect loop and
+delegates `Effect::Command` handling to `crates/fret-launch/src/runner/desktop/runner/command_effects.rs`.
+`command_effects.rs` owns window/global command context assembly, UI services selection, and driver
+callback routing. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

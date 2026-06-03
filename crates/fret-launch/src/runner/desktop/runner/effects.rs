@@ -6,7 +6,7 @@ use fret_core::Event;
 use fret_core::time::Instant;
 use winit::event_loop::ActiveEventLoop;
 
-use super::{WinitCommandContext, WinitGlobalContext, WinitRunner, WinitWindowContext};
+use super::{WinitRunner, WinitWindowContext};
 
 impl<D: super::WinitAppDriver> WinitRunner<D> {
     pub(super) fn drain_inboxes(&mut self, window: Option<fret_core::AppWindowId>) -> bool {
@@ -141,36 +141,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     Effect::UnhideAllApps => {
                         self.handle_unhide_all_apps();
                     }
-                    Effect::Command { window, command } => match window {
-                        Some(window) => {
-                            if let Some(state) = self.windows.get_mut(window) {
-                                let services = Self::ui_services_mut(
-                                    &mut self.renderer,
-                                    &mut self.no_services,
-                                );
-                                self.driver.handle_command(
-                                    WinitCommandContext {
-                                        app: &mut self.app,
-                                        services,
-                                        window,
-                                        state: &mut state.user,
-                                    },
-                                    command,
-                                );
-                            }
-                        }
-                        None => {
-                            let services =
-                                Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                            self.driver.handle_global_command(
-                                WinitGlobalContext {
-                                    app: &mut self.app,
-                                    services,
-                                },
-                                command,
-                            );
-                        }
-                    },
+                    Effect::Command { window, command } => {
+                        self.handle_command_effect(window, command);
+                    }
                     Effect::SetMenuBar { window, menu_bar } => {
                         if window.is_none() {
                             self.menu_bar = Some(menu_bar.clone());
