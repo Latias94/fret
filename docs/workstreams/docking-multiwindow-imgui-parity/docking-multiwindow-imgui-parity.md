@@ -148,6 +148,11 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M58_DOCKING_DECLARATIVE_INTERACTION_TYPE_OWNER_SPLIT_2026-06-03.md`
   (moves declarative docking interaction record types into a private `interaction/types.rs` owner
   without changing service methods, caller paths, field access, or the Wayland acceptance boundary)
+- Latest runner DockFloating follow owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M59_RUNNER_DOCKING_FOLLOW_OWNER_SPLIT_2026-06-03.md`
+  (moves desktop runner DockFloating follow movement and transparent-payload style patching into
+  a private `docking/follow.rs` owner without changing caller paths, follow behavior, or the
+  Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

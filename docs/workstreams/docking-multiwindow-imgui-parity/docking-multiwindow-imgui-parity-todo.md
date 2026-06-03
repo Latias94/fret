@@ -556,6 +556,16 @@ Each TODO is labeled:
         `DeclarativeDockInteractionService` and begin/take/set/cache methods.
       - Focused docking regressions, source gate, JSON shape, catalog, and diff checks passed
         locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner DockFloating follow owner split keeps follow movement out of the
+      dock-drag pointer/poll-up owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M59_RUNNER_DOCKING_FOLLOW_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` owns
+        `update_dock_tearoff_follow`, `stop_dock_tearoff_follow`, transparent payload style
+        requests, redundant outer-position suppression, and final settle/rollback.
+      - `crates/fret-launch/src/runner/desktop/runner/docking.rs` keeps dock drag pointer
+        discovery, pointer-capture cancellation, and platform poll-up fallbacks.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
