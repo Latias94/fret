@@ -167,6 +167,7 @@ mod webview;
 mod win32;
 mod window;
 mod window_close;
+mod window_geometry;
 mod window_lifecycle;
 mod window_style;
 

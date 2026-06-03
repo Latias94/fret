@@ -624,6 +624,15 @@ Each TODO is labeled:
         `WindowRequest::Close` dispatch only.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner window geometry owner split keeps geometry/chrome request application
+      out of the general effect dispatcher:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M65_RUNNER_WINDOW_GEOMETRY_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_geometry.rs` owns visible, inner-size,
+        outer-position, raise, native drag, and native resize request helpers.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic geometry/chrome
+        `WindowRequest` dispatch only.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

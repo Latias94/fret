@@ -178,6 +178,11 @@ Platform note:
   (moves `WindowRequest::Close` checked-close, main-window exit, force-close-all, empty-window
   shutdown, and event-loop exit policy into `window_close.rs` without changing close behavior or the
   Wayland acceptance boundary)
+- Latest runner window geometry owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M65_RUNNER_WINDOW_GEOMETRY_OWNER_SPLIT_2026-06-03.md`
+  (moves `WindowRequest` visible, size, outer-position, raise, native drag, and native resize
+  application into `window_geometry.rs` without changing geometry/chrome behavior or the Wayland
+  acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

@@ -4,7 +4,6 @@ use super::macos_cursor::dock_tearoff_log;
 use super::streaming_images::{
     StreamingImageUpdateNv12, StreamingImageUpdateRgba8, UploadedImageEntry,
 };
-use super::window::bring_window_to_front;
 use fret_app::{CreateWindowKind, Effect, WindowRequest};
 use fret_core::Event;
 use fret_core::time::Instant;
@@ -1619,124 +1618,25 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             self.app.request_redraw(new_window);
                         }
                         WindowRequest::SetVisible { window, visible } => {
-                            if let Some(state) = self.windows.get(window) {
-                                state.window.set_visible(visible);
-                                state.window.request_redraw();
-                            }
+                            self.apply_window_visibility_request(window, visible);
                         }
                         WindowRequest::SetInnerSize { window, size } => {
-                            let applied = if let Some(state) = self.windows.get_mut(window) {
-                                let requested = winit::dpi::LogicalSize::new(
-                                    size.width.0 as f64,
-                                    size.height.0 as f64,
-                                );
-                                Some(
-                                    state
-                                        .window
-                                        .request_surface_size(requested.into())
-                                        // Some platforms apply the resize without emitting a resize
-                                        // event *and* return `None` here. Fall back to querying the
-                                        // current surface size so scripted diagnostics still converge.
-                                        .unwrap_or_else(|| state.window.surface_size()),
-                                )
-                            } else {
-                                None
-                            };
-
-                            if let Some(applied) = applied {
-                                // Match the OS resize-event path: sync the surface as soon as we
-                                // know the applied physical size, but keep window-metrics delivery
-                                // coalesced to the next redraw.
-                                self.sync_surface_resize_now(window, applied);
-                                self.request_surface_resize_redraw(window);
-                            }
+                            self.apply_window_inner_size_request(window, size);
                         }
                         WindowRequest::SetOuterPosition { window, position } => {
-                            if let Some(state) = self.windows.get(window) {
-                                #[cfg(target_os = "windows")]
-                                {
-                                    // On Windows, winit's `Position::Logical` is monitor-local.
-                                    // Convert to absolute physical pixels to make scripted window
-                                    // placement deterministic across multi-monitor setups.
-                                    let scale = state.window.scale_factor().max(0.000_001);
-                                    let x = (position.x as f64 * scale).round() as i32;
-                                    let y = (position.y as f64 * scale).round() as i32;
-                                    if let Some(hwnd) = Self::hwnd_for_window(state.window.as_ref())
-                                    {
-                                        let _ = super::win32::set_window_outer_position(hwnd, x, y);
-                                    } else {
-                                        state.window.set_outer_position(
-                                            winit::dpi::Position::Physical(
-                                                winit::dpi::PhysicalPosition::new(x, y),
-                                            ),
-                                        );
-                                    }
-                                }
-                                #[cfg(not(target_os = "windows"))]
-                                state
-                                    .window
-                                    .set_outer_position(winit::dpi::Position::Logical(
-                                        winit::dpi::LogicalPosition::new(
-                                            position.x as f64,
-                                            position.y as f64,
-                                        ),
-                                    ));
-                                state.window.request_redraw();
-                            }
+                            self.apply_window_outer_position_request(window, position);
                         }
                         WindowRequest::Raise {
                             window,
                             sender: sender_id,
                         } => {
-                            let sender_window = sender_id
-                                .and_then(|id| self.windows.get(id))
-                                .map(|w| w.window.as_ref());
-                            if let Some(state) = self.windows.get(window) {
-                                let _ = bring_window_to_front(state.window.as_ref(), sender_window);
-                                state.window.request_redraw();
-                            }
-                            #[cfg(target_os = "macos")]
-                            {
-                                if self.windows.contains_key(window) {
-                                    self.enqueue_window_front(window, sender_id, None, now);
-                                }
-                            }
+                            self.apply_window_raise_request(window, sender_id, now);
                         }
                         WindowRequest::BeginDrag { window } => {
-                            if let Some(state) = self.windows.get(window) {
-                                let _ = state.window.drag_window();
-                            }
+                            self.begin_window_drag_request(window);
                         }
                         WindowRequest::BeginResize { window, direction } => {
-                            if let Some(state) = self.windows.get(window) {
-                                let direction = match direction {
-                                    fret_runtime::WindowResizeDirection::N => {
-                                        winit::window::ResizeDirection::North
-                                    }
-                                    fret_runtime::WindowResizeDirection::Ne => {
-                                        winit::window::ResizeDirection::NorthEast
-                                    }
-                                    fret_runtime::WindowResizeDirection::E => {
-                                        winit::window::ResizeDirection::East
-                                    }
-                                    fret_runtime::WindowResizeDirection::Se => {
-                                        winit::window::ResizeDirection::SouthEast
-                                    }
-                                    fret_runtime::WindowResizeDirection::S => {
-                                        winit::window::ResizeDirection::South
-                                    }
-                                    fret_runtime::WindowResizeDirection::Sw => {
-                                        winit::window::ResizeDirection::SouthWest
-                                    }
-                                    fret_runtime::WindowResizeDirection::W => {
-                                        winit::window::ResizeDirection::West
-                                    }
-                                    fret_runtime::WindowResizeDirection::Nw => {
-                                        winit::window::ResizeDirection::NorthWest
-                                    }
-                                };
-                                let _ = state.window.drag_resize_window(direction);
-                            }
+                            self.begin_window_resize_request(window, direction);
                         }
                         WindowRequest::SetStyle { window, style } => {
                             self.apply_window_style_request(window, style);
