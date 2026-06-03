@@ -7,22 +7,25 @@ Last updated: 2026-06-03
 
 Claim verified: the large `fret-imui` layout-collection composition proof file no longer owns the
 table helper proof surface; table layout, visibility, header-context-menu, pinned-column, and
-background override tests live in a private `layout_collections/table.rs` owner.
+background override tests live under private table proof owners.
 
 Evidence:
 
 - Fret IMUI layout collection table test owner split - 2026-06-03.
 - `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` declares `mod table;` and keeps
   container/menu/tab/virtual-list/separator/bullet composition tests.
-- `ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs` owns table helper tests
-  plus `first_solid_quad_index(...)`.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs` owns the table proof root,
+  table layout, pinned-column, plain/sortable header, background override tests, and
+  `first_solid_quad_index(...)`.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs` owns hidden
+  column, runtime visibility, visibility-menu, and header-context-menu visibility tests.
 - `tools/gate_imui_workstream_source.py` now requires the table owner and rejects table helper
   drift back into the mixed layout-collection root file.
 
 Focused gates:
 
 - `cargo fmt --package fret-imui`: pass.
-- `cargo nextest run -p fret-imui layout_collections --no-fail-fast`: pass, 28 tests.
+- `cargo nextest run -p fret-imui layout_collections::table --no-fail-fast`: pass, 13 tests.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
