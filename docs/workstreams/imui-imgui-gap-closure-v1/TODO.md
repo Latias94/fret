@@ -56,6 +56,14 @@ Last updated: 2026-06-03
       proof, metrics, debug trace, and Wayland handoff commands. The golden-path surface test and
       IMUI source gate now freeze the host route so it cannot drift back to a bare editor-notes
       route alias.
+- [x] Make the canonical workbench quick-action strip operational with an app-owned copy affordance
+      instead of leaving the action list as display-only chrome.
+      Result: the strip now has stable `imui-editor-workbench.action.copy-selected-command` and
+      `imui-editor-workbench.action.copy-command-bundle` controls plus a
+      `imui-editor-workbench.action-copy-status` readout. The workbench can copy either the
+      currently selected Demo/Metrics/Debug command or the full command bundle through the existing
+      runtime `Effect::ClipboardWriteText` boundary while keeping execution in DevTools and
+      fretboard.
 
 ## Porting Sugar Proof - 2026-05-31
 

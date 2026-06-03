@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Canonical Workbench Copy-Affordance Evidence - 2026-06-03
+
+Claim verified: the canonical IMUI editor workbench quick-action strip is no longer display-only;
+it now exposes app-owned `Copy command` and `Copy commands` affordances plus copy-status feedback.
+The workbench can copy either the currently selected Demo/Metrics/Debug command or the full
+command bundle through the existing runtime clipboard effect boundary while keeping execution in
+DevTools and fretboard.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_workbench_demo.rs` now defines
+  `TEST_ID_ACTION_COPY_SELECTED`, `TEST_ID_ACTION_COPY_BUNDLE`, and
+  `TEST_ID_ACTION_COPY_STATUS`, plus the shared `workbench_copy_text_on_activate(...)` helper and
+  `workbench_quick_action_command_bundle_text()` bundle formatter that feed
+  `Effect::ClipboardWriteText`.
+- The selected-command affordance copies the currently active
+  `WorkbenchQuickActionSpec.command` value shown under `imui-editor-workbench.action-command`,
+  while the bundle affordance copies the full Demo/Metrics/Debug command set and the status
+  readout confirms which payload was copied.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` now freezes the copy
+  affordance contract alongside the existing host/action-strip route checks, including the two
+  copy controls, the shared helper, the bundle formatter, and the status readout.
+- `tools/gate_imui_workstream_source.py` now requires the stable copy-affordance test ids, the
+  shared helper, the bundle formatter, and the clipboard effect marker so the canonical workbench
+  cannot regress back to a display-only action strip.
+- `TODO.md` and `MILESTONES.md` now record the copy slice as a thin productization step on the
+  canonical workbench route without reopening the closed editor-notes inspector command lane.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples`: pass.
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass with existing warnings from
+  `fret-chart` and `fret-plot`.
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
+  pass, 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Canonical Workbench Persistent Action Strip Evidence - 2026-06-03
 
 Claim verified: the canonical IMUI editor workbench route now owns a persistent

@@ -46,6 +46,9 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     for needle in [
         "const TEST_ID_ACTION_STRIP: &str = \"imui-editor-workbench.action-strip\";",
         "const TEST_ID_ACTION_COMMAND: &str = \"imui-editor-workbench.action-command\";",
+        "const TEST_ID_ACTION_COPY_SELECTED: &str = \"imui-editor-workbench.action.copy-selected-command\";",
+        "const TEST_ID_ACTION_COPY_BUNDLE: &str = \"imui-editor-workbench.action.copy-command-bundle\";",
+        "const TEST_ID_ACTION_COPY_STATUS: &str = \"imui-editor-workbench.action-copy-status\";",
         "const TEST_ID_WORKFLOW: &str = \"imui-editor-workbench.workflow\";",
         "const WORKBENCH_QUICK_ACTIONS: &[WorkbenchQuickActionSpec]",
         "WorkbenchQuickAction::Workbench",
@@ -59,6 +62,17 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
         "imui-p3-wayland-real-host",
         "DevTools and fretboard own execution.",
+        "Ready to copy the selected command or the full command bundle.",
+        "fn workbench_quick_action_command_bundle_text() -> String {",
+        "fn workbench_copy_text_on_activate(",
+        "Effect::ClipboardWriteText",
+        "shadcn::Button::new(\"Copy command\")",
+        "shadcn::Button::new(\"Copy commands\")",
+        ".on_activate(workbench_copy_text_on_activate(",
+        "active_spec.command.to_string(),",
+        "workbench_quick_action_command_bundle_text(),",
+        "Copied Demo/Metrics/Debug command bundle.",
+        ".test_id(TEST_ID_ACTION_COPY_STATUS)",
     ] {
         assert!(
             route_source.contains(needle),

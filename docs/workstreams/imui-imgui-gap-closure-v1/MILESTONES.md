@@ -13,6 +13,15 @@ trace command, and the Wayland real-host handoff command while leaving execution
 fretboard. `imui_editor_workbench_golden_path_surface` and the IMUI source gate now freeze the
 host route, so the canonical workbench cannot regress back to a bare route alias.
 
+2026-06-03 canonical workbench copy-affordance result:
+The persistent quick-action strip is no longer display-only. It now includes stable
+`imui-editor-workbench.action.copy-selected-command` and
+`imui-editor-workbench.action.copy-command-bundle` controls plus an
+`imui-editor-workbench.action-copy-status` readout. The workbench can copy either the currently
+selected Demo/Metrics/Debug command or the full command bundle through the existing runtime
+`Effect::ClipboardWriteText` boundary while keeping execution with DevTools and fretboard. The
+editor workflow remains mounted under `imui-editor-workbench.workflow`.
+
 2026-06-03 IMUI ResponseExt type owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover.rs` now keeps the hover response module declarations
 and public re-exports only. `response/hover/types.rs` owns the `ResponseExt` field record with

@@ -8,9 +8,10 @@
 
 use std::sync::Arc;
 
+use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::{Defaults, FretApp};
-use fret_app::CommandId;
+use fret_app::{CommandId, Effect};
 use fret_ui::element::AnyElement;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElementInExt as _, Space};
@@ -22,6 +23,9 @@ const TEST_ID_ACTION_STRIP: &str = "imui-editor-workbench.action-strip";
 const TEST_ID_ACTION_BUTTONS: &str = "imui-editor-workbench.action-buttons";
 const TEST_ID_ACTION_STATUS: &str = "imui-editor-workbench.action-status";
 const TEST_ID_ACTION_COMMAND: &str = "imui-editor-workbench.action-command";
+const TEST_ID_ACTION_COPY_SELECTED: &str = "imui-editor-workbench.action.copy-selected-command";
+const TEST_ID_ACTION_COPY_BUNDLE: &str = "imui-editor-workbench.action.copy-command-bundle";
+const TEST_ID_ACTION_COPY_STATUS: &str = "imui-editor-workbench.action-copy-status";
 const TEST_ID_WORKFLOW: &str = "imui-editor-workbench.workflow";
 const TEST_ID_ACTION_WORKBENCH: &str = "imui-editor-workbench.action.open-workbench";
 const TEST_ID_ACTION_PROOF: &str = "imui-editor-workbench.action.supporting-proof";
@@ -150,6 +154,9 @@ impl View for ImUiEditorWorkbenchView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let active_action = cx.state().local_init(WorkbenchQuickAction::default);
+        let copy_status_state = cx.state().local_init(|| {
+            "Ready to copy the selected command or the full command bundle.".to_string()
+        });
         cx.actions()
             .local(&active_action)
             .set::<act::SelectWorkbench>(WorkbenchQuickAction::Workbench);
@@ -167,7 +174,9 @@ impl View for ImUiEditorWorkbenchView {
             .set::<act::SelectWayland>(WorkbenchQuickAction::Wayland);
 
         let active_action = cx.state().watch(&active_action).layout().value_or_default();
-        let action_strip = render_workbench_quick_action_strip(cx, active_action);
+        let copy_status = copy_status_state.layout_value(cx);
+        let action_strip =
+            render_workbench_quick_action_strip(cx, active_action, copy_status_state, copy_status);
         let action_strip_region = ui::container(|_cx| [action_strip])
             .px(Space::N4)
             .pt(Space::N4)
@@ -230,15 +239,39 @@ fn workbench_quick_action_command(action: WorkbenchQuickAction) -> CommandId {
     }
 }
 
-fn render_workbench_quick_action_strip<'a, Cx>(
-    cx: &mut Cx,
+fn workbench_quick_action_command_bundle_text() -> String {
+    WORKBENCH_QUICK_ACTIONS
+        .iter()
+        .map(|spec| format!("{}: {}", spec.label, spec.command))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn workbench_copy_text_on_activate(
+    text: String,
+    copy_status: LocalState<String>,
+    next_status: String,
+) -> fret_ui::action::OnActivate {
+    Arc::new(move |host, action_cx, _reason| {
+        let token = host.next_clipboard_token();
+        host.push_effect(Effect::ClipboardWriteText {
+            window: action_cx.window,
+            token,
+            text: text.clone(),
+        });
+        let _ = copy_status.set_in(host.models_mut(), next_status.clone());
+        host.request_redraw(action_cx.window);
+    })
+}
+
+fn render_workbench_quick_action_strip(
+    cx: &mut AppUi<'_, '_>,
     active: WorkbenchQuickAction,
-) -> AnyElement
-where
-    Cx: fret::app::ElementContextAccess<'a, App>,
-{
+    copy_status_state: LocalState<String>,
+    copy_status: String,
+) -> AnyElement {
     let active_spec = *workbench_quick_action_spec(active);
-    let action_buttons = WORKBENCH_QUICK_ACTIONS
+    let mut action_buttons = WORKBENCH_QUICK_ACTIONS
         .iter()
         .map(|spec| {
             let selected = spec.action == active;
@@ -258,6 +291,32 @@ where
                 .into_element_in(cx)
         })
         .collect::<Vec<_>>();
+    action_buttons.push(
+        shadcn::Button::new("Copy command")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .size(shadcn::ButtonSize::Sm)
+            .on_activate(workbench_copy_text_on_activate(
+                active_spec.command.to_string(),
+                copy_status_state.clone(),
+                format!("Copied {} command.", active_spec.label),
+            ))
+            .test_id(TEST_ID_ACTION_COPY_SELECTED)
+            .ui()
+            .into_element_in(cx),
+    );
+    action_buttons.push(
+        shadcn::Button::new("Copy commands")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .on_activate(workbench_copy_text_on_activate(
+                workbench_quick_action_command_bundle_text(),
+                copy_status_state,
+                "Copied Demo/Metrics/Debug command bundle.".to_string(),
+            ))
+            .test_id(TEST_ID_ACTION_COPY_BUNDLE)
+            .ui()
+            .into_element_in(cx),
+    );
     let action_buttons = ui::h_flex(move |_cx| action_buttons)
         .gap(Space::N2)
         .items_center()
@@ -291,6 +350,7 @@ where
             ),
             workbench_text_readout(cx, active_spec.purpose),
             workbench_text_readout(cx, active_spec.command).test_id(TEST_ID_ACTION_COMMAND),
+            workbench_text_readout(cx, copy_status).test_id(TEST_ID_ACTION_COPY_STATUS),
         ]
     })
     .gap(Space::N1)
