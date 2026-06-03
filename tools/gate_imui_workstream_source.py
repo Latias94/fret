@@ -46,6 +46,10 @@ OPAQUE_STRUCT_SUFFIXES = (
     "Summary",
 )
 
+IMUI_KIT_SOURCE_THINNESS_ROOT = Path("ecosystem/fret-ui-kit/src/imui")
+IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180
+IMUI_KIT_SOURCE_THINNESS_EXCLUDED_DIRS = {"tests"}
+
 IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
@@ -355,6 +359,31 @@ def check_table_column_accessors(failures: list[str]) -> None:
         if marker not in accessor_sources[owner]:
             failures.append(
                 f"{path.as_posix()}: missing TableColumn {owner} accessor seam {marker}"
+            )
+
+
+def check_imui_kit_source_thinness(failures: list[str]) -> None:
+    root = WORKSPACE_ROOT / IMUI_KIT_SOURCE_THINNESS_ROOT
+    if not root.is_dir():
+        failures.append(f"{IMUI_KIT_SOURCE_THINNESS_ROOT.as_posix()}: missing source root")
+        return
+
+    for path in sorted(root.rglob("*.rs")):
+        local_parts = path.relative_to(root).parts
+        if any(part in IMUI_KIT_SOURCE_THINNESS_EXCLUDED_DIRS for part in local_parts):
+            continue
+
+        rel = path.relative_to(WORKSPACE_ROOT)
+        try:
+            line_count = len(path.read_text(encoding="utf-8").splitlines())
+        except OSError as exc:
+            failures.append(f"{rel.as_posix()}: failed to read source for line guard: {exc}")
+            continue
+
+        if line_count > IMUI_KIT_SOURCE_THINNESS_MAX_LINES:
+            failures.append(
+                f"{rel.as_posix()}: {line_count} lines exceeds "
+                f"{IMUI_KIT_SOURCE_THINNESS_MAX_LINES} line kit IMUI owner limit"
             )
 
 
@@ -3061,6 +3090,10 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md"),
             required=[
+                "Kit IMUI Source Thinness Guard - 2026-06-03",
+                "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
+                "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",
+                "check_imui_kit_source_thinness",
                 "Docking Declarative Interaction Type Owner Split - 2026-06-03",
                 "docking declarative interaction record type owner",
                 "interaction.rs keeps service storage and methods",
@@ -59096,6 +59129,7 @@ def main() -> None:
     )
     check_table_column_accessors(failures)
     check_property_row_value_slot_overflow(failures)
+    check_imui_kit_source_thinness(failures)
     for failure in collect_docking_multiwindow_failures():
         failures.append(f"docking multiwindow source: {failure}")
 

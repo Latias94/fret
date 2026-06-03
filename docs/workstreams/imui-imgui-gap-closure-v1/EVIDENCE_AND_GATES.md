@@ -3,6 +3,25 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI Source Thinness Guard - 2026-06-03
+
+Claim verified: `ecosystem/fret-ui-kit/src/imui` production files stay below 180 lines so the
+current owner-split posture is source-guarded instead of relying on manual review memory.
+
+Evidence:
+
+- Kit IMUI source thinness guard - 2026-06-03.
+- `tools/gate_imui_workstream_source.py` now defines `IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180`.
+- `check_imui_kit_source_thinness` scans `ecosystem/fret-ui-kit/src/imui/**/*.rs`, excludes
+  `tests` path components, and fails any production owner above the line budget.
+- Evidence anchor: ecosystem/fret-ui-kit/src/imui production files stay below 180 lines.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Docking Declarative Interaction Type Owner Split - 2026-06-03
 
 Claim verified: declarative docking interaction record types moved into a private
