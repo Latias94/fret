@@ -386,6 +386,7 @@ def _check_docs(failures: list[str]) -> None:
             "`M69_RUNNER_CLIPBOARD_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner clipboard and primary-selection effect ownership",
             "`M70_RUNNER_INCOMING_OPEN_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner incoming-open effect ownership",
             "`M71_RUNNER_FILE_TRANSFER_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner file-transfer effect ownership",
+            "`M75_RUNNER_SYSTEM_FONT_RESCAN_OWNER_SPLIT_2026-06-04.md` records desktop runner system-font rescan state ownership",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -452,6 +453,10 @@ def _check_docs(failures: list[str]) -> None:
             "Latest runner text effects owner split:",
             "M74_RUNNER_TEXT_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "text_effects.rs",
+            "Latest runner system-font rescan owner split:",
+            "M75_RUNNER_SYSTEM_FONT_RESCAN_OWNER_SPLIT_2026-06-04.md",
+            "async rescan gating",
+            "resize deferral",
         ],
         failures=failures,
     )
@@ -572,6 +577,10 @@ def _check_docs(failures: list[str]) -> None:
             "window_style.rs` owns",
             "`apply_window_style_request`",
             "transparent-payload follow state",
+            "2026-06-04 runner system-font rescan owner split keeps the rescan state machine out",
+            "M75_RUNNER_SYSTEM_FONT_RESCAN_OWNER_SPLIT_2026-06-04.md",
+            "async rescan gating",
+            "resize deferral",
             "2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration",
         ],
         forbidden=[
@@ -1266,6 +1275,38 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M75_RUNNER_SYSTEM_FONT_RESCAN_OWNER_SPLIT_2026-06-04.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/text_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effects.rs",
+            "system_font_rescan_async_enabled",
+            "system_font_catalog_startup_async_enabled",
+            "publish_system_font_rescan_state",
+            "request_system_font_rescan",
+            "rescan_system_fonts_sync",
+            "finish_system_font_rescan_result_state",
+            "apply_pending_system_font_rescan_result",
+            "resize-deferral helpers",
+            "cargo fmt --package fret-launch -- --check",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "gate_docking_multiwindow_workstream_source.py",
+            "gate_imui_workstream_source.py",
+            "WORKSTREAM.json",
+            "git diff --check",
+            "It does not close",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod clipboard_effects;",
@@ -1292,6 +1333,39 @@ def _check_docs(failures: list[str]) -> None:
             "fn effective_platform_capabilities_from_available",
             "ExternalDragPayloadKind",
             "ExternalDragPositionQuality",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/text_effects.rs"),
+        required=[
+            "pub(super) fn system_font_rescan_async_enabled",
+            "pub(super) fn system_font_catalog_startup_async_enabled",
+            "pub(super) fn publish_system_font_rescan_state",
+            "pub(super) fn request_system_font_rescan",
+            "pub(super) fn rescan_system_fonts_sync",
+            "pub(super) fn finish_system_font_rescan_result_state",
+            "pub(super) fn apply_pending_system_font_rescan_result",
+            "fn observe_window_surface_sizes",
+            "fn should_defer_system_font_rescan_apply",
+            "handle_text_add_font_assets",
+            "handle_text_rescan_system_fonts",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/effects.rs"),
+        required=[],
+        forbidden=[
+            "pub(super) fn system_font_rescan_async_enabled",
+            "pub(super) fn system_font_catalog_startup_async_enabled",
+            "pub(super) fn publish_system_font_rescan_state",
+            "pub(super) fn request_system_font_rescan",
+            "pub(super) fn rescan_system_fonts_sync",
+            "pub(super) fn finish_system_font_rescan_result_state",
+            "pub(super) fn apply_pending_system_font_rescan_result",
+            "fn observe_window_surface_sizes",
+            "fn should_defer_system_font_rescan_apply",
         ],
         failures=failures,
     )

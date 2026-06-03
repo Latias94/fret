@@ -29535,6 +29535,20 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M74_RUNNER_TEXT_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner system-font rescan owner split:
+
+- Claim: system-font rescan state handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/text_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `text_effects.rs` owns `system_font_rescan_async_enabled`,
+  `system_font_catalog_startup_async_enabled`, `publish_system_font_rescan_state`,
+  `request_system_font_rescan`, `rescan_system_fonts_sync`,
+  `finish_system_font_rescan_result_state`, and `apply_pending_system_font_rescan_result`;
+  `effects.rs` keeps the generic effect queue loop and drain-turn trigger.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M75_RUNNER_SYSTEM_FONT_RESCAN_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from
