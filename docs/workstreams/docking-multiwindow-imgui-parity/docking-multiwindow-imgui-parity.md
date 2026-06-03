@@ -240,6 +240,10 @@ Platform note:
 - Latest runner cursor effects owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   (moves cursor icon application into `cursor_effects.rs` without changing runtime behavior)
+- Latest runner quit-app effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves quit-app prompt, dev-state flush, force-close, dispatcher shutdown, and event-loop exit
+  handling into `quit_effects.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

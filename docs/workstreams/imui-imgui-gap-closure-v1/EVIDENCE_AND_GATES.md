@@ -29599,6 +29599,18 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner quit-app effects owner split:
+
+- Claim: quit-app effect handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/quit_effects.rs` without changing runtime behavior
+  or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod quit_effects;`; `quit_effects.rs` owns
+  `handle_quit_app_effect`; `effects.rs` keeps the effect queue loop and only delegates
+  `Effect::QuitApp` to the quit owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

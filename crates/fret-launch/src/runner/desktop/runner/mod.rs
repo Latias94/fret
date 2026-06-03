@@ -165,6 +165,7 @@ mod incoming_open_effects;
 mod macos_cursor;
 mod platform_capabilities;
 mod platform_prefs;
+mod quit_effects;
 mod render;
 mod run;
 mod shell_effects;

@@ -328,6 +328,7 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/ime_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/text_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/timers.rs",
+            "crates/fret-launch/src/runner/desktop/runner/quit_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/platform_capabilities.rs",
             "crates/fret-launch/src/runner/desktop/runner/window_close.rs",
             "crates/fret-launch/src/runner/desktop/runner/window_geometry.rs",
@@ -395,6 +396,7 @@ def _check_docs(failures: list[str]) -> None:
             "`M77_RUNNER_FRAME_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner frame effect ownership",
             "`M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner timer effect ownership",
             "`M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner cursor effect ownership",
+            "`M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner quit-app effect ownership",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -477,6 +479,9 @@ def _check_docs(failures: list[str]) -> None:
             "Latest runner cursor effects owner split:",
             "M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "cursor_effects.rs",
+            "Latest runner quit-app effects owner split:",
+            "M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "quit_effects.rs",
         ],
         failures=failures,
     )
@@ -613,6 +618,10 @@ def _check_docs(failures: list[str]) -> None:
             "2026-06-04 runner cursor effects owner split keeps cursor icon application out",
             "M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "dirty-window propagation",
+            "2026-06-04 runner quit-app effects owner split keeps application shutdown handling out",
+            "M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "force-close-all-windows behavior",
+            "event-loop exit",
             "2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration",
         ],
         forbidden=[
@@ -1467,6 +1476,39 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/mod.rs",
+            "crates/fret-launch/src/runner/desktop/runner/quit_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effects.rs",
+            "handle_quit_app_effect",
+            "Effect::QuitApp",
+            "before-close prompt gate",
+            "dev-state geometry flush",
+            "force-close-all-windows behavior",
+            "dispatcher shutdown",
+            "event-loop exit",
+            "mod quit_effects;",
+            "cargo fmt --package fret-launch -- --check",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "gate_docking_multiwindow_workstream_source.py",
+            "gate_imui_workstream_source.py",
+            "WORKSTREAM.json",
+            "git diff --check",
+            "It does not close",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod clipboard_effects;",
@@ -1478,6 +1520,7 @@ def _check_docs(failures: list[str]) -> None:
             "mod image_effects;",
             "mod ime_effects;",
             "mod text_effects;",
+            "mod quit_effects;",
             "mod platform_capabilities;",
             "mod window_close;",
             "mod window_geometry;",
@@ -1546,6 +1589,27 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/quit_effects.rs"),
+        required=[
+            "pub(super) fn handle_quit_app_effect",
+            "self.driver.before_close_window(&mut self.app, window)",
+            "self.dev_state.enabled()",
+            "fn flush_dev_state_for_quit_app_effect",
+            "sync_window_keys_from_app",
+            "observe_window_geometry_now",
+            "self.dev_state.export_and_flush_now(&mut self.app)",
+            "let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();",
+            "self.force_close_window(window)",
+            "self.dispatcher.shutdown();",
+            "event_loop.exit();",
+            "true",
+        ],
+        forbidden=[
+            "pub fn ",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/frame_effects.rs"),
         required=[
             "pub(super) fn handle_effect_redraw",
@@ -1596,6 +1660,11 @@ def _check_docs(failures: list[str]) -> None:
             "with_injected_event_scope",
             "self.timers.remove(&token)",
             "state.platform.set_cursor_icon",
+            "self.driver.before_close_window(&mut self.app, window)",
+            "self.dev_state.export_and_flush_now(&mut self.app)",
+            "self.dispatcher.shutdown();",
+            "event_loop.exit();",
+            "self.force_close_window(window)",
         ],
         failures=failures,
     )
@@ -1655,6 +1724,7 @@ def _check_docs(failures: list[str]) -> None:
             "self.handle_file_dialog_release(token);",
             "self.apply_window_metrics_insets_request(",
             "self.apply_window_metrics_preferences_request(",
+            "self.handle_quit_app_effect(event_loop)",
         ],
         forbidden=[
             "WindowRequest::Close(window)",
