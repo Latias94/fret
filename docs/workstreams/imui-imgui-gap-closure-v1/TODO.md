@@ -238,6 +238,16 @@ Last updated: 2026-06-03
       `row/metrics.rs` owns row height/test-id projection, and `row/children.rs` owns row child
       packing. The source gate prevents metrics/packing policy from drifting back into the wrapper
       owner.
+- [x] Split IMUI tooltip panel element assembly out of
+      `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` into a private element owner
+      without changing trigger-anchor lookup, window-margin bounds, popper placement, panel-id
+      writeback, tooltip semantics/test-id wiring, rich-content facade mounting, or public tooltip
+      facade behavior.
+      Result: `tooltip_overlay/panel.rs` keeps root-name scoping, anchor/outer/layout resolution,
+      and delegation only. `tooltip_overlay/panel/element.rs` owns the named panel element,
+      panel-id model writeback, popover chrome attachment, rich-content column facade assembly, and
+      tooltip semantics/test-id decoration. The source gate prevents panel element assembly from
+      drifting back into the placement owner.
 - [x] Split IMUI disclosure header indicator-slot assembly out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` into a
       private child owner without changing indicator width, glyph chrome, inherited foreground,

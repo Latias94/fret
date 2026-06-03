@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 IMUI tooltip panel element owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` now keeps root-name scoping,
+trigger-anchor fallback, environment outer-bounds lookup, popper placement, and delegation only.
+`tooltip_overlay/panel/element.rs` owns the named tooltip panel element, panel-id model writeback,
+popover chrome attachment, rich-content column facade assembly, and tooltip semantics/test-id
+decoration. Public tooltip facade behavior, hover/dismissal runtime, request orchestration, and
+text-tooltip helpers remain unchanged, and the source gate freezes placement and element assembly
+as separate owners.
+
 2026-06-03 canonical workbench persistent action-strip result:
 `apps/fret-examples/src/imui_editor_workbench_demo.rs` now owns an
 `ImUiEditorWorkbenchView` host instead of mounting `EditorNotesDemoView` directly as the app route.

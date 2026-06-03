@@ -1045,6 +1045,7 @@
     "ecosystem/fret-ui-kit/src/imui/child_region/scroll/types.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs",
+    "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel/element.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs",

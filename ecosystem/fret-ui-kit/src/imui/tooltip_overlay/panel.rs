@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use fret_core::{Px, Rect, SemanticsRole, Size};
-use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_core::{Px, Rect, Size};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
-
-use layout::{tooltip_panel_column_props, tooltip_panel_props};
 
 use crate::imui::ImUiFacade;
 use crate::overlay;
 use crate::primitives::popper::{self, PopperContentPlacement};
+use element::{TooltipPanelElementInput, tooltip_panel_element};
 
+mod element;
 mod layout;
 
 pub(super) struct TooltipPanelBuildOptions {
@@ -48,37 +48,18 @@ pub(super) fn tooltip_overlay_children<H: UiHost>(
             options.placement,
         );
 
-        vec![cx.named("fret-ui-kit.imui.tooltip.panel", |cx| {
-            let current_panel_id = cx.root_id();
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&options.panel_id_model, |value| {
-                    *value = Some(current_panel_id)
-                });
+        let Some(build) = build.take() else {
+            return Vec::new();
+        };
 
-            let panel_props = tooltip_panel_props(cx, layout.rect.origin);
-            let mut panel = cx.container(panel_props, move |cx| {
-                vec![cx.column(tooltip_panel_column_props(), move |cx| {
-                    let mut out = Vec::new();
-                    let mut ui = ImUiFacade {
-                        cx,
-                        out: &mut out,
-                        build_focus: None,
-                    };
-                    if let Some(build) = build.take() {
-                        build(&mut ui);
-                    }
-                    out
-                })]
-            });
-
-            let mut semantics = SemanticsDecoration::default().role(SemanticsRole::Tooltip);
-            if let Some(test_id) = options.panel_test_id.as_ref() {
-                semantics = semantics.test_id(test_id.clone());
-            }
-            panel = panel.attach_semantics(semantics);
-            panel
-        })]
+        vec![tooltip_panel_element(
+            cx,
+            TooltipPanelElementInput {
+                origin: layout.rect.origin,
+                panel_id_model: options.panel_id_model,
+                panel_test_id: options.panel_test_id,
+            },
+            build,
+        )]
     })
 }

@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI Tooltip Panel Element Owner Split Evidence - 2026-06-03
+
+Claim verified: tooltip panel element assembly moved out of the placement owner without changing
+trigger-anchor lookup, trigger-rect fallback, environment window-margin bounds, popper placement,
+panel-id writeback, tooltip semantics/test-id wiring, rich-content facade mounting, or public
+tooltip facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` now keeps root-name scoping,
+  anchor/outer/layout resolution, and `tooltip_panel_element(...)` delegation only.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel/element.rs` owns the named tooltip panel
+  element, panel-id model writeback, popover chrome attachment, rich-content column facade
+  assembly, and tooltip semantics/test-id decoration.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel/layout.rs` remains the chrome layout owner
+  for absolute panel props and the inner content column props.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs` keeps the same
+  `tooltip_overlay_children(...)` request path; runtime, trigger, and text-tooltip behavior are
+  unchanged.
+- `tools/gate_imui_workstream_source.py` now freezes `panel.rs` as the placement/delegation owner
+  and `panel/element.rs` as the private element assembly owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI Virtual-List Row Metrics/Children Owner Split Evidence - 2026-06-03
 
 Claim verified: virtual-list row metrics and child packing moved out of the row wrapper owner
