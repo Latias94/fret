@@ -6190,3 +6190,12 @@ stems plot model records, and primary/Y2/Y3/Y4 baseline-expanded data-bound proj
 `crate::models::{StemsSeries, StemsPlotModel}` imports, declarative stems plot panels, and optional
 IMUI adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
 split.
+
+2026-06-03 Fret Plot scatter model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-scatter model records, shared
+bounds helpers, and the stable public re-export for `ScatterSeries` / `ScatterPlotModel`.
+`ecosystem/fret-plot/src/models/scatter.rs` owns scatter series fields/builders, marker radius and
+marker shape policy, scatter plot model records, and primary/Y2/Y3/Y4 data-bound projection. Public
+`crate::models::{ScatterSeries, ScatterPlotModel}` imports, declarative model imports, and optional
+IMUI adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.
