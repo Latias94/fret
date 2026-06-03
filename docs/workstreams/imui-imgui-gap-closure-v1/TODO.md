@@ -6983,3 +6983,11 @@ opening the slice.
       construction. `table_column_visibility/menu/items.rs` now constructs the item response
       through `TableColumnVisibilityMenuItemResponse::new(...)`, and the IMUI source gate follows
       the opaque item owner.
+- [x] Split Fret Plot line series/model records out of the root plot model file without changing
+      `crate::models::{LineSeries, LinePlotModel}` import paths, line chart builder model output,
+      multi-axis bounds projection, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod line;`, re-exports
+      `LineSeries` and `LinePlotModel`, and keeps shared axes plus non-line model records and
+      bounds helpers. `ecosystem/fret-plot/src/models/line.rs` owns line series fields/builders,
+      line plot model records, primary/Y2/Y3/Y4 bounds construction, and explicit-bounds
+      construction. The IMUI source gate freezes the root re-export hub and line owner boundary.

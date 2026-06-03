@@ -6172,3 +6172,12 @@ response and header context-menu response ownership plus the stable public re-ex
 `table_column_visibility/response/item.rs`, where it owns opaque fields, public accessors, clicked/
 changed forwarding, and crate-local construction. Menu item aggregation now uses the constructor
 instead of field literals, and `tools/gate_imui_workstream_source.py` freezes the new owner.
+
+2026-06-03 Fret Plot line model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-line model records, shared
+bounds helpers, and the stable public re-export for `LineSeries` / `LinePlotModel`.
+`ecosystem/fret-plot/src/models/line.rs` owns line series fields/builders, line plot model records,
+default and caller-supplied bounds construction, and primary/Y2/Y3/Y4 data-bound projection. Public
+`crate::models::{LineSeries, LinePlotModel}` imports, line chart builder routing, declarative line
+plot panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

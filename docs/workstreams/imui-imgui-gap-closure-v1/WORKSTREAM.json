@@ -1908,6 +1908,8 @@
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger/behavior/response.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/item_methods.rs",
+    "ecosystem/fret-plot/src/models.rs",
+    "ecosystem/fret-plot/src/models/line.rs",
     "ecosystem/fret-plot/src/declarative.rs",
     "ecosystem/fret-plot/src/declarative/axis_labels.rs",
     "ecosystem/fret-plot/src/declarative/commands.rs",

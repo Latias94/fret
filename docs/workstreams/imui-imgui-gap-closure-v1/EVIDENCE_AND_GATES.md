@@ -30221,3 +30221,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot line model owner split:
+
+- Claim: `LineSeries` and `LinePlotModel` moved from
+  `ecosystem/fret-plot/src/models.rs` into `ecosystem/fret-plot/src/models/line.rs` without changing
+  `crate::models::{LineSeries, LinePlotModel}` import paths, public record fields/builders,
+  primary/Y2/Y3/Y4 bounds projection, `LineChart::build_model(...)`, declarative line plot panels,
+  or optional IMUI adapter routing.
+- Evidence anchors: `models.rs` declares `mod line;`, re-exports `LineSeries` and
+  `LinePlotModel`, and keeps shared `YAxis`, `MarkerShape`, non-line model records, and shared
+  bounds helpers; `models/line.rs` owns line series fields/builders, `LinePlotModel` fields,
+  `from_series(...)`, `from_series_with_bounds(...)`, `sanitize_data_rect(...)` use, and
+  `compute_data_bounds_from_series_data_by_axis(...)` calls for primary/Y2/Y3/Y4 bounds. The source
+  gate rejects line records drifting back into `models.rs` and rejects non-line model records
+  drifting into `models/line.rs`.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed: `cargo nextest run -p fret-plot --features imui line_plot --no-fail-fast`.
+- Passed:
+  `cargo nextest run -p fret-plot --features imui line_chart_builder_stays_model_only_on_default_surface --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
