@@ -6003,3 +6003,13 @@ expanded-state sync, panel rendering, input-owned text-assist semantics, TextFie
 semantics wiring, inline/overlay panel selection, empty-label fallback, root layout, and keyboard
 handler installation through the existing private keyboard owner. Public editor/IMUI adapter APIs
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor ColorEdit popup body section owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup argument reads,
+current/reference model projection, runtime option resolution, popup chrome/container assembly,
+width selection, and layout mounting. `controls/color_edit/popup/body/sections.rs` owns picker,
+side-preview, picker-options, eyedropper, numeric row, history swatch, preset swatch, and
+standalone alpha-bar section construction. The popup layout owner remains
+`controls/color_edit/popup/body/layout.rs`, and `imui_surface_policy` now checks the sections owner
+for the real preset-palette source anchors. Public editor/IMUI adapter APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

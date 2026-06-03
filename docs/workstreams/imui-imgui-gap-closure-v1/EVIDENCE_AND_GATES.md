@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor ColorEdit Popup Body Section Owner Split - 2026-06-03
+
+Claim verified: editor `ColorEdit` popup body section construction moved out of
+`controls/color_edit/popup/body.rs` into private `controls/color_edit/popup/body/sections.rs`
+without changing popup chrome, popup width selection, picker/side-preview ordering, picker options,
+eyedropper action, numeric rows, history/preset swatches, standalone alpha bar behavior, test-id
+derivation, or public color-edit / IMUI facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs` now keeps popup argument reads,
+  current/reference model projection, runtime option resolution, popup chrome/container assembly,
+  width selection, and layout mounting.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` owns picker,
+  side-preview, picker-options, eyedropper, numeric row, history swatch, preset swatch, and
+  standalone alpha-bar section construction.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/layout.rs` remains the popup content
+  layout owner for width constants, vertical ordering, and picker/side-preview row composition.
+- `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now includes the sections owner and
+  anchors the real preset-palette popup source markers there.
+- `tools/gate_imui_workstream_source.py` now requires the popup body shell, body sections owner,
+  and layout owner separately, while rejecting section details from drifting back into the shell.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui color_edit --no-fail-fast`: pass, 52 tests.
+- `cargo nextest run -p fret-ui-editor --no-fail-fast`: pass, 228 tests.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --test imui_adapter_smoke --no-fail-fast`:
+  pass, 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor TextAssistField Body Assembly Owner Split - 2026-06-03
 
 Claim verified: editor `TextAssistField` keyed body assembly moved out of

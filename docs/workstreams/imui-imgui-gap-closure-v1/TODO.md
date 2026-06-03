@@ -6806,3 +6806,13 @@ opening the slice.
       TextField assistive wiring, inline/overlay panel selection, empty-label fallback, root
       layout, and keyboard handler installation. The IMUI source gate rejects body assembly details
       drifting back into the public element hub.
+- [x] Split editor `ColorEdit` popup body section construction into a private owner without
+      changing popup chrome, popup width selection, picker/side-preview ordering, picker options,
+      eyedropper action, numeric rows, history/preset swatches, standalone alpha bar behavior,
+      test-id derivation, or public color-edit / IMUI facade APIs.
+      Result: `controls/color_edit/popup/body.rs` now keeps popup argument reads, current/reference
+      model projection, runtime option resolution, popup chrome/container assembly, width
+      selection, and layout mounting. `controls/color_edit/popup/body/sections.rs` owns picker,
+      side-preview, picker-options, eyedropper, numeric, history, preset, and standalone alpha-bar
+      section construction. The IMUI source gate and `imui_surface_policy` anchors reject section
+      details drifting back into the popup body shell.

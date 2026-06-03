@@ -5,25 +5,19 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
-use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
 use super::super::drag_drop::ColorDragDropStore;
 use super::super::{
-    ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditPaletteEntry,
-    ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
+    ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditPaletteEntry, ColorEditPopupOptions,
     ColorEditPopupRuntimeOptions, OnColorEditEyedropper, OnColorEditPaletteSlotDrop,
 };
-use super::eyedropper::color_eyedropper_action;
-use super::numeric::color_numeric_inputs;
-use super::options::color_picker_options;
-use super::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
-use super::preview::color_side_preview;
-use super::swatches::{history_swatches, preset_swatches};
 
 mod layout;
+mod sections;
 
-use layout::{ColorPopupContentArgs, color_popup_content, color_popup_width};
+use layout::{color_popup_content, color_popup_width};
+use sections::{ColorPopupBodySectionsArgs, color_popup_body_sections};
 
 pub(super) struct ColorPopupBodyArgs {
     pub(super) model: Model<Color>,
@@ -95,156 +89,39 @@ pub(super) fn color_popup_body<H: UiHost>(
         .get_model_copied(&popup_runtime_options, Invalidation::Paint)
         .unwrap_or_else(|| popup_options.runtime_defaults());
     let effective_popup_options = popup_options.with_runtime_options(runtime_options);
-    let picker = match effective_popup_options.picker {
-        ColorEditPopupPicker::HsvHueBar => Some(hsv_picker(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            show_alpha,
-            effective_popup_options.shows_alpha_bar(show_alpha),
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "hsv"),
-        )),
-        ColorEditPopupPicker::HsvHueWheel => Some(hsv_hue_wheel_picker(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            show_alpha,
-            effective_popup_options.shows_alpha_bar(show_alpha),
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "hsv-wheel"),
-        )),
-        ColorEditPopupPicker::Hidden => None,
-    };
-    let picker_options = popup_options.shows_picker_options(show_alpha).then(|| {
-        color_picker_options(
-            cx,
-            current,
-            popup_options,
-            runtime_options,
-            popup_runtime_options.clone(),
-            show_alpha,
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "options"),
-        )
-    });
-    let side_preview = effective_popup_options
-        .side_preview
-        .has_visible_content()
-        .then(|| {
-            color_side_preview(
-                cx,
-                current,
-                reference_color,
-                model.clone(),
-                draft.clone(),
-                error.clone(),
-                effective_popup_options.side_preview,
-                show_alpha,
-                enabled,
-                alpha_preview,
-                derived_test_id(popup_test_id.as_ref(), "preview"),
-            )
-        });
-    let eyedropper = on_eyedropper.map(|on_eyedropper| {
-        color_eyedropper_action(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            show_alpha,
-            enabled,
-            on_eyedropper,
-            eyedropper_test_id,
-        )
-    });
-    let numbers = (effective_popup_options.numeric_inputs != ColorEditPopupNumericInputs::Hidden)
-        .then(|| {
-            color_numeric_inputs(
-                cx,
-                current,
-                model.clone(),
-                draft.clone(),
-                rgb_draft.clone(),
-                hsv_draft.clone(),
-                numeric_error.clone(),
-                effective_popup_options.numeric_inputs,
-                show_alpha,
-                enabled,
-                derived_test_id(popup_test_id.as_ref(), "numbers"),
-            )
-        });
-    let history_swatches = (!history.is_empty()).then(|| {
-        history_swatches(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            open.clone(),
-            show_alpha,
-            enabled,
-            alpha_preview,
-            history.clone(),
-            drag_drop_store.clone(),
-            drag_drop_options,
-            drag_threshold,
-            popup_test_id.clone(),
-        )
-    });
-    let swatches = (effective_popup_options.presets && !palette.is_empty()).then(|| {
-        preset_swatches(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            open.clone(),
-            show_alpha,
-            enabled,
-            alpha_preview,
-            palette.clone(),
-            drag_drop_store.clone(),
-            drag_drop_options,
-            drag_threshold,
-            on_palette_slot_drop.clone(),
-            popup_test_id.clone(),
-        )
-    });
-    let standalone_alpha_bar = if effective_popup_options.picker == ColorEditPopupPicker::Hidden
-        && effective_popup_options.shows_alpha_bar(show_alpha)
-    {
-        Some(alpha_bar(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "alpha"),
-        ))
-    } else {
-        None
-    };
-    let popup_width = color_popup_width(effective_popup_options.picker, side_preview.is_some());
-    let content = color_popup_content(
+    let picker_for_width = effective_popup_options.picker;
+    let sections = color_popup_body_sections(
         cx,
-        ColorPopupContentArgs {
-            picker,
-            side_preview,
-            picker_options,
-            eyedropper,
-            numbers,
-            history_swatches,
-            swatches,
-            standalone_alpha_bar,
+        ColorPopupBodySectionsArgs {
+            current,
+            reference_color,
+            model: model.clone(),
+            draft: draft.clone(),
+            error: error.clone(),
+            open: open.clone(),
+            rgb_draft: rgb_draft.clone(),
+            hsv_draft: hsv_draft.clone(),
+            numeric_error: numeric_error.clone(),
+            show_alpha,
+            enabled,
+            alpha_preview,
+            palette: palette.clone(),
+            history: history.clone(),
+            drag_drop_store: drag_drop_store.clone(),
+            drag_drop_options,
+            drag_threshold,
+            on_palette_slot_drop: on_palette_slot_drop.clone(),
+            on_eyedropper,
+            popup_options,
+            popup_runtime_options: popup_runtime_options.clone(),
+            runtime_options,
+            effective_popup_options,
+            popup_test_id: popup_test_id.clone(),
+            eyedropper_test_id,
         },
     );
+    let popup_width = color_popup_width(picker_for_width, sections.has_side_preview);
+    let content = color_popup_content(cx, sections.content);
     let popup = cx.container(
         ContainerProps {
             layout: LayoutStyle {

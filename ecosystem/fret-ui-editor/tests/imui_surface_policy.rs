@@ -36,6 +36,8 @@ const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup
 const COLOR_EDIT_POPUP_BODY_RS: &str = include_str!("../src/controls/color_edit/popup/body.rs");
 const COLOR_EDIT_POPUP_BODY_LAYOUT_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/layout.rs");
+const COLOR_EDIT_POPUP_BODY_SECTIONS_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/sections.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
 const COLOR_EDIT_POPUP_NUMERIC_FIELD_RS: &str =
@@ -374,7 +376,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("struct ColorPopupBodyArgs"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("fn color_popup_body<"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("mod layout;"));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorPopupContentArgs"));
+    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("mod sections;"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorPopupContentArgs"));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_popup_content("));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_popup_width("));
     assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("fn picker_side_preview_row<"));
@@ -382,10 +385,12 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("fn picker_side_preview_row<"));
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("ColorEditPopupPicker::Hidden"));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorEditPopupPicker::HsvHueBar"));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_picker_options("));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_eyedropper_action("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueBar"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_picker_options("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_eyedropper_action("));
+    assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("color_picker_options("));
+    assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("color_eyedropper_action("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn history_swatches<"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("install_color_drag_source("));
@@ -414,7 +419,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("fn hue_wheel_picker_thumbnail<"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("sv_picker_preview_stack("));
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("hue_wheel_canvas("));
-    assert!(COLOR_EDIT_POPUP_BODY_RS.contains("popup_options.side_preview"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("effective_popup_options.side_preview"));
     assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("fn has_visible_content_with_swatches("));
