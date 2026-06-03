@@ -1,3 +1,45 @@
+pub mod product_workflow {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct ProductWorkflow {
+        pub id: &'static str,
+        pub purpose: &'static str,
+        pub command: &'static str,
+        pub focused_command: &'static str,
+        pub launched_command: &'static str,
+        pub docs: &'static str,
+        pub suite: &'static str,
+        pub expected_artifacts: &'static [&'static str],
+    }
+
+    pub const ID: &str = "imui-product-chain";
+    pub const PURPOSE: &str = "IMUI editor-grade product-chain gate with docking perf evidence";
+    pub const DOC: &str =
+        "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
+    pub const COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+    pub const FOCUSED_COMMAND: &str =
+        "python tools/diag_gate_imui_product_chain.py --only discovery";
+    pub const LAUNCHED_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
+    pub const SUITE: &str = "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
+    pub const EXPECTED_ARTIFACTS: &[&str] = &[
+        "perf-docking/regression.summary.json",
+        "perf-docking/check.perf_thresholds.json",
+        "perf-docking/*/trace.chrome.json",
+    ];
+
+    pub const IMUI_PRODUCT_CHAIN: ProductWorkflow = ProductWorkflow {
+        id: ID,
+        purpose: PURPOSE,
+        command: COMMAND,
+        focused_command: FOCUSED_COMMAND,
+        launched_command: LAUNCHED_COMMAND,
+        docs: DOC,
+        suite: SUITE,
+        expected_artifacts: EXPECTED_ARTIFACTS,
+    };
+
+    pub const PRODUCT_WORKFLOWS: &[ProductWorkflow] = &[IMUI_PRODUCT_CHAIN];
+}
+
 pub mod demo_metrics_debug {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct RouteCommand {
@@ -60,8 +102,7 @@ pub mod demo_metrics_debug {
         "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
     pub const DEBUG_TRACE_COMMAND: &str =
         "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
-    pub const PRODUCT_DISCOVERY_COMMAND: &str =
-        "python tools/diag_gate_imui_product_chain.py --only discovery";
+    pub const PRODUCT_DISCOVERY_COMMAND: &str = super::product_workflow::FOCUSED_COMMAND;
 
     pub const DEMO_COMMANDS: &[RouteCommand] = &[
         RouteCommand {

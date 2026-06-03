@@ -210,16 +210,14 @@ const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =
 const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag pack <bundle-dir> --include-all --pack-schema2-only";
 const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev";
-const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
-const IMUI_PRODUCT_WORKFLOW_DOC: &str =
-    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
-const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+const IMUI_PRODUCT_WORKFLOW_ID: &str = fret_first_open::product_workflow::ID;
+const IMUI_PRODUCT_WORKFLOW_DOC: &str = fret_first_open::product_workflow::DOC;
+const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = fret_first_open::product_workflow::COMMAND;
 const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =
-    "python tools/diag_gate_imui_product_chain.py --only discovery";
+    fret_first_open::product_workflow::FOCUSED_COMMAND;
 const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =
-    "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
-const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
-    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
+    fret_first_open::product_workflow::LAUNCHED_COMMAND;
+const IMUI_PRODUCT_WORKFLOW_SUITE: &str = fret_first_open::product_workflow::SUITE;
 const DEVTOOLS_WORKFLOW_ROUTE_ID: &str = "workflow-runs";
 const DEVTOOLS_WORKFLOW_FIRST_OPEN_VALIDATE_ID: &str = "campaign-validate-devtools-first-open";
 const DEVTOOLS_WORKFLOW_IMUI_P3_VALIDATE_ID: &str = "campaign-validate-imui-p3-multiwindow";
@@ -229,11 +227,8 @@ const DEVTOOLS_WORKFLOW_FIRST_OPEN_CAMPAIGN_MANIFEST: &str =
 const DEVTOOLS_WORKFLOW_IMUI_P3_CAMPAIGN_MANIFEST: &str =
     "tools/diag-campaigns/imui-p3-multiwindow-parity.json";
 const DEVTOOLS_WORKFLOW_PERF_DOCKING_SUITE: &str = "perf-docking-arbitration-steady";
-const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
-    "perf-docking/regression.summary.json",
-    "perf-docking/check.perf_thresholds.json",
-    "perf-docking/*/trace.chrome.json",
-];
+const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] =
+    fret_first_open::product_workflow::EXPECTED_ARTIFACTS;
 const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;
 const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND: &str =
     fret_first_open::demo_metrics_debug::DEMO_EDITOR_WORKBENCH_COMMAND;

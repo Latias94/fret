@@ -31,6 +31,14 @@ and `apps/fret-examples/src/imui_editor_workbench_demo.rs` now alias the shared 
 repeating local string bags. The source gate and workbench golden-path surface test now freeze the
 extraction so first-open discovery and the canonical workbench stop drifting independently.
 
+2026-06-03 IMUI product-chain first-open shared workflow result:
+`apps/fret-first-open/src/lib.rs` now owns the static `product_workflow` contract for
+`imui-product-chain`, including default, focused, launched, suite, docs, and expected artifact
+fields. `apps/fretboard/src/demos.rs`, `apps/fret-devtools/src/native.rs`, and
+`apps/fret-devtools-mcp/src/native.rs` now alias that shared owner instead of carrying separate
+local workflow constants. Discovery-line, GUI, and MCP projection remain in their existing owners;
+only the first-open workflow contract moved.
+
 2026-06-03 IMUI ResponseExt type owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover.rs` now keeps the hover response module declarations
 and public re-exports only. `response/hover/types.rs` owns the `ResponseExt` field record with

@@ -74,19 +74,6 @@ const DIAG_GUI_BRANCH_DOC: &str =
 const DIAG_REPO_PREFLIGHT_COMMAND: &str = "cargo run -p fretboard-dev -- diag doctor campaigns";
 const DIAG_REPO_PREFLIGHT_JSON_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag doctor campaigns --json";
-const IMUI_PRODUCT_CHAIN_DOC: &str =
-    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
-const IMUI_PRODUCT_CHAIN_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
-const IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND: &str =
-    "python tools/diag_gate_imui_product_chain.py --only discovery";
-const IMUI_DOCKING_PERF_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
-const IMUI_DOCKING_PERF_SUITE: &str =
-    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
-const IMUI_DOCKING_PERF_ARTIFACTS: &[&str] = &[
-    "perf-docking/regression.summary.json",
-    "perf-docking/check.perf_thresholds.json",
-    "perf-docking/*/trace.chrome.json",
-];
 const DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;
 const DEMO_METRICS_DEBUG_DOC: &str = fret_first_open::demo_metrics_debug::ROUTE_DOC;
 const DEMO_METRICS_DEBUG_OWNER_DOC: &str = fret_first_open::demo_metrics_debug::OWNER_DOC;
@@ -223,29 +210,10 @@ struct ToolApp {
 
 type RouteCommand = fret_first_open::demo_metrics_debug::RouteCommand;
 type FirstOpenRoute = fret_first_open::demo_metrics_debug::FirstOpenRoute;
-
-struct ProductWorkflow {
-    id: &'static str,
-    purpose: &'static str,
-    command: &'static str,
-    focused_command: &'static str,
-    launched_command: &'static str,
-    docs: &'static str,
-    suite: &'static str,
-    expected_artifacts: &'static [&'static str],
-}
+type ProductWorkflow = fret_first_open::product_workflow::ProductWorkflow;
 
 fn product_workflows() -> &'static [ProductWorkflow] {
-    &[ProductWorkflow {
-        id: "imui-product-chain",
-        purpose: "IMUI editor-grade product-chain gate with docking perf evidence",
-        command: IMUI_PRODUCT_CHAIN_COMMAND,
-        focused_command: IMUI_PRODUCT_CHAIN_DISCOVERY_COMMAND,
-        launched_command: IMUI_DOCKING_PERF_COMMAND,
-        docs: IMUI_PRODUCT_CHAIN_DOC,
-        suite: IMUI_DOCKING_PERF_SUITE,
-        expected_artifacts: IMUI_DOCKING_PERF_ARTIFACTS,
-    }]
+    fret_first_open::product_workflow::PRODUCT_WORKFLOWS
 }
 
 fn first_open_routes() -> &'static [FirstOpenRoute] {

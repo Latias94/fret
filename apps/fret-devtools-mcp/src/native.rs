@@ -62,20 +62,16 @@ const DEVTOOLS_REPO_PREFLIGHT_JSON_COMMAND: &str =
 const DEVTOOLS_TOOL_APP_INDEX_COMMAND: &str = "cargo run -p fretboard-dev -- list tool-apps";
 const DEVTOOLS_TOOL_APP_INDEX_JSON_COMMAND: &str =
     "cargo run -p fretboard-dev -- list tool-apps --json";
-const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain";
-const IMUI_PRODUCT_WORKFLOW_DOC: &str =
-    "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md";
-const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py";
+const IMUI_PRODUCT_WORKFLOW_ID: &str = fret_first_open::product_workflow::ID;
+const IMUI_PRODUCT_WORKFLOW_DOC: &str = fret_first_open::product_workflow::DOC;
+const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = fret_first_open::product_workflow::COMMAND;
 const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =
-    "python tools/diag_gate_imui_product_chain.py --only discovery";
-const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release";
-const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
-    "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json";
-const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
-    "perf-docking/regression.summary.json",
-    "perf-docking/check.perf_thresholds.json",
-    "perf-docking/*/trace.chrome.json",
-];
+    fret_first_open::product_workflow::FOCUSED_COMMAND;
+const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =
+    fret_first_open::product_workflow::LAUNCHED_COMMAND;
+const IMUI_PRODUCT_WORKFLOW_SUITE: &str = fret_first_open::product_workflow::SUITE;
+const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] =
+    fret_first_open::product_workflow::EXPECTED_ARTIFACTS;
 const DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;
 const DEMO_EDITOR_WORKBENCH_COMMAND: &str =
     fret_first_open::demo_metrics_debug::DEMO_EDITOR_WORKBENCH_COMMAND;

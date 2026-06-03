@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Product-Chain First-Open Shared Workflow Evidence - 2026-06-03
+
+Claim verified: the `imui-product-chain` first-open workflow contract no longer repeats command,
+suite, docs, and artifact constants across fretboard, DevTools GUI, and MCP. It now lives beside
+the Demo/Metrics/Debug route contract in the app-level first-open owner.
+
+Evidence:
+
+- `apps/fret-first-open/src/lib.rs` now defines
+  `product_workflow::{ProductWorkflow, IMUI_PRODUCT_CHAIN, PRODUCT_WORKFLOWS}` plus the shared
+  default, focused, launched, suite, docs, and expected-artifact constants.
+- `apps/fretboard/src/demos.rs` now uses the shared `ProductWorkflow` type and
+  `PRODUCT_WORKFLOWS` slice for `fretboard_tool_apps` discovery JSON.
+- `apps/fret-devtools/src/native.rs` and `apps/fret-devtools-mcp/src/native.rs` now alias the
+  shared product workflow constants while keeping first-open GUI/MCP line projection in their
+  existing owners.
+- `apps/fret-first-open/src/lib.rs` keeps the Demo/Metrics/Debug `product_discovery` action tied
+  to `product_workflow::FOCUSED_COMMAND`, so the route action and product workflow cannot drift.
+- `tools/gate_imui_workstream_source.py` now freezes the shared product workflow owner and the
+  three consumer aliases.
+
+Focused gates:
+
+- `cargo check -p fret-first-open`: pass.
+- `cargo check -p fret-devtools`: pass.
+- `cargo check -p fret-devtools-mcp`: pass.
+- `cargo check -p fretboard-dev`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Demo/Metrics/Debug First-Open Shared Contract Evidence - 2026-06-03
 
 Claim verified: the static Demo/Metrics/Debug first-open discovery contract no longer lives as

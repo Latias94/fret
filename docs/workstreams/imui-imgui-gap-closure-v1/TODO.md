@@ -74,6 +74,14 @@ Last updated: 2026-06-03
       `apps/fret-devtools-mcp/src/native.rs`, and
       `apps/fret-examples/src/imui_editor_workbench_demo.rs` now alias that shared owner, while the
       IMUI source gate and the workbench surface test freeze the extraction.
+- [x] Factor the IMUI product-chain first-open workflow contract into the same app-level shared
+      owner so the default/focused/launched workflow commands, suite path, and expected artifact
+      list stop drifting across fretboard, DevTools GUI, and MCP.
+      Result: `apps/fret-first-open/src/lib.rs` now owns
+      `product_workflow::{ProductWorkflow, IMUI_PRODUCT_CHAIN, PRODUCT_WORKFLOWS}` plus the
+      product-chain command/suite/artifact constants. `apps/fretboard/src/demos.rs`,
+      `apps/fret-devtools/src/native.rs`, and `apps/fret-devtools-mcp/src/native.rs` alias that
+      owner while keeping their existing projection/UI responsibilities.
 
 ## Porting Sugar Proof - 2026-05-31
 
