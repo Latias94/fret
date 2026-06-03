@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor ColorEdit Hue Wheel Model Owner Split - 2026-06-03
+
+Claim verified: editor `ColorEdit` hue-wheel model math moved out of
+`controls/color_edit/model/hue_wheel.rs` into private geometry, triangle, and interaction owners
+without changing hue-wheel geometry, rotated-triangle projection, SV cursor projection, drag-target
+hit testing, HSV update math, or popup picker / IMUI facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel.rs` now keeps only the stable
+  public hue-wheel model re-export hub.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel/geometry.rs` owns
+  `HueWheelGeometry`, finite-size sanitization, and wheel/triangle radius projection.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel/triangle.rs` owns
+  `HueWheelTriangle`, rotated-triangle projection, SV cursor projection, barycentric math, and
+  closest-point helpers.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel/interaction.rs` owns
+  `HueWheelDragTarget`, pointer hit testing, and position-to-HSV mapping.
+- `tools/gate_imui_workstream_source.py` now requires the root hue-wheel model hub and all three
+  math owners separately, while rejecting geometry/triangle/interaction math from drifting back into
+  the root hub.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui hue_wheel color_edit --no-fail-fast`:
+  pass, 52 tests.
+- `cargo nextest run -p fret-ui-editor --no-fail-fast`: pass, 228 tests.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --test imui_adapter_smoke --no-fail-fast`:
+  pass, 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Popup Body Section Owner Split - 2026-06-03
 
 Claim verified: editor `ColorEdit` popup body section construction moved out of

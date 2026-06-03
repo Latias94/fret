@@ -6013,3 +6013,12 @@ standalone alpha-bar section construction. The popup layout owner remains
 `controls/color_edit/popup/body/layout.rs`, and `imui_surface_policy` now checks the sections owner
 for the real preset-palette source anchors. Public editor/IMUI adapter APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor ColorEdit hue-wheel model owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel.rs` now keeps only the stable
+public hue-wheel model re-export hub. `model/hue_wheel/geometry.rs` owns `HueWheelGeometry`,
+finite-size sanitization, and wheel/triangle radius projection. `model/hue_wheel/triangle.rs` owns
+`HueWheelTriangle`, rotated-triangle projection, SV cursor projection, barycentric math, and
+closest-point helpers. `model/hue_wheel/interaction.rs` owns `HueWheelDragTarget`, pointer hit
+testing, and position-to-HSV mapping. Public editor/IMUI adapter APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

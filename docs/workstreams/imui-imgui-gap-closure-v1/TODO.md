@@ -6816,3 +6816,12 @@ opening the slice.
       side-preview, picker-options, eyedropper, numeric, history, preset, and standalone alpha-bar
       section construction. The IMUI source gate and `imui_surface_policy` anchors reject section
       details drifting back into the popup body shell.
+- [x] Split editor `ColorEdit` hue-wheel model math into private geometry, triangle, and
+      interaction owners without changing hue-wheel geometry, rotated-triangle projection, SV cursor
+      projection, drag-target hit testing, HSV update math, or popup picker / IMUI facade behavior.
+      Result: `controls/color_edit/model/hue_wheel.rs` now keeps only the public hue-wheel model
+      re-export hub. `hue_wheel/geometry.rs` owns wheel radii and triangle radius projection,
+      `hue_wheel/triangle.rs` owns rotated triangle, cursor projection, barycentric math, and
+      closest-point helpers, and `hue_wheel/interaction.rs` owns pointer hit testing and
+      position-to-HSV mapping. The IMUI source gate rejects geometry/triangle/interaction math from
+      drifting back into the root hub.
