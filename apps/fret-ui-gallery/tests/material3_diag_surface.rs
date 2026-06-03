@@ -6,6 +6,9 @@ const AUTOCOMPLETE_FILTERING_DIAG: &str = include_str!(
 const SEARCH_VIEW_SCREENSHOTS_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-view-screenshots.json"
 );
+const SEARCH_VIEW_EDGE_FULLSCREEN_COMPOSITION_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-search-view-edge-fullscreen-composition.json"
+);
 const TEXT_FIELD_HOVER_LABEL_COLOR_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-text-field-hover-label-color-expressive-screenshots.json"
 );
@@ -75,8 +78,14 @@ const NAVIGATION_BAR_ITEM_CHROME_DIAG: &str = include_str!(
 const NAVIGATION_BAR_INDICATOR_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json"
 );
+const NAVIGATION_ROUTED_CONTENT_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-routed-content.json"
+);
 const NAVIGATION_DRAWER_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-drawer-item-chrome-fill.json"
+);
+const MODAL_NAVIGATION_DRAWER_ROUTED_CONTENT_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-modal-navigation-drawer-routed-content.json"
 );
 const NAVIGATION_RAIL_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-item-chrome-fill.json"
@@ -131,6 +140,11 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "search view screenshots",
             SEARCH_VIEW_SCREENSHOTS_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_state_matrix\"",
+        ),
+        (
+            "search view edge fullscreen composition",
+            SEARCH_VIEW_EDGE_FULLSCREEN_COMPOSITION_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_menu\"",
         ),
         (
             "text field hover label color",
@@ -223,9 +237,19 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_bar\"",
         ),
         (
+            "navigation routed content",
+            NAVIGATION_ROUTED_CONTENT_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_bar\"",
+        ),
+        (
             "navigation drawer item chrome",
             NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_drawer\"",
+        ),
+        (
+            "modal navigation drawer routed content",
+            MODAL_NAVIGATION_DRAWER_ROUTED_CONTENT_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_modal_navigation_drawer\"",
         ),
         (
             "navigation rail item chrome",
@@ -292,6 +316,12 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             SEARCH_VIEW_SCREENSHOTS_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
             "\"id\": \"ui-gallery-material3-search-view\"",
+        ),
+        (
+            "search view edge fullscreen composition",
+            SEARCH_VIEW_EDGE_FULLSCREEN_COMPOSITION_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-menu-search-bottom\"",
         ),
         (
             "text field hover label color",
@@ -402,10 +432,22 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"id\": \"ui-gallery-material3-nav-settings\"",
         ),
         (
+            "navigation routed content",
+            NAVIGATION_ROUTED_CONTENT_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-nav-settings\"",
+        ),
+        (
             "navigation drawer item chrome",
             NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
             "\"id\": \"ui-gallery-material3-drawer-search\"",
+        ),
+        (
+            "modal navigation drawer routed content",
+            MODAL_NAVIGATION_DRAWER_ROUTED_CONTENT_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-modal-drawer-open\"",
         ),
         (
             "navigation rail item chrome",
@@ -485,6 +527,10 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
             "text field hover label color",
             TEXT_FIELD_HOVER_LABEL_COLOR_DIAG,
         ),
+        (
+            "search view edge fullscreen composition",
+            SEARCH_VIEW_EDGE_FULLSCREEN_COMPOSITION_DIAG,
+        ),
         ("select a11y parity", SELECT_A11Y_PARITY_DIAG),
         ("select item chrome", SELECT_ITEM_CHROME_DIAG),
         ("select rich options", SELECT_RICH_OPTIONS_DIAG),
@@ -506,9 +552,14 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
             NAVIGATION_BAR_ITEM_CHROME_DIAG,
         ),
         ("navigation bar indicator", NAVIGATION_BAR_INDICATOR_DIAG),
+        ("navigation routed content", NAVIGATION_ROUTED_CONTENT_DIAG),
         (
             "navigation drawer item chrome",
             NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
+        ),
+        (
+            "modal navigation drawer routed content",
+            MODAL_NAVIGATION_DRAWER_ROUTED_CONTENT_DIAG,
         ),
         (
             "navigation rail item chrome",
