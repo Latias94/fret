@@ -5966,3 +5966,12 @@ the stable `push_id(("image-item", id), ...)` wrapper.
 active/lifecycle/context model lookup, context-menu key handling, pointer handler installation, and
 `ActiveTriggerBehavior` assembly. `active_trigger_behavior.rs` keeps the stable install and
 response-population entry points.
+
+2026-06-03 editor widget visuals owner split result:
+`ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps the stable
+`EditorWidgetVisuals` helper facade, icon-button hover helpers, and public free-function wrappers.
+Private owners now carry the reusable policy details: `visuals/color_math.rs` owns alpha scaling
+and color interpolation, `visuals/invalid.rs` owns invalid foreground/border/background fallback,
+`visuals/frame.rs` owns input-like frame state projection, and `visuals/selection.rs` owns
+selection/toggle-like frame state projection. Public editor/IMUI adapter APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

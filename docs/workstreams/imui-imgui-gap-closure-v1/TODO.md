@@ -6767,3 +6767,11 @@ opening the slice.
       owns the ListBox semantics/scroll/selectable proof. The root `region_containers.rs` keeps
       child-region composition, chrome, resize, popup, and auto-size tests while the IMUI source
       gate rejects ListBox drift back into the mixed root file.
+- [x] Split editor widget visuals policy into private owner modules without changing the public
+      `EditorWidgetVisuals` helper surface, icon-button hover chrome, input-frame semantics,
+      selection/toggle frame semantics, invalid fallback behavior, or IMUI/editor facade APIs.
+      Result: `ecosystem/fret-ui-editor/src/primitives/visuals.rs` now keeps the stable helper
+      facade and delegates color math, invalid chrome fallback, input-frame policy, and
+      selection-frame policy to `visuals/color_math.rs`, `visuals/invalid.rs`, `visuals/frame.rs`,
+      and `visuals/selection.rs`; the IMUI source gate rejects those owner details drifting back
+      into the root visuals hub.

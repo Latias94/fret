@@ -8,13 +8,16 @@ use fret_core::Color;
 use fret_ui::Theme;
 
 use super::{
-    EditorTokenKeys,
     chrome::ResolvedEditorFrameChrome,
-    colors::{
-        editor_accent, editor_border, editor_invalid_border, editor_invalid_foreground,
-        editor_muted_foreground, editor_subtle_bg,
-    },
+    colors::{editor_accent, editor_border, editor_subtle_bg},
 };
+
+mod color_math;
+mod frame;
+mod invalid;
+mod selection;
+
+use color_math::mix;
 
 #[cfg(test)]
 mod tests;
@@ -31,10 +34,6 @@ pub(crate) struct EditorWidgetVisuals<'a> {
 impl<'a> EditorWidgetVisuals<'a> {
     pub(crate) fn new(theme: &'a Theme) -> Self {
         Self { theme }
-    }
-
-    pub(crate) fn muted_foreground(&self) -> Color {
-        editor_muted_foreground(self.theme)
     }
 
     pub(crate) fn hover_overlay_bg_custom(
@@ -125,65 +124,7 @@ impl<'a> EditorWidgetVisuals<'a> {
         chrome: ResolvedEditorFrameChrome,
         state: EditorFrameState,
     ) -> EditorFrameVisuals {
-        // Keep disabled visuals conservative: we only scale alpha and avoid color shifts that can
-        // reduce contrast too much on dark themes.
-        let disabled_alpha = if state.enabled { 1.0 } else { 0.55 };
-
-        let accent = editor_accent(self.theme);
-        let mut bg = alpha_mul(chrome.bg, disabled_alpha);
-        let mut border = alpha_mul(chrome.border, disabled_alpha);
-        let fg = alpha_mul(chrome.fg, disabled_alpha);
-        let mut icon = alpha_mul(self.muted_foreground(), disabled_alpha);
-
-        if state.hovered && state.enabled {
-            bg = mix(bg, accent, 0.08);
-            border = mix(border, accent, 0.10);
-        }
-        if state.pressed && state.enabled {
-            bg = mix(bg, accent, 0.14);
-            border = mix(border, accent, 0.16);
-        }
-        if (state.focused || state.open) && state.enabled {
-            bg = mix(bg, accent, 0.08);
-            border = chrome.border_focus;
-        }
-        if state.semantic.typing && state.enabled {
-            bg = mix(
-                bg,
-                accent,
-                if state.focused || state.open {
-                    0.14
-                } else {
-                    0.11
-                },
-            );
-            border = mix(border, chrome.border_focus, 0.72);
-            icon = mix(icon, chrome.border_focus, 0.24);
-        }
-        if state.semantic.invalid && state.enabled {
-            let invalid_fg = self.control_invalid_fg();
-            let invalid_border = self.control_invalid_border();
-            let invalid_bg = self.control_invalid_bg(chrome.bg, invalid_border);
-
-            bg = mix(
-                bg,
-                invalid_bg,
-                if state.semantic.typing { 0.90 } else { 0.96 },
-            );
-            border = if state.focused || state.open {
-                mix(invalid_border, chrome.border_focus, 0.12)
-            } else {
-                invalid_border
-            };
-            icon = mix(icon, invalid_fg, 0.36);
-        }
-
-        EditorFrameVisuals {
-            bg,
-            border,
-            fg,
-            icon,
-        }
+        frame::frame_visuals(self.theme, chrome, state)
     }
 
     /// Compute selection/toggle-like frame visuals (checkboxes, segmented toggles, etc.).
@@ -200,42 +141,15 @@ impl<'a> EditorWidgetVisuals<'a> {
         selected_fg: Color,
         selected: bool,
     ) -> EditorFrameVisuals {
-        let disabled_alpha = if state.enabled { 1.0 } else { 0.55 };
-
-        let accent = editor_accent(self.theme);
-        let mut bg = alpha_mul(if selected { selected_bg } else { base_bg }, disabled_alpha);
-        let mut border = alpha_mul(
-            if selected {
-                mix(chrome.border, selected_bg, 0.35)
-            } else {
-                chrome.border
-            },
-            disabled_alpha,
-        );
-        let fg = alpha_mul(
-            if selected { selected_fg } else { chrome.fg },
-            disabled_alpha,
-        );
-
-        if state.hovered && state.enabled {
-            bg = mix(bg, accent, if selected { 0.05 } else { 0.08 });
-            border = mix(border, accent, if selected { 0.08 } else { 0.10 });
-        }
-        if state.pressed && state.enabled {
-            bg = mix(bg, accent, if selected { 0.10 } else { 0.14 });
-            border = mix(border, accent, if selected { 0.12 } else { 0.16 });
-        }
-        if (state.focused || state.open) && state.enabled {
-            bg = mix(bg, accent, if selected { 0.04 } else { 0.08 });
-            border = chrome.border_focus;
-        }
-
-        EditorFrameVisuals {
-            bg,
-            border,
-            fg,
-            icon: fg,
-        }
+        selection::selection_frame_visuals(
+            self.theme,
+            chrome,
+            state,
+            base_bg,
+            selected_bg,
+            selected_fg,
+            selected,
+        )
     }
 }
 
@@ -263,43 +177,18 @@ pub(crate) struct EditorFrameVisuals {
     pub(crate) icon: Color,
 }
 
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
-
-fn mix(a: Color, b: Color, t: f32) -> Color {
-    let t = t.clamp(0.0, 1.0);
-    Color {
-        r: lerp(a.r, b.r, t),
-        g: lerp(a.g, b.g, t),
-        b: lerp(a.b, b.b, t),
-        a: lerp(a.a, b.a, t),
-    }
-}
-
+#[cfg(test)]
 impl<'a> EditorWidgetVisuals<'a> {
     fn control_invalid_fg(&self) -> Color {
-        editor_invalid_foreground(self.theme)
+        invalid::control_invalid_fg(self.theme)
     }
 
     fn control_invalid_border(&self) -> Color {
-        editor_invalid_border(self.theme)
+        invalid::control_invalid_border(self.theme)
     }
 
     fn control_invalid_bg(&self, base: Color, border: Color) -> Color {
-        self.theme
-            .color_by_key(EditorTokenKeys::CONTROL_INVALID_BG)
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BG))
-            .unwrap_or_else(|| {
-                let mut out = mix(base, Color { a: 1.0, ..border }, 0.10);
-                out.a = 1.0;
-                out
-            })
+        invalid::control_invalid_bg(self.theme, base, border)
     }
 }
 

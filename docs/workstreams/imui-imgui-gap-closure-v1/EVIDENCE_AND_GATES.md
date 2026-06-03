@@ -29402,3 +29402,31 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 editor widget visuals owner split:
+
+- Claim: editor widget visuals color math, invalid fallback chrome, input-frame state projection,
+  and selection/toggle-frame state projection moved from
+  `ecosystem/fret-ui-editor/src/primitives/visuals.rs` into private owner modules without changing
+  `EditorWidgetVisuals`, hover/icon-button helpers, frame visual semantics, selection visual
+  semantics, invalid fallback behavior, or IMUI/editor facade APIs.
+- Evidence anchors: `visuals.rs` declares `mod color_math;`, `mod invalid;`, `mod frame;`, and
+  `mod selection;`, keeps `EditorWidgetVisuals`, `hover_overlay_bg_custom(...)`,
+  `hover_overlay_border_custom(...)`, `icon_button_bg(...)`, `icon_button_border(...)`, and the
+  free-function wrappers, and delegates `frame_visuals(...)` / `selection_frame_visuals(...)` to the
+  private owners; `visuals/color_math.rs` owns `alpha_mul(...)`, `lerp(...)`, and `mix(...)`;
+  `visuals/invalid.rs` owns `CONTROL_INVALID_BG` / `NUMERIC_ERROR_BG` fallback; `visuals/frame.rs`
+  owns disabled alpha, hover/pressed/focus/open/typing/invalid input-frame projection; and
+  `visuals/selection.rs` owns selected/unselected fill, foreground, border, focus, and icon
+  projection. `tools/gate_imui_workstream_source.py` now rejects those details drifting back into
+  the root visuals hub.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-editor selection_frame_visuals_use_selected_fill_and_foreground selection_frame_visuals_use_focus_border_when_focused selection_frame_visuals_reduce_alpha_when_disabled frame_visuals_tint_typing_state_more_than_focus_only frame_visuals_use_shared_invalid_chrome icon_button_bg_prefers_editor_subtle_bg_over_host_background --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
