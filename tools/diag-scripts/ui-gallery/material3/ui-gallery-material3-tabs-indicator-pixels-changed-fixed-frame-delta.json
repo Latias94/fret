@@ -2,7 +2,10 @@
   "schema_version": 2,
   "meta": {
     "required_launch_features": ["gallery-material3"],
-    "env_defaults": { "FRET_DIAG_FIXED_FRAME_DELTA_MS": "16" },
+    "env_defaults": {
+      "FRET_DIAG_FIXED_FRAME_DELTA_MS": "16",
+      "FRET_UI_GALLERY_START_PAGE": "material3_tabs"
+    },
     "name": "ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "tags": ["ui_gallery", "material3", "tabs", "indicator", "fixed_frame_delta", "screenshots"]
@@ -12,23 +15,21 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-tabs" }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "material3 tabs" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-tabs" }
-      },
-      "timeout_frames": 240
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-tab-overview" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-tabs" } },
 
     {
       "type": "wait_until",

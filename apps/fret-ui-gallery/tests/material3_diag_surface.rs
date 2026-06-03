@@ -63,14 +63,23 @@ const MENU_ITEM_CHROME_DIAG: &str = include_str!(
 const NAVIGATION_BAR_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-item-chrome-fill.json"
 );
+const NAVIGATION_BAR_INDICATOR_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-bar-indicator-pixels-changed-fixed-frame-delta.json"
+);
 const NAVIGATION_DRAWER_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-drawer-item-chrome-fill.json"
 );
 const NAVIGATION_RAIL_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-item-chrome-fill.json"
 );
+const NAVIGATION_RAIL_INDICATOR_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-navigation-rail-indicator-pixels-changed-fixed-frame-delta.json"
+);
 const TABS_ITEM_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-item-chrome-fill.json"
+);
+const TABS_INDICATOR_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-tabs-indicator-pixels-changed-fixed-frame-delta.json"
 );
 const TIME_PICKER_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json"
@@ -185,6 +194,11 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_bar\"",
         ),
         (
+            "navigation bar indicator",
+            NAVIGATION_BAR_INDICATOR_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_bar\"",
+        ),
+        (
             "navigation drawer item chrome",
             NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_drawer\"",
@@ -195,8 +209,18 @@ fn material3_field_surface_diags_use_direct_start_pages() {
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_rail\"",
         ),
         (
+            "navigation rail indicator",
+            NAVIGATION_RAIL_INDICATOR_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_navigation_rail\"",
+        ),
+        (
             "tabs item chrome",
             TABS_ITEM_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_tabs\"",
+        ),
+        (
+            "tabs indicator",
+            TABS_INDICATOR_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_tabs\"",
         ),
         (
@@ -330,6 +354,12 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"id\": \"ui-gallery-material3-nav-search\"",
         ),
         (
+            "navigation bar indicator",
+            NAVIGATION_BAR_INDICATOR_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-nav-settings\"",
+        ),
+        (
             "navigation drawer item chrome",
             NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
@@ -342,8 +372,20 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             "\"id\": \"ui-gallery-material3-rail-search\"",
         ),
         (
+            "navigation rail indicator",
+            NAVIGATION_RAIL_INDICATOR_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-rail-settings\"",
+        ),
+        (
             "tabs item chrome",
             TABS_ITEM_CHROME_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-tab-overview\"",
+        ),
+        (
+            "tabs indicator",
+            TABS_INDICATOR_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
             "\"id\": \"ui-gallery-material3-tab-overview\"",
         ),
@@ -412,6 +454,7 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
             "navigation bar item chrome",
             NAVIGATION_BAR_ITEM_CHROME_DIAG,
         ),
+        ("navigation bar indicator", NAVIGATION_BAR_INDICATOR_DIAG),
         (
             "navigation drawer item chrome",
             NAVIGATION_DRAWER_ITEM_CHROME_DIAG,
@@ -420,7 +463,9 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
             "navigation rail item chrome",
             NAVIGATION_RAIL_ITEM_CHROME_DIAG,
         ),
+        ("navigation rail indicator", NAVIGATION_RAIL_INDICATOR_DIAG),
         ("tabs item chrome", TABS_ITEM_CHROME_DIAG),
+        ("tabs indicator", TABS_INDICATOR_DIAG),
         ("time picker chrome", TIME_PICKER_CHROME_DIAG),
     ] {
         assert!(
