@@ -6227,3 +6227,13 @@ primary/Y2/Y3/Y4 error-expanded data-bound projection. Public
 `crate::models::{ErrorBar, ErrorBarsSeries, ErrorBarsPlotModel}` imports, declarative error-bars
 plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 Fret Plot candlestick model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-candlestick model records,
+shared bounds helpers, and the stable public re-export for `OhlcPoint`, `CandlestickSeries`, and
+`CandlestickPlotModel`. `ecosystem/fret-plot/src/models/candlestick.rs` owns OHLC payloads,
+close-series adapter storage, candlestick series fields/builders, candlestick plot model records,
+candle-width bounds construction, and the focused bounds unit test. Public
+`crate::models::{OhlcPoint, CandlestickSeries, CandlestickPlotModel}` imports, declarative
+candlestick plot panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

@@ -7038,3 +7038,13 @@ opening the slice.
       payloads, error-bars series fields/builders, cap/marker policy, model records, and
       primary/Y2/Y3/Y4 error-expanded bounds construction. The IMUI source gate freezes the root
       re-export hub and error-bars owner boundary.
+- [x] Split Fret Plot candlestick records out of the root plot model file without changing
+      `crate::models::{OhlcPoint, CandlestickSeries, CandlestickPlotModel}` import paths, OHLC
+      close-series projection, candle width/wick/body options, multi-axis bounds projection,
+      declarative candlestick panel behavior, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod candlestick;`, re-exports
+      `OhlcPoint`, `CandlestickSeries`, and `CandlestickPlotModel`, and keeps shared axes plus
+      non-candlestick model records. `ecosystem/fret-plot/src/models/candlestick.rs` owns OHLC
+      payloads, close-series adapter storage, candlestick series fields/builders, candlestick plot
+      model records, candle-width bounds construction, and the focused bounds unit test. The IMUI
+      source gate freezes the root re-export hub and candlestick owner boundary.

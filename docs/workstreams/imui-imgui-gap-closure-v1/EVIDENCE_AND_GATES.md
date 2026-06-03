@@ -30374,3 +30374,30 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot candlestick model owner split:
+
+- Claim: `OhlcPoint`, `CandlestickSeries`, and `CandlestickPlotModel` moved from
+  `ecosystem/fret-plot/src/models.rs` into `ecosystem/fret-plot/src/models/candlestick.rs` without
+  changing `crate::models::{OhlcPoint, CandlestickSeries, CandlestickPlotModel}` import paths,
+  public record fields/builders, OHLC close-series projection, candle width/wick/body options,
+  primary/Y2/Y3/Y4 bounds projection, declarative candlestick plot panels, or optional IMUI
+  adapter routing.
+- Evidence anchors: `models.rs` declares `mod candlestick;`, re-exports `OhlcPoint`,
+  `CandlestickSeries`, and `CandlestickPlotModel`, and keeps shared `YAxis`, `MarkerShape`,
+  non-candlestick model records, and shared bounds helpers; `models/candlestick.rs` owns OHLC
+  payloads, `OhlcCloseSeriesData`, `SeriesData` projection, candlestick series options,
+  `CandlestickPlotModel` fields, `from_series(...)`, candle-width bounds construction, and the
+  focused `candlestick_bounds_include_wicks_and_width` unit test. The source gate rejects
+  candlestick records drifting back into `models.rs` and rejects error-bars, area, line, scatter,
+  shaded, stems, bars, histogram, and heatmap model records drifting into `models/candlestick.rs`.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed:
+  `cargo nextest run -p fret-plot --features imui candlestick --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
