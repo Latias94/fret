@@ -5975,3 +5975,13 @@ and color interpolation, `visuals/invalid.rs` owns invalid foreground/border/bac
 `visuals/frame.rs` owns input-like frame state projection, and `visuals/selection.rs` owns
 selection/toggle-like frame state projection. Public editor/IMUI adapter APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor numeric text-entry owner split result:
+`ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs` now keeps the stable numeric
+text-entry facade, `NumericInputSelectionBehavior` re-export, focus/handoff helper re-exports, and
+the replace-key handler used by numeric input, slider, axis drag value, and drag value controls.
+`numeric_text_entry/focus.rs` owns focus state, focus handoff timers, draft/error resync, and
+draft-change error clearing. `numeric_text_entry/replace.rs` owns `NumericReplacementPlan`,
+replace-on-first-edit key classification, paste handling, delete consumption, and insertion-key
+classification. Public editor/IMUI adapter APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

@@ -29430,3 +29430,32 @@ Focused gates:
 - Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast`.
 - Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\gate_imui_workstream_source.py`.
+
+2026-06-03 editor numeric text-entry owner split:
+
+- Claim: editor numeric text-entry focus state, focus handoff timers, draft/error sync, and
+  replace-on-first-edit key classification moved out of
+  `ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs` into private owner modules
+  without changing `NumericInputSelectionBehavior`, focus state handles, focus handoff behavior,
+  replacement-key semantics, or numeric input / slider / drag value call paths.
+- Evidence anchors: `numeric_text_entry.rs` declares `mod focus;` and `mod replace;`, keeps the
+  stable `NumericInputSelectionBehavior` re-export, focus/handoff helper re-exports,
+  `handle_numeric_text_entry_replace_key(...)`, and `clear_numeric_text_entry(...)`, and dropped
+  from 286 lines to 63 lines; `numeric_text_entry/focus.rs` owns
+  `NumericTextEntryFocusState`, `NumericTextEntryFocusHandoffState`,
+  `numeric_text_entry_focus_state(...)`, `arm_numeric_text_entry_focus_handoff(...)`,
+  `sync_numeric_text_entry_focus_handoff(...)`, `sync_numeric_text_entry_focus(...)`,
+  `sync_draft_from_current_text(...)`, `clear_error_if_present(...)`, and
+  `clear_numeric_error_when_draft_changes(...)`; `numeric_text_entry/replace.rs` owns
+  `NumericReplacementPlan`, `replacement_plan(...)`, `is_text_insertion_key(...)`, paste handling,
+  delete consumption, navigation-key disarm, and insertion-key classification. The source gate now
+  rejects focus/handoff and key-policy details drifting back into the root numeric text-entry hub.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed:
+  `cargo nextest run -p fret-ui-editor replacement_plan_clears_on_plain_character_keys replacement_plan_consumes_delete_keys replacement_plan_disarms_on_navigation_keys replacement_plan_clears_on_platform_paste_shortcut --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --test imui_adapter_smoke --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.

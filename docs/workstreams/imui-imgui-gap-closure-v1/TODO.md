@@ -6775,3 +6775,14 @@ opening the slice.
       selection-frame policy to `visuals/color_math.rs`, `visuals/invalid.rs`, `visuals/frame.rs`,
       and `visuals/selection.rs`; the IMUI source gate rejects those owner details drifting back
       into the root visuals hub.
+- [x] Split editor numeric text-entry focus/handoff and replacement-key policy into private owner
+      modules without changing `NumericInputSelectionBehavior`, numeric focus state handles,
+      focus handoff behavior, replace-on-first-edit semantics, or numeric input / slider / drag
+      value call paths.
+      Result: `ecosystem/fret-ui-editor/src/primitives/numeric_text_entry.rs` keeps the stable
+      facade, public selection-behavior re-export, focus/handoff re-exports, and replace-key
+      handler. `numeric_text_entry/focus.rs` owns focus state, focus handoff timers, draft/error
+      sync, and draft-change error clearing; `numeric_text_entry/replace.rs` owns
+      `NumericReplacementPlan`, replacement key classification, and insertion-key classification.
+      The IMUI source gate rejects focus/handoff and key-policy details drifting back into the
+      root numeric text-entry hub.
