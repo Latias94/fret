@@ -1,15 +1,128 @@
 //! Canonical IMUI editor workbench route.
 //!
-//! This route owns the stable product-facing editor workbench entrypoint. It now mounts the
-//! editor-notes workflow as the first converged editor workflow while the older focused demos stay
-//! supporting proof surfaces for shell behavior, dense editor controls, and docking arbitration.
+//! This route owns the stable product-facing editor workbench entrypoint. It mounts the
+//! editor-notes workflow as the first converged editor workflow and keeps the Dear ImGui-style
+//! Demo/Metrics/Debug route visible as persistent workbench chrome while the older focused demos
+//! stay supporting proof surfaces for shell behavior, dense editor controls, and docking
+//! arbitration.
 
+use std::sync::Arc;
+
+use fret::app::prelude::*;
 use fret::{Defaults, FretApp};
+use fret_app::CommandId;
+use fret_ui::element::AnyElement;
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::{IntoUiElementInExt as _, Space};
+use fret_ui_shadcn::facade as shadcn;
+
+const TEST_ID_ROOT: &str = "imui-editor-workbench.root";
+const TEST_ID_ACTION_STRIP_REGION: &str = "imui-editor-workbench.action-strip-region";
+const TEST_ID_ACTION_STRIP: &str = "imui-editor-workbench.action-strip";
+const TEST_ID_ACTION_BUTTONS: &str = "imui-editor-workbench.action-buttons";
+const TEST_ID_ACTION_STATUS: &str = "imui-editor-workbench.action-status";
+const TEST_ID_ACTION_COMMAND: &str = "imui-editor-workbench.action-command";
+const TEST_ID_WORKFLOW: &str = "imui-editor-workbench.workflow";
+const TEST_ID_ACTION_WORKBENCH: &str = "imui-editor-workbench.action.open-workbench";
+const TEST_ID_ACTION_PROOF: &str = "imui-editor-workbench.action.supporting-proof";
+const TEST_ID_ACTION_METRICS: &str = "imui-editor-workbench.action.metrics";
+const TEST_ID_ACTION_DEBUG: &str = "imui-editor-workbench.action.debug";
+const TEST_ID_ACTION_WAYLAND: &str = "imui-editor-workbench.action.wayland";
+
+const WORKBENCH_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_workbench_demo";
+const SUPPORTING_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
+const METRICS_COMMAND: &str = "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+const DEBUG_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+const WAYLAND_ACCEPTANCE_COMMAND: &str = "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag campaign run imui-p3-wayland-real-host --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release";
+
+pub(crate) mod act {
+    fret::actions!([
+        SelectWorkbench = "imui_editor_workbench_demo.action.open_workbench.v1",
+        SelectProof = "imui_editor_workbench_demo.action.supporting_proof.v1",
+        SelectMetrics = "imui_editor_workbench_demo.action.metrics.v1",
+        SelectDebug = "imui_editor_workbench_demo.action.debug.v1",
+        SelectWayland = "imui_editor_workbench_demo.action.wayland.v1"
+    ]);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum WorkbenchQuickAction {
+    #[default]
+    Workbench,
+    Proof,
+    Metrics,
+    Debug,
+    Wayland,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WorkbenchQuickActionSpec {
+    action: WorkbenchQuickAction,
+    label: &'static str,
+    category: &'static str,
+    command: &'static str,
+    purpose: &'static str,
+    test_id: &'static str,
+    primary: bool,
+}
+
+const WORKBENCH_QUICK_ACTIONS: &[WorkbenchQuickActionSpec] = &[
+    WorkbenchQuickActionSpec {
+        action: WorkbenchQuickAction::Workbench,
+        label: "Workbench",
+        category: "demo",
+        command: WORKBENCH_COMMAND,
+        purpose: "Primary product-facing editor route.",
+        test_id: TEST_ID_ACTION_WORKBENCH,
+        primary: true,
+    },
+    WorkbenchQuickActionSpec {
+        action: WorkbenchQuickAction::Proof,
+        label: "Proof",
+        category: "supporting demo",
+        command: SUPPORTING_PROOF_COMMAND,
+        purpose: "Dense editor-control and docking proof surface.",
+        test_id: TEST_ID_ACTION_PROOF,
+        primary: false,
+    },
+    WorkbenchQuickActionSpec {
+        action: WorkbenchQuickAction::Metrics,
+        label: "Metrics",
+        category: "metrics",
+        command: METRICS_COMMAND,
+        purpose: "Read frame, layout, memory, and artifact stats from a diagnostics bundle.",
+        test_id: TEST_ID_ACTION_METRICS,
+        primary: false,
+    },
+    WorkbenchQuickActionSpec {
+        action: WorkbenchQuickAction::Debug,
+        label: "Debug",
+        category: "debug",
+        command: DEBUG_COMMAND,
+        purpose: "Open a diagnostics trace drill-down for the selected bundle.",
+        test_id: TEST_ID_ACTION_DEBUG,
+        primary: false,
+    },
+    WorkbenchQuickActionSpec {
+        action: WorkbenchQuickAction::Wayland,
+        label: "Wayland",
+        category: "handoff",
+        command: WAYLAND_ACCEPTANCE_COMMAND,
+        purpose: "Real-host compositor acceptance remains a runner/backend handoff.",
+        test_id: TEST_ID_ACTION_WAYLAND,
+        primary: false,
+    },
+];
+
+struct ImUiEditorWorkbenchView {
+    notes: crate::editor_notes_demo::EditorNotesDemoView,
+}
 
 /// Runs the canonical IMUI editor workbench route.
 ///
 /// Current owner split:
 /// - `editor_notes_demo` owns the reusable editor notes workflow view.
+/// - this module owns the persistent Demo/Metrics/Debug workbench chrome.
 /// - `workspace_shell_demo` remains supporting shell proof evidence.
 /// - this module owns the stable product-facing route name.
 pub fn run() -> anyhow::Result<()> {
@@ -23,7 +136,177 @@ pub fn run() -> anyhow::Result<()> {
             crate::editor_notes_demo::install_editor_notes_demo_theme,
             fret_icons_lucide::app::install,
         ))
-        .view::<crate::editor_notes_demo::EditorNotesDemoView>()?
+        .view::<ImUiEditorWorkbenchView>()?
         .run()
         .map_err(anyhow::Error::from)
+}
+
+impl View for ImUiEditorWorkbenchView {
+    fn init(app: &mut App, window: WindowId) -> Self {
+        Self {
+            notes: crate::editor_notes_demo::EditorNotesDemoView::init(app, window),
+        }
+    }
+
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let active_action = cx.state().local_init(WorkbenchQuickAction::default);
+        cx.actions()
+            .local(&active_action)
+            .set::<act::SelectWorkbench>(WorkbenchQuickAction::Workbench);
+        cx.actions()
+            .local(&active_action)
+            .set::<act::SelectProof>(WorkbenchQuickAction::Proof);
+        cx.actions()
+            .local(&active_action)
+            .set::<act::SelectMetrics>(WorkbenchQuickAction::Metrics);
+        cx.actions()
+            .local(&active_action)
+            .set::<act::SelectDebug>(WorkbenchQuickAction::Debug);
+        cx.actions()
+            .local(&active_action)
+            .set::<act::SelectWayland>(WorkbenchQuickAction::Wayland);
+
+        let active_action = cx.state().watch(&active_action).layout().value_or_default();
+        let action_strip = render_workbench_quick_action_strip(cx, active_action);
+        let action_strip_region = ui::container(|_cx| [action_strip])
+            .px(Space::N4)
+            .pt(Space::N4)
+            .w_full()
+            .into_element_in(cx)
+            .test_id(TEST_ID_ACTION_STRIP_REGION);
+
+        let workflow_elements = self.notes.render(cx);
+        let workflow = ui::container(move |_cx| workflow_elements)
+            .flex_1()
+            .min_h_0()
+            .w_full()
+            .into_element_in(cx)
+            .test_id(TEST_ID_WORKFLOW);
+
+        ui::v_flex(|_cx| [action_strip_region, workflow])
+            .items_stretch()
+            .size_full()
+            .into_element_in(cx)
+            .test_id(TEST_ID_ROOT)
+            .into()
+    }
+}
+
+fn workbench_text_section<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn workbench_text_paragraph<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_paragraph(cx, text)
+}
+
+fn workbench_text_readout<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn workbench_quick_action_spec(action: WorkbenchQuickAction) -> &'static WorkbenchQuickActionSpec {
+    WORKBENCH_QUICK_ACTIONS
+        .iter()
+        .find(|spec| spec.action == action)
+        .unwrap_or(&WORKBENCH_QUICK_ACTIONS[0])
+}
+
+fn workbench_quick_action_command(action: WorkbenchQuickAction) -> CommandId {
+    match action {
+        WorkbenchQuickAction::Workbench => act::SelectWorkbench.into(),
+        WorkbenchQuickAction::Proof => act::SelectProof.into(),
+        WorkbenchQuickAction::Metrics => act::SelectMetrics.into(),
+        WorkbenchQuickAction::Debug => act::SelectDebug.into(),
+        WorkbenchQuickAction::Wayland => act::SelectWayland.into(),
+    }
+}
+
+fn render_workbench_quick_action_strip<'a, Cx>(
+    cx: &mut Cx,
+    active: WorkbenchQuickAction,
+) -> AnyElement
+where
+    Cx: fret::app::ElementContextAccess<'a, App>,
+{
+    let active_spec = *workbench_quick_action_spec(active);
+    let action_buttons = WORKBENCH_QUICK_ACTIONS
+        .iter()
+        .map(|spec| {
+            let selected = spec.action == active;
+            let variant = if selected {
+                shadcn::ButtonVariant::Default
+            } else if spec.primary {
+                shadcn::ButtonVariant::Secondary
+            } else {
+                shadcn::ButtonVariant::Outline
+            };
+            shadcn::Button::new(spec.label)
+                .variant(variant)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(workbench_quick_action_command(spec.action))
+                .test_id(spec.test_id)
+                .ui()
+                .into_element_in(cx)
+        })
+        .collect::<Vec<_>>();
+    let action_buttons = ui::h_flex(move |_cx| action_buttons)
+        .gap(Space::N2)
+        .items_center()
+        .into_element_in(cx)
+        .test_id(TEST_ID_ACTION_BUTTONS);
+
+    let title = ui::v_flex(|cx| {
+        ui::children![
+            cx;
+            workbench_text_section(cx, "Demo / Metrics / Debug"),
+            workbench_text_paragraph(
+                cx,
+                "Canonical editor workbench actions stay visible next to the editor workflow; DevTools and fretboard own execution.",
+            ),
+        ]
+    })
+    .gap(Space::N1)
+    .flex_1()
+    .min_w_0()
+    .into_element_in(cx);
+
+    let status = ui::v_flex(move |cx| {
+        ui::children![
+            cx;
+            workbench_text_readout(
+                cx,
+                format!(
+                    "selected: {} | category: {} | primary: {}",
+                    active_spec.label, active_spec.category, active_spec.primary
+                ),
+            ),
+            workbench_text_readout(cx, active_spec.purpose),
+            workbench_text_readout(cx, active_spec.command).test_id(TEST_ID_ACTION_COMMAND),
+        ]
+    })
+    .gap(Space::N1)
+    .flex_1()
+    .min_w_0()
+    .into_element_in(cx)
+    .test_id(TEST_ID_ACTION_STATUS);
+
+    ui::h_flex(|cx| ui::children![cx; title, action_buttons, status])
+        .gap(Space::N4)
+        .items_center()
+        .justify_between()
+        .w_full()
+        .p(Space::N3)
+        .rounded_md()
+        .border_1()
+        .into_element_in(cx)
+        .test_id(TEST_ID_ACTION_STRIP)
 }

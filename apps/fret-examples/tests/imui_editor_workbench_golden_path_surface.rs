@@ -10,10 +10,15 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         "Canonical IMUI editor workbench route.",
         "stable product-facing editor workbench entrypoint",
         "editor-notes workflow as the first converged editor workflow",
+        "Demo/Metrics/Debug route visible as persistent workbench chrome",
         "FretApp::new(\"imui-editor-workbench-demo\")",
         ".window(\"imui_editor_workbench_demo\"",
         "crate::editor_notes_demo::install_editor_notes_demo_theme",
-        ".view::<crate::editor_notes_demo::EditorNotesDemoView>()?",
+        ".view::<ImUiEditorWorkbenchView>()?",
+        "struct ImUiEditorWorkbenchView",
+        "notes: crate::editor_notes_demo::EditorNotesDemoView",
+        "crate::editor_notes_demo::EditorNotesDemoView::init(app, window)",
+        "self.notes.render(cx)",
     ] {
         assert!(
             route_source.contains(needle),
@@ -36,6 +41,28 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         assert!(
             editor_notes_source.contains(needle),
             "canonical editor-notes workflow should surface the editor-owned theme preset picker in the inspector; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "const TEST_ID_ACTION_STRIP: &str = \"imui-editor-workbench.action-strip\";",
+        "const TEST_ID_ACTION_COMMAND: &str = \"imui-editor-workbench.action-command\";",
+        "const TEST_ID_WORKFLOW: &str = \"imui-editor-workbench.workflow\";",
+        "const WORKBENCH_QUICK_ACTIONS: &[WorkbenchQuickActionSpec]",
+        "WorkbenchQuickAction::Workbench",
+        "WorkbenchQuickAction::Proof",
+        "WorkbenchQuickAction::Metrics",
+        "WorkbenchQuickAction::Debug",
+        "WorkbenchQuickAction::Wayland",
+        "cargo run -p fret-demo --bin imui_editor_workbench_demo",
+        "cargo run -p fret-demo --bin imui_editor_proof_demo",
+        "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
+        "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
+        "imui-p3-wayland-real-host",
+        "DevTools and fretboard own execution.",
+    ] {
+        assert!(
+            route_source.contains(needle),
+            "canonical workbench route should keep Demo/Metrics/Debug quick actions resident in first-open chrome; missing `{needle}`"
         );
     }
     assert!(
@@ -81,6 +108,7 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
     let diagnostics_first_open = include_str!("../../../docs/diagnostics-first-open.md");
     let fretboard_demos = include_str!("../../fretboard/src/demos.rs");
     let devtools_native = include_str!("../../fret-devtools/src/native.rs");
+    let devtools_demo_metrics_debug = include_str!("../../fret-devtools/src/demo_metrics_debug.rs");
     let product_chain_gate = include_str!("../../../tools/diag_gate_imui_product_chain.py");
 
     for (name, source) in [
@@ -113,7 +141,10 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
 
     for (name, source) in [
         ("apps/fretboard/src/demos.rs", fretboard_demos),
-        ("apps/fret-devtools/src/native.rs", devtools_native),
+        (
+            "apps/fret-devtools/src/demo_metrics_debug.rs",
+            devtools_demo_metrics_debug,
+        ),
         ("tools/diag_gate_imui_product_chain.py", product_chain_gate),
     ] {
         assert!(
@@ -121,12 +152,30 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
             "{name} should expose the canonical workbench label in the Demo/Metrics/Debug route"
         );
         assert!(
-            source.contains("cargo run -p fret-demo --bin imui_editor_workbench_demo"),
-            "{name} should expose the canonical workbench command"
-        );
-        assert!(
             source.contains("demo editor proof supporting"),
             "{name} should keep the old proof discoverable only as supporting evidence"
         );
     }
+
+    for (name, source) in [
+        ("apps/fretboard/src/demos.rs", fretboard_demos),
+        ("tools/diag_gate_imui_product_chain.py", product_chain_gate),
+    ] {
+        assert!(
+            source.contains("cargo run -p fret-demo --bin imui_editor_workbench_demo"),
+            "{name} should expose the canonical workbench command"
+        );
+    }
+
+    assert!(
+        devtools_demo_metrics_debug.contains("DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND")
+            && devtools_demo_metrics_debug.contains("DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND"),
+        "apps/fret-devtools/src/demo_metrics_debug.rs should project shared DevTools demo command constants"
+    );
+
+    assert!(
+        devtools_native.contains("const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND")
+            && devtools_native.contains("cargo run -p fret-demo --bin imui_editor_workbench_demo"),
+        "apps/fret-devtools/src/native.rs should keep the shared canonical workbench command constant"
+    );
 }

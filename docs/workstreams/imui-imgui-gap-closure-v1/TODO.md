@@ -48,6 +48,14 @@ Last updated: 2026-06-03
       set and direct-crate forbidden marker set, while the `imui_editor_proof_demo` text/readout
       helper checks follow the current `proof_helpers.rs` owner instead of stale root-file
       definitions.
+- [x] Productize the canonical workbench route itself with persistent Demo/Metrics/Debug chrome
+      while keeping DevTools/fretboard as the execution owners.
+      Result: `apps/fret-examples/src/imui_editor_workbench_demo.rs` now owns
+      `ImUiEditorWorkbenchView`, delegates the primary workflow to `EditorNotesDemoView`, and keeps
+      a stable `imui-editor-workbench.action-strip` quick-action surface for workbench, supporting
+      proof, metrics, debug trace, and Wayland handoff commands. The golden-path surface test and
+      IMUI source gate now freeze the host route so it cannot drift back to a bare editor-notes
+      route alias.
 
 ## Porting Sugar Proof - 2026-05-31
 

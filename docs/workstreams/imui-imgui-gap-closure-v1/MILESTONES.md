@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 canonical workbench persistent action-strip result:
+`apps/fret-examples/src/imui_editor_workbench_demo.rs` now owns an
+`ImUiEditorWorkbenchView` host instead of mounting `EditorNotesDemoView` directly as the app route.
+The host delegates the editor-notes workflow to `self.notes.render(cx)` and keeps a persistent
+Demo/Metrics/Debug quick-action strip with stable `imui-editor-workbench.*` test IDs. The strip
+surfaces the primary workbench command, supporting proof command, metrics stats command, debug
+trace command, and the Wayland real-host handoff command while leaving execution in DevTools and
+fretboard. `imui_editor_workbench_golden_path_surface` and the IMUI source gate now freeze the
+host route, so the canonical workbench cannot regress back to a bare route alias.
+
 2026-06-03 IMUI ResponseExt type owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/hover.rs` now keeps the hover response module declarations
 and public re-exports only. `response/hover/types.rs` owns the `ResponseExt` field record with

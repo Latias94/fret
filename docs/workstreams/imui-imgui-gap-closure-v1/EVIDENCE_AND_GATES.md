@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Canonical Workbench Persistent Action Strip Evidence - 2026-06-03
+
+Claim verified: the canonical IMUI editor workbench route now owns a persistent
+Demo/Metrics/Debug quick-action strip instead of being only a route alias around the editor-notes
+workflow. Execution remains in DevTools and fretboard; the workbench route exposes stable
+first-open chrome and command metadata only.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_workbench_demo.rs` now defines
+  `ImUiEditorWorkbenchView`, delegates workflow state/rendering through
+  `crate::editor_notes_demo::EditorNotesDemoView`, and mounts the workflow under
+  `imui-editor-workbench.workflow`.
+- The route exposes stable quick-action selectors:
+  `imui-editor-workbench.action.open-workbench`,
+  `imui-editor-workbench.action.supporting-proof`, `imui-editor-workbench.action.metrics`,
+  `imui-editor-workbench.action.debug`, and `imui-editor-workbench.action.wayland`.
+- The quick-action strip surfaces the canonical workbench, supporting proof, metrics stats, debug
+  trace, and Wayland real-host handoff commands while explicitly saying DevTools and fretboard own
+  execution.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` now checks both the host
+  view and the persistent Demo/Metrics/Debug action-strip contract.
+- `tools/gate_imui_workstream_source.py` now freezes the canonical route source so it cannot drift
+  back to a bare direct `EditorNotesDemoView` mount.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples`: pass.
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass with existing warnings from
+  `fret-chart` and `fret-plot`.
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
+  pass, 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI ResponseExt Type Owner Split Evidence - 2026-06-03
 
 Claim verified: IMUI `ResponseExt` record storage moved out of `response/hover.rs` into private
