@@ -30451,3 +30451,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot heatmap grid-value model owner split:
+
+- Claim: `HeatmapPlotModel` and `Histogram2DPlotModel` moved from
+  `ecosystem/fret-plot/src/models.rs` into `ecosystem/fret-plot/src/models/heatmap.rs` without
+  changing `crate::models::{HeatmapPlotModel, Histogram2DPlotModel}` import paths, public record
+  fields/constructors, grid shape/value storage, finite value-range fallback, sanitized data
+  bounds, row-major `value_at(...)` indexing, declarative heatmap/histogram2d plot panels, or
+  optional IMUI adapter routing.
+- Evidence anchors: `models.rs` declares `mod heatmap;`, re-exports `HeatmapPlotModel` and
+  `Histogram2DPlotModel`, and now keeps shared `YAxis`, `MarkerShape`, `StepMode`, and shared
+  series-data bounds helpers only; `models/heatmap.rs` owns both grid-value records, finite
+  min/max projection, sanitized data bounds, and row-major lookup. The source gate rejects heatmap
+  records drifting back into `models.rs` or into other plot model owners.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed:
+  `cargo nextest run -p fret-plot --features imui heatmap_plot_panel_paints_default_colorbar_on_declarative_path --no-fail-fast`.
+- Passed:
+  `cargo nextest run -p fret-plot --features imui histogram2d_plot_panel_paints_grid_cells_and_default_colorbar_on_declarative_path --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

@@ -6257,3 +6257,12 @@ primary/Y2/Y3/Y4 data-bound projection. Public
 `crate::models::{HistogramSeries, HistogramPlotModel}` imports, declarative histogram plot panels,
 and optional IMUI adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split.
+
+2026-06-03 Fret Plot heatmap grid-value model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes and shared series-data bounds
+helpers only, plus stable public re-exports for `HeatmapPlotModel` and `Histogram2DPlotModel`.
+`ecosystem/fret-plot/src/models/heatmap.rs` owns both grid-value model records, grid shape/value
+storage, finite min/max fallback, sanitized data bounds, and row-major `value_at(...)` lookup.
+Public `crate::models::{HeatmapPlotModel, Histogram2DPlotModel}` imports, declarative heatmap and
+histogram2d plot panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.

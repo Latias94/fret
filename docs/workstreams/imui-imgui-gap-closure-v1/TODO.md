@@ -7069,3 +7069,12 @@ opening the slice.
       series fields/builders, histogram plot model records, bins-backed primary/Y2/Y3/Y4 bounds
       construction, and the declarative histogram panel proof continues to cover the behavior. The
       IMUI source gate freezes the root re-export hub and histogram owner boundary.
+- [x] Split Fret Plot heatmap grid-value records out of the root plot model file without changing
+      `crate::models::{HeatmapPlotModel, Histogram2DPlotModel}` import paths, grid shape/value
+      storage, finite value-range fallback, sanitized data bounds, `value_at(...)` indexing,
+      declarative heatmap/histogram2d panel behavior, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod heatmap;`, re-exports
+      `HeatmapPlotModel` and `Histogram2DPlotModel`, and keeps shared axes plus shared series-data
+      bounds helpers only. `ecosystem/fret-plot/src/models/heatmap.rs` owns both grid-value model
+      records, finite min/max projection, sanitized data bounds, and row-major `value_at(...)`
+      lookup. The IMUI source gate freezes the root re-export hub and heatmap owner boundary.

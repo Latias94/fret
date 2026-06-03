@@ -1913,6 +1913,7 @@
     "ecosystem/fret-plot/src/models/bars.rs",
     "ecosystem/fret-plot/src/models/candlestick.rs",
     "ecosystem/fret-plot/src/models/error_bars.rs",
+    "ecosystem/fret-plot/src/models/heatmap.rs",
     "ecosystem/fret-plot/src/models/histogram.rs",
     "ecosystem/fret-plot/src/models/line.rs",
     "ecosystem/fret-plot/src/models/scatter.rs",
