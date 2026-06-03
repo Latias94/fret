@@ -56,8 +56,8 @@
       "predicate": {
         "kind": "bounds_min_size",
         "target": { "kind": "test_id", "id": "ui-gallery-material3-nav-search" },
-        "min_w_px": 56.0,
-        "min_h_px": 56.0,
+        "min_w_px": 180.0,
+        "min_h_px": 80.0,
         "eps_px": 1.0
       },
       "timeout_frames": 240

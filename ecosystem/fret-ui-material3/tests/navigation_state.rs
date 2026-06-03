@@ -240,6 +240,14 @@ fn assert_px_close(actual: f32, expected: f32, context: &str) {
     );
 }
 
+fn assert_px_close_with_tolerance(actual: f32, expected: f32, tolerance: f32, context: &str) {
+    let delta = (actual - expected).abs();
+    assert!(
+        delta <= tolerance,
+        "{context}: expected {expected}px ±{tolerance}px, got {actual}px (delta {delta}px)"
+    );
+}
+
 fn active_indicator_rect(
     scene: &Scene,
     expected_width: f32,
@@ -341,13 +349,48 @@ fn navigation_bar_uses_material_item_gap_and_active_indicator_geometry() {
         80.0,
         "navigation bar container height",
     );
+    assert_px_close(
+        chrome.size.width.0,
+        456.0,
+        "navigation bar fills available container width",
+    );
 
     let search = visual_bounds_by_test_id(&ui, &app, window, "m3-nav-search.chrome");
     let settings = visual_bounds_by_test_id(&ui, &app, window, "m3-nav-settings.chrome");
+    let disabled = visual_bounds_by_test_id(&ui, &app, window, "m3-nav-disabled.chrome");
+    let expected_item_width = (456.0 - 8.0 * 2.0) / 3.0;
+    assert_px_close(
+        search.origin.x.0,
+        chrome.origin.x.0,
+        "navigation bar first item starts at container edge",
+    );
+    assert_px_close_with_tolerance(
+        search.size.width.0,
+        expected_item_width,
+        1.0,
+        "navigation bar first item width",
+    );
+    assert_px_close_with_tolerance(
+        settings.size.width.0,
+        expected_item_width,
+        1.0,
+        "navigation bar middle item width",
+    );
+    assert_px_close_with_tolerance(
+        disabled.size.width.0,
+        expected_item_width,
+        1.0,
+        "navigation bar last item width",
+    );
     assert_px_close(
         settings.origin.x.0 - rect_right(search),
         8.0,
         "navigation bar item horizontal gap",
+    );
+    assert_px_close(
+        rect_right(disabled),
+        rect_right(chrome),
+        "navigation bar last item ends at container edge",
     );
 
     let icon = visual_bounds_by_test_id(&ui, &app, window, "m3-nav-search.icon");

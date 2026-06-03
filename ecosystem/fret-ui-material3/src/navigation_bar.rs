@@ -240,6 +240,12 @@ impl NavigationBar {
                     .or_else(|| items.iter().position(|it| !disabled && !it.disabled));
 
                 let sem = SemanticsProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.min_width = Some(Length::Px(Px(0.0)));
+                        layout
+                    },
                     role: SemanticsRole::TabList,
                     label: a11y_label.clone(),
                     test_id: test_id.clone(),
@@ -279,6 +285,8 @@ impl NavigationBar {
 
                 let mut props = RovingFlexProps::default();
                 props.flex.direction = Axis::Horizontal;
+                props.flex.layout.size.width = Length::Fill;
+                props.flex.layout.size.min_width = Some(Length::Px(Px(0.0)));
                 props.flex.gap = item_gap.into();
                 props.flex.justify = MainAlign::Start;
                 props.flex.align = fret_ui::element::CrossAlign::Stretch;
