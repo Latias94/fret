@@ -173,6 +173,7 @@ mod quit_effects;
 mod render;
 mod run;
 mod shell_effects;
+mod streaming_effects;
 mod streaming_images;
 mod text_effects;
 mod timers;

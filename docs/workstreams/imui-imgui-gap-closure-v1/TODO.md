@@ -1037,6 +1037,9 @@ Last updated: 2026-06-03
 - [x] Split desktop runner viewport-input and Dock effect dispatch into a private driver-effects owner without changing runtime behavior or public effect surfaces. The docking source gate
   freezes the owner split in `M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming
   Wayland compositor acceptance.
+- [x] Split desktop runner streaming upload effect lifecycle into a private streaming owner without changing runtime behavior or public effect surfaces. The docking source gate
+  freezes the owner split in `M85_RUNNER_STREAMING_EFFECTS_OWNER_SPLIT_2026-06-04.md` without
+  claiming Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

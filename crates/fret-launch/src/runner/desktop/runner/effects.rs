@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use fret_app::Effect;
-use fret_core::Event;
 use fret_core::time::Instant;
 use winit::event_loop::ActiveEventLoop;
 
@@ -25,44 +24,13 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             did_work |= self.drain_inboxes(None);
             did_work |= self.apply_pending_system_font_rescan_result(now);
             let effects = self.app.flush_effects();
-            let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
-                self.frame_id,
-                effects,
-                self.config.streaming_upload_budget_bytes_per_frame,
-                self.config.streaming_staging_budget_bytes,
-                self.config.streaming_update_ack_enabled,
-            );
+            let (effects, mut stats, ack_count) = self.process_streaming_upload_effects(effects);
             tracing::trace!(
                 did_work,
                 effects = effects.len(),
-                acks = acks.len(),
+                acks = ack_count,
                 "driver: drain_effects turn"
             );
-            if self.config.streaming_update_ack_enabled {
-                for ack in acks {
-                    let window = ack
-                        .window_hint
-                        .or(self.main_window)
-                        .or_else(|| self.windows.keys().next());
-                    let Some(window) = window else {
-                        continue;
-                    };
-                    match ack.kind {
-                        crate::runner::streaming_upload::StreamingUploadAckKind::Dropped(
-                            reason,
-                        ) => {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ImageUpdateDropped {
-                                    token: ack.token,
-                                    image: ack.image,
-                                    reason,
-                                },
-                            );
-                        }
-                    }
-                }
-            }
 
             did_work |= self.poll_watch_restart_trigger(now);
             did_work |= self.poll_hotpatch_trigger(now);
@@ -351,68 +319,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                 }
             }
 
-            let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled
-                || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty());
-            let streaming_stats_have_activity = stats.update_effects_seen > 0
-                || stats.update_effects_enqueued > 0
-                || stats.update_effects_replaced > 0
-                || stats.update_effects_applied > 0
-                || stats.update_effects_delayed_budget > 0
-                || stats.update_effects_dropped_staging > 0
-                || stats.upload_bytes_budgeted > 0
-                || stats.upload_bytes_applied > 0
-                || stats.pending_updates > 0
-                || stats.pending_staging_bytes > 0
-                || stats.yuv_conversions_attempted > 0
-                || stats.yuv_convert_us > 0;
-            if streaming_snapshot_enabled && streaming_stats_have_activity {
-                self.app.set_global(fret_core::StreamingUploadPerfSnapshot {
-                    frame_id: self.frame_id,
-                    upload_budget_bytes_per_frame: stats.upload_budget_bytes_per_frame,
-                    staging_budget_bytes: stats.staging_budget_bytes,
-                    update_effects_seen: u64::from(stats.update_effects_seen),
-                    update_effects_enqueued: u64::from(stats.update_effects_enqueued),
-                    update_effects_replaced: u64::from(stats.update_effects_replaced),
-                    update_effects_applied: u64::from(stats.update_effects_applied),
-                    update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
-                    update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
-                    upload_bytes_budgeted: stats.upload_bytes_budgeted,
-                    upload_bytes_applied: stats.upload_bytes_applied,
-                    pending_updates: u64::from(stats.pending_updates),
-                    pending_staging_bytes: stats.pending_staging_bytes,
-                    yuv_convert_us: stats.yuv_convert_us,
-                    yuv_convert_output_bytes: stats.yuv_convert_output_bytes,
-                    yuv_conversions_attempted: u64::from(stats.yuv_conversions_attempted),
-                    yuv_conversions_applied: u64::from(stats.yuv_conversions_applied),
-                });
-            }
-
-            if std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
-                && (stats.update_effects_delayed_budget > 0
-                    || stats.update_effects_dropped_staging > 0
-                    || stats.update_effects_replaced > 0
-                    || stats.yuv_conversions_attempted > 0)
-            {
-                tracing::debug!(
-                    seen = stats.update_effects_seen,
-                    enqueued = stats.update_effects_enqueued,
-                    replaced = stats.update_effects_replaced,
-                    applied = stats.update_effects_applied,
-                    delayed_budget = stats.update_effects_delayed_budget,
-                    dropped_staging = stats.update_effects_dropped_staging,
-                    upload_bytes_budgeted = stats.upload_bytes_budgeted,
-                    upload_bytes_applied = stats.upload_bytes_applied,
-                    upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
-                    staging_budget_bytes = stats.staging_budget_bytes,
-                    pending_updates = stats.pending_updates,
-                    pending_staging_bytes = stats.pending_staging_bytes,
-                    yuv_attempted = stats.yuv_conversions_attempted,
-                    yuv_applied = stats.yuv_conversions_applied,
-                    yuv_convert_us = stats.yuv_convert_us,
-                    yuv_output_bytes = stats.yuv_convert_output_bytes,
-                    "streaming image updates queued/budgeted"
-                );
-            }
+            self.publish_streaming_upload_diagnostics(&stats);
 
             for window in window_state_dirty {
                 if let Some(state) = self.windows.get_mut(window) {
@@ -425,9 +332,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             did_work |= self.propagate_model_changes();
             did_work |= self.propagate_global_changes();
 
-            if self.streaming_uploads.has_pending() {
-                self.request_streaming_pending_redraws();
-            }
+            self.request_pending_streaming_upload_redraws();
 
             if !did_work {
                 return false;
