@@ -21,6 +21,9 @@ const AUTOCOMPLETE_LEADING_ICON_DIAG: &str = include_str!(
 const AUTOCOMPLETE_OPTION_CHROME_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-autocomplete-option-chrome-fill.json"
 );
+const EXPOSED_DROPDOWN_FILTERING_DIAG: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-exposed-dropdown-filtering.json"
+);
 const TEXT_FIELD_ICONS_DIAG: &str = include_str!(
     "../../../tools/diag-scripts/ui-gallery/material3/forms/ui-gallery-material3-text-field-icons-screenshots.json"
 );
@@ -78,6 +81,11 @@ fn material3_field_surface_diags_use_direct_start_pages() {
         (
             "autocomplete option chrome",
             AUTOCOMPLETE_OPTION_CHROME_DIAG,
+            "\"FRET_UI_GALLERY_START_PAGE\": \"material3_autocomplete\"",
+        ),
+        (
+            "exposed dropdown filtering",
+            EXPOSED_DROPDOWN_FILTERING_DIAG,
             "\"FRET_UI_GALLERY_START_PAGE\": \"material3_autocomplete\"",
         ),
         (
@@ -168,6 +176,12 @@ fn material3_field_surface_diags_keep_explicit_content_scroll_anchors() {
             AUTOCOMPLETE_OPTION_CHROME_DIAG,
             "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-scroll\" }",
             "\"id\": \"ui-gallery-material3-autocomplete\"",
+        ),
+        (
+            "exposed dropdown filtering",
+            EXPOSED_DROPDOWN_FILTERING_DIAG,
+            "\"container\": { \"kind\": \"test_id\", \"id\": \"ui-gallery-content-viewport\" }",
+            "\"id\": \"ui-gallery-material3-exposed-dropdown\"",
         ),
         (
             "search view screenshots",
@@ -266,6 +280,10 @@ fn material3_control_surface_diags_drop_nav_search_hops_when_start_page_is_owned
         (
             "autocomplete option chrome",
             AUTOCOMPLETE_OPTION_CHROME_DIAG,
+        ),
+        (
+            "exposed dropdown filtering",
+            EXPOSED_DROPDOWN_FILTERING_DIAG,
         ),
         ("text field icons", TEXT_FIELD_ICONS_DIAG),
         (
