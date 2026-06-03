@@ -580,25 +580,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.handle_incoming_open_release(token);
                     }
                     Effect::TextAddFontAssets { requests } => {
-                        let Some(renderer) = self.renderer.as_mut() else {
-                            continue;
-                        };
-
-                        let added = crate::runner::font_catalog::inject_font_asset_requests_and_refresh_catalog(
-                                &mut self.app,
-                                renderer,
-                                requests,
-                                fret_runtime::RendererFontSourceLane::AssetRequest,
-                                fret_runtime::FontFamilyDefaultsPolicy::None,
-                            );
-                        if added == 0 {
-                            continue;
-                        }
-
-                        self.request_redraw_all_windows();
+                        self.handle_text_add_font_assets(requests);
                     }
                     Effect::TextRescanSystemFonts => {
-                        self.request_system_font_rescan();
+                        self.handle_text_rescan_system_fonts();
                     }
                     Effect::ImageRegisterRgba8 {
                         window,

@@ -29522,6 +29522,19 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-04 Desktop runner text effects owner split:
+
+- Claim: font asset injection and system-font rescan handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/text_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod text_effects;`; `text_effects.rs` owns
+  `handle_text_add_font_assets` and `handle_text_rescan_system_fonts`; `effects.rs` keeps the
+  effect queue loop and only delegates `Effect::TextAddFontAssets` and
+  `Effect::TextRescanSystemFonts` to the text owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M74_RUNNER_TEXT_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

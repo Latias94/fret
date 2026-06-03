@@ -217,6 +217,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M73_RUNNER_IMAGE_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   (moves image registration, streaming updates, and unregister handling into `image_effects.rs`
   without changing runtime behavior)
+- Latest runner text effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M74_RUNNER_TEXT_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves font asset injection and system-font rescan handling into `text_effects.rs` without
+  changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

@@ -166,6 +166,7 @@ mod render;
 mod run;
 mod shell_effects;
 mod streaming_images;
+mod text_effects;
 mod timers;
 mod webview;
 #[cfg(target_os = "windows")]
