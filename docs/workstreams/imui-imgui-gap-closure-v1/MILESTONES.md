@@ -1423,6 +1423,14 @@ installation, and unsupported-target no-op consumption. Runtime behavior and pub
 remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
 multiwindow source gate.
 
+2026-06-04 desktop runner change propagation owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the generic effect loop and
+calls `propagate_model_changes` / `propagate_global_changes` from
+`crates/fret-launch/src/runner/desktop/runner/change_propagation.rs`. `change_propagation.rs` owns
+model/global driver fan-out, platform menu keymap and command-gating sync, renderer font-family
+sync, and renderer locale sync. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

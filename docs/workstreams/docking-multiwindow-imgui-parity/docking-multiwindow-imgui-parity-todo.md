@@ -798,6 +798,16 @@ Each TODO is labeled:
         delegates the menu-bar effect branch.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner change propagation owner split keeps model/global change fan-out out of
+      the general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/change_propagation.rs` owns model-change
+        driver callbacks, global-change driver callbacks, Windows/macOS menu sync, renderer
+        font-family sync, and renderer locale sync.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        calls the change propagation owner after effect dispatch.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

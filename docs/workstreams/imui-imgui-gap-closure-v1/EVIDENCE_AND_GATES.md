@@ -29635,6 +29635,18 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner change propagation owner split:
+
+- Claim: model/global change propagation moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/change_propagation.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod change_propagation;`; `change_propagation.rs` owns
+  `propagate_model_changes` and `propagate_global_changes`; `effects.rs` keeps the effect queue loop
+  and only calls the change propagation owner after effect dispatch.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

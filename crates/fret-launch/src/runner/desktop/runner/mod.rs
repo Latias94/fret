@@ -154,6 +154,7 @@ mod scheduling_diagnostics;
 #[cfg(windows)]
 mod windows_menu;
 
+mod change_propagation;
 mod clipboard_effects;
 mod command_effects;
 mod cursor_effects;

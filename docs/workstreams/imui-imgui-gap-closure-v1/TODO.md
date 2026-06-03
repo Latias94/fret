@@ -1031,6 +1031,9 @@ Last updated: 2026-06-03
 - [x] Split desktop runner menu-bar effect handling into a private menu owner without changing runtime behavior or public effect surfaces. The docking source gate
   freezes the owner split in `M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming
   Wayland compositor acceptance.
+- [x] Split desktop runner model/global change propagation into a private change-propagation owner without changing runtime behavior or public effect surfaces. The docking source gate
+  freezes the owner split in `M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md` without
+  claiming Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.
