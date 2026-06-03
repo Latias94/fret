@@ -6786,3 +6786,13 @@ opening the slice.
       `NumericReplacementPlan`, replacement key classification, and insertion-key classification.
       The IMUI source gate rejects focus/handoff and key-policy details drifting back into the
       root numeric text-entry hub.
+- [x] Split editor `VecEdit` public Vec2/Vec3/Vec4 model records into private owner modules
+      without changing public `Vec2Edit`, `Vec3Edit`, or `Vec4Edit` import paths, builder APIs,
+      presentation helpers, validation/reset/option methods, keyed element routing, or IMUI/editor
+      facade APIs.
+      Result: `controls/vec_edit/model.rs` now keeps the stable public re-export hub and focused
+      presentation regression test only. `controls/vec_edit/model/vec2.rs`,
+      `controls/vec_edit/model/vec3.rs`, and `controls/vec_edit/model/vec4.rs` own the
+      corresponding public record fields, constructors, presentation helpers, builder methods, and
+      `into_element(...)` delegation. The IMUI source gate rejects Vec2/Vec3/Vec4 model bodies from
+      drifting back into the root model hub.

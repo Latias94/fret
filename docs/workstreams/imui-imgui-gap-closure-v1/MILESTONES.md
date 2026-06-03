@@ -5985,3 +5985,12 @@ draft-change error clearing. `numeric_text_entry/replace.rs` owns `NumericReplac
 replace-on-first-edit key classification, paste handling, delete consumption, and insertion-key
 classification. Public editor/IMUI adapter APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor VecEdit model record owner split result:
+`ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the stable public VecEdit model
+hub, Vec2/Vec3/Vec4 re-exports, and the focused presentation regression test. The public model
+records moved into dedicated private owners: `model/vec2.rs` owns `Vec2Edit`, `model/vec3.rs` owns
+`Vec3Edit`, and `model/vec4.rs` owns `Vec4Edit`. Each owner carries its record fields,
+constructor, presentation helper, validation/reset/option builders, and `into_element(...)`
+delegation through the existing private keying owner. Public editor/IMUI adapter APIs remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.

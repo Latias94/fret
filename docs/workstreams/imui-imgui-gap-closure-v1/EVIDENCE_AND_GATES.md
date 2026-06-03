@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor VecEdit Model Record Owner Split - 2026-06-03
+
+Claim verified: editor `VecEdit` public Vec2/Vec3/Vec4 model records moved out of
+`controls/vec_edit/model.rs` into private per-arity owners without changing public `Vec2Edit`,
+`Vec3Edit`, or `Vec4Edit` import paths, builder APIs, presentation helpers, validation/reset/option
+methods, keyed element routing, or IMUI/editor facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps only the stable public model
+  hub, `mod keying;`, Vec2/Vec3/Vec4 owner declarations, public re-exports, and the focused
+  presentation regression test.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model/vec2.rs` owns `Vec2Edit` fields,
+  constructor, presentation helper, validation/reset/option builders, and `into_element(...)`
+  delegation.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model/vec3.rs` owns `Vec3Edit` fields,
+  constructor, presentation helper, validation/reset/option builders, and `into_element(...)`
+  delegation.
+- `ecosystem/fret-ui-editor/src/controls/vec_edit/model/vec4.rs` owns `Vec4Edit` fields,
+  constructor, presentation helper, validation/reset/option builders, and `into_element(...)`
+  delegation.
+- `tools/gate_imui_workstream_source.py` now requires the root model hub and each Vec2/Vec3/Vec4
+  owner, while rejecting Vec2/Vec3/Vec4 model bodies from drifting back into the root hub.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor vec_edit --no-fail-fast`: pass, 4 tests.
+- `cargo nextest run -p fret-ui-editor --no-fail-fast`: pass, 228 tests.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --test imui_adapter_smoke --no-fail-fast`:
+  pass, 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret IMUI Region Container ListBox Test Owner Split - 2026-06-03
 
 Claim verified: the `fret-imui` region-container composition proof root no longer owns the ListBox
