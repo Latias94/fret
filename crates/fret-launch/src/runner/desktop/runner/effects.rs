@@ -109,12 +109,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         );
                     }
                     Effect::CursorSetIcon { window, icon } => {
-                        let Some(state) = self.windows.get_mut(window) else {
-                            continue;
-                        };
-                        if state.platform.set_cursor_icon(icon) {
-                            window_state_dirty.insert(window);
-                        }
+                        self.handle_cursor_set_icon(window, icon, &mut window_state_dirty);
                     }
                     Effect::RequestAnimationFrame(window) => {
                         self.handle_request_animation_frame(window);

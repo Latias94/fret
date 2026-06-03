@@ -319,6 +319,7 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/docking/pointer.rs",
             "crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs",
             "crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/file_transfer_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/frame_effects.rs",
@@ -393,6 +394,7 @@ def _check_docs(failures: list[str]) -> None:
             "`M76_RUNNER_IME_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner IME effect ownership",
             "`M77_RUNNER_FRAME_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner frame effect ownership",
             "`M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner timer effect ownership",
+            "`M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner cursor effect ownership",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -472,6 +474,9 @@ def _check_docs(failures: list[str]) -> None:
             "Latest runner timer effects owner split:",
             "M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "timers.rs",
+            "Latest runner cursor effects owner split:",
+            "M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "cursor_effects.rs",
         ],
         failures=failures,
     )
@@ -605,6 +610,9 @@ def _check_docs(failures: list[str]) -> None:
             "2026-06-04 runner timer effects owner split keeps timer set/cancel handling out",
             "M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "fired-timer re-arm/removal behavior",
+            "2026-06-04 runner cursor effects owner split keeps cursor icon application out",
+            "M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "dirty-window propagation",
             "2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration",
         ],
         forbidden=[
@@ -1430,9 +1438,39 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/mod.rs",
+            "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effects.rs",
+            "handle_cursor_set_icon",
+            "CursorSetIcon",
+            "window_state_dirty",
+            "mod cursor_effects;",
+            "cargo fmt --package fret-launch -- --check",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "gate_docking_multiwindow_workstream_source.py",
+            "gate_imui_workstream_source.py",
+            "WORKSTREAM.json",
+            "git diff --check",
+            "It does not close",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod clipboard_effects;",
+            "mod cursor_effects;",
             "mod incoming_open_effects;",
             "mod file_transfer_effects;",
             "mod frame_effects;",
@@ -1496,6 +1534,18 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs"),
+        required=[
+            "pub(super) fn handle_cursor_set_icon",
+            "state.platform.set_cursor_icon(icon)",
+            "window_state_dirty.insert(window)",
+        ],
+        forbidden=[
+            "pub fn ",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/frame_effects.rs"),
         required=[
             "pub(super) fn handle_effect_redraw",
@@ -1545,6 +1595,7 @@ def _check_docs(failures: list[str]) -> None:
             "FRET_IME_DEBUG",
             "with_injected_event_scope",
             "self.timers.remove(&token)",
+            "state.platform.set_cursor_icon",
         ],
         failures=failures,
     )
