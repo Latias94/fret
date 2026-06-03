@@ -209,6 +209,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M71_RUNNER_FILE_TRANSFER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   (moves external-drop and file-dialog completion handling into `file_transfer_effects.rs` without
   changing read, selection/cancel, capability-gating, or release behavior)
+- Latest runner shell effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M72_RUNNER_SHELL_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves macOS app-shell actions, open-url capability gating, and share-sheet completion handling
+  into `shell_effects.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

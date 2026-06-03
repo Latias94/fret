@@ -163,6 +163,7 @@ mod platform_capabilities;
 mod platform_prefs;
 mod render;
 mod run;
+mod shell_effects;
 mod streaming_images;
 mod timers;
 mod webview;

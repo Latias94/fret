@@ -7,8 +7,6 @@ use super::streaming_images::{
 use fret_app::Effect;
 use fret_core::Event;
 use fret_core::time::Instant;
-use fret_platform::open_url::OpenUrl as _;
-use fret_runtime::PlatformCapabilities;
 use winit::event_loop::ActiveEventLoop;
 
 use super::{WinitCommandContext, WinitGlobalContext, WinitRunner, WinitWindowContext};
@@ -434,28 +432,16 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         return false;
                     }
                     Effect::ShowAboutPanel => {
-                        #[cfg(target_os = "macos")]
-                        {
-                            super::macos_menu::show_about_panel();
-                        }
+                        self.handle_show_about_panel();
                     }
                     Effect::HideApp => {
-                        #[cfg(target_os = "macos")]
-                        {
-                            super::macos_menu::hide_app();
-                        }
+                        self.handle_hide_app();
                     }
                     Effect::HideOtherApps => {
-                        #[cfg(target_os = "macos")]
-                        {
-                            super::macos_menu::hide_other_apps();
-                        }
+                        self.handle_hide_other_apps();
                     }
                     Effect::UnhideAllApps => {
-                        #[cfg(target_os = "macos")]
-                        {
-                            super::macos_menu::unhide_all_apps();
-                        }
+                        self.handle_unhide_all_apps();
                     }
                     Effect::Command { window, command } => match window {
                         Some(window) => {
@@ -558,48 +544,14 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.handle_external_drop_release(token);
                     }
                     Effect::OpenUrl { url, .. } => {
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.shell.open_url {
-                            continue;
-                        }
-                        if let Err(err) = self.open_url.open_url(&url) {
-                            tracing::debug!(?err, url = %url, "failed to open url");
-                        }
+                        self.handle_open_url(url);
                     }
                     Effect::ShareSheetShow {
                         window,
                         token,
                         items,
                     } => {
-                        let _ = items;
-                        let caps = self
-                            .app
-                            .global::<PlatformCapabilities>()
-                            .cloned()
-                            .unwrap_or_default();
-                        if !caps.shell.share_sheet {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ShareSheetCompleted {
-                                    token,
-                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
-                                },
-                            );
-                            continue;
-                        }
-
-                        // Desktop share sheets are not implemented yet; report unavailable.
-                        self.deliver_window_event_now(
-                            window,
-                            &Event::ShareSheetCompleted {
-                                token,
-                                outcome: fret_core::ShareSheetOutcome::Unavailable,
-                            },
-                        );
+                        self.handle_share_sheet_show(window, token, items);
                     }
                     Effect::FileDialogOpen { window, options } => {
                         self.handle_file_dialog_open(window, options);

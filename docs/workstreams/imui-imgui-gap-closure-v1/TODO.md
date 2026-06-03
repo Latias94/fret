@@ -996,6 +996,10 @@ Last updated: 2026-06-03
       source gate freezes the owner split in
       `M71_RUNNER_FILE_TRANSFER_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
       compositor acceptance.
+- [x] Split desktop runner shell actions into a private shell owner without changing runtime behavior or
+      public effect surfaces. The docking source gate freezes the owner split in
+      `M72_RUNNER_SHELL_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
+      acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.

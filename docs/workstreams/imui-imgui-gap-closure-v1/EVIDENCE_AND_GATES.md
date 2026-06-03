@@ -29460,6 +29460,28 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-04 Desktop runner shell effects owner split:
+
+- Claim: macOS about-panel and app hide/unhide actions, open-url capability gating, and
+  share-sheet unavailable completion moved from `crates/fret-launch/src/runner/desktop/runner/effects.rs`
+  into `crates/fret-launch/src/runner/desktop/runner/shell_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod shell_effects;`; `shell_effects.rs` owns
+  `handle_show_about_panel`, `handle_hide_app`, `handle_hide_other_apps`,
+  `handle_unhide_all_apps`, `handle_open_url`, and `handle_share_sheet_show`; `effects.rs` keeps
+  the effect queue loop and only delegates `Effect::ShowAboutPanel`, `Effect::HideApp`,
+  `Effect::HideOtherApps`, `Effect::UnhideAllApps`, `Effect::OpenUrl`, and `Effect::ShareSheetShow`
+  to the shell owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M72_RUNNER_SHELL_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+- Passed: `cargo fmt --package fret-launch -- --check`.
+- Passed: `cargo check -p fret-launch --lib`.
+- Passed:
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`.
+
 2026-06-03 Fret Docking declarative interaction drag-session owner split:
 
 - Claim: floating drag, divider drag, pending panel/tabs drag, and viewport-capture session map
