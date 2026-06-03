@@ -166,6 +166,7 @@ mod webview;
 #[cfg(target_os = "windows")]
 mod win32;
 mod window;
+mod window_close;
 mod window_lifecycle;
 mod window_style;
 

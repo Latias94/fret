@@ -173,6 +173,11 @@ Platform note:
   (moves `WindowRequest::SetStyle` platform application, style diagnostics, composited-alpha
   reconfiguration, and DockFloating transparent-payload follow state into `window_style.rs` without
   changing effect ordering or the Wayland acceptance boundary)
+- Latest runner window close owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M64_RUNNER_WINDOW_CLOSE_OWNER_SPLIT_2026-06-03.md`
+  (moves `WindowRequest::Close` checked-close, main-window exit, force-close-all, empty-window
+  shutdown, and event-loop exit policy into `window_close.rs` without changing close behavior or the
+  Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

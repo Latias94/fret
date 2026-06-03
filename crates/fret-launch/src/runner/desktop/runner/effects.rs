@@ -1591,27 +1591,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                     }
                     Effect::Window(req) => match req {
                         WindowRequest::Close(window) => {
-                            let is_main = Some(window) == self.main_window;
-                            let closed = self.close_window(window);
-                            if !closed {
-                                continue;
-                            }
-
-                            if is_main && self.config.exit_on_main_window_close {
-                                let windows: Vec<fret_core::AppWindowId> =
-                                    self.windows.keys().collect();
-                                for window in windows {
-                                    let _ = self.force_close_window(window);
-                                }
-                                self.dispatcher.shutdown();
-                                event_loop.exit();
-                                should_exit = true;
-                                return false;
-                            }
-
-                            if self.windows.is_empty() {
-                                self.dispatcher.shutdown();
-                                event_loop.exit();
+                            if self.handle_window_close_request(window, event_loop) {
                                 should_exit = true;
                                 return false;
                             }
