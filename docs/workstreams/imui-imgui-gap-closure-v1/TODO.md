@@ -7008,3 +7008,13 @@ opening the slice.
       fields/builders, marker radius/shape policy, scatter plot model records, and primary/Y2/Y3/Y4
       bounds construction. The IMUI source gate freezes the root re-export hub and scatter owner
       boundary.
+- [x] Split Fret Plot area series/model records out of the root plot model file without changing
+      `crate::models::{AreaSeries, AreaPlotModel}` import paths, fill/stroke/baseline options,
+      baseline-inclusive multi-axis bounds projection, declarative area panel behavior, or optional
+      IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod area;`, re-exports
+      `AreaSeries` and `AreaPlotModel`, and keeps shared axes plus non-area model records.
+      `ecosystem/fret-plot/src/models/area.rs` owns area series fields/builders, fill alpha,
+      baseline policy, area plot model records, explicit-bounds construction, and primary/Y2/Y3/Y4
+      baseline-expanded bounds construction. The IMUI source gate freezes the root re-export hub
+      and area owner boundary.

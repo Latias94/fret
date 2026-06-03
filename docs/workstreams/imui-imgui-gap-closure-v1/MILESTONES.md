@@ -6199,3 +6199,12 @@ marker shape policy, scatter plot model records, and primary/Y2/Y3/Y4 data-bound
 `crate::models::{ScatterSeries, ScatterPlotModel}` imports, declarative model imports, and optional
 IMUI adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
 split.
+
+2026-06-03 Fret Plot area model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-area model records, shared
+bounds helpers, and the stable public re-export for `AreaSeries` / `AreaPlotModel`.
+`ecosystem/fret-plot/src/models/area.rs` owns area series fields/builders, fill alpha and baseline
+policy, area plot model records, caller-supplied bounds construction, and primary/Y2/Y3/Y4
+baseline-expanded data-bound projection. Public `crate::models::{AreaSeries, AreaPlotModel}`
+imports, declarative area plot panels, and optional IMUI adapter routing remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
