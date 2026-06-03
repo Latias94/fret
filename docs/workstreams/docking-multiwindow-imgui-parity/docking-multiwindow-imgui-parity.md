@@ -158,6 +158,11 @@ Platform note:
   (moves dock-drag pointer discovery/capture-cancel into `docking/pointer.rs` and platform
   release-outside poll-up fallbacks into `docking/poll_up.rs` without changing caller paths,
   drop routing, follow-stop cleanup, or the Wayland acceptance boundary)
+- Latest runner platform capability owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M61_RUNNER_PLATFORM_CAPABILITY_OWNER_SPLIT_2026-06-03.md`
+  (moves desktop runner platform capability posture, including Linux Wayland degradation and
+  effective-capability clamping, into `platform_capabilities.rs` without changing caller paths,
+  capability values, or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -320,7 +325,7 @@ Evidence anchors:
 - Arbitration rules: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - Optional “transparent payload” (ImGui-style):
   - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
-  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
+  - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (emits `WindowRequest::SetStyle`),
     `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
     `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_hit_test_passthrough_all`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`

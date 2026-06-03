@@ -83,13 +83,13 @@ Each TODO is labeled:
 
 - [x] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
   - Evidence anchors:
-    - Follow state machine: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`dock_tearoff_follow`, `stop_dock_tearoff_follow`)
-    - Cancel/drag end guard: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`)
+    - Follow state machine: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (`dock_tearoff_follow`, `stop_dock_tearoff_follow`)
+    - Cancel/drag end guard: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (`update_dock_tearoff_follow`)
     - about_to_wait guard: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` (`about_to_wait`)
     - Escape cancel: `crates/fret-ui/src/tree/dispatch.rs` and runner cancel path `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
     - Release-outside + poll-up no longer hardcode `PointerId(0)`:
       - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` (`DeviceEvent::Button` fallback, `WindowEvent::PointerButton` left-up)
-      - `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`maybe_finish_dock_drag_released_outside`)
+      - `crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs` (`maybe_finish_dock_drag_released_outside`)
   - Acceptance:
     - Escape during dock drag cancels and stops follow.
     - Mouse-up outside any window completes drop and stops follow.
@@ -179,7 +179,7 @@ Each TODO is labeled:
   - Evidence anchors:
     - Cursor override integration (diagnostics): `crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs`
     - Hover routing under follow: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`route_internal_drag_hover_from_cursor`)
-    - Window move/follow: `crates/fret-launch/src/runner/desktop/runner/docking.rs`
+    - Window move/follow: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs`
   - Acceptance (manual; Windows with 2 monitors at different scale factors):
     - Tear off a tab to a DockFloating OS window.
     - Begin drag-back while follow is active.
@@ -312,13 +312,13 @@ Each TODO is labeled:
       in-window floating fallback instead of creating DockFloating OS windows.
   - Evidence anchors:
     - Wayland session detection: `crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs` (`linux_is_wayland_session`)
-    - Capability downgrade: `crates/fret-launch/src/runner/desktop/runner/mod.rs` (`backend_platform_capabilities`)
+    - Capability downgrade: `crates/fret-launch/src/runner/desktop/runner/platform_capabilities.rs` (`backend_platform_capabilities`)
     - Tear-off request degradation (no `CreateWindowKind::DockFloating` when tear-off is disabled): `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`)
     - Docking UI gating: `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
     - Source-policy status note: `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`
     - Unit tests:
       - `crates/fret-launch/src/runner/desktop/runner/platform_prefs.rs` (`is_wayland_session_*`)
-      - `crates/fret-launch/src/runner/desktop/runner/mod.rs` (`linux_windowing_capability_posture_*`)
+      - `crates/fret-launch/src/runner/desktop/runner/platform_capabilities.rs` (`linux_windowing_capability_posture_*`)
       - `ecosystem/fret-docking/src/runtime.rs` (`request_float_degrades_to_in_window_when_window_hover_detection_is_none`)
   - Progress:
     - [x] Runner capability posture is now explicit and helper-tested:
@@ -562,8 +562,9 @@ Each TODO is labeled:
       - `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` owns
         `update_dock_tearoff_follow`, `stop_dock_tearoff_follow`, transparent payload style
         requests, redundant outer-position suppression, and final settle/rollback.
-      - `crates/fret-launch/src/runner/desktop/runner/docking.rs` keeps dock drag pointer
-        discovery, pointer-capture cancellation, and platform poll-up fallbacks.
+      - `crates/fret-launch/src/runner/desktop/runner/docking.rs` is now a private module facade
+        over follow, pointer, and poll-up owners; platform poll-up fallbacks live in
+        `crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs`.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [x] 2026-06-03 runner dock-drag pointer/poll-up owner split keeps the desktop runner
@@ -578,6 +579,16 @@ Each TODO is labeled:
         and follow-stop cleanup.
       - `crates/fret-launch/src/runner/desktop/runner/docking.rs` keeps only `mod follow;`,
         `mod pointer;`, and `mod poll_up;`.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner platform capability owner split keeps Wayland degradation posture out
+      of the runner root module:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M61_RUNNER_PLATFORM_CAPABILITY_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/platform_capabilities.rs` owns
+        `apply_linux_windowing_capability_posture`, `backend_platform_capabilities`, effective
+        capability clamping, and focused capability posture regressions.
+      - `crates/fret-launch/src/runner/desktop/runner/mod.rs` keeps `mod platform_capabilities;`
+        without owning the Wayland degradation helpers.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
@@ -630,7 +641,7 @@ Each TODO is labeled:
     - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
     - Docking create request wiring: `ecosystem/fret-docking/src/runtime/tear_off.rs` (`WindowRequest::Create` for `DockFloating`)
     - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
-    - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
+    - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Desktop runner runtime patch handling: `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`WindowRequest::SetStyle`)
     - Opacity capability + effective diagnostics closure: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
   - Remaining gaps (keep ADR 0139 scope honest):
