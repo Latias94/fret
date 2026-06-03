@@ -6040,3 +6040,11 @@ owns the TextInput props call, mount, buffered single-line session/key/blur wiri
 submit-command-aware key mode, and focus-selection routing. Public `TextField` options and
 editor/IMUI adapter APIs remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
 split.
+
+2026-06-03 editor ColorEdit swatch visual owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` now keeps swatch pressable
+registration, popup activation/context-menu orchestration, drag source/drop hover hooks, and
+visual child-owner routing only. `controls/color_edit/swatch/visual.rs` owns tooltip-open
+synchronization, `EditorWidgetVisuals` frame projection, clipped preview container assembly, and
+`color_preview_stack(...)` mounting. Public `ColorEdit` behavior and editor/IMUI adapter APIs
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.

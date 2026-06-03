@@ -958,6 +958,16 @@ Last updated: 2026-06-03
       private activation owner contains visible-content guard, original-reference capture,
       open-state toggle, copy-menu close, and redraw request. The source gate prevents popup
       activation policy from drifting back into the root swatch owner.
+- [x] Split editor color-edit main swatch visual/tooltip-state projection into a private child
+      owner without changing pressable registration, popup activation/reference capture,
+      context-menu routing, drag/drop hooks, tooltip visibility rules, frame visual state, preview
+      container chrome, alpha-preview rendering, or a11y value text.
+      Result: `controls/color_edit/swatch.rs` now keeps swatch pressable registration,
+      activation/context-menu orchestration, drag source/drop hover hooks, and visual child-owner
+      routing only. `controls/color_edit/swatch/visual.rs` owns tooltip-open synchronization,
+      frame visual projection, clipped preview container assembly, and `color_preview_stack(...)`
+      mounting. The source gate and `imui_surface_policy` anchors prevent visual state from
+      drifting back into the root swatch owner.
 - [x] Split editor color-edit root test-id derivation into a private child owner without changing
       explicit child test-id precedence, fallback derivation from the root test id, input/swatch
       assignment, popup/tooltip/copy/eyedropper overlay ids, caller-keyed element identity,

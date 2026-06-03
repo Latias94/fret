@@ -29031,6 +29031,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-03 editor ColorEdit swatch visual owner split:
+
+- Claim: color-edit main swatch visual/tooltip-state projection moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` into
+  `ecosystem/fret-ui-editor/src/controls/color_edit/swatch/visual.rs` without changing pressable
+  registration, popup activation/reference capture, context-menu routing, drag/drop hooks, tooltip
+  visibility rules, frame visual state, preview container chrome, alpha-preview rendering, or a11y
+  value text.
+- Evidence anchors: `swatch.rs` now declares `mod visual;`, imports
+  `ColorSwatchVisualArgs` / `color_swatch_visual(...)`, keeps `PressableProps`,
+  `pressable_add_on_activate(...)`, context-menu routing, drag source/drop hover hooks, and
+  delegates the visual branch through `color_swatch_visual(...)`; `swatch/visual.rs` owns
+  tooltip-open synchronization, `EditorWidgetVisuals::new(theme).frame_visuals(...)`,
+  clipped preview container assembly, and `color_preview_stack(...)` mounting; `imui_surface_policy`
+  now checks the visual owner for these anchors, and `tools/gate_imui_workstream_source.py`
+  rejects visual state from drifting back into `swatch.rs`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-03 editor TextField entry branch owner split:
 
 - Claim: editor `TextField` entry single-line and multiline mount/session branches moved from

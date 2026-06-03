@@ -1,26 +1,23 @@
 mod activation;
 mod context_menu;
+mod visual;
 
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
+use fret_core::{Color, Corners, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
-    SizeStyle,
-};
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::primitives::style::EditorStyle;
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 use self::activation::{ColorSwatchActivateInput, color_swatch_activate};
 use self::context_menu::{
     install_context_menu_keyboard_handler, install_context_menu_pointer_handler,
 };
+use self::visual::{ColorSwatchVisualArgs, color_swatch_visual};
 use super::drag_drop::{ColorDragDropStore, install_color_drag_source, update_color_drop_target};
-use super::popup::color_preview_stack;
 use super::{
     ColorEditAlphaPreview, ColorEditCopyOptions, ColorEditDragDropOptions,
     ColorEditDragDropPayload, ColorEditPopupOptions, ColorEditTooltipOptions,
@@ -162,65 +159,24 @@ pub(super) fn color_swatch<H: UiHost>(
                 drag_drop_enabled,
             );
 
-            let is_open = cx
-                .get_model_copied(&open_for_paint, Invalidation::Paint)
-                .unwrap_or(false);
-            let copy_menu_is_open = cx
-                .get_model_copied(&copy_menu_open_for_paint, Invalidation::Paint)
-                .unwrap_or(false);
-            let tooltip_visible = tooltip_options.enabled
-                && enabled
-                && !is_open
-                && !copy_menu_is_open
-                && st.hovered_raw;
-            let tooltip_open_now = cx
-                .get_model_copied(&tooltip_open_for_paint, Invalidation::Paint)
-                .unwrap_or(false);
-            if tooltip_open_now != tooltip_visible {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&tooltip_open_for_paint, |value| *value = tooltip_visible);
-            }
-            let visuals = {
-                let theme = Theme::global(&*cx.app);
-                EditorWidgetVisuals::new(theme).frame_visuals(
+            vec![color_swatch_visual(
+                cx,
+                ColorSwatchVisualArgs {
+                    open: open_for_paint.clone(),
+                    tooltip_open: tooltip_open_for_paint.clone(),
+                    copy_menu_open: copy_menu_open_for_paint.clone(),
+                    current,
+                    alpha_preview,
                     frame_chrome,
-                    EditorFrameState {
-                        enabled,
-                        hovered: st.hovered || st.hovered_raw,
-                        pressed: st.pressed || drop_over,
-                        focused: st.focused,
-                        open: (is_open && popup_has_visible_content) || copy_menu_is_open,
-                        semantic: EditorFrameSemanticState::default(),
-                    },
-                )
-            };
-
-            vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(swatch_size),
-                            height: Length::Px(swatch_size),
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    border: Edges::all(frame_chrome.border_width),
-                    border_color: Some(visuals.border),
-                    corner_radii: Corners::all(frame_chrome.radius),
-                    padding: Edges::all(frame_chrome.border_width).into(),
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![color_preview_stack(
-                        cx,
-                        current,
-                        frame_chrome.radius,
-                        alpha_preview,
-                    )]
+                    swatch_size,
+                    enabled,
+                    popup_has_visible_content,
+                    tooltip_options,
+                    hovered: st.hovered,
+                    hovered_raw: st.hovered_raw,
+                    pressed: st.pressed,
+                    focused: st.focused,
+                    drop_over,
                 },
             )]
         },

@@ -6553,6 +6553,23 @@ for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead co
 `git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
 `apps/fret-examples/src/lib.rs`.
 
+## ColorEdit swatch visual owner split - 2026-06-03
+
+Scope: keep `color_edit/swatch.rs` as the pressable/activation/context-menu/drag-drop shell while
+moving tooltip-visible synchronization and swatch visual projection into a dedicated private owner.
+
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` remains the route shell around
+  `color_swatch(...)`.
+- `ecosystem/fret-ui-editor/src/controls/color_edit/swatch/visual.rs` owns tooltip-open
+  synchronization, `EditorWidgetVisuals` frame projection, clipped preview container assembly, and
+  `color_preview_stack(...)` mounting.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-ui-editor color_edit --no-fail-fast
+```
+
 ## TextField entry branch owner split - 2026-06-03
 
 Scope: keep `text_field/element/entry.rs` as a route-only shell while moving single-line and
