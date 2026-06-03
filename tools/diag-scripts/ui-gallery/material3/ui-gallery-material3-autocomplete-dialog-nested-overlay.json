@@ -1,6 +1,9 @@
 {
   "schema_version": 2,
   "meta": {
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_autocomplete"
+    },
     "name": "ui-gallery-material3-autocomplete-dialog-nested-overlay",
     "required_launch_features": ["gallery-material3"],
     "required_capabilities": ["diag.script_v2"],
@@ -19,7 +22,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-autocomplete" }
       },
       "timeout_frames": 600
     },
@@ -27,31 +30,6 @@
     { "type": "wait_frames", "n": 2 },
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
     { "type": "wait_frames", "n": 15 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "autocomplete" },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-autocomplete" },
-      "within_window": true,
-      "padding_px": 8.0,
-      "timeout_frames": 600
-    },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-autocomplete" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-autocomplete" }
-      },
-      "timeout_frames": 600
-    },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
