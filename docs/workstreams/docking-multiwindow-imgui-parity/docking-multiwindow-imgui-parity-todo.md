@@ -838,6 +838,17 @@ Each TODO is labeled:
         lifecycle polling, diagnostics, post-dispatch propagation, and pending streaming redraws.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner wheel coalescing owner split keeps wheel smoothing math out of the
+      general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M87_RUNNER_WHEEL_COALESCING_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/wheel_coalescing.rs` owns wheel delta
+        coalescing, per-axis max-abs splitting, carried remainder behavior, env configuration, and
+        the existing wheel unit tests.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps winit event routing,
+        pending wheel event insertion/delivery, redraw handling, and `ApplicationHandler` wiring.
+      - Focused runner compile, wheel coalescing regression, Linux capability posture regression,
+        source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
+        compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

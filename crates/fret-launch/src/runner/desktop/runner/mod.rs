@@ -179,6 +179,7 @@ mod streaming_images;
 mod text_effects;
 mod timers;
 mod webview;
+mod wheel_coalescing;
 #[cfg(target_os = "windows")]
 mod win32;
 mod window;
