@@ -30193,3 +30193,31 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 table-column visibility item-response owner split:
+
+- Claim: `TableColumnVisibilityMenuItemResponse` storage and accessors moved from
+  `ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs` into
+  `ecosystem/fret-ui-kit/src/imui/table_column_visibility/response/item.rs` without changing public
+  response type names, public re-export paths, item accessors, clicked/changed forwarding, runtime
+  visibility reads, menu response aggregation, or header context-menu response behavior.
+- Evidence anchors: `response.rs` declares `mod item;`, re-exports
+  `TableColumnVisibilityMenuItemResponse`, keeps `TableColumnVisibilityMenuResponse`,
+  `TableColumnVisibilityHeaderContextMenuResponse`, aggregate `items()`/`item(...)`/`changed()`
+  accessors, and delegates item lookup through `item.column_id()`; `response/item.rs` owns the
+  opaque `column_id`, `visible`, and `response` fields, the crate-local `new(...)` constructor, and
+  the public `column_id()`, `visible()`, `response()`, `clicked()`, and `changed()` accessors;
+  `menu/items.rs` now constructs item responses through `TableColumnVisibilityMenuItemResponse::new(...)`.
+  The source gate covers the moved opaque struct owner, rejects item storage drifting back into
+  `response.rs`, and rejects field-literal construction in `menu/items.rs`.
+- Passed: `cargo fmt --package fret-ui-kit -- --check`.
+- Passed: `cargo check -p fret-ui-kit --features imui --lib`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility --no-fail-fast`.
+- Passed:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

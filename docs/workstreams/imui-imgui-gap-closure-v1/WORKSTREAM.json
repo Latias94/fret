@@ -1875,6 +1875,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/model.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/options.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_column_visibility/response/item.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/columns.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/mutation.rs",

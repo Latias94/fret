@@ -6974,3 +6974,12 @@ opening the slice.
       closest-point helpers, and `hue_wheel/interaction.rs` owns pointer hit testing and
       position-to-HSV mapping. The IMUI source gate rejects geometry/triangle/interaction math from
       drifting back into the root hub.
+- [x] Split IMUI table-column visibility menu-item response storage out of the aggregate response
+      owner without changing public response type names, re-export paths, accessors, clicked/
+      changed semantics, runtime visibility reads, or header context-menu aggregation.
+      Result: `table_column_visibility/response.rs` now keeps the aggregate menu and header
+      context response owners plus the public item re-export. `table_column_visibility/response/item.rs`
+      owns `TableColumnVisibilityMenuItemResponse` storage, accessors, and crate-local
+      construction. `table_column_visibility/menu/items.rs` now constructs the item response
+      through `TableColumnVisibilityMenuItemResponse::new(...)`, and the IMUI source gate follows
+      the opaque item owner.

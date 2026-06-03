@@ -1,6 +1,6 @@
-use std::sync::Arc;
+mod item;
 
-use super::super::ResponseExt;
+pub use item::TableColumnVisibilityMenuItemResponse;
 
 /// Aggregated response for a helper-composed table-column visibility menu section.
 #[derive(Debug, Clone, Default)]
@@ -15,23 +15,13 @@ pub struct TableColumnVisibilityHeaderContextMenuResponse {
     pub(super) items: TableColumnVisibilityMenuResponse,
 }
 
-/// Response for one generated table-column visibility menu item.
-#[derive(Debug, Clone)]
-pub struct TableColumnVisibilityMenuItemResponse {
-    pub(super) column_id: Arc<str>,
-    pub(super) visible: bool,
-    pub(super) response: ResponseExt,
-}
-
 impl TableColumnVisibilityMenuResponse {
     pub fn items(&self) -> &[TableColumnVisibilityMenuItemResponse] {
         &self.items
     }
 
     pub fn item(&self, column_id: &str) -> Option<&TableColumnVisibilityMenuItemResponse> {
-        self.items
-            .iter()
-            .find(|item| item.column_id.as_ref() == column_id)
+        self.items.iter().find(|item| item.column_id() == column_id)
     }
 
     pub fn len(&self) -> usize {
@@ -58,27 +48,5 @@ impl TableColumnVisibilityHeaderContextMenuResponse {
 
     pub fn changed(&self) -> bool {
         self.items.changed()
-    }
-}
-
-impl TableColumnVisibilityMenuItemResponse {
-    pub fn column_id(&self) -> &str {
-        self.column_id.as_ref()
-    }
-
-    pub fn visible(&self) -> bool {
-        self.visible
-    }
-
-    pub fn response(&self) -> ResponseExt {
-        self.response
-    }
-
-    pub fn clicked(&self) -> bool {
-        self.response.clicked()
-    }
-
-    pub fn changed(&self) -> bool {
-        self.response.changed()
     }
 }

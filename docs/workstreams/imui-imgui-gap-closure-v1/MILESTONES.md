@@ -6164,3 +6164,11 @@ owns horizontal badge chrome plus the row Link toggle, while
 row. Section text roles, link-scale test IDs, Column/Row layout selection, Vec3Edit composition,
 uniform-scale sync, public `TransformEdit` options, and editor/IMUI adapter APIs remain unchanged,
 and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 table-column visibility item-response owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs` now keeps aggregate menu
+response and header context-menu response ownership plus the stable public re-export for
+`TableColumnVisibilityMenuItemResponse`. The item response storage moved to
+`table_column_visibility/response/item.rs`, where it owns opaque fields, public accessors, clicked/
+changed forwarding, and crate-local construction. Menu item aggregation now uses the constructor
+instead of field literals, and `tools/gate_imui_workstream_source.py` freezes the new owner.

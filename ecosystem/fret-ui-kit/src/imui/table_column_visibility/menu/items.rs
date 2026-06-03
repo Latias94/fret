@@ -50,11 +50,9 @@ pub(in crate::imui::table_column_visibility) fn table_column_visibility_menu_ite
             })
             .unwrap_or(column.visible())
         });
-        items.push(TableColumnVisibilityMenuItemResponse {
-            column_id,
-            visible,
-            response,
-        });
+        items.push(TableColumnVisibilityMenuItemResponse::new(
+            column_id, visible, response,
+        ));
     }
 
     TableColumnVisibilityMenuResponse { items }
