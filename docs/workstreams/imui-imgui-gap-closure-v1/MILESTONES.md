@@ -3533,6 +3533,12 @@ hub. `control_chrome/chrome/palette.rs` owns `ImUiControlPalette`,
 and `control_chrome/chrome/field.rs` owns field theme resolution plus fill-width field chrome
 props.
 
+2026-06-03 button control chrome child owner-split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button.rs` now keeps the
+`button_chrome(...)` entry only. `button/palette.rs` owns button state color fallback order, and
+`button/props.rs` owns compact button container chrome props. Caller paths, theme token fallback
+order, press/hover/focus semantics, and dense button chrome defaults remain unchanged.
+
 2026-05-27 container element owner-split result:
 `ecosystem/fret-ui-kit/src/imui/containers.rs` is now a private module index/re-export hub.
 `ecosystem/fret-ui-kit/src/imui/containers/children.rs` owns child `ImUiFacade` mounting with build

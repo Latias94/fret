@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Button Control Chrome Child Owner Split - 2026-06-03
+
+Claim verified: button control chrome theme resolution and container props moved behind dedicated
+private child owners without changing `control_chrome::button_chrome`, `ImUiControlPalette`, dense
+button chrome defaults, theme token fallback order, press/hover/focus color semantics, or caller
+paths.
+
+Evidence:
+
+- IMUI button control chrome child owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button.rs` keeps `button_chrome(...)` entry
+  only.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button/palette.rs` owns button palette state
+  color fallback order.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button/props.rs` owns compact button
+  container chrome props.
+- Evidence anchor: button.rs keeps button_chrome entry only.
+- Evidence anchor: button palette state color fallback order.
+- Evidence anchor: button compact container chrome props.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Debug Draw Stroked Rect/Quad/Triangle Path Paint Child Owner Split - 2026-06-03
 
 Claim verified: stroked rect/quad/triangle debug-draw path painters moved behind dedicated private

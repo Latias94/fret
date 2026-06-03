@@ -3623,6 +3623,12 @@ Last updated: 2026-06-03
       `chrome/button.rs` owns button theme resolution and chrome props, `chrome/field.rs` owns
       field theme resolution and chrome props, and `chrome.rs` is now a private module/re-export
       index.
+- [x] Split IMUI button control chrome theme resolution and container props into child owners
+      without changing `control_chrome::button_chrome`, `ImUiControlPalette`, dense button chrome
+      defaults, theme token fallback order, press/hover/focus color semantics, or caller paths.
+      Result: `control_chrome/chrome/button.rs` now keeps the `button_chrome(...)` entry only,
+      `button/palette.rs` owns button state color fallback order, and `button/props.rs` owns compact
+      button container chrome props.
 - [x] Split IMUI control chrome regression tests into private text-role and layout owners without
       changing control/fill text shrink semantics, inherited foreground assertions, row/stack
       direction, fill-width behavior, gap tokens, justification, or alignment coverage.

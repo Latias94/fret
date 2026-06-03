@@ -585,6 +585,8 @@
     "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button.rs",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button/palette.rs",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button/props.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/field.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/palette.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs",

@@ -2,6 +2,34 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI button control chrome child owner split - 2026-06-03
+
+This maintenance slice keeps shared IMUI button chrome readable without changing the caller-facing
+`control_chrome::button_chrome(...)` path:
+
+- IMUI button control chrome child owner split - 2026-06-03.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button.rs` keeps `button_chrome(...)` entry
+  only.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button/palette.rs` owns button palette state
+  color fallback order.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button/props.rs` owns compact button
+  container chrome props.
+- Evidence anchor: button.rs keeps button_chrome entry only.
+- Evidence anchor: button palette state color fallback order.
+- Evidence anchor: button compact container chrome props.
+- Caller paths, `ImUiControlPalette`, theme token fallback order, press/hover/focus semantics, and
+  dense button chrome defaults remain unchanged.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
 ## IMUI debug draw stroked rect/quad/triangle path paint child owner split - 2026-06-03
 
 This maintenance slice keeps debug-draw path painting readable while preserving public draw-list
