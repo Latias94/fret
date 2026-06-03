@@ -153,6 +153,11 @@ Platform note:
   (moves desktop runner DockFloating follow movement and transparent-payload style patching into
   a private `docking/follow.rs` owner without changing caller paths, follow behavior, or the
   Wayland acceptance boundary)
+- Latest runner dock-drag pointer/poll-up owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M60_RUNNER_DOCKING_POINTER_POLL_UP_OWNER_SPLIT_2026-06-03.md`
+  (moves dock-drag pointer discovery/capture-cancel into `docking/pointer.rs` and platform
+  release-outside poll-up fallbacks into `docking/poll_up.rs` without changing caller paths,
+  drop routing, follow-stop cleanup, or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

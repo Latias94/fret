@@ -566,6 +566,20 @@ Each TODO is labeled:
         discovery, pointer-capture cancellation, and platform poll-up fallbacks.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner dock-drag pointer/poll-up owner split keeps the desktop runner
+      docking module as a private facade:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M60_RUNNER_DOCKING_POINTER_POLL_UP_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/docking/pointer.rs` owns
+        `dock_drag_pointer_id`, `sync_dock_drag_pointer_capture`, and
+        `deliver_dock_drag_pointer_cancel`.
+      - `crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs` owns
+        `maybe_finish_dock_drag_released_outside`, `maybe_finish_dock_drag_released_outside_windows`,
+        macOS release polling, Windows poll-up diagnostics, cursor override preference, drop routing,
+        and follow-stop cleanup.
+      - `crates/fret-launch/src/runner/desktop/runner/docking.rs` keeps only `mod follow;`,
+        `mod pointer;`, and `mod poll_up;`.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
