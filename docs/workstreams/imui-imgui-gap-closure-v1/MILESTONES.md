@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 editor AxisDragValue typing branch owner-split result:
+`ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed state lookup,
+current value reads, mode/test-id/theme projection, scrub owner routing, typing owner routing, and
+final dual-surface mounting only. `controls/axis_drag_value/element/typing_element.rs` owns typing
+branch orchestration across draft/error local model allocation, hidden/active typing layout
+selection, typing TextInput mount, focus sync/handoff, key handler installation, draft-change error
+clearing, and typing frame assembly. Scrub behavior, typing behavior, public `AxisDragValue`
+options, and editor/IMUI adapter APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split.
+
 2026-06-03 editor NumericInput joined field/frame owner-split result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed runtime state
 projection, duplicate-affix preparation, inline error composition, and outer root layout only.

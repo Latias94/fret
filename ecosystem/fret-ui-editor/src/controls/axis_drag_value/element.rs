@@ -7,31 +7,23 @@ use fret_ui_kit::ChromeRefinement;
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
-use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, numeric_text_entry_focus_state,
-};
+use crate::primitives::numeric_text_entry::NumericTextEntryFocusHandoffState;
 use crate::primitives::style::EditorStyle;
 
 use super::AxisDragValue;
 use super::ids::axis_drag_value_test_ids;
 use super::model::{AxisDragValueMode, AxisDragValueState, axis_drag_value_input_text_style};
-use super::session::{draft_model, error_model, hidden_layout};
 
 mod input;
 mod scrub;
 mod scrub_element;
 mod typing;
+mod typing_element;
 mod typing_focus;
 mod typing_keys;
 
-use input::{AxisDragValueTypingInputArgs, axis_drag_value_typing_input};
 use scrub_element::{AxisDragValueScrubElementArgs, axis_drag_value_scrub_element};
-use typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
-use typing_focus::{
-    AxisDragValueTypingFocusArgs, axis_drag_value_clear_typing_error_when_draft_changes,
-    axis_drag_value_sync_typing_focus,
-};
-use typing_keys::{AxisDragValueTypingKeyHandlerArgs, axis_drag_value_add_typing_key_handler};
+use typing_element::{AxisDragValueTypingElementArgs, axis_drag_value_typing_element};
 
 impl<T> AxisDragValue<T>
 where
@@ -50,12 +42,6 @@ where
             |s| s.clone(),
         );
         let on_outcome = self.on_outcome.clone();
-
-        let draft = draft_model(cx);
-        let error = error_model(cx);
-        let focus_state = numeric_text_entry_focus_state(cx);
-        let last_draft_text =
-            cx.slot_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
 
         let value = cx
             .get_model_copied(&self.model, Invalidation::Paint)
@@ -138,96 +124,35 @@ where
                 scrub_reset_test_id: scrub_reset_test_id.clone(),
             },
         );
-
-        let input_group_layout = if typing {
-            self.options.layout
-        } else {
-            hidden_layout(self.options.layout)
-        };
-
-        let has_error = cx
-            .get_model_cloned(&error, Invalidation::Paint)
-            .unwrap_or(None)
-            .is_some();
-
-        let typing_input = axis_drag_value_typing_input(
+        let typing_field = axis_drag_value_typing_element(
             cx,
-            AxisDragValueTypingInputArgs {
-                draft: draft.clone(),
-                density,
-                input_chrome,
-                text_style: text_style.clone(),
-                enabled: self.options.enabled,
-                focusable: self.options.focusable,
-                typing,
-                typing_input_test_id: typing_input_test_id.clone(),
-                has_error,
-            },
-        );
-        let input = typing_input.input;
-        let input_id = typing_input.input_id;
-        let is_focused = typing_input.is_focused;
-
-        axis_drag_value_sync_typing_focus(
-            cx,
-            AxisDragValueTypingFocusArgs {
+            AxisDragValueTypingElementArgs {
                 state: state.clone(),
-                focus_state: focus_state.clone(),
                 focus_handoff: focus_handoff.clone(),
-                draft: draft.clone(),
-                error: error.clone(),
-                last_draft_text: last_draft_text.clone(),
-                value_text: value_text.clone(),
-                typing,
-                input_id,
-                is_focused,
-                selection_behavior: self.options.selection_behavior,
-            },
-        );
-
-        axis_drag_value_add_typing_key_handler(
-            cx,
-            AxisDragValueTypingKeyHandlerArgs {
-                input_id,
-                focus_state: focus_state.clone(),
-                draft: draft.clone(),
-                error: error.clone(),
-                last_draft_text: last_draft_text.clone(),
-                state: state.clone(),
                 model: self.model.clone(),
                 parse: self.parse.clone(),
                 format: self.format.clone(),
                 validate: self.validate.clone(),
-                constraints: self.options.constraints,
                 on_outcome: on_outcome.clone(),
-            },
-        );
-
-        axis_drag_value_clear_typing_error_when_draft_changes(
-            cx,
-            is_focused,
-            &draft,
-            &error,
-            &last_draft_text,
-        );
-
-        let typing_field = axis_drag_value_typing_field(
-            cx,
-            AxisDragValueTypingFrameArgs {
-                layout: input_group_layout,
+                value_text: value_text.clone(),
+                typing,
+                layout: self.options.layout,
+                constraints: self.options.constraints,
                 density,
                 frame_chrome,
-                is_focused,
-                has_error,
-                input,
+                input_chrome,
+                text_style,
+                enabled: self.options.enabled,
+                focusable: self.options.focusable,
+                selection_behavior: self.options.selection_behavior,
                 axis_label: self.axis_label.clone(),
                 axis_tint: self.axis_tint,
                 prefix: prefix.clone(),
                 suffix: suffix.clone(),
                 reset_action: self.options.reset.clone(),
-                enabled: self.options.enabled,
                 active_typing_test_id,
                 typing_axis_test_id,
+                typing_input_test_id,
                 typing_prefix_test_id,
                 typing_suffix_test_id,
                 typing_error_icon_test_id,

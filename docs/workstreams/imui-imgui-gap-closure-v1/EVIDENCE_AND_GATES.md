@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor AxisDragValue Typing Branch Owner Split Evidence - 2026-06-03
+
+Claim verified: editor `AxisDragValue` typing branch orchestration moved out of
+`controls/axis_drag_value/element.rs` into private
+`controls/axis_drag_value/element/typing_element.rs` without changing draft/error local model
+allocation, hidden/active typing layout selection, typing TextInput mount, focus sync and handoff,
+key handler installation, draft-change error clearing, typing frame assembly, scrub element
+mounting, or public `AxisDragValue` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed state lookup,
+  current value reads, mode/test-id/theme projection, scrub owner routing, typing owner routing,
+  and final dual-surface mounting only.
+- `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_element.rs` owns draft/error
+  model allocation, hidden/active typing layout selection, typing TextInput owner invocation,
+  focus sync/handoff owner invocation, key handler owner invocation, draft-change error clearing,
+  and typing frame owner invocation.
+- Existing child owners remain focused: `input.rs` owns TextInput props/mount, `typing_focus.rs`
+  owns focus lifecycle, `typing_keys.rs` owns typed commit/cancel keys, and `typing.rs` owns typing
+  frame visuals.
+- `tools/gate_imui_workstream_source.py` now requires the typing branch owner and rejects typing
+  branch orchestration from drifting back into `element.rs`.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`: pass, 5 tests.
+- `cargo nextest run -p fret-ui-editor --no-fail-fast`: pass, 228 tests.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`: pass, 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Joined Field/Frame Owner Split Evidence - 2026-06-03
 
 Claim verified: editor `NumericInput` joined field/frame assembly moved out of

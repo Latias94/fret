@@ -323,6 +323,15 @@ Last updated: 2026-06-03
       TextInputProps assembly, joined chrome, invalid state, test-id routing, input mounting, and
       focus id reads. The source gate prevents typing input props from drifting back into the root
       element owner.
+- [x] Split editor `AxisDragValue` typing branch orchestration into a private element child owner
+      without changing draft/error local model allocation, hidden/active typing layout selection,
+      typing TextInput mount, focus sync and handoff, key handler installation, draft-change error
+      clearing, typing frame assembly, scrub element mounting, or public `AxisDragValue` options.
+      Result: `controls/axis_drag_value/element.rs` now keeps keyed state lookup, current value
+      reads, mode/test-id/theme projection, scrub owner routing, typing owner routing, and final
+      dual-surface mount only. `controls/axis_drag_value/element/typing_element.rs` owns the typing
+      branch orchestration across the existing input/focus/key/frame child owners. The source gate
+      prevents typing branch orchestration from drifting back into the root element owner.
 - [x] Split editor `TransformEdit` section-control Vec3 assembly into a private element child owner
       without changing section presentation formats/parses/chrome affixes, per-section
       id-source/test-id derivation, linked-scale test-id derivation, axis outcome routing,
