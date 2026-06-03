@@ -191,6 +191,11 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M67_RUNNER_WINDOW_REQUEST_DISPATCH_OWNER_SPLIT_2026-06-03.md`
   (moves full `Effect::Window` request dispatch into `window_requests.rs` without changing close,
   create, geometry, style, driver callback, or exit behavior)
+- Latest runner window metrics owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M68_RUNNER_WINDOW_METRICS_OWNER_SPLIT_2026-06-04.md`
+  (moves `Effect::WindowMetricsSetInsets` and `Effect::WindowMetricsSetPreferences` service
+  updates into `window_metrics.rs` without changing diagnostic override, known-state, redraw, or
+  RAF behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

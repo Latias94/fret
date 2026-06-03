@@ -953,6 +953,16 @@ Last updated: 2026-06-03
       `Effect::Window(req)` to the request owner. The docking source gate freezes the owner split
       in `M67_RUNNER_WINDOW_REQUEST_DISPATCH_OWNER_SPLIT_2026-06-03.md` without claiming Wayland
       compositor acceptance.
+- [x] Split desktop runner window metrics effect handling into a private metrics owner without
+      changing diagnostic insets/preference overrides, `WindowMetricsService` known-state
+      comparison, safe-area/occlusion/preference/text-scale service updates, redraw requests, or
+      RAF requests.
+      Result: `crates/fret-launch/src/runner/desktop/runner/window_metrics.rs` owns
+      `apply_window_metrics_insets_request` and `apply_window_metrics_preferences_request`;
+      `effects.rs` keeps the effect loop and delegates the two window-metrics effect branches.
+      The docking source gate freezes the owner split in
+      `M68_RUNNER_WINDOW_METRICS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
+      acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.

@@ -653,6 +653,17 @@ Each TODO is labeled:
         exit short-circuit only for window requests.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window metrics owner split keeps metrics service mutation out of the
+      general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M68_RUNNER_WINDOW_METRICS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_metrics.rs` owns
+        `apply_window_metrics_insets_request` and `apply_window_metrics_preferences_request`,
+        including diagnostic override storage, `WindowMetricsService` known-state comparisons,
+        service mutation, redraw, and RAF requests.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        delegates `Effect::WindowMetricsSetInsets` and `Effect::WindowMetricsSetPreferences`.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

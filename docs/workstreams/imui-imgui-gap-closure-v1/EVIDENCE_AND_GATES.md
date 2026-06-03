@@ -29508,6 +29508,31 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-04 Desktop runner window metrics owner split:
+
+- Claim: `Effect::WindowMetricsSetInsets` and `Effect::WindowMetricsSetPreferences` service-update
+  handling moved from `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_metrics.rs` without changing diagnostic
+  override storage, `WindowMetricsService` known-state comparisons, service mutation, redraw
+  requests, or RAF requests.
+- Evidence anchors: `mod.rs` declares `mod window_metrics;`; `window_metrics.rs` owns
+  `apply_window_metrics_insets_request`, `apply_window_metrics_preferences_request`, and
+  `request_window_metrics_redraw_if_changed`; `effects.rs` keeps the effect queue loop and only
+  delegates the two window-metrics effect branches.
+  `M68_RUNNER_WINDOW_METRICS_OWNER_SPLIT_2026-06-04.md` records the matching docking multiwindow
+  lane evidence without claiming Wayland acceptance.
+- Passed: `cargo fmt --package fret-launch -- --check`.
+- Passed: `cargo check -p fret-launch --lib`.
+- Passed:
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`.
+- Passed: `python tools\gate_docking_multiwindow_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-03 editor TransformEdit section chrome row/column owner split:
 
 - Claim: TransformEdit section row and column chrome moved from
