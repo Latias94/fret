@@ -15,8 +15,9 @@ Evidence:
 - `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` declares `mod table;` and keeps
   container/menu/tab/virtual-list/separator/bullet composition tests.
 - `ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs` owns the table proof root,
-  table layout, pinned-column, plain/sortable header, background override tests, and
-  `first_solid_quad_index(...)`.
+  table layout, pinned-column, background override tests, and `first_solid_quad_index(...)`.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs` owns plain and
+  sortable header context-menu interaction tests.
 - `ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs` owns hidden
   column, runtime visibility, visibility-menu, and header-context-menu visibility tests.
 - `tools/gate_imui_workstream_source.py` now requires the table owner and rejects table helper

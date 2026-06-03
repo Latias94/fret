@@ -6756,8 +6756,9 @@ opening the slice.
       behavior unchanged.
 - [x] Split `fret-imui` layout-collection table proof tests into a private owner module.
       Result: `ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs` owns the
-      table proof root plus layout, pinned-column, plain/sortable header, background override, and
-      `first_solid_quad_index(...)` tests. `table/visibility.rs` owns hidden/runtime visibility,
+      table proof root plus layout, pinned-column, background override, and
+      `first_solid_quad_index(...)` tests. `table/header.rs` owns plain/sortable header
+      context-menu interaction tests, and `table/visibility.rs` owns hidden/runtime visibility,
       visibility-menu, and header-context-menu visibility tests. The root `layout_collections.rs`
       keeps container/menu/tab/virtual-list/separator/bullet composition tests and declares
       `mod table;`; the IMUI source gate rejects table helper drift back into the mixed root file.
