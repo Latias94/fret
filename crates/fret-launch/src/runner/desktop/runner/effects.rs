@@ -4,7 +4,7 @@ use super::macos_cursor::dock_tearoff_log;
 use super::streaming_images::{
     StreamingImageUpdateNv12, StreamingImageUpdateRgba8, UploadedImageEntry,
 };
-use fret_app::{CreateWindowKind, Effect, WindowRequest};
+use fret_app::Effect;
 use fret_core::Event;
 use fret_core::time::Instant;
 use fret_platform::clipboard::Clipboard as _;
@@ -14,7 +14,6 @@ use fret_platform::open_url::OpenUrl as _;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
 use fret_runtime::{PlatformCapabilities, PlatformCompletion};
-use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 
 use super::{WinitCommandContext, WinitGlobalContext, WinitRunner, WinitWindowContext};
@@ -1588,60 +1587,12 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                         self.driver.dock_op(&mut self.app, op);
                     }
-                    Effect::Window(req) => match req {
-                        WindowRequest::Close(window) => {
-                            if self.handle_window_close_request(window, event_loop) {
-                                should_exit = true;
-                                return false;
-                            }
+                    Effect::Window(req) => {
+                        if self.handle_window_request_effect(event_loop, req, now) {
+                            should_exit = true;
+                            return false;
                         }
-                        WindowRequest::Create(create) => {
-                            if matches!(create.kind, CreateWindowKind::DockFloating { .. }) {
-                                dock_tearoff_log(format_args!(
-                                    "[effect-window-create] kind={:?} anchor={:?}",
-                                    create.kind, create.anchor
-                                ));
-                            }
-                            let new_window =
-                                match self.create_window_from_request(event_loop, &create) {
-                                    Ok(id) => id,
-                                    Err(e) => {
-                                        error!(error = ?e, "failed to create window from request");
-                                        continue;
-                                    }
-                                };
-                            self.handle_created_docking_window(&create, new_window, now);
-
-                            self.driver
-                                .window_created(&mut self.app, &create, new_window);
-
-                            self.app.request_redraw(new_window);
-                        }
-                        WindowRequest::SetVisible { window, visible } => {
-                            self.apply_window_visibility_request(window, visible);
-                        }
-                        WindowRequest::SetInnerSize { window, size } => {
-                            self.apply_window_inner_size_request(window, size);
-                        }
-                        WindowRequest::SetOuterPosition { window, position } => {
-                            self.apply_window_outer_position_request(window, position);
-                        }
-                        WindowRequest::Raise {
-                            window,
-                            sender: sender_id,
-                        } => {
-                            self.apply_window_raise_request(window, sender_id, now);
-                        }
-                        WindowRequest::BeginDrag { window } => {
-                            self.begin_window_drag_request(window);
-                        }
-                        WindowRequest::BeginResize { window, direction } => {
-                            self.begin_window_resize_request(window, direction);
-                        }
-                        WindowRequest::SetStyle { window, style } => {
-                            self.apply_window_style_request(window, style);
-                        }
-                    },
+                    }
                 }
             }
 

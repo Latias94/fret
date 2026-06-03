@@ -607,7 +607,7 @@ Each TODO is labeled:
         `handle_created_docking_window`, including DockFloating/DockRestore registration,
         cursor-grab position refinement, follow initialization, temporary AlwaysOnTop diagnostics,
         and deferred front enqueueing.
-      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic
+      - `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` now keeps generic
         `WindowRequest::Create` orchestration and the driver `window_created` callback ordering.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
@@ -618,7 +618,7 @@ Each TODO is labeled:
         `apply_window_style_request`, including z-level, hit-test, opacity, background material,
         composited-alpha surface reconfiguration, style diagnostics, redraw, and DockFloating
         transparent-payload follow state.
-      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic
+      - `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` now keeps generic
         `WindowRequest::SetStyle` dispatch only.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
@@ -629,7 +629,7 @@ Each TODO is labeled:
         `handle_window_close_request`, including checked close, main-window exit policy,
         force-closing remaining windows, empty-window shutdown, dispatcher shutdown, and
         event-loop exit.
-      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic
+      - `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` now keeps generic
         `WindowRequest::Close` dispatch only.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
@@ -638,8 +638,19 @@ Each TODO is labeled:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M65_RUNNER_WINDOW_GEOMETRY_OWNER_SPLIT_2026-06-03.md`
       - `crates/fret-launch/src/runner/desktop/runner/window_geometry.rs` owns visible, inner-size,
         outer-position, raise, native drag, and native resize request helpers.
-      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic geometry/chrome
-        `WindowRequest` dispatch only.
+      - `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` now keeps generic
+        geometry/chrome `WindowRequest` dispatch only.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner window request dispatch owner split keeps the full `Effect::Window`
+      router out of the general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M67_RUNNER_WINDOW_REQUEST_DISPATCH_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` owns
+        `handle_window_request_effect`, including close/create dispatch, DockFloating create trace
+        logging, driver `window_created` callback ordering, and delegation to close/geometry/style
+        owners.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        exit short-circuit only for window requests.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
@@ -693,7 +704,10 @@ Each TODO is labeled:
     - Docking create request wiring: `ecosystem/fret-docking/src/runtime/tear_off.rs` (`WindowRequest::Create` for `DockFloating`)
     - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
     - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
-    - Desktop runner runtime patch handling: `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`WindowRequest::SetStyle`)
+    - Desktop runner runtime patch handling:
+      `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` (`WindowRequest::SetStyle`
+      dispatch) and `crates/fret-launch/src/runner/desktop/runner/window_style.rs`
+      (`apply_window_style_request`)
     - Opacity capability + effective diagnostics closure: `docs/workstreams/docking-multiwindow-imgui-parity/M10_WINDOW_STYLE_OPACITY_CAPABILITY_2026-04-26.md`
   - Remaining gaps (keep ADR 0139 scope honest):
     - Native handle escape hatches remain intentionally outside portable crates.

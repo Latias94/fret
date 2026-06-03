@@ -944,6 +944,15 @@ Last updated: 2026-06-03
       floating, divider, pending panel/tabs, and viewport-capture session mutations with visibility
       limited to `crate::dock::declarative`. The source gate prevents drag/capture session helpers
       from drifting back into the interaction service root.
+- [x] Split desktop runner `WindowRequest` effect dispatch into a private request owner without
+      changing close/create dispatch, DockFloating create trace logging, docking post-create
+      handling, driver `window_created` callback ordering, geometry/style delegation, or app-exit
+      signaling.
+      Result: `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` owns
+      `handle_window_request_effect`; `effects.rs` keeps the effect loop and delegates
+      `Effect::Window(req)` to the request owner. The docking source gate freezes the owner split
+      in `M67_RUNNER_WINDOW_REQUEST_DISPATCH_OWNER_SPLIT_2026-06-03.md` without claiming Wayland
+      compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
       changing internal drag route anchor registration, dock-space node registration, active dock
       drag invalidation, drop-time dock drag cancellation, or public docking APIs.

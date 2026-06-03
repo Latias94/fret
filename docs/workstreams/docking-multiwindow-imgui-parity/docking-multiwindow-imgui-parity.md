@@ -187,6 +187,10 @@ Platform note:
   (moves `WindowRequest` visible, size, outer-position, raise, native drag, and native resize
   application into `window_geometry.rs` without changing geometry/chrome behavior or the Wayland
   acceptance boundary)
+- Latest runner window request dispatch owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M67_RUNNER_WINDOW_REQUEST_DISPATCH_OWNER_SPLIT_2026-06-03.md`
+  (moves full `Effect::Window` request dispatch into `window_requests.rs` without changing close,
+  create, geometry, style, driver callback, or exit behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
@@ -350,7 +354,8 @@ Evidence anchors:
 - Optional “transparent payload” (ImGui-style):
   - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
   - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (emits `WindowRequest::SetStyle`),
-    `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
+    `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` (dispatches the request),
+    `crates/fret-launch/src/runner/desktop/runner/window_style.rs` (applies style), and
     `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_hit_test_passthrough_all`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
   - Note: the follow loop also requests a temporary `WindowZLevel::AlwaysOnTop` (capability-gated) so the moving window stays
