@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-03
 
+## IMUI Active Teaching Direct-Crate Drift Guard - 2026-06-03
+
+Claim verified: active IMUI teaching/docs surfaces are now guarded against drifting back to direct
+`fret_imui::` or `fret_ui_kit::imui::` imports as the default app-facing path, while compatibility
+surfaces, owning-crate tests, recipes, and historical workstream evidence remain outside this
+cleanup target.
+
+Evidence:
+
+- IMUI active teaching direct-crate drift guard - 2026-06-03.
+- `tools/gate_imui_facade_teaching_source.py` now defines `ACTIVE_FACADE_TEACHING_PATHS` for the
+  cookbook IMUI lessons, canonical workbench/proof surfaces, examples docs, cookbook docs,
+  `ecosystem/fret` README, and root README.
+- `ACTIVE_FACADE_DIRECT_CRATE_FORBIDDEN` rejects direct `fret_imui::`, `use fret_imui`,
+  `fret_ui_kit::imui::`, and `use fret_ui_kit::imui` markers on those active teaching paths.
+- The editor cookbook proof also rejects direct `fret_ui_editor` imports so it keeps using
+  `fret::imui::editor`.
+- The `imui_editor_proof_demo` checks now follow the current `proof_helpers.rs` owner for proof
+  readout/text helpers and outliner readout helpers.
+- Evidence anchor: active IMUI teaching path set.
+- Evidence anchor: active facade direct-crate forbidden markers.
+- Evidence anchor: proof_helpers.rs carries proof helper definitions.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_facade_teaching_source.py`: pass.
+- `python tools\gate_imui_facade_teaching_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Child-Region Scroll Carrier/Chrome Owner Split - 2026-06-03
 
 Claim verified: child-region scroll input carriers and framed scroll chrome moved behind private

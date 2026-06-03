@@ -20,6 +20,14 @@ teaching/product proof surfaces above. Recipe-layer imports such as
 `fret_ui_kit::recipes::imui_drag_preview` remain explicit because they are not the root IMUI
 facade.
 
+2026-06-03 drift guard refresh: `tools/gate_imui_facade_teaching_source.py` now defines an explicit
+active teaching path set for cookbook IMUI lessons, workbench/proof surfaces, examples docs,
+cookbook docs, `ecosystem/fret` README, and the root README. Those paths reject direct
+`fret_imui::` and `fret_ui_kit::imui::` teaching imports, while the editor cookbook proof also
+rejects direct `fret_ui_editor` imports so it remains on `fret::imui::editor`. The same refresh
+aligns the proof-demo helper checks with the current `proof_helpers.rs` owner instead of stale
+root-file definitions.
+
 ## Allowed Direct References
 
 These references are intentionally not cleanup targets in this pass:

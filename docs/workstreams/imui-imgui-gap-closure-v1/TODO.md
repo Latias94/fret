@@ -41,6 +41,13 @@ Last updated: 2026-06-03
       Result: the catalog now records ListBox as a kit-owned container proof, plot as an opt-in
       `fret-plot/imui` adapter, and style/theme editing as editor-owned preset tooling exposed by
       the canonical workbench.
+- [x] Harden the active IMUI teaching source gate so cookbook lessons, workbench/proof surfaces,
+      examples docs, and README entrypoints cannot drift back to direct `fret_imui::` or
+      `fret_ui_kit::imui::` imports as the default teaching path.
+      Result: `tools/gate_imui_facade_teaching_source.py` now has an explicit active teaching path
+      set and direct-crate forbidden marker set, while the `imui_editor_proof_demo` text/readout
+      helper checks follow the current `proof_helpers.rs` owner instead of stale root-file
+      definitions.
 
 ## Porting Sugar Proof - 2026-05-31
 

@@ -19,6 +19,37 @@ COMMON_DELETED_OR_NON_TEACHING = [
     "fret_ui_kit::imui::adapters",
 ]
 
+ACTIVE_FACADE_TEACHING_PATHS = [
+    "apps/fret-cookbook/examples/imui_action_basics.rs",
+    "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
+    "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "apps/fret-examples/src/imui_editor_workbench_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples-imui/src/imui_hello_demo.rs",
+    "apps/fret-examples-imui/src/imui_floating_windows_demo.rs",
+    "apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs",
+    "apps/fret-examples-imui/src/imui_response_signals_demo.rs",
+    "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
+    "apps/fret-cookbook/README.md",
+    "apps/fret-cookbook/EXAMPLES.md",
+    "docs/examples/README.md",
+    "ecosystem/fret/README.md",
+    "README.md",
+]
+
+ACTIVE_FACADE_DIRECT_CRATE_FORBIDDEN = [
+    "fret_imui::",
+    "use fret_imui",
+    "fret_ui_kit::imui::",
+    "use fret_ui_kit::imui",
+]
+
+COOKBOOK_EDITOR_DIRECT_CRATE_FORBIDDEN = [
+    "use fret_ui_editor",
+    "fret_ui_editor::",
+]
+
 
 @dataclass(frozen=True)
 class SourceCheck:
@@ -379,14 +410,11 @@ def main() -> None:
                 "imui_build(cx, out, |ui| {",
                 "imui_build(cx, &mut out, move |ui| {",
                 "imui_build(cx, out, f);",
-                "fn proof_compact_readout_element<",
-                "fn proof_section_chrome_label<",
-                "fn proof_imui_section_text(",
-                "fn proof_imui_readout_text(",
-                "fn proof_imui_compact_paragraph_text(",
-                "decl_text::text_control_readout(cx, readout.clone())",
-                "decl_text::text_section_chrome_label(cx, text)",
-                "decl_text::text_compact_paragraph(cx, text)",
+                "mod proof_helpers;",
+                "use proof_helpers::*;",
+                "proof_imui_section_text(",
+                "proof_imui_readout_text(",
+                "proof_imui_compact_paragraph_text(",
                 "kit::TooltipOptions {",
                 "kit::CollapsingHeaderOptions {",
                 "F: for<'cx, 'a> FnOnce(&mut ImUi<'cx, 'a, H>) + 'static,",
@@ -431,12 +459,7 @@ def main() -> None:
                 "fn render_authoring_parity_imui_host<H, F>(",
                 ") -> impl IntoUiElement<KernelApp> + use<> {",
                 ") -> impl IntoUiElement<H> + use<H, F>",
-                "fn proof_compact_readout<H: UiHost>(",
                 "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
-                "fn proof_outliner_items_snapshot(",
-                "app.models().read(model, |items| items.clone()).unwrap_or_default()",
-                "fn proof_outliner_order_line_for_model(",
-                "proof_outliner_order_line(items)",
                 "let outliner_items = proof_outliner_items_snapshot(ui.cx_mut().app, &outliner_items_model);",
                 "let outliner_order = proof_outliner_order_line_for_model(ui.cx_mut().app, &outliner_items_model);",
                 "fn embedded_target_for_window(app: &KernelApp, window: AppWindowId) -> fret_core::RenderTargetId {",
@@ -445,6 +468,32 @@ def main() -> None:
             forbidden=[
                 "ui.cx_mut().app.models().read(&outliner_items_model, |items| items.clone())",
                 "ui.cx_mut().app.models().read(&outliner_items_model, |items| { proof_outliner_order_line(items) })",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs"),
+            required=[
+                "pub(super) fn proof_compact_readout<H: UiHost>(",
+                "pub(super) fn proof_compact_readout_element<H: UiHost>(",
+                "pub(super) fn proof_section_chrome_label<H: UiHost>(",
+                "pub(super) fn proof_imui_section_text(",
+                "pub(super) fn proof_imui_readout_text(",
+                "pub(super) fn proof_imui_compact_paragraph_text(",
+                "decl_text::text_control_readout(cx, readout.clone())",
+                "decl_text::text_control_readout(cx, readout.clone()).test_id(test_id.into())",
+                "decl_text::text_section_chrome_label(cx, text)",
+                "decl_text::text_compact_paragraph(cx, text)",
+                "pub(super) fn proof_outliner_items_snapshot(",
+                "read(model, |items| items.clone())",
+                "pub(super) fn proof_outliner_order_line_for_model(",
+                "read(model, |items| proof_outliner_order_line(items))",
+            ],
+            forbidden=[
+                "fret_imui::",
+                "fret_ui_kit::imui::",
+                "retained_bridge::",
+                "RetainedSubtreeProps",
+                "UiTreeRetainedExt as _",
             ],
         ),
         SourceCheck(
@@ -562,6 +611,23 @@ def main() -> None:
         "apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs",
     ]:
         checks.append(SourceCheck(Path(path), required=[], forbidden=retained_bridge_forbidden))
+
+    for path in ACTIVE_FACADE_TEACHING_PATHS:
+        checks.append(
+            SourceCheck(
+                Path(path),
+                required=[],
+                forbidden=ACTIVE_FACADE_DIRECT_CRATE_FORBIDDEN,
+            )
+        )
+
+    checks.append(
+        SourceCheck(
+            Path("apps/fret-cookbook/examples/imui_editor_controls_basics.rs"),
+            required=[],
+            forbidden=COOKBOOK_EDITOR_DIRECT_CRATE_FORBIDDEN,
+        )
+    )
 
     slice_checks = [
         SourceSliceCheck(

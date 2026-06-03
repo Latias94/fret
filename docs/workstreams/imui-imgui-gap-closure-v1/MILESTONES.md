@@ -3,6 +3,23 @@
 Status: Active
 Last updated: 2026-06-03
 
+## M7 - P1 Active Teaching Drift Guard
+
+Exit criteria:
+
+- Keep active first-party IMUI teaching surfaces on the app-facing `fret::imui` facade.
+- Permit direct low-level crate references only in owning-crate tests, compatibility/reference
+  surfaces, recipes, and historical workstream evidence.
+- Keep source gates aligned with the current owner split of proof helpers.
+
+2026-06-03 active teaching direct-crate drift-guard result:
+`tools/gate_imui_facade_teaching_source.py` now has an explicit active teaching path set covering
+the cookbook IMUI lessons, product workbench/proof surfaces, examples docs, cookbook docs,
+`ecosystem/fret` README, and the root README. Those paths reject direct `fret_imui::` and
+`fret_ui_kit::imui::` teaching imports. The gate also now validates
+`apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs` as the owner of proof readout/text
+helpers and outliner readout helpers instead of expecting stale definitions in the root proof demo.
+
 ## M6 - Continuing IMUI Owner-Split Pressure
 
 Exit criteria:
