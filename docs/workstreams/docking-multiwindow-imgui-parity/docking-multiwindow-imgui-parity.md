@@ -168,6 +168,11 @@ Platform note:
   (moves DockFloating/DockRestore post-create registration, placement refinement, follow
   initialization, and deferred front enqueueing into `docking/create.rs` without changing
   `WindowRequest::Create` ordering or the Wayland acceptance boundary)
+- Latest runner window style owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M63_RUNNER_WINDOW_STYLE_OWNER_SPLIT_2026-06-03.md`
+  (moves `WindowRequest::SetStyle` platform application, style diagnostics, composited-alpha
+  reconfiguration, and DockFloating transparent-payload follow state into `window_style.rs` without
+  changing effect ordering or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

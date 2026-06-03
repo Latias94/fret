@@ -167,6 +167,7 @@ mod webview;
 mod win32;
 mod window;
 mod window_lifecycle;
+mod window_style;
 
 pub use event_loop::RunnerUserEvent;
 #[cfg(windows)]

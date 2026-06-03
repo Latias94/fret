@@ -602,6 +602,17 @@ Each TODO is labeled:
         `WindowRequest::Create` orchestration and the driver `window_created` callback ordering.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner window style owner split keeps DockFloating style application out of
+      the general effect dispatcher:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M63_RUNNER_WINDOW_STYLE_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_style.rs` owns
+        `apply_window_style_request`, including z-level, hit-test, opacity, background material,
+        composited-alpha surface reconfiguration, style diagnostics, redraw, and DockFloating
+        transparent-payload follow state.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic
+        `WindowRequest::SetStyle` dispatch only.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
