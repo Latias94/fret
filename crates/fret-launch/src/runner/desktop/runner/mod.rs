@@ -157,6 +157,7 @@ mod windows_menu;
 mod clipboard_effects;
 mod event_loop;
 mod file_transfer_effects;
+mod frame_effects;
 mod image_effects;
 mod ime_effects;
 mod incoming_open_effects;

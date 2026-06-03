@@ -73,15 +73,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             for effect in effects {
                 match effect {
                     Effect::Redraw(window) => {
-                        if self.request_window_redraw_with_reason(
-                            window,
-                            fret_runtime::RunnerFrameDriveReason::EffectRedraw,
-                        ) {
-                            // Some platforms may not wake the event loop for `request_redraw()`
-                            // alone; scheduling a one-shot RAF ensures the first frame presents
-                            // without requiring any input events.
-                            self.raf_windows.request(window);
-                        }
+                        self.handle_effect_redraw(window);
                     }
                     Effect::ImeAllow { window, enabled } => {
                         self.handle_ime_allow(window, enabled, &mut window_state_dirty);
@@ -125,25 +117,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::RequestAnimationFrame(window) => {
-                        self.raf_windows.request(window);
-                        if self.windows.contains_key(window) {
-                            self.record_frame_drive_reason(
-                                window,
-                                fret_runtime::RunnerFrameDriveReason::EffectRequestAnimationFrame,
-                            );
-                        }
+                        self.handle_request_animation_frame(window);
                     }
                     Effect::DiagInjectEvent { window, event } => {
-                        fret_runtime::with_injected_event_scope(|| {
-                            self.deliver_window_event_now(window, &event);
-                        });
-                        if self.windows.contains_key(window) {
-                            let _ = self.request_window_redraw_with_reason(
-                                window,
-                                fret_runtime::RunnerFrameDriveReason::EffectRedraw,
-                            );
-                            self.raf_windows.request(window);
-                        }
+                        self.handle_diag_inject_event(window, event);
                     }
                     Effect::SetTimer { .. } => {
                         self.schedule_timer(now, &effect);

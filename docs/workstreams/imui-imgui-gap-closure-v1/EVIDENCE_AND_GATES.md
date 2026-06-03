@@ -29562,6 +29562,19 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M76_RUNNER_IME_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner frame effects owner split:
+
+- Claim: redraw, request-animation-frame, and diagnostic event-injection handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/frame_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod frame_effects;`; `frame_effects.rs` owns
+  `handle_effect_redraw`, `handle_request_animation_frame`, and `handle_diag_inject_event`;
+  `effects.rs` keeps the effect queue loop and only delegates `Effect::Redraw`,
+  `Effect::RequestAnimationFrame`, and `Effect::DiagInjectEvent` to the frame owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M77_RUNNER_FRAME_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

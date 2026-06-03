@@ -1376,6 +1376,15 @@ dirty-window propagation. Runtime behavior and public effect surfaces remain unc
 `tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
 gate.
 
+2026-06-04 desktop runner frame effects owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the generic effect loop and
+delegates redraw, request-animation-frame, and diagnostic event-injection handling to
+`crates/fret-launch/src/runner/desktop/runner/frame_effects.rs`. `frame_effects.rs` owns
+effect-redraw RAF fallback scheduling, `EffectRequestAnimationFrame` reason recording,
+injected-event scope handling, and post-injection redraw/RAF scheduling. Runtime behavior and
+public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split through the docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
