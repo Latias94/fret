@@ -145,39 +145,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.handle_command_effect(window, command);
                     }
                     Effect::SetMenuBar { window, menu_bar } => {
-                        if window.is_none() {
-                            self.menu_bar = Some(menu_bar.clone());
-                        }
-                        #[cfg(windows)]
-                        {
-                            let targets: Vec<fret_core::AppWindowId> = match window {
-                                Some(window) => vec![window],
-                                None => self.windows.keys().collect(),
-                            };
-                            for window in targets {
-                                let Some(state) = self.windows.get_mut(window) else {
-                                    continue;
-                                };
-                                let Some(menu) = super::windows_menu::set_window_menu_bar(
-                                    &self.app,
-                                    state.window.as_ref(),
-                                    window,
-                                    &menu_bar,
-                                ) else {
-                                    continue;
-                                };
-                                state.os_menu = Some(menu);
-                            }
-                        }
-                        #[cfg(target_os = "macos")]
-                        {
-                            let _ = window;
-                            super::macos_menu::set_app_menu_bar(&self.app, &menu_bar);
-                        }
-                        #[cfg(all(not(windows), not(target_os = "macos")))]
-                        {
-                            let _ = (window, menu_bar);
-                        }
+                        self.handle_set_menu_bar_effect(window, menu_bar);
                     }
                     Effect::DiagClipboardForceUnavailable { window, enabled } => {
                         self.apply_diag_clipboard_force_unavailable(window, enabled);

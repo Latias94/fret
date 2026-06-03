@@ -1415,6 +1415,14 @@ delegates `Effect::Command` handling to `crates/fret-launch/src/runner/desktop/r
 callback routing. Runtime behavior and public effect surfaces remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source gate.
 
+2026-06-04 desktop runner menu effects owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the generic effect loop and
+delegates `Effect::SetMenuBar` handling to `crates/fret-launch/src/runner/desktop/runner/menu_effects.rs`.
+`menu_effects.rs` owns menu-bar caching, Windows per-window menu installation, macOS app-menu
+installation, and unsupported-target no-op consumption. Runtime behavior and public effect surfaces
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

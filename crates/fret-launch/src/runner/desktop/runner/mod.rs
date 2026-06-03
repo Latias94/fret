@@ -164,6 +164,7 @@ mod image_effects;
 mod ime_effects;
 mod incoming_open_effects;
 mod macos_cursor;
+mod menu_effects;
 mod platform_capabilities;
 mod platform_prefs;
 mod quit_effects;

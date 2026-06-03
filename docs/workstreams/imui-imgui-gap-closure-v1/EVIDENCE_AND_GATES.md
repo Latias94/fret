@@ -29623,6 +29623,18 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner menu effects owner split:
+
+- Claim: menu-bar effect handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/menu_effects.rs` without changing runtime behavior
+  or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod menu_effects;`; `menu_effects.rs` owns
+  `handle_set_menu_bar_effect`; `effects.rs` keeps the effect queue loop and only delegates
+  `Effect::SetMenuBar` to the menu owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

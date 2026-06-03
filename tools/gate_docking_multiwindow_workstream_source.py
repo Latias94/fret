@@ -329,6 +329,7 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/ime_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/text_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/timers.rs",
+            "crates/fret-launch/src/runner/desktop/runner/menu_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/quit_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/platform_capabilities.rs",
             "crates/fret-launch/src/runner/desktop/runner/window_close.rs",
@@ -399,6 +400,7 @@ def _check_docs(failures: list[str]) -> None:
             "`M79_RUNNER_CURSOR_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner cursor effect ownership",
             "`M80_RUNNER_QUIT_APP_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner quit-app effect ownership",
             "`M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner command effect ownership",
+            "`M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner menu effect ownership",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -487,6 +489,9 @@ def _check_docs(failures: list[str]) -> None:
             "Latest runner command effects owner split:",
             "M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "command_effects.rs",
+            "Latest runner menu effects owner split:",
+            "M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "menu_effects.rs",
         ],
         failures=failures,
     )
@@ -631,6 +636,10 @@ def _check_docs(failures: list[str]) -> None:
             "M81_RUNNER_COMMAND_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "window-scoped command",
             "global command delivery",
+            "2026-06-04 runner menu effects owner split keeps menu-bar platform installation out",
+            "M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "Windows per-window menu installation",
+            "unsupported-target",
             "2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration",
         ],
         forbidden=[
@@ -1550,6 +1559,38 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M82_RUNNER_MENU_EFFECTS_OWNER_SPLIT_2026-06-04.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/mod.rs",
+            "crates/fret-launch/src/runner/desktop/runner/menu_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effects.rs",
+            "handle_set_menu_bar_effect",
+            "Effect::SetMenuBar",
+            "global menu-bar caching",
+            "Windows per-window menu installation",
+            "macOS app-menu installation",
+            "unsupported desktop targets",
+            "mod menu_effects;",
+            "cargo fmt --package fret-launch -- --check",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "gate_docking_multiwindow_workstream_source.py",
+            "gate_imui_workstream_source.py",
+            "WORKSTREAM.json",
+            "git diff --check",
+            "It does not close",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod clipboard_effects;",
@@ -1562,6 +1603,7 @@ def _check_docs(failures: list[str]) -> None:
             "mod image_effects;",
             "mod ime_effects;",
             "mod text_effects;",
+            "mod menu_effects;",
             "mod quit_effects;",
             "mod platform_capabilities;",
             "mod window_close;",
@@ -1669,6 +1711,22 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/menu_effects.rs"),
+        required=[
+            "pub(super) fn handle_set_menu_bar_effect",
+            "self.menu_bar = Some(menu_bar.clone());",
+            "let targets: Vec<AppWindowId>",
+            "super::windows_menu::set_window_menu_bar",
+            "state.os_menu = Some(menu);",
+            "super::macos_menu::set_app_menu_bar(&self.app, &menu_bar);",
+            "let _ = (window, menu_bar);",
+        ],
+        forbidden=[
+            "pub fn ",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/frame_effects.rs"),
         required=[
             "pub(super) fn handle_effect_redraw",
@@ -1728,6 +1786,10 @@ def _check_docs(failures: list[str]) -> None:
             "WinitGlobalContext",
             "self.driver.handle_command(",
             "self.driver.handle_global_command(",
+            "self.menu_bar = Some(menu_bar.clone());",
+            "super::windows_menu::set_window_menu_bar",
+            "state.os_menu = Some(menu);",
+            "let _ = (window, menu_bar);",
         ],
         failures=failures,
     )
@@ -1789,6 +1851,7 @@ def _check_docs(failures: list[str]) -> None:
             "self.apply_window_metrics_preferences_request(",
             "self.handle_quit_app_effect(event_loop)",
             "self.handle_command_effect(window, command)",
+            "self.handle_set_menu_bar_effect(window, menu_bar)",
         ],
         forbidden=[
             "WindowRequest::Close(window)",
