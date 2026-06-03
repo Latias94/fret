@@ -591,6 +591,17 @@ Each TODO is labeled:
         without owning the Wayland degradation helpers.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-03 runner DockFloating create owner split keeps creation-time docking policy out
+      of the general effect dispatcher:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M62_RUNNER_DOCKING_CREATE_OWNER_SPLIT_2026-06-03.md`
+      - `crates/fret-launch/src/runner/desktop/runner/docking/create.rs` owns
+        `handle_created_docking_window`, including DockFloating/DockRestore registration,
+        cursor-grab position refinement, follow initialization, temporary AlwaysOnTop diagnostics,
+        and deferred front enqueueing.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps generic
+        `WindowRequest::Create` orchestration and the driver `window_created` callback ordering.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

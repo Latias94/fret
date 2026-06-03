@@ -163,6 +163,11 @@ Platform note:
   (moves desktop runner platform capability posture, including Linux Wayland degradation and
   effective-capability clamping, into `platform_capabilities.rs` without changing caller paths,
   capability values, or the Wayland acceptance boundary)
+- Latest runner DockFloating create owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M62_RUNNER_DOCKING_CREATE_OWNER_SPLIT_2026-06-03.md`
+  (moves DockFloating/DockRestore post-create registration, placement refinement, follow
+  initialization, and deferred front enqueueing into `docking/create.rs` without changing
+  `WindowRequest::Create` ordering or the Wayland acceptance boundary)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
