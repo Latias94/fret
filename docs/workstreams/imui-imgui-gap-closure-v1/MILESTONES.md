@@ -1448,6 +1448,14 @@ delivery, perf snapshot/debug publication, and pending streaming redraw wakeups 
 effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
 through the docking multiwindow source gate.
 
+2026-06-04 desktop runner effect queue owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the fixed-point drain loop and
+post-dispatch lifecycle work while delegating ordered queued effect dispatch to
+`crates/fret-launch/src/runner/desktop/runner/effect_queue.rs`. Runtime behavior, effect ordering,
+streaming stats mutation, dirty-window tracking, and early-exit signaling remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

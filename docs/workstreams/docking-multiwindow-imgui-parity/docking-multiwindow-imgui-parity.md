@@ -264,6 +264,9 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M85_RUNNER_STREAMING_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   (moves streaming upload preprocessing, ack delivery, diagnostics, and pending redraw wakeups into
   `streaming_effects.rs` without changing runtime behavior)
+- Latest runner effect queue owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M86_RUNNER_EFFECT_QUEUE_OWNER_SPLIT_2026-06-04.md`
+  (moves queued effect dispatch into `effect_queue.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

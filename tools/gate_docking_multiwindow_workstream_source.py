@@ -323,6 +323,7 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/driver_effects.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effect_queue.rs",
             "crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/file_transfer_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/frame_effects.rs",
@@ -407,6 +408,7 @@ def _check_docs(failures: list[str]) -> None:
             "`M83_RUNNER_CHANGE_PROPAGATION_OWNER_SPLIT_2026-06-04.md` records desktop runner change propagation ownership",
             "`M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner driver-facing effect dispatch ownership",
             "`M85_RUNNER_STREAMING_EFFECTS_OWNER_SPLIT_2026-06-04.md` records desktop runner streaming upload effect lifecycle ownership",
+            "`M86_RUNNER_EFFECT_QUEUE_OWNER_SPLIT_2026-06-04.md` records desktop runner effect queue dispatch ownership",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -507,6 +509,9 @@ def _check_docs(failures: list[str]) -> None:
             "Latest runner streaming effects owner split:",
             "M85_RUNNER_STREAMING_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "streaming_effects.rs",
+            "Latest runner effect queue owner split:",
+            "M86_RUNNER_EFFECT_QUEUE_OWNER_SPLIT_2026-06-04.md",
+            "effect_queue.rs",
         ],
         failures=failures,
     )
@@ -661,6 +666,8 @@ def _check_docs(failures: list[str]) -> None:
             "M84_RUNNER_DRIVER_EFFECTS_OWNER_SPLIT_2026-06-04.md",
             "2026-06-04 runner streaming effects owner split keeps streaming upload lifecycle out",
             "M85_RUNNER_STREAMING_EFFECTS_OWNER_SPLIT_2026-06-04.md",
+            "2026-06-04 runner effect queue owner split keeps queued effect dispatch out",
+            "M86_RUNNER_EFFECT_QUEUE_OWNER_SPLIT_2026-06-04.md",
             "font-family sync",
             "locale",
             "2026-06-02 docking runtime apply owner split keeps ordinary DockOp mutation orchestration",
@@ -1714,6 +1721,41 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M86_RUNNER_EFFECT_QUEUE_OWNER_SPLIT_2026-06-04.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/mod.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effect_queue.rs",
+            "crates/fret-launch/src/runner/desktop/runner/effects.rs",
+            "dispatch_effect_queue",
+            "effect ordering",
+            "streaming upload stats mutation",
+            "dirty-window tracking",
+            "early-exit behavior",
+            "QuitApp",
+            "exiting window requests",
+            "fixed-point drain loop",
+            "original ordering is preserved",
+            "mod effect_queue;",
+            "cargo fmt --package fret-launch -- --check",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "gate_docking_multiwindow_workstream_source.py",
+            "gate_imui_workstream_source.py",
+            "WORKSTREAM.json",
+            "git diff --check",
+            "does not close",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod change_propagation;",
@@ -1721,6 +1763,7 @@ def _check_docs(failures: list[str]) -> None:
             "mod command_effects;",
             "mod cursor_effects;",
             "mod driver_effects;",
+            "mod effect_queue;",
             "mod incoming_open_effects;",
             "mod file_transfer_effects;",
             "mod frame_effects;",
@@ -1915,6 +1958,41 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/effect_queue.rs"),
+        required=[
+            "pub(super) fn dispatch_effect_queue",
+            "effects: Vec<Effect>",
+            "stats: &mut StreamingUploadStats",
+            "window_state_dirty: &mut HashSet<AppWindowId>",
+            "for effect in effects",
+            "match effect",
+            "Effect::Redraw(window)",
+            "Effect::ImeAllow { window, enabled }",
+            "Effect::WindowMetricsSetInsets",
+            "Effect::CursorSetIcon { window, icon }",
+            "Effect::SetTimer { .. }",
+            "self.handle_set_timer_effect(now, &effect);",
+            "Effect::QuitApp",
+            "self.handle_quit_app_effect(event_loop)",
+            "Effect::ImageUpdateRgba8",
+            "self.handle_image_update_rgba8(",
+            "Effect::ImageUpdateNv12",
+            "Effect::ImageUpdateI420",
+            "Effect::ViewportInput(event)",
+            "self.handle_viewport_input_effect(event);",
+            "Effect::Dock(op)",
+            "self.handle_dock_effect(op);",
+            "Effect::Window(req)",
+            "self.handle_window_request_effect(event_loop, req, now)",
+            "return true;",
+            "false",
+        ],
+        forbidden=[
+            "pub fn ",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/frame_effects.rs"),
         required=[
             "pub(super) fn handle_effect_redraw",
@@ -1948,7 +2026,13 @@ def _check_docs(failures: list[str]) -> None:
     )
     _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/effects.rs"),
-        required=[],
+        required=[
+            "self.dispatch_effect_queue(",
+            "self.publish_streaming_upload_diagnostics(&stats);",
+            "did_work |= self.propagate_model_changes();",
+            "did_work |= self.propagate_global_changes();",
+            "self.request_pending_streaming_upload_redraws();",
+        ],
         forbidden=[
             "pub(super) fn system_font_rescan_async_enabled",
             "pub(super) fn system_font_catalog_startup_async_enabled",
@@ -1993,6 +2077,12 @@ def _check_docs(failures: list[str]) -> None:
             "FRET_STREAMING_DEBUG",
             "request_streaming_pending_redraws",
             "streaming_uploads.has_pending",
+            "for effect in effects",
+            "match effect",
+            "Effect::Redraw(window)",
+            "Effect::QuitApp",
+            "Effect::Window(req)",
+            "handle_image_update_rgba8(",
             "WinitWindowContext",
         ],
         failures=failures,
@@ -2031,7 +2121,7 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
-        Path("crates/fret-launch/src/runner/desktop/runner/effects.rs"),
+        Path("crates/fret-launch/src/runner/desktop/runner/effect_queue.rs"),
         required=[
             "Effect::Window(req) =>",
             "self.handle_window_request_effect(event_loop, req, now)",
@@ -2056,8 +2146,6 @@ def _check_docs(failures: list[str]) -> None:
             "self.handle_quit_app_effect(event_loop)",
             "self.handle_command_effect(window, command)",
             "self.handle_set_menu_bar_effect(window, menu_bar)",
-            "did_work |= self.propagate_model_changes();",
-            "did_work |= self.propagate_global_changes();",
         ],
         forbidden=[
             "WindowRequest::Close(window)",

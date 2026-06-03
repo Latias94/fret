@@ -828,6 +828,16 @@ Each TODO is labeled:
         image update dispatch while delegating streaming lifecycle work.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner effect queue owner split keeps queued effect dispatch out of the
+      fixed-point drain loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M86_RUNNER_EFFECT_QUEUE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/effect_queue.rs` owns ordered queued effect
+        dispatch, shared streaming stats mutation, dirty-window tracking, and exit signaling for
+        `QuitApp` / exiting window requests.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the fixed-point drain loop,
+        lifecycle polling, diagnostics, post-dispatch propagation, and pending streaming redraws.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
