@@ -1,28 +1,23 @@
 use std::sync::{Arc, Mutex};
 
 use fret_core::{Axis, Edges, Px};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, SpacingLength};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
 use crate::primitives::chrome::resolve_editor_text_field_style;
-use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, derived_test_id,
-    editor_joined_input_frame_segments_with_overrides,
-};
+use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::numeric_text_entry_focus_state;
 use crate::primitives::style::EditorStyle;
 
 mod affix;
 mod error;
+mod field;
 mod input;
 
-use affix::numeric_input_affix_segment;
-use error::{numeric_input_inline_error, numeric_input_trailing_error_icon};
-use input::{NumericInputTextEntryArgs, numeric_input_text_entry};
+use error::numeric_input_inline_error;
+use field::{NumericInputFieldArgs, numeric_input_field};
 
 use super::NumericInput;
 use super::model::editor_numeric_input_text_style;
@@ -90,98 +85,39 @@ where
     let error_icon_test_id = derived_test_id(options.test_id.as_ref(), "error");
     let error_text_test_id = derived_test_id(options.test_id.as_ref(), "error-text");
 
-    let field = editor_joined_input_frame_segments_with_overrides(
+    let field = numeric_input_field(
         cx,
-        LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        density,
-        frame_chrome,
-        enabled_for_paint,
-        false,
-        options.test_id.clone(),
-        move |cx, focused| {
-            let has_error = cx
-                .get_model_cloned(&error_for_frame, Invalidation::Paint)
-                .unwrap_or(None)
-                .is_some();
-            EditorInputGroupFrameOverrides {
-                semantic: Some(crate::primitives::visuals::EditorFrameSemanticState {
-                    typing: focused,
-                    invalid: has_error,
-                }),
-                ..EditorInputGroupFrameOverrides::none()
-            }
-        },
-        move |cx| {
-            let mut segments = Vec::new();
-
-            if let Some(segment) = numeric_input_affix_segment(
-                cx,
-                density,
-                frame_chrome,
-                prefix.clone(),
-                prefix_test_id.clone(),
-            ) {
-                segments.push(segment);
-            }
-            segments
-        },
-        move |cx| {
-            numeric_input_text_entry(
-                cx,
-                NumericInputTextEntryArgs {
-                    model: model.clone(),
-                    draft: draft.clone(),
-                    error: error_for_field.clone(),
-                    focus_state: focus_state.clone(),
-                    last_draft_text: last_draft_text.clone(),
-                    current_text: current_text.clone(),
-                    has_error,
-                    density,
-                    enabled: enabled_for_paint,
-                    focusable,
-                    placeholder: placeholder.clone(),
-                    test_id: input_test_id.clone(),
-                    chrome: chrome.clone(),
-                    text_style: text_style_for_field.clone(),
-                    focus_target: focus_target.clone(),
-                    selection_behavior,
-                    parse: parse.clone(),
-                    format: format.clone(),
-                    validate: validate.clone(),
-                    on_outcome: on_outcome.clone(),
-                },
-            )
-        },
-        move |cx| {
-            let mut segments = Vec::new();
-
-            if let Some(segment) = numeric_input_affix_segment(
-                cx,
-                density,
-                frame_chrome,
-                suffix.clone(),
-                suffix_test_id.clone(),
-            ) {
-                segments.push(segment);
-            }
-
-            if let Some(icon) = numeric_input_trailing_error_icon(
-                cx,
-                density,
-                error_display,
-                &error_for_trailing,
-                error_icon_test_id.clone(),
-            ) {
-                segments.push(icon);
-            }
-            segments
+        NumericInputFieldArgs {
+            model,
+            draft: draft.clone(),
+            error_for_field: error_for_field.clone(),
+            error_for_frame: error_for_frame.clone(),
+            error_for_trailing: error_for_trailing.clone(),
+            focus_state: focus_state.clone(),
+            last_draft_text: last_draft_text.clone(),
+            current_text: current_text.clone(),
+            has_error,
+            density,
+            frame_chrome,
+            chrome,
+            text_style: text_style_for_field,
+            enabled_for_paint,
+            focusable,
+            placeholder,
+            error_display,
+            selection_behavior,
+            focus_target,
+            prefix,
+            suffix,
+            test_id: options.test_id.clone(),
+            input_test_id,
+            prefix_test_id,
+            suffix_test_id,
+            error_icon_test_id,
+            parse,
+            format,
+            validate,
+            on_outcome,
         },
     );
 

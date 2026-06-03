@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor NumericInput Joined Field/Frame Owner Split Evidence - 2026-06-03
+
+Claim verified: editor `NumericInput` joined field/frame assembly moved out of
+`controls/numeric_input/element.rs` into private `controls/numeric_input/element/field.rs` without
+changing keyed draft/error model reads, duplicate affix suppression, TextInput mount behavior,
+frame invalid/typing semantic projection, prefix/suffix segment order, trailing error icon
+composition, inline error layout, focus-target capture, or public `NumericInput` options.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed runtime state
+  projection, duplicate-affix preparation, inline error composition, and outer root layout only.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element/field.rs` owns joined frame
+  assembly through `editor_joined_input_frame_segments_with_overrides(...)`, including frame
+  invalid/typing semantic overrides, prefix/suffix affix mounting, text-entry owner invocation, and
+  trailing error icon composition.
+- `ecosystem/fret-ui-editor/src/controls/numeric_input/element/input.rs` remains the TextInput
+  props/focus/key/draft-sync owner, while `affix.rs` and `error.rs` keep segment/error display
+  policy.
+- `tools/gate_imui_workstream_source.py` now requires the new field owner and rejects joined
+  field/frame assembly from drifting back into `element.rs`.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`: pass, 6 tests.
+- `cargo nextest run -p fret-ui-editor --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor ColorEdit Hue Wheel Model Owner Split - 2026-06-03
 
 Claim verified: editor `ColorEdit` hue-wheel model math moved out of

@@ -906,6 +906,17 @@ Last updated: 2026-06-03
       owner invocation, and error owner invocation while delegating prefix/suffix segment chrome to
       `controls/numeric_input/element/affix.rs`. The source gate prevents affix segment policy from
       drifting back into the root element owner.
+- [x] Split editor `NumericInput` joined field/frame assembly into a private element child owner
+      without changing keyed draft/error model reads, duplicate affix suppression, TextInput mount
+      behavior, frame invalid/typing semantic projection, prefix/suffix segment order, trailing
+      error icon composition, inline error layout, focus-target capture, or public `NumericInput`
+      options.
+      Result: `controls/numeric_input/element.rs` now keeps keyed runtime state projection,
+      duplicate-affix preparation, inline error composition, and outer root layout only.
+      `controls/numeric_input/element/field.rs` owns joined frame assembly, frame override
+      semantics, prefix/suffix affix mounting, text-entry owner invocation, and trailing error icon
+      composition. The source gate prevents joined field/frame assembly from drifting back into the
+      root element owner.
 - [x] Split editor color-edit tooltip panel rendering into a private child owner without changing
       tooltip open gating, anchored placement, dismissal routing, hover-preview content, color
       tooltip line formatting, preview fill routing, tooltip readout text role, tooltip semantics,

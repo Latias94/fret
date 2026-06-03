@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 editor NumericInput joined field/frame owner-split result:
+`ecosystem/fret-ui-editor/src/controls/numeric_input/element.rs` now keeps keyed runtime state
+projection, duplicate-affix preparation, inline error composition, and outer root layout only.
+`controls/numeric_input/element/field.rs` owns joined frame assembly, frame invalid/typing semantic
+overrides, prefix/suffix affix mounting, text-entry owner invocation, and trailing error icon
+composition. Draft/error model reads, duplicate-affix suppression, TextInput mount behavior,
+focus-target capture, inline error layout, and public `NumericInput` options remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split.
+
 ## M7 - P1 Active Teaching Drift Guard
 
 Exit criteria:
