@@ -1367,6 +1367,15 @@ Runtime behavior and public effect surfaces remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
 gate.
 
+2026-06-04 desktop runner IME effects owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/effects.rs` now keeps the generic effect loop and
+delegates IME allow/disable, virtual-keyboard request, and cursor-area handling to
+`crates/fret-launch/src/runner/desktop/runner/ime_effects.rs`. `ime_effects.rs` owns Android
+soft-input forwarding, `FRET_IME_DEBUG` cursor-area logging, platform cursor-area publication, and
+dirty-window propagation. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

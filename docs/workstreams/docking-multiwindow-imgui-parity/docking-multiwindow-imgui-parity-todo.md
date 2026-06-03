@@ -732,6 +732,15 @@ Each TODO is labeled:
         drain-turn trigger only.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner IME effects owner split keeps IME platform state handling out of the
+      general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M76_RUNNER_IME_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/ime_effects.rs` owns IME allow, virtual
+        keyboard request, cursor-area, debug logging, and dirty-window propagation.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        delegates the IME effect branches.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

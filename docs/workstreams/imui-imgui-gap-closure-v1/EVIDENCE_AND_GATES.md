@@ -29549,6 +29549,19 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M75_RUNNER_SYSTEM_FONT_RESCAN_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner IME effects owner split:
+
+- Claim: IME allow/disable, virtual-keyboard request, and cursor-area handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/ime_effects.rs` without changing runtime behavior
+  or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod ime_effects;`; `ime_effects.rs` owns
+  `handle_ime_allow`, `handle_ime_request_virtual_keyboard`, and `handle_ime_set_cursor_area`;
+  `effects.rs` keeps the effect queue loop and only delegates `Effect::ImeAllow`,
+  `Effect::ImeRequestVirtualKeyboard`, and `Effect::ImeSetCursorArea` to the IME owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M76_RUNNER_IME_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from
