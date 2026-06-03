@@ -6796,3 +6796,13 @@ opening the slice.
       corresponding public record fields, constructors, presentation helpers, builder methods, and
       `into_element(...)` delegation. The IMUI source gate rejects Vec2/Vec3/Vec4 model bodies from
       drifting back into the root model hub.
+- [x] Split editor `TextAssistField` keyed body assembly into a private element owner without
+      changing public constructor/options/accept APIs, callsite/id-source keying, controller
+      projection, expanded-state sync, assistive semantics, inline/overlay panel routing, empty
+      label fallback, or keyboard accept/navigation installation.
+      Result: `controls/text_assist_field/element.rs` now keeps the public field record,
+      constructor/builders, and callsite/id-source keyed routing. `controls/text_assist_field/element/body.rs`
+      owns keyed controller projection, panel rendering, input-owned text-assist semantics,
+      TextField assistive wiring, inline/overlay panel selection, empty-label fallback, root
+      layout, and keyboard handler installation. The IMUI source gate rejects body assembly details
+      drifting back into the public element hub.

@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Editor TextAssistField Body Assembly Owner Split - 2026-06-03
+
+Claim verified: editor `TextAssistField` keyed body assembly moved out of
+`controls/text_assist_field/element.rs` into private `controls/text_assist_field/element/body.rs`
+without changing public constructor/options/accept APIs, callsite/id-source keying, controller
+projection, expanded-state sync, assistive semantics, inline/overlay panel routing, empty-label
+fallback, or keyboard accept/navigation installation.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs` now keeps the public
+  `TextAssistField` record, constructor/builders, and callsite/id-source keyed routing.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element/body.rs` owns keyed controller
+  projection, expanded-state sync, panel rendering, input-owned text-assist semantics, TextField
+  assistive semantics wiring, inline/overlay panel selection, empty-label fallback, root layout,
+  and keyboard handler installation.
+- `ecosystem/fret-ui-editor/src/controls/text_assist_field/element/keyboard.rs` remains the
+  input-owned keyboard policy owner.
+- `tools/gate_imui_workstream_source.py` now requires the root/keying hub and body assembly owner
+  separately, while rejecting controller/semantics/panel/root-layout details from drifting back
+  into the public element hub.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui text_assist --no-fail-fast`: pass, 4 tests.
+- `cargo nextest run -p fret-ui-editor --no-fail-fast`: pass, 228 tests.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --test imui_adapter_smoke --no-fail-fast`:
+  pass, 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor VecEdit Model Record Owner Split - 2026-06-03
 
 Claim verified: editor `VecEdit` public Vec2/Vec3/Vec4 model records moved out of

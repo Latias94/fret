@@ -5994,3 +5994,12 @@ records moved into dedicated private owners: `model/vec2.rs` owns `Vec2Edit`, `m
 constructor, presentation helper, validation/reset/option builders, and `into_element(...)`
 delegation through the existing private keying owner. Public editor/IMUI adapter APIs remain
 unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 editor TextAssistField body assembly owner split result:
+`ecosystem/fret-ui-editor/src/controls/text_assist_field/element.rs` now keeps the public
+`TextAssistField` record, constructors/builders, and callsite/id-source keyed routing only.
+`controls/text_assist_field/element/body.rs` owns the keyed body assembly: controller projection,
+expanded-state sync, panel rendering, input-owned text-assist semantics, TextField assistive
+semantics wiring, inline/overlay panel selection, empty-label fallback, root layout, and keyboard
+handler installation through the existing private keyboard owner. Public editor/IMUI adapter APIs
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split.
