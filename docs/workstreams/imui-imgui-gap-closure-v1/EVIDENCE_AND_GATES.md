@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI Begin-Menu Trigger Flow Owner Split Evidence - 2026-06-03
+
+Claim verified: begin-menu trigger mounting and trigger-driven open-state synchronization moved out
+of the popup/response owner without changing disabled gating, begin-menu state capture, trigger
+identity, active-trigger synchronization, menubar reconciliation, click-toggle behavior, popup
+request routing, disabled-popup cleanup, or `DisclosureResponse` fields.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps enabled/state setup,
+  `open_begin_menu_popup_if_requested(...)`, popup body routing, disabled-popup cleanup, render
+  state recording, and final `DisclosureResponse` shaping.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu/trigger_flow.rs` owns
+  `run_begin_menu_trigger_flow(...)`, begin-menu trigger mounting, row-open reads,
+  active-trigger synchronization, menubar open-menu snapshot/reconciliation, and enabled
+  click-toggle policy.
+- `menu/open.rs` still owns open-request resolution, menubar active-trigger activation, and
+  `ui.open_popup_at(...)`; submenu and menu-item owners are unchanged.
+- `tools/gate_imui_workstream_source.py` now freezes `menu.rs` as the popup/response owner and
+  `menu/trigger_flow.rs` as the private trigger-flow owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls --no-fail-fast`:
+  pass, 1 test.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation interaction_menu_tabs::submenu_hover interaction_menu_tabs::submenu_shortcuts --no-fail-fast`:
+  pass, 15 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI Table Header Sort-Label Owner Split Evidence - 2026-06-03
 
 Claim verified: table header sort-label helpers moved out of the label/chrome hub without changing

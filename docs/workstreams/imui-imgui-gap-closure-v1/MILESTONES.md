@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 IMUI begin-menu trigger-flow owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps enabled/state setup, popup
+request/body routing, disabled-popup cleanup, and final `DisclosureResponse` shaping.
+`menu_family_controls/menu/trigger_flow.rs` owns begin-menu trigger mounting, row-open reads,
+active-trigger synchronization, menubar open-menu snapshot/reconciliation, and enabled
+click-toggle policy. Begin-menu identity, shortcut activation, menubar hover/sibling switching,
+submenu interaction, and public IMUI menu facade behavior remain unchanged, and the source gate
+freezes trigger-flow policy separately from the popup/response owner.
+
 2026-06-03 IMUI table header sort-label owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` now keeps visible-label parsing,
 header content-box chrome, header label text-role routing, and narrow re-exports only.

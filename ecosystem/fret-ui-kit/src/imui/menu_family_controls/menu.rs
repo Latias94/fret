@@ -4,10 +4,12 @@ use fret_ui::UiHost;
 
 use crate::imui::{BeginMenuOptions, DisclosureResponse, ImUiFacade, UiWriterImUiFacadeExt};
 use open::open_begin_menu_popup_if_requested;
+use trigger_flow::{BeginMenuTriggerInput, run_begin_menu_trigger_flow};
 
 use super::menu_state;
 
 mod open;
+mod trigger_flow;
 
 pub(in crate::imui) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -19,49 +21,25 @@ pub(in crate::imui) fn begin_menu_with_options<H: UiHost, W: UiWriterImUiFacadeE
     let enabled = options.enabled && ui.with_cx_mut(|cx| !super::super::imui_is_disabled(cx));
     let menu_state = menu_state::capture_begin_menu_state(ui, id);
 
-    let trigger = ui.push_id(format!("{id}.trigger"), |ui| {
-        super::trigger::menu_trigger_with_options(
-            ui,
-            Arc::from(id),
-            label.clone(),
-            menu_state.open_before,
-            menu_state.row_open.clone(),
-            menu_state.menubar_policy.clone(),
+    let trigger_flow = run_begin_menu_trigger_flow(
+        ui,
+        id,
+        &menu_state,
+        BeginMenuTriggerInput {
+            label,
             enabled,
-            options.test_id.clone(),
-            options.activate_shortcut,
-            options.shortcut_repeat,
-        )
-    });
-
-    let open_after_trigger = menu_state.read_row_open(ui);
-    menu_state::sync_open_menu_for_active_trigger(
-        ui,
-        id,
-        &menu_state,
-        open_after_trigger,
-        trigger.clicked(),
-        trigger.id(),
+            test_id: options.test_id.clone(),
+            activate_shortcut: options.activate_shortcut,
+            shortcut_repeat: options.shortcut_repeat,
+        },
     );
-
-    let open_menu_before = menu_state.read_menubar_open_menu(ui);
-    menu_state::reconcile_menubar_after_trigger(
-        ui,
-        id,
-        &menu_state,
-        open_after_trigger,
-        trigger.id(),
-    );
-
-    if enabled && trigger.clicked() {
-        menu_state::toggle_menu_on_trigger_click(ui, id, &menu_state);
-    }
+    let trigger = trigger_flow.trigger;
 
     open_begin_menu_popup_if_requested(
         ui,
         id,
         &menu_state,
-        open_menu_before,
+        trigger_flow.open_menu_before,
         trigger.id(),
         trigger.rect(),
     );

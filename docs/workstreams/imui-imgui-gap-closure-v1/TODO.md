@@ -258,6 +258,16 @@ Last updated: 2026-06-03
       `column_is_sortable(...)`, sort glyph projection, sort-indicator text construction, and
       sortable header a11y-label wording. The source gate prevents sort policy from drifting back
       into the label/chrome hub.
+- [x] Split IMUI begin-menu trigger flow out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` into a private trigger-flow
+      owner without changing disabled gating, begin-menu state capture, trigger identity,
+      active-trigger synchronization, menubar reconciliation, click-toggle behavior, popup request
+      routing, disabled-popup cleanup, or `DisclosureResponse` fields.
+      Result: `menu_family_controls/menu.rs` keeps the public begin-menu entry flow, enabled/state
+      setup, popup request/body routing, disabled cleanup, and response shaping.
+      `menu/trigger_flow.rs` owns trigger mounting, row-open reads, active-trigger sync, menubar
+      open-menu snapshot/reconcile, and enabled click-toggle policy. The source gate prevents
+      trigger-flow policy from drifting back into the popup/response owner.
 - [x] Split IMUI disclosure header indicator-slot assembly out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` into a
       private child owner without changing indicator width, glyph chrome, inherited foreground,
