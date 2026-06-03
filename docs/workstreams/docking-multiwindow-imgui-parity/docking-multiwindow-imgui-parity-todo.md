@@ -849,6 +849,16 @@ Each TODO is labeled:
       - Focused runner compile, wheel coalescing regression, Linux capability posture regression,
         source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
         compositor acceptance.
+    - [x] 2026-06-04 runner redraw hitch owner split keeps redraw diagnostics out of the general
+      application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M88_RUNNER_REDRAW_HITCH_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/redraw_hitch.rs` owns hitch enablement,
+        threshold parsing, log path selection, buffered log writes, logical pixel quantization,
+        phase tracing spans, and per-phase elapsed timing.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps redraw execution,
+        renderer frame construction, surface recovery, and `ApplicationHandler` wiring.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

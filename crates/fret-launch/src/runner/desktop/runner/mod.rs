@@ -171,6 +171,7 @@ mod menu_effects;
 mod platform_capabilities;
 mod platform_prefs;
 mod quit_effects;
+mod redraw_hitch;
 mod render;
 mod run;
 mod shell_effects;

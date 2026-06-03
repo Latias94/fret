@@ -1464,6 +1464,15 @@ carried remainder behavior, and wheel-coalescing env configuration to
 effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
 through the docking multiwindow source gate.
 
+2026-06-04 desktop runner redraw hitch owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps winit event routing,
+redraw execution, renderer frame construction, surface recovery, and `ApplicationHandler` wiring
+while delegating hitch configuration, log path selection, buffered writes, logical pixel
+quantization, phase tracing spans, and elapsed timing to
+`crates/fret-launch/src/runner/desktop/runner/redraw_hitch.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

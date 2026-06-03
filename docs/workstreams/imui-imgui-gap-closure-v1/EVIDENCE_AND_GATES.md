@@ -29743,6 +29743,35 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M87_RUNNER_WHEEL_COALESCING_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner redraw hitch owner split:
+
+- Claim: redraw hitch diagnostics moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/redraw_hitch.rs` without changing runtime
+  behavior, hitch enablement, threshold parsing, log path selection, buffered log writes, logical
+  pixel quantization, redraw phase tracing spans, per-phase elapsed timing, or public effect
+  surfaces.
+- Evidence anchors: `mod.rs` declares `mod redraw_hitch;`; `redraw_hitch.rs` owns
+  `redraw_hitch_config`, `quantize_logical_px`, `write_redraw_hitch_log`, `RedrawPhase`, and
+  `measure_redraw_phase`; `app_handler.rs` keeps winit event routing, redraw execution, renderer
+  frame construction, surface recovery, and `ApplicationHandler` wiring.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo check -p fret-launch --lib`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M88 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M88_RUNNER_REDRAW_HITCH_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from
