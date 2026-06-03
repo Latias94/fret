@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI ResponseExt Type Owner Split Evidence - 2026-06-03
+
+Claim verified: IMUI `ResponseExt` record storage moved out of `response/hover.rs` into private
+`response/hover/types.rs` without changing public `ResponseExt` / `ImUiHoveredFlags` re-export
+paths, core response accessors, hover-query flags, lifecycle signals, press-context signals, drag
+accessors, or facade response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/hover.rs` now keeps only hover response module
+  declarations plus public `ImUiHoveredFlags` and `ResponseExt` re-exports.
+- `ecosystem/fret-ui-kit/src/imui/response/hover/types.rs` owns the `ResponseExt` field record with
+  `hover`-scoped field visibility so sibling impl owners can continue to project response state
+  without widening crate-level field access.
+- Existing impl owners remain focused: `core_state.rs`, `hover_state.rs`, `lifecycle.rs`,
+  `press_context.rs`, `drag_accessors.rs`, and `query.rs` still own their accessor, setter, and
+  query behavior.
+- `tools/gate_imui_workstream_source.py` now points the opaque `ResponseExt` owner check and the
+  hover response source checks at `response/hover/types.rs`; `WORKSTREAM.json` includes the new
+  manifest path.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --no-fail-fast`: pass,
+  2 tests.
+- `cargo nextest run -p fret-imui popup_hover interaction_press --no-fail-fast`: pass, 30 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI Table Row-Group Horizontal Flex Owner Split Evidence - 2026-06-03
 
 Claim verified: IMUI table row-group horizontal flex chrome moved out of

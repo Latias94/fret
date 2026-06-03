@@ -1238,6 +1238,15 @@ Last updated: 2026-06-03
       Result: `adapters.rs` keeps the public seam hub, `AdapterSeamOptions`, and
       `report_adapter_signal(...)`. `adapters/signal.rs` owns `AdapterSignalMetadata`,
       `AdapterSignalRecord`, and `AdapterSignalReporter`.
+- [x] Split IMUI `ResponseExt` record storage into a private hover type owner without changing
+      public `ResponseExt` / `ImUiHoveredFlags` re-export paths, core response accessors,
+      hover-query flags, lifecycle/press-context setters, drag accessors, or facade response
+      behavior.
+      Result: `response/hover.rs` is now the module/re-export hub. `response/hover/types.rs` owns
+      the `ResponseExt` field record with `hover`-scoped field visibility, while existing
+      core-state, hover-state, lifecycle, press-context, drag, and query owners keep their impls.
+      The source gate and workstream manifest now point the opaque response record at the type
+      owner.
 - [x] Split IMUI tooltip runtime model creation and trigger gate installation into a private owner
       without changing trigger-id validation, provider option defaults, layout projection,
       hover/focus interaction updates, overlay request submission, or public tooltip facade

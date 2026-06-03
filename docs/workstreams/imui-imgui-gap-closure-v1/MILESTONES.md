@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 IMUI ResponseExt type owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover.rs` now keeps the hover response module declarations
+and public re-exports only. `response/hover/types.rs` owns the `ResponseExt` field record with
+`hover`-scoped field visibility, while `core_state.rs`, `hover_state.rs`, `lifecycle.rs`,
+`press_context.rs`, `drag_accessors.rs`, and `query.rs` keep their existing impl responsibilities.
+Public `ResponseExt` / `ImUiHoveredFlags` paths, core response accessors, hover flag queries,
+lifecycle and press-context signals, drag accessors, and facade behavior remain unchanged, and the
+source gate plus workstream manifest freeze the new type owner.
+
 2026-06-03 IMUI table row-group horizontal flex owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs` now keeps only semantic
 row-group entrypoints for outer, fill, pinned, and scroll-content table row groups.
