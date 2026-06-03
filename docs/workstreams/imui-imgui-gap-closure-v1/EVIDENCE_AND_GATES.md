@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Fret IMUI Region Container ListBox Test Owner Split - 2026-06-03
+
+Claim verified: the `fret-imui` region-container composition proof root no longer owns the ListBox
+semantics/scroll/selectable proof; the ListBox proof lives under a private region-container owner
+while the root keeps child-region composition proofs.
+
+Evidence:
+
+- Fret IMUI region-container ListBox test owner split - 2026-06-03.
+- ListBox semantics/scroll/selectable proof lives in the private region-container ListBox owner.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs` declares
+  `mod list_box;` and keeps child-region composition, chrome, resize, popup, and auto-size tests.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/list_box.rs`
+  owns `list_box_container_stamps_semantics_scroll_and_hosts_selectables`.
+- `tools/gate_imui_workstream_source.py` now requires the ListBox owner and rejects ListBox drift
+  back into the mixed region-container root file.
+
+Focused gates:
+
+- `cargo fmt --package fret-imui`: pass.
+- `cargo nextest run -p fret-imui layout_collections::region_containers --no-fail-fast`: pass,
+  7 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret IMUI Layout Collection Table Test Owner Split - 2026-06-03
 
 Claim verified: the large `fret-imui` layout-collection composition proof file no longer owns the

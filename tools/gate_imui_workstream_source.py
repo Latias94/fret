@@ -3090,6 +3090,10 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md"),
             required=[
+                "Fret IMUI Region Container ListBox Test Owner Split - 2026-06-03",
+                "ListBox semantics/scroll/selectable proof",
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/list_box.rs",
+                "rejects ListBox drift",
                 "Fret IMUI Layout Collection Table Test Owner Split - 2026-06-03",
                 "table helper proof surface",
                 "ecosystem/fret-imui/src/tests/composition/layout_collections/table.rs",
@@ -12256,6 +12260,26 @@ def main() -> None:
             ),
             required=[
                 "use super::*;",
+                "mod list_box;",
+                "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "fn child_region_without_width_constraint_auto_sizes_to_content()",
+            ],
+            forbidden=[
+                "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
+                "ui.list_box_with_options(",
+                "SemanticsRole::ListBox",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/list_box.rs"
+            ),
+            required=[
+                "use super::*;",
                 "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
                 "ui.list_box_with_options(",
                 "ListBoxOptions {",
@@ -12266,7 +12290,11 @@ def main() -> None:
                 "listbox.active_descendant.is_none()",
                 "handle.max_offset().y.0 > 0.0",
             ],
-            forbidden=[],
+            forbidden=[
+                "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-plot/Cargo.toml"),
@@ -51479,7 +51507,7 @@ def main() -> None:
         ),
         SourceCheck(
             Path(
-                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs"
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/list_box.rs"
             ),
             required=[
                 "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",

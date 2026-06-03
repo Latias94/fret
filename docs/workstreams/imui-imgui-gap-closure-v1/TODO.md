@@ -6762,3 +6762,8 @@ opening the slice.
       visibility-menu, and header-context-menu visibility tests. The root `layout_collections.rs`
       keeps container/menu/tab/virtual-list/separator/bullet composition tests and declares
       `mod table;`; the IMUI source gate rejects table helper drift back into the mixed root file.
+- [x] Split `fret-imui` region-container ListBox proof into a private owner module.
+      Result: `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/list_box.rs`
+      owns the ListBox semantics/scroll/selectable proof. The root `region_containers.rs` keeps
+      child-region composition, chrome, resize, popup, and auto-size tests while the IMUI source
+      gate rejects ListBox drift back into the mixed root file.
