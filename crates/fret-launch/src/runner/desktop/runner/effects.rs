@@ -1,9 +1,6 @@
 use std::{any::TypeId, collections::HashSet, sync::OnceLock};
 
 use super::macos_cursor::dock_tearoff_log;
-use super::streaming_images::{
-    StreamingImageUpdateNv12, StreamingImageUpdateRgba8, UploadedImageEntry,
-};
 use fret_app::Effect;
 use fret_core::Event;
 use fret_core::time::Instant;
@@ -612,103 +609,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         color_info,
                         alpha_mode,
                     } => {
-                        let Some(context) = self.context.as_ref() else {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ImageRegisterFailed {
-                                    token,
-                                    message: "wgpu not initialized".to_string(),
-                                },
-                            );
-                            continue;
-                        };
-                        let Some(renderer) = self.renderer.as_mut() else {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ImageRegisterFailed {
-                                    token,
-                                    message: "renderer not initialized".to_string(),
-                                },
-                            );
-                            continue;
-                        };
-
-                        if width == 0 || height == 0 {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ImageRegisterFailed {
-                                    token,
-                                    message: format!("invalid image size: {width}x{height}"),
-                                },
-                            );
-                            continue;
-                        }
-
-                        let expected_len = (width as usize)
-                            .saturating_mul(height as usize)
-                            .saturating_mul(4);
-                        if bytes.len() != expected_len {
-                            self.deliver_window_event_now(
-                                window,
-                                &Event::ImageRegisterFailed {
-                                    token,
-                                    message: format!(
-                                        "invalid rgba8 byte length: got {} expected {}",
-                                        bytes.len(),
-                                        expected_len
-                                    ),
-                                },
-                            );
-                            continue;
-                        }
-
-                        let color_space = match color_info.encoding {
-                            fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
-                            fret_core::ImageEncoding::Linear => {
-                                fret_render::ImageColorSpace::Linear
-                            }
-                        };
-
-                        let uploaded = fret_render::upload_rgba8_image(
-                            &context.device,
-                            &context.queue,
-                            (width, height),
-                            &bytes,
-                            color_space,
+                        self.handle_image_register_rgba8(
+                            window, token, width, height, bytes, color_info, alpha_mode,
                         );
-
-                        let view = uploaded
-                            .texture
-                            .create_view(&wgpu::TextureViewDescriptor::default());
-                        let image = renderer.register_image(fret_render::ImageDescriptor {
-                            view,
-                            size: uploaded.size,
-                            format: uploaded.format,
-                            color_space: uploaded.color_space,
-                            alpha_mode,
-                        });
-                        self.uploaded_images.insert(
-                            image,
-                            UploadedImageEntry {
-                                uploaded,
-                                stream_generation: 0,
-                                alpha_mode,
-                                nv12_planes: None,
-                            },
-                        );
-
-                        self.deliver_window_event_now(
-                            window,
-                            &Event::ImageRegistered {
-                                token,
-                                image,
-                                width,
-                                height,
-                            },
-                        );
-                        if let Some(state) = self.windows.get(window) {
-                            state.window.request_redraw();
-                        }
                     }
                     Effect::ImageUpdateRgba8 {
                         window,
@@ -723,21 +626,19 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         color_info,
                         alpha_mode,
                     } => {
-                        self.apply_streaming_image_update_rgba8(
+                        self.handle_image_update_rgba8(
                             &mut stats,
-                            StreamingImageUpdateRgba8 {
-                                window,
-                                token,
-                                image,
-                                stream_generation,
-                                width,
-                                height,
-                                update_rect_px,
-                                bytes_per_row,
-                                bytes: &bytes,
-                                color_info,
-                                alpha_mode,
-                            },
+                            window,
+                            token,
+                            image,
+                            stream_generation,
+                            width,
+                            height,
+                            update_rect_px,
+                            bytes_per_row,
+                            bytes,
+                            color_info,
+                            alpha_mode,
                         );
                     }
                     Effect::ImageUpdateNv12 {
@@ -755,88 +656,21 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         color_info,
                         alpha_mode: _,
                     } => {
-                        stats.yuv_conversions_attempted =
-                            stats.yuv_conversions_attempted.saturating_add(1);
-                        if self.try_apply_streaming_image_update_nv12_gpu(
+                        self.handle_image_update_nv12(
                             &mut stats,
-                            StreamingImageUpdateNv12 {
-                                window,
-                                token,
-                                image,
-                                stream_generation,
-                                width,
-                                height,
-                                update_rect_px,
-                                y_bytes_per_row,
-                                y_plane: &y_plane,
-                                uv_bytes_per_row,
-                                uv_plane: &uv_plane,
-                                color_info,
-                            },
-                        ) {
-                            continue;
-                        }
-
-                        let t0 = Instant::now();
-                        match crate::runner::yuv::nv12_to_rgba8_rect(
-                            crate::runner::yuv::Nv12ToRgba8RectInput {
-                                width,
-                                height,
-                                update_rect_px,
-                                y_bytes_per_row,
-                                y_plane: &y_plane,
-                                uv_bytes_per_row,
-                                uv_plane: &uv_plane,
-                                range: color_info.range,
-                                matrix: color_info.matrix,
-                            },
-                        ) {
-                            Ok((rect, rgba)) => {
-                                stats.yuv_conversions_applied =
-                                    stats.yuv_conversions_applied.saturating_add(1);
-                                stats.yuv_convert_us = stats
-                                    .yuv_convert_us
-                                    .saturating_add(t0.elapsed().as_micros() as u64);
-                                stats.yuv_convert_output_bytes = stats
-                                    .yuv_convert_output_bytes
-                                    .saturating_add(rgba.len() as u64);
-
-                                self.apply_streaming_image_update_rgba8(
-                                    &mut stats,
-                                    StreamingImageUpdateRgba8 {
-                                        window,
-                                        token,
-                                        image,
-                                        stream_generation,
-                                        width,
-                                        height,
-                                        update_rect_px: Some(rect),
-                                        bytes_per_row: rect.w.saturating_mul(4),
-                                        bytes: &rgba,
-                                        color_info: fret_core::ImageColorInfo::srgb_rgba(),
-                                        alpha_mode: fret_core::AlphaMode::Opaque,
-                                    },
-                                );
-                            }
-                            Err(_message) => {
-                                if self.config.streaming_update_ack_enabled {
-                                    let target = window
-                                        .or(self.main_window)
-                                        .or_else(|| self.windows.keys().next());
-                                    if let Some(target) = target {
-                                        self.deliver_window_event_now(
-                                            target,
-                                            &Event::ImageUpdateDropped {
-                                                token,
-                                                image,
-                                                reason:
-                                                    fret_core::ImageUpdateDropReason::InvalidPayload,
-                                            },
-                                        );
-                                    }
-                                }
-                            }
-                        }
+                            window,
+                            token,
+                            image,
+                            stream_generation,
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            y_plane,
+                            uv_bytes_per_row,
+                            uv_plane,
+                            color_info,
+                        );
                     }
                     Effect::ImageUpdateI420 {
                         window,
@@ -855,84 +689,26 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         color_info,
                         alpha_mode: _,
                     } => {
-                        stats.yuv_conversions_attempted =
-                            stats.yuv_conversions_attempted.saturating_add(1);
-                        let t0 = Instant::now();
-                        match crate::runner::yuv::i420_to_rgba8_rect(
-                            crate::runner::yuv::I420ToRgba8RectInput {
-                                width,
-                                height,
-                                update_rect_px,
-                                y_bytes_per_row,
-                                y_plane: &y_plane,
-                                u_bytes_per_row,
-                                u_plane: &u_plane,
-                                v_bytes_per_row,
-                                v_plane: &v_plane,
-                                range: color_info.range,
-                                matrix: color_info.matrix,
-                            },
-                        ) {
-                            Ok((rect, rgba)) => {
-                                stats.yuv_conversions_applied =
-                                    stats.yuv_conversions_applied.saturating_add(1);
-                                stats.yuv_convert_us = stats
-                                    .yuv_convert_us
-                                    .saturating_add(t0.elapsed().as_micros() as u64);
-                                stats.yuv_convert_output_bytes = stats
-                                    .yuv_convert_output_bytes
-                                    .saturating_add(rgba.len() as u64);
-
-                                self.apply_streaming_image_update_rgba8(
-                                    &mut stats,
-                                    StreamingImageUpdateRgba8 {
-                                        window,
-                                        token,
-                                        image,
-                                        stream_generation,
-                                        width,
-                                        height,
-                                        update_rect_px: Some(rect),
-                                        bytes_per_row: rect.w.saturating_mul(4),
-                                        bytes: &rgba,
-                                        color_info: fret_core::ImageColorInfo::srgb_rgba(),
-                                        alpha_mode: fret_core::AlphaMode::Opaque,
-                                    },
-                                );
-                            }
-                            Err(_message) => {
-                                if self.config.streaming_update_ack_enabled {
-                                    let target = window
-                                        .or(self.main_window)
-                                        .or_else(|| self.windows.keys().next());
-                                    if let Some(target) = target {
-                                        self.deliver_window_event_now(
-                                            target,
-                                            &Event::ImageUpdateDropped {
-                                                token,
-                                                image,
-                                                reason: fret_core::ImageUpdateDropReason::InvalidPayload,
-                                            },
-                                        );
-                                    }
-                                }
-                            }
-                        }
+                        self.handle_image_update_i420(
+                            &mut stats,
+                            window,
+                            token,
+                            image,
+                            stream_generation,
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            y_plane,
+                            u_bytes_per_row,
+                            u_plane,
+                            v_bytes_per_row,
+                            v_plane,
+                            color_info,
+                        );
                     }
                     Effect::ImageUnregister { image } => {
-                        let Some(renderer) = self.renderer.as_mut() else {
-                            continue;
-                        };
-
-                        self.uploaded_images.remove(&image);
-
-                        if !renderer.unregister_image(image) {
-                            continue;
-                        }
-
-                        for (_id, state) in self.windows.iter() {
-                            state.window.request_redraw();
-                        }
+                        self.handle_image_unregister(image);
                     }
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);

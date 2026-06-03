@@ -997,12 +997,16 @@ Last updated: 2026-06-03
       `M71_RUNNER_FILE_TRANSFER_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
       compositor acceptance.
 - [x] Split desktop runner shell actions into a private shell owner without changing runtime behavior or
-      public effect surfaces. The docking source gate freezes the owner split in
-      `M72_RUNNER_SHELL_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
-      acceptance.
+  public effect surfaces. The docking source gate freezes the owner split in
+  `M72_RUNNER_SHELL_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
+  acceptance.
+- [x] Split desktop runner image registration and streaming update handling into a private image owner
+  without changing runtime behavior or public effect surfaces. The docking source gate freezes the
+  owner split in `M73_RUNNER_IMAGE_EFFECTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+  compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
-      changing internal drag route anchor registration, dock-space node registration, active dock
-      drag invalidation, drop-time dock drag cancellation, or public docking APIs.
+  changing internal drag route anchor registration, dock-space node registration, active dock
+  drag invalidation, drop-time dock drag cancellation, or public docking APIs.
       Result: `dock/declarative.rs` keeps the managed-surface entrypoint, layout/render/input
       orchestration, and public docking APIs. `dock/declarative/drag_route.rs` owns dock drag route
       installation, dock drag session-kind checks, active-window invalidation gating, and

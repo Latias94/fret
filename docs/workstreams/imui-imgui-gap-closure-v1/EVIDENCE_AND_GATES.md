@@ -29460,6 +29460,21 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-04 Desktop runner image effects owner split:
+
+- Claim: image registration, streaming RGBA8/NV12/I420 updates, and image unregister handling moved
+  from `crates/fret-launch/src/runner/desktop/runner/effects.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/image_effects.rs` without changing runtime
+  behavior or public effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod image_effects;`; `image_effects.rs` owns
+  `handle_image_register_rgba8`, `handle_image_update_rgba8`, `handle_image_update_nv12`,
+  `handle_image_update_i420`, and `handle_image_unregister`; `effects.rs` keeps the effect queue
+  loop and only delegates `Effect::ImageRegisterRgba8`, `Effect::ImageUpdateRgba8`,
+  `Effect::ImageUpdateNv12`, `Effect::ImageUpdateI420`, and `Effect::ImageUnregister` to the image
+  owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M73_RUNNER_IMAGE_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-04 Desktop runner shell effects owner split:
 
 - Claim: macOS about-panel and app hide/unhide actions, open-url capability gating, and
@@ -29473,6 +29488,8 @@ Focused gates:
   `Effect::HideOtherApps`, `Effect::UnhideAllApps`, `Effect::OpenUrl`, and `Effect::ShareSheetShow`
   to the shell owner.
 - `docs/workstreams/docking-multiwindow-imgui-parity/M72_RUNNER_SHELL_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M73_RUNNER_IMAGE_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 - Passed: `cargo fmt --package fret-launch -- --check`.
 - Passed: `cargo check -p fret-launch --lib`.
