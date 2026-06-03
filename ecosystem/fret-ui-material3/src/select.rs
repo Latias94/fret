@@ -15,7 +15,7 @@ use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, LayoutDirection, Point, Px, SemanticsRole, SvgFit,
     TextOverflow, TextWrap,
 };
-use fret_icons::{ids, IconId};
+use fret_icons::{IconId, ids};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -27,41 +27,40 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::typography::{self, TextIntent};
-use fret_ui_kit::{
-    resolve_override_slot_opt_with, resolve_override_slot_with, OverrideSlot, WidgetStateProperty,
-    WidgetStates,
-};
 use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
+use fret_ui_kit::{
+    OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::context::material_layout_direction_in_scope;
 use crate::foundation::field::{
+    MaterialFieldFloatingLabelProps, MaterialFieldSupportingTextProps, MaterialFieldVariant,
     material_field_active_indicator_layer, material_field_floating_label,
-    material_field_supporting_text, MaterialFieldFloatingLabelProps,
-    MaterialFieldSupportingTextProps, MaterialFieldVariant,
+    material_field_supporting_text,
 };
 use crate::foundation::field_motion::{
-    field_input_phase, field_motion_frame, field_motion_springs_in_scope, FieldMotionTargets,
+    FieldMotionTargets, field_input_phase, field_motion_frame, field_motion_springs_in_scope,
 };
 use crate::foundation::field_overlay::{
+    MATERIAL_FIELD_OVERLAY_WIDTH_FLOOR, MaterialFieldOverlayAlign, MaterialFieldOverlayWidth,
     material_field_overlay_layout, material_field_overlay_listbox_size,
     material_field_overlay_placement, material_field_overlay_scale_transform,
-    MaterialFieldOverlayAlign, MaterialFieldOverlayWidth, MATERIAL_FIELD_OVERLAY_WIDTH_FLOOR,
 };
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    material_focus_state_layer_opacity, material_ink_layer_for_pressable,
+    RippleClip, material_focus_state_layer_opacity, material_ink_layer_for_pressable,
     material_pressable_indication_config_in_scope, material_pressed_state_layer_opacity,
-    RippleClip,
 };
 use crate::foundation::logical_edges::horizontal_logical_edges;
-use crate::foundation::motion_roles::{material_motion_spring_in_scope, MaterialMotionRole};
+use crate::foundation::motion_roles::{MaterialMotionRole, material_motion_spring_in_scope};
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::style_overrides::merge_style_override_slots;
 use crate::foundation::surface::material_surface_style;
 use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
-use crate::motion::{ms_to_frames, SpringAnimator};
+use crate::motion::{SpringAnimator, ms_to_frames};
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::list as list_tokens;
 use crate::tokens::select as select_tokens;
@@ -1199,8 +1198,8 @@ fn select_trigger_element<H: UiHost>(
                             left.align = CrossAlign::Center;
                             left.gap = if has_leading_icon { Px(16.0) } else { Px(0.0) }.into();
 
-                            vec![cx
-                                .flex(left, move |_cx| {
+                            vec![
+                                cx.flex(left, move |_cx| {
                                     let mut out = Vec::new();
                                     if let Some(icon) = leading_icon_el {
                                         out.push(icon);
@@ -1208,7 +1207,8 @@ fn select_trigger_element<H: UiHost>(
                                     out.push(text_el);
                                     out
                                 })
-                                .with_layout_direction(layout_direction)]
+                                .with_layout_direction(layout_direction),
+                            ]
                         },
                     );
 
@@ -2508,8 +2508,8 @@ fn select_list_item<H: UiHost>(
                 .into();
 
                 let chrome = cx.container(chrome, move |cx| {
-                    vec![cx
-                        .flex(row, move |cx| {
+                    vec![
+                        cx.flex(row, move |cx| {
                             let body_slot = if has_secondary_text {
                                 let headline_el = {
                                     let mut props = TextProps::new(item.label.clone());
@@ -2655,7 +2655,8 @@ fn select_list_item<H: UiHost>(
                             }
                             children
                         })
-                        .with_layout_direction(layout_direction)]
+                        .with_layout_direction(layout_direction),
+                    ]
                 });
                 let mut inset = FlexProps::default();
                 inset.direction = Axis::Horizontal;
