@@ -233,6 +233,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M77_RUNNER_FRAME_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   (moves redraw, request-animation-frame, and diagnostic event injection handling into
   `frame_effects.rs` without changing runtime behavior)
+- Latest runner timer effects owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  (moves set/cancel timer effect handling into the existing `timers.rs` owner without changing
+  runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

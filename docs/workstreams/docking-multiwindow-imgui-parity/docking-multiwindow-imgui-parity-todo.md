@@ -751,6 +751,15 @@ Each TODO is labeled:
         delegates the frame effect branches.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner timer effects owner split keeps timer set/cancel handling out of the
+      general effect loop:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/timers.rs` owns timer set/cancel effect
+        handling, timer firing, and fired-timer re-arm/removal behavior.
+      - `crates/fret-launch/src/runner/desktop/runner/effects.rs` keeps the effect queue loop and
+        delegates the timer effect branches.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

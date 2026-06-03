@@ -7,7 +7,7 @@ use super::window::TimerEntry;
 use super::{WinitEventContext, WinitRunner};
 
 impl<D: super::WinitAppDriver> WinitRunner<D> {
-    pub(super) fn schedule_timer(&mut self, now: Instant, effect: &Effect) {
+    pub(super) fn handle_set_timer_effect(&mut self, now: Instant, effect: &Effect) {
         let Effect::SetTimer {
             window,
             token,
@@ -26,6 +26,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                 last_fired_tick: None,
             },
         );
+    }
+
+    pub(super) fn handle_cancel_timer_effect(&mut self, token: fret_runtime::TimerToken) {
+        self.timers.remove(&token);
     }
 
     pub(super) fn fire_due_timers(&mut self, now: Instant) -> bool {

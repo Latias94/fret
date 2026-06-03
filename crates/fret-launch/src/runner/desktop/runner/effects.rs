@@ -123,10 +123,10 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         self.handle_diag_inject_event(window, event);
                     }
                     Effect::SetTimer { .. } => {
-                        self.schedule_timer(now, &effect);
+                        self.handle_set_timer_effect(now, &effect);
                     }
                     Effect::CancelTimer { token } => {
-                        self.timers.remove(&token);
+                        self.handle_cancel_timer_effect(token);
                     }
                     Effect::QuitApp => {
                         let prompt_window = self.main_window.or_else(|| self.windows.keys().next());

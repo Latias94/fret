@@ -29575,6 +29575,18 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M77_RUNNER_FRAME_EFFECTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner timer effects owner split:
+
+- Claim: timer set/cancel effect handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/effects.rs` into the existing
+  `crates/fret-launch/src/runner/desktop/runner/timers.rs` owner without changing runtime behavior
+  or public effect surfaces.
+- Evidence anchors: `timers.rs` owns `handle_set_timer_effect`, `handle_cancel_timer_effect`,
+  `fire_due_timers`, and `finish_fired_timer`; `effects.rs` keeps the effect queue loop and only
+  delegates `Effect::SetTimer` and `Effect::CancelTimer` to the timer owner.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M78_RUNNER_TIMER_EFFECTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from
