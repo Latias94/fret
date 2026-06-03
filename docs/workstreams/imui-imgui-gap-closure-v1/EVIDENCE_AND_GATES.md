@@ -30247,3 +30247,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-03 Fret Plot stems model owner split:
+
+- Claim: `StemsSeries` and `StemsPlotModel` moved from
+  `ecosystem/fret-plot/src/models.rs` into `ecosystem/fret-plot/src/models/stems.rs` without
+  changing `crate::models::{StemsSeries, StemsPlotModel}` import paths, public record
+  fields/builders, baseline-inclusive primary/Y2/Y3/Y4 bounds projection, declarative stems plot
+  panels, or optional IMUI adapter routing.
+- Evidence anchors: `models.rs` declares `mod stems;`, re-exports `StemsSeries` and
+  `StemsPlotModel`, and keeps shared `YAxis`, `MarkerShape`, non-stems model records, and shared
+  bounds helpers; `models/stems.rs` owns stems series fields/builders, `baseline(...)`,
+  `StemsPlotModel` fields, `from_series(...)`, baseline sanitization/filtering, and
+  `sanitize_data_rect(...)` bounds expansion for primary/Y2/Y3/Y4 axes. The source gate rejects
+  stems records drifting back into `models.rs` and rejects non-stems model records drifting into
+  `models/stems.rs`.
+- Passed: `cargo fmt --package fret-plot -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` (with existing `plot/view.rs` dead-code
+  warnings for `apply_axis_locks` and `all_visible_axes_zoom_locked`).
+- Passed:
+  `cargo nextest run -p fret-plot --features imui stems_plot_panel_paints_stems_from_baseline_on_declarative_path --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

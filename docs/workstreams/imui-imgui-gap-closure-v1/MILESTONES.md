@@ -6181,3 +6181,12 @@ default and caller-supplied bounds construction, and primary/Y2/Y3/Y4 data-bound
 `crate::models::{LineSeries, LinePlotModel}` imports, line chart builder routing, declarative line
 plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-03 Fret Plot stems model owner split result:
+`ecosystem/fret-plot/src/models.rs` now keeps shared plot axes, non-stems model records, shared
+bounds helpers, and the stable public re-export for `StemsSeries` / `StemsPlotModel`.
+`ecosystem/fret-plot/src/models/stems.rs` owns stems series fields/builders, baseline policy,
+stems plot model records, and primary/Y2/Y3/Y4 baseline-expanded data-bound projection. Public
+`crate::models::{StemsSeries, StemsPlotModel}` imports, declarative stems plot panels, and optional
+IMUI adapter routing remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split.

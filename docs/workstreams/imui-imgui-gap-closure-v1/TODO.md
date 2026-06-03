@@ -6991,3 +6991,11 @@ opening the slice.
       bounds helpers. `ecosystem/fret-plot/src/models/line.rs` owns line series fields/builders,
       line plot model records, primary/Y2/Y3/Y4 bounds construction, and explicit-bounds
       construction. The IMUI source gate freezes the root re-export hub and line owner boundary.
+- [x] Split Fret Plot stems series/model records out of the root plot model file without changing
+      `crate::models::{StemsSeries, StemsPlotModel}` import paths, baseline-inclusive bounds
+      projection, declarative stems panel behavior, or optional IMUI adapter routing.
+      Result: `ecosystem/fret-plot/src/models.rs` now declares `mod stems;`, re-exports
+      `StemsSeries` and `StemsPlotModel`, and keeps shared axes plus non-stems model records and
+      bounds helpers. `ecosystem/fret-plot/src/models/stems.rs` owns stems series fields/builders,
+      baseline policy, stems plot model records, and primary/Y2/Y3/Y4 baseline-expanded bounds
+      construction. The IMUI source gate freezes the root re-export hub and stems owner boundary.
