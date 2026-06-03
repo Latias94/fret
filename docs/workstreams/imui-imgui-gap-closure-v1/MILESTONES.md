@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-03
 
+2026-06-03 IMUI table header sort-label owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` now keeps visible-label parsing,
+header content-box chrome, header label text-role routing, and narrow re-exports only.
+`table_controls/header/labels/sort.rs` owns sortable detection, sort glyph projection,
+sort-indicator text construction, and sortable header a11y-label wording. Header row rendering,
+sortable/plain wrapper call paths, resize-handle placement, and public table facade behavior remain
+unchanged, and the source gate freezes sort policy separately from the label/chrome hub.
+
 2026-06-03 IMUI tooltip panel element owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` now keeps root-name scoping,
 trigger-anchor fallback, environment outer-bounds lookup, popper placement, and delegation only.

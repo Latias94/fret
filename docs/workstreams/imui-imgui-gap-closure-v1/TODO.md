@@ -248,6 +248,16 @@ Last updated: 2026-06-03
       panel-id model writeback, popover chrome attachment, rich-content column facade assembly, and
       tooltip semantics/test-id decoration. The source gate prevents panel element assembly from
       drifting back into the placement owner.
+- [x] Split IMUI table header sort-label helpers out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` into a private sort owner
+      without changing visible-label parsing, sortable/plain header wrapper call paths,
+      sort-indicator glyph text role, sortable a11y label wording, header content-box chrome, or
+      public table facade behavior.
+      Result: `table_controls/header/labels.rs` keeps visible-label parsing, header content box
+      chrome, label text-role routing, and narrow re-exports only. `labels/sort.rs` owns
+      `column_is_sortable(...)`, sort glyph projection, sort-indicator text construction, and
+      sortable header a11y-label wording. The source gate prevents sort policy from drifting back
+      into the label/chrome hub.
 - [x] Split IMUI disclosure header indicator-slot assembly out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` into a
       private child owner without changing indicator width, glyph chrome, inherited foreground,

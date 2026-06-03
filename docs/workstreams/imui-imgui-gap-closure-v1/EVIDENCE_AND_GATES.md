@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI Table Header Sort-Label Owner Split Evidence - 2026-06-03
+
+Claim verified: table header sort-label helpers moved out of the label/chrome hub without changing
+visible-label parsing, sortable/plain header wrapper call paths, sort-indicator glyph text role,
+sortable a11y-label wording, header content-box chrome, resize-handle placement, or public table
+facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` now keeps visible-label parsing,
+  header content-box chrome, header label text-role routing, and narrow re-exports only.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/labels/sort.rs` owns
+  `column_is_sortable(...)`, sort glyph projection, sort-indicator text construction, and sortable
+  header a11y-label wording.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs`,
+  `header/sortable.rs`, and `header/trigger/visual.rs` keep the same imported helper names, so
+  header row rendering and sortable trigger wiring are unchanged.
+- `tools/gate_imui_workstream_source.py` now freezes `labels.rs` as the label/chrome hub and
+  `labels/sort.rs` as the private sort-label owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-ui-kit`: pass.
+- `cargo fmt --package fret-ui-kit -- --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Kit IMUI Tooltip Panel Element Owner Split Evidence - 2026-06-03
 
 Claim verified: tooltip panel element assembly moved out of the placement owner without changing

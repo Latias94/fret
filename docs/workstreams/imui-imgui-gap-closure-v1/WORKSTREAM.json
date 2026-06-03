@@ -1841,6 +1841,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header_row/cells.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/header/labels/sort.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/resize/props.rs",
