@@ -229,6 +229,15 @@ Last updated: 2026-06-03
       `pointer_region/move_phase.rs` owns thresholded move, started/stopped transients, and cancel
       cleanup, and `pointer_region/up.rs` owns finish/cancel plus pointer-capture release. The
       source gate prevents phase logic from drifting back into the hub.
+- [x] Split IMUI virtual-list row height/test-id projection and child packing out of
+      `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row.rs` into private row child owners
+      without changing fixed/known/measured row-height behavior, row test-id derivation,
+      multi-child row packing, empty-row handling, striped-row background, fixed-height clipping,
+      or list-item semantics.
+      Result: `virtual_list_controls/row.rs` keeps wrapper chrome and semantics only,
+      `row/metrics.rs` owns row height/test-id projection, and `row/children.rs` owns row child
+      packing. The source gate prevents metrics/packing policy from drifting back into the wrapper
+      owner.
 - [x] Split IMUI disclosure header indicator-slot assembly out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header/children.rs` into a
       private child owner without changing indicator width, glyph chrome, inherited foreground,

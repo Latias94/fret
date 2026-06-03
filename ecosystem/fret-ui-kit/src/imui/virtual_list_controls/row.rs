@@ -3,10 +3,14 @@
 use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole};
-use fret_ui::element::{
-    AnyElement, ContainerProps, Length, Overflow, SemanticsProps, VirtualListMeasureMode,
-};
+use fret_ui::element::{AnyElement, ContainerProps, Length, Overflow, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+
+mod children;
+mod metrics;
+
+pub(super) use children::pack_row_children;
+pub(super) use metrics::{row_height_for_index, row_test_id};
 
 pub(super) fn wrap_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -41,43 +45,4 @@ pub(super) fn wrap_row<H: UiHost>(
     } else {
         row
     }
-}
-
-pub(super) fn row_height_for_index(
-    index: usize,
-    measure_mode: VirtualListMeasureMode,
-    estimate_row_height: Px,
-    known_row_height_at: Option<&Arc<dyn Fn(usize) -> Px + Send + Sync>>,
-) -> Option<Px> {
-    match measure_mode {
-        VirtualListMeasureMode::Measured => None,
-        VirtualListMeasureMode::Fixed => Some(estimate_row_height),
-        VirtualListMeasureMode::Known => known_row_height_at
-            .map(|f| f(index))
-            .or(Some(estimate_row_height)),
-    }
-}
-
-pub(super) fn row_test_id(base: Option<&Arc<str>>, index: usize) -> Option<Arc<str>> {
-    base.map(|base| Arc::from(format!("{base}.row.{index}")))
-}
-
-pub(super) fn pack_row_children<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: Vec<AnyElement>,
-) -> AnyElement {
-    match children.len() {
-        0 => empty_row(cx),
-        1 => children.into_iter().next().expect("single row child"),
-        _ => crate::ui::v_flex(move |_cx| children)
-            .gap_metric(crate::MetricRef::space(crate::Space::N0))
-            .justify(crate::Justify::Start)
-            .items(crate::Items::Stretch)
-            .no_wrap()
-            .into_element(cx),
-    }
-}
-
-fn empty_row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    cx.container(ContainerProps::default(), |_cx| Vec::new())
 }

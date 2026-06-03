@@ -58,6 +58,13 @@ table APIs, and `fret-imui` table facade behavior remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split across all repeated row-group source
 checks.
 
+2026-06-03 IMUI virtual-list row metrics/children owner-split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row.rs` now keeps only virtual-list row
+wrapper chrome, fixed-height clipping, striped background, and list-item semantics.
+`virtual_list_controls/row/metrics.rs` owns row height and row test-id projection, while
+`virtual_list_controls/row/children.rs` owns empty/single/multi-child row packing. Fixed, known,
+and measured virtual-list row behavior remains unchanged, and the source gate freezes the split.
+
 2026-06-03 editor AxisDragValue typing branch owner-split result:
 `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element.rs` now keeps keyed state lookup,
 current value reads, mode/test-id/theme projection, scrub owner routing, typing owner routing, and

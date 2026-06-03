@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-03
 
+## Kit IMUI Virtual-List Row Metrics/Children Owner Split Evidence - 2026-06-03
+
+Claim verified: virtual-list row metrics and child packing moved out of the row wrapper owner
+without changing fixed/known/measured height behavior, row test-id derivation, multi-child packing,
+empty-row handling, striped-row background, fixed-height clipping, or list-item semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row.rs` now keeps wrapper chrome only:
+  fixed-height sizing/clipping, striped row background, and list-item semantics/test-id decoration.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row/metrics.rs` owns
+  `row_height_for_index(...)` and `row_test_id(...)`.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row/children.rs` owns
+  `pack_row_children(...)` and empty-row construction.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` keeps the same row helper
+  imports and virtual-list assembly path; public `virtual_list` / facade behavior is unchanged.
+- `tools/gate_imui_workstream_source.py` now freezes `row.rs` as the wrapper/chrome hub and the two
+  private row child owners as the metrics and child-packing owners.
+
+Focused gates:
+
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib virtual_list_controls --no-fail-fast`:
+  pass, 3 tests.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_virtual_list_smoke --no-fail-fast`:
+  pass, 1 test.
+- `cargo nextest run -p fret-imui virtual_list_fixed_rows_clip_oversized_row_content --no-fail-fast`:
+  pass, 1 test.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## IMUI Product-Chain First-Open Shared Workflow Evidence - 2026-06-03
 
 Claim verified: the `imui-product-chain` first-open workflow contract no longer repeats command,
