@@ -950,6 +950,18 @@ Each TODO is labeled:
         owner.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner about-to-wait control-flow owner split keeps event-loop scheduling
+      out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M97_RUNNER_ABOUT_TO_WAIT_CONTROL_FLOW_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/event_loop.rs` owns pending-front request
+        processing, timer/dispatcher/pending-front/hotpatch deadline merging, dock drag/follow
+        polling pressure, RAF deadline scheduling, RAF flush behavior, and final ControlFlow
+        selection.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::about_to_wait` trait hook and delegates the final scheduling tail to
+        the event-loop owner.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

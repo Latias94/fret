@@ -1555,6 +1555,18 @@ split through the docking multiwindow source gate.
 
 Marker summary: destroy-surface diagnostics; suspend control-flow wait.
 
+2026-06-04 desktop runner about-to-wait control-flow owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating pending-front request processing,
+timer deadline merging, dispatcher deadline merging, pending-front deadline merging, hotpatch
+deadline merging, dock drag/follow polling pressure, RAF deadline scheduling, RAF flush behavior,
+and final `ControlFlow::Poll` / `ControlFlow::WaitUntil` / `ControlFlow::Wait` selection to
+`crates/fret-launch/src/runner/desktop/runner/event_loop.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
+Marker summary: pending-front request processing; RAF flush behavior; final ControlFlow selection.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

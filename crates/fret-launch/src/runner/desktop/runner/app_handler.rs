@@ -9,7 +9,7 @@ use super::window::PendingWheelEvent;
 use super::*;
 use std::sync::Arc;
 
-use fret_core::time::{Duration, Instant};
+use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
 #[cfg(target_os = "macos")]
 use objc2_metal::MTLDevice as _;
@@ -2201,79 +2201,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        let did_pending_front_work = self.process_pending_front_requests(now);
-
-        let mut next_deadline: Option<Instant> = None;
-        for entry in self.timers.values() {
-            next_deadline = Some(match next_deadline {
-                Some(cur) => cur.min(entry.deadline),
-                None => entry.deadline,
-            });
-        }
-
-        if let Some(deadline) = self.dispatcher.next_deadline() {
-            next_deadline = Some(match next_deadline {
-                Some(cur) => cur.min(deadline),
-                None => deadline,
-            });
-        }
-
-        if let Some(deadline) = self.next_pending_front_deadline() {
-            next_deadline = Some(match next_deadline {
-                Some(cur) => cur.min(deadline),
-                None => deadline,
-            });
-        }
-
-        #[cfg(feature = "hotpatch-subsecond")]
-        if let Some(trigger) = self.hotpatch.as_ref() {
-            if let Some(deadline) = trigger.next_poll_at() {
-                next_deadline = Some(match next_deadline {
-                    Some(cur) => cur.min(deadline),
-                    None => deadline,
-                });
-            }
-        }
-
-        let drag_poll = self.dock_drag_pointer_id().is_some();
-        let follow_poll = self.dock_tearoff_follow.is_some();
-        let wants_poll = drag_poll || follow_poll;
-
-        let raf_deadline = if self.raf_windows.has_pending() {
-            let deadline = *self
-                .next_raf_deadline
-                .get_or_insert_with(|| now + self.config.frame_interval);
-            Some(deadline)
-        } else {
-            self.next_raf_deadline = None;
-            None
-        };
-        let flushed_raf_this_turn = raf_deadline.is_some_and(|deadline| now >= deadline);
-        if flushed_raf_this_turn {
-            self.next_raf_deadline = None;
-            self.flush_raf_redraw_requests();
-        }
-
-        let next = match (
-            next_deadline,
-            raf_deadline.filter(|deadline| now < *deadline),
-        ) {
-            (Some(deadline), Some(raf_deadline)) => Some(deadline.min(raf_deadline)),
-            (Some(deadline), None) => Some(deadline),
-            (None, Some(raf_deadline)) => Some(raf_deadline),
-            (None, None) => None,
-        };
-
-        if wants_poll || flushed_raf_this_turn {
-            event_loop.set_control_flow(ControlFlow::Poll);
-        } else if let Some(next) = next {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(next));
-        } else if did_pending_front_work {
-            // Ensure we keep turning the event loop while we try to raise a window on macOS.
-            event_loop.set_control_flow(ControlFlow::WaitUntil(now + Duration::from_millis(16)));
-        } else {
-            event_loop.set_control_flow(ControlFlow::Wait);
-        }
+        self.handle_about_to_wait_control_flow(event_loop, now);
     }
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
