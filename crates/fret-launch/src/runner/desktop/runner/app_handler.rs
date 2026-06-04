@@ -457,9 +457,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
 
                 #[cfg(feature = "diag-screenshots")]
-                if let Some(diag) = self.diag_screenshots.as_mut() {
-                    diag.poll();
-                }
+                super::window_redraw_diag_screenshots::poll_window_redraw_diag_screenshot_requests(
+                    self.diag_screenshots.as_mut(),
+                );
 
                 if let Some(size) = self
                     .windows
@@ -821,40 +821,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             cmd_buffers.push(ui_cmd);
 
                             #[cfg(feature = "diag-screenshots")]
-                            let mut screenshot_inflight: Option<
-                                diag_screenshots::InFlightCapture,
-                            > = None;
-                            #[cfg(feature = "diag-screenshots")]
-                            if let (Some(diag), Some((frame, _view))) =
-                                (self.diag_screenshots.as_mut(), frame_view.as_ref())
-                            {
-                                let window_ffi = app_window.data().as_ffi();
-                                if let Some((cmd, inflight)) = diag.begin_capture_for_window(
+                            let screenshot_inflight =
+                                super::window_redraw_diag_screenshots::begin_window_redraw_diag_screenshot_capture(
+                                    self.diag_screenshots.as_mut(),
+                                    app_window,
+                                    frame_view.as_ref(),
                                     &context.device,
-                                    window_ffi,
-                                    &frame.texture,
                                     surface.format(),
                                     surface.size(),
-                                ) {
-                                    cmd_buffers.push(cmd);
-                                    screenshot_inflight = Some(inflight);
-                                }
-                            }
-
-                            let mut pending_bundle_screenshot = None;
-                            if let (Some(dir), Some((frame, _view))) =
-                                (screenshot_dir, frame_view.as_ref())
-                                && let Some((pending, copy_cmd)) =
-                                    self.diag_bundle_screenshots.begin_readback(
-                                        &context.device,
-                                        &frame.texture,
-                                        surface.format(),
-                                        surface.size(),
-                                    )
-                            {
-                                cmd_buffers.push(copy_cmd);
-                                pending_bundle_screenshot = Some((pending, dir));
-                            }
+                                    &mut cmd_buffers,
+                                );
+                            let pending_bundle_screenshot =
+                                super::window_redraw_diag_screenshots::begin_window_redraw_bundle_screenshot_readback(
+                                    &self.diag_bundle_screenshots,
+                                    screenshot_dir,
+                                    frame_view.as_ref(),
+                                    &context.device,
+                                    surface.format(),
+                                    surface.size(),
+                                    &mut cmd_buffers,
+                                );
 
                             context.queue.submit(cmd_buffers);
                             if let Some((frame, _view)) = frame_view {
@@ -868,25 +854,19 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             drop(engine_keepalive);
 
                             #[cfg(feature = "diag-screenshots")]
-                            if let (Some(diag), Some(inflight)) =
-                                (self.diag_screenshots.as_mut(), screenshot_inflight)
-                                && let Err(err) = diag.finish_capture(&context.device, inflight)
-                            {
-                                tracing::warn!(
-                                    error = %err,
-                                    window = ?app_window,
-                                    "diag screenshot: capture failed"
-                                );
-                            }
+                            super::window_redraw_diag_screenshots::finish_window_redraw_diag_screenshot_capture(
+                                self.diag_screenshots.as_mut(),
+                                &context.device,
+                                app_window,
+                                screenshot_inflight,
+                            );
 
-                            if let Some((pending, dir)) = pending_bundle_screenshot {
-                                let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
-                                    &context.device,
-                                    pending,
-                                    &dir,
-                                    surface.format(),
-                                );
-                            }
+                            super::window_redraw_diag_screenshots::finish_window_redraw_bundle_screenshot_readback(
+                                &self.diag_bundle_screenshots,
+                                &context.device,
+                                pending_bundle_screenshot,
+                                surface.format(),
+                            );
 
                             Ok(())
                         },

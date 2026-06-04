@@ -443,6 +443,11 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M130_RUNNER_WINDOW_REDRAW_TEXT_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time renderer text diagnostics publication into
   `window_redraw_text_diagnostics.rs` while leaving only dispatch in `app_handler.rs`)
+- Latest runner window redraw diag screenshots owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M131_RUNNER_WINDOW_REDRAW_DIAG_SCREENSHOTS_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time diagnostic screenshot capture/readback lifecycle into
+  `window_redraw_diag_screenshots.rs` while leaving submit/present orchestration in
+  `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
