@@ -20,6 +20,8 @@ const COLOR_EDIT_POPUP_COPY_ROW_RS: &str =
 const COLOR_EDIT_POPUP_EYEDROPPER_RS: &str =
     include_str!("../src/controls/color_edit/popup/eyedropper.rs");
 const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
+const COLOR_EDIT_DRAG_DROP_DELIVERY_RS: &str =
+    include_str!("../src/controls/color_edit/drag_drop/delivery.rs");
 const COLOR_EDIT_DRAG_DROP_SOURCE_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/source.rs");
 const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS: &str =
@@ -576,8 +578,19 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("fn color_eyedropper_action<"));
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("ColorEditEyedropperRequest::new("));
     assert!(!COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("Effect::"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("mod delivery;"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("mod source;"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("mod store;"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(super) use delivery::apply_color_drop_payload;"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_RS.contains(
+            "pub(in crate::controls::color_edit) use delivery::take_delivered_color_drop;"
+        )
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(super) use delivery::{"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains(
+        "ColorEditDeliveredDropArgs, apply_delivered_color_drop, palette_slot_drop_from_payload,"
+    ));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("use source::install_color_drag_source;"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("use source::resolve_color_drag_threshold;"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(in crate::controls::color_edit) use store::{"));
@@ -589,12 +602,6 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
         "pub(super) use store::{color_drag_drop_store_for, prune_color_drag_drop_store};"
     ));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
-    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(super) struct ColorEditDeliveredDropArgs"));
-    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_delivered_color_drop<"));
-    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("take_delivered_color_drop(cx, &args.store"));
-    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("format_hex(next, args.show_alpha)"));
-    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
-    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn palette_slot_drop_from_payload("));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("pressable_add_on_pointer_move"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("PressablePointerDownResult"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
@@ -604,6 +611,37 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("struct DeliveredColorDrop"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn color_drag_drop_store_for<"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn prune_color_drag_drop_store<"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn take_delivered_color_drop<"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("struct ColorEditDeliveredDropArgs"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_delivered_color_drop<"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("take_delivered_color_drop(cx, &args.store"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("format_hex(next, args.show_alpha)"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_color_drop_payload("));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn palette_slot_drop_from_payload("));
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("fn take_delivered_color_drop<"));
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("st.delivered.remove(&target_id)?"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_DELIVERY_RS
+            .contains("current_tick.0 > delivered.tick_id.0.saturating_add(1)")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("struct ColorEditDeliveredDropArgs"));
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("fn apply_delivered_color_drop<"));
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("take_delivered_color_drop(cx, &args.store"));
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("format_hex(next, args.show_alpha)"));
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("fn apply_color_drop_payload("));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_DELIVERY_RS
+            .contains("ColorEditDragDropComponents::Rgb || !target_show_alpha")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("fn palette_slot_drop_from_payload("));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_DELIVERY_RS
+            .contains("fret_ui_kit::colors::hex_rgb_from_linear(payload.color())")
+    );
+    assert!(!COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("update_color_drop_target"));
+    assert!(!COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("install_color_drag_source"));
+    assert!(!COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("pressable_add_on_pointer_move"));
+    assert!(!COLOR_EDIT_DRAG_DROP_DELIVERY_RS.contains("std::collections::HashMap"));
     assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("std::collections::HashMap"));
     assert!(
         COLOR_EDIT_DRAG_DROP_STORE_RS

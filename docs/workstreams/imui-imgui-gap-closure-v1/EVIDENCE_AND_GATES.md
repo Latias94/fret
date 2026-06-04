@@ -29757,6 +29757,33 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit drag/drop delivery owner split:
+
+- Claim: ColorEdit delivered-drop application and payload conversion moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs` into private
+  `drag_drop/delivery.rs` without changing root drag/drop target hover behavior, delivered-drop
+  tick validation, RGB/RGBA alpha preservation, model/draft/error writeback, palette slot payload
+  conversion, source handlers, store model records, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `drag_drop.rs` now declares `mod delivery;`, re-exports
+  `take_delivered_color_drop(...)`, `ColorEditDeliveredDropArgs`,
+  `apply_delivered_color_drop(...)`, test-only `apply_color_drop_payload(...)`, and
+  `palette_slot_drop_from_payload(...)`, and keeps `update_color_drop_target(...)` as the remaining
+  root target-hover owner; `drag_drop/delivery.rs` owns `take_delivered_color_drop(...)`,
+  delivered-drop tick validation, `ColorEditDeliveredDropArgs`,
+  `apply_delivered_color_drop(...)`, `format_hex(...)` writeback,
+  `apply_color_drop_payload(...)`, RGB/RGBA alpha preservation, and
+  `palette_slot_drop_from_payload(...)`. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject delivery implementation details
+  drifting back into the drag/drop root owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

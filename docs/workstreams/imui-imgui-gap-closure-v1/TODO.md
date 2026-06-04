@@ -7568,3 +7568,12 @@ opening the slice.
       `ActiveColorDrag`, `DeliveredColorDrop`, store allocation, stale active-session pruning, and
       delivered-drop tick retention. The source gate and `imui_surface_policy` freeze the store
       owner boundary.
+- [x] Split editor `ColorEdit` delivered-drop application and payload conversion into a private
+      child owner without changing root drag/drop target hover behavior, delivered-drop tick
+      validation, RGB/RGBA alpha preservation, model/draft/error writeback, palette slot payload
+      conversion, source handlers, store model records, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/drag_drop.rs` now keeps source/store/delivery re-exports and target hover
+      updates only. `color_edit/drag_drop/delivery.rs` owns `take_delivered_color_drop`,
+      `ColorEditDeliveredDropArgs`, `apply_delivered_color_drop`, `apply_color_drop_payload`, and
+      `palette_slot_drop_from_payload`. The source gate and `imui_surface_policy` freeze the
+      delivery owner boundary.
