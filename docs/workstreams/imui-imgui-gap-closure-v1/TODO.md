@@ -1195,6 +1195,11 @@ Last updated: 2026-06-03
   docking source gate freezes the owner split in
   `M127_RUNNER_WINDOW_REDRAW_RENDERER_PERF_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
   compositor acceptance.
+- [x] Split desktop runner redraw-time WGPU hub report publication into the private
+  window-redraw-wgpu-report owner without changing runtime behavior or public effect surfaces. The
+  docking source gate freezes the owner split in
+  `M128_RUNNER_WINDOW_REDRAW_WGPU_HUB_REPORT_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+  compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

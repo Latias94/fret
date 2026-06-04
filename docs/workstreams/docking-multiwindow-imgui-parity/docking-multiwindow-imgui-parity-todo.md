@@ -1306,6 +1306,18 @@ Each TODO is labeled:
         renderer perf dispatch after text diagnostics and before WGPU diagnostics.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw WGPU hub report owner split keeps hub count publication
+      out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M128_RUNNER_WINDOW_REDRAW_WGPU_HUB_REPORT_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_wgpu_report.rs` owns
+        `maybe_record_window_redraw_wgpu_hub_report`, including `FRET_DIAG_WGPU_REPORT`, cadence
+        parsing, `context.instance.generate_report`, hub count projection, and
+        `WgpuHubReportFrameStore` recording.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time WGPU
+        hub report dispatch after renderer perf diagnostics and before allocator diagnostics.
+      - Allocator report publication remains in `app_handler.rs` for a separate owner split.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

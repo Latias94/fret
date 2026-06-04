@@ -1915,6 +1915,19 @@ multiwindow source gate.
 Marker summary: redraw renderer perf owner; renderer perf sample publication; app-handler dispatch
 only.
 
+2026-06-04 desktop runner window redraw WGPU hub report owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_wgpu_report.rs` now owns
+`maybe_record_window_redraw_wgpu_hub_report`, including `FRET_DIAG_WGPU_REPORT`, cadence parsing,
+`context.instance.generate_report`, hub count projection, and `WgpuHubReportFrameStore` recording.
+`app_handler.rs` keeps only redraw-time WGPU hub report dispatch after renderer perf diagnostics
+and before allocator diagnostics. Allocator report publication remains in `app_handler.rs` for a
+separate owner split. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw WGPU hub report owner; hub report count publication; app-handler dispatch
+only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
