@@ -1,10 +1,10 @@
 mod source;
+mod store;
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{Color, PointerId};
-use fret_runtime::{DragKindId, DragSessionId, Model, TickId};
+use fret_core::Color;
+use fret_runtime::Model;
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 
 use super::model::format_hex;
@@ -12,76 +12,10 @@ use super::{ColorEditDragDropComponents, ColorEditDragDropPayload, ColorEditPale
 
 pub(in crate::controls::color_edit) use source::install_color_drag_source;
 pub(super) use source::resolve_color_drag_threshold;
-
-#[derive(Default)]
-struct ColorDragDropStoreGlobal {
-    model: Option<Model<ColorDragDropStore>>,
-}
-
-#[derive(Default)]
-pub(in crate::controls::color_edit) struct ColorDragDropStore {
-    active: HashMap<DragSessionId, ActiveColorDrag>,
-    delivered: HashMap<GlobalElementId, DeliveredColorDrop>,
-}
-
-#[derive(Clone, Copy)]
-struct ActiveColorDrag {
-    pointer_id: PointerId,
-    kind: DragKindId,
-    source_id: GlobalElementId,
-    hovered_target: Option<GlobalElementId>,
-    payload: ColorEditDragDropPayload,
-}
-
-#[derive(Clone, Copy)]
-struct DeliveredColorDrop {
-    tick_id: TickId,
-    payload: ColorEditDragDropPayload,
-}
-
-pub(super) fn color_drag_drop_store_for<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<ColorDragDropStore> {
-    cx.app
-        .with_global_mut_untracked(ColorDragDropStoreGlobal::default, |st, app| {
-            if let Some(model) = st.model.clone() {
-                return model;
-            }
-
-            let model = app.models_mut().insert(ColorDragDropStore::default());
-            st.model = Some(model.clone());
-            model
-        })
-}
-
-pub(super) fn prune_color_drag_drop_store<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    store: &Model<ColorDragDropStore>,
-) {
-    let current_tick = cx.app.tick_id();
-    let stale_sessions = cx
-        .read_model(store, Invalidation::Paint, |app, st| {
-            st.active
-                .iter()
-                .filter_map(|(session_id, active)| {
-                    app.drag(active.pointer_id)
-                        .filter(|drag| drag.session_id == *session_id && drag.kind == active.kind)
-                        .map(|_| None)
-                        .unwrap_or(Some(*session_id))
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-
-    let _ = cx.app.models_mut().update(store, |st| {
-        for session_id in &stale_sessions {
-            st.active.remove(session_id);
-        }
-
-        st.delivered
-            .retain(|_, drop| current_tick.0 <= drop.tick_id.0.saturating_add(1));
-    });
-}
+pub(in crate::controls::color_edit) use store::{
+    ActiveColorDrag, ColorDragDropStore, DeliveredColorDrop,
+};
+pub(super) use store::{color_drag_drop_store_for, prune_color_drag_drop_store};
 
 pub(in crate::controls::color_edit) fn update_color_drop_target<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

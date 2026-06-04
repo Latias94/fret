@@ -7558,3 +7558,13 @@ opening the slice.
       setup, `ColorEditInputArgs`, `ColorEditSwatchArgs`, delivered-drop application, overlay
       requests, and `ColorEditRootLayoutArgs`. The source gate and `imui_surface_policy` freeze the
       frame owner boundary.
+- [x] Split editor `ColorEdit` drag/drop store state into a private child owner without changing
+      store model identity, active drag session tracking, delivered-drop retention, source handler
+      record construction, drop-target hover updates, delivered-drop take/apply behavior, palette
+      slot payload conversion, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/drag_drop.rs` now keeps drag/drop API routing, target hover updates,
+      delivered-drop application, and payload conversion while re-exporting store records and
+      helpers. `color_edit/drag_drop/store.rs` owns the global store model, `ColorDragDropStore`,
+      `ActiveColorDrag`, `DeliveredColorDrop`, store allocation, stale active-session pruning, and
+      delivered-drop tick retention. The source gate and `imui_surface_policy` freeze the store
+      owner boundary.

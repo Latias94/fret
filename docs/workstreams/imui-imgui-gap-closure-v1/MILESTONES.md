@@ -649,6 +649,16 @@ requests, and root layout handoff. Public ColorEdit APIs, caller-keyed identity 
 swatch/input semantics, drag/drop delivery, overlay routing, and IMUI facade APIs remain unchanged,
 and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit drag/drop store owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs` now keeps drag/drop root routing,
+source and store re-exports, target hover updates, delivered-drop application, and payload
+conversion only. `drag_drop/store.rs` owns the global store model, `ColorDragDropStore`,
+`ActiveColorDrag`, `DeliveredColorDrop`, store allocation, stale active-session pruning, and
+delivered-drop tick retention. Store model identity, active drag session tracking, delivered-drop
+retention, source handler record construction, drop-target hover behavior, delivered payload
+application, palette slot payload conversion, and public ColorEdit / IMUI facade APIs remain
+unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

@@ -29728,6 +29728,35 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit drag/drop store owner split:
+
+- Claim: ColorEdit drag/drop store model and session records moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs` into private
+  `drag_drop/store.rs` without changing store model identity, active drag session tracking,
+  delivered-drop retention, source handler record construction, drop-target hover updates,
+  delivered-drop take/apply behavior, palette slot payload conversion, or public ColorEdit / IMUI
+  facade APIs.
+- Evidence anchors: `drag_drop.rs` now declares `mod store;`, re-exports `ActiveColorDrag`,
+  `ColorDragDropStore`, `DeliveredColorDrop`, `color_drag_drop_store_for(...)`, and
+  `prune_color_drag_drop_store(...)`, and keeps `update_color_drop_target(...)`,
+  `take_delivered_color_drop(...)`, `ColorEditDeliveredDropArgs`,
+  `apply_delivered_color_drop(...)`, `apply_color_drop_payload(...)`, and
+  `palette_slot_drop_from_payload(...)`; `drag_drop/store.rs` owns `ColorDragDropStoreGlobal`,
+  `ColorDragDropStore`, `ActiveColorDrag`, `DeliveredColorDrop`,
+  `color_drag_drop_store_for(...)`, `with_global_mut_untracked(...)`,
+  `prune_color_drag_drop_store(...)`, stale active-session removal, and delivered-drop tick
+  retention. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject store implementation details
+  drifting back into the drag/drop root owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

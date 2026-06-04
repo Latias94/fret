@@ -24,6 +24,8 @@ const COLOR_EDIT_DRAG_DROP_SOURCE_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/source.rs");
 const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/source/handlers.rs");
+const COLOR_EDIT_DRAG_DROP_STORE_RS: &str =
+    include_str!("../src/controls/color_edit/drag_drop/store.rs");
 const COLOR_EDIT_LAYOUT_RS: &str = include_str!("../src/controls/color_edit/layout.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_MODEL_NUMERIC_RS: &str =
@@ -575,8 +577,17 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("ColorEditEyedropperRequest::new("));
     assert!(!COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("Effect::"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("mod source;"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("mod store;"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("use source::install_color_drag_source;"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("use source::resolve_color_drag_threshold;"));
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(in crate::controls::color_edit) use store::{"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_RS
+            .contains("ActiveColorDrag, ColorDragDropStore, DeliveredColorDrop,")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_RS.contains(
+        "pub(super) use store::{color_drag_drop_store_for, prune_color_drag_drop_store};"
+    ));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn update_color_drop_target<"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("pub(super) struct ColorEditDeliveredDropArgs"));
     assert!(COLOR_EDIT_DRAG_DROP_RS.contains("fn apply_delivered_color_drop<"));
@@ -587,6 +598,39 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("pressable_add_on_pointer_move"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("PressablePointerDownResult"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("std::collections::HashMap"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("struct ColorDragDropStoreGlobal"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("struct ActiveColorDrag"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("struct DeliveredColorDrop"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn color_drag_drop_store_for<"));
+    assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("fn prune_color_drag_drop_store<"));
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("std::collections::HashMap"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_STORE_RS
+            .contains("pub(in crate::controls::color_edit) struct ColorDragDropStore")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("pub(super) active: HashMap"));
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("pub(super) delivered: HashMap"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_STORE_RS
+            .contains("pub(in crate::controls::color_edit) struct ActiveColorDrag")
+    );
+    assert!(
+        COLOR_EDIT_DRAG_DROP_STORE_RS
+            .contains("pub(in crate::controls::color_edit) struct DeliveredColorDrop")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("fn color_drag_drop_store_for<H: UiHost>"));
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("with_global_mut_untracked"));
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("fn prune_color_drag_drop_store<H: UiHost>"));
+    assert!(COLOR_EDIT_DRAG_DROP_STORE_RS.contains("st.active.remove(session_id)"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_STORE_RS
+            .contains("current_tick.0 <= drop.tick_id.0.saturating_add(1)")
+    );
+    assert!(!COLOR_EDIT_DRAG_DROP_STORE_RS.contains("apply_delivered_color_drop"));
+    assert!(!COLOR_EDIT_DRAG_DROP_STORE_RS.contains("apply_color_drop_payload"));
+    assert!(!COLOR_EDIT_DRAG_DROP_STORE_RS.contains("update_color_drop_target"));
+    assert!(!COLOR_EDIT_DRAG_DROP_STORE_RS.contains("install_color_drag_source"));
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("mod handlers;"));
     assert!(
         COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains(
