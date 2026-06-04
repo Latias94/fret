@@ -338,56 +338,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 if let Some(main_window) = self.main_window
                     && let Some(surface) = main_surface
-                    && let Some(context) = self.context.as_ref()
-                    && let Some(state) = self.windows.get_mut(main_window)
+                    && !self.attach_factory_surface_to_main_window(main_window, surface)
                 {
-                    let surface_usage = {
-                        let base = self.diag_bundle_screenshots.surface_usage();
-                        #[cfg(feature = "diag-screenshots")]
-                        {
-                            if self.diag_screenshots.is_some() {
-                                base | wgpu::TextureUsages::COPY_SRC
-                            } else {
-                                base
-                            }
-                        }
-                        #[cfg(not(feature = "diag-screenshots"))]
-                        {
-                            base
-                        }
-                    };
-                    let size = state.window.surface_size();
-                    let mut surface_state = match SurfaceState::new_with_usage(
-                        &context.adapter,
-                        &context.device,
-                        surface,
-                        size.width,
-                        size.height,
-                        surface_usage,
-                    ) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!(
-                                window = ?main_window,
-                                error = ?e,
-                                "failed to configure factory surface"
-                            );
-                            return;
-                        }
-                    };
-
-                    let want_surface_composited_alpha = self
-                        .app
-                        .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
-                        .and_then(|s| s.effective_snapshot(main_window))
-                        .is_some_and(|s| s.surface_composited_alpha);
-                    super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
-                        &context.adapter,
-                        &context.device,
-                        &mut surface_state,
-                        want_surface_composited_alpha,
-                    );
-                    state.surface = Some(surface_state);
+                    return;
                 }
 
                 if let Some(main_window) = self.main_window {

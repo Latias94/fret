@@ -902,6 +902,17 @@ Each TODO is labeled:
         attachment, driver initialization, and `ApplicationHandler` wiring.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner factory surface attach owner split keeps mobile factory-surface
+      configuration out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M93_RUNNER_FACTORY_SURFACE_ATTACH_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` owns Android/iOS
+        factory-provided main surface attachment, surface-state construction, screenshot usage,
+        composited-alpha configuration, missing context/state skip behavior, and failed factory
+        surface early return.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps mobile context
+        construction, renderer bootstrap, driver initialization, and `ApplicationHandler` wiring.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

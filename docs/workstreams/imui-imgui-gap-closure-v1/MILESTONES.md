@@ -1512,6 +1512,16 @@ context/renderer installation, `gpu_ready` ordering, and startup async font resc
 effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
 through the docking multiwindow source gate.
 
+2026-06-04 desktop runner factory surface attach owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps winit event routing,
+mobile context construction, renderer bootstrap, driver initialization, and `ApplicationHandler`
+wiring while delegating Android/iOS factory-provided main surface attachment, `SurfaceState`
+construction, screenshot usage selection, composited-alpha configuration, missing context/state skip
+behavior, and failed factory surface early return to
+`crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs`. Runtime behavior and public
+effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
+through the docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
