@@ -29696,6 +29696,38 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit keyed frame owner split:
+
+- Claim: keyed ColorEdit frame assembly moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` into private
+  `element/frame.rs` without changing public `ColorEdit` constructors/options, caller-keyed
+  routing, test-id derivation, local state model setup, density/popup-padding token resolution,
+  drag/drop store pruning, swatch/input construction, delivered-drop application,
+  popup/tooltip/copy overlay requests, root layout handoff, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `element.rs` now keeps `pub struct ColorEdit`, `ColorEdit::new(...)`,
+  `ColorEdit::options(...)`, `into_element(...)`, `into_element_keyed(...)`, `mod frame;`,
+  `mod keying;`, `mod test_ids;`, `color_edit_into_element(self, cx)`, and
+  `color_edit_into_element_keyed(self, cx)` only for root routing; `element/frame.rs` owns
+  `color_edit_into_element_keyed(...)`, `popup_open_model(...)`, `tooltip_open_model(...)`,
+  `copy_menu_open_model(...)`, `reference_model(...)`, `draft_model(...)`, `error_model(...)`,
+  `EditorDensity::resolve(...)`, `EditorTokenKeys::COLOR_POPUP_PADDING`,
+  `color_drag_drop_store_for(...)`, `prune_color_drag_drop_store(...)`,
+  `resolve_color_drag_threshold(...)`, `color_edit_element_test_ids(...)`, `ColorEditInputArgs`,
+  `color_hex_input(...)`, `ColorEditSwatchArgs`, `color_swatch(...)`,
+  `ColorEditDeliveredDropArgs`, `apply_delivered_color_drop(...)`, `request_popup_overlay(...)`,
+  `request_color_tooltip_overlay(...)`, `request_color_copy_menu_overlay(...)`,
+  `ColorEditRootLayoutArgs`, and `color_edit_root_layout(...)`. `tools/gate_imui_workstream_source.py`
+  and `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject frame assembly details
+  drifting back into the public root owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

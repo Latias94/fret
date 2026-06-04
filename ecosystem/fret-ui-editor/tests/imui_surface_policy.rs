@@ -3,6 +3,8 @@
 const IMUI_RS: &str = include_str!("../src/imui.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_ELEMENT_RS: &str = include_str!("../src/controls/color_edit/element.rs");
+const COLOR_EDIT_ELEMENT_FRAME_RS: &str =
+    include_str!("../src/controls/color_edit/element/frame.rs");
 const COLOR_EDIT_ELEMENT_KEYING_RS: &str =
     include_str!("../src/controls/color_edit/element/keying.rs");
 const COLOR_EDIT_ELEMENT_TEST_IDS_RS: &str =
@@ -146,11 +148,18 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_RS.contains("mod swatch;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("pub struct ColorEdit"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("fn into_element_keyed"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("mod frame;"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("use self::frame::color_edit_into_element_keyed;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("mod keying;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("use self::keying::color_edit_into_element;"));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_into_element(self, cx)"));
+    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_into_element_keyed(self, cx)"));
     assert!(!COLOR_EDIT_ELEMENT_RS.contains("Location::caller"));
     assert!(!COLOR_EDIT_ELEMENT_RS.contains("cx.keyed("));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("color_hex_input("));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("color_swatch("));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("request_popup_overlay("));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("apply_delivered_color_drop("));
     assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("ColorEdit caller-keyed element routing owner."));
     assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("fn color_edit_into_element<"));
     assert!(COLOR_EDIT_ELEMENT_KEYING_RS.contains("type Callsite = (&'static str, u32, u32);"));
@@ -163,9 +172,33 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_ELEMENT_KEYING_RS.contains("color_swatch("));
     assert!(!COLOR_EDIT_ELEMENT_KEYING_RS.contains("request_popup_overlay("));
     assert!(COLOR_EDIT_ELEMENT_RS.contains("mod test_ids;"));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("use self::test_ids::color_edit_element_test_ids;"));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_element_test_ids(&self.options)"));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("use self::test_ids::color_edit_element_test_ids;"));
+    assert!(!COLOR_EDIT_ELEMENT_RS.contains("color_edit_element_test_ids(&"));
     assert!(!COLOR_EDIT_ELEMENT_RS.contains("derived_test_id("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("use super::ColorEdit;"));
+    assert!(
+        COLOR_EDIT_ELEMENT_FRAME_RS.contains("use super::test_ids::color_edit_element_test_ids;")
+    );
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("fn color_edit_into_element_keyed<"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("color_edit_element_test_ids(&control.options)"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("color_hex_input("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("color_swatch("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("request_popup_overlay("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("request_color_tooltip_overlay("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("request_color_copy_menu_overlay("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("color_edit_root_layout("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("ColorEditDeliveredDropArgs"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("apply_delivered_color_drop("));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("sync_popup_runtime_options"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("test_id: test_ids.input.clone()"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("test_id: test_ids.swatch.clone()"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("test_ids.popup"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("test_ids.tooltip"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("test_ids.copy_menu"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_RS.contains("test_ids.eyedropper"));
+    assert!(!COLOR_EDIT_ELEMENT_FRAME_RS.contains("Location::caller"));
+    assert!(!COLOR_EDIT_ELEMENT_FRAME_RS.contains("cx.keyed("));
+    assert!(!COLOR_EDIT_ELEMENT_FRAME_RS.contains("derived_test_id("));
     assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("struct ColorEditElementTestIds"));
     assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("fn color_edit_element_test_ids("));
     assert!(COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("ColorEditOptions"));
@@ -179,10 +212,6 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("color_hex_input("));
     assert!(!COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("color_swatch("));
     assert!(!COLOR_EDIT_ELEMENT_TEST_IDS_RS.contains("request_popup_overlay("));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_hex_input("));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_swatch("));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("request_popup_overlay("));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("color_edit_root_layout("));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditOptions"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("mod popup;"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub use popup::{"));
@@ -234,8 +263,6 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_SWATCH_CONTEXT_MENU_RS.contains("KeyCode::ContextMenu"));
     assert!(!COLOR_EDIT_SWATCH_RS.contains("color_preview_stack"));
     assert!(COLOR_EDIT_SWATCH_VISUAL_RS.contains("color_preview_stack"));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("ColorEditDeliveredDropArgs"));
-    assert!(COLOR_EDIT_ELEMENT_RS.contains("apply_delivered_color_drop("));
     assert!(COLOR_EDIT_RECORDS_RS.contains("const COLOR_PRESETS:"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("mod slot;"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("use self::slot::preset_swatch;"));

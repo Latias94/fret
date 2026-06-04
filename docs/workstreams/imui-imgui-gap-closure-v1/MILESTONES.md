@@ -639,6 +639,16 @@ skip-activate behavior. Drag threshold semantics, cross-window source behavior, 
 behavior, delivery recording, and public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit keyed frame owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/element.rs` now keeps only the public
+`ColorEdit` type, constructor/options builder, `into_element(...)`, and private keyed delegation.
+`element/frame.rs` owns keyed frame assembly: local state model reads, editor density and popup
+padding resolution, current color/hex projection, drag/drop store setup and pruning, test-id
+projection, input/swatch construction, delivered-drop application, popup/tooltip/copy overlay
+requests, and root layout handoff. Public ColorEdit APIs, caller-keyed identity behavior,
+swatch/input semantics, drag/drop delivery, overlay routing, and IMUI facade APIs remain unchanged,
+and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

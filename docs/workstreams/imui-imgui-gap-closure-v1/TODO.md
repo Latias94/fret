@@ -7547,3 +7547,14 @@ opening the slice.
       drag startup, active drag store updates, delivered-drop insertion, cancel cleanup, and
       threshold-exceeded math. The source gate and `imui_surface_policy` freeze the handler owner
       boundary.
+- [x] Split editor `ColorEdit` keyed frame assembly into a private element child owner without
+      changing public `ColorEdit` constructors/options, caller-keyed routing, test-id derivation,
+      local state model setup, drag/drop store pruning, swatch/input construction, delivered-drop
+      application, popup/tooltip/copy overlay requests, root layout, or public ColorEdit / IMUI
+      facade APIs.
+      Result: `color_edit/element.rs` now keeps only the public `ColorEdit` type, builder methods,
+      `into_element(...)`, and keyed delegation. `color_edit/element/frame.rs` owns keyed frame
+      assembly, local state model reads, theme density/popup-padding resolution, drag/drop store
+      setup, `ColorEditInputArgs`, `ColorEditSwatchArgs`, delivered-drop application, overlay
+      requests, and `ColorEditRootLayoutArgs`. The source gate and `imui_surface_policy` freeze the
+      frame owner boundary.
