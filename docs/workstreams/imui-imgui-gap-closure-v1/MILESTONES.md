@@ -541,6 +541,16 @@ input, swatch, popup, tooltip, copy-menu, and eyedropper ids. Public `ColorEdit`
 request routing, drag/drop routing, and IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/preview.rs` now keeps only
+the horizontal and vertical alpha preview stack entrypoints, checkerboard layering, and child
+ordering. `alpha/preview/gradient.rs` owns horizontal/vertical alpha gradient grids, alpha-step
+projection, and `color_from_rgb_preserving_alpha(...)` use; `alpha/preview/thumb.rs` owns
+horizontal/vertical thumb overlays, marker chrome, shared horizontal spacer routing, and vertical
+spacer behavior. Alpha bar pressable behavior, alpha coordinate mapping, popup picker composition,
+and public ColorEdit / IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
+plus `imui_surface_policy` freeze the child-owner split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

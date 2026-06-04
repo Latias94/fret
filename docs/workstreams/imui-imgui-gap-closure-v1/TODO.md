@@ -7454,3 +7454,12 @@ opening the slice.
       `sections/preview.rs` owns side-preview construction, and `sections/swatches.rs` owns
       history/preset swatch section construction. The IMUI source gate and
       `imui_surface_policy` freeze those child-owner boundaries.
+- [x] Split editor `ColorEdit` alpha preview gradient and thumb rendering into private child
+      owners without changing horizontal/vertical alpha preview stacks, checkerboard layering,
+      alpha gradient step math, thumb marker geometry, horizontal/vertical alpha bars, or public
+      ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/picker/alpha/preview.rs` now keeps only the horizontal/vertical
+      preview stack entrypoints and child ordering. `alpha/preview/gradient.rs` owns
+      `ALPHA_BAR_STEPS` grid projection and alpha color interpolation, while
+      `alpha/preview/thumb.rs` owns horizontal/vertical thumb overlay layout, marker chrome, and
+      vertical spacer behavior. The source gate and `imui_surface_policy` freeze the split.
