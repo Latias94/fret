@@ -7472,3 +7472,13 @@ opening the slice.
       `alpha/bar/surface.rs` owns focused border/ring resolution, clipped frame chrome, padding,
       and horizontal/vertical preview stack mounting. The source gate and `imui_surface_policy`
       freeze the surface owner boundary.
+- [x] Split editor `ColorEdit` alpha bar pointer lifecycle into a private child owner without
+      changing horizontal/vertical alpha bar entrypoints, slider a11y values, pointer
+      capture/release semantics, alpha mutation routing, focused surface rendering, or public
+      ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/picker/alpha/bar.rs` now keeps horizontal/vertical pressable
+      entrypoints, a11y props, and delegation to the pointer/surface owners.
+      `alpha/bar/pointer.rs` owns horizontal/vertical pointer down/move/up handler installation,
+      left-button gating, pointer capture/release, and alpha mutation routing through the existing
+      alpha interaction owner. The source gate and `imui_surface_policy` freeze the pointer owner
+      boundary.

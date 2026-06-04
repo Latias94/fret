@@ -29485,6 +29485,33 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit alpha bar pointer owner split:
+
+- Claim: pointer lifecycle moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/bar.rs` into private
+  `alpha/bar/pointer.rs` without changing horizontal/vertical alpha bar entrypoints, slider a11y
+  values, pointer capture/release semantics, alpha mutation routing, focused surface rendering,
+  preview stack routing, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `bar.rs` keeps `vertical_alpha_bar(...)`, `alpha_bar(...)`,
+  `PressableProps`, `PressableA11y`, slider a11y value projection, and delegates to
+  `install_vertical_alpha_bar_pointer_handlers(...)`,
+  `install_alpha_bar_pointer_handlers(...)`, `vertical_alpha_bar_surface(...)`, and
+  `alpha_bar_surface(...)`; `bar/pointer.rs` owns horizontal/vertical pointer down/move/up handler
+  installation, `MouseButton::Left` gating, pointer capture/release, and calls to
+  `apply_vertical_alpha_bar_position(...)` / `apply_alpha_bar_position(...)`. `bar/surface.rs`
+  continues to own focused border/ring and preview stack mounting.
+  `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject pointer details drifting back into
+  the pressable entry owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

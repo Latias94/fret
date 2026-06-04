@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-04
+Last updated: 2026-06-05
 
 2026-06-03 IMUI begin-menu trigger-flow owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps enabled/state setup, popup
@@ -559,6 +559,16 @@ clipped frame chrome, 1px padding, and horizontal/vertical preview stack mountin
 vertical alpha bar import paths, pointer lifecycle, alpha coordinate mapping, preview visuals, and
 public ColorEdit / IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
 plus `imui_surface_policy` freeze the split.
+
+2026-06-05 editor ColorEdit alpha bar pointer owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/bar.rs` now keeps the
+horizontal/vertical alpha bar pressable entrypoints, slider a11y props, and delegation to the
+private pointer and surface owners. `alpha/bar/pointer.rs` owns horizontal/vertical pointer
+down/move/up handler installation, left-button gating, pointer capture/release, and alpha mutation
+routing through the existing alpha interaction owner. Alpha bar import paths, slider a11y values,
+focused surface rendering, alpha coordinate mapping, preview visuals, and public ColorEdit / IMUI
+facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
+`imui_surface_policy` freeze the split.
 
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model

@@ -63,6 +63,8 @@ const COLOR_EDIT_POPUP_PICKER_ALPHA_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/alpha.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/alpha/bar.rs");
+const COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/alpha/bar/pointer.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_SURFACE_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/alpha/bar/surface.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_PREVIEW_RS: &str =
@@ -288,8 +290,37 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
             .contains("pub(in crate::controls::color_edit::popup) use bar::alpha_bar;")
     );
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("pub(super) use bar::vertical_alpha_bar;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("mod pointer;"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("mod surface;"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("fn vertical_alpha_bar<"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS
+            .contains("install_vertical_alpha_bar_pointer_handlers(")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("install_alpha_bar_pointer_handlers("));
+    assert!(!COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("pressable_add_on_pointer_down"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("MouseButton::Left"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("apply_alpha_bar_position("));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS
+            .contains("fn install_vertical_alpha_bar_pointer_handlers<")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS
+            .contains("fn install_alpha_bar_pointer_handlers<")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("pressable_add_on_pointer_down"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("pressable_add_on_pointer_move"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("pressable_add_on_pointer_up"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("MouseButton::Left"));
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("apply_alpha_bar_position("));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("apply_vertical_alpha_bar_position(")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("host.capture_pointer()"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_POINTER_RS.contains("host.release_pointer_capture()")
+    );
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("vertical_alpha_bar_surface("));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("alpha_bar_surface("));
     assert!(!COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("picker_border_and_ring"));
