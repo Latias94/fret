@@ -174,6 +174,7 @@ mod platform_prefs;
 mod quit_effects;
 mod redraw_hitch;
 mod render;
+mod renderer_bootstrap;
 mod run;
 mod shell_effects;
 mod streaming_effects;

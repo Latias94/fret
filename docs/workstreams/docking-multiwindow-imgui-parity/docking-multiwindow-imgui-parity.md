@@ -285,6 +285,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M91_RUNNER_WGPU_ADAPTER_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md`
   (moves adapter selection diagnostics into `wgpu_adapter_diagnostics.rs` without changing runtime
   behavior)
+- Latest runner renderer bootstrap owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M92_RUNNER_RENDERER_BOOTSTRAP_OWNER_SPLIT_2026-06-04.md`
+  (moves renderer/caps/font startup installation into `renderer_bootstrap.rs` without changing
+  runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
