@@ -33250,3 +33250,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit popup request owner split:
+
+- Claim: ColorEdit popup overlay request assembly moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs` into private
+  `popup/request.rs` without changing visible-content gating, draft/error model setup, overlay id
+  creation, popper placement, anchored props, pointer-region wrapping, dismissible menu request
+  flags, close-on-window-focus/resize policy, close-auto-focus restore, popup body argument
+  routing, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `popup.rs` now declares `mod request;` and re-exports
+  `request_popup_overlay(...)` while keeping popup child module routing only; `popup/request.rs`
+  owns `request_popup_overlay(...)`, `OverlayRequest::dismissible_menu`, popper placement,
+  `PointerRegionProps`, `OnCloseAutoFocus`, `OverlayController::request(...)`, and
+  `ColorPopupBodyArgs` routing into `color_popup_body(...)`. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the popup request owner boundary
+  and reject overlay request policy drifting back into the popup hub.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

@@ -7364,3 +7364,13 @@ side-preview construction, and `sections/swatches.rs` owns history/preset swatch
 Popup chrome, layout ordering, runtime picker overrides, side-preview restore behavior, swatch
 drag/drop hooks, numeric rows, public ColorEdit APIs, and IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
+2026-06-05 editor ColorEdit popup request owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs` now keeps popup module routing and the
+stable `request_popup_overlay(...)` re-export. The new
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/request.rs` owns visible-content gating,
+draft/error model setup, overlay id and presence creation, popper placement, anchored props,
+pointer-region wrapping, dismissible menu request flags, close-on-window-focus/resize policy, and
+close-auto-focus restore to the swatch. Popup body assembly remains in `popup/body.rs`, public
+ColorEdit APIs and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
+plus `imui_surface_policy` freeze the hub/request split.

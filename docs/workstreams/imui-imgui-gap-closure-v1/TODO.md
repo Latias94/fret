@@ -1466,11 +1466,13 @@ Last updated: 2026-06-05
       overlay request placement, close-focus behavior, popup open model, picker/runtime option
       semantics, side preview composition, numeric rows, eyedropper action, swatch/history rows,
       standalone alpha bar behavior, popup chrome, width policy, or public popup entrypoints.
-      Result: `controls/color_edit/popup.rs` keeps overlay request lifecycle, anchored placement,
+      Result: `controls/color_edit/popup.rs` keeps module routing and the popup request re-export.
+      `controls/color_edit/popup/request.rs` owns overlay request lifecycle, anchored placement,
       pointer-region wrapping, and close-on-focus/resize policy. `controls/color_edit/popup/body.rs`
       owns popup content assembly, picker/body width selection, side-preview row layout, popup
       chrome, and all child affordance composition. The source gate prevents body assembly from
-      drifting back into the overlay request owner.
+      drifting back into the request owner and prevents request policy from drifting back into the
+      popup hub.
 - [x] Split editor color-edit drag source pointer lifecycle into a private child owner without
       changing drag threshold resolution, local/cross-window drag startup, pointer
       down/move/up routing, active session payload capture, hover-target preservation, delivery on
@@ -7616,3 +7618,13 @@ opening the slice.
       `ColorSwatchVisualArgs` mounting, test-id routing, and swatch a11y value assignment. The
       workstream manifest, source gate, and `imui_surface_policy` freeze the swatch element owner
       boundary.
+- [x] Split editor `ColorEdit` popup overlay request assembly into a private child owner without
+      changing visible-content gating, draft/error model setup, overlay id creation, anchored
+      placement, pointer-region wrapping, close-on-focus/resize policy, focus restore, popup body
+      argument routing, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup.rs` now keeps module declarations and the
+      `request_popup_overlay(...)` re-export. `color_edit/popup/request.rs` owns
+      `request_popup_overlay(...)`, popup visible-content gating, overlay presence, popper
+      placement, anchored props, pointer-region wrapper, dismissible menu request flags, and
+      close-auto-focus restore to the swatch. The workstream manifest, source gate, and
+      `imui_surface_policy` freeze the popup request owner boundary.

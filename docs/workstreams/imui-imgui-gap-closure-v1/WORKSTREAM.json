@@ -1300,6 +1300,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/picker.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/request.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/body.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/layout.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",

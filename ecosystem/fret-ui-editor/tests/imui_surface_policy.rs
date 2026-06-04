@@ -48,6 +48,8 @@ const COLOR_EDIT_SWATCH_ELEMENT_RS: &str =
 const COLOR_EDIT_SWATCH_VISUAL_RS: &str =
     include_str!("../src/controls/color_edit/swatch/visual.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
+const COLOR_EDIT_POPUP_REQUEST_RS: &str =
+    include_str!("../src/controls/color_edit/popup/request.rs");
 const COLOR_EDIT_POPUP_BODY_RS: &str = include_str!("../src/controls/color_edit/popup/body.rs");
 const COLOR_EDIT_POPUP_BODY_LAYOUT_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/layout.rs");
@@ -634,15 +636,23 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_COPY_ROW_RS.contains("Effect::ClipboardWriteText"));
     assert!(!COLOR_EDIT_POPUP_COPY_RS.contains("Effect::ClipboardWriteText"));
     assert!(COLOR_EDIT_POPUP_RS.contains("mod body;"));
-    assert!(
-        COLOR_EDIT_POPUP_RS.contains("use self::body::{ColorPopupBodyArgs, color_popup_body};")
-    );
-    assert!(COLOR_EDIT_POPUP_RS.contains("request_popup_overlay<"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("OverlayRequest::dismissible_menu"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("on_close_auto_focus"));
-    assert!(COLOR_EDIT_POPUP_RS.contains("color_popup_body("));
+    assert!(COLOR_EDIT_POPUP_RS.contains("pub(super) use self::request::request_popup_overlay;"));
+    assert!(COLOR_EDIT_POPUP_RS.contains("mod request;"));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("OverlayRequest::dismissible_menu"));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("on_close_auto_focus"));
+    assert!(!COLOR_EDIT_POPUP_RS.contains("color_popup_body("));
     assert!(!COLOR_EDIT_POPUP_RS.contains("color_eyedropper_action("));
     assert!(!COLOR_EDIT_POPUP_RS.contains("picker_side_preview_row("));
+    assert!(
+        COLOR_EDIT_POPUP_REQUEST_RS
+            .contains("use super::body::{ColorPopupBodyArgs, color_popup_body};")
+    );
+    assert!(COLOR_EDIT_POPUP_REQUEST_RS.contains("request_popup_overlay<"));
+    assert!(COLOR_EDIT_POPUP_REQUEST_RS.contains("OverlayRequest::dismissible_menu"));
+    assert!(COLOR_EDIT_POPUP_REQUEST_RS.contains("on_close_auto_focus"));
+    assert!(COLOR_EDIT_POPUP_REQUEST_RS.contains("color_popup_body("));
+    assert!(!COLOR_EDIT_POPUP_REQUEST_RS.contains("color_eyedropper_action("));
+    assert!(!COLOR_EDIT_POPUP_REQUEST_RS.contains("picker_side_preview_row("));
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("fn color_eyedropper_action<"));
     assert!(COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("ColorEditEyedropperRequest::new("));
     assert!(!COLOR_EDIT_POPUP_EYEDROPPER_RS.contains("Effect::"));
