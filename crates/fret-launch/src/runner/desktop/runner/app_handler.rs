@@ -1813,11 +1813,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
 
         self.handle_about_to_wait_internal_drag_poll(event_loop);
-        self.tick_id = scheduling::begin_turn(&mut self.tick_id);
-        self.app.set_tick_id(self.tick_id);
-        self.saw_left_mouse_release_this_turn = false;
-        let now = Instant::now();
-        self.poll_window_environment_if_due(now);
+        let turn_now = self.handle_about_to_wait_turn_bookkeeping();
 
         #[cfg(all(
             feature = "dev-state",
@@ -1846,9 +1842,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let position = state.window.outer_position().ok();
                     observed.push((key, logical, position));
                 }
-                self.dev_state.observe_windows(now, &self.app, observed);
+                self.dev_state
+                    .observe_windows(turn_now, &self.app, observed);
             }
         }
+        #[cfg(not(all(
+            feature = "dev-state",
+            not(any(target_os = "android", target_os = "ios"))
+        )))]
+        let _ = turn_now;
 
         #[cfg(target_os = "ios")]
         if self.ios_keyboard.is_none() {

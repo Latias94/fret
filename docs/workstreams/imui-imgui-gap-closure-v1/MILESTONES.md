@@ -1601,6 +1601,16 @@ through the docking multiwindow source gate.
 
 Marker summary: released-outside fallback scheduling; platform poll-up drain.
 
+2026-06-04 desktop runner about-to-wait turn bookkeeping owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating tick-id advancement, app tick
+publication, per-turn left-release reset, turn timestamp sampling, window environment polling, and
+dev-state timestamp reuse to `crates/fret-launch/src/runner/desktop/runner/event_loop.rs`. Runtime
+behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split through the docking multiwindow source gate.
+
+Marker summary: tick-id advancement; environment poll; dev-state timestamp reuse.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

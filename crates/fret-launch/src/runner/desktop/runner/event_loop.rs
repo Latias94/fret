@@ -96,6 +96,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.drain_effects(event_loop);
     }
 
+    pub(super) fn handle_about_to_wait_turn_bookkeeping(&mut self) -> Instant {
+        self.tick_id = super::scheduling::begin_turn(&mut self.tick_id);
+        self.app.set_tick_id(self.tick_id);
+        self.saw_left_mouse_release_this_turn = false;
+        let now = Instant::now();
+        self.poll_window_environment_if_due(now);
+        now
+    }
+
     pub(super) fn handle_about_to_wait_control_flow(
         &mut self,
         event_loop: &dyn ActiveEventLoop,

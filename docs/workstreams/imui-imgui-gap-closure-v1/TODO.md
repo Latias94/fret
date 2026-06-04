@@ -1086,6 +1086,9 @@ Last updated: 2026-06-03
 - [x] Split desktop runner about-to-wait DockFloating released-outside fallback scheduling into the private docking poll-up owner without changing runtime behavior or public effect surfaces. The docking source gate
   freezes the owner split in `M100_RUNNER_ABOUT_TO_WAIT_DOCK_RELEASED_OUTSIDE_FALLBACK_OWNER_SPLIT_2026-06-04.md`
   without claiming Wayland compositor acceptance.
+- [x] Split desktop runner about-to-wait turn bookkeeping into the private event-loop owner without changing runtime behavior or public effect surfaces. The docking source gate
+  freezes the owner split in `M101_RUNNER_ABOUT_TO_WAIT_TURN_BOOKKEEPING_OWNER_SPLIT_2026-06-04.md`
+  without claiming Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.
