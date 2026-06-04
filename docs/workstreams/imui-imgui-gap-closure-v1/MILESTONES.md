@@ -2072,6 +2072,19 @@ gate.
 Marker summary: redraw render scene owner; UI command buffer recording; app-handler render-scene
 dispatch.
 
+2026-06-04 desktop runner window redraw present-submit owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_present_submit.rs` now owns
+`submit_window_redraw_present_frame`, including `WindowRedrawPresentSubmitInput`,
+`input.context.queue.submit(input.command_buffers)`, `WindowRedrawPresentTarget` consumption, and
+`frame.present()`. `app_handler.rs` keeps only present-submit owner dispatch and continues to own
+text diagnostics, renderer perf/wgpu reports, screenshots, scheduling presented-frame commit,
+engine keepalive drop, surface recovery, and hitch summary orchestration. Runtime behavior and
+public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split through the docking multiwindow source gate.
+
+Marker summary: redraw present submit owner; queue submit; surface frame present; app-handler
+present-submit dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

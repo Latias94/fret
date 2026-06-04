@@ -619,10 +619,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     &mut cmd_buffers,
                                 );
 
-                            context.queue.submit(cmd_buffers);
-                            if let Some((frame, _view)) = present_target.into_frame_view() {
-                                frame.present();
-                            }
+                            super::window_redraw_present_submit::submit_window_redraw_present_frame(
+                                super::window_redraw_present_submit::WindowRedrawPresentSubmitInput {
+                                    context,
+                                    command_buffers: cmd_buffers,
+                                    present_target,
+                                },
+                            );
                             super::scheduling_diagnostics::commit_presented_frame_for_window(
                                 &mut self.app,
                                 &mut self.frame_id,
