@@ -130,6 +130,7 @@ mod app_handler;
 mod asset_reload;
 #[cfg(feature = "dev-state")]
 mod dev_state;
+mod device_events;
 mod diag_bundle_screenshots;
 mod diag_cursor_override;
 mod diag_mouse_buttons_override;

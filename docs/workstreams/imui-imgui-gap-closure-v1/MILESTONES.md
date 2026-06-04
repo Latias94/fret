@@ -1522,6 +1522,16 @@ behavior, and failed factory surface early return to
 effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
 through the docking multiwindow source gate.
 
+2026-06-04 desktop runner device event owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::device_event` trait hook while delegating cross-window pointer/device routing,
+pointer-motion cursor tracking, diagnostics pointer input isolation, dock drag follow updates,
+pointer-capture sync, released-outside fallback drop routing, reliable window-under-cursor skip
+behavior, cached mouse-button cleanup, and DockFloating follow stop behavior to
+`crates/fret-launch/src/runner/desktop/runner/device_events.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

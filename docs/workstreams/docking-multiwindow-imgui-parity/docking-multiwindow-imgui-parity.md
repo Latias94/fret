@@ -293,6 +293,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M93_RUNNER_FACTORY_SURFACE_ATTACH_OWNER_SPLIT_2026-06-04.md`
   (moves mobile factory-provided main surface attachment into `surface_lifecycle.rs` without
   changing runtime behavior)
+- Latest runner device event owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M94_RUNNER_DEVICE_EVENT_OWNER_SPLIT_2026-06-04.md`
+  (moves cross-window device-event routing into `device_events.rs` without changing runtime
+  behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

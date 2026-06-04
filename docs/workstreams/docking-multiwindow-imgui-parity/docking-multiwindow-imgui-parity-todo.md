@@ -913,6 +913,18 @@ Each TODO is labeled:
         construction, renderer bootstrap, driver initialization, and `ApplicationHandler` wiring.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner device event owner split keeps cross-window device-event routing out of
+      the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M94_RUNNER_DEVICE_EVENT_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/device_events.rs` owns pointer-motion cursor
+        tracking, diagnostics pointer input isolation, dock drag follow updates, pointer-capture
+        sync, released-outside fallback drop routing, reliable window-under-cursor skip behavior,
+        cached mouse-button cleanup, and DockFloating follow stop behavior.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::device_event` trait hook and delegates directly to the device-event
+        owner.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
