@@ -335,6 +335,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M104_RUNNER_ABOUT_TO_WAIT_DIAG_SCREENSHOT_POLL_OWNER_SPLIT_2026-06-04.md`
   (moves feature-gated screenshot request polling and pending-window redraw/RAF requests into
   `diag_screenshots.rs` without changing runtime behavior)
+- Latest runner about-to-wait dev-state observation owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M105_RUNNER_ABOUT_TO_WAIT_DEV_STATE_OBSERVATION_OWNER_SPLIT_2026-06-04.md`
+  (moves feature-gated desktop dev-state window observation into `dev_state.rs` without changing
+  runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

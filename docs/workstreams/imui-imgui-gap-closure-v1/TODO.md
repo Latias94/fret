@@ -1098,6 +1098,9 @@ Last updated: 2026-06-03
 - [x] Split desktop runner about-to-wait diagnostic screenshot polling into the private diagnostics screenshot owner without changing runtime behavior or public effect surfaces. The docking source gate
   freezes the owner split in `M104_RUNNER_ABOUT_TO_WAIT_DIAG_SCREENSHOT_POLL_OWNER_SPLIT_2026-06-04.md`
   without claiming Wayland compositor acceptance.
+- [x] Split desktop runner about-to-wait dev-state window observation into the private dev-state owner without changing runtime behavior or public effect surfaces. The docking source gate
+  freezes the owner split in `M105_RUNNER_ABOUT_TO_WAIT_DEV_STATE_OBSERVATION_OWNER_SPLIT_2026-06-04.md`
+  without claiming Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

@@ -1643,6 +1643,17 @@ freezes the split through the docking multiwindow source gate.
 
 Marker summary: diag screenshot polling; pending screenshot windows; EffectRedraw request; RAF wake.
 
+2026-06-04 desktop runner about-to-wait dev-state observation owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating desktop-only dev-state
+alive-window filtering, app export, window-key snapshot iteration, logical-size projection,
+outer-position sampling, and turn timestamp reuse to
+`crates/fret-launch/src/runner/desktop/runner/dev_state.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
+Marker summary: dev-state window observation; alive-window filtering; app-export ordering; turn timestamp reuse.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

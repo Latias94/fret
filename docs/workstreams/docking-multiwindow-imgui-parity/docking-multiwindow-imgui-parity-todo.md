@@ -1042,6 +1042,17 @@ Each TODO is labeled:
         monitor topology refresh.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner about-to-wait dev-state observation owner split keeps desktop
+      dev-state window observation out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M105_RUNNER_ABOUT_TO_WAIT_DEV_STATE_OBSERVATION_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/dev_state.rs` owns alive-window filtering,
+        app export, window-key snapshot iteration, window geometry sampling, and
+        `turn_now` timestamp reuse.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::about_to_wait` trait hook and delegates dev-state observation after
+        turn bookkeeping.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

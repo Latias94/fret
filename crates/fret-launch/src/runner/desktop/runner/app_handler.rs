@@ -1782,33 +1782,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             feature = "dev-state",
             not(any(target_os = "android", target_os = "ios"))
         ))]
-        {
-            if self.dev_state.enabled() {
-                let alive: std::collections::HashSet<fret_core::AppWindowId> =
-                    self.windows.keys().collect();
-                self.dev_state
-                    .sync_window_keys_from_app(&self.app, |window| alive.contains(&window));
-                self.dev_state.export_app_state(&mut self.app);
-                let keys = self.dev_state.window_keys_snapshot();
-                let mut observed: Vec<(
-                    String,
-                    winit::dpi::LogicalSize<f64>,
-                    Option<winit::dpi::PhysicalPosition<i32>>,
-                )> = Vec::new();
-                for (window, key) in keys {
-                    let Some(state) = self.windows.get(window) else {
-                        continue;
-                    };
-                    let physical = state.window.surface_size();
-                    let logical: winit::dpi::LogicalSize<f64> =
-                        physical.to_logical(state.window.scale_factor());
-                    let position = state.window.outer_position().ok();
-                    observed.push((key, logical, position));
-                }
-                self.dev_state
-                    .observe_windows(turn_now, &self.app, observed);
-            }
-        }
+        self.handle_about_to_wait_dev_state_observation(turn_now);
         #[cfg(not(all(
             feature = "dev-state",
             not(any(target_os = "android", target_os = "ios"))

@@ -8,7 +8,10 @@ use winit::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 use fret_app::App;
 use fret_core::AppWindowId;
 
-use super::{WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition};
+use super::{
+    WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition, WinitAppDriver,
+    WinitRunner,
+};
 
 use crate::dev_state::{DevStateHooks, DevStateService, DevStateWindowKeyRegistry};
 
@@ -481,6 +484,31 @@ impl DevStateController {
         };
 
         write_json_atomic(&self.path, &file)
+    }
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    pub(super) fn handle_about_to_wait_dev_state_observation(&mut self, now: Instant) {
+        if self.dev_state.enabled() {
+            let alive: std::collections::HashSet<AppWindowId> = self.windows.keys().collect();
+            self.dev_state
+                .sync_window_keys_from_app(&self.app, |window| alive.contains(&window));
+            self.dev_state.export_app_state(&mut self.app);
+            let keys = self.dev_state.window_keys_snapshot();
+            let mut observed: Vec<(String, LogicalSize<f64>, Option<PhysicalPosition<i32>>)> =
+                Vec::new();
+            for (window, key) in keys {
+                let Some(state) = self.windows.get(window) else {
+                    continue;
+                };
+                let physical = state.window.surface_size();
+                let logical: LogicalSize<f64> = physical.to_logical(state.window.scale_factor());
+                let position = state.window.outer_position().ok();
+                observed.push((key, logical, position));
+            }
+            self.dev_state.observe_windows(now, &self.app, observed);
+        }
     }
 }
 
