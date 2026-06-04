@@ -1797,6 +1797,17 @@ multiwindow source gate.
 
 Marker summary: external file drag state machine; token/path cache; app-handler dispatch only.
 
+2026-06-04 desktop runner window surface resize owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` now owns
+`handle_window_surface_resized`, including immediate surface resize synchronization, macOS active
+hit-test refresh, surface resize redraw requesting, and effect draining. `app_handler.rs` keeps the
+`WindowEvent::SurfaceResized` dispatch and the existing redraw-time `pending_surface_resize`
+fallback. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: surface resize event owner; immediate resize sync; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

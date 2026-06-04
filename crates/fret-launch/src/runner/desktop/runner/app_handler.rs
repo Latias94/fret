@@ -380,13 +380,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.handle_window_drag_left(event_loop, app_window, position);
             }
             WindowEvent::SurfaceResized(size) => {
-                self.sync_surface_resize_now(app_window, size);
-                #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
-                if macos_hit_test::has_active_regions() {
-                    macos_hit_test::apply_latest_mouse_location();
-                }
-                self.request_surface_resize_redraw(app_window);
-                self.drain_effects(event_loop);
+                self.handle_window_surface_resized(event_loop, app_window, size);
             }
             ref ev @ WindowEvent::PointerMoved { .. } => {
                 let (mapped, pos, external_drag_token, screen_pos, _scale_factor) = {

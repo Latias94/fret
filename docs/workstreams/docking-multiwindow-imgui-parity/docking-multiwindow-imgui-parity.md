@@ -391,6 +391,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M117_RUNNER_WINDOW_EXTERNAL_DRAG_OWNER_SPLIT_2026-06-04.md`
   (moves the external file drag state machine for enter/move/drop/leave into
   `window_external_drag.rs` while leaving app-handler pointer-event merge orchestration unchanged)
+- Latest runner window surface resize owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M118_RUNNER_WINDOW_SURFACE_RESIZE_OWNER_SPLIT_2026-06-04.md`
+  (moves immediate `WindowEvent::SurfaceResized` handling into `surface_lifecycle.rs` while leaving
+  redraw-time pending resize fallback in the application handler)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

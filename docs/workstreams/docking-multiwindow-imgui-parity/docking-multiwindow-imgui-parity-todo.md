@@ -1192,6 +1192,17 @@ Each TODO is labeled:
         external-drag arm dispatch plus the existing pointer-move merge path.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window surface resize owner split keeps immediate resize handling in
+      the surface lifecycle owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M118_RUNNER_WINDOW_SURFACE_RESIZE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` owns
+        `handle_window_surface_resized`, including immediate surface resize synchronization,
+        macOS active hit-test refresh, surface resize redraw requesting, and effect draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only
+        `WindowEvent::SurfaceResized` dispatch and the existing redraw-time
+        `pending_surface_resize` fallback.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

@@ -1,9 +1,12 @@
 use fret_core::AppWindowId;
 use tracing::error;
 
-#[cfg(any(target_os = "android", target_os = "ios"))]
-use super::ActiveEventLoop;
-use super::{PlatformCapabilities, SurfaceState, WindowStyleRequest, WinitAppDriver, WinitRunner};
+#[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+use super::macos_hit_test;
+use super::{
+    ActiveEventLoop, PlatformCapabilities, SurfaceState, WindowStyleRequest, WinitAppDriver,
+    WinitRunner,
+};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use winit::event_loop::ControlFlow;
 
@@ -149,6 +152,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
 
         self.destroy_runner_surfaces();
+    }
+
+    pub(super) fn handle_window_surface_resized(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        app_window: AppWindowId,
+        size: winit::dpi::PhysicalSize<u32>,
+    ) {
+        self.sync_surface_resize_now(app_window, size);
+        #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+        if macos_hit_test::has_active_regions() {
+            macos_hit_test::apply_latest_mouse_location();
+        }
+        self.request_surface_resize_redraw(app_window);
+        self.drain_effects(event_loop);
     }
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
