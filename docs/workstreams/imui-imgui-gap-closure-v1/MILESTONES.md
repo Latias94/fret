@@ -1941,6 +1941,20 @@ freezes the split through the docking multiwindow source gate.
 Marker summary: redraw WGPU allocator report owner; allocator report sample publication;
 app-handler dispatch only.
 
+2026-06-04 desktop runner window redraw text diagnostics owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_text_diagnostics.rs` now owns
+`WindowRedrawTextDiagnosticsMode`, `window_redraw_text_diagnostics_mode_from_env`,
+`begin_window_redraw_text_diagnostics_frame`, and `publish_window_redraw_text_diagnostics`,
+including `FRET_RENDER_TEXT_DEBUG`, `FRET_DIAG_DIR`, `begin_text_diagnostics_frame`, SVG text
+bridge diagnostics publication, renderer text diagnostics snapshots, and the debug vs untracked
+global-write policy. `app_handler.rs` keeps only redraw-time text diagnostics mode creation plus
+begin/publish dispatch around render and renderer perf diagnostics. Runtime behavior and public
+effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
+through the docking multiwindow source gate.
+
+Marker summary: redraw text diagnostics owner; renderer text diagnostics publication;
+app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

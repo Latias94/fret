@@ -1331,6 +1331,20 @@ Each TODO is labeled:
         submission.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw text diagnostics owner split keeps renderer text
+      diagnostics publication out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M130_RUNNER_WINDOW_REDRAW_TEXT_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_text_diagnostics.rs` owns
+        `window_redraw_text_diagnostics_mode_from_env`,
+        `begin_window_redraw_text_diagnostics_frame`, and
+        `publish_window_redraw_text_diagnostics`, including `FRET_RENDER_TEXT_DEBUG`,
+        `FRET_DIAG_DIR`, SVG text bridge diagnostics, renderer text diagnostics snapshots, and the
+        debug vs untracked global-write policy.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time text
+        diagnostics mode creation plus begin/publish dispatch around render and renderer perf
+        diagnostics.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

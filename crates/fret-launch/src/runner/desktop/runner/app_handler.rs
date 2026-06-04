@@ -574,11 +574,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         hitch_prepare_ms = Some(elapsed.as_millis() as u64);
                     }
 
-                    let render_text_debug_enabled =
-                        std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
-                    let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
-                        .is_some_and(|v| !v.is_empty())
-                        || render_text_debug_enabled;
+                    let text_diagnostics =
+                        super::window_redraw_text_diagnostics::window_redraw_text_diagnostics_mode_from_env();
                     let (_, render_elapsed) = measure_redraw_phase(
                         RedrawPhase::Render {
                             bounds,
@@ -586,9 +583,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         },
                         hitch_config.is_some(),
                         || {
-                            if render_text_diag_enabled {
-                                renderer.begin_text_diagnostics_frame();
-                            }
+                            super::window_redraw_text_diagnostics::begin_window_redraw_text_diagnostics_frame(
+                                renderer,
+                                text_diagnostics,
+                            );
                             self.driver.render(WinitRenderContext {
                                 app: &mut self.app,
                                 services: renderer as &mut dyn fret_core::UiServices,
@@ -786,42 +784,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         },
                                     )
                                 });
-                            crate::runner::font_catalog::publish_renderer_svg_text_bridge_diagnostics(
-                            &mut self.app,
-                            renderer,
-                        );
-                            if render_text_diag_enabled {
-                                let diagnostics = renderer.text_diagnostics_snapshot(self.frame_id);
-                                let trace = renderer.text_font_trace_snapshot(self.frame_id);
-                                let policy = renderer.text_fallback_policy_snapshot(self.frame_id);
-
-                                if render_text_debug_enabled {
-                                    self.app.set_global(diagnostics);
-                                    self.app.set_global(trace);
-                                    self.app.set_global(policy);
-                                } else {
-                                    // Avoid turning per-frame diagnostics snapshots into global-change
-                                    // propagation / invalidation work during perf-sensitive runs.
-                                    self.app.with_global_mut_untracked(
-                                        fret_core::RendererTextPerfSnapshot::default,
-                                        |slot, _app| {
-                                            *slot = diagnostics;
-                                        },
-                                    );
-                                    self.app.with_global_mut_untracked(
-                                        fret_core::RendererTextFontTraceSnapshot::default,
-                                        |slot, _app| {
-                                            *slot = trace;
-                                        },
-                                    );
-                                    self.app.with_global_mut_untracked(
-                                        fret_core::RendererTextFallbackPolicySnapshot::default,
-                                        |slot, _app| {
-                                            *slot = policy;
-                                        },
-                                    );
-                                }
-                            }
+                            super::window_redraw_text_diagnostics::publish_window_redraw_text_diagnostics(
+                                &mut self.app,
+                                renderer,
+                                self.frame_id,
+                                text_diagnostics,
+                            );
 
                             super::window_redraw_renderer_perf::maybe_publish_window_redraw_renderer_perf_sample(
                                 &mut self.app,
