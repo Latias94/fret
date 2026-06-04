@@ -549,21 +549,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     },
                                 );
 
-                            let (ui_cmd, _) =
-                                measure_redraw_phase(RedrawPhase::RenderScene, false, || {
-                                    renderer.render_scene(
-                                        &context.device,
-                                        &context.queue,
-                                        fret_render::RenderSceneParams {
-                                            format: surface.format(),
-                                            target_view: present_target.target_view(),
-                                            scene: &state.scene,
-                                            clear: clear_color,
-                                            scale_factor,
-                                            viewport_size: surface.size(),
-                                        },
-                                    )
-                                });
+                            let ui_cmd =
+                                super::window_redraw_render_scene::record_window_redraw_render_scene(
+                                    super::window_redraw_render_scene::WindowRedrawRenderSceneInput {
+                                        renderer,
+                                        context,
+                                        surface,
+                                        target_view: present_target.target_view(),
+                                        scene: &state.scene,
+                                        clear_color,
+                                        scale_factor,
+                                    },
+                                );
                             super::window_redraw_text_diagnostics::publish_window_redraw_text_diagnostics(
                                 &mut self.app,
                                 renderer,

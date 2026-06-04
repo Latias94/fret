@@ -1447,6 +1447,17 @@ Each TODO is labeled:
       - Marker: fallback texture/view preparation.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw render-scene owner split keeps UI command recording out
+      of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M139_RUNNER_WINDOW_REDRAW_RENDER_SCENE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_render_scene.rs` owns
+        `record_window_redraw_render_scene`, `WindowRedrawRenderSceneInput`,
+        `RedrawPhase::RenderScene`, `RenderSceneParams`, and `renderer.render_scene(...)`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps text diagnostics,
+        renderer perf/wgpu reports, screenshots, command submission, and `frame.present()`.
+      - Marker: redraw-time render-scene command recording before diagnostics and submit.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
