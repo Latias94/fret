@@ -1737,6 +1737,18 @@ freezes the split through the docking multiwindow source gate.
 Marker summary: composited-alpha surface configuration; background material implied transparency;
 surface reconfigure.
 
+2026-06-04 desktop runner window close teardown owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_close.rs` now owns `close_window`,
+`force_close_window`, and `close_window_impl`, including `before_close_window` checks, dev-state
+flushes, DockFloating follow cancellation, drag cleanup, webview close cleanup, window registry
+removal, diagnostics cleanup, per-window service cleanup, metrics cleanup, and main-window clearing.
+`crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps window create/insert
+helpers without close-window teardown. Runtime behavior and public effect surfaces remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: close-window teardown; checked close; drag cleanup; diagnostics cleanup.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

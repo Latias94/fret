@@ -182,6 +182,10 @@ Platform note:
   (moves `WindowRequest::Close` checked-close, main-window exit, force-close-all, empty-window
   shutdown, and event-loop exit policy into `window_close.rs` without changing close behavior or the
   Wayland acceptance boundary)
+- Latest runner window close teardown owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M113_RUNNER_WINDOW_CLOSE_TEARDOWN_OWNER_SPLIT_2026-06-04.md`
+  (moves checked close and close-window teardown cleanup into `window_close.rs` without changing
+  close behavior or the Wayland acceptance boundary)
 - Latest runner window geometry owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M65_RUNNER_WINDOW_GEOMETRY_OWNER_SPLIT_2026-06-03.md`
   (moves `WindowRequest` visible, size, outer-position, raise, native drag, and native resize
@@ -367,6 +371,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M112_RUNNER_SURFACE_ALPHA_OWNER_SPLIT_2026-06-04.md`
   (moves composited-alpha surface configuration into `surface_lifecycle.rs` without changing
   runtime behavior)
+- Latest runner window close teardown owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M113_RUNNER_WINDOW_CLOSE_TEARDOWN_OWNER_SPLIT_2026-06-04.md`
+  (moves close-window teardown, drag cleanup, diagnostics cleanup, and service cleanup into
+  `window_close.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

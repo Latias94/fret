@@ -1134,6 +1134,18 @@ Each TODO is labeled:
         create/insert/destroy helpers without defining composited-alpha surface configuration.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window close teardown owner split keeps checked close and cleanup
+      out of the window lifecycle owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M113_RUNNER_WINDOW_CLOSE_TEARDOWN_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_close.rs` owns
+        `close_window`, `force_close_window`, and `close_window_impl`, including
+        `before_close_window` checks, dev-state flushes, DockFloating follow cancellation,
+        drag cleanup, webview close cleanup, window registry removal, diagnostics cleanup,
+        per-window service cleanup, metrics cleanup, and main-window clearing.
+      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps window
+        create/insert helpers without defining close-window teardown.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
