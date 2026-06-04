@@ -399,6 +399,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M119_RUNNER_WINDOW_POINTER_MOVE_OWNER_SPLIT_2026-06-04.md`
   (moves `WindowEvent::PointerMoved` mapping, external drag over delivery, and dock drag move
   reroute handling into `window_pointer_move.rs`)
+- Latest runner window pointer button owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M120_RUNNER_WINDOW_POINTER_BUTTON_OWNER_SPLIT_2026-06-04.md`
+  (moves `WindowEvent::PointerButton` left-release drag cleanup and dock-source Up/Down rerouting
+  into `window_pointer_button.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

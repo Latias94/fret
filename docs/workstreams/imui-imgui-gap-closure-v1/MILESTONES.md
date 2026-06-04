@@ -1820,6 +1820,19 @@ multiwindow source gate.
 
 Marker summary: pointer move event owner; dock drag move reroute; app-handler dispatch only.
 
+2026-06-04 desktop runner window pointer button owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_pointer_button.rs` now owns
+`handle_window_pointer_button`, including pointer button platform event mapping, cursor
+screen-position fallback, macOS cursor transform calibration, dock-drag pointer-capture
+synchronization, left mouse down/up tracking, cursor-based internal drag drop delivery,
+DockFloating follow stop on left release, cross-window drag cancellation, dock-source Up/Down
+rerouting, mapped event delivery, and effect draining. `app_handler.rs` keeps only
+`WindowEvent::PointerButton` dispatch. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: pointer button event owner; left release drag cleanup; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
