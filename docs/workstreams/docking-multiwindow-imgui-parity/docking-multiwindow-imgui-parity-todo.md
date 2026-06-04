@@ -1358,6 +1358,21 @@ Each TODO is labeled:
         dispatch plus `context.queue.submit`, `frame.present`, and frame-id commit ordering.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw pending-wheel owner split keeps frame-boundary wheel
+      drain out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M132_RUNNER_WINDOW_REDRAW_PENDING_WHEEL_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_pending_wheel.rs` owns
+        `handle_window_redraw_pending_wheel`, including diagnostic wheel burst injection,
+        pending-wheel coalescing, max-abs splitting, remainder carry-over redraw requests, and
+        final wheel event delivery.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time
+        pending-wheel dispatch before window-environment refresh; redraw-time pending-wheel
+        dispatch before window-environment refresh is now the only app-handler responsibility for
+        this path.
+      - Marker: redraw-time pending-wheel dispatch before window-environment refresh.
+      - Focused runner compile, wheel coalescing regression, Linux capability posture regression,
+        source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
+        compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

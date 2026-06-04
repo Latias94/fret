@@ -1971,6 +1971,19 @@ through the docking multiwindow source gate.
 Marker summary: redraw diag screenshots owner; screenshot capture/readback lifecycle;
 app-handler submit/present orchestration only.
 
+2026-06-04 desktop runner window redraw pending-wheel owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_pending_wheel.rs` now owns
+`handle_window_redraw_pending_wheel`, including diagnostic wheel burst injection, pending-wheel
+coalescing, frame-boundary max-abs splitting, remainder carry-over redraw requests, and final wheel
+event delivery. `app_handler.rs` keeps only redraw-time pending-wheel dispatch before
+window-environment refresh. `wheel_coalescing.rs` continues to own math/env configuration, and
+`window_mapped_events.rs` continues to own catchall mapped wheel accumulation into
+`pending_wheel`. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw pending wheel owner; frame-boundary wheel drain; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

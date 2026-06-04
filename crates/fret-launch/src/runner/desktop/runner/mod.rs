@@ -204,6 +204,7 @@ mod window_position;
 mod window_pre_dispatch_events;
 mod window_redraw_accessibility;
 mod window_redraw_diag_screenshots;
+mod window_redraw_pending_wheel;
 mod window_redraw_renderer_perf;
 mod window_redraw_text_diagnostics;
 mod window_redraw_text_input;

@@ -533,6 +533,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M131_RUNNER_WINDOW_REDRAW_DIAG_SCREENSHOTS_OWNER_SPLIT_2026-06-04.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M132_RUNNER_WINDOW_REDRAW_PENDING_WHEEL_OWNER_SPLIT_2026-06-04.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
@@ -781,6 +785,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M129_RUNNER_WINDOW_REDRAW_WGPU_ALLOCATOR_REPORT_OWNER_SPLIT_2026-06-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M130_RUNNER_WINDOW_REDRAW_TEXT_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M131_RUNNER_WINDOW_REDRAW_DIAG_SCREENSHOTS_OWNER_SPLIT_2026-06-04.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M132_RUNNER_WINDOW_REDRAW_PENDING_WHEEL_OWNER_SPLIT_2026-06-04.md",
     "crates/fret-launch/src/runner/desktop/runner/change_propagation.rs",
     "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
@@ -866,6 +871,7 @@
     "crates/fret-launch/src/runner/desktop/runner/window_pre_dispatch_events.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_accessibility.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_diag_screenshots.rs",
+    "crates/fret-launch/src/runner/desktop/runner/window_redraw_pending_wheel.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_renderer_perf.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_text_diagnostics.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_text_input.rs",
