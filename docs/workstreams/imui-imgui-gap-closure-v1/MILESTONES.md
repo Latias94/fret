@@ -7392,3 +7392,13 @@ requests, and root layout. The new
 merging, drag/drop tooltip/copy/eyedropper enablement, and swatch enabled/focusable derivation.
 Public ColorEdit APIs and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
 plus `imui_surface_policy` freeze the frame/affordance split.
+
+2026-06-05 editor ColorEdit picker test owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests/picker.rs` now keeps only child module
+routing. `tests/picker/bars.rs` owns SV/hue/alpha bar local-position mapping,
+`tests/picker/hue_wheel.rs` owns hue-wheel ring target coverage,
+`tests/picker/hue_wheel_triangle.rs` owns barycentric SV triangle coverage, and
+`tests/picker/preview_alpha.rs` owns alpha-preserving HSV edits, checkerboard stability,
+preview-alpha policy, original restore behavior, and alpha a11y text coverage. Assertions,
+production ColorEdit code, public ColorEdit APIs, and IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the picker test hub split.

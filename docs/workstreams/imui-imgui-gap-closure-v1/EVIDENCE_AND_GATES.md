@@ -33310,10 +33310,10 @@ Focused gates:
 - Evidence anchors: `element.rs` now declares `mod affordance;`; `frame.rs` calls
   `color_edit_frame_affordances(...)` and no longer owns `has_visible_content_with_swatches` or
   `tooltip_enabled` derivation; `element/affordance.rs` owns `ColorEditFrameAffordances`,
-  `color_edit_frame_affordances(...)`, popup visible-content merging, drag/drop tooltip/copy/
-  eyedropper enablement, and swatch enabled/focusable derivation. `WORKSTREAM.json`,
-  `tools/gate_imui_workstream_source.py`, and
-  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the affordance owner boundary.
+ `color_edit_frame_affordances(...)`, popup visible-content merging, drag/drop tooltip/copy/
+ eyedropper enablement, and swatch enabled/focusable derivation. `WORKSTREAM.json`,
+ `tools/gate_imui_workstream_source.py`, and
+ `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the affordance owner boundary.
 - Passed: `cargo fmt --package fret-ui-editor -- --check`.
 - Passed: `cargo check -p fret-ui-editor --features imui`.
 - Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
@@ -33322,3 +33322,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit picker test owner split:
+
+- Claim: ColorEdit picker/preview/alpha unit coverage moved from the single
+  `ecosystem/fret-ui-editor/src/controls/color_edit/tests/picker.rs` file into private child test
+  owners without changing SV/hue/alpha coordinate assertions, hue-wheel ring or triangle math
+  coverage, alpha-preserving HSV edits, checkerboard stability, original restore behavior, shared
+  HSV assertions, production ColorEdit code, public ColorEdit APIs, or IMUI facade APIs.
+- Evidence anchors: `tests/picker.rs` now declares only `mod bars;`, `mod hue_wheel;`,
+  `mod hue_wheel_triangle;`, and `mod preview_alpha;`; `tests/picker/bars.rs` owns SV/hue/alpha
+  bar local-position mapping; `tests/picker/hue_wheel.rs` owns hue-wheel ring target coverage;
+  `tests/picker/hue_wheel_triangle.rs` owns barycentric SV triangle coverage; and
+  `tests/picker/preview_alpha.rs` owns alpha-preserving HSV edits, checkerboard stability,
+  preview-alpha policy, original restore behavior, and alpha a11y text coverage.
+  `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the picker test hub boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.

@@ -142,6 +142,15 @@ const COLOR_EDIT_POPUP_TOOLTIP_RS: &str =
     include_str!("../src/controls/color_edit/popup/tooltip.rs");
 const COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS: &str =
     include_str!("../src/controls/color_edit/popup/tooltip/panel.rs");
+const COLOR_EDIT_TESTS_PICKER_RS: &str = include_str!("../src/controls/color_edit/tests/picker.rs");
+const COLOR_EDIT_TESTS_PICKER_BARS_RS: &str =
+    include_str!("../src/controls/color_edit/tests/picker/bars.rs");
+const COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_RS: &str =
+    include_str!("../src/controls/color_edit/tests/picker/hue_wheel.rs");
+const COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_TRIANGLE_RS: &str =
+    include_str!("../src/controls/color_edit/tests/picker/hue_wheel_triangle.rs");
+const COLOR_EDIT_TESTS_PICKER_PREVIEW_ALPHA_RS: &str =
+    include_str!("../src/controls/color_edit/tests/picker/preview_alpha.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -931,6 +940,25 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("fn has_visible_content_with_swatches("));
+    assert!(COLOR_EDIT_TESTS_PICKER_RS.contains("mod bars;"));
+    assert!(COLOR_EDIT_TESTS_PICKER_RS.contains("mod hue_wheel;"));
+    assert!(COLOR_EDIT_TESTS_PICKER_RS.contains("mod hue_wheel_triangle;"));
+    assert!(COLOR_EDIT_TESTS_PICKER_RS.contains("mod preview_alpha;"));
+    assert!(!COLOR_EDIT_TESTS_PICKER_RS.contains("#[test]"));
+    assert!(COLOR_EDIT_TESTS_PICKER_BARS_RS.contains("sv_picker_position_preserves_hue"));
+    assert!(COLOR_EDIT_TESTS_PICKER_BARS_RS.contains("alpha_bar_position_maps_local_x"));
+    assert!(COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_RS.contains("hue_wheel_ring_maps_screen_angle"));
+    assert!(COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_RS.contains("hue_wheel_target_rejects_outside"));
+    assert!(
+        COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_TRIANGLE_RS
+            .contains("hue_wheel_triangle_maps_imgui_barycentric_sv")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_TRIANGLE_RS
+            .contains("hue_wheel_triangle_rotates_with_hue")
+    );
+    assert!(COLOR_EDIT_TESTS_PICKER_PREVIEW_ALPHA_RS.contains("hsv_color_edits_preserve"));
+    assert!(COLOR_EDIT_TESTS_PICKER_PREVIEW_ALPHA_RS.contains("popup_original_restore_matches"));
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));
     assert!(!COLOR_EDIT_POPUP_RS.contains("Color picker (stub)"));

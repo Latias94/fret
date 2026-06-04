@@ -7646,3 +7646,14 @@ opening the slice.
       `color_edit_frame_affordances(...)`, popup visible-content merging, drag/drop tooltip/copy/
       eyedropper enablement, and swatch enabled/focusable derivation. The workstream manifest,
       source gate, and `imui_surface_policy` freeze the affordance policy owner boundary.
+- [x] Split editor `ColorEdit` picker test coverage into private child owners without changing
+      SV/hue/alpha coordinate assertions, hue-wheel ring or triangle math coverage, preview alpha
+      rules, checkerboard stability, original restore behavior, shared HSV assertions, or public
+      ColorEdit / IMUI facade APIs.
+      Result: `color_edit/tests/picker.rs` now keeps only child module routing.
+      `tests/picker/bars.rs` owns SV/hue/alpha bar local-position mapping,
+      `tests/picker/hue_wheel.rs` owns hue-wheel ring target coverage,
+      `tests/picker/hue_wheel_triangle.rs` owns barycentric SV triangle coverage, and
+      `tests/picker/preview_alpha.rs` owns alpha-preserving HSV edits and preview/restore
+      coverage. The workstream manifest, source gate, and `imui_surface_policy` freeze the picker
+      test hub boundary.
