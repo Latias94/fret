@@ -1785,6 +1785,18 @@ multiwindow source gate.
 
 Marker summary: create-request orchestration; dev-state spec projection; no lifecycle owner.
 
+2026-06-04 desktop runner window external drag owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_external_drag.rs` now owns
+`handle_window_drag_entered`, `handle_window_drag_moved`, `handle_window_drag_dropped`, and
+`handle_window_drag_left`, including external drag token allocation/reuse, path-cache updates,
+physical-to-logical position mapping, Enter/Over/Drop/Leave external drag event construction,
+payload-path publication, token release, and effect draining. `app_handler.rs` keeps winit event
+dispatch and the existing pointer-move merge path. Runtime behavior and public effect surfaces
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: external file drag state machine; token/path cache; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

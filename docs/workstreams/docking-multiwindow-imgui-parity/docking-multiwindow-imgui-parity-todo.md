@@ -1180,6 +1180,18 @@ Each TODO is labeled:
         `mod window_create_request;` and no longer declares `mod window_lifecycle;`.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window external drag owner split keeps file-drag state handling out of
+      the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M117_RUNNER_WINDOW_EXTERNAL_DRAG_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_external_drag.rs` owns
+        `handle_window_drag_entered`, `handle_window_drag_moved`,
+        `handle_window_drag_dropped`, and `handle_window_drag_left`, including token/path cache
+        updates, physical-to-logical position mapping, Enter/Over/Drop/Leave external drag event
+        delivery, payload-path publication, token release, and effect draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only the winit
+        external-drag arm dispatch plus the existing pointer-move merge path.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

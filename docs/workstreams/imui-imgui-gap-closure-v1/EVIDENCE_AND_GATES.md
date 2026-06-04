@@ -30594,6 +30594,38 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M116_RUNNER_WINDOW_CREATE_REQUEST_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window external drag owner split:
+
+- Claim: external file drag window-event handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_external_drag.rs` without changing
+  winit event matching, external drag token allocation/reuse, path-cache updates,
+  physical-to-logical position mapping, Enter/Over/Drop/Leave event construction,
+  payload-path publication, token release, effect draining, pointer-move over-event co-delivery,
+  or public effect surfaces.
+- Evidence anchors: `window_external_drag.rs` owns `handle_window_drag_entered`,
+  `handle_window_drag_moved`, `handle_window_drag_dropped`, and `handle_window_drag_left`;
+  `app_handler.rs` dispatches `WindowEvent::DragEntered`, `WindowEvent::DragMoved`,
+  `WindowEvent::DragDropped`, and `WindowEvent::DragLeft` to those helpers while keeping the
+  pointer-move event merge path; `mod.rs` declares `mod window_external_drag;`.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M117 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M117_RUNNER_WINDOW_EXTERNAL_DRAG_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

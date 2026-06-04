@@ -188,6 +188,7 @@ mod win32;
 mod window;
 mod window_close;
 mod window_create_request;
+mod window_external_drag;
 mod window_front;
 mod window_geometry;
 mod window_insert;

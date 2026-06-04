@@ -387,6 +387,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M116_RUNNER_WINDOW_CREATE_REQUEST_OWNER_SPLIT_2026-06-04.md`
   (moves final create-request orchestration into `window_create_request.rs` and removes the
   current `window_lifecycle.rs` source owner without changing runtime behavior; no lifecycle owner)
+- Latest runner window external drag owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M117_RUNNER_WINDOW_EXTERNAL_DRAG_OWNER_SPLIT_2026-06-04.md`
+  (moves the external file drag state machine for enter/move/drop/leave into
+  `window_external_drag.rs` while leaving app-handler pointer-event merge orchestration unchanged)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
