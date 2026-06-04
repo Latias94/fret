@@ -30910,6 +30910,38 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M126_RUNNER_WINDOW_REDRAW_TEXT_INPUT_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window redraw renderer perf owner split:
+
+- Claim: redraw-time renderer perf sample publication moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_redraw_renderer_perf.rs` without changing
+  redraw ordering after scene rendering/text diagnostics and before WGPU diagnostics,
+  `FRET_DIAG_RENDERER_PERF` gating, last-frame perf snapshot extraction,
+  `RendererPerfFrameSample` construction, `RendererPerfFrameStore` recording,
+  `driver.renderer_perf_sample` dispatch, runtime behavior, or public effect surfaces.
+- Evidence anchors: `window_redraw_renderer_perf.rs` owns
+  `maybe_publish_window_redraw_renderer_perf_sample`, `FRET_DIAG_RENDERER_PERF`,
+  `take_last_frame_perf_snapshot`, `RendererPerfFrameSample`, `RendererPerfFrameStore::default`,
+  `store.record`, and `driver.renderer_perf_sample`; `app_handler.rs` keeps only redraw-time
+  dispatch after text diagnostics and before WGPU diagnostics.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M127 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M127_RUNNER_WINDOW_REDRAW_RENDERER_PERF_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

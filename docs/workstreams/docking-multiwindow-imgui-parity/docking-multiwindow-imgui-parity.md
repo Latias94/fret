@@ -428,6 +428,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M126_RUNNER_WINDOW_REDRAW_TEXT_INPUT_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time text-input snapshot/IME synchronization into
   `window_redraw_text_input.rs` while leaving only cfg-gated dispatch in `app_handler.rs`)
+- Latest runner window redraw renderer perf owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M127_RUNNER_WINDOW_REDRAW_RENDERER_PERF_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time renderer perf sample publication into `window_redraw_renderer_perf.rs` while
+  leaving only dispatch in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

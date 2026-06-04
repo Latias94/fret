@@ -1903,6 +1903,18 @@ gate.
 Marker summary: redraw text-input owner; IME snapshot application; Android soft-input forwarding;
 app-handler dispatch only.
 
+2026-06-04 desktop runner window redraw renderer perf owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_renderer_perf.rs` now owns
+`maybe_publish_window_redraw_renderer_perf_sample`, including `FRET_DIAG_RENDERER_PERF`,
+`take_last_frame_perf_snapshot`, `RendererPerfFrameSample`, `RendererPerfFrameStore` recording, and
+`driver.renderer_perf_sample`. `app_handler.rs` keeps only redraw-time renderer perf dispatch after
+text diagnostics and before WGPU diagnostics. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: redraw renderer perf owner; renderer perf sample publication; app-handler dispatch
+only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

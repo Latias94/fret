@@ -1295,6 +1295,17 @@ Each TODO is labeled:
         redraw-time text-input snapshot dispatch after render and before scene validation.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw renderer perf owner split keeps renderer perf sample
+      publication out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M127_RUNNER_WINDOW_REDRAW_RENDERER_PERF_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_renderer_perf.rs` owns
+        `maybe_publish_window_redraw_renderer_perf_sample`, including `FRET_DIAG_RENDERER_PERF`,
+        `take_last_frame_perf_snapshot`, `RendererPerfFrameSample`, `RendererPerfFrameStore`
+        recording, and `driver.renderer_perf_sample`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time
+        renderer perf dispatch after text diagnostics and before WGPU diagnostics.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
