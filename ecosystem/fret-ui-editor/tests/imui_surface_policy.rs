@@ -103,6 +103,8 @@ const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
 const COLOR_EDIT_POPUP_PREVIEW_FILL_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/fill.rs");
+const COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS: &str =
+    include_str!("../src/controls/color_edit/popup/preview/fill/checkerboard.rs");
 const COLOR_EDIT_POPUP_PREVIEW_SIDE_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/side.rs");
 const COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS: &str =
@@ -242,7 +244,27 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("mod side;"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("use side::{"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn color_preview_stack<"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn checkerboard_grid<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains(
+        "pub(in crate::controls::color_edit) use fill::checkerboard::checkerboard_cell_color;"
+    ));
+    assert!(
+        COLOR_EDIT_POPUP_PREVIEW_FILL_RS
+            .contains("pub(in crate::controls::color_edit) mod checkerboard;")
+    );
+    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains(
+        "pub(in crate::controls::color_edit::popup) use checkerboard::checkerboard_grid"
+    ));
+    assert!(
+        !COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains(
+            "pub(in crate::controls::color_edit) use checkerboard::checkerboard_cell_color"
+        )
+    );
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn checkerboard_grid<"));
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn checkerboard_cell_color("));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("fn checkerboard_grid<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("fn checkerboard_cell_color("));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("CHECKERBOARD_LIGHT_RGB"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("GridProps"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("mod original;"));
     assert!(
         COLOR_EDIT_POPUP_PREVIEW_SIDE_RS

@@ -7509,3 +7509,12 @@ opening the slice.
       grid tracks, hue-step cell projection, and HSV-to-color rendering.
       `hue_bar/preview/thumb.rs` owns the vertical thumb overlay, spacer, and marker chrome. The
       source gate and `imui_surface_policy` freeze the gradient/thumb owner boundary.
+- [x] Split editor `ColorEdit` fill-preview checkerboard rendering into a private child owner
+      without changing alpha-preview mode dispatch, checkerboard/overlay ordering, cell color
+      policy, alpha visibility helpers, popup alpha-preview reuse, or public ColorEdit / IMUI
+      facade APIs.
+      Result: `color_edit/popup/preview/fill.rs` now keeps only the fill-preview stack owner,
+      alpha mode dispatch, shared fill layout, and opaque/alpha visibility color helpers.
+      `color_edit/popup/preview/fill/checkerboard.rs` owns checkerboard grid construction, cell
+      color parity, and light/dark checkerboard token use. The source gate and
+      `imui_surface_policy` freeze the checkerboard owner boundary.

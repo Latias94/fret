@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-04
+Last updated: 2026-06-05
 
 ## Kit IMUI Begin-Menu Trigger Flow Owner Split Evidence - 2026-06-03
 
@@ -29582,6 +29582,32 @@ Focused gates:
   `FlexProps`, and marker chrome colors. `tools/gate_imui_workstream_source.py` and
   `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject gradient/thumb details drifting
   back into the preview stack owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit fill-preview checkerboard owner split:
+
+- Claim: checkerboard grid and checkerboard cell color policy moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/fill.rs` into private
+  `preview/fill/checkerboard.rs` without changing alpha-preview mode dispatch,
+  checkerboard/overlay ordering, half-alpha preview composition, alpha picker preview reuse, or
+  public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `preview/fill.rs` keeps `color_preview_stack(...)`,
+  `checkerboard_preview_fill(...)`, `solid_preview_fill(...)`, `half_alpha_preview_fill(...)`,
+  `fill_preview_layout()`, `fill_absolute_preview_layout()`, `opaque_preview_color(...)`, and
+  `preview_color_for_alpha_visibility(...)`; `preview/fill/checkerboard.rs` owns
+  `checkerboard_grid(...)`, `checkerboard_cell_color(...)`, `GridProps`, `GridTrackSizing`, and
+  `CHECKERBOARD_LIGHT_RGB` / `CHECKERBOARD_DARK_RGB` use. `preview.rs` keeps the popup
+  `checkerboard_grid` re-export and imports the test-only `checkerboard_cell_color` helper
+  directly from the child owner. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject checkerboard implementation
+  details drifting back into the fill-preview stack owner.
 - Passed: `cargo fmt --package fret-ui-editor -- --check`.
 - Passed: `cargo check -p fret-ui-editor --features imui`.
 - Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.

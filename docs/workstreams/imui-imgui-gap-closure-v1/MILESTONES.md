@@ -600,6 +600,15 @@ Hue preview stack ordering, hue-step color projection, thumb geometry, popup pic
 and public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit fill-preview checkerboard owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/fill.rs` now keeps the
+fill-preview stack entrypoint, alpha-preview mode dispatch, shared fill layout, absolute overlay
+layout, and opaque/alpha visibility color helpers. `preview/fill/checkerboard.rs` owns the
+checkerboard grid, grid track construction, cell parity color policy, and light/dark checkerboard
+token use. Checkerboard/overlay ordering, half-alpha preview composition, alpha-preview reuse by
+the popup alpha picker, and public ColorEdit / IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating
