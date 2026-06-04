@@ -1,8 +1,7 @@
 //! Winit `ApplicationHandler` integration.
 
 use super::redraw_hitch::{
-    RedrawPhase, measure_redraw_phase, quantize_logical_px, redraw_hitch_config,
-    write_redraw_hitch_log,
+    RedrawPhase, measure_redraw_phase, redraw_hitch_config, write_redraw_hitch_log,
 };
 use super::*;
 
@@ -394,35 +393,22 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .as_mut()
                         .is_some_and(|r| r.begin_capture_if_requested());
 
-                    let ((scale_factor, bounds), prepare_elapsed) =
-                        measure_redraw_phase(RedrawPhase::Prepare, hitch_config.is_some(), || {
-                            // Apply any pending window-side state (IME/cursor) once per frame,
-                            // similar to Dear ImGui's backend `prepare_frame` pattern.
-                            state.platform.prepare_frame(state.window.as_ref());
-
-                            let scale_factor = state.window.scale_factor() as f32;
-                            let physical = state.window.surface_size();
-                            let logical: winit::dpi::LogicalSize<f32> =
-                                physical.to_logical(state.window.scale_factor());
-                            let logical_width = quantize_logical_px(logical.width);
-                            let logical_height = quantize_logical_px(logical.height);
-
-                            let bounds = Rect::new(
-                                Point::new(Px(0.0), Px(0.0)),
-                                Size::new(Px(logical_width), Px(logical_height)),
-                            );
-
-                            self.driver.gpu_frame_prepare(
-                                &mut self.app,
+                    let (prepared, prepare_elapsed) =
+                        super::window_redraw_frame_prepare::prepare_window_redraw_frame(
+                            super::window_redraw_frame_prepare::WindowRedrawFramePrepareInput {
+                                app: &mut self.app,
+                                driver: &mut self.driver,
                                 app_window,
-                                &mut state.user,
+                                user: &mut state.user,
+                                platform: &mut state.platform,
+                                window: state.window.as_ref(),
                                 context,
                                 renderer,
-                                scale_factor,
-                            );
-
-                            (scale_factor, bounds)
-                        });
+                                hitch_enabled: hitch_config.is_some(),
+                            },
+                        );
+                    let scale_factor = prepared.scale_factor;
+                    let bounds = prepared.bounds;
                     if let Some(elapsed) = prepare_elapsed {
                         hitch_prepare_ms = Some(elapsed.as_millis() as u64);
                     }

@@ -1386,6 +1386,18 @@ Each TODO is labeled:
       - Marker: redraw-time surface-resize dispatch before platform frame preparation.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw frame-prepare owner split keeps platform frame
+      preparation out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M134_RUNNER_WINDOW_REDRAW_FRAME_PREPARE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_frame_prepare.rs` owns
+        `prepare_window_redraw_frame`, including platform `prepare_frame`, scale-factor capture,
+        surface-size-to-bounds projection, logical-size quantization, and driver
+        `gpu_frame_prepare` dispatch.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time
+        frame-prepare dispatch and continues to own render/record/present orchestration.
+      - Marker: redraw-time frame-prepare dispatch before render.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

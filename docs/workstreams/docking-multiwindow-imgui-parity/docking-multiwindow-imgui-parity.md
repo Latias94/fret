@@ -456,6 +456,11 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M133_RUNNER_WINDOW_REDRAW_SURFACE_RESIZE_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time pending surface resize fallback into `window_redraw_surface_resize.rs` while
   leaving only dispatch in `app_handler.rs`)
+- Latest runner window redraw frame-prepare owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M134_RUNNER_WINDOW_REDRAW_FRAME_PREPARE_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time platform frame preparation, bounds projection, and driver
+  `gpu_frame_prepare` dispatch into `window_redraw_frame_prepare.rs` while leaving only prepare
+  dispatch in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
