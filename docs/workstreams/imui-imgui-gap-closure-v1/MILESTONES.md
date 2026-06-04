@@ -2141,6 +2141,19 @@ gate.
 Marker summary: redraw renderdoc capture owner; capture begin; capture end; app-handler
 renderdoc-capture dispatch.
 
+2026-06-04 desktop runner window redraw clear-color owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_clear_color.rs` now owns
+`resolve_window_redraw_clear_color`, including the `RunnerWindowStyleDiagnosticsStore` lookup,
+`effective_snapshot(app_window)`, `visual_transparent`, transparent
+`ClearColor(wgpu::Color::TRANSPARENT)`, and configured clear-color fallback. `app_handler.rs` keeps
+only clear-color owner dispatch before render-scene recording. Render-scene command recording stays
+in `window_redraw_render_scene.rs`. Runtime behavior and public effect surfaces remain unchanged,
+and `tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw clear color owner; visual transparent selection; app-handler clear-color
+dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

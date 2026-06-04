@@ -202,6 +202,7 @@ mod window_pointer_move;
 mod window_position;
 mod window_pre_dispatch_events;
 mod window_redraw_accessibility;
+mod window_redraw_clear_color;
 mod window_redraw_diag_screenshots;
 mod window_redraw_frame_prepare;
 mod window_redraw_hitch_summary;

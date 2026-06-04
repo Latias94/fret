@@ -528,16 +528,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                             let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
-                            let want_visual_transparent = self
-                                .app
-                                .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
-                                .and_then(|s| s.effective_snapshot(app_window))
-                                .is_some_and(|s| s.visual_transparent);
-                            let clear_color = if want_visual_transparent {
-                                fret_render::ClearColor(wgpu::Color::TRANSPARENT)
-                            } else {
-                                self.config.clear_color
-                            };
+                            let clear_color =
+                                super::window_redraw_clear_color::resolve_window_redraw_clear_color(
+                                    &self.app,
+                                    app_window,
+                                    self.config.clear_color,
+                                );
                             let present_target =
                                 super::window_redraw_present_target::prepare_window_redraw_present_target(
                                     super::window_redraw_present_target::WindowRedrawPresentTargetInput {

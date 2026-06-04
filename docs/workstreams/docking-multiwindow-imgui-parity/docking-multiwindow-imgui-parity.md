@@ -504,6 +504,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M144_RUNNER_WINDOW_REDRAW_RENDERDOC_CAPTURE_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time RenderDoc capture begin/end into `window_redraw_renderdoc_capture.rs` while
   leaving initialization and request hotkeys in their existing owners)
+- Latest runner window redraw clear-color owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M145_RUNNER_WINDOW_REDRAW_CLEAR_COLOR_OWNER_SPLIT_2026-06-04.md`
+  (moves transparent-window clear-color selection into `window_redraw_clear_color.rs` while leaving
+  render-scene recording in its existing owner)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

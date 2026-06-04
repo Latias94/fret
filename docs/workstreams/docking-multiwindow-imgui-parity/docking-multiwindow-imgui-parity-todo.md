@@ -1520,6 +1520,18 @@ Each TODO is labeled:
       - Marker: redraw-time renderdoc capture lifecycle.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw clear-color owner split keeps transparent-window clear
+      selection out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M145_RUNNER_WINDOW_REDRAW_CLEAR_COLOR_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_clear_color.rs` owns
+        `resolve_window_redraw_clear_color`, the `RunnerWindowStyleDiagnosticsStore` lookup,
+        `effective_snapshot(app_window)`, `visual_transparent`, transparent `ClearColor`, and the
+        configured clear-color fallback.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only clear-color owner
+        dispatch before render-scene recording.
+      - Marker: redraw-time clear color selection before render-scene recording.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
