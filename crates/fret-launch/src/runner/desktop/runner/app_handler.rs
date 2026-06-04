@@ -386,10 +386,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         return;
                     };
 
-                    let capturing = self
-                        .renderdoc
-                        .as_mut()
-                        .is_some_and(|r| r.begin_capture_if_requested());
+                    let capturing =
+                        super::window_redraw_renderdoc_capture::begin_window_redraw_renderdoc_capture(
+                            self.renderdoc.as_mut(),
+                        );
 
                     let (prepared, prepare_elapsed) =
                         super::window_redraw_frame_prepare::prepare_window_redraw_frame(
@@ -648,9 +648,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         hitch_present_ms = Some(elapsed.as_millis() as u64);
                     }
 
-                    if capturing && let Some(r) = self.renderdoc.as_mut() {
-                        r.end_capture();
-                    }
+                    super::window_redraw_renderdoc_capture::end_window_redraw_renderdoc_capture(
+                        self.renderdoc.as_mut(),
+                        capturing,
+                    );
 
                     let scene_ops = state.scene.ops_len();
                     if let Err(err) = draw_result {

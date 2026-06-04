@@ -213,6 +213,7 @@ mod window_redraw_present_target;
 mod window_redraw_record;
 mod window_redraw_render;
 mod window_redraw_render_scene;
+mod window_redraw_renderdoc_capture;
 mod window_redraw_renderer_perf;
 mod window_redraw_surface_resize;
 mod window_redraw_target_updates;

@@ -2128,6 +2128,19 @@ gate.
 Marker summary: redraw hitch summary owner; total redraw elapsed; hitch threshold check;
 app-handler hitch-summary dispatch.
 
+2026-06-04 desktop runner window redraw RenderDoc capture owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_renderdoc_capture.rs` now owns
+`begin_window_redraw_renderdoc_capture` and `end_window_redraw_renderdoc_capture`, including
+`Option<&mut RenderDocCapture>`, `begin_capture_if_requested`, the `capturing` boolean, and
+`end_capture`. `app_handler.rs` keeps only RenderDoc capture begin/end owner dispatch around redraw
+frame work. RenderDoc initialization stays in `render.rs`; capture request hotkey handling stays in
+`window_mapped_events.rs`. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw renderdoc capture owner; capture begin; capture end; app-handler
+renderdoc-capture dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
