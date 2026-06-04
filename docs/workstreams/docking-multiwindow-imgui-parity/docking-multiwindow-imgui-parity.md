@@ -488,6 +488,10 @@ Platform note:
   (moves redraw-time command submission and surface frame presentation into
   `window_redraw_present_submit.rs` while leaving diagnostics/recovery orchestration in
   `app_handler.rs`)
+- Latest runner window redraw present-finish owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M141_RUNNER_WINDOW_REDRAW_PRESENT_FINISH_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time successful present finish into `window_redraw_present_finish.rs` while leaving
+  recovery/hitch orchestration in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

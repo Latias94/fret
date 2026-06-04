@@ -1469,6 +1469,19 @@ Each TODO is labeled:
       - Marker: redraw-time command submission and surface frame presentation.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw present-finish owner split keeps successful present
+      finalization out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M141_RUNNER_WINDOW_REDRAW_PRESENT_FINISH_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_present_finish.rs` owns
+        `finish_window_redraw_present_frame`, `WindowRedrawPresentFinishInput`,
+        `commit_presented_frame_for_window`, `drop(input.keepalive)`,
+        `finish_window_redraw_diag_screenshot_capture`, and
+        `finish_window_redraw_bundle_screenshot_readback`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps recovery, hitch
+        summary orchestration, and present-finish dispatch.
+      - Marker: redraw-time successful present finish after submit.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

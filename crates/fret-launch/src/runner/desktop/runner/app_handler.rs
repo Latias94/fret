@@ -626,26 +626,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     present_target,
                                 },
                             );
-                            super::scheduling_diagnostics::commit_presented_frame_for_window(
-                                &mut self.app,
-                                &mut self.frame_id,
-                                app_window,
-                            );
-                            drop(engine_keepalive);
-
-                            #[cfg(feature = "diag-screenshots")]
-                            super::window_redraw_diag_screenshots::finish_window_redraw_diag_screenshot_capture(
-                                self.diag_screenshots.as_mut(),
-                                &context.device,
-                                app_window,
-                                screenshot_inflight,
-                            );
-
-                            super::window_redraw_diag_screenshots::finish_window_redraw_bundle_screenshot_readback(
-                                &self.diag_bundle_screenshots,
-                                &context.device,
-                                pending_bundle_screenshot,
-                                surface.format(),
+                            super::window_redraw_present_finish::finish_window_redraw_present_frame(
+                                super::window_redraw_present_finish::WindowRedrawPresentFinishInput {
+                                    app: &mut self.app,
+                                    frame_id: &mut self.frame_id,
+                                    app_window,
+                                    keepalive: engine_keepalive,
+                                    #[cfg(feature = "diag-screenshots")]
+                                    diag_screenshots: self.diag_screenshots.as_mut(),
+                                    bundle_screenshots: &self.diag_bundle_screenshots,
+                                    device: &context.device,
+                                    #[cfg(feature = "diag-screenshots")]
+                                    screenshot_inflight,
+                                    bundle_screenshot_readback: pending_bundle_screenshot,
+                                    surface_format: surface.format(),
+                                },
                             );
 
                             Ok(())
