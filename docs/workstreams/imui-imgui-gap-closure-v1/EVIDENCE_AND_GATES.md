@@ -30142,6 +30142,36 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M101_RUNNER_ABOUT_TO_WAIT_TURN_BOOKKEEPING_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner about-to-wait window turn accessibility owner split:
+
+- Claim: about-to-wait per-window platform inset projection and accessibility action draining moved
+  from `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_turn.rs` without changing runtime behavior,
+  iOS keyboard tracker bootstrap, Android content-rect inset projection, iOS safe-area/keyboard
+  occlusion projection, diagnostic inset overrides, accessibility activation diagnostics,
+  focus/invoke/stepper/set-value action routing, snapshot-backed scroll/text-selection actions,
+  redraw requests, or public effect surfaces.
+- Evidence anchors: `window_turn.rs` owns
+  `handle_about_to_wait_window_platform_and_accessibility`; `app_handler.rs` keeps the
+  `ApplicationHandler::about_to_wait` hook and delegates per-window platform/a11y turn work after
+  dev-state window observation.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo check -p fret-launch --lib`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M102 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M102_RUNNER_ABOUT_TO_WAIT_WINDOW_TURN_ACCESSIBILITY_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

@@ -1009,6 +1009,17 @@ Each TODO is labeled:
         after pre-turn internal drag polling.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner about-to-wait window turn accessibility owner split keeps per-window
+      platform inset and accessibility action handling out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M102_RUNNER_ABOUT_TO_WAIT_WINDOW_TURN_ACCESSIBILITY_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_turn.rs` owns iOS keyboard bootstrap,
+        Android/iOS platform inset projection, diagnostic inset overrides, accessibility
+        activation diagnostics, and accessibility action draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::about_to_wait` trait hook and delegates per-window platform/a11y turn
+        handling immediately after dev-state window observation.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

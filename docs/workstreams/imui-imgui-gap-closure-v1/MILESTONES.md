@@ -1611,6 +1611,17 @@ freezes the split through the docking multiwindow source gate.
 
 Marker summary: tick-id advancement; environment poll; dev-state timestamp reuse.
 
+2026-06-04 desktop runner about-to-wait window turn accessibility owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating iOS keyboard bootstrap, Android/iOS
+platform inset projection, diagnostic inset overrides, accessibility activation diagnostics, and
+accessibility action draining to `crates/fret-launch/src/runner/desktop/runner/window_turn.rs`.
+Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: window-turn platform insets; accessibility action drain; activation diagnostics.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
