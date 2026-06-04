@@ -1031,6 +1031,17 @@ Each TODO is labeled:
         recreation before pre-turn internal drag polling.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner about-to-wait diag screenshot poll owner split keeps feature-gated
+      screenshot request polling out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M104_RUNNER_ABOUT_TO_WAIT_DIAG_SCREENSHOT_POLL_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/diag_screenshots.rs` owns request polling,
+        pending-window collection by FFI key, `EffectRedraw` redraw requests, and RAF wakes for
+        pending screenshot captures.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::about_to_wait` trait hook and delegates screenshot polling after
+        monitor topology refresh.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

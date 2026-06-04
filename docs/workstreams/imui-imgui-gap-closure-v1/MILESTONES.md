@@ -1633,6 +1633,16 @@ through the docking multiwindow source gate.
 
 Marker summary: mobile surface recreation; can-create-surfaces lifecycle gate; post-bootstrap effect drain.
 
+2026-06-04 desktop runner about-to-wait diag screenshot poll owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating feature-gated screenshot request
+polling, pending-window collection by `AppWindowId` FFI key, `EffectRedraw` request publication, and
+RAF wake requests to `crates/fret-launch/src/runner/desktop/runner/diag_screenshots.rs`. Runtime
+behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split through the docking multiwindow source gate.
+
+Marker summary: diag screenshot polling; pending screenshot windows; EffectRedraw request; RAF wake.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

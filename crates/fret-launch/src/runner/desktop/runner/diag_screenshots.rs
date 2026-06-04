@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use fret_core::AppWindowId;
 use fret_diag_protocol::{
     DiagScreenshotRequestV1, DiagScreenshotResultEntryV1, DiagScreenshotResultFileV1,
 };
+use slotmap::Key as _;
+
+use super::{WinitAppDriver, WinitRunner};
 
 #[derive(Debug, Clone)]
 struct PendingCapture {
@@ -396,6 +400,29 @@ impl DiagScreenshotCapture {
         )?;
 
         Ok(())
+    }
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(super) fn handle_about_to_wait_diag_screenshots(&mut self) {
+        let pending_diag_screenshot_windows: Vec<AppWindowId> =
+            if let Some(diag) = self.diag_screenshots.as_mut() {
+                diag.poll();
+                self.windows
+                    .keys()
+                    .filter(|window| diag.has_pending_for_window(window.data().as_ffi()))
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
+        for window in pending_diag_screenshot_windows {
+            let _ = self.request_window_redraw_with_reason(
+                window,
+                fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+            );
+            self.raf_windows.request(window);
+        }
     }
 }
 
