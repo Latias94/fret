@@ -29566,6 +29566,31 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit hue-bar preview gradient/thumb owner split:
+
+- Claim: hue-bar preview gradient and thumb rendering moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_bar/preview.rs` into private
+  `hue_bar/preview/gradient.rs` and `hue_bar/preview/thumb.rs` owners without changing hue preview
+  stack ordering, hue-step color projection, thumb marker geometry, popup picker composition, or
+  public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `hue_bar/preview.rs` keeps `hue_bar_preview_stack(...)`, `StackProps`,
+  `fill_preview_layout()`, `vertical_hue_gradient_overlay(cx)`, and
+  `vertical_bar_thumb_overlay(cx, hue)` only; `hue_bar/preview/gradient.rs` owns
+  `vertical_hue_gradient_overlay(...)`, `HUE_BAR_STEPS`, `GridProps`, `GridTrackSizing`,
+  `HsvColor`, and `hsv_to_color_preserving_alpha(...)`; `hue_bar/preview/thumb.rs` owns
+  `vertical_bar_thumb_overlay(...)`, `vertical_bar_thumb_spacer(...)`, `Axis::Vertical`,
+  `FlexProps`, and marker chrome colors. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject gradient/thumb details drifting
+  back into the preview stack owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

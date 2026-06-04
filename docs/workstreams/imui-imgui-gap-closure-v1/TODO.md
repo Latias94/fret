@@ -7501,3 +7501,11 @@ opening the slice.
       cell projection, and HSV-to-color rendering. `sv/preview/thumb.rs` owns the thumb overlay,
       vertical spacer, marker chrome, and horizontal spacer reuse. The source gate and
       `imui_surface_policy` freeze the grid/thumb owner boundary.
+- [x] Split editor `ColorEdit` hue-bar preview gradient and thumb rendering into private child
+      owners without changing hue preview stack ordering, hue-step color projection, thumb marker
+      geometry, popup picker composition, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/picker/hue_bar/preview.rs` now keeps only the preview stack
+      entrypoint and child ordering. `hue_bar/preview/gradient.rs` owns `HUE_BAR_STEPS`, vertical
+      grid tracks, hue-step cell projection, and HSV-to-color rendering.
+      `hue_bar/preview/thumb.rs` owns the vertical thumb overlay, spacer, and marker chrome. The
+      source gate and `imui_surface_policy` freeze the gradient/thumb owner boundary.

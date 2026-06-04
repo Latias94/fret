@@ -79,6 +79,10 @@ const COLOR_EDIT_POPUP_PICKER_HUE_BAR_BAR_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_bar/bar.rs");
 const COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_bar/preview.rs");
+const COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_GRADIENT_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/hue_bar/preview/gradient.rs");
+const COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_THUMB_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/hue_bar/preview/thumb.rs");
 const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_wheel.rs");
 const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS: &str =
@@ -303,9 +307,33 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
         "pub(in crate::controls::color_edit::popup) use preview::hue_bar_preview_stack;"
     ));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_BAR_RS.contains("fn hue_bar<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("mod gradient;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("mod thumb;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("fn hue_bar_preview_stack<"));
     assert!(
-        COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("fn vertical_hue_gradient_overlay<")
+        COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("vertical_hue_gradient_overlay(cx)")
     );
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("vertical_bar_thumb_overlay(cx, hue)")
+    );
+    assert!(
+        !COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("fn vertical_hue_gradient_overlay<")
+    );
+    assert!(!COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("fn vertical_bar_thumb_overlay<"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_RS.contains("HUE_BAR_STEPS"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_GRADIENT_RS
+            .contains("fn vertical_hue_gradient_overlay<")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_GRADIENT_RS.contains("HUE_BAR_STEPS"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_GRADIENT_RS.contains("GridProps"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_THUMB_RS.contains("fn vertical_bar_thumb_overlay<")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_THUMB_RS.contains("fn vertical_bar_thumb_spacer<")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_PREVIEW_THUMB_RS.contains("Axis::Vertical"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("mod bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("mod interaction;"));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_RS.contains("mod preview;"));

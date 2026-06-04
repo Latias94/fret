@@ -591,6 +591,15 @@ color projection, thumb geometry, popup picker composition, and public ColorEdit
 remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the
 split.
 
+2026-06-05 editor ColorEdit hue-bar preview gradient/thumb owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_bar/preview.rs` now keeps only
+the hue-bar preview stack entrypoint and child ordering. `hue_bar/preview/gradient.rs` owns
+`HUE_BAR_STEPS`, vertical grid track construction, hue-step cell projection, and HSV-to-color
+rendering. `hue_bar/preview/thumb.rs` owns the vertical thumb overlay, spacer, and marker chrome.
+Hue preview stack ordering, hue-step color projection, thumb geometry, popup picker composition,
+and public ColorEdit / IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating
