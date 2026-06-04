@@ -1689,6 +1689,17 @@ split through the docking multiwindow source gate.
 
 Marker summary: client/screen coordinate helpers; cursor-grab placement; client-origin diagnostics.
 
+2026-06-04 desktop runner window under-cursor owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_under_cursor.rs` now owns platform
+under-cursor lookup, macOS ordered-window matching, Windows root-HWND lookup and z-order walk
+fallback, heuristic rect fallback, preferred-window exclusion, and z-order bump bookkeeping used by
+DockFloating drag target identification. `crates/fret-launch/src/runner/desktop/runner/window.rs`
+keeps window runtime state plus platform focus/style/hit-test/background-material helpers. Runtime
+behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split through the docking multiwindow source gate.
+
+Marker summary: platform under-cursor lookup; z-order fallback; DockFloating target identification.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

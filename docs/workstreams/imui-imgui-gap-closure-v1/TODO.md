@@ -1111,6 +1111,10 @@ Last updated: 2026-06-03
   docking source gate freezes the owner split in
   `M108_RUNNER_WINDOW_POSITION_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
   acceptance.
+- [x] Split desktop runner platform under-cursor lookup and z-order fallback into the private window-under-cursor owner without changing runtime behavior or public effect surfaces. The docking
+  source gate freezes the owner split in
+  `M109_RUNNER_WINDOW_UNDER_CURSOR_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
+  acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

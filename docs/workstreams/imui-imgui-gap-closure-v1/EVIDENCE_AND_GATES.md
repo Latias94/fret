@@ -30346,6 +30346,36 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M108_RUNNER_WINDOW_POSITION_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window under-cursor owner split:
+
+- Claim: platform under-cursor lookup, heuristic z-order fallback, Windows root-HWND lookup, and
+  z-order bump bookkeeping moved from `crates/fret-launch/src/runner/desktop/runner/window.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_under_cursor.rs` without changing runtime
+  behavior, macOS ordered-window lookup, Windows z-order walk fallback, heuristic rect fallback,
+  preferred-window exclusion, DockFloating drag target identification, or public effect surfaces.
+- Evidence anchors: `window_under_cursor.rs` owns `WindowUnderCursorHit`,
+  `ns_window_number_for_window`, `ordered_ns_window_numbers_front_to_back`,
+  `window_under_cursor_macos`, `hwnd_for_window`, `window_under_cursor_win32`,
+  `window_under_cursor_platform`, `window_under_cursor_best_effort`, and `bump_window_z_order`;
+  `window.rs` keeps window runtime state plus platform focus/style/hit-test/background-material
+  helpers.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo check -p fret-launch --lib`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M109 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M109_RUNNER_WINDOW_UNDER_CURSOR_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

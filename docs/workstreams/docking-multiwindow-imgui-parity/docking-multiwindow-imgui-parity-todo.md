@@ -1089,6 +1089,18 @@ Each TODO is labeled:
         defining the coordinate helper bodies or cursor-grab placement tests.
       - Focused runner compile, window-position regression tests, source gate, JSON shape, catalog,
         and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window under-cursor owner split keeps platform target lookup and
+      z-order fallback out of the window owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M109_RUNNER_WINDOW_UNDER_CURSOR_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_under_cursor.rs` owns
+        `WindowUnderCursorHit`, macOS ordered-window lookup, Windows root-HWND lookup and z-order
+        walk fallback, heuristic rect fallback, preferred-window exclusion, and z-order bump bookkeeping
+        used by DockFloating drag target identification.
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps window runtime state plus
+        platform focus/style/hit-test/background-material helpers without defining under-cursor or
+        z-order fallback helper bodies.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
