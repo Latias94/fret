@@ -359,6 +359,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M110_RUNNER_WINDOW_PLATFORM_OWNER_SPLIT_2026-06-04.md`
   (moves platform raise/focus, opacity, hit-test, and background-material helpers into
   `window_platform.rs` without changing runtime behavior)
+- Latest runner window front owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M111_RUNNER_WINDOW_FRONT_OWNER_SPLIT_2026-06-04.md`
+  (moves the pending-front retry queue and deadline processing into `window_front.rs` without
+  changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

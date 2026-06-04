@@ -30388,7 +30388,8 @@ Focused gates:
 - Evidence anchors: `window_platform.rs` owns `bring_window_to_front`, `set_window_opacity`,
   `set_window_hit_test_passthrough_all`, `set_window_hit_test`, `set_window_background_material`,
   and the private Windows region passthrough helper; `window.rs` keeps `WindowRuntime`,
-  `PendingWheelEvent`, `PendingFrontRequest`, `TimerEntry`, and `DockTearoffFollow` only.
+  `PendingWheelEvent`, `TimerEntry`, and `DockTearoffFollow` after the follow-up M111
+  pending-front split.
 - Fresh gates run on 2026-06-04:
   `cargo fmt --package fret-launch`;
   `cargo check -p fret-launch --lib`;
@@ -30405,6 +30406,37 @@ Focused gates:
   public API or cross-crate behavior change; the package check, targeted nextest, and source gates
   cover this claim.
 - `docs/workstreams/docking-multiwindow-imgui-parity/M110_RUNNER_WINDOW_PLATFORM_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
+2026-06-04 Desktop runner window front owner split:
+
+- Claim: pending-front retry scheduling moved from
+  `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` and the front request record
+  moved from `crates/fret-launch/src/runner/desktop/runner/window.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_front.rs` without changing DockFloating
+  fronting, raise retry cadence, focused-window retry trimming, about-to-wait deadline scheduling,
+  or public effect surfaces.
+- Evidence anchors: `window_front.rs` owns `PendingFrontRequest`, `enqueue_window_front`,
+  `process_pending_front_requests`, and `next_pending_front_deadline`; `window.rs` keeps
+  `WindowRuntime`, `PendingWheelEvent`, `TimerEntry`, and `DockTearoffFollow` only;
+  `window_lifecycle.rs` keeps create/insert/destroy lifecycle helpers without pending-front retry
+  behavior.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M111 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M111_RUNNER_WINDOW_FRONT_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
 2026-06-03 Desktop runner window request dispatch owner split:

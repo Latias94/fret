@@ -190,6 +190,7 @@ mod wheel_coalescing;
 mod win32;
 mod window;
 mod window_close;
+mod window_front;
 mod window_geometry;
 mod window_lifecycle;
 mod window_metrics;
@@ -242,7 +243,8 @@ use macos_cursor::{
 use macos_cursor::{dock_tearoff_log, macos_window_log};
 use restart_trigger::RestartTrigger;
 use streaming_images::UploadedImageEntry;
-use window::{DockTearoffFollow, PendingFrontRequest, TimerEntry, WindowRuntime};
+use window::{DockTearoffFollow, TimerEntry, WindowRuntime};
+use window_front::PendingFrontRequest;
 use window_platform::bring_window_to_front;
 
 pub struct WinitRunner<D: WinitAppDriver> {

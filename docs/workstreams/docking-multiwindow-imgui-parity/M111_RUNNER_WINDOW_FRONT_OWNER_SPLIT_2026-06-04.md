@@ -1,4 +1,4 @@
-# M110 Runner Window Platform Owner Split - 2026-06-04
+# M111 Runner Window Front Owner Split - 2026-06-04
 
 Status: local owner split; no Wayland acceptance claim.
 
@@ -8,29 +8,31 @@ qualifying Linux Wayland host.
 
 ## Claim
 
-Desktop runner low-level platform window operations now live in
-`crates/fret-launch/src/runner/desktop/runner/window_platform.rs` instead of the general
-`window.rs` state owner. The split preserves platform raise/focus behavior, Windows foreground raising,
-macOS ordered-front logging, opacity application, hit-test passthrough, region hit-test fallback,
-background material application, and the high-level `window_style.rs` request pipeline.
+Desktop runner pending-front retry scheduling now lives in
+`crates/fret-launch/src/runner/desktop/runner/window_front.rs` instead of the general
+`window.rs` state record owner or the `window_lifecycle.rs` create/insert/destroy owner. The split
+preserves the `PendingFrontRequest` record, `enqueue_window_front`,
+`process_pending_front_requests`, `next_pending_front_deadline`, about-to-wait scheduling,
+DockFloating fronting, raise retry cadence, focused-window retry trimming, and existing call sites.
 
-Marker summary: platform window operations; raise/focus; style material helpers; does not close.
+Marker summary: pending-front retry queue; about-to-wait scheduling; DockFloating fronting; does
+not close.
 
 ## Source Shape
 
-- `crates/fret-launch/src/runner/desktop/runner/window_platform.rs` owns `bring_window_to_front`,
-  `set_window_opacity`, `set_window_hit_test_passthrough_all`, `set_window_hit_test`,
-  `set_window_background_material`, and the private Windows region passthrough helper.
+- `crates/fret-launch/src/runner/desktop/runner/window_front.rs` owns `PendingFrontRequest`,
+  `enqueue_window_front`, `process_pending_front_requests`, and `next_pending_front_deadline`.
 - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps `WindowRuntime`,
-  `PendingWheelEvent`, `TimerEntry`, and `DockTearoffFollow` without defining platform operation
-  helper bodies; the follow-up M111 split moves the remaining pending-front record and retry owner
-  out too.
-- Existing call sites in `crates/fret-launch/src/runner/desktop/runner/window_style.rs`,
-  `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs`,
-  `crates/fret-launch/src/runner/desktop/runner/window_geometry.rs`,
-  `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`, and
-  `crates/fret-launch/src/runner/desktop/runner/docking/create.rs` continue to use the same helper
-  semantics through the private runner module boundary.
+  `PendingWheelEvent`, `TimerEntry`, and `DockTearoffFollow` without defining pending-front records.
+- `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps window creation,
+  insertion, close, force-close, and surface alpha lifecycle helpers without owning pending-front
+  retry behavior.
+- Existing call sites in `crates/fret-launch/src/runner/desktop/runner/window_geometry.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/window_under_cursor.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/docking/create.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs`, and
+  `crates/fret-launch/src/runner/desktop/runner/event_loop.rs` continue to use the same private
+  runner methods through the module boundary.
 
 ## Commands Run
 
@@ -64,13 +66,13 @@ git diff --check
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass, with the existing `WORKSTREAM.json` CRLF normalization warning.
-- Broader workspace gates were not run because M110 is a private `fret-launch` owner split with no
+- Broader workspace gates were not run because M111 is a private `fret-launch` owner split with no
   public API or cross-crate behavior change; the package check, targeted nextest, and source gates
   cover this claim.
 
 ## Verdict
 
-This keeps desktop runner platform window operations source-auditable in a dedicated owner and
+This keeps desktop runner pending-front retry behavior source-auditable in a dedicated owner and
 leaves `window.rs` as the runtime state record owner. It does not close `DW-P1-linux-003`; the next
 true closure event remains a dated real Linux Wayland compositor acceptance note from
 `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`.

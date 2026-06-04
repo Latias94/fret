@@ -52,15 +52,6 @@ pub(super) struct PendingWheelEvent {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct PendingFrontRequest {
-    pub(super) source_window: Option<fret_core::AppWindowId>,
-    pub(super) panel: Option<fret_core::PanelKey>,
-    pub(super) created_at: Instant,
-    pub(super) next_attempt_at: Instant,
-    pub(super) attempts_left: u8,
-}
-
-#[derive(Debug, Clone)]
 pub(super) struct TimerEntry {
     pub(super) window: Option<fret_core::AppWindowId>,
     pub(super) deadline: Instant,

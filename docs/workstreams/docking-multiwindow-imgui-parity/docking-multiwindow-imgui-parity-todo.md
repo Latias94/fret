@@ -1108,8 +1108,19 @@ Each TODO is labeled:
         `bring_window_to_front`, opacity application, hit-test passthrough, region hit-test
         fallback, background material application, and non-macOS/non-Windows fallback behavior.
       - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps `WindowRuntime`,
-        `PendingWheelEvent`, `PendingFrontRequest`, `TimerEntry`, and `DockTearoffFollow` without
-        defining platform operation helper bodies.
+        `PendingWheelEvent`, `TimerEntry`, and `DockTearoffFollow` without defining platform operation helper bodies;
+        the follow-up M111 split moves the remaining pending-front record and retry owner out too.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window front owner split keeps pending-front retry scheduling out of
+      the window state and lifecycle owners:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M111_RUNNER_WINDOW_FRONT_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_front.rs` owns
+        `PendingFrontRequest`, `enqueue_window_front`, `process_pending_front_requests`, and
+        `next_pending_front_deadline` for DockFloating fronting and about-to-wait retry deadlines.
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps window runtime state without
+        defining pending-front records; `window_lifecycle.rs` keeps create/insert/destroy lifecycle
+        helpers without owning pending-front retry behavior.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.

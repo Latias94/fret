@@ -1706,11 +1706,23 @@ Marker summary: platform under-cursor lookup; z-order fallback; DockFloating tar
 Windows foreground raising, macOS ordered-front logging, opacity application, hit-test passthrough,
 region hit-test fallback, background material application, and non-macOS/non-Windows fallback
 behavior. `crates/fret-launch/src/runner/desktop/runner/window.rs` now keeps `WindowRuntime`,
-`PendingWheelEvent`, `PendingFrontRequest`, `TimerEntry`, and `DockTearoffFollow` only. Runtime
-behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
-freezes the split through the docking multiwindow source gate.
+`PendingWheelEvent`, `TimerEntry`, and `DockTearoffFollow` only after the follow-up M111
+pending-front split. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
 
 Marker summary: platform window operations; raise/focus; style material helpers.
+
+2026-06-04 desktop runner window front owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_front.rs` now owns the pending-front retry
+queue, `PendingFrontRequest`, `enqueue_window_front`, `process_pending_front_requests`, and
+`next_pending_front_deadline`. `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps
+runtime state records and `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps
+create/insert/destroy lifecycle helpers without pending-front retry behavior. Runtime behavior and
+public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split through the docking multiwindow source gate.
+
+Marker summary: pending-front retry queue; about-to-wait scheduling; DockFloating fronting.
 
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
