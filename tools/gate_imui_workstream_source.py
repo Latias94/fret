@@ -40516,21 +40516,66 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy.rs"),
             required=[
+                "mod defaults;",
+                "mod runtime;",
+                "mod visibility;",
+            ],
+            forbidden=[
+                "#[test]",
                 "use super::*;",
+                "popup_options_default_to_imgui_like_hue_bar_surface",
+                "popup_options_can_hide_every_popup_affordance",
+                "popup_runtime_options_are_local_overrides_until_defaults_change",
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy/defaults.rs"),
+            required=[
+                "use super::super::*;",
                 "popup_options_default_to_imgui_like_hue_bar_surface",
                 "popup_side_preview_defaults_to_imgui_current_and_original",
                 "popup_side_preview_uses_imgui_three_by_two_color_button_ratio",
                 "alpha_preview_options_cover_imgui_color_button_preview_modes",
                 "tooltip_options_default_to_imgui_hover_preview_enabled",
                 "copy_options_default_to_imgui_context_copy_enabled",
+            ],
+            forbidden=[
                 "popup_options_can_hide_every_popup_affordance",
-                "empty_palette_does_not_count_as_visible_popup_content",
-                "non_empty_history_counts_as_visible_popup_content_without_palette",
+                "popup_runtime_options_are_local_overrides_until_defaults_change",
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy/runtime.rs"),
+            required=[
+                "use super::super::*;",
                 "popup_runtime_options_are_local_overrides_until_defaults_change",
                 "popup_runtime_options_do_not_re_enable_hidden_picker_policy",
                 "popup_runtime_options_are_ignored_when_options_surface_is_disabled",
             ],
             forbidden=[
+                "popup_options_can_hide_every_popup_affordance",
+                "empty_palette_does_not_count_as_visible_popup_content",
+                "non_empty_history_counts_as_visible_popup_content_without_palette",
+                "popup_options_default_to_imgui_like_hue_bar_surface",
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy/visibility.rs"),
+            required=[
+                "use super::super::*;",
+                "popup_options_can_hide_every_popup_affordance",
+                "empty_palette_does_not_count_as_visible_popup_content",
+                "non_empty_history_counts_as_visible_popup_content_without_palette",
+            ],
+            forbidden=[
+                "popup_options_default_to_imgui_like_hue_bar_surface",
+                "popup_runtime_options_are_local_overrides_until_defaults_change",
                 "popup_numeric_input_modes_are_explicit_and_ordered",
                 "sv_picker_position_preserves_hue_and_clamps_sv",
             ],

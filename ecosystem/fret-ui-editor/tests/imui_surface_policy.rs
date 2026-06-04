@@ -151,6 +151,14 @@ const COLOR_EDIT_TESTS_PICKER_HUE_WHEEL_TRIANGLE_RS: &str =
     include_str!("../src/controls/color_edit/tests/picker/hue_wheel_triangle.rs");
 const COLOR_EDIT_TESTS_PICKER_PREVIEW_ALPHA_RS: &str =
     include_str!("../src/controls/color_edit/tests/picker/preview_alpha.rs");
+const COLOR_EDIT_TESTS_POPUP_POLICY_RS: &str =
+    include_str!("../src/controls/color_edit/tests/popup_policy.rs");
+const COLOR_EDIT_TESTS_POPUP_POLICY_DEFAULTS_RS: &str =
+    include_str!("../src/controls/color_edit/tests/popup_policy/defaults.rs");
+const COLOR_EDIT_TESTS_POPUP_POLICY_RUNTIME_RS: &str =
+    include_str!("../src/controls/color_edit/tests/popup_policy/runtime.rs");
+const COLOR_EDIT_TESTS_POPUP_POLICY_VISIBILITY_RS: &str =
+    include_str!("../src/controls/color_edit/tests/popup_policy/visibility.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -959,6 +967,34 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     );
     assert!(COLOR_EDIT_TESTS_PICKER_PREVIEW_ALPHA_RS.contains("hsv_color_edits_preserve"));
     assert!(COLOR_EDIT_TESTS_PICKER_PREVIEW_ALPHA_RS.contains("popup_original_restore_matches"));
+    assert!(COLOR_EDIT_TESTS_POPUP_POLICY_RS.contains("mod defaults;"));
+    assert!(COLOR_EDIT_TESTS_POPUP_POLICY_RS.contains("mod runtime;"));
+    assert!(COLOR_EDIT_TESTS_POPUP_POLICY_RS.contains("mod visibility;"));
+    assert!(!COLOR_EDIT_TESTS_POPUP_POLICY_RS.contains("#[test]"));
+    assert!(
+        COLOR_EDIT_TESTS_POPUP_POLICY_DEFAULTS_RS
+            .contains("popup_options_default_to_imgui_like_hue_bar_surface")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_POPUP_POLICY_DEFAULTS_RS
+            .contains("copy_options_default_to_imgui_context_copy_enabled")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_POPUP_POLICY_RUNTIME_RS
+            .contains("popup_runtime_options_are_local_overrides_until_defaults_change")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_POPUP_POLICY_RUNTIME_RS
+            .contains("popup_runtime_options_are_ignored_when_options_surface_is_disabled")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_POPUP_POLICY_VISIBILITY_RS
+            .contains("popup_options_can_hide_every_popup_affordance")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_POPUP_POLICY_VISIBILITY_RS
+            .contains("non_empty_history_counts_as_visible_popup_content_without_palette")
+    );
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));
     assert!(!COLOR_EDIT_POPUP_RS.contains("Color picker (stub)"));

@@ -7657,3 +7657,13 @@ opening the slice.
       `tests/picker/preview_alpha.rs` owns alpha-preserving HSV edits and preview/restore
       coverage. The workstream manifest, source gate, and `imui_surface_policy` freeze the picker
       test hub boundary.
+- [x] Split editor `ColorEdit` popup policy tests into private child owners without changing popup
+      option defaults, side-preview ratio coverage, tooltip/copy defaults, visible-content
+      predicate rules, runtime override synchronization, hidden-picker enforcement, shared imports,
+      or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/tests/popup_policy.rs` now keeps only child module routing.
+      `tests/popup_policy/defaults.rs` owns default option and side-preview coverage,
+      `tests/popup_policy/visibility.rs` owns popup visible-content predicate coverage, and
+      `tests/popup_policy/runtime.rs` owns runtime override synchronization and policy enforcement.
+      The workstream manifest, source gate, and `imui_surface_policy` freeze the popup policy test
+      hub boundary.

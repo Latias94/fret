@@ -7398,7 +7398,17 @@ plus `imui_surface_policy` freeze the frame/affordance split.
 routing. `tests/picker/bars.rs` owns SV/hue/alpha bar local-position mapping,
 `tests/picker/hue_wheel.rs` owns hue-wheel ring target coverage,
 `tests/picker/hue_wheel_triangle.rs` owns barycentric SV triangle coverage, and
-`tests/picker/preview_alpha.rs` owns alpha-preserving HSV edits, checkerboard stability,
+ `tests/picker/preview_alpha.rs` owns alpha-preserving HSV edits, checkerboard stability,
 preview-alpha policy, original restore behavior, and alpha a11y text coverage. Assertions,
 production ColorEdit code, public ColorEdit APIs, and IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the picker test hub split.
+
+2026-06-05 editor ColorEdit popup policy test owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy.rs` now keeps only child
+module routing. `tests/popup_policy/defaults.rs` owns popup option defaults, side-preview default
+and ratio coverage, alpha preview variants, and tooltip/copy defaults.
+`tests/popup_policy/visibility.rs` owns popup visible-content predicate coverage, and
+`tests/popup_policy/runtime.rs` owns runtime override synchronization, hidden-picker enforcement,
+and disabled options-surface policy. Assertions, production ColorEdit code, public ColorEdit APIs,
+and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
+`imui_surface_policy` freeze the popup policy test hub split.

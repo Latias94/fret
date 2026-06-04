@@ -29458,6 +29458,32 @@ Focused gates:
 - Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
+
+2026-06-05 editor ColorEdit popup policy test owner split:
+
+- Claim: ColorEdit popup policy unit coverage moved from the single
+  `ecosystem/fret-ui-editor/src/controls/color_edit/tests/popup_policy.rs` file into private child
+  test owners without changing popup option defaults, side-preview ratio coverage, tooltip/copy
+  defaults, visible-content predicate rules, runtime override synchronization, hidden-picker
+  enforcement, production ColorEdit code, public ColorEdit APIs, or IMUI facade APIs.
+- Evidence anchors: `tests/popup_policy.rs` now declares only `mod defaults;`, `mod runtime;`, and
+  `mod visibility;`; `tests/popup_policy/defaults.rs` owns popup option defaults, side-preview
+  default and ratio coverage, alpha preview variants, and tooltip/copy defaults;
+  `tests/popup_policy/visibility.rs` owns popup visible-content predicate coverage; and
+  `tests/popup_policy/runtime.rs` owns runtime override synchronization, hidden-picker
+  enforcement, and disabled options-surface policy. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the popup policy test hub
+  boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
 - Passed: `git diff --check`.
 
 2026-06-05 editor ColorEdit alpha bar surface owner split:
