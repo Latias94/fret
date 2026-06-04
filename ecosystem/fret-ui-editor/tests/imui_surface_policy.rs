@@ -20,6 +20,8 @@ const COLOR_EDIT_POPUP_EYEDROPPER_RS: &str =
 const COLOR_EDIT_DRAG_DROP_RS: &str = include_str!("../src/controls/color_edit/drag_drop.rs");
 const COLOR_EDIT_DRAG_DROP_SOURCE_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/source.rs");
+const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS: &str =
+    include_str!("../src/controls/color_edit/drag_drop/source/handlers.rs");
 const COLOR_EDIT_LAYOUT_RS: &str = include_str!("../src/controls/color_edit/layout.rs");
 const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model.rs");
 const COLOR_EDIT_MODEL_NUMERIC_RS: &str =
@@ -558,17 +560,32 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("pressable_add_on_pointer_move"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("PressablePointerDownResult"));
     assert!(!COLOR_EDIT_DRAG_DROP_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("mod handlers;"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains(
+            "pub(in crate::controls::color_edit) use handlers::install_color_drag_source;"
+        )
+    );
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn resolve_color_drag_threshold<"));
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("COMPONENT_IMUI_DRAG_THRESHOLD_PX"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn install_color_drag_source<"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("pressable_add_on_pointer_down"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("pressable_add_on_pointer_move"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("pressable_add_on_pointer_up"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("begin_cross_window_drag_with_kind"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("begin_drag_with_kind"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("DragPhase::Dragging"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("PressablePointerUpResult::SkipActivate"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn color_drag_threshold_exceeded("));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("pressable_add_on_pointer_down"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("pressable_add_on_pointer_move"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("pressable_add_on_pointer_up"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("begin_cross_window_drag_with_kind"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("DragPhase::Dragging"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn color_drag_threshold_exceeded("));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("fn install_color_drag_source<"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_down"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_move"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_up"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("begin_cross_window_drag_with_kind"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("begin_drag_with_kind"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("DragPhase::Dragging"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("PressablePointerUpResult::SkipActivate")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("DeliveredColorDrop"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("fn color_drag_threshold_exceeded("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("ColorEditAlphaPreview::Half"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn color_side_preview<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));

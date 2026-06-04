@@ -29668,6 +29668,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit drag-source handler owner split:
+
+- Claim: drag-source pointer lifecycle moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop/source.rs` into private
+  `drag_drop/source/handlers.rs` without changing drag threshold token resolution, cross-window
+  drag startup, same-window drag startup, threshold activation, active drag store updates,
+  delivered-drop recording, cancel cleanup, skip-activate behavior, or public ColorEdit / IMUI
+  facade APIs.
+- Evidence anchors: `drag_drop/source.rs` now keeps `resolve_color_drag_threshold(...)`,
+  `COMPONENT_IMUI_DRAG_THRESHOLD_PX` lookup, finite/non-negative threshold fallback, and the
+  `install_color_drag_source(...)` re-export only; `drag_drop/source/handlers.rs` owns
+  `install_color_drag_source(...)`, `MouseButton::Left` gating,
+  `begin_cross_window_drag_with_kind(...)`, `begin_drag_with_kind(...)`,
+  `pressable_add_on_pointer_down`, `pressable_add_on_pointer_move`,
+  `pressable_add_on_pointer_up`, `DragPhase::Dragging`, `ActiveColorDrag`,
+  `DeliveredColorDrop`, `PressablePointerUpResult::SkipActivate`, drag kind derivation, and
+  `color_drag_threshold_exceeded(...)`. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject pointer handler details drifting
+  back into the threshold owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

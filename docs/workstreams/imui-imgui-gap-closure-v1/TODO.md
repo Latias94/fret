@@ -7537,3 +7537,13 @@ opening the slice.
       `color_edit/popup/options/picker/card.rs` owns the picker radio-card pressable, runtime
       picker writeback, selected/disabled palette, thumbnail mounting, caption text, card sizing,
       and redraw request. The source gate and `imui_surface_policy` freeze the card owner boundary.
+- [x] Split editor `ColorEdit` drag-source pointer lifecycle into a private child owner without
+      changing drag threshold token resolution, cross-window drag startup, same-window drag
+      startup, drag threshold activation, delivered-drop recording, cancel cleanup, skip-activate
+      behavior, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/drag_drop/source.rs` now keeps only the drag threshold token/fallback
+      policy and re-exports the source installer. `color_edit/drag_drop/source/handlers.rs` owns
+      drag kind derivation, pointer down/move/up handler installation, cross-window/same-window
+      drag startup, active drag store updates, delivered-drop insertion, cancel cleanup, and
+      threshold-exceeded math. The source gate and `imui_surface_policy` freeze the handler owner
+      boundary.

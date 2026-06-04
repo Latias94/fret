@@ -629,6 +629,16 @@ and redraw request. Hue Bar / Hue Wheel runtime mutation, thumbnail reuse, capti
 option-card sizing, and public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit drag-source handler owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop/source.rs` now keeps only drag
+threshold token resolution, finite/non-negative fallback policy, and the re-export for
+`install_color_drag_source(...)`. `drag_drop/source/handlers.rs` owns drag kind derivation,
+pointer down/move/up handler installation, cross-window and same-window drag startup, active drag
+store updates, delivered-drop insertion, cancel cleanup, threshold-exceeded math, and
+skip-activate behavior. Drag threshold semantics, cross-window source behavior, same-window source
+behavior, delivery recording, and public ColorEdit / IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating
