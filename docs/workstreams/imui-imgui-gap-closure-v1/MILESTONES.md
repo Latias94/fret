@@ -1846,6 +1846,18 @@ gate.
 
 Marker summary: window state event owner; focus/environment refresh; app-handler dispatch only.
 
+2026-06-04 desktop runner window mapped events owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_mapped_events.rs` now owns
+`handle_window_mapped_event`, including catchall platform event mapping, wheel-event coalescing
+into `WindowRuntime::pending_wheel`, redraw requesting after coalesced wheel input, RenderDoc F12
+capture requests, Escape cancellation for active cross-window dock drags, mapped event delivery,
+and effect draining. `app_handler.rs` keeps only catchall dispatch plus the existing redraw-time
+pending wheel drain. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: mapped window event owner; wheel coalescing catchall; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

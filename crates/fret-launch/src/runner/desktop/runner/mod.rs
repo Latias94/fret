@@ -192,6 +192,7 @@ mod window_external_drag;
 mod window_front;
 mod window_geometry;
 mod window_insert;
+mod window_mapped_events;
 mod window_metrics;
 mod window_os_create;
 mod window_platform;

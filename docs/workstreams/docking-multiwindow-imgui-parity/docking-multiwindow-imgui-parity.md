@@ -407,6 +407,11 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M121_RUNNER_WINDOW_STATE_EVENTS_OWNER_SPLIT_2026-06-04.md`
   (moves `WindowEvent::ModifiersChanged`, `WindowEvent::ThemeChanged`, and
   `WindowEvent::Focused` handling into `window_state_events.rs`)
+- Latest runner window mapped events owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M122_RUNNER_WINDOW_MAPPED_EVENTS_OWNER_SPLIT_2026-06-04.md`
+  (moves catchall mapped-event delivery, wheel coalescing, RenderDoc F12 handling, and Escape
+  dock-drag cancellation into `window_mapped_events.rs` while leaving redraw-time wheel drain in
+  `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

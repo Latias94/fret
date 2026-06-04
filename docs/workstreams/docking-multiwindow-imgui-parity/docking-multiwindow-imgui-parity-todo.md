@@ -1241,6 +1241,18 @@ Each TODO is labeled:
         `WindowEvent::Focused` dispatch.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window mapped events owner split keeps catchall mapping out of the
+      application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M122_RUNNER_WINDOW_MAPPED_EVENTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_mapped_events.rs` owns
+        `handle_window_mapped_event`, including catchall platform event mapping, wheel-event
+        coalescing into `pending_wheel`, redraw requesting after coalesced wheel input, RenderDoc
+        F12 capture requests, Escape cancellation for active cross-window dock drags, mapped event
+        delivery, and effect draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only catchall
+        dispatch and the existing redraw-time pending wheel drain.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
