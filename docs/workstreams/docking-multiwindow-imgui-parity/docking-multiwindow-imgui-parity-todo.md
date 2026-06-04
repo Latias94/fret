@@ -1096,9 +1096,20 @@ Each TODO is labeled:
         `WindowUnderCursorHit`, macOS ordered-window lookup, Windows root-HWND lookup and z-order
         walk fallback, heuristic rect fallback, preferred-window exclusion, and z-order bump bookkeeping
         used by DockFloating drag target identification.
-      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps window runtime state plus
-        platform focus/style/hit-test/background-material helpers without defining under-cursor or
-        z-order fallback helper bodies.
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps window runtime state without
+        defining under-cursor or z-order fallback helper bodies; the follow-up M110 split moves the
+        remaining platform operation helpers out too.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window platform owner split keeps OS raise and style material helpers
+      out of the window state owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M110_RUNNER_WINDOW_PLATFORM_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_platform.rs` owns
+        `bring_window_to_front`, opacity application, hit-test passthrough, region hit-test
+        fallback, background material application, and non-macOS/non-Windows fallback behavior.
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps `WindowRuntime`,
+        `PendingWheelEvent`, `PendingFrontRequest`, `TimerEntry`, and `DockTearoffFollow` without
+        defining platform operation helper bodies.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.

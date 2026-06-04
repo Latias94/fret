@@ -142,7 +142,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && let Some(material) = effective_background_material
             && material != fret_runtime::WindowBackgroundMaterialRequest::None
         {
-            let _ = super::window::set_window_background_material(window.as_ref(), material);
+            let _ =
+                super::window_platform::set_window_background_material(window.as_ref(), material);
         }
 
         if let Some(hit_test) = style.hit_test.clone() {
@@ -150,12 +151,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_runtime::RunnerWindowStyleDiagnosticsStore::clamp_hit_test_request(
                     hit_test, caps,
                 );
-            let _ = super::window::set_window_hit_test(window.as_ref(), &effective);
+            let _ = super::window_platform::set_window_hit_test(window.as_ref(), &effective);
         }
         if let Some(opacity) = style.opacity
             && caps.ui.window_opacity
         {
-            let _ = super::window::set_window_opacity(window.as_ref(), opacity.as_f32());
+            let _ = super::window_platform::set_window_opacity(window.as_ref(), opacity.as_f32());
         }
 
         Ok((window, accessibility))

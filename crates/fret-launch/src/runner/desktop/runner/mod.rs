@@ -193,6 +193,7 @@ mod window_close;
 mod window_geometry;
 mod window_lifecycle;
 mod window_metrics;
+mod window_platform;
 mod window_position;
 mod window_requests;
 mod window_style;
@@ -241,9 +242,8 @@ use macos_cursor::{
 use macos_cursor::{dock_tearoff_log, macos_window_log};
 use restart_trigger::RestartTrigger;
 use streaming_images::UploadedImageEntry;
-use window::{
-    DockTearoffFollow, PendingFrontRequest, TimerEntry, WindowRuntime, bring_window_to_front,
-};
+use window::{DockTearoffFollow, PendingFrontRequest, TimerEntry, WindowRuntime};
+use window_platform::bring_window_to_front;
 
 pub struct WinitRunner<D: WinitAppDriver> {
     pub config: WinitRunnerConfig,

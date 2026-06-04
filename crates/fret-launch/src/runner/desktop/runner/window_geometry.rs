@@ -2,7 +2,7 @@ use fret_core::time::Instant;
 use fret_core::{AppWindowId, Size, WindowLogicalPosition};
 use fret_runtime::WindowResizeDirection;
 
-use super::window::bring_window_to_front;
+use super::window_platform::bring_window_to_front;
 use super::{WinitAppDriver, WinitRunner};
 
 impl<D: WinitAppDriver> WinitRunner<D> {

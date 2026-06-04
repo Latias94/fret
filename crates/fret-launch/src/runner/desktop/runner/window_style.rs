@@ -34,7 +34,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_runtime::RunnerWindowStyleDiagnosticsStore::clamp_hit_test_request(
                     hit_test, &caps,
                 );
-            let applied = window::set_window_hit_test(window_handle.as_ref(), &effective);
+            let applied = window_platform::set_window_hit_test(window_handle.as_ref(), &effective);
             let passthrough_all = matches!(
                 effective,
                 fret_runtime::WindowHitTestRequestV1::PassthroughAll
@@ -56,7 +56,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if let Some(opacity) = style.opacity
             && caps.ui.window_opacity
         {
-            let _ = window::set_window_opacity(window_handle.as_ref(), opacity.as_f32());
+            let _ = window_platform::set_window_opacity(window_handle.as_ref(), opacity.as_f32());
         }
 
         self.app.with_global_mut(
@@ -82,7 +82,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         &caps,
                     )
                 });
-            let _ = window::set_window_background_material(window_handle.as_ref(), material);
+            let _ =
+                window_platform::set_window_background_material(window_handle.as_ref(), material);
         }
 
         if let Some(context) = self.context.as_ref() {

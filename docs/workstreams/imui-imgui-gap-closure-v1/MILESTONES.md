@@ -1694,11 +1694,23 @@ Marker summary: client/screen coordinate helpers; cursor-grab placement; client-
 under-cursor lookup, macOS ordered-window matching, Windows root-HWND lookup and z-order walk
 fallback, heuristic rect fallback, preferred-window exclusion, and z-order bump bookkeeping used by
 DockFloating drag target identification. `crates/fret-launch/src/runner/desktop/runner/window.rs`
-keeps window runtime state plus platform focus/style/hit-test/background-material helpers. Runtime
+keeps window runtime state; the follow-up M110 split moves the remaining platform operation helpers
+out too. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: platform under-cursor lookup; z-order fallback; DockFloating target identification.
+
+2026-06-04 desktop runner window platform owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_platform.rs` now owns platform raise/focus,
+Windows foreground raising, macOS ordered-front logging, opacity application, hit-test passthrough,
+region hit-test fallback, background material application, and non-macOS/non-Windows fallback
+behavior. `crates/fret-launch/src/runner/desktop/runner/window.rs` now keeps `WindowRuntime`,
+`PendingWheelEvent`, `PendingFrontRequest`, `TimerEntry`, and `DockTearoffFollow` only. Runtime
 behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
 freezes the split through the docking multiwindow source gate.
 
-Marker summary: platform under-cursor lookup; z-order fallback; DockFloating target identification.
+Marker summary: platform window operations; raise/focus; style material helpers.
 
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
