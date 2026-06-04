@@ -29828,6 +29828,35 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M90_RUNNER_SURFACE_LIFECYCLE_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner wgpu adapter diagnostics owner split:
+
+- Claim: adapter selection diagnostics moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/wgpu_adapter_diagnostics.rs` without changing
+  runtime behavior, `FRET_WGPU_BACKEND` request logging, adapter identity logging, downlevel
+  capability warnings, init-attempt logging, `WgpuAdapterSelectionSnapshot` publication, or public
+  effect surfaces.
+- Evidence anchors: `mod.rs` declares `mod wgpu_adapter_diagnostics;`;
+  `wgpu_adapter_diagnostics.rs` owns `publish_wgpu_adapter_selection_diagnostics`; `app_handler.rs`
+  keeps winit `can_create_surfaces`, context construction, renderer construction, startup font
+  initialization, and `ApplicationHandler` wiring.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo check -p fret-launch --lib`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M91 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M91_RUNNER_WGPU_ADAPTER_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

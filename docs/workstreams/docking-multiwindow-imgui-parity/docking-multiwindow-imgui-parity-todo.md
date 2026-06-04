@@ -880,6 +880,16 @@ Each TODO is labeled:
         `ApplicationHandler` wiring.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner wgpu adapter diagnostics owner split keeps adapter-selection logging
+      out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M91_RUNNER_WGPU_ADAPTER_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/wgpu_adapter_diagnostics.rs` owns
+        `FRET_WGPU_BACKEND` request logging, adapter identity logging, downlevel capability
+        warnings, init-attempt logging, and `WgpuAdapterSelectionSnapshot` publication.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps context construction,
+        renderer construction, startup font initialization, and `ApplicationHandler` wiring.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

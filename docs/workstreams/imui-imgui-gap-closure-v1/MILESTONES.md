@@ -1492,6 +1492,16 @@ scheduling, and surface destroy cleanup to
 effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
 through the docking multiwindow source gate.
 
+2026-06-04 desktop runner wgpu adapter diagnostics owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps winit event routing,
+context construction, renderer construction, startup font initialization, and
+`ApplicationHandler` wiring while delegating `FRET_WGPU_BACKEND` request logging, adapter identity
+logging, downlevel capability warnings, init-attempt logging, and
+`WgpuAdapterSelectionSnapshot` publication to
+`crates/fret-launch/src/runner/desktop/runner/wgpu_adapter_diagnostics.rs`. Runtime behavior and
+public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split through the docking multiwindow source gate.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

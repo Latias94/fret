@@ -182,6 +182,7 @@ mod surface_lifecycle;
 mod text_effects;
 mod timers;
 mod webview;
+mod wgpu_adapter_diagnostics;
 mod wheel_coalescing;
 #[cfg(target_os = "windows")]
 mod win32;
