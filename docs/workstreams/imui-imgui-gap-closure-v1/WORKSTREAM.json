@@ -1278,6 +1278,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/input.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/layout.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/model.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/model/hsv.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/model/numeric.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/model/hue_wheel.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/options.rs",

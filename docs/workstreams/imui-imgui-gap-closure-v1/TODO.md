@@ -7596,3 +7596,13 @@ opening the slice.
       `ColorEditDragDropOptions`, `ColorEditTooltipOptions`, `ColorEditCopyOptions`, and their
       defaults. The workstream manifest, source gate, and `imui_surface_policy` freeze the policy
       record owner boundary.
+- [x] Split editor `ColorEdit` HSV color-space and picker coordinate helpers into a private model
+      child owner without changing hex parse/format behavior, RGB/HSV conversion, alpha-preserving
+      color conversion, SV/hue local-position mapping, sanitize policy, picker a11y text, numeric
+      tests, hue-wheel model ownership, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/model.rs` now keeps hex parse/format plus hue-wheel/numeric/HSV
+      re-export routing. `color_edit/model/hsv.rs` owns `HsvColor`, `hsv_from_color(...)`,
+      `rgb_to_hsv(...)`, `hsv_to_rgb(...)`, alpha-preserving color conversion, SV/hue coordinate
+      helpers, sanitize helpers, `sv_picker_a11y_text(...)`, and `hue_percent_text(...)`. The
+      workstream manifest, source gate, and `imui_surface_policy` freeze the HSV model owner
+      boundary.

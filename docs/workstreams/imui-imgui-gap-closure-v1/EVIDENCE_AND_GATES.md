@@ -29831,6 +29831,32 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit HSV model owner split:
+
+- Claim: ColorEdit HSV color-space helpers, SV/hue local-position mapping, unit/hue sanitization,
+  and picker a11y text helpers moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/model.rs` into private `model/hsv.rs` without
+  changing hex parse/format behavior, RGB/HSV conversion, alpha-preserving color conversion,
+  numeric tests, hue-wheel model ownership, picker interaction behavior, or public ColorEdit / IMUI
+  facade APIs.
+- Evidence anchors: `model.rs` now declares `mod hsv;`, re-exports the HSV owner surface, keeps
+  `format_hex(...)` and `parse_hex(...)`, and continues routing hue-wheel and numeric owners.
+  `model/hsv.rs` owns `HsvColor`, `hsv_from_color(...)`, `rgb_to_hsv(...)`, `hsv_to_rgb(...)`,
+  `hsv_to_color_preserving_alpha(...)`, `color_from_rgb_preserving_alpha(...)`,
+  `hsv_with_sv_from_local_position(...)`, `hue_from_local_y(...)`, unit/hue sanitizers, step
+  projection, `sv_picker_a11y_text(...)`, and `hue_percent_text(...)`. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the HSV model owner boundary and
+  reject these implementation details drifting back into the model root.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

@@ -687,6 +687,15 @@ re-exports, and policy record re-exports only. `options/policies.rs` owns
 IMUI facade APIs remain unchanged, and the workstream manifest, source gate, and
 `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit HSV model owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/model.rs` now keeps hex parse/format plus
+hue-wheel, numeric, and HSV owner re-export routing only. `model/hsv.rs` owns `HsvColor`,
+RGB/HSV conversion, alpha-preserving color conversion, SV/hue local-position mapping, unit/hue
+sanitization, step projection, and picker a11y text helpers. Hex parsing/formatting, numeric tests,
+hue-wheel model ownership, picker interaction behavior, and public ColorEdit / IMUI facade APIs
+remain unchanged, and the workstream manifest, source gate, and `imui_surface_policy` freeze the
+split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating
