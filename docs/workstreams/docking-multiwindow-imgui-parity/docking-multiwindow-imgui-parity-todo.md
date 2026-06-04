@@ -1532,6 +1532,19 @@ Each TODO is labeled:
       - Marker: redraw-time clear color selection before render-scene recording.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw webviews owner split keeps redraw-time webview snapshot
+      selection and sync out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M146_RUNNER_WINDOW_REDRAW_WEBVIEWS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_webviews.rs` owns
+        `WindowRedrawWebViewSyncInput`, `sync_window_redraw_webviews`,
+        `window_redraw_webview_snapshot`, `WebViewHost`, `webview_has_surfaces_for_window`,
+        `last_semantics_snapshot`, `driver.semantics_snapshot`, and
+        `RunnerWebViewState::sync_window` dispatch.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only webview sync owner
+        dispatch after frame recording and before target updates.
+      - Marker: redraw-time webview snapshot and sync before target updates.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

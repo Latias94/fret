@@ -220,6 +220,7 @@ mod window_redraw_surface_resize;
 mod window_redraw_target_updates;
 mod window_redraw_text_diagnostics;
 mod window_redraw_text_input;
+mod window_redraw_webviews;
 mod window_redraw_wgpu_allocator_report;
 mod window_redraw_wgpu_report;
 mod window_requests;

@@ -508,6 +508,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M145_RUNNER_WINDOW_REDRAW_CLEAR_COLOR_OWNER_SPLIT_2026-06-04.md`
   (moves transparent-window clear-color selection into `window_redraw_clear_color.rs` while leaving
   render-scene recording in its existing owner)
+- Latest runner window redraw webviews owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M146_RUNNER_WINDOW_REDRAW_WEBVIEWS_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time webview snapshot selection and sync dispatch into
+  `window_redraw_webviews.rs` while leaving request/event bridging in `webview.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

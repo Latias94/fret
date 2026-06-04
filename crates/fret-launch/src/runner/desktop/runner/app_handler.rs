@@ -484,32 +484,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         hitch_record_ms = Some(elapsed.as_millis() as u64);
                     }
 
-                    #[cfg(feature = "webview-wry")]
-                    let webview_snapshot =
-                        if self.app.global::<fret_webview::WebViewHost>().is_some()
-                            && fret_webview::webview_has_surfaces_for_window(&self.app, app_window)
-                        {
-                            state.last_semantics_snapshot.clone().or_else(|| {
-                                self.driver.semantics_snapshot(
-                                    &mut self.app,
-                                    app_window,
-                                    &mut state.user,
-                                )
-                            })
-                        } else {
-                            None
-                        };
-                    #[cfg(not(feature = "webview-wry"))]
-                    let webview_snapshot: Option<
-                        std::sync::Arc<fret_core::SemanticsSnapshot>,
-                    > = None;
-
-                    self.webviews.sync_window(
-                        &mut self.app,
-                        self.frame_id,
-                        app_window,
-                        state.window.as_ref(),
-                        webview_snapshot.as_ref(),
+                    super::window_redraw_webviews::sync_window_redraw_webviews(
+                        super::window_redraw_webviews::WindowRedrawWebViewSyncInput {
+                            app: &mut self.app,
+                            driver: &mut self.driver,
+                            webviews: &mut self.webviews,
+                            frame_id: self.frame_id,
+                            app_window,
+                            user: &mut state.user,
+                            window: state.window.as_ref(),
+                            last_semantics_snapshot: &state.last_semantics_snapshot,
+                        },
                     );
 
                     super::window_redraw_target_updates::apply_window_redraw_target_updates(

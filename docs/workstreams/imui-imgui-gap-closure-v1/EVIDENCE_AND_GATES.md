@@ -31526,6 +31526,38 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M145_RUNNER_WINDOW_REDRAW_CLEAR_COLOR_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window redraw webviews owner split:
+
+- Claim: redraw-time webview snapshot selection and sync dispatch moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_redraw_webviews.rs` without changing webview
+  request handling, stale-surface GC, native webview host ownership, target updates, present
+  ordering, runtime behavior, or public effect surfaces.
+- Evidence anchors: `window_redraw_webviews.rs` owns `WindowRedrawWebViewSyncInput`,
+  `sync_window_redraw_webviews`, `window_redraw_webview_snapshot`, the `WebViewHost` gate,
+  `webview_has_surfaces_for_window`, cached `last_semantics_snapshot` reuse, fallback
+  `driver.semantics_snapshot`, and `RunnerWebViewState::sync_window` dispatch. `app_handler.rs`
+  keeps only webview sync owner dispatch after frame recording and before target updates.
+  `webview.rs` still owns request/event bridging, placement requests, stale-surface GC, and native
+  host state.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M146 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M146_RUNNER_WINDOW_REDRAW_WEBVIEWS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

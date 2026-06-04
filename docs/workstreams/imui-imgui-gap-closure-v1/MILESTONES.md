@@ -2154,6 +2154,20 @@ gate.
 Marker summary: redraw clear color owner; visual transparent selection; app-handler clear-color
 dispatch.
 
+2026-06-04 desktop runner window redraw webviews owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_webviews.rs` now owns
+`WindowRedrawWebViewSyncInput`, `sync_window_redraw_webviews`, and
+`window_redraw_webview_snapshot`, including the `WebViewHost` gate,
+`webview_has_surfaces_for_window`, cached `last_semantics_snapshot` reuse, fallback
+`driver.semantics_snapshot`, and `RunnerWebViewState::sync_window` dispatch. `app_handler.rs` keeps
+only webview sync owner dispatch after frame recording and before target updates. `webview.rs` still
+owns request/event bridging, placement requests, stale-surface GC, and native host state. Runtime
+behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split through the docking multiwindow source gate.
+
+Marker summary: redraw webviews owner; webview snapshot selection; app-handler webview sync
+dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
