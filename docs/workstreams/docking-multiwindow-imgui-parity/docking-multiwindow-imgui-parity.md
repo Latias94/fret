@@ -297,6 +297,9 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M94_RUNNER_DEVICE_EVENT_OWNER_SPLIT_2026-06-04.md`
   (moves cross-window device-event routing into `device_events.rs` without changing runtime
   behavior)
+- Latest runner proxy wake owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M95_RUNNER_PROXY_WAKE_OWNER_SPLIT_2026-06-04.md`
+  (moves queued proxy event dispatch into `event_loop.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

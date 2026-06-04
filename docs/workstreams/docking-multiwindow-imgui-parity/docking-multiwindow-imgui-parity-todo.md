@@ -925,6 +925,18 @@ Each TODO is labeled:
         owner.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner proxy wake owner split keeps queued proxy event dispatch out of the
+      general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M95_RUNNER_PROXY_WAKE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/event_loop.rs` owns proxy queue drain,
+        platform completion delivery, asset reload wake handling, Windows/macOS menu command
+        forwarding, macOS menu gating refresh, macOS hit-test refresh forwarding, and final effect
+        draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::proxy_wake_up` trait hook and delegates directly to the event-loop
+        owner.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

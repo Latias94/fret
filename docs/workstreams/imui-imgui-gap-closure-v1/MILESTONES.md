@@ -1532,6 +1532,17 @@ behavior, cached mouse-button cleanup, and DockFloating follow stop behavior to
 surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
 docking multiwindow source gate.
 
+2026-06-04 desktop runner proxy wake owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::proxy_wake_up` trait hook while delegating queued proxy event dispatch, proxy
+queue drain, platform completion delivery, asset reload wake handling, Windows/macOS menu command
+forwarding, macOS menu gating refresh, macOS hit-test refresh forwarding, and final effect draining
+to `crates/fret-launch/src/runner/desktop/runner/event_loop.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
+Marker summary: proxy queue drain.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

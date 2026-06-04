@@ -1,6 +1,7 @@
 #[cfg(windows)]
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use super::{ActiveEventLoop, WinitAppDriver, WinitRunner};
 use fret_runtime::PlatformCompletion;
 
 #[cfg(target_os = "macos")]
@@ -44,4 +45,52 @@ pub enum RunnerUserEvent {
     MacosMenuWillOpen,
     #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
     MacosHitTestRefreshRegions,
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(super) fn handle_proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
+        let proxy_events = &self.proxy_events;
+        let pending = proxy_events
+            .lock()
+            .ok()
+            .map(|mut q| std::mem::take(&mut *q))
+            .unwrap_or_default();
+
+        for event in pending {
+            match event {
+                RunnerUserEvent::PlatformCompletion { window, completion } => {
+                    self.deliver_platform_completion_now(window, completion);
+                }
+                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+                RunnerUserEvent::AssetReloadWake => {
+                    let windows = self.windows.keys().collect::<Vec<_>>();
+                    if let Some(asset_reload) = self.asset_reload.as_mut() {
+                        let _ = asset_reload.handle_proxy_wake(&mut self.app, &windows);
+                    }
+                }
+                #[cfg(windows)]
+                RunnerUserEvent::WindowsMenuCommand { window, command } => {
+                    self.app.push_effect(fret_app::Effect::Command {
+                        window: Some(window),
+                        command,
+                    });
+                }
+                #[cfg(target_os = "macos")]
+                RunnerUserEvent::MacosMenuCommand { window, command } => {
+                    self.app
+                        .push_effect(fret_app::Effect::Command { window, command });
+                }
+                #[cfg(target_os = "macos")]
+                RunnerUserEvent::MacosMenuWillOpen => {
+                    super::macos_menu::sync_command_gating_from_app(&self.app);
+                }
+                #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+                RunnerUserEvent::MacosHitTestRefreshRegions => {
+                    super::macos_hit_test::apply_latest_mouse_location();
+                }
+            }
+        }
+
+        self.drain_effects(event_loop);
+    }
 }
