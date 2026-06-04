@@ -35,6 +35,12 @@ const COLOR_EDIT_MODEL_RS: &str = include_str!("../src/controls/color_edit/model
 const COLOR_EDIT_MODEL_HSV_RS: &str = include_str!("../src/controls/color_edit/model/hsv.rs");
 const COLOR_EDIT_MODEL_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/model/numeric.rs");
+const COLOR_EDIT_MODEL_NUMERIC_MODE_RS: &str =
+    include_str!("../src/controls/color_edit/model/numeric/mode.rs");
+const COLOR_EDIT_MODEL_NUMERIC_PARSE_RS: &str =
+    include_str!("../src/controls/color_edit/model/numeric/parse.rs");
+const COLOR_EDIT_MODEL_NUMERIC_TEXT_RS: &str =
+    include_str!("../src/controls/color_edit/model/numeric/text.rs");
 const COLOR_EDIT_OPTIONS_RS: &str = include_str!("../src/controls/color_edit/options.rs");
 const COLOR_EDIT_OPTIONS_POLICIES_RS: &str =
     include_str!("../src/controls/color_edit/options/policies.rs");
@@ -629,9 +635,21 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_MODEL_HSV_RS.contains("fn hue_percent_text("));
     assert!(!COLOR_EDIT_MODEL_RS.contains("fn rgb_to_hsv("));
     assert!(!COLOR_EDIT_MODEL_RS.contains("fn hsv_to_rgb("));
-    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn rgb_numeric_text("));
-    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn hsv_numeric_text("));
-    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn parse_color_numeric_input("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("mod mode;"));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("mod parse;"));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("mod text;"));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("pub(in crate::controls::color_edit) use"));
+    assert!(!COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn rgb_numeric_text("));
+    assert!(!COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn parse_color_numeric_input("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_MODE_RS.contains("enum ColorNumericInputMode"));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_MODE_RS.contains("fn color_numeric_input_modes("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_MODE_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_TEXT_RS.contains("fn rgb_numeric_text("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_TEXT_RS.contains("fn hsv_numeric_text("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_TEXT_RS.contains("fn color_numeric_text("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_PARSE_RS.contains("fn parse_color_numeric_input("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_PARSE_RS.contains("fn parse_rgb_numeric_input("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_PARSE_RS.contains("fn parse_hsv_numeric_input("));
     assert!(COLOR_EDIT_MODEL_HSV_RS.contains("fn rgb_to_hsv("));
     assert!(COLOR_EDIT_MODEL_HSV_RS.contains("fn hsv_to_rgb("));
     assert!(COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS.contains("fn alpha_bar<"));
@@ -955,8 +973,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(
         COLOR_EDIT_POPUP_BODY_SECTIONS_PREVIEW_RS.contains("effective_popup_options.side_preview")
     );
-    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
-    assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn color_numeric_input_modes("));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_MODE_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
+    assert!(COLOR_EDIT_MODEL_NUMERIC_MODE_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("fn has_visible_content_with_swatches("));
     assert!(COLOR_EDIT_TESTS_PICKER_RS.contains("mod bars;"));
     assert!(COLOR_EDIT_TESTS_PICKER_RS.contains("mod hue_wheel;"));

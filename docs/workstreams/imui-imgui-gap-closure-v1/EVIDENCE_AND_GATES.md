@@ -29458,6 +29458,8 @@ Focused gates:
 - Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Passed: `python tools\check_workstream_catalog.py`.
 
 2026-06-05 editor ColorEdit popup policy test owner split:
 
@@ -29484,6 +29486,29 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit numeric model owner split:
+
+- Claim: ColorEdit numeric model implementation moved from the single
+  `ecosystem/fret-ui-editor/src/controls/color_edit/model/numeric.rs` file into private mode,
+  text, and parse owners without changing numeric mode type names, test suffix/a11y/invalid-message
+  metadata, popup numeric input ordering, RGB/HSV readout formatting, RGB/HSV text input parsing,
+  finite/range rejection behavior, alpha preservation, production call sites, public ColorEdit
+  APIs, or IMUI facade APIs.
+- Evidence anchors: `model/numeric.rs` now declares only `mod mode;`, `mod parse;`, `mod text;`
+  and stable re-exports; `model/numeric/mode.rs` owns `ColorNumericInputMode`, mode metadata, and
+  popup numeric input mode lists; `model/numeric/text.rs` owns `rgb_numeric_text(...)`,
+  `hsv_numeric_text(...)`, and `color_numeric_text(...)`; and `model/numeric/parse.rs` owns
+  `parse_color_numeric_input(...)`, RGB/HSV numeric parsing, numeric token extraction, and
+  channel/unit/hue validation. `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the numeric model hub boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.

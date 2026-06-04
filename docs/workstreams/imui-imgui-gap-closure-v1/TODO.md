@@ -7677,3 +7677,12 @@ opening the slice.
       rejection coverage, and `tests/numeric/conversion.rs` owns HSV conversion coverage. The
       workstream manifest, source gate, and `imui_surface_policy` freeze the numeric test hub
       boundary.
+- [x] Split editor `ColorEdit` numeric model implementation into private mode/text/parse owners
+      without changing numeric mode type names, test suffix/a11y/invalid-message metadata, popup
+      numeric input ordering, RGB/HSV readout formatting, RGB/HSV text input parsing, finite/range
+      rejection behavior, alpha preservation, public ColorEdit APIs, or IMUI facade APIs.
+      Result: `color_edit/model/numeric.rs` now keeps only child module routing and re-exports.
+      `model/numeric/mode.rs` owns `ColorNumericInputMode` and mode lists,
+      `model/numeric/text.rs` owns RGB/HSV readout formatting, and `model/numeric/parse.rs` owns
+      RGB/HSV numeric text parsing and channel/unit validation. The workstream manifest, source
+      gate, and `imui_surface_policy` freeze the numeric model hub boundary.

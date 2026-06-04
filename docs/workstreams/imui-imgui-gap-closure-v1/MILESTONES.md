@@ -7422,3 +7422,13 @@ RGB/RGBA hex parsing, alpha-preserving preset conversion, and numeric readout co
 coverage. Assertions, production ColorEdit code, public ColorEdit APIs, and IMUI facade APIs remain
 unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the numeric
 test hub split.
+
+2026-06-05 editor ColorEdit numeric model owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/model/numeric.rs` now keeps only child module
+routing and stable re-exports. `model/numeric/mode.rs` owns `ColorNumericInputMode`, mode metadata,
+and popup numeric input mode lists. `model/numeric/text.rs` owns RGB/HSV readout formatting.
+`model/numeric/parse.rs` owns RGB/HSV numeric text parsing, channel/unit validation, and
+alpha-preserving color conversion routing. Public ColorEdit APIs, IMUI facade APIs, and existing
+`model::{ColorNumericInputMode, color_numeric_text, parse_color_numeric_input, ...}` imports remain
+unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the numeric
+model hub split.
