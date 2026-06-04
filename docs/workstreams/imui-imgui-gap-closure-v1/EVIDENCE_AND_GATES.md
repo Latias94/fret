@@ -29617,6 +29617,32 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit side-preview cell owner split:
+
+- Claim: current preview cell construction and shared side-preview cell chrome/layout moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side.rs` into private
+  `preview/side/cell.rs` without changing side-preview current/original ordering, original restore
+  behavior, swatch dimensions, caption text role, preview stack mounting, preview a11y value, or
+  public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `preview/side.rs` now keeps `color_side_preview(...)`, current/original child
+  routing, `derived_test_id(...)` propagation, and `original::original_reference_preview_cell(...)`
+  mounting only; `preview/side/cell.rs` owns `current_preview_cell(...)`,
+  `preview_cell_container(...)`, `preview_cell_content(...)`, `preview_cell_layout()`,
+  `SIDE_PREVIEW_SWATCH_WIDTH`, `SIDE_PREVIEW_SWATCH_HEIGHT`, caption text props, preview stack
+  mounting, and formatted a11y value projection. `preview/side/original.rs` now imports
+  `preview_cell_content` and `preview_cell_layout` from the cell owner while keeping restore
+  activation and model updates local. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject cell chrome details drifting back
+  into the side-preview stack owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

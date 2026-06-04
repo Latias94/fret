@@ -609,6 +609,17 @@ token use. Checkerboard/overlay ordering, half-alpha preview composition, alpha-
 the popup alpha picker, and public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit side-preview cell owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/side.rs` now keeps side-preview
+stack assembly, current/original cell ordering, original child routing, and side/root test-id
+propagation only. `preview/side/cell.rs` owns current cell construction, shared preview cell
+content/layout, caption text-role styling, swatch dimensions, preview stack mounting, and formatted
+a11y value projection. `preview/side/original.rs` continues to own restore activation and now
+reuses the cell owner for shared layout/content. Current/original ordering, original restore
+behavior, side-preview dimensions, preview a11y values, and public ColorEdit / IMUI facade APIs
+remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the
+split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

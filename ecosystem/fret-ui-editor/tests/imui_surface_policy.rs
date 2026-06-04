@@ -107,6 +107,8 @@ const COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/fill/checkerboard.rs");
 const COLOR_EDIT_POPUP_PREVIEW_SIDE_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/side.rs");
+const COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS: &str =
+    include_str!("../src/controls/color_edit/popup/preview/side/cell.rs");
 const COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview/side/original.rs");
 const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
@@ -265,7 +267,13 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("fn checkerboard_cell_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("CHECKERBOARD_LIGHT_RGB"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_CHECKERBOARD_RS.contains("GridProps"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("mod cell;"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("mod original;"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("use cell::current_preview_cell;"));
+    assert!(
+        COLOR_EDIT_POPUP_PREVIEW_SIDE_RS
+            .contains("pub(in crate::controls::color_edit) use cell::{")
+    );
     assert!(
         COLOR_EDIT_POPUP_PREVIEW_SIDE_RS
             .contains("pub(in crate::controls::color_edit) use original::restore_reference_color;")
@@ -275,8 +283,24 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     );
     assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("OnActivate"));
     assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("PressableProps"));
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn current_preview_cell<"));
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn preview_cell_content<"));
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn preview_cell_layout()"));
+    assert!(!COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("editor_preview_caption_text_props"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("fn current_preview_cell<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("fn preview_cell_content<"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("fn preview_cell_layout()"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("editor_preview_caption_text_props"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("color_preview_stack"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("format_hex"));
     assert!(
         COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("fn original_reference_preview_cell<")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS
+            .contains("use super::cell::{preview_cell_content, preview_cell_layout};")
     );
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("fn restore_reference_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("OnActivate"));
@@ -526,8 +550,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn color_drag_threshold_exceeded("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("ColorEditAlphaPreview::Half"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn color_side_preview<"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
-    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("SIDE_PREVIEW_SWATCH_HEIGHT"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_ORIGINAL_RS.contains("fn restore_reference_color("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("fn preview_color_for_alpha_visibility("));
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("struct ColorPopupBodyArgs"));

@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use super::super::super::super::{ColorEditAlphaPreview, model::format_hex};
 use super::super::fill::preview_color_for_alpha_visibility;
+use super::cell::{preview_cell_content, preview_cell_layout};
 
 pub(super) fn original_reference_preview_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -40,7 +41,7 @@ pub(super) fn original_reference_preview_cell<H: UiHost>(
     let color = preview_color_for_alpha_visibility(original, show_alpha);
     let mut cell = cx.pressable(
         PressableProps {
-            layout: super::preview_cell_layout(),
+            layout: preview_cell_layout(),
             enabled,
             focusable: enabled,
             a11y: PressableA11y {
@@ -52,7 +53,7 @@ pub(super) fn original_reference_preview_cell<H: UiHost>(
         },
         move |cx, _st| {
             cx.pressable_add_on_activate(restore.clone());
-            vec![super::preview_cell_content(
+            vec![preview_cell_content(
                 cx,
                 "Original",
                 color,

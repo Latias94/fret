@@ -7518,3 +7518,13 @@ opening the slice.
       `color_edit/popup/preview/fill/checkerboard.rs` owns checkerboard grid construction, cell
       color parity, and light/dark checkerboard token use. The source gate and
       `imui_surface_policy` freeze the checkerboard owner boundary.
+- [x] Split editor `ColorEdit` side-preview cell chrome into a private child owner without
+      changing side-preview current/original ordering, current swatch test-id derivation,
+      original restore behavior, caption text role, swatch size, preview a11y value, or public
+      ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/preview/side.rs` now keeps only side-preview stack assembly,
+      current/original child routing, and side/root test-id propagation.
+      `color_edit/popup/preview/side/cell.rs` owns current cell construction, shared preview cell
+      content/layout, caption/chrome styling, swatch dimensions, preview stack mounting, and
+      formatted a11y value projection. The source gate and `imui_surface_policy` freeze the cell
+      owner boundary.
