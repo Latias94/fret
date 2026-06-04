@@ -551,6 +551,15 @@ spacer behavior. Alpha bar pressable behavior, alpha coordinate mapping, popup p
 and public ColorEdit / IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
 plus `imui_surface_policy` freeze the child-owner split.
 
+2026-06-05 editor ColorEdit alpha bar surface owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/bar.rs` now keeps the
+horizontal/vertical alpha bar pressable entrypoints, slider a11y props, pointer capture/release,
+and alpha mutation routing only. `alpha/bar/surface.rs` owns focused border/ring resolution,
+clipped frame chrome, 1px padding, and horizontal/vertical preview stack mounting. Horizontal and
+vertical alpha bar import paths, pointer lifecycle, alpha coordinate mapping, preview visuals, and
+public ColorEdit / IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
+plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

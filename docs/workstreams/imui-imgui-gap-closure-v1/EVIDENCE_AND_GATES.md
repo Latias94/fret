@@ -29460,6 +29460,31 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit alpha bar surface owner split:
+
+- Claim: focused surface rendering moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/alpha/bar.rs` into private
+  `alpha/bar/surface.rs` without changing horizontal/vertical alpha bar entrypoints, pressable
+  pointer lifecycle, slider a11y values, focused border/ring behavior, preview stack routing, or
+  public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `bar.rs` keeps `vertical_alpha_bar(...)`, `alpha_bar(...)`,
+  `PressableProps`, `PressableA11y`, pointer down/move/up handlers, `MouseButton::Left`,
+  `apply_vertical_alpha_bar_position(...)`, `apply_alpha_bar_position(...)`, pointer
+  capture/release, and `alpha_percent_text(...)`; `bar/surface.rs` owns
+  `vertical_alpha_bar_surface(...)`, `alpha_bar_surface(...)`, `alpha_bar_surface_frame(...)`,
+  `picker_border_and_ring(...)`, `Overflow::Clip`, frame padding/radius, and preview stack
+  mounting. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject surface details drifting back into
+  the pressable entry owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

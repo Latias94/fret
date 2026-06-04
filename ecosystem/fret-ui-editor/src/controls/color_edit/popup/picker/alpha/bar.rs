@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, MouseButton, Px};
+use fret_core::{Color, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
-    SizeStyle,
-};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle};
+use fret_ui::{ElementContext, UiHost};
 
-use super::super::{HSV_PICKER_SIZE, picker_border_and_ring};
+use super::super::HSV_PICKER_SIZE;
 use super::alpha_percent_text;
 use super::interaction::{apply_alpha_bar_position, apply_vertical_alpha_bar_position};
-use super::preview::{alpha_bar_preview_stack, vertical_alpha_bar_preview_stack};
+
+mod surface;
+
+use surface::{alpha_bar_surface, vertical_alpha_bar_surface};
 
 pub(in crate::controls::color_edit::popup) fn vertical_alpha_bar<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -91,29 +91,7 @@ pub(in crate::controls::color_edit::popup) fn vertical_alpha_bar<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let theme = Theme::global(&*cx.app);
-            let (border, ring) = picker_border_and_ring(theme);
-            let border_color = if st.focused { ring } else { border };
-
-            vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(border_color),
-                    corner_radii: Corners::all(Px(4.0)),
-                    padding: Edges::all(Px(1.0)).into(),
-                    ..Default::default()
-                },
-                move |cx| vec![vertical_alpha_bar_preview_stack(cx, rgb, alpha)],
-            )]
+            vec![vertical_alpha_bar_surface(cx, st.focused, rgb, alpha)]
         },
     );
 
@@ -200,29 +178,7 @@ pub(in crate::controls::color_edit::popup) fn alpha_bar<H: UiHost>(
                 PressablePointerUpResult::Continue
             }));
 
-            let theme = Theme::global(&*cx.app);
-            let (border, ring) = picker_border_and_ring(theme);
-            let border_color = if st.focused { ring } else { border };
-
-            vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(border_color),
-                    corner_radii: Corners::all(Px(4.0)),
-                    padding: Edges::all(Px(1.0)).into(),
-                    ..Default::default()
-                },
-                move |cx| vec![alpha_bar_preview_stack(cx, rgb, alpha)],
-            )]
+            vec![alpha_bar_surface(cx, st.focused, rgb, alpha)]
         },
     );
 

@@ -7463,3 +7463,12 @@ opening the slice.
       `ALPHA_BAR_STEPS` grid projection and alpha color interpolation, while
       `alpha/preview/thumb.rs` owns horizontal/vertical thumb overlay layout, marker chrome, and
       vertical spacer behavior. The source gate and `imui_surface_policy` freeze the split.
+- [x] Split editor `ColorEdit` alpha bar focused surface rendering into a private child owner
+      without changing horizontal/vertical alpha bar entrypoints, pressable pointer lifecycle,
+      slider a11y values, focused border/ring behavior, preview stack routing, or public ColorEdit
+      / IMUI facade APIs.
+      Result: `color_edit/popup/picker/alpha/bar.rs` now keeps horizontal/vertical pressable
+      entrypoints, a11y props, pointer capture/release, and alpha mutation routing.
+      `alpha/bar/surface.rs` owns focused border/ring resolution, clipped frame chrome, padding,
+      and horizontal/vertical preview stack mounting. The source gate and `imui_surface_policy`
+      freeze the surface owner boundary.
