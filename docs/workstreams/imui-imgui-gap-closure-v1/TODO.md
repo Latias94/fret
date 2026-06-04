@@ -1295,6 +1295,11 @@ Last updated: 2026-06-04
       surfaces. The docking source gate freezes the owner split in
       `M147_RUNNER_WINDOW_REDRAW_POST_RENDER_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md` without
       claiming Wayland compositor acceptance.
+- [x] Split desktop runner redraw-time present-capture command assembly into the private
+      window-redraw-present-capture-commands owner without changing runtime behavior or public effect
+      surfaces. The docking source gate freezes the owner split in
+      `M148_RUNNER_WINDOW_REDRAW_PRESENT_CAPTURE_COMMANDS_OWNER_SPLIT_2026-06-05.md` without
+      claiming Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

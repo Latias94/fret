@@ -2182,6 +2182,19 @@ gate.
 Marker summary: redraw post-render diagnostics owner; text diagnostics dispatch; renderer perf and
 wgpu reports; app-handler post-render diagnostics dispatch.
 
+2026-06-05 desktop runner window redraw present-capture command owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_present_capture_commands.rs` now owns
+`WindowRedrawPresentCaptureCommandsInput`, `WindowRedrawPresentCaptureCommands`, and
+`prepare_window_redraw_present_capture_commands`. The owner appends `ui_cmd` to engine command
+buffers, dispatches diag screenshot capture begin, polls bundle screenshot request dirs, and
+dispatches bundle screenshot readback begin. Screenshot finish, present submit, present finish, and
+present error recovery remain in existing owners. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: redraw present capture commands owner; command buffer assembly; screenshot capture
+begin; bundle screenshot readback begin; app-handler present-capture dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

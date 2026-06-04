@@ -511,8 +511,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     surface,
                                 )?;
 
-                            let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
-
                             let clear_color =
                                 super::window_redraw_clear_color::resolve_window_redraw_clear_color(
                                     &self.app,
@@ -554,35 +552,27 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 },
                             );
 
-                            let mut cmd_buffers = engine_command_buffers;
-                            cmd_buffers.push(ui_cmd);
-
-                            #[cfg(feature = "diag-screenshots")]
-                            let screenshot_inflight =
-                                super::window_redraw_diag_screenshots::begin_window_redraw_diag_screenshot_capture(
-                                     self.diag_screenshots.as_mut(),
-                                     app_window,
-                                     present_target.frame_view(),
-                                     &context.device,
-                                     surface.format(),
-                                     surface.size(),
-                                    &mut cmd_buffers,
-                                );
-                            let pending_bundle_screenshot =
-                                super::window_redraw_diag_screenshots::begin_window_redraw_bundle_screenshot_readback(
-                                     &self.diag_bundle_screenshots,
-                                     screenshot_dir,
-                                     present_target.frame_view(),
-                                     &context.device,
-                                     surface.format(),
-                                     surface.size(),
-                                    &mut cmd_buffers,
+                            let capture_commands =
+                                super::window_redraw_present_capture_commands::prepare_window_redraw_present_capture_commands(
+                                    super::window_redraw_present_capture_commands::WindowRedrawPresentCaptureCommandsInput {
+                                        command_buffers: engine_command_buffers,
+                                        ui_cmd,
+                                        #[cfg(feature = "diag-screenshots")]
+                                        diag_screenshots: self.diag_screenshots.as_mut(),
+                                        bundle_screenshots: &mut self.diag_bundle_screenshots,
+                                        #[cfg(feature = "diag-screenshots")]
+                                        app_window,
+                                        frame_view: present_target.frame_view(),
+                                        device: &context.device,
+                                        surface_format: surface.format(),
+                                        surface_size: surface.size(),
+                                    },
                                 );
 
                             super::window_redraw_present_submit::submit_window_redraw_present_frame(
                                 super::window_redraw_present_submit::WindowRedrawPresentSubmitInput {
                                     context,
-                                    command_buffers: cmd_buffers,
+                                    command_buffers: capture_commands.command_buffers,
                                     present_target,
                                 },
                             );
@@ -597,8 +587,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     bundle_screenshots: &self.diag_bundle_screenshots,
                                     device: &context.device,
                                     #[cfg(feature = "diag-screenshots")]
-                                    screenshot_inflight,
-                                    bundle_screenshot_readback: pending_bundle_screenshot,
+                                    screenshot_inflight: capture_commands.screenshot_inflight,
+                                    bundle_screenshot_readback: capture_commands
+                                        .bundle_screenshot_readback,
                                     surface_format: surface.format(),
                                 },
                             );

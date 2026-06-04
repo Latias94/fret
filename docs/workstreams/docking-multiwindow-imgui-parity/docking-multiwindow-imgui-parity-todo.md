@@ -1558,6 +1558,18 @@ Each TODO is labeled:
       - Marker: redraw-time post-render diagnostics before command buffer submission.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-05 runner window redraw present-capture command owner split keeps command-buffer
+      assembly and screenshot begin/readback out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M148_RUNNER_WINDOW_REDRAW_PRESENT_CAPTURE_COMMANDS_OWNER_SPLIT_2026-06-05.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_present_capture_commands.rs`
+        owns `WindowRedrawPresentCaptureCommandsInput`, `WindowRedrawPresentCaptureCommands`, and
+        `prepare_window_redraw_present_capture_commands`.
+      - The owner appends `ui_cmd`, dispatches diag screenshot capture begin, polls bundle screenshot
+        request dirs, and dispatches bundle screenshot readback begin while leaving screenshot finish
+        and present submit/finish in existing owners.
+      - Marker: redraw-time present capture commands before submit.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
