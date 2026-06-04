@@ -4,21 +4,24 @@ use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
 
-use crate::primitives::input_group::derived_test_id;
-
 use super::super::super::drag_drop::ColorDragDropStore;
 use super::super::super::{
-    ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditPaletteEntry,
-    ColorEditPopupNumericInputs, ColorEditPopupOptions, ColorEditPopupPicker,
+    ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditPaletteEntry, ColorEditPopupOptions,
     ColorEditPopupRuntimeOptions, OnColorEditEyedropper, OnColorEditPaletteSlotDrop,
 };
-use super::super::eyedropper::color_eyedropper_action;
-use super::super::numeric::color_numeric_inputs;
-use super::super::options::color_picker_options;
-use super::super::picker::{alpha_bar, hsv_hue_wheel_picker, hsv_picker};
-use super::super::preview::color_side_preview;
-use super::super::swatches::{history_swatches, preset_swatches};
 use super::layout::ColorPopupContentArgs;
+
+mod actions;
+mod picker;
+mod preview;
+mod swatches;
+
+use actions::{
+    color_popup_eyedropper_section, color_popup_numeric_section, color_popup_picker_options_section,
+};
+use picker::{color_popup_picker_section, color_popup_standalone_alpha_bar_section};
+use preview::color_popup_side_preview_section;
+use swatches::{color_popup_history_swatches_section, color_popup_preset_swatches_section};
 
 pub(super) struct ColorPopupBodySectionsArgs {
     pub(super) current: Color,
@@ -85,143 +88,110 @@ pub(super) fn color_popup_body_sections<H: UiHost>(
         eyedropper_test_id,
     } = args;
 
-    let picker = match effective_popup_options.picker {
-        ColorEditPopupPicker::HsvHueBar => Some(hsv_picker(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            show_alpha,
-            effective_popup_options.shows_alpha_bar(show_alpha),
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "hsv"),
-        )),
-        ColorEditPopupPicker::HsvHueWheel => Some(hsv_hue_wheel_picker(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            show_alpha,
-            effective_popup_options.shows_alpha_bar(show_alpha),
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "hsv-wheel"),
-        )),
-        ColorEditPopupPicker::Hidden => None,
-    };
-    let picker_options = popup_options.shows_picker_options(show_alpha).then(|| {
-        color_picker_options(
-            cx,
-            current,
-            popup_options,
-            runtime_options,
-            popup_runtime_options.clone(),
-            show_alpha,
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "options"),
-        )
-    });
-    let side_preview = effective_popup_options
-        .side_preview
-        .has_visible_content()
-        .then(|| {
-            color_side_preview(
-                cx,
-                current,
-                reference_color,
-                model.clone(),
-                draft.clone(),
-                error.clone(),
-                effective_popup_options.side_preview,
-                show_alpha,
-                enabled,
-                alpha_preview,
-                derived_test_id(popup_test_id.as_ref(), "preview"),
-            )
-        });
+    let picker = color_popup_picker_section(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        show_alpha,
+        effective_popup_options,
+        enabled,
+        popup_test_id.as_ref(),
+    );
+    let picker_options = color_popup_picker_options_section(
+        cx,
+        current,
+        popup_options,
+        runtime_options,
+        popup_runtime_options.clone(),
+        show_alpha,
+        enabled,
+        popup_test_id.as_ref(),
+    );
+    let side_preview = color_popup_side_preview_section(
+        cx,
+        current,
+        reference_color,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        effective_popup_options,
+        show_alpha,
+        enabled,
+        alpha_preview,
+        popup_test_id.as_ref(),
+    );
     let has_side_preview = side_preview.is_some();
-    let eyedropper = on_eyedropper.map(|on_eyedropper| {
-        color_eyedropper_action(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            show_alpha,
-            enabled,
-            on_eyedropper,
-            eyedropper_test_id,
-        )
-    });
-    let numbers = (effective_popup_options.numeric_inputs != ColorEditPopupNumericInputs::Hidden)
-        .then(|| {
-            color_numeric_inputs(
-                cx,
-                current,
-                model.clone(),
-                draft.clone(),
-                rgb_draft.clone(),
-                hsv_draft.clone(),
-                numeric_error.clone(),
-                effective_popup_options.numeric_inputs,
-                show_alpha,
-                enabled,
-                derived_test_id(popup_test_id.as_ref(), "numbers"),
-            )
-        });
-    let history_swatches = (!history.is_empty()).then(|| {
-        history_swatches(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            open.clone(),
-            show_alpha,
-            enabled,
-            alpha_preview,
-            history.clone(),
-            drag_drop_store.clone(),
-            drag_drop_options,
-            drag_threshold,
-            popup_test_id.clone(),
-        )
-    });
-    let swatches = (effective_popup_options.presets && !palette.is_empty()).then(|| {
-        preset_swatches(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            open.clone(),
-            show_alpha,
-            enabled,
-            alpha_preview,
-            palette.clone(),
-            drag_drop_store.clone(),
-            drag_drop_options,
-            drag_threshold,
-            on_palette_slot_drop.clone(),
-            popup_test_id.clone(),
-        )
-    });
-    let standalone_alpha_bar = if effective_popup_options.picker == ColorEditPopupPicker::Hidden
-        && effective_popup_options.shows_alpha_bar(show_alpha)
-    {
-        Some(alpha_bar(
-            cx,
-            current,
-            model.clone(),
-            draft.clone(),
-            error.clone(),
-            enabled,
-            derived_test_id(popup_test_id.as_ref(), "alpha"),
-        ))
-    } else {
-        None
-    };
+    let eyedropper = color_popup_eyedropper_section(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        show_alpha,
+        enabled,
+        on_eyedropper,
+        eyedropper_test_id,
+    );
+    let numbers = color_popup_numeric_section(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        rgb_draft.clone(),
+        hsv_draft.clone(),
+        numeric_error.clone(),
+        effective_popup_options,
+        show_alpha,
+        enabled,
+        popup_test_id.as_ref(),
+    );
+    let history_swatches = color_popup_history_swatches_section(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        open.clone(),
+        show_alpha,
+        enabled,
+        alpha_preview,
+        history.clone(),
+        drag_drop_store.clone(),
+        drag_drop_options,
+        drag_threshold,
+        popup_test_id.clone(),
+    );
+    let swatches = color_popup_preset_swatches_section(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        open.clone(),
+        show_alpha,
+        enabled,
+        alpha_preview,
+        palette.clone(),
+        drag_drop_store.clone(),
+        drag_drop_options,
+        drag_threshold,
+        on_palette_slot_drop.clone(),
+        effective_popup_options,
+        popup_test_id.clone(),
+    );
+    let standalone_alpha_bar = color_popup_standalone_alpha_bar_section(
+        cx,
+        current,
+        model.clone(),
+        draft.clone(),
+        error.clone(),
+        effective_popup_options,
+        show_alpha,
+        enabled,
+        popup_test_id.as_ref(),
+    );
 
     ColorPopupBodySections {
         content: ColorPopupContentArgs {

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-04
+Last updated: 2026-06-05
 
 ## Worktree Convergence - 2026-05-26
 
@@ -7443,3 +7443,14 @@ opening the slice.
       bounds helpers only. `ecosystem/fret-plot/src/models/heatmap.rs` owns both grid-value model
       records, finite min/max projection, sanitized data bounds, and row-major `value_at(...)`
       lookup. The IMUI source gate freezes the root re-export hub and heatmap owner boundary.
+- [x] Split editor `ColorEdit` popup body section construction into private picker/actions/preview/
+      swatches owners without changing popup chrome, picker selection, standalone alpha-bar
+      behavior, picker-options runtime overrides, eyedropper action, numeric rows, history/preset
+      swatches, side-preview restore behavior, or public ColorEdit / IMUI facade APIs.
+      Result: `controls/color_edit/popup/body/sections.rs` now keeps the section argument record,
+      section call order, `has_side_preview`, and `ColorPopupContentArgs` assembly only.
+      `sections/picker.rs` owns picker-shape and standalone alpha-bar selection,
+      `sections/actions.rs` owns picker-options, eyedropper, and numeric section construction,
+      `sections/preview.rs` owns side-preview construction, and `sections/swatches.rs` owns
+      history/preset swatch section construction. The IMUI source gate and
+      `imui_surface_policy` freeze those child-owner boundaries.

@@ -40,6 +40,14 @@ const COLOR_EDIT_POPUP_BODY_LAYOUT_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/layout.rs");
 const COLOR_EDIT_POPUP_BODY_SECTIONS_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/sections.rs");
+const COLOR_EDIT_POPUP_BODY_SECTIONS_ACTIONS_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/sections/actions.rs");
+const COLOR_EDIT_POPUP_BODY_SECTIONS_PICKER_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/sections/picker.rs");
+const COLOR_EDIT_POPUP_BODY_SECTIONS_PREVIEW_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/sections/preview.rs");
+const COLOR_EDIT_POPUP_BODY_SECTIONS_SWATCHES_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/sections/swatches.rs");
 const COLOR_EDIT_POPUP_NUMERIC_RS: &str =
     include_str!("../src/controls/color_edit/popup/numeric.rs");
 const COLOR_EDIT_POPUP_NUMERIC_FIELD_RS: &str =
@@ -389,10 +397,40 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("fn picker_side_preview_row<"));
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("ColorEditPopupPicker::Hidden"));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueBar"));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_picker_options("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_eyedropper_action("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod actions;"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod picker;"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod preview;"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod swatches;"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_picker_options_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_side_preview_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_eyedropper_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_numeric_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_history_swatches_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_preset_swatches_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_picker_section("));
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_standalone_alpha_bar_section(")
+    );
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueBar"));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_picker_options("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_side_preview("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_eyedropper_action("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_numeric_inputs("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("history_swatches("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("preset_swatches("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_PICKER_RS.contains("ColorEditPopupPicker::HsvHueBar"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_PICKER_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_PICKER_RS.contains("alpha_bar("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ACTIONS_RS.contains("color_picker_options("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ACTIONS_RS.contains("color_eyedropper_action("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ACTIONS_RS.contains("color_numeric_inputs("));
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_ACTIONS_RS.contains("ColorEditPopupNumericInputs::Hidden")
+    );
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_PREVIEW_RS.contains("color_side_preview("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_SWATCHES_RS.contains("history_swatches("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_SWATCHES_RS.contains("preset_swatches("));
     assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("color_picker_options("));
     assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("color_eyedropper_action("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
@@ -423,7 +461,9 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("fn hue_wheel_picker_thumbnail<"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("sv_picker_preview_stack("));
     assert!(COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS.contains("hue_wheel_canvas("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("effective_popup_options.side_preview"));
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_PREVIEW_RS.contains("effective_popup_options.side_preview")
+    );
     assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("ColorEditPopupNumericInputs::RgbAndHsv"));
     assert!(COLOR_EDIT_MODEL_NUMERIC_RS.contains("fn color_numeric_input_modes("));
     assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("fn has_visible_content_with_swatches("));

@@ -32775,3 +32775,31 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit popup sections child-owner split:
+
+- Claim: popup section construction moved from the aggregate
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` owner into private
+  picker/actions/preview/swatches child owners without changing popup chrome, section ordering,
+  picker selection, standalone alpha-bar behavior, picker-options runtime overrides, eyedropper
+  action, numeric rows, history/preset swatches, side-preview restore behavior, or public ColorEdit
+  / IMUI facade APIs.
+- Evidence anchors: `sections.rs` keeps `ColorPopupBodySectionsArgs`,
+  `ColorPopupBodySections`, `color_popup_body_sections(...)`, section call order,
+  `has_side_preview`, and final `ColorPopupContentArgs` assembly only;
+  `sections/picker.rs` owns `ColorEditPopupPicker::{HsvHueBar,HsvHueWheel,Hidden}` dispatch and
+  standalone `alpha_bar(...)` selection; `sections/actions.rs` owns
+  `color_picker_options(...)`, `color_eyedropper_action(...)`, and `color_numeric_inputs(...)`;
+  `sections/preview.rs` owns `effective_popup_options.side_preview` and
+  `color_side_preview(...)`; `sections/swatches.rs` owns `history_swatches(...)` and
+  `preset_swatches(...)`. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reject those details drifting back
+  into the sections hub.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

@@ -7189,3 +7189,14 @@ storage, finite min/max fallback, sanitized data bounds, and row-major `value_at
 Public `crate::models::{HeatmapPlotModel, Histogram2DPlotModel}` imports, declarative heatmap and
 histogram2d plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
+
+2026-06-05 editor ColorEdit popup sections child-owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` now keeps the popup
+section argument record, section sequencing, `has_side_preview`, and final
+`ColorPopupContentArgs` assembly. Private child owners now carry the section-specific construction:
+`sections/picker.rs` owns picker-shape and standalone alpha-bar selection, `sections/actions.rs`
+owns picker-options/eyedropper/numeric section construction, `sections/preview.rs` owns
+side-preview construction, and `sections/swatches.rs` owns history/preset swatch construction.
+Popup chrome, layout ordering, runtime picker overrides, side-preview restore behavior, swatch
+drag/drop hooks, numeric rows, public ColorEdit APIs, and IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
