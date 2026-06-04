@@ -677,6 +677,16 @@ row. HSV Hue Bar / Hue Wheel picker selection, alpha visibility, shared color ap
 layout metrics, and public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit auxiliary policy record owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/options.rs` now keeps the public
+`ColorEditOptions` aggregate, root Debug/Default assembly, palette/history/callback fields, popup
+re-exports, and policy record re-exports only. `options/policies.rs` owns
+`ColorEditAlphaPreview`, `ColorEditDragDropOptions`, `ColorEditTooltipOptions`,
+`ColorEditCopyOptions`, and their defaults. Public option type names, default values,
+`ColorEditOptions` field layout, popup options, palette/history callbacks, and public ColorEdit /
+IMUI facade APIs remain unchanged, and the workstream manifest, source gate, and
+`imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

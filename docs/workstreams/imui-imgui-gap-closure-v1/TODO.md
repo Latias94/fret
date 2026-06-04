@@ -7587,3 +7587,12 @@ opening the slice.
       `hsv_hue_wheel_picker(...)`, derived child test IDs, horizontal `FlexProps` construction, and
       SV/hue/wheel/alpha child composition. The source gate and `imui_surface_policy` freeze the
       layout owner boundary.
+- [x] Split editor `ColorEdit` auxiliary policy records into a private options child owner without
+      changing public option type names, default values, root `ColorEditOptions` fields, popup
+      options, palette/history callbacks, debug projection, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/options.rs` now keeps `ColorEditOptions`, root Debug/Default assembly,
+      palette/history/callback fields, popup re-exports, and policy record re-exports.
+      `color_edit/options/policies.rs` owns `ColorEditAlphaPreview`,
+      `ColorEditDragDropOptions`, `ColorEditTooltipOptions`, `ColorEditCopyOptions`, and their
+      defaults. The workstream manifest, source gate, and `imui_surface_policy` freeze the policy
+      record owner boundary.

@@ -29808,6 +29808,29 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit auxiliary policy record owner split:
+
+- Claim: ColorEdit alpha preview, drag/drop, tooltip, and copy policy records moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/options.rs` into private
+  `options/policies.rs` without changing public option type names, default values,
+  `ColorEditOptions` fields, popup options, palette/history callbacks, Debug projection, or public
+  ColorEdit / IMUI facade APIs.
+- Evidence anchors: `options.rs` now declares `mod policies;`, re-exports
+  `ColorEditAlphaPreview`, `ColorEditDragDropOptions`, `ColorEditTooltipOptions`, and
+  `ColorEditCopyOptions`, and keeps `ColorEditOptions`, Debug/Default assembly, palette/history
+  callback fields, and popup re-exports. `options/policies.rs` owns the four auxiliary policy
+  records and their `Default` impls. `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the policy owner boundary and
+  reject these record definitions drifting back into the root options owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of
