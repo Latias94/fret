@@ -1868,6 +1868,17 @@ docking multiwindow source gate.
 
 Marker summary: moved window event owner; macOS hit-test refresh; app-handler dispatch only.
 
+2026-06-04 desktop runner window pre-dispatch events owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_pre_dispatch_events.rs` now owns
+`handle_window_pre_dispatch_event`, including raw winit event delivery into the accessibility
+backend and `FRET_IME_DEBUG` winit IME cached cursor-area logging. `app_handler.rs` keeps only the
+pre-dispatch call before `WindowEvent` matching. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: window pre-dispatch event owner; accessibility event feed; IME debug logging;
+app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

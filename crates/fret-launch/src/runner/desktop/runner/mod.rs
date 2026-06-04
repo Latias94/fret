@@ -201,6 +201,7 @@ mod window_platform;
 mod window_pointer_button;
 mod window_pointer_move;
 mod window_position;
+mod window_pre_dispatch_events;
 mod window_requests;
 mod window_state_events;
 mod window_style;

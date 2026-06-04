@@ -1263,6 +1263,16 @@ Each TODO is labeled:
         `WindowEvent::Moved(..)` dispatch.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window pre-dispatch events owner split keeps raw event side feeds out
+      of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M124_RUNNER_WINDOW_PRE_DISPATCH_EVENTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_pre_dispatch_events.rs` owns
+        `handle_window_pre_dispatch_event`, including accessibility `process_event` delivery and
+        `FRET_IME_DEBUG` winit `WindowEvent::Ime` cached cursor-area logging.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only the pre-dispatch
+        call before matching the window event.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

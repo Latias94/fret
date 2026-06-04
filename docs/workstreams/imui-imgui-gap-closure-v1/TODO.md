@@ -1175,6 +1175,11 @@ Last updated: 2026-06-03
   freezes the owner split in
   `M123_RUNNER_WINDOW_MOVED_EVENTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
   acceptance.
+- [x] Split desktop runner raw window-event pre-dispatch handling into the private
+  window-pre-dispatch-events owner without changing runtime behavior or public effect surfaces. The
+  docking source gate freezes the owner split in
+  `M124_RUNNER_WINDOW_PRE_DISPATCH_EVENTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+  compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

@@ -30815,6 +30815,36 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M123_RUNNER_WINDOW_MOVED_EVENTS_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window pre-dispatch events owner split:
+
+- Claim: raw window-event pre-dispatch handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_pre_dispatch_events.rs` without changing
+  event ordering before `WindowEvent` matching, accessibility backend `process_event` delivery,
+  `FRET_IME_DEBUG` winit IME logging, cached cursor-area reporting, runtime behavior, or public
+  effect surfaces.
+- Evidence anchors: `window_pre_dispatch_events.rs` owns
+  `handle_window_pre_dispatch_event`, accessibility `process_event`, `WindowEvent::Ime`,
+  `FRET_IME_DEBUG`, and `state.platform.ime_cursor_area().is_some()`; `app_handler.rs` calls that
+  helper before matching the window event.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M124 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M124_RUNNER_WINDOW_PRE_DISPATCH_EVENTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from
