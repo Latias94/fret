@@ -403,6 +403,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M120_RUNNER_WINDOW_POINTER_BUTTON_OWNER_SPLIT_2026-06-04.md`
   (moves `WindowEvent::PointerButton` left-release drag cleanup and dock-source Up/Down rerouting
   into `window_pointer_button.rs`)
+- Latest runner window state events owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M121_RUNNER_WINDOW_STATE_EVENTS_OWNER_SPLIT_2026-06-04.md`
+  (moves `WindowEvent::ModifiersChanged`, `WindowEvent::ThemeChanged`, and
+  `WindowEvent::Focused` handling into `window_state_events.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

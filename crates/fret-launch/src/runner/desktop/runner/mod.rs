@@ -199,6 +199,7 @@ mod window_pointer_button;
 mod window_pointer_move;
 mod window_position;
 mod window_requests;
+mod window_state_events;
 mod window_style;
 mod window_turn;
 mod window_under_cursor;

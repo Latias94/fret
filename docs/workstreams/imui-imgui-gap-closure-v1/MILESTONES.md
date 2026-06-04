@@ -1833,6 +1833,19 @@ multiwindow source gate.
 
 Marker summary: pointer button event owner; left release drag cleanup; app-handler dispatch only.
 
+2026-06-04 desktop runner window state events owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_state_events.rs` now owns
+`handle_window_modifiers_changed`, `handle_window_theme_changed`, and
+`handle_window_focus_changed`, including modifier platform event mapping, internal drag hover
+rerouting, theme/environment refresh, redraw requesting, focus state updates, pressed-button reset
+on focus loss, focus z-order bump, `Event::WindowFocusChanged` delivery, and macOS focus logging.
+`app_handler.rs` keeps only `WindowEvent::ModifiersChanged`, `WindowEvent::ThemeChanged`, and
+`WindowEvent::Focused` dispatch. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: window state event owner; focus/environment refresh; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

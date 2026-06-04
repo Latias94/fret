@@ -489,6 +489,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M120_RUNNER_WINDOW_POINTER_BUTTON_OWNER_SPLIT_2026-06-04.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M121_RUNNER_WINDOW_STATE_EVENTS_OWNER_SPLIT_2026-06-04.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
@@ -726,6 +730,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M118_RUNNER_WINDOW_SURFACE_RESIZE_OWNER_SPLIT_2026-06-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M119_RUNNER_WINDOW_POINTER_MOVE_OWNER_SPLIT_2026-06-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M120_RUNNER_WINDOW_POINTER_BUTTON_OWNER_SPLIT_2026-06-04.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M121_RUNNER_WINDOW_STATE_EVENTS_OWNER_SPLIT_2026-06-04.md",
     "crates/fret-launch/src/runner/desktop/runner/change_propagation.rs",
     "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
@@ -806,6 +811,7 @@
     "crates/fret-launch/src/runner/desktop/runner/window_pointer_button.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_pointer_move.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_position.rs",
+    "crates/fret-launch/src/runner/desktop/runner/window_state_events.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_style.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_turn.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_under_cursor.rs",

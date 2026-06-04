@@ -30720,6 +30720,39 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M120_RUNNER_WINDOW_POINTER_BUTTON_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window state events owner split:
+
+- Claim: `WindowEvent::ModifiersChanged`, `WindowEvent::ThemeChanged`, and
+  `WindowEvent::Focused` handling moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_state_events.rs` without changing modifier
+  platform mapping, internal drag hover rerouting, theme/environment refresh, redraw requesting,
+  focus state updates, pressed-button reset on focus loss, focus z-order bump,
+  `Event::WindowFocusChanged` delivery, macOS focus logging, pointer event handling, or public
+  effect surfaces.
+- Evidence anchors: `window_state_events.rs` owns `handle_window_modifiers_changed`,
+  `handle_window_theme_changed`, `handle_window_focus_changed`,
+  `route_internal_drag_hover_from_cursor`, `update_window_environment_for_window_ref`,
+  `request_redraw`, `bump_window_z_order`, and `Event::WindowFocusChanged`; `app_handler.rs`
+  dispatches the three state events to those helpers.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M121 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M121_RUNNER_WINDOW_STATE_EVENTS_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

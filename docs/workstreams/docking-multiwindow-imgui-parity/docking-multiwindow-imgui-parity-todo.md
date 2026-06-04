@@ -1227,6 +1227,20 @@ Each TODO is labeled:
         `WindowEvent::PointerButton` dispatch.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window state events owner split keeps modifiers/theme/focus state
+      handling out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M121_RUNNER_WINDOW_STATE_EVENTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_state_events.rs` owns
+        `handle_window_modifiers_changed`, `handle_window_theme_changed`, and
+        `handle_window_focus_changed`, including modifier platform mapping, internal drag hover
+        rerouting, theme/environment refresh, redraw requesting, focus state updates,
+        pressed-button reset on focus loss, z-order bump, `Event::WindowFocusChanged` delivery,
+        and macOS focus logging.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only
+        `WindowEvent::ModifiersChanged`, `WindowEvent::ThemeChanged`, and
+        `WindowEvent::Focused` dispatch.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
