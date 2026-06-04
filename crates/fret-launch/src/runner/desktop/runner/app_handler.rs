@@ -1790,27 +1790,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
 
         #[cfg(any(target_os = "android", target_os = "ios"))]
-        {
-            // Only attempt to (re)create missing surfaces after winit has indicated surfaces may
-            // be created for this lifecycle turn. Calling the `can_create_surfaces` hook
-            // directly would bypass the winit gate and can fail early on Android.
-            let surfaces_available = self
-                .app
-                .global::<fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore>()
-                .map(|s| s.snapshot().surfaces_available)
-                .unwrap_or(false);
-
-            if surfaces_available && self.context.is_some() {
-                let needs_surfaces = self
-                    .windows
-                    .iter()
-                    .any(|(_app_window, state)| state.surface.is_none());
-                if needs_surfaces {
-                    self.try_create_missing_surfaces();
-                    self.drain_effects(event_loop);
-                }
-            }
-        }
+        self.handle_about_to_wait_mobile_surface_recreation(event_loop);
 
         self.handle_about_to_wait_internal_drag_poll(event_loop);
         let turn_now = self.handle_about_to_wait_turn_bookkeeping();
