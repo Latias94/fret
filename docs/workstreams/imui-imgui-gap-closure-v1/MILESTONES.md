@@ -581,6 +581,16 @@ HSV mutation behavior, focused surface rendering, canvas painting, and public Co
 facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
 `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit SV preview grid/thumb owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv/preview.rs` now keeps only the
+SV preview stack entrypoint and child ordering. `sv/preview/grid.rs` owns `SV_PICKER_STEPS`, grid
+track construction, saturation/value cell projection, `unit_from_step(...)`, and
+HSV-to-color rendering. `sv/preview/thumb.rs` owns the saturation/value thumb overlay, vertical
+spacer, marker chrome, and shared horizontal thumb spacer reuse. SV preview stack ordering, grid
+color projection, thumb geometry, popup picker composition, and public ColorEdit / IMUI facade APIs
+remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the
+split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

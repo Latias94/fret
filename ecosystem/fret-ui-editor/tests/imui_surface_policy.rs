@@ -91,6 +91,10 @@ const COLOR_EDIT_POPUP_PICKER_SV_BAR_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/sv/bar.rs");
 const COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/sv/preview.rs");
+const COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_GRID_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/sv/preview/grid.rs");
+const COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_THUMB_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/sv/preview/thumb.rs");
 const COLOR_EDIT_POPUP_PREVIEW_RS: &str =
     include_str!("../src/controls/color_edit/popup/preview.rs");
 const COLOR_EDIT_POPUP_PREVIEW_FILL_RS: &str =
@@ -272,7 +276,25 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
         "pub(in crate::controls::color_edit::popup) use preview::sv_picker_preview_stack;"
     ));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_BAR_RS.contains("fn sv_picker<"));
-    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("fn sv_picker_grid<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("mod grid;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("mod thumb;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("fn sv_picker_preview_stack<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("sv_picker_grid(cx, hsv.hue)"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS
+            .contains("sv_picker_thumb_overlay(cx, hsv.saturation, hsv.value)")
+    );
+    assert!(!COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("fn sv_picker_grid<"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("fn sv_picker_thumb_overlay<"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_RS.contains("SV_PICKER_STEPS"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_GRID_RS.contains("fn sv_picker_grid<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_GRID_RS.contains("SV_PICKER_STEPS"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_GRID_RS.contains("unit_from_step"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_GRID_RS.contains("GridProps"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_THUMB_RS.contains("fn sv_picker_thumb_overlay<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_THUMB_RS.contains("fn sv_thumb_vertical_spacer<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_THUMB_RS.contains("Axis::Vertical"));
+    assert!(COLOR_EDIT_POPUP_PICKER_SV_PREVIEW_THUMB_RS.contains("horizontal_bar_thumb_spacer"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS.contains("mod bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS.contains("mod interaction;"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_BAR_RS.contains("mod preview;"));

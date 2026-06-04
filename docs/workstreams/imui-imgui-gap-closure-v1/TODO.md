@@ -7492,3 +7492,12 @@ opening the slice.
       installation, left-button gating, capture/release cleanup, target hit testing, and
       `apply_hue_wheel_position(...)` routing through the existing HSV mutation owner. The source
       gate and `imui_surface_policy` freeze the pointer owner boundary.
+- [x] Split editor `ColorEdit` SV preview grid and thumb rendering into private child owners
+      without changing SV preview stack ordering, saturation/value grid color projection, thumb
+      marker geometry, horizontal thumb spacer reuse, popup picker composition, or public ColorEdit
+      / IMUI facade APIs.
+      Result: `color_edit/popup/picker/sv/preview.rs` now keeps only the preview stack entrypoint
+      and child ordering. `sv/preview/grid.rs` owns `SV_PICKER_STEPS`, grid tracks, saturation/value
+      cell projection, and HSV-to-color rendering. `sv/preview/thumb.rs` owns the thumb overlay,
+      vertical spacer, marker chrome, and horizontal spacer reuse. The source gate and
+      `imui_surface_policy` freeze the grid/thumb owner boundary.

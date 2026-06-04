@@ -29540,6 +29540,32 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit SV preview grid/thumb owner split:
+
+- Claim: SV preview grid and thumb rendering moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/sv/preview.rs` into private
+  `sv/preview/grid.rs` and `sv/preview/thumb.rs` owners without changing SV preview stack ordering,
+  saturation/value grid color projection, thumb marker geometry, horizontal thumb spacer reuse,
+  popup picker composition, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `sv/preview.rs` keeps `sv_picker_preview_stack(...)`, `StackProps`,
+  `fill_preview_layout()`, `sv_picker_grid(cx, hsv.hue)`, and
+  `sv_picker_thumb_overlay(cx, hsv.saturation, hsv.value)` only; `sv/preview/grid.rs` owns
+  `sv_picker_grid(...)`, `SV_PICKER_STEPS`, `GridProps`, `GridTrackSizing`, `unit_from_step(...)`,
+  and `hsv_to_color_preserving_alpha(...)`; `sv/preview/thumb.rs` owns
+  `sv_picker_thumb_overlay(...)`, `sv_thumb_vertical_spacer(...)`, `Axis::Vertical`,
+  `Color::TRANSPARENT` marker chrome, and `horizontal_bar_thumb_spacer(...)` reuse.
+  `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject grid/thumb details drifting back
+  into the preview stack owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of
