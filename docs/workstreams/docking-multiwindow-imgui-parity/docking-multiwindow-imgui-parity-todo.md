@@ -1146,6 +1146,17 @@ Each TODO is labeled:
         create/insert helpers without defining close-window teardown.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window insert owner split keeps insertion/bootstrap out of the
+      window lifecycle owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M114_RUNNER_WINDOW_INSERT_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_insert.rs` owns
+        `insert_window`, `WindowRuntime`, surface setup, metrics bootstrap, registry insertion,
+        z-order bootstrap, menu registration, lifecycle diagnostics, and initial redraw/RAF
+        bootstrap.
+      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps OS window
+        creation and create-request orchestration without defining insertion/bootstrap behavior.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

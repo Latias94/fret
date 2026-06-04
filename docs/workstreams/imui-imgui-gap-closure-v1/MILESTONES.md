@@ -1749,6 +1749,18 @@ gate.
 
 Marker summary: close-window teardown; checked close; drag cleanup; diagnostics cleanup.
 
+2026-06-04 desktop runner window insert owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_insert.rs` now owns `insert_window`,
+`WindowRuntime` construction, optional surface setup, metrics bootstrap, surface config diagnostics,
+environment refresh, window registry insertion, z-order bootstrap, menu registration, lifecycle
+diagnostics, and initial redraw/RAF bootstrap. `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs`
+keeps OS window creation and create-request orchestration without insertion/bootstrap behavior.
+Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: window insertion bootstrap; metrics bootstrap; redraw bootstrap.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
