@@ -986,6 +986,18 @@ Each TODO is labeled:
         the docking follow owner before the broad effect drain.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner about-to-wait dock released-outside fallback owner split keeps
+      platform fallback scheduling out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M100_RUNNER_ABOUT_TO_WAIT_DOCK_RELEASED_OUTSIDE_FALLBACK_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs` owns
+        macOS released-outside polling, Windows poll-up routing, diagnostics pointer-input
+        isolation behavior, cursor-based drop routing, follow cleanup after Windows poll-up, and
+        fallback-triggered effect draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::about_to_wait` trait hook and delegates platform fallback scheduling
+        to the docking poll-up owner after the broad effect drain.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

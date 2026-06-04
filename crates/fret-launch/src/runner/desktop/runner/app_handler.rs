@@ -2160,20 +2160,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.drain_effects(event_loop);
 
         let now = Instant::now();
-
-        #[cfg(target_os = "macos")]
-        {
-            if self.maybe_finish_dock_drag_released_outside() {
-                self.drain_effects(event_loop);
-            }
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            if self.maybe_finish_dock_drag_released_outside_windows() {
-                self.drain_effects(event_loop);
-            }
-        }
+        self.handle_about_to_wait_dock_released_outside_fallbacks(event_loop);
 
         self.handle_about_to_wait_control_flow(event_loop, now);
     }

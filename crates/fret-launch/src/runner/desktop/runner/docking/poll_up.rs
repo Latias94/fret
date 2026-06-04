@@ -1,6 +1,27 @@
 use super::super::*;
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(in crate::runner::desktop::runner) fn handle_about_to_wait_dock_released_outside_fallbacks(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+    ) {
+        let _ = event_loop;
+
+        #[cfg(target_os = "macos")]
+        {
+            if self.maybe_finish_dock_drag_released_outside() {
+                self.drain_effects(event_loop);
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            if self.maybe_finish_dock_drag_released_outside_windows() {
+                self.drain_effects(event_loop);
+            }
+        }
+    }
+
     #[cfg(target_os = "macos")]
     pub(in crate::runner::desktop::runner) fn maybe_finish_dock_drag_released_outside(
         &mut self,

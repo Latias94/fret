@@ -1590,6 +1590,17 @@ docking multiwindow source gate.
 
 Marker summary: no-pointer-motion follow stop; non-raising stop semantics.
 
+2026-06-04 desktop runner about-to-wait DockFloating released-outside fallback owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating macOS released-outside polling,
+Windows poll-up routing, diagnostics pointer-input isolation behavior, cursor-based drop routing,
+follow cleanup after Windows poll-up, and fallback-triggered effect draining to
+`crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs`. Runtime behavior and public
+effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
+through the docking multiwindow source gate.
+
+Marker summary: released-outside fallback scheduling; platform poll-up drain.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

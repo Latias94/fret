@@ -315,6 +315,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M99_RUNNER_ABOUT_TO_WAIT_DOCK_FOLLOW_STOP_OWNER_SPLIT_2026-06-04.md`
   (moves idle DockFloating follow-stop checks into `docking/follow.rs` without changing runtime
   behavior)
+- Latest runner about-to-wait dock released-outside fallback owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M100_RUNNER_ABOUT_TO_WAIT_DOCK_RELEASED_OUTSIDE_FALLBACK_OWNER_SPLIT_2026-06-04.md`
+  (moves platform released-outside fallback scheduling into `docking/poll_up.rs` without changing
+  runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
