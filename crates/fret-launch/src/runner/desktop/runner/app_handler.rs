@@ -523,24 +523,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         RedrawPhase::Present,
                         hitch_config.is_some(),
                         || -> Result<(), fret_render::RenderError> {
-                            let frame_view = match surface.get_current_frame_view() {
-                                Ok(frame_view) => Some(frame_view),
-                                Err(source) => {
-                                    let diag_renderer_perf =
-                                        std::env::var_os("FRET_DIAG_RENDERER_PERF")
-                                            .is_some_and(|v| !v.is_empty());
-                                    if !diag_renderer_perf
-                                        || source != fret_render::SurfaceAcquireError::Other
-                                    {
-                                        return Err(
-                                            fret_render::RenderError::SurfaceAcquireFailed {
-                                                source,
-                                            },
-                                        );
-                                    }
-                                    None
-                                }
-                            };
+                            let frame_view =
+                                super::window_redraw_present_target::acquire_window_redraw_present_frame(
+                                    surface,
+                                )?;
 
                             let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
@@ -554,32 +540,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             } else {
                                 self.config.clear_color
                             };
-                            let fallback_target = if frame_view.is_none() {
-                                Some(context.device.create_texture(&wgpu::TextureDescriptor {
-                                    label: Some("fret diag renderer perf fallback target"),
-                                    size: wgpu::Extent3d {
-                                        width: surface.size().0.max(1),
-                                        height: surface.size().1.max(1),
-                                        depth_or_array_layers: 1,
+                            let present_target =
+                                super::window_redraw_present_target::prepare_window_redraw_present_target(
+                                    super::window_redraw_present_target::WindowRedrawPresentTargetInput {
+                                        context,
+                                        surface,
+                                        frame_view,
                                     },
-                                    mip_level_count: 1,
-                                    sample_count: 1,
-                                    dimension: wgpu::TextureDimension::D2,
-                                    format: surface.format(),
-                                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                                    view_formats: &[],
-                                }))
-                            } else {
-                                None
-                            };
-                            let fallback_view = fallback_target.as_ref().map(|target| {
-                                target.create_view(&wgpu::TextureViewDescriptor::default())
-                            });
-                            let target_view = frame_view
-                                .as_ref()
-                                .map(|(_, view)| view)
-                                .or(fallback_view.as_ref())
-                                .expect("renderer perf fallback should provide a target view");
+                                );
 
                             let (ui_cmd, _) =
                                 measure_redraw_phase(RedrawPhase::RenderScene, false, || {
@@ -588,7 +556,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         &context.queue,
                                         fret_render::RenderSceneParams {
                                             format: surface.format(),
-                                            target_view,
+                                            target_view: present_target.target_view(),
                                             scene: &state.scene,
                                             clear: clear_color,
                                             scale_factor,
@@ -635,27 +603,27 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             #[cfg(feature = "diag-screenshots")]
                             let screenshot_inflight =
                                 super::window_redraw_diag_screenshots::begin_window_redraw_diag_screenshot_capture(
-                                    self.diag_screenshots.as_mut(),
-                                    app_window,
-                                    frame_view.as_ref(),
-                                    &context.device,
-                                    surface.format(),
-                                    surface.size(),
+                                     self.diag_screenshots.as_mut(),
+                                     app_window,
+                                     present_target.frame_view(),
+                                     &context.device,
+                                     surface.format(),
+                                     surface.size(),
                                     &mut cmd_buffers,
                                 );
                             let pending_bundle_screenshot =
                                 super::window_redraw_diag_screenshots::begin_window_redraw_bundle_screenshot_readback(
-                                    &self.diag_bundle_screenshots,
-                                    screenshot_dir,
-                                    frame_view.as_ref(),
-                                    &context.device,
-                                    surface.format(),
-                                    surface.size(),
+                                     &self.diag_bundle_screenshots,
+                                     screenshot_dir,
+                                     present_target.frame_view(),
+                                     &context.device,
+                                     surface.format(),
+                                     surface.size(),
                                     &mut cmd_buffers,
                                 );
 
                             context.queue.submit(cmd_buffers);
-                            if let Some((frame, _view)) = frame_view {
+                            if let Some((frame, _view)) = present_target.into_frame_view() {
                                 frame.present();
                             }
                             super::scheduling_diagnostics::commit_presented_frame_for_window(

@@ -205,6 +205,7 @@ mod window_redraw_accessibility;
 mod window_redraw_diag_screenshots;
 mod window_redraw_frame_prepare;
 mod window_redraw_pending_wheel;
+mod window_redraw_present_target;
 mod window_redraw_record;
 mod window_redraw_render;
 mod window_redraw_renderer_perf;

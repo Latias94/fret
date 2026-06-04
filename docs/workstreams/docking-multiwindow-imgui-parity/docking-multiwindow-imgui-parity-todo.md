@@ -1434,6 +1434,19 @@ Each TODO is labeled:
       - Marker: redraw-time render-target update application before present.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw present-target owner split keeps surface acquire and
+      fallback target preparation out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M138_RUNNER_WINDOW_REDRAW_PRESENT_TARGET_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_present_target.rs` owns
+        `acquire_window_redraw_present_frame`, `prepare_window_redraw_present_target`,
+        `WindowRedrawPresentTarget`, `FRET_DIAG_RENDERER_PERF` fallback admission, and fallback
+        texture/view preparation.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps clear-color resolution,
+        render-scene, diagnostics, command submission, and `frame.present()` orchestration.
+      - Marker: redraw-time present surface target preparation before render-scene.
+      - Marker: fallback texture/view preparation.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

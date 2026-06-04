@@ -475,6 +475,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M137_RUNNER_WINDOW_REDRAW_TARGET_UPDATES_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time render-target update application into `window_redraw_target_updates.rs` while
   leaving only target-updates owner dispatch in `app_handler.rs`)
+- Latest runner window redraw present-target owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M138_RUNNER_WINDOW_REDRAW_PRESENT_TARGET_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time present surface target preparation into `window_redraw_present_target.rs`
+  while leaving render-scene/submit/present orchestration in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
