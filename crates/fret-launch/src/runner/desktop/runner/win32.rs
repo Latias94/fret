@@ -1,4 +1,4 @@
-use super::window::MonitorRectF64;
+use super::monitor_topology::MonitorRectF64;
 use winit::dpi::PhysicalPosition;
 
 use fret_runtime::WindowHitTestRegionV1;

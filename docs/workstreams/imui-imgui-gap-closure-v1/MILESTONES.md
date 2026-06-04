@@ -1665,6 +1665,18 @@ multiwindow source gate.
 
 Marker summary: pre-render drain; suspended wait fast path; monitor topology refresh.
 
+2026-06-04 desktop runner monitor geometry owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/monitor_topology.rs` now owns the monitor rect types,
+virtual desktop bounds lookup, physical monitor rect collection, target monitor selection,
+visibility clamping, Windows work-area preference, mixed-DPI scale lookup, and DockFloating
+outer-position settling while `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps
+window/client coordinate conversion, cursor-grab placement, z-order heuristics, and window helper
+tests. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: monitor geometry helpers; virtual desktop bounds; outer-position settle.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

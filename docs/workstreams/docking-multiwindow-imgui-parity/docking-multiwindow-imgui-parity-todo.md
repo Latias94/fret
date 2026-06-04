@@ -1065,6 +1065,18 @@ Each TODO is labeled:
         diagnostics, surface recreation, drag polling, turn bookkeeping, and later turn hooks.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner monitor geometry owner split keeps virtual desktop and outer-position
+      settling math out of the window owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M107_RUNNER_MONITOR_GEOMETRY_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/monitor_topology.rs` owns monitor rect
+        types, virtual desktop bounds, monitor rect collection, target monitor selection,
+        visibility clamping, Windows work-area preference, mixed-DPI scale lookup, and
+        DockFloating outer-position settling.
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps window/client coordinate
+        conversion, cursor-grab placement, z-order heuristics, and window helper tests without
+        defining the monitor geometry helper bodies or monitor rect types.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
