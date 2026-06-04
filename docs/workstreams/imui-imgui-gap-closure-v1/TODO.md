@@ -7528,3 +7528,12 @@ opening the slice.
       content/layout, caption/chrome styling, swatch dimensions, preview stack mounting, and
       formatted a11y value projection. The source gate and `imui_surface_policy` freeze the cell
       owner boundary.
+- [x] Split editor `ColorEdit` picker option radio-card rendering into a private child owner
+      without changing Hue Bar / Hue Wheel option ordering, picker runtime mutation, radio a11y
+      checked state, thumbnail reuse, caption text role, option-card sizing, or public ColorEdit /
+      IMUI facade APIs.
+      Result: `color_edit/popup/options/picker.rs` now keeps only picker option row composition,
+      option test-id derivation, and Hue Bar / Hue Wheel selection routing.
+      `color_edit/popup/options/picker/card.rs` owns the picker radio-card pressable, runtime
+      picker writeback, selected/disabled palette, thumbnail mounting, caption text, card sizing,
+      and redraw request. The source gate and `imui_surface_policy` freeze the card owner boundary.

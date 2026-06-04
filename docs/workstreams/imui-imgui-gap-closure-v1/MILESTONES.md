@@ -620,6 +620,15 @@ behavior, side-preview dimensions, preview a11y values, and public ColorEdit / I
 remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the
 split.
 
+2026-06-05 editor ColorEdit picker option card owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/options/picker.rs` now keeps picker option
+row composition, Hue Bar / Hue Wheel option ordering, row-level test-id derivation, and selection
+routing only. `options/picker/card.rs` owns the picker radio-card pressable, radio a11y state,
+runtime picker writeback, selected/disabled palette, thumbnail mounting, caption text, card sizing,
+and redraw request. Hue Bar / Hue Wheel runtime mutation, thumbnail reuse, caption text role,
+option-card sizing, and public ColorEdit / IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

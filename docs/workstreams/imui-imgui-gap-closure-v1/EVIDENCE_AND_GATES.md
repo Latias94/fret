@@ -29643,6 +29643,31 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit picker option card owner split:
+
+- Claim: Hue Bar / Hue Wheel picker option radio-card rendering moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options/picker.rs` into private
+  `options/picker/card.rs` without changing option ordering, picker runtime mutation, radio a11y
+  checked state, thumbnail reuse, caption text role, option-card sizing, redraw behavior, or public
+  ColorEdit / IMUI facade APIs.
+- Evidence anchors: `options/picker.rs` now keeps `picker_options_row(...)`,
+  row-level `derived_test_id(...)` calls, Hue Bar / Hue Wheel option ordering, and
+  `picker_option_button(...)` routing only; `options/picker/card.rs` owns
+  `picker_option_button(...)`, `PressableProps`, `PressableA11y`, `SemanticsRole::RadioButton`,
+  `runtime.picker = picker`, `host.request_redraw(action_cx.window)`, `hsv_from_color(...)`,
+  selected/disabled palette projection, `picker_option_thumbnail(...)`, caption text props, and
+  card sizing. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject card implementation details
+  drifting back into the picker row owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

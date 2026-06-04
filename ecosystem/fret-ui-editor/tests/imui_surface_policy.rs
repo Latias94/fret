@@ -56,6 +56,8 @@ const COLOR_EDIT_POPUP_OPTIONS_RS: &str =
     include_str!("../src/controls/color_edit/popup/options.rs");
 const COLOR_EDIT_POPUP_OPTIONS_PICKER_RS: &str =
     include_str!("../src/controls/color_edit/popup/options/picker.rs");
+const COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS: &str =
+    include_str!("../src/controls/color_edit/popup/options/picker/card.rs");
 const COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS: &str =
     include_str!("../src/controls/color_edit/popup/options/thumbnail.rs");
 const COLOR_EDIT_POPUP_PICKER_RS: &str = include_str!("../src/controls/color_edit/popup/picker.rs");
@@ -458,7 +460,26 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_NUMERIC_FIELD_RS.contains("fn color_numeric_input_field<"));
     assert!(COLOR_EDIT_POPUP_NUMERIC_FIELD_RS.contains("parse_color_numeric_input"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn color_picker_options<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("mod card;"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("use card::picker_option_button;"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("fn picker_options_row<"));
+    assert!(!COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("fn picker_option_button<"));
+    assert!(!COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("PressableProps"));
+    assert!(!COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("runtime.picker = picker"));
+    assert!(!COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("picker_option_thumbnail"));
+    assert!(
+        !COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("editor_popup_list_option_caption_text_props")
+    );
+    assert!(!COLOR_EDIT_POPUP_OPTIONS_PICKER_RS.contains("hsv_from_color"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS.contains("fn picker_option_button<"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS.contains("PressableProps"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS.contains("runtime.picker = picker"));
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS.contains("picker_option_thumbnail"));
+    assert!(
+        COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS
+            .contains("editor_popup_list_option_caption_text_props")
+    );
+    assert!(COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS.contains("hsv_from_color"));
     assert!(COLOR_EDIT_POPUP_OPTIONS_RS.contains("fn alpha_bar_option<"));
     assert!(COLOR_EDIT_MODEL_RS.contains("mod numeric;"));
     assert!(COLOR_EDIT_MODEL_RS.contains("pub(super) use numeric::{"));
