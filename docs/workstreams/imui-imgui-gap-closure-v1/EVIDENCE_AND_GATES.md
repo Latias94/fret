@@ -29512,6 +29512,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit hue-wheel picker pointer owner split:
+
+- Claim: pointer lifecycle moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel_picker.rs` into private
+  `hue_wheel_picker/pointer.rs` without changing the hue-wheel picker entrypoint, slider a11y
+  value, drag-target semantics, pointer capture/release behavior, HSV mutation routing, focused
+  surface rendering, canvas routing, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `hue_wheel_picker.rs` keeps `hue_wheel_picker(...)`, `PressableProps`,
+  `PressableA11y`, `HUE_WHEEL_PICKER_WIDTH`, `HSV_PICKER_SIZE`,
+  `install_hue_wheel_pointer_handlers(...)`, focused `picker_border_and_ring(...)` surface
+  assembly, and `hue_wheel_canvas(cx, hsv)` mounting; `hue_wheel_picker/pointer.rs` owns
+  `install_hue_wheel_pointer_handlers(...)`, drag-target `Arc<Mutex<Option<HueWheelDragTarget>>>`
+  storage, `MouseButton::Left` gating, pointer down/move/up handler installation,
+  `host.capture_pointer()`, `host.release_pointer_capture()`,
+  `hue_wheel_target_from_local_position(...)`, `hsv_with_hue_wheel_position(...)`, and
+  `apply_hue_wheel_position(...)` routing through `apply_hsv_color(...)`.
+  `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject pointer details drifting back into
+  the hue-wheel picker entry owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

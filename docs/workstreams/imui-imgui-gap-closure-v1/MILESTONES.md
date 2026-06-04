@@ -570,6 +570,17 @@ focused surface rendering, alpha coordinate mapping, preview visuals, and public
 facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
 `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit hue-wheel picker pointer owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker/hue_wheel_picker.rs` now keeps the
+hue-wheel picker pressable entrypoint, slider a11y props/value, focused border/ring surface, and
+`hue_wheel_canvas(...)` mounting. `hue_wheel_picker/pointer.rs` owns drag-target storage,
+horizontal/vertical local-position use, pointer down/move/up handler installation, left-button
+gating, capture/release cleanup, target hit testing, and `apply_hue_wheel_position(...)` routing
+through the existing HSV mutation owner. Hue-wheel picker import paths, drag target semantics,
+HSV mutation behavior, focused surface rendering, canvas painting, and public ColorEdit / IMUI
+facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
+`imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

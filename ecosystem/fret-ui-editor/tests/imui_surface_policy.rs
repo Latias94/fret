@@ -83,6 +83,8 @@ const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_wheel.rs");
 const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/hue_wheel_picker.rs");
+const COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_POINTER_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/hue_wheel_picker/pointer.rs");
 const COLOR_EDIT_POPUP_PICKER_SV_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/sv.rs");
 const COLOR_EDIT_POPUP_PICKER_SV_BAR_RS: &str =
@@ -519,11 +521,30 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS.contains("SemanticsRole::Tooltip"));
     assert!(!COLOR_EDIT_POPUP_TOOLTIP_RS.contains("editor_tooltip_readout_text_props("));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("mod pointer;"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn hue_wheel_picker<"));
-    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn apply_hue_wheel_position("));
     assert!(
-        COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS
+        COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("install_hue_wheel_pointer_handlers(")
+    );
+    assert!(!COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn apply_hue_wheel_position("));
+    assert!(
+        !COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS
             .contains("hue_wheel_target_from_local_position")
+    );
+    assert!(!COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("MouseButton::Left"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_POINTER_RS
+            .contains("fn apply_hue_wheel_position(")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_POINTER_RS
+            .contains("hue_wheel_target_from_local_position")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_POINTER_RS.contains("MouseButton::Left"));
+    assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_POINTER_RS.contains("host.capture_pointer()"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_POINTER_RS
+            .contains("host.release_pointer_capture()")
     );
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS.contains("fn hue_wheel_canvas<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_RS.contains("fn paint_hue_wheel_canvas("));

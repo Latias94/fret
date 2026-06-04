@@ -7482,3 +7482,13 @@ opening the slice.
       left-button gating, pointer capture/release, and alpha mutation routing through the existing
       alpha interaction owner. The source gate and `imui_surface_policy` freeze the pointer owner
       boundary.
+- [x] Split editor `ColorEdit` hue-wheel picker pointer lifecycle into a private child owner
+      without changing the hue-wheel picker entrypoint, slider a11y value, drag-target semantics,
+      pointer capture/release behavior, HSV mutation routing, focused surface rendering, canvas
+      routing, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/picker/hue_wheel_picker.rs` now keeps the pressable entrypoint,
+      a11y props, focused border/ring surface, and `hue_wheel_canvas(...)` mounting.
+      `hue_wheel_picker/pointer.rs` owns drag-target storage, pointer down/move/up handler
+      installation, left-button gating, capture/release cleanup, target hit testing, and
+      `apply_hue_wheel_position(...)` routing through the existing HSV mutation owner. The source
+      gate and `imui_surface_policy` freeze the pointer owner boundary.
