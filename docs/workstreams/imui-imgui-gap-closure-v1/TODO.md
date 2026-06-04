@@ -1152,6 +1152,10 @@ Last updated: 2026-06-03
   without changing runtime behavior or public effect surfaces. The docking source gate freezes the
   owner split in `M118_RUNNER_WINDOW_SURFACE_RESIZE_OWNER_SPLIT_2026-06-04.md` without claiming
   Wayland compositor acceptance.
+- [x] Split desktop runner pointer-move event handling into the private window-pointer-move owner
+  without changing runtime behavior or public effect surfaces. The docking source gate freezes the
+  owner split in `M119_RUNNER_WINDOW_POINTER_MOVE_OWNER_SPLIT_2026-06-04.md` without claiming
+  Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

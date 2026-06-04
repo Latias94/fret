@@ -1203,6 +1203,18 @@ Each TODO is labeled:
         `pending_surface_resize` fallback.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window pointer move owner split keeps dock-drag move rerouting out of
+      the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M119_RUNNER_WINDOW_POINTER_MOVE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_pointer_move.rs` owns
+        `handle_window_pointer_moved`, including pointer-move platform event mapping, non-touch
+        screen-position sampling, macOS cursor transform calibration, DockFloating follow updates,
+        external drag over-event delivery, cross-window dock-drag move rerouting, dock-drag pointer
+        capture synchronization, internal drag hover routing, and effect draining.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only
+        `WindowEvent::PointerMoved` dispatch.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

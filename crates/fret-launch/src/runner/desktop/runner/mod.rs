@@ -44,8 +44,8 @@ mod hotpatch;
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect};
 use fret_core::time::{Duration, Instant};
 use fret_core::{
-    Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Point, Px,
-    Rect, Size, UiServices, WindowMetricsService,
+    Event, InternalDragEvent, InternalDragKind, Point, Px, Rect, Size, UiServices,
+    WindowMetricsService,
 };
 use fret_platform_native::clipboard::NativeClipboard;
 use fret_platform_native::external_drop::NativeExternalDrop;
@@ -195,6 +195,7 @@ mod window_insert;
 mod window_metrics;
 mod window_os_create;
 mod window_platform;
+mod window_pointer_move;
 mod window_position;
 mod window_requests;
 mod window_style;

@@ -1808,6 +1808,18 @@ gate.
 
 Marker summary: surface resize event owner; immediate resize sync; app-handler dispatch only.
 
+2026-06-04 desktop runner window pointer move owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_pointer_move.rs` now owns
+`handle_window_pointer_moved`, including pointer-move platform event mapping, non-touch
+screen-position sampling, macOS cursor transform calibration, DockFloating follow updates, external
+drag over-event delivery, cross-window dock-drag move rerouting, dock-drag pointer-capture
+synchronization, internal drag hover routing, and effect draining. `app_handler.rs` keeps only
+`WindowEvent::PointerMoved` dispatch. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: pointer move event owner; dock drag move reroute; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
