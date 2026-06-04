@@ -1761,6 +1761,18 @@ gate.
 
 Marker summary: window insertion bootstrap; metrics bootstrap; redraw bootstrap.
 
+2026-06-04 desktop runner OS window create owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_os_create.rs` now owns `create_os_window`,
+winit `WindowAttributes`, OS window creation, creation-time style attributes, Windows taskbar
+creation attributes, macOS parent-window creation attributes, accessibility bootstrap, z-level
+setup, background material setup, hit-test setup, and opacity setup.
+`crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps create-request
+orchestration without OS window creation. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: OS window creation; create-time style attributes; accessibility bootstrap.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

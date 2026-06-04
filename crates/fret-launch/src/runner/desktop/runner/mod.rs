@@ -53,11 +53,8 @@ use fret_platform_native::file_dialog::NativeFileDialog;
 use fret_platform_native::open_url::NativeOpenUrl;
 use fret_render::{Renderer, SurfaceState, WgpuContext};
 use fret_runner_winit::accessibility;
-#[cfg(windows)]
-use fret_runtime::TaskbarVisibility;
 use fret_runtime::{
-    ActivationPolicy, FrameId, PlatformCapabilities, PlatformCompletion, TickId,
-    WindowStyleRequest, WindowZLevel,
+    FrameId, PlatformCapabilities, PlatformCompletion, TickId, WindowStyleRequest, WindowZLevel,
 };
 use slotmap::SlotMap;
 use tracing::error;
@@ -195,6 +192,7 @@ mod window_geometry;
 mod window_insert;
 mod window_lifecycle;
 mod window_metrics;
+mod window_os_create;
 mod window_platform;
 mod window_position;
 mod window_requests;

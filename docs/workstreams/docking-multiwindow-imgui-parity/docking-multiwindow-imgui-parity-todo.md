@@ -1157,6 +1157,17 @@ Each TODO is labeled:
         creation and create-request orchestration without defining insertion/bootstrap behavior.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner OS window create owner split keeps winit creation attributes out of
+      the create-request lifecycle owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M115_RUNNER_OS_WINDOW_CREATE_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_os_create.rs` owns
+        `create_os_window`, winit `WindowAttributes`, create-time style application, Windows
+        taskbar creation attributes, macOS parent-window creation attributes, accessibility
+        bootstrap, z-level setup, background material setup, hit-test setup, and opacity setup.
+      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps create-request
+        orchestration without defining OS window creation.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
@@ -1206,7 +1217,7 @@ Each TODO is labeled:
     - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)
     - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
     - Docking create request wiring: `ecosystem/fret-docking/src/runtime/tear_off.rs` (`WindowRequest::Create` for `DockFloating`)
-    - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
+    - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/runner/window_os_create.rs` (`create_os_window`)
     - Runner follow style patches: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` (`update_dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Desktop runner runtime patch handling:
       `crates/fret-launch/src/runner/desktop/runner/window_requests.rs` (`WindowRequest::SetStyle`
@@ -1227,7 +1238,7 @@ Each TODO is labeled:
     Space/fullscreen behavior is closer to ImGui/Editor expectations.
   - Evidence anchors:
     - Parent window handle wiring (DockFloating only): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_window_from_request`)
-    - Window creation applies parent relationship via winit: `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`, `with_parent_window`)
+    - Window creation applies parent relationship via winit: `crates/fret-launch/src/runner/desktop/runner/window_os_create.rs` (`create_os_window`, `with_parent_window`)
   - Non-normative reference: winit parent_window support calls `NSWindow.addChildWindow_ordered(...)`
     (`repo-ref/winit/winit-appkit/src/window_delegate.rs`).
   - Acceptance (manual; macOS):
