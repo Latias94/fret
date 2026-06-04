@@ -2168,6 +2168,20 @@ freezes the split through the docking multiwindow source gate.
 Marker summary: redraw webviews owner; webview snapshot selection; app-handler webview sync
 dispatch.
 
+2026-06-04 desktop runner window redraw post-render diagnostics owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_post_render_diagnostics.rs` now owns
+`WindowRedrawPostRenderDiagnosticsInput` and
+`publish_window_redraw_post_render_diagnostics`, dispatching text diagnostics, renderer perf
+samples, WGPU hub reports, and WGPU allocator reports after render-scene command recording and
+before command-buffer assembly. The underlying diagnostics modules still own their environment
+gates, sampling cadence, snapshot construction, report construction, and global-store writes.
+Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw post-render diagnostics owner; text diagnostics dispatch; renderer perf and
+wgpu reports; app-handler post-render diagnostics dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

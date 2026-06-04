@@ -512,6 +512,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M146_RUNNER_WINDOW_REDRAW_WEBVIEWS_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time webview snapshot selection and sync dispatch into
   `window_redraw_webviews.rs` while leaving request/event bridging in `webview.rs`)
+- Latest runner window redraw post-render diagnostics owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M147_RUNNER_WINDOW_REDRAW_POST_RENDER_DIAGNOSTICS_OWNER_SPLIT_2026-06-04.md`
+  (moves text diagnostics, renderer perf, and WGPU report dispatch into
+  `window_redraw_post_render_diagnostics.rs` while leaving diagnostics internals in existing owners)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

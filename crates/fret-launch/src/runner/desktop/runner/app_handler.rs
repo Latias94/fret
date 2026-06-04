@@ -540,37 +540,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                         scale_factor,
                                     },
                                 );
-                            super::window_redraw_text_diagnostics::publish_window_redraw_text_diagnostics(
-                                &mut self.app,
-                                renderer,
-                                self.frame_id,
-                                text_diagnostics,
-                            );
-
-                            super::window_redraw_renderer_perf::maybe_publish_window_redraw_renderer_perf_sample(
-                                &mut self.app,
-                                &mut self.driver,
-                                renderer,
-                                app_window,
-                                &mut state.user,
-                                self.tick_id.0,
-                                self.frame_id.0,
-                            );
-
-                            super::window_redraw_wgpu_report::maybe_record_window_redraw_wgpu_hub_report(
-                                &mut self.app,
-                                context,
-                                app_window,
-                                self.tick_id.0,
-                                self.frame_id.0,
-                            );
-
-                            super::window_redraw_wgpu_allocator_report::maybe_record_window_redraw_wgpu_allocator_report(
-                                &mut self.app,
-                                context,
-                                app_window,
-                                self.tick_id.0,
-                                self.frame_id.0,
+                            super::window_redraw_post_render_diagnostics::publish_window_redraw_post_render_diagnostics(
+                                super::window_redraw_post_render_diagnostics::WindowRedrawPostRenderDiagnosticsInput {
+                                    app: &mut self.app,
+                                    driver: &mut self.driver,
+                                    renderer,
+                                    context,
+                                    app_window,
+                                    user: &mut state.user,
+                                    tick_id: self.tick_id,
+                                    frame_id: self.frame_id,
+                                    text_diagnostics,
+                                },
                             );
 
                             let mut cmd_buffers = engine_command_buffers;
