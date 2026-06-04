@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 2026-06-03 IMUI begin-menu trigger-flow owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps enabled/state setup, popup
@@ -2009,6 +2009,17 @@ multiwindow source gate.
 
 Marker summary: redraw frame prepare owner; platform frame preparation; app-handler prepare
 dispatch only.
+
+2026-06-04 desktop runner window redraw render owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_render.rs` now owns
+`render_window_redraw_frame`, including `RedrawPhase::Render`, renderer text diagnostics frame
+begin, `WinitRenderContext`, and app `driver.render(...)` dispatch. `app_handler.rs` keeps only
+redraw-time render owner dispatch before text-input/accessibility/record/present orchestration and
+continues to publish text diagnostics in present. Runtime behavior and public effect surfaces
+remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: redraw render owner; app render dispatch; app-handler render dispatch only.
 
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space

@@ -1398,6 +1398,18 @@ Each TODO is labeled:
       - Marker: redraw-time frame-prepare dispatch before render.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw render owner split keeps app render dispatch out of the
+      application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M135_RUNNER_WINDOW_REDRAW_RENDER_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_render.rs` owns
+        `render_window_redraw_frame`, including `RedrawPhase::Render`, text diagnostics frame
+        begin, `WinitRenderContext`, and app `driver.render(...)` dispatch.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time
+        render owner dispatch and continues to own text-input/accessibility/record/present
+        orchestration.
+      - Marker: redraw-time app render dispatch before text-input and record.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

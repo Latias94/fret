@@ -413,30 +413,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         hitch_prepare_ms = Some(elapsed.as_millis() as u64);
                     }
 
-                    let text_diagnostics =
-                        super::window_redraw_text_diagnostics::window_redraw_text_diagnostics_mode_from_env();
-                    let (_, render_elapsed) = measure_redraw_phase(
-                        RedrawPhase::Render {
-                            bounds,
-                            scale_factor,
-                        },
-                        hitch_config.is_some(),
-                        || {
-                            super::window_redraw_text_diagnostics::begin_window_redraw_text_diagnostics_frame(
-                                renderer,
-                                text_diagnostics,
-                            );
-                            self.driver.render(WinitRenderContext {
+                    let (rendered, render_elapsed) =
+                        super::window_redraw_render::render_window_redraw_frame(
+                            super::window_redraw_render::WindowRedrawRenderInput {
                                 app: &mut self.app,
-                                services: renderer as &mut dyn fret_core::UiServices,
-                                window: app_window,
-                                state: &mut state.user,
+                                driver: &mut self.driver,
+                                renderer,
+                                app_window,
+                                user: &mut state.user,
+                                scene: &mut state.scene,
                                 bounds,
                                 scale_factor,
-                                scene: &mut state.scene,
-                            });
-                        },
-                    );
+                                hitch_enabled: hitch_config.is_some(),
+                            },
+                        );
+                    let text_diagnostics = rendered.text_diagnostics;
                     if let Some(elapsed) = render_elapsed {
                         hitch_render_ms = Some(elapsed.as_millis() as u64);
                     }

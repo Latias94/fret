@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 ## Worktree Convergence - 2026-05-26
 
@@ -1230,6 +1230,11 @@ Last updated: 2026-06-03
       surfaces. The docking source gate freezes the owner split in
       `M134_RUNNER_WINDOW_REDRAW_FRAME_PREPARE_OWNER_SPLIT_2026-06-04.md` without claiming
       Wayland compositor acceptance.
+- [x] Split desktop runner redraw-time app render dispatch into the private
+      window-redraw-render owner without changing runtime behavior or public effect surfaces. The
+      docking source gate freezes the owner split in
+      `M135_RUNNER_WINDOW_REDRAW_RENDER_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+      compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.
