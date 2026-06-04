@@ -7729,3 +7729,12 @@ opening the slice.
       color/hex projection, drag/drop store setup, option snapshots, popup runtime option sync, and
       frame affordance resolution. The workstream manifest, source gate, and `imui_surface_policy`
       freeze the setup owner boundary.
+- [x] Split editor `ColorEdit` public records into private palette, drag/drop, and eyedropper child
+      owners without changing public type names, root re-export paths, default palette contents,
+      payload component semantics, palette slot drop conversion, eyedropper alpha preservation, or
+      callback type aliases.
+      Result: `color_edit/records.rs` now keeps only child module declarations and public
+      re-exports. `records/palette.rs` owns palette entries and defaults,
+      `records/drag_drop.rs` owns drag/drop payload and palette slot drop records, and
+      `records/eyedropper.rs` owns eyedropper request/callback records. The workstream manifest,
+      source gate, and `imui_surface_policy` freeze the public-record child owner boundaries.

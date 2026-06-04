@@ -29487,6 +29487,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit public records child-owner split:
+
+- Claim: ColorEdit public palette, drag/drop, and eyedropper records moved from the aggregate
+  `ecosystem/fret-ui-editor/src/controls/color_edit/records.rs` owner into private child owners
+  without changing public type names, root re-export paths, default palette contents, payload
+  component semantics, palette slot drop conversion, eyedropper alpha preservation, public ColorEdit
+  API, or IMUI facade behavior.
+- Evidence anchors: `records.rs` now declares `mod palette;`, `mod drag_drop;`, and
+  `mod eyedropper;` and re-exports the same public record names. `records/palette.rs` owns
+  `COLOR_PRESETS`, `ColorEditPaletteEntry`, and `default_color_edit_palette(...)`.
+  `records/drag_drop.rs` owns `ColorEditDragDropComponents`, `ColorEditDragDropPayload`,
+  `ColorEditPaletteSlotDrop`, and `OnColorEditPaletteSlotDrop`, including the existing
+  `palette_slot_drop_from_payload(...)` conversion. `records/eyedropper.rs` owns
+  `ColorEditEyedropperRequest`, `apply_sample(...)`, and `OnColorEditEyedropper`.
+  `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the public records hub/child
+  owner boundaries.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit keyed frame setup owner split:
 
 - Claim: ColorEdit keyed frame setup/runtime snapshot construction moved from

@@ -7485,3 +7485,16 @@ projection, and `ColorEditFrameAffordances` resolution. Local model identity, th
 drag/drop setup, runtime popup option behavior, affordance gates, and public ColorEdit / IMUI
 facade behavior remain unchanged, and `tools/gate_imui_workstream_source.py` plus
 `imui_surface_policy` freeze the frame/setup split.
+
+2026-06-05 editor ColorEdit public records child-owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/records.rs` is now a public record re-export hub:
+it declares private palette, drag/drop, and eyedropper child modules and keeps the existing public
+`ColorEdit` record type names available through the same root exports. The new
+`records/palette.rs` owns `ColorEditPaletteEntry`, default palette constants, and
+`default_color_edit_palette(...)`; `records/drag_drop.rs` owns
+`ColorEditDragDropComponents`, `ColorEditDragDropPayload`, `ColorEditPaletteSlotDrop`, and
+`OnColorEditPaletteSlotDrop`; and `records/eyedropper.rs` owns
+`ColorEditEyedropperRequest` plus `OnColorEditEyedropper`. Public import paths, default palette
+contents, drag/drop payload component behavior, palette slot drop conversion, eyedropper sample
+alpha policy, and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
+plus `imui_surface_policy` freeze the records hub/child split.
