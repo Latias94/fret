@@ -657,23 +657,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                     super::render::validate_scene_if_enabled(&state.scene);
 
-                    if let Some(a11y) = state.accessibility.as_mut()
-                        && a11y.is_active()
-                        && let Some(snapshot) = self.driver.semantics_snapshot(
-                            &mut self.app,
-                            app_window,
-                            &mut state.user,
-                        )
-                    {
-                        let update = accessibility::tree_update_from_snapshot(
-                            &snapshot,
-                            state.window.scale_factor(),
-                        );
-                        a11y.update_if_active(|| update);
-                        state.last_semantics_snapshot = Some(snapshot);
-                    } else {
-                        state.last_semantics_snapshot = None;
-                    }
+                    let accessibility_scale_factor = state.window.scale_factor();
+                    super::window_redraw_accessibility::update_window_redraw_accessibility_snapshot(
+                        &mut self.driver,
+                        &mut self.app,
+                        app_window,
+                        &mut state.user,
+                        &mut state.accessibility,
+                        &mut state.last_semantics_snapshot,
+                        accessibility_scale_factor,
+                    );
 
                     let (engine_frame, record_elapsed) = measure_redraw_phase(
                         RedrawPhase::Record {

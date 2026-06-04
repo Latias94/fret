@@ -1879,6 +1879,17 @@ multiwindow source gate.
 Marker summary: window pre-dispatch event owner; accessibility event feed; IME debug logging;
 app-handler dispatch only.
 
+2026-06-04 desktop runner window redraw accessibility owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_accessibility.rs` now owns
+`update_window_redraw_accessibility_snapshot`, including active accessibility checks, driver
+semantics snapshot requests, AccessKit tree update construction, active update dispatch, and
+`last_semantics_snapshot` cache maintenance. `app_handler.rs` keeps only redraw-time accessibility
+dispatch after scene validation and before engine-frame recording. Runtime behavior and public
+effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split
+through the docking multiwindow source gate.
+
+Marker summary: redraw accessibility owner; semantics snapshot cache; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

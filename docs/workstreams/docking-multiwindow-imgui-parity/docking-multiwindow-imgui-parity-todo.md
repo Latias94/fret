@@ -1273,6 +1273,17 @@ Each TODO is labeled:
         call before matching the window event.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw accessibility owner split keeps semantics cache update
+      out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M125_RUNNER_WINDOW_REDRAW_ACCESSIBILITY_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_accessibility.rs` owns
+        `update_window_redraw_accessibility_snapshot`, including active accessibility checks,
+        driver semantics snapshots, AccessKit tree update construction, active update dispatch,
+        and `last_semantics_snapshot` cache maintenance.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time
+        accessibility dispatch between scene validation and engine-frame recording.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

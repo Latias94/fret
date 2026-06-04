@@ -420,6 +420,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M124_RUNNER_WINDOW_PRE_DISPATCH_EVENTS_OWNER_SPLIT_2026-06-04.md`
   (moves raw winit event accessibility feed and `FRET_IME_DEBUG` IME logging into
   `window_pre_dispatch_events.rs` while leaving only the pre-dispatch call in `app_handler.rs`)
+- Latest runner window redraw accessibility owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M125_RUNNER_WINDOW_REDRAW_ACCESSIBILITY_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time semantics snapshot and accessibility tree update/cache maintenance into
+  `window_redraw_accessibility.rs` while leaving only dispatch in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

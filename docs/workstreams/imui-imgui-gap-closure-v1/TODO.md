@@ -1180,6 +1180,11 @@ Last updated: 2026-06-03
   docking source gate freezes the owner split in
   `M124_RUNNER_WINDOW_PRE_DISPATCH_EVENTS_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
   compositor acceptance.
+- [x] Split desktop runner redraw-time accessibility semantics update handling into the private
+  window-redraw-accessibility owner without changing runtime behavior or public effect surfaces. The
+  docking source gate freezes the owner split in
+  `M125_RUNNER_WINDOW_REDRAW_ACCESSIBILITY_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+  compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.
