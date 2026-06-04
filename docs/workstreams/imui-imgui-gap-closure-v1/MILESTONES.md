@@ -1984,6 +1984,20 @@ gate.
 
 Marker summary: redraw pending wheel owner; frame-boundary wheel drain; app-handler dispatch only.
 
+2026-06-04 desktop runner window redraw surface-resize owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_surface_resize.rs` now owns
+`handle_window_redraw_pending_surface_resize`, including `pending_surface_resize` draining,
+fallback `resize_surface`, logical-size quantization, `last_delivered_window_resized`
+deduplication, `Event::WindowResized`, and `Event::WindowScaleFactorChanged` delivery.
+`app_handler.rs` keeps only redraw-time surface-resize dispatch before platform frame preparation.
+`surface_lifecycle.rs` continues to own immediate surface resize event handling and GPU surface
+synchronization. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw surface resize owner; pending surface resize fallback; app-handler dispatch
+only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
