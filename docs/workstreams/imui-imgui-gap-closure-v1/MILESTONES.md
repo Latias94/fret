@@ -1773,6 +1773,18 @@ multiwindow source gate.
 
 Marker summary: OS window creation; create-time style attributes; accessibility bootstrap.
 
+2026-06-04 desktop runner window create-request owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_create_request.rs` now owns
+`create_window_from_request`, driver/default spec resolution, dev-state spec projection,
+DockFloating cursor/anchor placement selection, macOS hidden-create policy, macOS parent handle
+selection, OS window creation delegation, WGPU surface creation, insertion delegation, open-style
+diagnostics, dev-state key registration, and monitor topology refresh. The current source no
+longer has a `window_lifecycle.rs` module owner. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: create-request orchestration; dev-state spec projection; no lifecycle owner.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

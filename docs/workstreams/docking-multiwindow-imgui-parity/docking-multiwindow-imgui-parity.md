@@ -383,6 +383,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M115_RUNNER_OS_WINDOW_CREATE_OWNER_SPLIT_2026-06-04.md`
   (moves winit OS window attributes, create-time style application, and accessibility bootstrap
   into `window_os_create.rs` without changing runtime behavior)
+- Latest runner window create-request owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M116_RUNNER_WINDOW_CREATE_REQUEST_OWNER_SPLIT_2026-06-04.md`
+  (moves final create-request orchestration into `window_create_request.rs` and removes the
+  current `window_lifecycle.rs` source owner without changing runtime behavior; no lifecycle owner)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

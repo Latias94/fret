@@ -1153,8 +1153,9 @@ Each TODO is labeled:
         `insert_window`, `WindowRuntime`, surface setup, metrics bootstrap, registry insertion,
         z-order bootstrap, menu registration, lifecycle diagnostics, and initial redraw/RAF
         bootstrap.
-      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps OS window
-        creation and create-request orchestration without defining insertion/bootstrap behavior.
+      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` kept OS window
+        creation and create-request orchestration at M114; follow-up M115/M116 split those
+        responsibilities into explicit OS-create and create-request owners.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [x] 2026-06-04 runner OS window create owner split keeps winit creation attributes out of
@@ -1164,8 +1165,19 @@ Each TODO is labeled:
         `create_os_window`, winit `WindowAttributes`, create-time style application, Windows
         taskbar creation attributes, macOS parent-window creation attributes, accessibility
         bootstrap, z-level setup, background material setup, hit-test setup, and opacity setup.
-      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps create-request
-        orchestration without defining OS window creation.
+      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` kept create-request
+        orchestration at M115; follow-up M116 moves it into `window_create_request.rs`.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window create-request owner split removes the vague lifecycle owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M116_RUNNER_WINDOW_CREATE_REQUEST_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_create_request.rs` owns
+        `create_window_from_request`, request/spec orchestration, dev-state spec projection,
+        initial DockFloating placement, macOS parent handle selection, surface creation,
+        insertion delegation, open-style diagnostics, dev-state key registration, and monitor
+        topology refresh.
+      - `crates/fret-launch/src/runner/desktop/runner/mod.rs` declares
+        `mod window_create_request;` and no longer declares `mod window_lifecycle;`.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
@@ -1237,7 +1249,7 @@ Each TODO is labeled:
   - Goal: attach DockFloating OS windows as child/tool windows of their source window so ordering and
     Space/fullscreen behavior is closer to ImGui/Editor expectations.
   - Evidence anchors:
-    - Parent window handle wiring (DockFloating only): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_window_from_request`)
+    - Parent window handle wiring (DockFloating only): `crates/fret-launch/src/runner/desktop/runner/window_create_request.rs` (`create_window_from_request`)
     - Window creation applies parent relationship via winit: `crates/fret-launch/src/runner/desktop/runner/window_os_create.rs` (`create_os_window`, `with_parent_window`)
   - Non-normative reference: winit parent_window support calls `NSWindow.addChildWindow_ordered(...)`
     (`repo-ref/winit/winit-appkit/src/window_delegate.rs`).

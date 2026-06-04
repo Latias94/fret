@@ -1139,6 +1139,10 @@ Last updated: 2026-06-03
   changing runtime behavior or public effect surfaces. The docking source gate freezes the owner
   split in `M115_RUNNER_OS_WINDOW_CREATE_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
   compositor acceptance.
+- [x] Split desktop runner create-request orchestration into the private window-create-request
+  owner without changing runtime behavior or public effect surfaces. The docking source gate
+  freezes the owner split in `M116_RUNNER_WINDOW_CREATE_REQUEST_OWNER_SPLIT_2026-06-04.md` without
+  claiming Wayland compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.
