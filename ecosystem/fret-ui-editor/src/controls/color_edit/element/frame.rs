@@ -8,20 +8,20 @@ use super::super::drag_drop::{
     ColorEditDeliveredDropArgs, apply_delivered_color_drop, color_drag_drop_store_for,
     prune_color_drag_drop_store, resolve_color_drag_threshold,
 };
-use super::super::input::{ColorEditInputArgs, color_hex_input};
 use super::super::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
 use super::super::model::format_hex;
 use super::super::state::{
     copy_menu_open_model, draft_model, error_model, popup_open_model, popup_runtime_options_model,
     reference_model, sync_popup_runtime_options, tooltip_open_model,
 };
-use super::super::swatch::{ColorEditSwatchArgs, color_swatch};
 use super::ColorEdit;
 use super::affordance::color_edit_frame_affordances;
 use super::test_ids::color_edit_element_test_ids;
 
+mod children;
 mod overlays;
 
+use children::{ColorEditFrameChildrenArgs, color_edit_frame_children};
 use overlays::{ColorEditFrameOverlayArgs, request_color_edit_frame_overlays};
 
 pub(super) fn color_edit_into_element_keyed<H: UiHost>(
@@ -73,48 +73,31 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
         eyedropper_available,
     );
 
-    let input = color_hex_input(
+    let children = color_edit_frame_children(
         cx,
-        ColorEditInputArgs {
-            model: control.model.clone(),
-            draft: draft.clone(),
-            error: error.clone(),
-            current_hex: current_hex.clone(),
-            show_alpha: control.options.show_alpha,
-            enabled: control.options.enabled,
-            focusable: control.options.focusable,
-            test_id: test_ids.input.clone(),
-            row_height: density.row_height,
-        },
-    );
-
-    let swatch = color_swatch(
-        cx,
-        ColorEditSwatchArgs {
-            model: control.model.clone(),
+        ColorEditFrameChildrenArgs {
+            control: &control,
             open: open.clone(),
             tooltip_open: tooltip_open.clone(),
             copy_menu_open: copy_menu_open.clone(),
             reference: reference.clone(),
+            draft: draft.clone(),
+            error: error.clone(),
             drag_drop_store: drag_drop_store.clone(),
-            current,
             current_hex: current_hex.clone(),
-            show_alpha: control.options.show_alpha,
-            alpha_preview: control.options.alpha_preview,
-            enabled: control.options.enabled,
-            swatch_enabled: affordances.swatch_enabled,
-            swatch_focusable: affordances.swatch_focusable,
-            popup_has_visible_content: affordances.popup_has_visible_content,
+            current,
+            affordances: &affordances,
             popup_options,
             tooltip_options,
             copy_options,
-            copy_enabled: affordances.copy_enabled,
-            drag_drop_enabled: affordances.drag_drop_enabled,
             drag_drop_options,
             drag_threshold,
-            test_id: test_ids.swatch.clone(),
+            test_ids: &test_ids,
+            row_height: density.row_height,
         },
     );
+    let input = children.input;
+    let swatch = children.swatch;
 
     apply_delivered_color_drop(
         cx,

@@ -7456,3 +7456,17 @@ forwarding, and popup/tooltip/copy/eyedropper test-id forwarding. Popup, tooltip
 eyedropper, palette/history, drag/drop, runtime popup option, and public ColorEdit / IMUI facade
 behavior remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy`
 freeze the frame/overlay split.
+
+2026-06-05 editor ColorEdit keyed frame children owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` now delegates input/swatch
+construction through `ColorEditFrameChildrenArgs` and keeps keyed frame orchestration, local
+state/model setup, theme density/popup padding resolution, current color/hex projection, drag/drop
+store setup, test-id projection, affordance resolution, delivered-drop application, overlay routing,
+and root layout handoff. The new
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/frame/children.rs` owns
+`ColorEditFrameChildren`, `color_edit_frame_children(...)`, `ColorEditInputArgs` assembly,
+`ColorEditSwatchArgs` assembly, input/swatch test-id forwarding, and swatch affordance forwarding.
+Hex input behavior, swatch behavior, popup/tooltip/copy model forwarding, reference model
+forwarding, drag/drop store forwarding, test-id routing, and public ColorEdit / IMUI facade
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy`
+freeze the frame/children split.

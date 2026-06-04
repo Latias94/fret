@@ -7707,3 +7707,14 @@ opening the slice.
       menu request routing, overlay callback/test-id forwarding, and popup runtime option handoff.
       The workstream manifest, source gate, and `imui_surface_policy` freeze the overlay request
       owner boundary.
+- [x] Split editor `ColorEdit` keyed frame input/swatch construction into a private frame child
+      owner without changing hex input behavior, swatch behavior, popup/tooltip/copy model
+      forwarding, reference model forwarding, drag/drop store forwarding, affordance gates,
+      test-id routing, or public ColorEdit / IMUI facade behavior.
+      Result: `color_edit/element/frame.rs` now delegates child construction through
+      `ColorEditFrameChildrenArgs` and keeps keyed orchestration, setup, delivered-drop
+      application, overlay routing, and root layout. The new `element/frame/children.rs` owns
+      `ColorEditFrameChildren`, `color_edit_frame_children(...)`, `ColorEditInputArgs` assembly,
+      `ColorEditSwatchArgs` assembly, input/swatch test-id forwarding, and swatch affordance
+      forwarding. The workstream manifest, source gate, and `imui_surface_policy` freeze the child
+      construction owner boundary.

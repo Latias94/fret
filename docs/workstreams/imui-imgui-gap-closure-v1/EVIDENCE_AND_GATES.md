@@ -29487,6 +29487,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit keyed frame children owner split:
+
+- Claim: ColorEdit keyed frame input/swatch child construction moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` into private
+  `element/frame/children.rs` without changing hex input behavior, swatch behavior,
+  popup/tooltip/copy model forwarding, reference model forwarding, drag/drop store forwarding,
+  affordance gates, test-id routing, public ColorEdit API, or IMUI facade behavior.
+- Evidence anchors: `element/frame.rs` now delegates child construction through
+  `ColorEditFrameChildrenArgs` and keeps keyed orchestration, local state/model setup, theme
+  density/popup padding resolution, current color/hex projection, drag/drop store setup, test-id
+  projection, affordance resolution, delivered-drop application, overlay routing, and root layout
+  handoff. `element/frame/children.rs` owns `ColorEditFrameChildren`,
+  `color_edit_frame_children(...)`, `ColorEditInputArgs` assembly, `ColorEditSwatchArgs` assembly,
+  input/swatch test-id forwarding, and swatch affordance forwarding. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the child construction owner
+  boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit keyed frame overlay owner split:
 
 - Claim: ColorEdit keyed frame overlay request routing moved from
