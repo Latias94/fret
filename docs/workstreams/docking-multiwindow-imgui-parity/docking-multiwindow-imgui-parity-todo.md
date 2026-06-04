@@ -1497,6 +1497,18 @@ Each TODO is labeled:
       - Marker: redraw-time present error recovery after submit.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw hitch-summary owner split keeps hitch line formatting
+      out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M143_RUNNER_WINDOW_REDRAW_HITCH_SUMMARY_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_hitch_summary.rs` owns
+        `maybe_write_window_redraw_hitch_summary`, `WindowRedrawHitchSummaryInput`,
+        `RedrawHitchConfig`, total redraw elapsed calculation, threshold comparison, and
+        `write_redraw_hitch_log(&format!(...))`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps phase timing,
+        present-error dispatch, and hitch-summary dispatch.
+      - Marker: redraw-time hitch summary after present success.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

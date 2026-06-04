@@ -1,8 +1,6 @@
 //! Winit `ApplicationHandler` integration.
 
-use super::redraw_hitch::{
-    RedrawPhase, measure_redraw_phase, redraw_hitch_config, write_redraw_hitch_log,
-};
+use super::redraw_hitch::{RedrawPhase, measure_redraw_phase, redraw_hitch_config};
 use super::*;
 
 use fret_core::time::Instant;
@@ -662,21 +660,22 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         return;
                     }
 
-                    if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
-                        let total_ms = started.elapsed().as_millis() as u64;
-                        if total_ms >= cfg.hitch_ms {
-                            write_redraw_hitch_log(&format!(
-                                "redraw hitch window={app_window:?} tick_id={tick_id} frame_id={frame_id} total_ms={total_ms} prepare_ms={prepare_ms:?} render_ms={render_ms:?} record_ms={record_ms:?} present_ms={present_ms:?} scene_ops={scene_ops} bounds={bounds:?} scale_factor={scale_factor}",
-                                tick_id = self.tick_id.0,
-                                frame_id = self.frame_id.0,
-                                prepare_ms = hitch_prepare_ms,
-                                render_ms = hitch_render_ms,
-                                record_ms = hitch_record_ms,
-                                present_ms = hitch_present_ms,
-                                scene_ops = scene_ops,
-                            ));
-                        }
-                    }
+                    super::window_redraw_hitch_summary::maybe_write_window_redraw_hitch_summary(
+                        super::window_redraw_hitch_summary::WindowRedrawHitchSummaryInput {
+                            config: hitch_config,
+                            started: hitch_total_started,
+                            app_window,
+                            tick_id: self.tick_id,
+                            frame_id: self.frame_id,
+                            prepare_ms: hitch_prepare_ms,
+                            render_ms: hitch_render_ms,
+                            record_ms: hitch_record_ms,
+                            present_ms: hitch_present_ms,
+                            scene_ops,
+                            bounds,
+                            scale_factor,
+                        },
+                    );
                 }
 
                 #[cfg(target_os = "android")]

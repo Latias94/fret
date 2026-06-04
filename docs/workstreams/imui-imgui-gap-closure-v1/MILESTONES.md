@@ -2115,6 +2115,19 @@ gate.
 Marker summary: redraw present error owner; surface acquire recovery; timeout redraw retry;
 out-of-memory exit; app-handler present-error dispatch.
 
+2026-06-04 desktop runner window redraw hitch-summary owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_hitch_summary.rs` now owns
+`maybe_write_window_redraw_hitch_summary`, including `WindowRedrawHitchSummaryInput`,
+`RedrawHitchConfig`, total redraw elapsed calculation, threshold comparison, the existing
+`redraw hitch window=...` line shape, and `write_redraw_hitch_log(&format!(...))`.
+`app_handler.rs` keeps phase timing capture, present-error owner dispatch, and hitch-summary owner
+dispatch. Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw hitch summary owner; total redraw elapsed; hitch threshold check;
+app-handler hitch-summary dispatch.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
