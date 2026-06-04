@@ -549,6 +549,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M135_RUNNER_WINDOW_REDRAW_RENDER_OWNER_SPLIT_2026-06-04.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M136_RUNNER_WINDOW_REDRAW_RECORD_OWNER_SPLIT_2026-06-04.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
@@ -801,6 +805,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M133_RUNNER_WINDOW_REDRAW_SURFACE_RESIZE_OWNER_SPLIT_2026-06-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M134_RUNNER_WINDOW_REDRAW_FRAME_PREPARE_OWNER_SPLIT_2026-06-04.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M135_RUNNER_WINDOW_REDRAW_RENDER_OWNER_SPLIT_2026-06-04.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M136_RUNNER_WINDOW_REDRAW_RECORD_OWNER_SPLIT_2026-06-04.md",
     "crates/fret-launch/src/runner/desktop/runner/change_propagation.rs",
     "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
@@ -888,6 +893,7 @@
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_diag_screenshots.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_frame_prepare.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_pending_wheel.rs",
+    "crates/fret-launch/src/runner/desktop/runner/window_redraw_record.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_render.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_renderer_perf.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_surface_resize.rs",

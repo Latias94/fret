@@ -2021,6 +2021,17 @@ multiwindow source gate.
 
 Marker summary: redraw render owner; app render dispatch; app-handler render dispatch only.
 
+2026-06-04 desktop runner window redraw record owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_record.rs` now owns
+`record_window_redraw_frame`, including `RedrawPhase::Record`, scene-op count measurement, and
+`driver.record_engine_frame(...)` dispatch. `app_handler.rs` keeps only redraw-time record owner
+dispatch before webview sync/render-target updates/present orchestration and continues to
+destructure `EngineFrameUpdate` locally. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: redraw record owner; engine frame recording; app-handler record dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

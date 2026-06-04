@@ -466,6 +466,11 @@ Platform note:
   (moves redraw-time app render dispatch, including `RedrawPhase::Render`, text diagnostics frame
   begin, and app `driver.render(...)` dispatch into `window_redraw_render.rs` while leaving only
   render owner dispatch in `app_handler.rs`)
+- Latest runner window redraw record owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M136_RUNNER_WINDOW_REDRAW_RECORD_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time engine frame recording, including `RedrawPhase::Record`,
+  `scene_ops`, and `driver.record_engine_frame(...)`, into `window_redraw_record.rs` while leaving
+  only record owner dispatch in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

@@ -461,24 +461,22 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         accessibility_scale_factor,
                     );
 
-                    let (engine_frame, record_elapsed) = measure_redraw_phase(
-                        RedrawPhase::Record {
-                            scene_ops: state.scene.ops_len(),
-                        },
-                        hitch_config.is_some(),
-                        || {
-                            self.driver.record_engine_frame(
-                                &mut self.app,
+                    let (engine_frame, record_elapsed) =
+                        super::window_redraw_record::record_window_redraw_frame(
+                            super::window_redraw_record::WindowRedrawRecordInput {
+                                app: &mut self.app,
+                                driver: &mut self.driver,
                                 app_window,
-                                &mut state.user,
+                                user: &mut state.user,
                                 context,
                                 renderer,
                                 scale_factor,
-                                self.tick_id,
-                                self.frame_id,
-                            )
-                        },
-                    );
+                                tick_id: self.tick_id,
+                                frame_id: self.frame_id,
+                                scene_ops: state.scene.ops_len(),
+                                hitch_enabled: hitch_config.is_some(),
+                            },
+                        );
                     let EngineFrameUpdate {
                         target_updates,
                         command_buffers: engine_command_buffers,
