@@ -11,9 +11,6 @@ use super::super::drag_drop::{
 use super::super::input::{ColorEditInputArgs, color_hex_input};
 use super::super::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
 use super::super::model::format_hex;
-use super::super::popup::{
-    request_color_copy_menu_overlay, request_color_tooltip_overlay, request_popup_overlay,
-};
 use super::super::state::{
     copy_menu_open_model, draft_model, error_model, popup_open_model, popup_runtime_options_model,
     reference_model, sync_popup_runtime_options, tooltip_open_model,
@@ -22,6 +19,10 @@ use super::super::swatch::{ColorEditSwatchArgs, color_swatch};
 use super::ColorEdit;
 use super::affordance::color_edit_frame_affordances;
 use super::test_ids::color_edit_element_test_ids;
+
+mod overlays;
+
+use overlays::{ColorEditFrameOverlayArgs, request_color_edit_frame_overlays};
 
 pub(super) fn color_edit_into_element_keyed<H: UiHost>(
     control: ColorEdit,
@@ -55,7 +56,7 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
     let popup_options = control.options.popup;
     let tooltip_options = control.options.tooltip;
     let copy_options = control.options.copy;
-    let on_eyedropper = control.options.on_eyedropper.clone();
+    let eyedropper_available = control.options.on_eyedropper.is_some();
     let popup_runtime_options = popup_runtime_options_model(cx, popup_options.runtime_defaults());
     sync_popup_runtime_options(cx, &popup_runtime_options, popup_options.runtime_defaults());
     let popup_options_for_frame = popup_options.with_runtime_options(
@@ -69,7 +70,7 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
         popup_options_for_frame,
         !palette.is_empty(),
         !history.is_empty(),
-        on_eyedropper.is_some(),
+        eyedropper_available,
     );
 
     let input = color_hex_input(
@@ -129,48 +130,28 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
         },
     );
 
-    request_popup_overlay(
+    request_color_edit_frame_overlays(
         cx,
-        swatch.id,
-        control.model.clone(),
-        reference.clone(),
-        draft.clone(),
-        error.clone(),
-        open.clone(),
-        control.options.show_alpha,
-        control.options.enabled,
-        control.options.alpha_preview,
-        palette,
-        history,
-        drag_drop_store.clone(),
-        drag_drop_options,
-        drag_threshold,
-        control.options.on_palette_slot_drop.clone(),
-        on_eyedropper,
-        popup_options,
-        popup_runtime_options,
-        popup_padding,
-        test_ids.popup,
-        test_ids.eyedropper,
-    );
-    request_color_tooltip_overlay(
-        cx,
-        swatch.id,
-        tooltip_open,
-        current,
-        control.options.show_alpha,
-        control.options.alpha_preview,
-        tooltip_options,
-        test_ids.tooltip,
-    );
-    request_color_copy_menu_overlay(
-        cx,
-        swatch.id,
-        copy_menu_open,
-        current,
-        control.options.show_alpha,
-        copy_options,
-        test_ids.copy_menu,
+        ColorEditFrameOverlayArgs {
+            control: &control,
+            swatch_id: swatch.id,
+            open,
+            tooltip_open,
+            copy_menu_open,
+            reference,
+            draft,
+            error: error.clone(),
+            current,
+            drag_drop_store,
+            drag_drop_options,
+            drag_threshold,
+            popup_options,
+            tooltip_options,
+            copy_options,
+            popup_runtime_options,
+            popup_padding,
+            test_ids: &test_ids,
+        },
     );
 
     color_edit_root_layout(

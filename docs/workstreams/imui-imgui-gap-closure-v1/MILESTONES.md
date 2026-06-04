@@ -7443,3 +7443,16 @@ and redraw. `handlers/up.rs` owns left-button release handling, delivered-drop i
 cleanup, redraw, and skip-activate behavior. Drag-source installation, drag threshold semantics,
 delivery recording, and public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the phase split.
+
+2026-06-05 editor ColorEdit keyed frame overlay owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` now keeps keyed frame
+orchestration, local state/model setup, theme density/popup padding resolution, current color/hex
+projection, drag/drop store setup, test-id projection, input/swatch construction, delivered-drop
+application, and root layout handoff. The new
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/frame/overlays.rs` owns
+`ColorEditFrameOverlayArgs`, `request_color_edit_frame_overlays(...)`, popup request routing,
+tooltip request routing, copy-menu request routing, popup runtime option handoff, callback
+forwarding, and popup/tooltip/copy/eyedropper test-id forwarding. Popup, tooltip, copy-menu,
+eyedropper, palette/history, drag/drop, runtime popup option, and public ColorEdit / IMUI facade
+behavior remain unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy`
+freeze the frame/overlay split.

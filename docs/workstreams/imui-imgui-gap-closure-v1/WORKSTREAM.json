@@ -1274,6 +1274,8 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element/affordance.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/element/frame/overlays.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element/keying.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element/test_ids.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/input.rs",

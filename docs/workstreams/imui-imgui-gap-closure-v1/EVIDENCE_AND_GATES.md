@@ -29487,6 +29487,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit keyed frame overlay owner split:
+
+- Claim: ColorEdit keyed frame overlay request routing moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` into private
+  `element/frame/overlays.rs` without changing popup, tooltip, copy-menu, eyedropper,
+  palette/history, drag/drop payload, runtime popup option, test-id, public ColorEdit API, or IMUI
+  facade behavior.
+- Evidence anchors: `element/frame.rs` now keeps keyed frame orchestration, local state/model setup,
+  theme density/popup padding resolution, current color/hex projection, drag/drop store setup,
+  test-id projection, input/swatch construction, delivered-drop application, and root layout
+  handoff. `element/frame/overlays.rs` owns `ColorEditFrameOverlayArgs`,
+  `request_color_edit_frame_overlays(...)`, popup request routing, tooltip request routing,
+  copy-menu request routing, callback forwarding, popup runtime option handoff, and
+  popup/tooltip/copy/eyedropper test-id forwarding. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the overlay request owner
+  boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit drag-source phase owner split:
 
 - Claim: ColorEdit drag-source pointer phase handling moved out of the single

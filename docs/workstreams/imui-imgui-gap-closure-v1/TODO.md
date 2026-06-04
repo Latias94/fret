@@ -7697,3 +7697,13 @@ opening the slice.
       `handlers/up.rs` owns delivered-drop recording, drag cleanup, redraw, and skip-activate
       behavior. The workstream manifest, source gate, and `imui_surface_policy` freeze the phase
       owner boundaries.
+- [x] Split editor `ColorEdit` keyed frame overlay requests into a private frame child owner
+      without changing popup, tooltip, copy-menu, eyedropper, palette/history, drag/drop payload,
+      runtime popup option, test-id, or public ColorEdit / IMUI facade behavior.
+      Result: `color_edit/element/frame.rs` now keeps keyed frame orchestration, state/model setup,
+      input/swatch construction, delivered-drop application, and root layout. The new
+      `element/frame/overlays.rs` owns `ColorEditFrameOverlayArgs`,
+      `request_color_edit_frame_overlays(...)`, popup request routing, tooltip request routing, copy
+      menu request routing, overlay callback/test-id forwarding, and popup runtime option handoff.
+      The workstream manifest, source gate, and `imui_surface_policy` freeze the overlay request
+      owner boundary.
