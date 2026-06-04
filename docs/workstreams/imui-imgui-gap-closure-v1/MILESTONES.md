@@ -1858,6 +1858,16 @@ gate.
 
 Marker summary: mapped window event owner; wheel coalescing catchall; app-handler dispatch only.
 
+2026-06-04 desktop runner window moved events owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_moved_events.rs` now owns
+`handle_window_moved`, including the macOS hit-test active-region check and latest mouse-location
+refresh used for the `macos-hit-test-regions` guarded `WindowEvent::Moved(..)` path.
+`app_handler.rs` keeps only cfg-gated moved-event dispatch. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
+Marker summary: moved window event owner; macOS hit-test refresh; app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

@@ -324,9 +324,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         match event {
             #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
             WindowEvent::Moved(..) => {
-                if macos_hit_test::has_active_regions() {
-                    macos_hit_test::apply_latest_mouse_location();
-                }
+                self.handle_window_moved();
             }
             ref ev @ WindowEvent::ModifiersChanged(..) => {
                 self.handle_window_modifiers_changed(event_loop, app_window, ev);

@@ -1253,6 +1253,16 @@ Each TODO is labeled:
         dispatch and the existing redraw-time pending wheel drain.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window moved events owner split keeps macOS hit-test refresh out of
+      the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M123_RUNNER_WINDOW_MOVED_EVENTS_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_moved_events.rs` owns
+        `handle_window_moved`, including the `macos-hit-test-regions` guarded active-region check
+        and latest mouse-location refresh for `WindowEvent::Moved(..)`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only the cfg-gated
+        `WindowEvent::Moved(..)` dispatch.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

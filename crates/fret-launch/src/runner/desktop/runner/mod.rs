@@ -194,6 +194,8 @@ mod window_geometry;
 mod window_insert;
 mod window_mapped_events;
 mod window_metrics;
+#[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+mod window_moved_events;
 mod window_os_create;
 mod window_platform;
 mod window_pointer_button;
