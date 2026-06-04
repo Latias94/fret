@@ -1812,26 +1812,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        // Diagnostics hook: scripted runs can override cursor screen position via the filesystem
-        // transport (to avoid OS mouse injection). Poll once per event-loop turn so receiver-at-
-        // cursor probes and multi-window drag routing can both consume the override.
-        let _ = self.poll_diag_cursor_screen_pos_override();
-
-        // During cross-window drags, runner-owned hover routing depends on cursor screen position.
-        // Scripted runs inject pointer events directly into the UI tree (bypassing OS cursor
-        // events), so we also poll mouse buttons + route hover/drop in this branch.
-        if self.internal_drag_routing_pointer_id().is_some() {
-            let mouse_buttons_updated = self.poll_diag_mouse_buttons_override();
-            let _ = self.route_internal_drag_hover_from_cursor();
-            if mouse_buttons_updated && !self.left_mouse_down {
-                self.saw_left_mouse_release_this_turn = true;
-                self.route_internal_drag_drop_from_cursor();
-            }
-            if self.dock_drag_pointer_id().is_some() {
-                let _ = self.update_dock_tearoff_follow();
-            }
-            self.drain_effects(event_loop);
-        }
+        self.handle_about_to_wait_internal_drag_poll(event_loop);
         self.tick_id = scheduling::begin_turn(&mut self.tick_id);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;

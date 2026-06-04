@@ -1567,6 +1567,18 @@ docking multiwindow source gate.
 
 Marker summary: pending-front request processing; RAF flush behavior; final ControlFlow selection.
 
+2026-06-04 desktop runner about-to-wait internal drag poll owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating scripted cursor screen position
+override polling, event-loop turn polling, internal drag hover routing, diagnostic mouse-button
+override polling, release-to-drop routing, `saw_left_mouse_release_this_turn` updates, dock drag
+follow updates, and conditional effect draining to
+`crates/fret-launch/src/runner/desktop/runner/device_events.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
+Marker summary: internal drag hover routing; conditional effect draining.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

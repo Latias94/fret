@@ -308,6 +308,9 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M97_RUNNER_ABOUT_TO_WAIT_CONTROL_FLOW_OWNER_SPLIT_2026-06-04.md`
   (moves pending-front, timer, dispatcher, RAF, and final control-flow scheduling into
   `event_loop.rs` without changing runtime behavior)
+- Latest runner about-to-wait internal drag poll owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M98_RUNNER_ABOUT_TO_WAIT_INTERNAL_DRAG_POLL_OWNER_SPLIT_2026-06-04.md`
+  (moves pre-turn internal drag polling into `device_events.rs` without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
