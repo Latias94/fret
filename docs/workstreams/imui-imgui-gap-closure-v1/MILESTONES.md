@@ -7432,3 +7432,14 @@ alpha-preserving color conversion routing. Public ColorEdit APIs, IMUI facade AP
 `model::{ColorNumericInputMode, color_numeric_text, parse_color_numeric_input, ...}` imports remain
 unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the numeric
 model hub split.
+
+2026-06-05 editor ColorEdit drag-source phase owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop/source/handlers.rs` now keeps only
+child module routing, `install_color_drag_source(...)`, drag kind derivation, and threshold
+distance math. `handlers/down.rs` owns left-button drag startup, cross-window/same-window begin
+calls, and stale active-session cleanup. `handlers/move_phase.rs` owns pointer move routing,
+thresholded drag activation, dragging/canceled phase updates, active store writes, cancel cleanup,
+and redraw. `handlers/up.rs` owns left-button release handling, delivered-drop insertion, drag
+cleanup, redraw, and skip-activate behavior. Drag-source installation, drag threshold semantics,
+delivery recording, and public ColorEdit / IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the phase split.

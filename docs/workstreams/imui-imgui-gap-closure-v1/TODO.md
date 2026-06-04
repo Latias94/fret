@@ -7686,3 +7686,14 @@ opening the slice.
       `model/numeric/text.rs` owns RGB/HSV readout formatting, and `model/numeric/parse.rs` owns
       RGB/HSV numeric text parsing and channel/unit validation. The workstream manifest, source
       gate, and `imui_surface_policy` freeze the numeric model hub boundary.
+- [x] Split editor `ColorEdit` drag-source handler phases into private down/move/up owners without
+      changing drag-source installation, drag kind derivation, cross-window and same-window drag
+      startup, drag threshold activation, active drag store updates, delivered-drop insertion,
+      cancel cleanup, skip-activate behavior, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/drag_drop/source/handlers.rs` now keeps only child module routing,
+      `install_color_drag_source(...)`, drag kind derivation, and threshold math.
+      `handlers/down.rs` owns left-button drag startup and stale active-session cleanup,
+      `handlers/move_phase.rs` owns thresholded dragging/cancel state and active store updates, and
+      `handlers/up.rs` owns delivered-drop recording, drag cleanup, redraw, and skip-activate
+      behavior. The workstream manifest, source gate, and `imui_surface_policy` freeze the phase
+      owner boundaries.

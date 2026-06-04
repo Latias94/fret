@@ -29487,6 +29487,36 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit drag-source phase owner split:
+
+- Claim: ColorEdit drag-source pointer phase handling moved out of the single
+  `ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop/source/handlers.rs` owner into
+  private down, move, and up owners without changing drag-source installation, drag kind
+  derivation, cross-window or same-window drag startup, drag threshold activation, active drag
+  store updates, delivered-drop insertion, cancel cleanup, skip-activate behavior, public
+  ColorEdit APIs, or IMUI facade APIs.
+- Evidence anchors: `drag_drop/source/handlers.rs` now declares only `mod down;`,
+  `mod move_phase;`, and `mod up;` for phase routing while retaining `install_color_drag_source(...)`,
+  `color_drag_kind_for_element(...)`, and `color_drag_threshold_exceeded(...)`.
+  `handlers/down.rs` owns left-button pointer-down handling, cross-window/same-window drag begin
+  calls, and stale active-session cleanup. `handlers/move_phase.rs` owns pointer move routing,
+  thresholded drag activation, dragging/canceled phase updates, active store writes, cancellation,
+  and redraw. `handlers/up.rs` owns left-button release handling, delivered-drop insertion, drag
+  cleanup, redraw, and `PressablePointerUpResult::SkipActivate`. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the phase owner boundaries.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Passed: `git diff --cached --check`.
+
 2026-06-05 editor ColorEdit numeric model owner split:
 
 - Claim: ColorEdit numeric model implementation moved from the single

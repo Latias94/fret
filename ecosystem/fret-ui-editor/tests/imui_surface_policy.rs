@@ -28,6 +28,12 @@ const COLOR_EDIT_DRAG_DROP_SOURCE_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/source.rs");
 const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/source/handlers.rs");
+const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS: &str =
+    include_str!("../src/controls/color_edit/drag_drop/source/handlers/down.rs");
+const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS: &str =
+    include_str!("../src/controls/color_edit/drag_drop/source/handlers/move_phase.rs");
+const COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS: &str =
+    include_str!("../src/controls/color_edit/drag_drop/source/handlers/up.rs");
 const COLOR_EDIT_DRAG_DROP_STORE_RS: &str =
     include_str!("../src/controls/color_edit/drag_drop/store.rs");
 const COLOR_EDIT_LAYOUT_RS: &str = include_str!("../src/controls/color_edit/layout.rs");
@@ -831,17 +837,63 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("DragPhase::Dragging"));
     assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_RS.contains("fn color_drag_threshold_exceeded("));
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("fn install_color_drag_source<"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_down"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_move"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_up"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("begin_cross_window_drag_with_kind"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("begin_drag_with_kind"));
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("DragPhase::Dragging"));
-    assert!(
-        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("PressablePointerUpResult::SkipActivate")
-    );
-    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("DeliveredColorDrop"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("mod down;"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("mod move_phase;"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("mod up;"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("install_color_drag_pointer_down"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("install_color_drag_pointer_move"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("install_color_drag_pointer_up"));
     assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("fn color_drag_threshold_exceeded("));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("COLOR_DRAG_KIND_MASK"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("fn color_drag_kind_for_element"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("MouseButton::Left"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_down"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_move"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("pressable_add_on_pointer_up"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("begin_cross_window_drag_with_kind"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("DragPhase::Dragging"));
+    assert!(
+        !COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("PressablePointerUpResult::SkipActivate")
+    );
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_RS.contains("DeliveredColorDrop"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS
+            .contains("fn install_color_drag_pointer_down<")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS.contains("pressable_add_on_pointer_down"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS.contains("MouseButton::Left"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS.contains("begin_cross_window_drag_with_kind")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS.contains("begin_drag_with_kind"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS.contains("DragPhase::Dragging"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_DOWN_RS.contains("DeliveredColorDrop"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS
+            .contains("fn install_color_drag_pointer_move<")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS.contains("pressable_add_on_pointer_move"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS.contains("DragPhase::Dragging"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS.contains("ActiveColorDrag"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS.contains("color_drag_threshold_exceeded"));
+    assert!(
+        !COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS.contains("begin_cross_window_drag_with_kind")
+    );
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_MOVE_RS.contains("DeliveredColorDrop"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS.contains("fn install_color_drag_pointer_up<")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS.contains("pressable_add_on_pointer_up"));
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS.contains("DeliveredColorDrop"));
+    assert!(
+        COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS
+            .contains("PressablePointerUpResult::SkipActivate")
+    );
+    assert!(COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS.contains("MouseButton::Left"));
+    assert!(!COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS.contains("DragPhase::Dragging"));
+    assert!(
+        !COLOR_EDIT_DRAG_DROP_SOURCE_HANDLERS_UP_RS.contains("begin_cross_window_drag_with_kind")
+    );
     assert!(COLOR_EDIT_POPUP_PREVIEW_FILL_RS.contains("ColorEditAlphaPreview::Half"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_RS.contains("fn color_side_preview<"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_SIDE_CELL_RS.contains("SIDE_PREVIEW_SWATCH_WIDTH"));
