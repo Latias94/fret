@@ -327,8 +327,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .cloned()
                 .unwrap_or_default();
             let want_surface_composited_alpha =
-                want_surface_composited_alpha_for_style(style, &caps);
-            configure_surface_alpha_mode_for_composited_window(
+                super::surface_lifecycle::want_surface_composited_alpha_for_style(style, &caps);
+            super::surface_lifecycle::configure_surface_alpha_mode_for_composited_window(
                 &context.adapter,
                 &context.device,
                 &mut state,
@@ -628,75 +628,5 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         true
-    }
-}
-
-fn want_surface_composited_alpha_for_style(
-    style: WindowStyleRequest,
-    caps: &PlatformCapabilities,
-) -> bool {
-    if !caps.ui.window_transparent {
-        return false;
-    }
-
-    if let Some(transparent) = style.transparent {
-        return transparent;
-    }
-
-    if let Some(material) = style.background_material {
-        let clamped = fret_runtime::clamp_background_material_request(material, caps);
-        if clamped != fret_runtime::WindowBackgroundMaterialRequest::None {
-            // Background materials may require a composited alpha surface (ADR 0310). If the
-            // caller did not explicitly request `transparent`, treat it as implied once a
-            // non-None material is effectively applied.
-            return true;
-        }
-    }
-
-    false
-}
-
-pub(super) fn configure_surface_alpha_mode_for_composited_window(
-    adapter: &wgpu::Adapter,
-    device: &wgpu::Device,
-    surface: &mut SurfaceState<'_>,
-    want_surface_composited_alpha: bool,
-) {
-    let capabilities = surface.surface.get_capabilities(adapter);
-    if capabilities.alpha_modes.is_empty() {
-        return;
-    }
-
-    let desired = if want_surface_composited_alpha {
-        // Prefer explicit alpha composition modes over `Opaque` when we want a composited window.
-        // Ordering is "best-effort" and may vary by platform/backend.
-        [
-            wgpu::CompositeAlphaMode::PreMultiplied,
-            wgpu::CompositeAlphaMode::PostMultiplied,
-            wgpu::CompositeAlphaMode::Inherit,
-            // `Auto` may pick an opaque path even for transparent windows on some backends.
-            // Prefer `Inherit` first so the platform can select the appropriate compositing mode.
-            wgpu::CompositeAlphaMode::Auto,
-        ]
-        .into_iter()
-        .find(|m| capabilities.alpha_modes.contains(m))
-        .unwrap_or(capabilities.alpha_modes[0])
-    } else {
-        capabilities
-            .alpha_modes
-            .iter()
-            .copied()
-            .find(|m| matches!(m, wgpu::CompositeAlphaMode::Opaque))
-            .unwrap_or(capabilities.alpha_modes[0])
-    };
-
-    if surface.config.alpha_mode != desired {
-        surface.config.alpha_mode = desired;
-        if let Err(err) = surface.reconfigure(device) {
-            tracing::error!(
-                error = ?err,
-                "failed to reconfigure surface alpha mode for composited window"
-            );
-        }
     }
 }

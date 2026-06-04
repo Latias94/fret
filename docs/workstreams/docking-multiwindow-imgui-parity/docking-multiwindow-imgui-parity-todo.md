@@ -1123,6 +1123,17 @@ Each TODO is labeled:
         helpers without owning pending-front retry behavior.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner surface alpha owner split keeps composited-alpha surface
+      configuration out of the window lifecycle owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M112_RUNNER_SURFACE_ALPHA_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` owns
+        `want_surface_composited_alpha_for_style` and
+        `configure_surface_alpha_mode_for_composited_window` for window creation, style updates,
+        background material implied transparency, and surface reconfigure behavior.
+      - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` keeps window
+        create/insert/destroy helpers without defining composited-alpha surface configuration.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

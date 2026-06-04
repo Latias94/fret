@@ -1724,6 +1724,19 @@ split through the docking multiwindow source gate.
 
 Marker summary: pending-front retry queue; about-to-wait scheduling; DockFloating fronting.
 
+2026-06-04 desktop runner surface alpha owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` now owns
+`want_surface_composited_alpha_for_style` and
+`configure_surface_alpha_mode_for_composited_window`, including background material implied
+transparency, alpha-mode selection order, and surface reconfigure behavior. `window_lifecycle.rs`
+keeps window create/insert/destroy lifecycle helpers and delegates initial surface alpha setup to
+the surface owner; `window_style.rs` calls the same surface owner for style updates. Runtime
+behavior and public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py`
+freezes the split through the docking multiwindow source gate.
+
+Marker summary: composited-alpha surface configuration; background material implied transparency;
+surface reconfigure.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

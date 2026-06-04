@@ -30439,6 +30439,36 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M111_RUNNER_WINDOW_FRONT_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner surface alpha owner split:
+
+- Claim: composited-alpha surface configuration moved from
+  `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` without changing window
+  creation surface setup, style updates, background material implied transparency, alpha-mode
+  selection order, surface reconfigure behavior, diagnostics snapshot publication, or public effect
+  surfaces.
+- Evidence anchors: `surface_lifecycle.rs` owns `want_surface_composited_alpha_for_style` and
+  `configure_surface_alpha_mode_for_composited_window`; `window_lifecycle.rs` delegates initial
+  surface alpha setup to the surface owner; `window_style.rs` calls the same surface owner for
+  style-time surface alpha updates.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M112 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M112_RUNNER_SURFACE_ALPHA_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

@@ -93,7 +93,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if let Some(state) = self.windows.get_mut(window)
                 && let Some(surface) = state.surface.as_mut()
             {
-                window_lifecycle::configure_surface_alpha_mode_for_composited_window(
+                surface_lifecycle::configure_surface_alpha_mode_for_composited_window(
                     &context.adapter,
                     &context.device,
                     surface,
