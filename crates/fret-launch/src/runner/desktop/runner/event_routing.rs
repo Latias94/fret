@@ -30,8 +30,8 @@ fn point_from_physical_i32(pos: winit::dpi::PhysicalPosition<i32>) -> Point {
 
 fn apply_drag_window_geometry_diagnostics(
     drag: &mut fret_runtime::DragSession,
-    current_diag: Option<super::window::WindowClientOriginDiagnostics>,
-    moving_diag: Option<super::window::WindowClientOriginDiagnostics>,
+    current_diag: Option<super::window_position::WindowClientOriginDiagnostics>,
+    moving_diag: Option<super::window_position::WindowClientOriginDiagnostics>,
     current_screen_pos: winit::dpi::PhysicalPosition<f64>,
     moving_screen_pos: winit::dpi::PhysicalPosition<f64>,
 ) {
@@ -46,7 +46,7 @@ fn apply_drag_window_geometry_diagnostics(
         drag.diag_current_window_scale_factor_x1000 =
             diagnostics_scale_factor_x1000(diag.scale_factor);
         drag.diag_current_window_local_pos_from_screen_logical_px =
-            Some(super::window::local_pos_for_screen_pos(
+            Some(super::window_position::local_pos_for_screen_pos(
                 diag.client_origin_screen,
                 diag.scale_factor,
                 current_screen_pos,
@@ -64,7 +64,7 @@ fn apply_drag_window_geometry_diagnostics(
         drag.diag_moving_window_scale_factor_x1000 =
             diagnostics_scale_factor_x1000(diag.scale_factor);
         drag.diag_moving_window_local_pos_from_screen_logical_px =
-            Some(super::window::local_pos_for_screen_pos(
+            Some(super::window_position::local_pos_for_screen_pos(
                 diag.client_origin_screen,
                 diag.scale_factor,
                 moving_screen_pos,

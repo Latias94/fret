@@ -30313,6 +30313,39 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M107_RUNNER_MONITOR_GEOMETRY_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window position owner split:
+
+- Claim: client/screen coordinate conversion helpers and DockFloating cursor-grab placement moved
+  from `crates/fret-launch/src/runner/desktop/runner/window.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_position.rs` without changing runtime
+  behavior, client-origin diagnostics, cursor-grab decoration handling, mixed-DPI cursor-grab
+  estimates, window anchor/cursor placement, client-rect hit checks, or public effect surfaces.
+- Evidence anchors: `window_position.rs` owns `WindowClientOriginDiagnostics`,
+  `client_origin_screen`, `screen_pos_in_client`, `local_pos_for_screen_pos`,
+  `outer_pos_for_cursor_grab`, `scale_decoration_offset_for_target_scale`,
+  `estimated_outer_pos_for_cursor_grab`, `compute_window_position_from_anchor`,
+  `compute_window_position_from_cursor`, `compute_window_position_from_cursor_grab_estimate`,
+  `compute_window_outer_position_from_cursor_grab`, `cursor_screen_pos_fallback_for_window`,
+  `screen_pos_in_window`, `local_pos_for_window`, `client_origin_screen_diagnostics_for_window`,
+  `window_client_rect_screen`, and `clamp_screen_pos_to_window_client`; `window.rs` keeps platform
+  focus/style, platform under-cursor lookup, heuristic z-order fallback, and window runtime state.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo check -p fret-launch --lib`;
+  `cargo nextest run -p fret-launch --lib window_position --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M108 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M108_RUNNER_WINDOW_POSITION_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

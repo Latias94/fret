@@ -1677,6 +1677,18 @@ gate.
 
 Marker summary: monitor geometry helpers; virtual desktop bounds; outer-position settle.
 
+2026-06-04 desktop runner window position owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_position.rs` now owns client/screen coordinate
+conversion, client-origin diagnostics, local-position projection, cursor-grab decoration math,
+mixed-DPI cursor-grab estimates, window anchor/cursor placement, client-rect hit checks, and
+DockFloating cursor-grab outer-position helpers while
+`crates/fret-launch/src/runner/desktop/runner/window.rs` keeps platform focus/style, platform
+under-cursor lookup, heuristic z-order fallback, and window runtime state. Runtime behavior and
+public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split through the docking multiwindow source gate.
+
+Marker summary: client/screen coordinate helpers; cursor-grab placement; client-origin diagnostics.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

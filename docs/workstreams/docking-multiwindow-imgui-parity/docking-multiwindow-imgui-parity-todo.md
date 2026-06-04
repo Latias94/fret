@@ -1077,6 +1077,18 @@ Each TODO is labeled:
         defining the monitor geometry helper bodies or monitor rect types.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window position owner split keeps client/screen coordinate conversion
+      and cursor-grab placement out of the window owner:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M108_RUNNER_WINDOW_POSITION_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_position.rs` owns
+        `WindowClientOriginDiagnostics`, client-origin projection, local-position conversion,
+        cursor-grab decoration math, mixed-DPI cursor-grab estimates, anchor/cursor placement,
+        client-rect hit checks, and DockFloating cursor-grab outer-position helpers.
+      - `crates/fret-launch/src/runner/desktop/runner/window.rs` keeps platform focus/style,
+        platform under-cursor lookup, heuristic z-order fallback, and window runtime state without
+        defining the coordinate helper bodies or cursor-grab placement tests.
+      - Focused runner compile, window-position regression tests, source gate, JSON shape, catalog,
+        and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

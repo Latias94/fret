@@ -1107,6 +1107,10 @@ Last updated: 2026-06-03
 - [x] Split desktop runner monitor geometry and outer-position settling into the private monitor topology owner without changing runtime behavior or public effect surfaces. The docking source gate
   freezes the owner split in `M107_RUNNER_MONITOR_GEOMETRY_OWNER_SPLIT_2026-06-04.md` without
   claiming Wayland compositor acceptance.
+- [x] Split desktop runner client/screen coordinate conversion and cursor-grab placement into the private window-position owner without changing runtime behavior or public effect surfaces. The
+  docking source gate freezes the owner split in
+  `M108_RUNNER_WINDOW_POSITION_OWNER_SPLIT_2026-06-04.md` without claiming Wayland compositor
+  acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

@@ -347,6 +347,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M107_RUNNER_MONITOR_GEOMETRY_OWNER_SPLIT_2026-06-04.md`
   (moves monitor geometry helpers and outer-position settling into `monitor_topology.rs` without
   changing runtime behavior)
+- Latest runner window position owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M108_RUNNER_WINDOW_POSITION_OWNER_SPLIT_2026-06-04.md`
+  (moves client/screen coordinate helpers and cursor-grab placement into `window_position.rs`
+  without changing runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
