@@ -1291,6 +1291,7 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/swatch/activation.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/swatch/context_menu.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/swatch/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/affordances.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/tests/drag_drop.rs",

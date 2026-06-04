@@ -43,6 +43,8 @@ const COLOR_EDIT_STATE_RS: &str = include_str!("../src/controls/color_edit/state
 const COLOR_EDIT_SWATCH_RS: &str = include_str!("../src/controls/color_edit/swatch.rs");
 const COLOR_EDIT_SWATCH_CONTEXT_MENU_RS: &str =
     include_str!("../src/controls/color_edit/swatch/context_menu.rs");
+const COLOR_EDIT_SWATCH_ELEMENT_RS: &str =
+    include_str!("../src/controls/color_edit/swatch/element.rs");
 const COLOR_EDIT_SWATCH_VISUAL_RS: &str =
     include_str!("../src/controls/color_edit/swatch/visual.rs");
 const COLOR_EDIT_POPUP_RS: &str = include_str!("../src/controls/color_edit/popup.rs");
@@ -247,12 +249,22 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_LAYOUT_RS.contains("FlexProps"));
     assert!(COLOR_EDIT_LAYOUT_RS.contains("el.test_id(test_id.clone())"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) struct ColorEditSwatchArgs"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) fn color_swatch<"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("PressableProps"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("pressable_add_on_activate"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("mod element;"));
+    assert!(COLOR_EDIT_SWATCH_RS.contains("pub(super) use element::color_swatch;"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("pub(super) fn color_swatch<"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("PressableProps"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("pressable_add_on_activate"));
+    assert!(
+        COLOR_EDIT_SWATCH_ELEMENT_RS
+            .contains("pub(in crate::controls::color_edit) fn color_swatch<")
+    );
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("PressableProps"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("pressable_add_on_activate"));
     assert!(COLOR_EDIT_SWATCH_RS.contains("mod context_menu;"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("install_context_menu_pointer_handler"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("install_context_menu_keyboard_handler"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("install_context_menu_pointer_handler"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("install_context_menu_keyboard_handler"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("install_context_menu_pointer_handler"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("install_context_menu_keyboard_handler"));
     assert!(!COLOR_EDIT_SWATCH_RS.contains("MouseButton::Right"));
     assert!(!COLOR_EDIT_SWATCH_RS.contains("KeyCode::ContextMenu"));
     assert!(!COLOR_EDIT_SWATCH_RS.contains("PressablePointerDownResult"));
@@ -265,10 +277,16 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
             .contains("PressablePointerDownResult::SkipDefaultAndStopPropagation")
     );
     assert!(COLOR_EDIT_SWATCH_CONTEXT_MENU_RS.contains("key_on_key_down_for"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("ColorEditDragDropPayload::from_color"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("install_color_drag_source"));
-    assert!(COLOR_EDIT_SWATCH_RS.contains("update_color_drop_target"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("ColorEditDragDropPayload::from_color"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("install_color_drag_source"));
+    assert!(!COLOR_EDIT_SWATCH_RS.contains("update_color_drop_target"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("ColorEditDragDropPayload::from_color"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("install_color_drag_source"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("update_color_drop_target"));
     assert!(!COLOR_EDIT_SWATCH_RS.contains("EditorWidgetVisuals"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("color_swatch_visual("));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("ColorSwatchVisualArgs {"));
+    assert!(COLOR_EDIT_SWATCH_ELEMENT_RS.contains("COLOR_SWATCH_SIZE"));
     assert!(COLOR_EDIT_SWATCH_VISUAL_RS.contains("EditorWidgetVisuals"));
     assert!(COLOR_EDIT_SWATCH_CONTEXT_MENU_RS.contains("key_on_key_down_for"));
     assert!(COLOR_EDIT_SWATCH_CONTEXT_MENU_RS.contains("KeyCode::ContextMenu"));

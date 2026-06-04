@@ -7606,3 +7606,13 @@ opening the slice.
       helpers, sanitize helpers, `sv_picker_a11y_text(...)`, and `hue_percent_text(...)`. The
       workstream manifest, source gate, and `imui_surface_policy` freeze the HSV model owner
       boundary.
+- [x] Split editor `ColorEdit` swatch pressable element assembly into a private child owner without
+      changing swatch args, activation behavior, copy context-menu pointer/keyboard routing,
+      drag-source installation, drop-target hover updates, visual state mounting, test-id/a11y value
+      routing, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/swatch.rs` now keeps module declarations, `ColorEditSwatchArgs`, and the
+      `color_swatch(...)` re-export. `color_edit/swatch/element.rs` owns the pressable root,
+      activation hook installation, context-menu hook orchestration, drag/drop target routing,
+      `ColorSwatchVisualArgs` mounting, test-id routing, and swatch a11y value assignment. The
+      workstream manifest, source gate, and `imui_surface_policy` freeze the swatch element owner
+      boundary.

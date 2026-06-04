@@ -696,6 +696,15 @@ hue-wheel model ownership, picker interaction behavior, and public ColorEdit / I
 remain unchanged, and the workstream manifest, source gate, and `imui_surface_policy` freeze the
 split.
 
+2026-06-05 editor ColorEdit swatch element owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` now keeps module declarations,
+`ColorEditSwatchArgs`, and the `color_swatch(...)` re-export only. `swatch/element.rs` owns the
+pressable root, focus ring and a11y props, activation hook installation, context-menu hook
+orchestration, drag-source installation, drop-target hover updates, visual child mounting,
+test-id routing, and swatch a11y value assignment. Activation behavior, context-menu behavior,
+drag/drop behavior, visual state projection, and public ColorEdit / IMUI facade APIs remain
+unchanged, and the workstream manifest, source gate, and `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

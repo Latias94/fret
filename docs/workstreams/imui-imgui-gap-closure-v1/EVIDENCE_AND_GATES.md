@@ -29857,6 +29857,31 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit swatch element owner split:
+
+- Claim: ColorEdit swatch pressable element assembly moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/swatch.rs` into private `swatch/element.rs`
+  without changing `ColorEditSwatchArgs`, activation behavior, copy context-menu pointer/keyboard
+  routing, drag-source installation, drop-target hover updates, visual state mounting,
+  test-id/a11y value routing, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `swatch.rs` now declares `mod element;`, re-exports `color_swatch(...)`, and
+  keeps `ColorEditSwatchArgs` plus swatch child module routing. `swatch/element.rs` owns
+  `color_swatch(...)`, the `PressableProps`/a11y/focus-ring root, activation hook installation,
+  context-menu hook orchestration, color drag-source installation, drop-target hover updates,
+  `ColorSwatchVisualArgs` mounting, root test-id routing, and swatch a11y value assignment.
+  `swatch/activation.rs`, `swatch/context_menu.rs`, and `swatch/visual.rs` keep their existing
+  behavior owners. `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the swatch element owner boundary
+  and reject pressable/drag/drop/context-menu orchestration drifting back into the swatch root.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of
