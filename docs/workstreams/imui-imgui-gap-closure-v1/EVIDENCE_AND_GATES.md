@@ -33231,9 +33231,10 @@ Focused gates:
   picker selection, standalone alpha-bar behavior, picker-options runtime overrides, eyedropper
   action, numeric rows, history/preset swatches, side-preview restore behavior, or public ColorEdit
   / IMUI facade APIs.
-- Evidence anchors: `sections.rs` keeps `ColorPopupBodySectionsArgs`,
-  `ColorPopupBodySections`, `color_popup_body_sections(...)`, section call order,
-  `has_side_preview`, and final `ColorPopupContentArgs` assembly only;
+- Evidence anchors: `sections.rs` now keeps `ColorPopupBodySectionsArgs`,
+  `ColorPopupBodySections`, child module declarations, and the stable
+  `color_popup_body_sections(...)` re-export; `sections/assembly.rs` owns section call order,
+  `has_side_preview`, and final `ColorPopupContentArgs` assembly;
   `sections/picker.rs` owns `ColorEditPopupPicker::{HsvHueBar,HsvHueWheel,Hidden}` dispatch and
   standalone `alpha_bar(...)` selection; `sections/actions.rs` owns
   `color_picker_options(...)`, `color_eyedropper_action(...)`, and `color_numeric_inputs(...)`;
@@ -33242,6 +33243,29 @@ Focused gates:
   `preset_swatches(...)`. `tools/gate_imui_workstream_source.py` and
   `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` now reject those details drifting back
   into the sections hub.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit popup sections assembly owner split:
+
+- Claim: ColorEdit popup body section sequencing and final content assembly moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` into private
+  `sections/assembly.rs` without changing section argument records, picker/options/preview/
+  eyedropper/numeric/history/preset/standalone-alpha routing, `has_side_preview`, final
+  `ColorPopupContentArgs`, popup body width policy, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `sections.rs` now declares `mod assembly;`, re-exports
+  `color_popup_body_sections(...)`, and keeps `ColorPopupBodySectionsArgs` plus
+  `ColorPopupBodySections`; `sections/assembly.rs` owns `color_popup_body_sections(...)`,
+  calls each child section owner, computes `has_side_preview`, and builds `ColorPopupContentArgs`.
+  `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the sections assembly owner
+  boundary and reject child section call sequencing drifting back into the sections hub.
 - Passed: `cargo fmt --package fret-ui-editor -- --check`.
 - Passed: `cargo check -p fret-ui-editor --features imui`.
 - Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.

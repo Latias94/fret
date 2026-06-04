@@ -7628,3 +7628,12 @@ opening the slice.
       placement, anchored props, pointer-region wrapper, dismissible menu request flags, and
       close-auto-focus restore to the swatch. The workstream manifest, source gate, and
       `imui_surface_policy` freeze the popup request owner boundary.
+- [x] Split editor `ColorEdit` popup body section assembly into a private child owner without
+      changing section argument records, section call ordering, picker/options/preview/eyedropper/
+      numeric/swatches/standalone-alpha routing, `has_side_preview` calculation, final
+      `ColorPopupContentArgs`, popup body width policy, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/body/sections.rs` now keeps section type records, child module
+      declarations, and the `color_popup_body_sections(...)` re-export. `sections/assembly.rs`
+      owns `color_popup_body_sections(...)`, section call sequencing, `has_side_preview`, and final
+      `ColorPopupContentArgs` assembly. The workstream manifest, source gate, and
+      `imui_surface_policy` freeze the sections assembly owner boundary.

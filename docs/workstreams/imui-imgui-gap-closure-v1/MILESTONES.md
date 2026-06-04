@@ -7355,9 +7355,9 @@ histogram2d plot panels, and optional IMUI adapter routing remain unchanged, and
 `tools/gate_imui_workstream_source.py` freezes the split.
 
 2026-06-05 editor ColorEdit popup sections child-owner split result:
-`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` now keeps the popup
-section argument record, section sequencing, `has_side_preview`, and final
-`ColorPopupContentArgs` assembly. Private child owners now carry the section-specific construction:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` now keeps popup section
+type records, child module declarations, and the stable `color_popup_body_sections(...)`
+re-export. Private child owners now carry the section-specific construction:
 `sections/picker.rs` owns picker-shape and standalone alpha-bar selection, `sections/actions.rs`
 owns picker-options/eyedropper/numeric section construction, `sections/preview.rs` owns
 side-preview construction, and `sections/swatches.rs` owns history/preset swatch construction.
@@ -7374,3 +7374,12 @@ pointer-region wrapping, dismissible menu request flags, close-on-window-focus/r
 close-auto-focus restore to the swatch. Popup body assembly remains in `popup/body.rs`, public
 ColorEdit APIs and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
 plus `imui_surface_policy` freeze the hub/request split.
+
+2026-06-05 editor ColorEdit popup sections assembly owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections.rs` now keeps section type
+records, child module declarations, and the stable `color_popup_body_sections(...)` re-export. The
+new `ecosystem/fret-ui-editor/src/controls/color_edit/popup/body/sections/assembly.rs` owns section
+call sequencing, picker/options/preview/eyedropper/numeric/history/preset/standalone-alpha routing,
+`has_side_preview`, and final `ColorPopupContentArgs` assembly. Popup body width policy, child
+section behavior, public ColorEdit APIs, and IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the hub/assembly split.

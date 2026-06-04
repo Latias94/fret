@@ -55,6 +55,8 @@ const COLOR_EDIT_POPUP_BODY_LAYOUT_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/layout.rs");
 const COLOR_EDIT_POPUP_BODY_SECTIONS_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/sections.rs");
+const COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS: &str =
+    include_str!("../src/controls/color_edit/popup/body/sections/assembly.rs");
 const COLOR_EDIT_POPUP_BODY_SECTIONS_ACTIONS_RS: &str =
     include_str!("../src/controls/color_edit/popup/body/sections/actions.rs");
 const COLOR_EDIT_POPUP_BODY_SECTIONS_PICKER_RS: &str =
@@ -788,6 +790,11 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_BODY_RS.contains("color_popup_width("));
     assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("fn picker_side_preview_row<"));
     assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod assembly;"));
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_RS
+            .contains("pub(super) use assembly::color_popup_body_sections;")
+    );
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("fn picker_side_preview_row<"));
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("COLOR_POPUP_WITH_SIDE_PREVIEW_WIDTH"));
     assert!(COLOR_EDIT_POPUP_BODY_LAYOUT_RS.contains("ColorEditPopupPicker::Hidden"));
@@ -795,16 +802,38 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod picker;"));
     assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod preview;"));
     assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("mod swatches;"));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_picker_options_section("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_side_preview_section("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_eyedropper_section("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_numeric_section("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_history_swatches_section("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_preset_swatches_section("));
-    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_picker_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_picker_options_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_side_preview_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_eyedropper_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_numeric_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_history_swatches_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_preset_swatches_section("));
+    assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_picker_section("));
     assert!(
-        COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_standalone_alpha_bar_section(")
+        !COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_popup_standalone_alpha_bar_section(")
     );
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("color_popup_picker_options_section(")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("color_popup_side_preview_section(")
+    );
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("color_popup_eyedropper_section("));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("color_popup_numeric_section("));
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS
+            .contains("color_popup_history_swatches_section(")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("color_popup_preset_swatches_section(")
+    );
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("color_popup_picker_section("));
+    assert!(
+        COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS
+            .contains("color_popup_standalone_alpha_bar_section(")
+    );
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("ColorPopupContentArgs {"));
+    assert!(COLOR_EDIT_POPUP_BODY_SECTIONS_ASSEMBLY_RS.contains("has_side_preview"));
     assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueBar"));
     assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
     assert!(!COLOR_EDIT_POPUP_BODY_SECTIONS_RS.contains("color_picker_options("));
