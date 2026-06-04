@@ -7412,3 +7412,13 @@ and ratio coverage, alpha preview variants, and tooltip/copy defaults.
 and disabled options-surface policy. Assertions, production ColorEdit code, public ColorEdit APIs,
 and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
 `imui_surface_policy` freeze the popup policy test hub split.
+
+2026-06-05 editor ColorEdit numeric test owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric.rs` now keeps only child module
+routing. `tests/numeric/modes.rs` owns popup numeric mode ordering, `tests/numeric/hex.rs` owns
+RGB/RGBA hex parsing, alpha-preserving preset conversion, and numeric readout coverage,
+`tests/numeric/input.rs` owns RGB/HSV text input parsing and rejection coverage, and
+`tests/numeric/conversion.rs` owns primary-color, grayscale, and palette roundtrip HSV conversion
+coverage. Assertions, production ColorEdit code, public ColorEdit APIs, and IMUI facade APIs remain
+unchanged, and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the numeric
+test hub split.

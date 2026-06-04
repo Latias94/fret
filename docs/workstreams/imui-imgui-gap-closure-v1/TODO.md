@@ -7667,3 +7667,13 @@ opening the slice.
       `tests/popup_policy/runtime.rs` owns runtime override synchronization and policy enforcement.
       The workstream manifest, source gate, and `imui_surface_policy` freeze the popup policy test
       hub boundary.
+- [x] Split editor `ColorEdit` numeric tests into private child owners without changing popup
+      numeric mode ordering, RGB/RGBA hex parsing, alpha-preserving preset conversion, numeric
+      readout formatting, RGB/HSV text input parsing, rejection behavior, HSV conversion math,
+      shared HSV assertions, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/tests/numeric.rs` now keeps only child module routing.
+      `tests/numeric/modes.rs` owns popup numeric mode ordering, `tests/numeric/hex.rs` owns
+      hex/preset/readout coverage, `tests/numeric/input.rs` owns RGB/HSV text input parsing and
+      rejection coverage, and `tests/numeric/conversion.rs` owns HSV conversion coverage. The
+      workstream manifest, source gate, and `imui_surface_policy` freeze the numeric test hub
+      boundary.

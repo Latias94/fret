@@ -159,6 +159,16 @@ const COLOR_EDIT_TESTS_POPUP_POLICY_RUNTIME_RS: &str =
     include_str!("../src/controls/color_edit/tests/popup_policy/runtime.rs");
 const COLOR_EDIT_TESTS_POPUP_POLICY_VISIBILITY_RS: &str =
     include_str!("../src/controls/color_edit/tests/popup_policy/visibility.rs");
+const COLOR_EDIT_TESTS_NUMERIC_RS: &str =
+    include_str!("../src/controls/color_edit/tests/numeric.rs");
+const COLOR_EDIT_TESTS_NUMERIC_CONVERSION_RS: &str =
+    include_str!("../src/controls/color_edit/tests/numeric/conversion.rs");
+const COLOR_EDIT_TESTS_NUMERIC_HEX_RS: &str =
+    include_str!("../src/controls/color_edit/tests/numeric/hex.rs");
+const COLOR_EDIT_TESTS_NUMERIC_INPUT_RS: &str =
+    include_str!("../src/controls/color_edit/tests/numeric/input.rs");
+const COLOR_EDIT_TESTS_NUMERIC_MODES_RS: &str =
+    include_str!("../src/controls/color_edit/tests/numeric/modes.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -994,6 +1004,37 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(
         COLOR_EDIT_TESTS_POPUP_POLICY_VISIBILITY_RS
             .contains("non_empty_history_counts_as_visible_popup_content_without_palette")
+    );
+    assert!(COLOR_EDIT_TESTS_NUMERIC_RS.contains("mod conversion;"));
+    assert!(COLOR_EDIT_TESTS_NUMERIC_RS.contains("mod hex;"));
+    assert!(COLOR_EDIT_TESTS_NUMERIC_RS.contains("mod input;"));
+    assert!(COLOR_EDIT_TESTS_NUMERIC_RS.contains("mod modes;"));
+    assert!(!COLOR_EDIT_TESTS_NUMERIC_RS.contains("#[test]"));
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_MODES_RS
+            .contains("popup_numeric_input_modes_are_explicit_and_ordered")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_HEX_RS
+            .contains("rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_HEX_RS
+            .contains("numeric_readout_formats_rgb_hsv_and_optional_alpha")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_INPUT_RS
+            .contains("rgb_numeric_input_parses_channels_and_optional_alpha_percent")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_INPUT_RS
+            .contains("numeric_input_rejects_out_of_range_or_incomplete_values")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_CONVERSION_RS.contains("hsv_conversion_matches_primary_colors")
+    );
+    assert!(
+        COLOR_EDIT_TESTS_NUMERIC_CONVERSION_RS.contains("hsv_conversion_roundtrips_color_presets")
     );
     assert!(!COLOR_EDIT_RS.contains("Color picker (stub)"));
     assert!(!COLOR_EDIT_RS.contains("picker TBD"));

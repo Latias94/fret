@@ -29484,6 +29484,31 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit numeric test owner split:
+
+- Claim: ColorEdit numeric unit coverage moved from the single
+  `ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric.rs` file into private child test
+  owners without changing popup numeric mode ordering, RGB/RGBA hex parsing, alpha-preserving
+  preset conversion, numeric readout formatting, RGB/HSV text input parsing, rejection behavior,
+  HSV conversion math, shared HSV assertions, production ColorEdit code, public ColorEdit APIs, or
+  IMUI facade APIs.
+- Evidence anchors: `tests/numeric.rs` now declares only `mod conversion;`, `mod hex;`,
+  `mod input;`, and `mod modes;`; `tests/numeric/modes.rs` owns popup numeric mode ordering;
+  `tests/numeric/hex.rs` owns RGB/RGBA hex parsing, alpha-preserving preset conversion, and
+  numeric readout coverage; `tests/numeric/input.rs` owns RGB/HSV text input parsing and rejection
+  coverage; and `tests/numeric/conversion.rs` owns primary-color, grayscale, and palette roundtrip
+  HSV conversion coverage. `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the numeric test hub boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `git diff --check`.
 
 2026-06-05 editor ColorEdit alpha bar surface owner split:

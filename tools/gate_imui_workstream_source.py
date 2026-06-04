@@ -40404,18 +40404,75 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric.rs"),
             required=[
+                "mod conversion;",
+                "mod hex;",
+                "mod input;",
+                "mod modes;",
+            ],
+            forbidden=[
+                "#[test]",
                 "use super::*;",
                 "popup_numeric_input_modes_are_explicit_and_ordered",
                 "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
+                "hsv_conversion_roundtrips_color_presets",
+                "sv_picker_position_preserves_hue_and_clamps_sv",
+                "alpha_bar_position_maps_local_x_to_clamped_alpha",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric/modes.rs"),
+            required=[
+                "use super::super::*;",
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+            ],
+            forbidden=[
+                "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
+                "hsv_conversion_matches_primary_colors",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric/hex.rs"),
+            required=[
+                "use super::super::*;",
+                "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
                 "rgba_hex_parse_is_only_available_when_alpha_is_visible",
+                "rgb_presets_preserve_current_alpha",
                 "numeric_readout_formats_rgb_hsv_and_optional_alpha",
+            ],
+            forbidden=[
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
+                "hsv_conversion_matches_primary_colors",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric/input.rs"),
+            required=[
+                "use super::super::*;",
                 "rgb_numeric_input_parses_channels_and_optional_alpha_percent",
                 "hsv_numeric_input_parses_degrees_and_percentages_preserving_alpha",
                 "numeric_input_rejects_out_of_range_or_incomplete_values",
+            ],
+            forbidden=[
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
                 "hsv_conversion_matches_primary_colors",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/tests/numeric/conversion.rs"),
+            required=[
+                "use super::super::*;",
+                "hsv_conversion_matches_primary_colors",
+                "hsv_conversion_handles_grayscale_without_unstable_hue",
                 "hsv_conversion_roundtrips_color_presets",
             ],
             forbidden=[
+                "popup_numeric_input_modes_are_explicit_and_ordered",
+                "rgb_hex_parse_preserves_alpha_when_alpha_is_not_explicit",
+                "numeric_input_rejects_out_of_range_or_incomplete_values",
                 "sv_picker_position_preserves_hue_and_clamps_sv",
                 "alpha_bar_position_maps_local_x_to_clamped_alpha",
             ],
