@@ -1890,6 +1890,19 @@ through the docking multiwindow source gate.
 
 Marker summary: redraw accessibility owner; semantics snapshot cache; app-handler dispatch only.
 
+2026-06-04 desktop runner window redraw text-input owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/window_redraw_text_input.rs` now owns
+`apply_window_redraw_text_input_snapshot`, including `WindowTextInputSnapshotService` lookup, IME
+allowed-state sync, Android soft-input forwarding, cursor-area sync, surrounding-text sync,
+`FRET_IME_DEBUG` snapshot logging, and follow-up `prepare_frame`. `app_handler.rs` keeps only
+cfg-gated redraw-time text-input snapshot dispatch after render and before scene validation.
+Runtime behavior and public effect surfaces remain unchanged, and
+`tools/gate_imui_workstream_source.py` freezes the split through the docking multiwindow source
+gate.
+
+Marker summary: redraw text-input owner; IME snapshot application; Android soft-input forwarding;
+app-handler dispatch only.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

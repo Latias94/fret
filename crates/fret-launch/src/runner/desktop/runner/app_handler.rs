@@ -7,7 +7,6 @@ use super::redraw_hitch::{
 use super::wheel_coalescing::{wheel_coalesce_delta, wheel_split_delta_by_max_abs_px};
 use super::window::PendingWheelEvent;
 use super::*;
-use std::sync::Arc;
 
 use fret_core::time::Instant;
 #[cfg(target_os = "macos")]
@@ -605,55 +604,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         hitch_render_ms = Some(elapsed.as_millis() as u64);
                     }
 
-                    // Consume the window-scoped text-input snapshot after render so the runner can
-                    // position the IME candidate window based on the final painted caret rect.
-                    //
-                    // Note: v1 still emits `Effect::ImeSetCursorArea` from widgets; this snapshot
-                    // path is a runner-level fallback and an integration seam for future macOS
-                    // (NSTextInputClient) interop.
-                    if let Some(snapshot) = self
-                        .app
-                        .global::<fret_runtime::WindowTextInputSnapshotService>()
-                        .and_then(|svc| svc.snapshot(app_window))
-                    {
-                        let mut dirty = false;
-                        let ime_changed =
-                            state.platform.set_ime_allowed(snapshot.focus_is_text_input);
-                        dirty |= ime_changed;
-                        #[cfg(target_os = "android")]
-                        if ime_changed {
-                            android_soft_input_request = Some(snapshot.focus_is_text_input);
-                        }
-                        if snapshot.focus_is_text_input
-                            && let Some(rect) = snapshot.ime_cursor_area
-                        {
-                            dirty |= state.platform.set_ime_cursor_area(rect);
-                        }
-                        if snapshot.focus_is_text_input {
-                            let surrounding = snapshot.surrounding_text.as_ref().map(|s| {
-                                fret_runner_winit::ImeSurroundingTextUpdate {
-                                    text: Arc::clone(&s.text),
-                                    cursor: s.cursor,
-                                    anchor: s.anchor,
-                                }
-                            });
-                            dirty |= state.platform.set_ime_surrounding_text(surrounding);
-                        } else {
-                            dirty |= state.platform.set_ime_surrounding_text(None);
-                        }
-
-                        if dirty {
-                            if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {
-                                tracing::info!(
-                                    "IME_DEBUG snapshot: window={:?} focus={} cursor_area={:?}",
-                                    app_window,
-                                    snapshot.focus_is_text_input,
-                                    snapshot.ime_cursor_area
-                                );
-                            }
-                            state.platform.prepare_frame(state.window.as_ref());
-                        }
-                    }
+                    #[cfg(target_os = "android")]
+                    super::window_redraw_text_input::apply_window_redraw_text_input_snapshot(
+                        &self.app,
+                        app_window,
+                        &mut state.platform,
+                        state.window.as_ref(),
+                        &mut android_soft_input_request,
+                    );
+                    #[cfg(not(target_os = "android"))]
+                    super::window_redraw_text_input::apply_window_redraw_text_input_snapshot(
+                        &self.app,
+                        app_window,
+                        &mut state.platform,
+                        state.window.as_ref(),
+                    );
 
                     super::render::validate_scene_if_enabled(&state.scene);
 

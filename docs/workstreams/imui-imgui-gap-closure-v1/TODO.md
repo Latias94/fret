@@ -1185,6 +1185,11 @@ Last updated: 2026-06-03
   docking source gate freezes the owner split in
   `M125_RUNNER_WINDOW_REDRAW_ACCESSIBILITY_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
   compositor acceptance.
+- [x] Split desktop runner redraw-time text-input snapshot application into the private
+  window-redraw-text-input owner without changing runtime behavior or public effect surfaces. The
+  docking source gate freezes the owner split in
+  `M126_RUNNER_WINDOW_REDRAW_TEXT_INPUT_OWNER_SPLIT_2026-06-04.md` without claiming Wayland
+  compositor acceptance.
 - [x] Split docking declarative drag route/session-kind policy into a private child owner without
   changing internal drag route anchor registration, dock-space node registration, active dock
   drag invalidation, drop-time dock drag cancellation, or public docking APIs.

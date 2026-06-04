@@ -1284,6 +1284,17 @@ Each TODO is labeled:
         accessibility dispatch between scene validation and engine-frame recording.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw text-input owner split keeps IME snapshot application
+      out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M126_RUNNER_WINDOW_REDRAW_TEXT_INPUT_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_text_input.rs` owns
+        `apply_window_redraw_text_input_snapshot`, including `WindowTextInputSnapshotService`
+        lookup, IME allowed-state sync, Android soft-input forwarding, cursor-area sync,
+        surrounding-text sync, `FRET_IME_DEBUG` snapshot logging, and follow-up `prepare_frame`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only cfg-gated
+        redraw-time text-input snapshot dispatch after render and before scene validation.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
