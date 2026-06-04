@@ -1422,6 +1422,18 @@ Each TODO is labeled:
       - Marker: redraw-time engine frame recording before render-target updates and present.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw target-updates owner split keeps render-target update
+      application out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M137_RUNNER_WINDOW_REDRAW_TARGET_UPDATES_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_target_updates.rs` owns
+        `apply_window_redraw_target_updates`, including `RenderTargetUpdate::Update`,
+        `RenderTargetUpdate::Unregister`, `renderer.update_render_target(...)`, and
+        `renderer.unregister_render_target(...)`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps only redraw-time
+        target-updates owner dispatch and continues to own present/render-scene orchestration.
+      - Marker: redraw-time render-target update application before present.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

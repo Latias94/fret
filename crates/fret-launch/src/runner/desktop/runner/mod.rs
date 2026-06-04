@@ -209,6 +209,7 @@ mod window_redraw_record;
 mod window_redraw_render;
 mod window_redraw_renderer_perf;
 mod window_redraw_surface_resize;
+mod window_redraw_target_updates;
 mod window_redraw_text_diagnostics;
 mod window_redraw_text_input;
 mod window_redraw_wgpu_allocator_report;

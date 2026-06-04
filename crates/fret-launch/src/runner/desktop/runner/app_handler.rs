@@ -514,26 +514,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         webview_snapshot.as_ref(),
                     );
 
-                    for update in target_updates {
-                        match update {
-                            RenderTargetUpdate::Update { id, desc } => {
-                                if !renderer.update_render_target(id, desc) {
-                                    error!(
-                                        ?id,
-                                        "engine frame update tried to update unknown render target"
-                                    );
-                                }
-                            }
-                            RenderTargetUpdate::Unregister { id } => {
-                                if !renderer.unregister_render_target(id) {
-                                    error!(
-                                        ?id,
-                                        "engine frame update tried to unregister unknown render target"
-                                    );
-                                }
-                            }
-                        }
-                    }
+                    super::window_redraw_target_updates::apply_window_redraw_target_updates(
+                        renderer,
+                        target_updates,
+                    );
 
                     let (draw_result, present_elapsed) = measure_redraw_phase(
                         RedrawPhase::Present,
