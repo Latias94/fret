@@ -33299,3 +33299,26 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-05 editor ColorEdit frame affordance owner split:
+
+- Claim: ColorEdit frame affordance policy moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` into private
+  `element/affordance.rs` without changing popup visible-content detection, drag/drop enablement,
+  tooltip/copy/eyedropper gating, swatch enabled/focusable behavior, input/swatch construction,
+  delivered-drop application, overlay requests, root layout, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `element.rs` now declares `mod affordance;`; `frame.rs` calls
+  `color_edit_frame_affordances(...)` and no longer owns `has_visible_content_with_swatches` or
+  `tooltip_enabled` derivation; `element/affordance.rs` owns `ColorEditFrameAffordances`,
+  `color_edit_frame_affordances(...)`, popup visible-content merging, drag/drop tooltip/copy/
+  eyedropper enablement, and swatch enabled/focusable derivation. `WORKSTREAM.json`,
+  `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the affordance owner boundary.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

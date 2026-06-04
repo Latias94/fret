@@ -1273,6 +1273,7 @@
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/element/affordance.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element/keying.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element/test_ids.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/input.rs",

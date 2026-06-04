@@ -7383,3 +7383,12 @@ call sequencing, picker/options/preview/eyedropper/numeric/history/preset/standa
 `has_side_preview`, and final `ColorPopupContentArgs` assembly. Popup body width policy, child
 section behavior, public ColorEdit APIs, and IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the hub/assembly split.
+
+2026-06-05 editor ColorEdit frame affordance owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` now keeps keyed frame
+orchestration, local state/model setup, child construction, delivered-drop application, overlay
+requests, and root layout. The new
+`ecosystem/fret-ui-editor/src/controls/color_edit/element/affordance.rs` owns popup visible-content
+merging, drag/drop tooltip/copy/eyedropper enablement, and swatch enabled/focusable derivation.
+Public ColorEdit APIs and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
+plus `imui_surface_policy` freeze the frame/affordance split.

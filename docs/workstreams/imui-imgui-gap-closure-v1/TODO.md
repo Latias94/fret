@@ -7637,3 +7637,12 @@ opening the slice.
       owns `color_popup_body_sections(...)`, section call sequencing, `has_side_preview`, and final
       `ColorPopupContentArgs` assembly. The workstream manifest, source gate, and
       `imui_surface_policy` freeze the sections assembly owner boundary.
+- [x] Split editor `ColorEdit` frame affordance policy into a private element child owner without
+      changing popup visible-content detection, drag/drop enablement, tooltip/copy/eyedropper
+      gating, swatch enabled/focusable behavior, input/swatch construction, delivered-drop
+      application, overlay requests, root layout, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/element/frame.rs` now keeps keyed frame orchestration and consumes
+      `ColorEditFrameAffordances`. `color_edit/element/affordance.rs` owns
+      `color_edit_frame_affordances(...)`, popup visible-content merging, drag/drop tooltip/copy/
+      eyedropper enablement, and swatch enabled/focusable derivation. The workstream manifest,
+      source gate, and `imui_surface_policy` freeze the affordance policy owner boundary.

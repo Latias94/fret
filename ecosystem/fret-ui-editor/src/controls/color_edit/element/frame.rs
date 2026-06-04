@@ -20,6 +20,7 @@ use super::super::state::{
 };
 use super::super::swatch::{ColorEditSwatchArgs, color_swatch};
 use super::ColorEdit;
+use super::affordance::color_edit_frame_affordances;
 use super::test_ids::color_edit_element_test_ids;
 
 pub(super) fn color_edit_into_element_keyed<H: UiHost>(
@@ -63,24 +64,13 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
     );
     let palette = control.options.palette.clone();
     let history = control.options.history.clone();
-    let popup_has_visible_content = popup_options_for_frame.has_visible_content_with_swatches(
-        control.options.show_alpha,
+    let affordances = color_edit_frame_affordances(
+        &control.options,
+        popup_options_for_frame,
         !palette.is_empty(),
         !history.is_empty(),
+        on_eyedropper.is_some(),
     );
-    let drag_drop_enabled = control.options.enabled && drag_drop_options.enabled;
-    let tooltip_enabled = control.options.enabled && tooltip_options.enabled;
-    let copy_enabled = control.options.enabled && copy_options.enabled;
-    let eyedropper_enabled = control.options.enabled && on_eyedropper.is_some();
-    let popup_has_visible_content = popup_has_visible_content || on_eyedropper.is_some();
-    let swatch_enabled = control.options.enabled
-        && (popup_has_visible_content
-            || drag_drop_enabled
-            || tooltip_enabled
-            || copy_enabled
-            || eyedropper_enabled);
-    let swatch_focusable = control.options.focusable
-        && (popup_has_visible_content || drag_drop_enabled || copy_enabled || eyedropper_enabled);
 
     let input = color_hex_input(
         cx,
@@ -111,14 +101,14 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
             show_alpha: control.options.show_alpha,
             alpha_preview: control.options.alpha_preview,
             enabled: control.options.enabled,
-            swatch_enabled,
-            swatch_focusable,
-            popup_has_visible_content,
+            swatch_enabled: affordances.swatch_enabled,
+            swatch_focusable: affordances.swatch_focusable,
+            popup_has_visible_content: affordances.popup_has_visible_content,
             popup_options,
             tooltip_options,
             copy_options,
-            copy_enabled,
-            drag_drop_enabled,
+            copy_enabled: affordances.copy_enabled,
+            drag_drop_enabled: affordances.drag_drop_enabled,
             drag_drop_options,
             drag_threshold,
             test_id: test_ids.swatch.clone(),
@@ -135,7 +125,7 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
             error: error.clone(),
             current,
             show_alpha: control.options.show_alpha,
-            enabled: drag_drop_enabled,
+            enabled: affordances.drag_drop_enabled,
         },
     );
 
