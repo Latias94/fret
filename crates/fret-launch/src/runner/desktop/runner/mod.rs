@@ -65,7 +65,7 @@ use winit::{
     application::ApplicationHandler,
     dpi::{PhysicalPosition, Position},
     event::{DeviceEvent, ElementState, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
+    event_loop::{ActiveEventLoop, EventLoopProxy},
     window::{Window, WindowId, WindowLevel},
 };
 

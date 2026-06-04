@@ -1654,6 +1654,17 @@ docking multiwindow source gate.
 
 Marker summary: dev-state window observation; alive-window filtering; app-export ordering; turn timestamp reuse.
 
+2026-06-04 desktop runner about-to-wait preamble owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/event_loop.rs` now keeps the pre-render effect drain,
+suspended wait fast path, and monitor topology refresh while
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` delegates the preamble before the
+later about-to-wait diagnostics, surface recreation, drag polling, turn bookkeeping, dev-state
+observation, and dock follow/fallback hooks. Runtime behavior and public effect surfaces remain
+unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the docking
+multiwindow source gate.
+
+Marker summary: pre-render drain; suspended wait fast path; monitor topology refresh.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

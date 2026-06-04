@@ -30256,6 +30256,33 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M105_RUNNER_ABOUT_TO_WAIT_DEV_STATE_OBSERVATION_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner about-to-wait preamble owner split:
+
+- Claim: about-to-wait pre-render drain, suspended wait fast path, and monitor topology refresh
+  moved from `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/event_loop.rs` without changing runtime behavior,
+  feature/cfg gating, the suspended fast path, monitor topology diagnostics publication, or public
+  effect surfaces.
+- Evidence anchors: `event_loop.rs` owns `handle_about_to_wait_preamble`; `app_handler.rs`
+  delegates the preamble before diagnostics, surface recreation, drag polling, turn bookkeeping,
+  dev-state observation, and later dock-follow / fallback hooks.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo check -p fret-launch --lib`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M106 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M106_RUNNER_ABOUT_TO_WAIT_PREAMBLE_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from

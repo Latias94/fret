@@ -96,6 +96,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.drain_effects(event_loop);
     }
 
+    pub(super) fn handle_about_to_wait_preamble(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+    ) -> bool {
+        // Ensure effects requested during `RedrawRequested` (after the pre-render drain) are still
+        // observed before the loop sleeps (e.g. `App::request_redraw()` inside a render callback).
+        self.drain_effects(event_loop);
+
+        if self.is_suspended {
+            event_loop.set_control_flow(ControlFlow::Wait);
+            return true;
+        }
+
+        self.refresh_runner_monitor_topology_diagnostics(event_loop);
+        false
+    }
+
     pub(super) fn handle_about_to_wait_turn_bookkeeping(&mut self) -> Instant {
         self.tick_id = super::scheduling::begin_turn(&mut self.tick_id);
         self.app.set_tick_id(self.tick_id);

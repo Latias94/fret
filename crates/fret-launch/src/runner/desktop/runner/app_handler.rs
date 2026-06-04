@@ -1758,16 +1758,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
-        // Ensure effects requested during `RedrawRequested` (after the pre-render drain) are still
-        // observed before the loop sleeps (e.g. `App::request_redraw()` inside a render callback).
-        self.drain_effects(event_loop);
-
-        if self.is_suspended {
-            event_loop.set_control_flow(ControlFlow::Wait);
+        if self.handle_about_to_wait_preamble(event_loop) {
             return;
         }
-
-        self.refresh_runner_monitor_topology_diagnostics(event_loop);
 
         #[cfg(feature = "diag-screenshots")]
         self.handle_about_to_wait_diag_screenshots();
