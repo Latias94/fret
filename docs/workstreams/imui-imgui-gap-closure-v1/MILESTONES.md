@@ -1543,6 +1543,18 @@ docking multiwindow source gate.
 
 Marker summary: proxy queue drain.
 
+2026-06-04 desktop runner surface lifecycle hook owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::destroy_surfaces`, `ApplicationHandler::resumed`, and
+`ApplicationHandler::suspended` trait hooks while delegating destroy-surface diagnostics, surface
+destroy cleanup, Android/iOS resume redraw requests, Android/iOS resume effect draining,
+Android/iOS suspend state updates, Android/iOS best-effort surface drop, and suspend control-flow
+wait to `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs`. Runtime behavior and
+public effect surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the
+split through the docking multiwindow source gate.
+
+Marker summary: destroy-surface diagnostics; suspend control-flow wait.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private

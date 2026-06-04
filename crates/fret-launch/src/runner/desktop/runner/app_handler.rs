@@ -288,14 +288,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn destroy_surfaces(&mut self, _event_loop: &dyn ActiveEventLoop) {
-        self.app.with_global_mut(
-            fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore::default,
-            |store, _app| {
-                store.record_destroy_surfaces();
-            },
-        );
-
-        self.destroy_runner_surfaces();
+        self.handle_destroy_surfaces();
     }
 
     fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
@@ -2285,22 +2278,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
     fn resumed(&mut self, event_loop: &dyn ActiveEventLoop) {
-        self.is_suspended = false;
-
-        for (app_window, state) in self.windows.iter() {
-            let _ = (app_window, state);
-            state.window.request_redraw();
-        }
-        self.drain_effects(event_loop);
+        self.handle_resumed(event_loop);
     }
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
     fn suspended(&mut self, event_loop: &dyn ActiveEventLoop) {
-        self.is_suspended = true;
-
-        // Best-effort: drop surfaces to avoid presenting while backgrounded and to ensure we can
-        // recreate cleanly on resume.
-        self.destroy_surfaces(event_loop);
-        event_loop.set_control_flow(ControlFlow::Wait);
+        self.handle_suspended(event_loop);
     }
 }

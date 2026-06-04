@@ -300,6 +300,10 @@ Platform note:
 - Latest runner proxy wake owner split:
   `docs/workstreams/docking-multiwindow-imgui-parity/M95_RUNNER_PROXY_WAKE_OWNER_SPLIT_2026-06-04.md`
   (moves queued proxy event dispatch into `event_loop.rs` without changing runtime behavior)
+- Latest runner surface lifecycle hook owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M96_RUNNER_SURFACE_LIFECYCLE_HOOK_OWNER_SPLIT_2026-06-04.md`
+  (moves destroy/resume/suspend lifecycle hook bodies into `surface_lifecycle.rs` without changing
+  runtime behavior)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

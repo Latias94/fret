@@ -1,7 +1,11 @@
 use fret_core::AppWindowId;
 use tracing::error;
 
+#[cfg(any(target_os = "android", target_os = "ios"))]
+use super::ActiveEventLoop;
 use super::{SurfaceState, WinitAppDriver, WinitRunner};
+#[cfg(any(target_os = "android", target_os = "ios"))]
+use winit::event_loop::ControlFlow;
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     fn surface_usage_for_new_surface(&self) -> wgpu::TextureUsages {
@@ -134,6 +138,38 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
         state.surface = Some(surface_state);
         true
+    }
+
+    pub(super) fn handle_destroy_surfaces(&mut self) {
+        self.app.with_global_mut(
+            fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore::default,
+            |store, _app| {
+                store.record_destroy_surfaces();
+            },
+        );
+
+        self.destroy_runner_surfaces();
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    pub(super) fn handle_resumed(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.is_suspended = false;
+
+        for (app_window, state) in self.windows.iter() {
+            let _ = (app_window, state);
+            state.window.request_redraw();
+        }
+        self.drain_effects(event_loop);
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    pub(super) fn handle_suspended(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.is_suspended = true;
+
+        // Best-effort: drop surfaces to avoid presenting while backgrounded and to ensure we can
+        // recreate cleanly on resume.
+        self.handle_destroy_surfaces();
+        event_loop.set_control_flow(ControlFlow::Wait);
     }
 
     pub(super) fn destroy_runner_surfaces(&mut self) {

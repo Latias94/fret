@@ -937,6 +937,19 @@ Each TODO is labeled:
         owner.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner surface lifecycle hook owner split keeps destroy/resume/suspend
+      lifecycle bodies out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M96_RUNNER_SURFACE_LIFECYCLE_HOOK_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs` owns
+        destroy-surface diagnostics, surface destroy cleanup, Android/iOS resume redraw requests,
+        Android/iOS resume effect draining, Android/iOS suspend state updates, Android/iOS
+        best-effort surface drop, and suspend control-flow wait.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::destroy_surfaces`, `ApplicationHandler::resumed`, and
+        `ApplicationHandler::suspended` trait hooks and delegates directly to the surface lifecycle
+        owner.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
