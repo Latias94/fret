@@ -205,6 +205,7 @@ mod window_pre_dispatch_events;
 mod window_redraw_accessibility;
 mod window_redraw_renderer_perf;
 mod window_redraw_text_input;
+mod window_redraw_wgpu_allocator_report;
 mod window_redraw_wgpu_report;
 mod window_requests;
 mod window_state_events;

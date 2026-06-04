@@ -30976,6 +30976,42 @@ Focused gates:
 - `docs/workstreams/docking-multiwindow-imgui-parity/M128_RUNNER_WINDOW_REDRAW_WGPU_HUB_REPORT_OWNER_SPLIT_2026-06-04.md`
   records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
 
+2026-06-04 Desktop runner window redraw WGPU allocator report owner split:
+
+- Claim: redraw-time WGPU allocator report publication moved from
+  `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` into
+  `crates/fret-launch/src/runner/desktop/runner/window_redraw_wgpu_allocator_report.rs` without
+  changing redraw ordering after WGPU hub diagnostics and before command-buffer submission,
+  `FRET_DIAG_WGPU_ALLOCATOR_REPORT` gating, cadence parsing, top-N/max-name-byte configuration,
+  `context.device.generate_allocator_report`, macOS Metal allocated-size sampling,
+  `WgpuAllocatorReportFrameStore` recording, runtime behavior, or public effect surfaces.
+- Evidence anchors: `window_redraw_wgpu_allocator_report.rs` owns
+  `maybe_record_window_redraw_wgpu_allocator_report`, `FRET_DIAG_WGPU_ALLOCATOR_REPORT`,
+  `FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES`,
+  `FRET_DIAG_WGPU_ALLOCATOR_REPORT_TOP_N`,
+  `FRET_DIAG_WGPU_ALLOCATOR_REPORT_MAX_NAME_BYTES`,
+  `frame_id.is_multiple_of(every_n)`, `context.device.generate_allocator_report`,
+  `as_hal::<wgpu::hal::api::Metal>()`, `metal_current_allocated_size_bytes`,
+  `WgpuAllocatorReportFrameStore::default`, and `store.record_sample`; `app_handler.rs` keeps only
+  redraw-time dispatch after hub report diagnostics and before command-buffer submission.
+- Fresh gates run on 2026-06-04:
+  `cargo fmt --package fret-launch`;
+  `cargo check -p fret-launch --lib`;
+  `cargo fmt --package fret-launch -- --check`;
+  `cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast`;
+  `python -m py_compile tools\gate_docking_multiwindow_workstream_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\docking-multiwindow-imgui-parity\WORKSTREAM.json`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`;
+  `python tools\gate_docking_multiwindow_workstream_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check` (pass, with the existing `WORKSTREAM.json` CRLF normalization warning).
+- Broader workspace gates were not run because M129 is a private `fret-launch` owner split with no
+  public API or cross-crate behavior change; the package check, targeted nextest, and source gates
+  cover this claim.
+- `docs/workstreams/docking-multiwindow-imgui-parity/M129_RUNNER_WINDOW_REDRAW_WGPU_ALLOCATOR_REPORT_OWNER_SPLIT_2026-06-04.md`
+  records the matching docking multiwindow lane evidence without claiming Wayland acceptance.
+
 2026-06-03 Desktop runner window request dispatch owner split:
 
 - Claim: `Effect::Window` dispatch moved from
