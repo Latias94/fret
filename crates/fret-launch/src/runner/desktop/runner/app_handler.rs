@@ -654,61 +654,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         r.end_capture();
                     }
 
+                    let scene_ops = state.scene.ops_len();
                     if let Err(err) = draw_result {
-                        match err {
-                            fret_render::RenderError::SurfaceAcquireFailed {
-                                source: fret_render::SurfaceAcquireError::Lost,
-                            } => {
-                                let _ = surface;
-                                state.surface = None;
-                                let _ = state;
-                                let _ = self.request_window_redraw_with_reason(
-                                    app_window,
-                                    fret_runtime::RunnerFrameDriveReason::SurfaceRecoverLost,
-                                );
-                                self.raf_windows.request(app_window);
-                                return;
-                            }
-                            fret_render::RenderError::SurfaceAcquireFailed {
-                                source: fret_render::SurfaceAcquireError::Outdated,
-                            } => {
-                                let _ = surface;
-                                state.surface = None;
-                                let _ = state;
-                                let _ = self.request_window_redraw_with_reason(
-                                    app_window,
-                                    fret_runtime::RunnerFrameDriveReason::SurfaceRecoverOutdated,
-                                );
-                                self.raf_windows.request(app_window);
-                                return;
-                            }
-                            fret_render::RenderError::SurfaceAcquireFailed {
-                                source: fret_render::SurfaceAcquireError::Timeout,
-                            } => {
-                                // Transient on some platforms (especially during startup / resize).
-                                // Schedule a one-shot redraw so the window doesn't stay blank until
-                                // the next user input arrives.
-                                let _ = state;
-                                let _ = self.request_window_redraw_with_reason(
-                                    app_window,
-                                    fret_runtime::RunnerFrameDriveReason::SurfaceRecoverTimeout,
-                                );
-                                self.raf_windows.request(app_window);
-                                return;
-                            }
-                            fret_render::RenderError::SurfaceAcquireFailed {
-                                source: fret_render::SurfaceAcquireError::OutOfMemory,
-                            } => {
-                                self.dispatcher.shutdown();
-                                event_loop.exit();
-                                return;
-                            }
-                            fret_render::RenderError::SurfaceAcquireFailed { .. } => return,
-                            _ => {
-                                error!(?err, "render error");
-                                return;
-                            }
-                        }
+                        let _ = surface;
+                        let _ = state;
+                        self.handle_window_redraw_present_error(event_loop, app_window, err);
+                        return;
                     }
 
                     if let (Some(cfg), Some(started)) = (hitch_config, hitch_total_started) {
@@ -722,7 +673,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 render_ms = hitch_render_ms,
                                 record_ms = hitch_record_ms,
                                 present_ms = hitch_present_ms,
-                                scene_ops = state.scene.ops_len(),
+                                scene_ops = scene_ops,
                             ));
                         }
                     }

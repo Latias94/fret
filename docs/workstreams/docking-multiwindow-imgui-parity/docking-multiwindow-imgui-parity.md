@@ -492,6 +492,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M141_RUNNER_WINDOW_REDRAW_PRESENT_FINISH_OWNER_SPLIT_2026-06-04.md`
   (moves redraw-time successful present finish into `window_redraw_present_finish.rs` while leaving
   recovery/hitch orchestration in `app_handler.rs`)
+- Latest runner window redraw present-error owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M142_RUNNER_WINDOW_REDRAW_PRESENT_ERROR_OWNER_SPLIT_2026-06-04.md`
+  (moves redraw-time present error recovery into `window_redraw_present_error.rs` while leaving
+  hitch reporting in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

@@ -1482,6 +1482,21 @@ Each TODO is labeled:
       - Marker: redraw-time successful present finish after submit.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner window redraw present-error owner split keeps surface recovery and
+      present error handling out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M142_RUNNER_WINDOW_REDRAW_PRESENT_ERROR_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw_present_error.rs` owns
+        `handle_window_redraw_present_error`,
+        `clear_window_surface_after_present_acquire_failure`,
+        `RenderError::SurfaceAcquireFailed`, `RunnerFrameDriveReason::SurfaceRecoverLost`,
+        `RunnerFrameDriveReason::SurfaceRecoverOutdated`,
+        `RunnerFrameDriveReason::SurfaceRecoverTimeout`, `self.dispatcher.shutdown()`,
+        `event_loop.exit()`, and `error!(?err, "render error")`.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps renderdoc capture end,
+        present-error dispatch, and hitch summary orchestration.
+      - Marker: redraw-time present error recovery after submit.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
