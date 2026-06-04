@@ -7718,3 +7718,14 @@ opening the slice.
       `ColorEditSwatchArgs` assembly, input/swatch test-id forwarding, and swatch affordance
       forwarding. The workstream manifest, source gate, and `imui_surface_policy` freeze the child
       construction owner boundary.
+- [x] Split editor `ColorEdit` keyed frame setup/runtime snapshot into a private frame child owner
+      without changing local model identity, theme density/popup padding resolution, current
+      color/hex projection, drag/drop store pruning, drag threshold policy, test-id derivation,
+      popup runtime option synchronization, affordance resolution, or public ColorEdit / IMUI facade
+      behavior.
+      Result: `color_edit/element/frame.rs` now keeps only keyed frame orchestration and delegates
+      setup through `color_edit_frame_setup(...)`. The new `element/frame/setup.rs` owns
+      `ColorEditFrameSetup`, local state model allocation, density/padding lookup, current
+      color/hex projection, drag/drop store setup, option snapshots, popup runtime option sync, and
+      frame affordance resolution. The workstream manifest, source gate, and `imui_surface_policy`
+      freeze the setup owner boundary.

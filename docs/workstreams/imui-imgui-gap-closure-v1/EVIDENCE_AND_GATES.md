@@ -29487,6 +29487,33 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit keyed frame setup owner split:
+
+- Claim: ColorEdit keyed frame setup/runtime snapshot construction moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/element/frame.rs` into private
+  `element/frame/setup.rs` without changing local model identity, theme density/popup padding
+  resolution, current color/hex projection, drag/drop store pruning, drag threshold policy, test-id
+  derivation, popup runtime option synchronization, affordance resolution, public ColorEdit API, or
+  IMUI facade behavior.
+- Evidence anchors: `element/frame.rs` now delegates setup through `color_edit_frame_setup(...)`
+  and keeps keyed orchestration, child construction routing, delivered-drop application, overlay
+  routing, and root layout handoff. `element/frame/setup.rs` owns `ColorEditFrameSetup`, local
+  state model allocation, editor density and popup padding lookup, current color/hex projection,
+  drag/drop store setup and pruning, drag threshold resolution, root test-id derivation, popup
+  runtime option sync, palette/history/eyedropper presence projection, and frame affordance
+  resolution. `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the setup owner boundary.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit keyed frame children owner split:
 
 - Claim: ColorEdit keyed frame input/swatch child construction moved from
