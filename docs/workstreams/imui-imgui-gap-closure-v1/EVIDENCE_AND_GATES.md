@@ -29784,6 +29784,30 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit picker popup layout owner split:
+
+- Claim: ColorEdit popup picker row/frame composition moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` into private
+  `popup/picker/layout.rs` without changing HSV Hue Bar / Hue Wheel picker entrypoints,
+  SV/hue/wheel/alpha child ordering, alpha visibility, derived test IDs, picker
+  gap/padding/stretch layout, shared HSV color application, or public ColorEdit / IMUI facade APIs.
+- Evidence anchors: `popup/picker.rs` now declares `mod layout;`, re-exports
+  `hsv_picker(...)` and `hsv_hue_wheel_picker(...)`, and keeps only picker module routing,
+  picker constants, shared thumb spacer/border helpers, and `apply_hsv_color(...)`;
+  `popup/picker/layout.rs` owns `hsv_picker(...)`, `hsv_hue_wheel_picker(...)`,
+  `derived_test_id(...)` projection for SV/hue/wheel/alpha children, horizontal `FlexProps`
+  construction, and SV/hue/wheel/alpha child mounting. `tools/gate_imui_workstream_source.py` and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` reject layout composition details
+  drifting back into the picker root owner.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit alpha preview gradient/thumb owner split:
 
 - Claim: alpha preview gradient and thumb rendering moved out of

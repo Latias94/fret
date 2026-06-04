@@ -7577,3 +7577,13 @@ opening the slice.
       `ColorEditDeliveredDropArgs`, `apply_delivered_color_drop`, `apply_color_drop_payload`, and
       `palette_slot_drop_from_payload`. The source gate and `imui_surface_policy` freeze the
       delivery owner boundary.
+- [x] Split editor `ColorEdit` popup picker row layout composition into a private child owner
+      without changing HSV Hue Bar / Hue Wheel picker selection, SV/hue/wheel/alpha child mounting,
+      derived test-id routing, alpha visibility, picker gap/padding/stretch layout, shared HSV
+      color application, or public ColorEdit / IMUI facade APIs.
+      Result: `color_edit/popup/picker.rs` now keeps module declarations, picker child re-exports,
+      picker constants, shared thumb spacer/border helpers, and shared HSV color application.
+      `color_edit/popup/picker/layout.rs` owns `hsv_picker(...)`,
+      `hsv_hue_wheel_picker(...)`, derived child test IDs, horizontal `FlexProps` construction, and
+      SV/hue/wheel/alpha child composition. The source gate and `imui_surface_policy` freeze the
+      layout owner boundary.

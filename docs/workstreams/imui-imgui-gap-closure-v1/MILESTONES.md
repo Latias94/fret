@@ -668,6 +668,15 @@ records, store model records, delivered-drop application semantics, palette slot
 public ColorEdit / IMUI facade APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
 
+2026-06-05 editor ColorEdit picker popup layout owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/picker.rs` now keeps module declarations,
+picker child re-exports, picker constants, shared thumb spacer/border helpers, and shared HSV color
+application only. `picker/layout.rs` owns `hsv_picker(...)`, `hsv_hue_wheel_picker(...)`,
+SV/hue/wheel/alpha child mounting, derived test-id routing, and the horizontal picker `FlexProps`
+row. HSV Hue Bar / Hue Wheel picker selection, alpha visibility, shared color application, picker
+layout metrics, and public ColorEdit / IMUI facade APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the split.
+
 2026-06-02 editor VecEdit caller-keying owner-split result:
 `ecosystem/fret-ui-editor/src/controls/vec_edit/model.rs` now keeps the public Vec2/Vec3/Vec4 model
 records, constructors, builder-style setters, and presentation affix adoption while delegating

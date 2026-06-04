@@ -69,6 +69,8 @@ const COLOR_EDIT_POPUP_OPTIONS_PICKER_CARD_RS: &str =
 const COLOR_EDIT_POPUP_OPTIONS_THUMBNAIL_RS: &str =
     include_str!("../src/controls/color_edit/popup/options/thumbnail.rs");
 const COLOR_EDIT_POPUP_PICKER_RS: &str = include_str!("../src/controls/color_edit/popup/picker.rs");
+const COLOR_EDIT_POPUP_PICKER_LAYOUT_RS: &str =
+    include_str!("../src/controls/color_edit/popup/picker/layout.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_RS: &str =
     include_str!("../src/controls/color_edit/popup/picker/alpha.rs");
 const COLOR_EDIT_POPUP_PICKER_ALPHA_BAR_RS: &str =
@@ -344,15 +346,37 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(in crate::controls::color_edit) mod alpha;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use alpha::alpha_bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_bar;"));
-    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("use hue_bar::hue_bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use hue_bar::hue_bar_preview_stack;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod hue_wheel_picker;"));
-    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("use hue_wheel_picker::hue_wheel_picker;"));
+    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod layout;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("mod sv;"));
-    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("use sv::sv_picker;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use sv::sv_picker_preview_stack;"));
     assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("pub(super) use hue_wheel::hue_wheel_canvas;"));
-    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_picker<"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_RS
+            .contains("pub(super) use layout::{hsv_hue_wheel_picker, hsv_picker};")
+    );
+    assert!(!COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_picker<"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_RS.contains("derived_test_id("));
+    assert!(!COLOR_EDIT_POPUP_PICKER_RS.contains("cx.flex("));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("fn hsv_picker<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("fn hsv_hue_wheel_picker<"));
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("derived_test_id(test_id.as_ref(), \"sv\")")
+    );
+    assert!(
+        COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("derived_test_id(test_id.as_ref(), \"wheel\")")
+    );
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("let sv = sv_picker("));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("let hue = hue_bar("));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("let wheel = hue_wheel_picker("));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("vertical_alpha_bar(cx, current,"));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("FlexProps"));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("direction: Axis::Horizontal"));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("gap: SpacingLength::Px(Px(6.0))"));
+    assert!(!COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("apply_hsv_color("));
+    assert!(!COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("horizontal_bar_thumb_spacer"));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("mod bar;"));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("mod interaction;"));
     assert!(COLOR_EDIT_POPUP_PICKER_SV_RS.contains("mod preview;"));
@@ -763,7 +787,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS.contains("editor_tooltip_readout_text_props("));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS.contains("SemanticsRole::Tooltip"));
     assert!(!COLOR_EDIT_POPUP_TOOLTIP_RS.contains("editor_tooltip_readout_text_props("));
-    assert!(COLOR_EDIT_POPUP_PICKER_RS.contains("fn hsv_hue_wheel_picker<"));
+    assert!(COLOR_EDIT_POPUP_PICKER_LAYOUT_RS.contains("fn hsv_hue_wheel_picker<"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("mod pointer;"));
     assert!(COLOR_EDIT_POPUP_PICKER_HUE_WHEEL_PICKER_RS.contains("fn hue_wheel_picker<"));
     assert!(
