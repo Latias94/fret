@@ -12,6 +12,17 @@ fn env_flag_is_true(name: &str) -> bool {
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(in crate::runner::desktop::runner) fn handle_about_to_wait_dock_follow_stop(&mut self) {
+        if let Some(follow) = self.dock_tearoff_follow {
+            // Stop follow even without pointer motion (e.g. Escape cancels the drag session).
+            if self.dock_drag_pointer_id().is_none()
+                || !self.is_left_mouse_down_for_window(follow.source_window)
+            {
+                self.stop_dock_tearoff_follow(Instant::now(), false);
+            }
+        }
+    }
+
     pub(in crate::runner::desktop::runner) fn update_dock_tearoff_follow(&mut self) -> bool {
         let pointer_id = self.dock_drag_pointer_id();
         if self.dock_tearoff_follow.is_some() && pointer_id.is_none() {

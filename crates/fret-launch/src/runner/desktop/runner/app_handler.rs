@@ -2155,14 +2155,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        if let Some(follow) = self.dock_tearoff_follow {
-            // Stop follow even without pointer motion (e.g. Escape cancels the drag session).
-            if self.dock_drag_pointer_id().is_none()
-                || !self.is_left_mouse_down_for_window(follow.source_window)
-            {
-                self.stop_dock_tearoff_follow(Instant::now(), false);
-            }
-        }
+        self.handle_about_to_wait_dock_follow_stop();
 
         self.drain_effects(event_loop);
 

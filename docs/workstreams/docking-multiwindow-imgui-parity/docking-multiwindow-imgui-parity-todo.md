@@ -975,6 +975,17 @@ Each TODO is labeled:
         polling branch to the device-event owner.
       - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
         catalog, and diff checks passed locally without recording Wayland compositor acceptance.
+    - [x] 2026-06-04 runner about-to-wait dock follow stop owner split keeps idle follow-stop
+      checks out of the general application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M99_RUNNER_ABOUT_TO_WAIT_DOCK_FOLLOW_STOP_OWNER_SPLIT_2026-06-04.md`
+      - `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs` owns
+        no-pointer-motion follow stop, canceled drag session detection, source-window left-button
+        fallback detection, `Instant::now()` stop timing, and non-raising stop semantics.
+      - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` keeps the
+        `ApplicationHandler::about_to_wait` trait hook and delegates the idle follow-stop check to
+        the docking follow owner before the broad effect drain.
+      - Focused runner compile, Linux capability posture regression, source gate, JSON shape,
+        catalog, and diff checks passed locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

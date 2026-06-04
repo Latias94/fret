@@ -1579,6 +1579,17 @@ docking multiwindow source gate.
 
 Marker summary: internal drag hover routing; conditional effect draining.
 
+2026-06-04 desktop runner about-to-wait DockFloating follow-stop owner-split result:
+`crates/fret-launch/src/runner/desktop/runner/app_handler.rs` now keeps the
+`ApplicationHandler::about_to_wait` trait hook while delegating no-pointer-motion follow stop,
+canceled drag session detection, source-window left-button fallback detection, `Instant::now()`
+stop timing, non-raising stop semantics, and the pre-drain idle follow-stop check to
+`crates/fret-launch/src/runner/desktop/runner/docking/follow.rs`. Runtime behavior and public effect
+surfaces remain unchanged, and `tools/gate_imui_workstream_source.py` freezes the split through the
+docking multiwindow source gate.
+
+Marker summary: no-pointer-motion follow stop; non-raising stop semantics.
+
 2026-06-01 docking declarative drag-route owner-split result:
 `ecosystem/fret-docking/src/dock/declarative.rs` now keeps the managed-surface dock-space
 entrypoint, layout/render/input orchestration, and public docking APIs. The private
