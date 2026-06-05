@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-05
 
+## IMUI Plot Adapter Cookbook Teaching Surface Evidence - 2026-06-05
+
+Claim verified: the optional `fret-plot/imui` adapter now has a first-party cookbook teaching
+surface without moving plot policy into `fret-imui` or `fret-ui-kit::imui`, and without changing
+the core `fret-plot` implementation.
+
+Evidence:
+
+- `apps/fret-cookbook/examples/imui_plot_basics.rs` hosts
+  `fret_plot::imui::line_plot_panel(...)` from the root `fret::imui::imui_raw(...)` lane, wires
+  caller-owned `PlotState` and `PlotOutput`, stamps stable `cookbook.imui_plot_basics.*` readouts,
+  and sets an explicit fill-width, fixed-height canvas for the cookbook host.
+- `apps/fret-cookbook/Cargo.toml` owns the opt-in `cookbook-imui-plot` feature and enables
+  `fret-plot/imui` only for the new lesson.
+- `apps/fretboard/src/demos.rs` auto-enables `--features cookbook-imui-plot` for
+  `imui_plot_basics`.
+- `apps/fret-cookbook/src/lib.rs`, `tools/gate_imui_workstream_source.py`, and
+  `tools/gate_imui_facade_teaching_source.py` freeze the adapter teaching surface and the current
+  `imui_editor_proof_demo/workbench_shell.rs` owner markers.
+- `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, `docs/examples/README.md`,
+  `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md` now list the plot adapter proof as an
+  explicit first-party IMUI teaching route.
+
+Focused gates:
+
+- `cargo fmt --package fret-cookbook --package fretboard-dev -- --check`: pass.
+- `cargo check -p fret-cookbook --features cookbook-imui-plot --example imui_plot_basics`: pass
+  with existing dead-code warnings from `fret-plot/src/plot/view.rs`.
+- `cargo nextest run -p fret-cookbook --features cookbook-imui-plot --lib --no-fail-fast`: pass,
+  34 passed.
+- `cargo nextest run -p fretboard-dev cookbook_feature_hints_cover_imui_teaching_examples --no-fail-fast`:
+  pass, 1 passed and 36 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\gate_imui_facade_teaching_source.py`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_facade_teaching_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with a Git line-ending warning for `Cargo.lock`.
+
 ## Fret Plot Declarative Drag-Output Test Owner Split Evidence - 2026-06-05
 
 Claim verified: declarative plot draggable-output regression tests moved out of the root

@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 IMUI plot adapter cookbook teaching surface result:
+`apps/fret-cookbook/examples/imui_plot_basics.rs` now provides the first-party opt-in plot adapter
+teaching path. The lesson hosts `fret_plot::imui::line_plot_panel(...)` under
+`fret::imui::imui_raw(...)`, wires caller-owned `PlotState` and `PlotOutput`, stamps stable
+`cookbook.imui_plot_basics.*` readouts, and sets an explicit plot canvas size for the cookbook
+host. `apps/fret-cookbook/Cargo.toml` owns the `cookbook-imui-plot` feature, and
+`apps/fretboard/src/demos.rs` auto-enables it for cookbook launching. The cookbook/docs/source
+gates freeze this as an adapter proof without adding any `fret-plot` dependency to `fret-imui` or
+`fret-ui-kit::imui`.
+
 2026-06-05 Fret Plot declarative drag-output test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
 primary axis-label smoke tests, and child test-owner routing.

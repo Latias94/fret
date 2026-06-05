@@ -138,6 +138,9 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
 - Debug draw proof:
   - `imui_debug_draw_basics` — canvas-backed draw-list authoring and metadata through
     `fret::imui::kit`
+- Plot adapter proof:
+  - `imui_plot_basics` — opt-in plotting through `fret_plot::imui` while the host surface stays on
+    the root `fret::imui` lane
 - Product workbench:
   - `cargo run -p fret-demo --bin imui_editor_workbench_demo`
   - discover product proofs with `cargo run -p fretboard-dev -- list native-demos --all`
@@ -185,8 +188,9 @@ Stable identity rule for the immediate-mode lane:
   `ui.for_each_keyed(...)` or `ui.id(key, ...)`.
 - Rebuild rows each frame; do not treat element values as cloneable reusable UI.
 - `imui_action_basics` is still the right generic/default proof even though it does not need keyed
-  identity yet; `imui_editor_controls_basics` is the editor-control first-contact proof, while
-  `imui_editor_workbench_demo` is the canonical product workbench route, while
+  identity yet; `imui_editor_controls_basics` is the editor-control first-contact proof,
+  `imui_plot_basics` is the opt-in plot adapter proof, and `imui_editor_workbench_demo` is the
+  canonical product workbench route, while
   `imui_editor_proof_demo` remains the supporting dense panel proof where explicit stable identity
   is already visible.
 
@@ -261,7 +265,8 @@ Explicit advanced/reference roster:
 - `imui_hello_demo` is a tiny IMUI smoke/reference surface. It remains useful for the smallest
   runnable facade check and the smallest text/control rendering check, but the generic/editor
   immediate teaching path should start from `imui_action_basics` and `imui_editor_controls_basics`;
-  use `imui_editor_workbench_demo` when you need the canonical editor workbench route, and use
+  use `imui_plot_basics` when the missing piece is the optional `fret_plot::imui` adapter, use
+  `imui_editor_workbench_demo` when you need the canonical editor workbench route, and use
   `imui_editor_proof_demo` only for the supporting dense editor panel proof.
   - when launched through `fretboard`, select `fret-demo` or `fret-examples-imui` explicitly:
     `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`

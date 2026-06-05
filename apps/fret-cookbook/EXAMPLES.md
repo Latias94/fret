@@ -146,8 +146,9 @@ Example | Status | Feature | Run | Diag suite
 [`imui_action_basics.rs`](./examples/imui_action_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_action_basics` | `cookbook-imui-action-basics`
 [`imui_debug_draw_basics.rs`](./examples/imui_debug_draw_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_debug_draw_basics` | `cookbook-imui-debug-draw-basics`
 [`imui_editor_controls_basics.rs`](./examples/imui_editor_controls_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_editor_controls_basics` | `cookbook-imui-editor-controls-basics`
+[`imui_plot_basics.rs`](./examples/imui_plot_basics.rs) | Lab | `cookbook-imui-plot` | `cargo run -p fretboard-dev -- dev native --example imui_plot_basics` | -
 
-After these focused cookbook lessons, use `cargo run -p fret-demo --bin imui_editor_workbench_demo`
+After these focused IMUI cookbook lessons, use `cargo run -p fret-demo --bin imui_editor_workbench_demo`
 as the canonical editor workbench route. It mounts the editor-notes workflow directly while
 `imui_editor_proof_demo`, `workspace_shell_demo`, and `docking_arbitration_demo` remain supporting
 proof surfaces for dense panel controls, shell behavior, and docking arbitration. These heavier

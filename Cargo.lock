@@ -2040,6 +2040,7 @@ dependencies = [
  "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
+ "fret-plot",
  "fret-render",
  "fret-runtime",
  "fret-ui",

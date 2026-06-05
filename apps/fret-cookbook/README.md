@@ -110,7 +110,8 @@ required cookbook features for known Lab examples and print what it enabled.
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_debug_draw_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics`
-    - canonical editor workbench after the three focused lessons:
+    - `cargo run -p fret-cookbook --features cookbook-imui-plot --example imui_plot_basics`
+    - canonical editor workbench after the focused IMUI lessons:
       `cargo run -p fret-demo --bin imui_editor_workbench_demo`
       for the product-facing editor workbench route that mounts the editor-notes workflow directly
       while the supporting proof demos stay smaller and focused
@@ -139,6 +140,8 @@ required cookbook features for known Lab examples and print what it enabled.
   - `cargo run -p fret-cookbook --features cookbook-canvas --example canvas_pan_zoom_basics`
 - Charts:
   - `cargo run -p fret-cookbook --features cookbook-chart --example chart_interactions_basics`
+- IMUI plot adapter:
+  - `cargo run -p fret-cookbook --features cookbook-imui-plot --example imui_plot_basics`
 - Gizmo:
   - `cargo run -p fret-cookbook --features cookbook-gizmo --example gizmo_basics`
 

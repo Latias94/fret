@@ -83,11 +83,12 @@
     }
   ],
   "repro": {
-    "summary": "Start from the three current IMUI teaching examples plus the editor/workbench/docking proof surfaces before adding or deleting IMUI APIs.",
+    "summary": "Start from the four current IMUI teaching examples plus the editor/workbench/docking proof surfaces before adding or deleting IMUI APIs.",
     "commands": [
       "cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics",
       "cargo run -p fret-cookbook --features cookbook-imui --example imui_debug_draw_basics",
       "cargo run -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics",
+      "cargo run -p fret-cookbook --features cookbook-imui-plot --example imui_plot_basics",
       "cargo run -p fret-demo --bin imui_editor_proof_demo",
       "cargo run -p fret-demo --bin workspace_shell_demo",
       "cargo run -p fret-demo --bin docking_arbitration_demo"
@@ -1623,6 +1624,7 @@
     "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
     "ecosystem/fret-ui-kit/tests/imui_debug_draw_smoke.rs",
     "ecosystem/fret/src/lib.rs",
+    "apps/fret-cookbook/Cargo.toml",
     "apps/fret-cookbook/src/lib.rs",
     "apps/fret-cookbook/README.md",
     "apps/fret-cookbook/EXAMPLES.md",
@@ -1630,6 +1632,9 @@
     "apps/fret-cookbook/examples/imui_action_basics.rs",
     "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
     "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
+    "apps/fret-cookbook/examples/imui_plot_basics.rs",
+    "apps/fretboard/src/demos.rs",
+    "tools/gate_imui_facade_teaching_source.py",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
     "tools/diag_gate_imui_product_chain.py",
     "apps/fret-devtools/src/demo_metrics_debug.rs",

@@ -38,6 +38,7 @@ mod authoring_surface_policy_tests {
     const IMUI_DEBUG_DRAW_EXAMPLE: &str = include_str!("../examples/imui_debug_draw_basics.rs");
     const IMUI_EDITOR_CONTROLS_EXAMPLE: &str =
         include_str!("../examples/imui_editor_controls_basics.rs");
+    const IMUI_PLOT_EXAMPLE: &str = include_str!("../examples/imui_plot_basics.rs");
     const ICONS_AND_ASSETS_EXAMPLE: &str = include_str!("../examples/icons_and_assets_basics.rs");
     const SCAFFOLD: &str = include_str!("scaffold.rs");
     const HELLO_EXAMPLE: &str = include_str!("../examples/hello.rs");
@@ -355,6 +356,7 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(IMUI_ACTION_EXAMPLE);
         assert_uses_app_surface(IMUI_DEBUG_DRAW_EXAMPLE);
         assert_uses_app_surface(IMUI_EDITOR_CONTROLS_EXAMPLE);
+        assert_uses_app_surface(IMUI_PLOT_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains(".locals_with((&count_state, &step_state))"));
@@ -877,6 +879,39 @@ mod authoring_surface_policy_tests {
                 "use fret_ui_kit::headless::text_assist",
                 "fret_ui_kit::headless::text_assist",
                 "fret_imui::imui_raw(cx, |ui| {",
+            ],
+        );
+    }
+
+    #[test]
+    fn cookbook_imui_plot_example_keeps_optional_plot_adapter_teaching_surface() {
+        assert_current_imui_teaching_surface(
+            "imui_plot_basics",
+            IMUI_PLOT_EXAMPLE,
+            &[
+                "use fret::imui::prelude::*;",
+                "use fret_plot::declarative::LinePlotPanelProps;",
+                "use fret_plot::state::{PlotOutput, PlotState};",
+                "imui_raw(cx, |ui| {",
+                "ui.text(\"Plot adapter\");",
+                "canvas.layout.size.width = Length::Fill;",
+                "canvas.layout.size.height = Length::Px(Px(280.0));",
+                "LinePlotPanelProps::new(self.plot.clone())",
+                ".state(self.plot_state.clone())",
+                ".output(self.plot_output.clone())",
+                "fret_plot::imui::line_plot_panel(ui, props);",
+                "cookbook.imui_plot_basics.panel",
+                "cookbook.imui_plot_basics.view",
+                "cookbook.imui_plot_basics.cursor",
+            ],
+            &[
+                "use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};",
+                "line_plot_panel_in(cx, props)",
+                "fret_imui::imui_raw(cx, |ui| {",
+                "fret_ui_kit::imui::",
+                "LinePlotCanvas",
+                "PlotCanvas",
+                "retained",
             ],
         );
     }
@@ -1405,6 +1440,7 @@ mod authoring_surface_policy_tests {
             ("imui_action_basics", IMUI_ACTION_EXAMPLE),
             ("imui_debug_draw_basics", IMUI_DEBUG_DRAW_EXAMPLE),
             ("imui_editor_controls_basics", IMUI_EDITOR_CONTROLS_EXAMPLE),
+            ("imui_plot_basics", IMUI_PLOT_EXAMPLE),
             ("icons_and_assets_basics", ICONS_AND_ASSETS_EXAMPLE),
             ("hello", HELLO_EXAMPLE),
             ("hello_counter", HELLO_COUNTER_EXAMPLE),
@@ -1630,6 +1666,7 @@ mod authoring_surface_policy_tests {
             IMUI_ACTION_EXAMPLE,
             IMUI_DEBUG_DRAW_EXAMPLE,
             IMUI_EDITOR_CONTROLS_EXAMPLE,
+            IMUI_PLOT_EXAMPLE,
             DRAG_EXAMPLE,
             EFFECTS_LAYER_EXAMPLE,
             DROP_SHADOW_EXAMPLE,

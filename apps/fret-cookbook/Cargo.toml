@@ -43,6 +43,7 @@ fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = fal
 fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false, optional = true }
 fret-canvas = { path = "../../ecosystem/fret-canvas", default-features = false, features = ["ui"], optional = true }
 fret-chart = { path = "../../ecosystem/fret-chart", optional = true }
+fret-plot = { path = "../../ecosystem/fret-plot", optional = true }
 delinea = { path = "../../ecosystem/delinea", optional = true }
 fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 
@@ -79,6 +80,7 @@ cookbook-imui = [
     "dep:serde_json",
     "fret/command-palette",
 ]
+cookbook-imui-plot = ["cookbook-imui", "dep:fret-plot", "fret-plot/imui"]
 cookbook-interop = [
     "cookbook-bootstrap",
     "dep:fret-render",
@@ -154,6 +156,10 @@ required-features = ["cookbook-imui"]
 [[example]]
 name = "imui_editor_controls_basics"
 required-features = ["cookbook-imui"]
+
+[[example]]
+name = "imui_plot_basics"
+required-features = ["cookbook-imui-plot"]
 
 [[example]]
 name = "docking_basics"

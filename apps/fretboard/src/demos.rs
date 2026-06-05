@@ -378,6 +378,7 @@ pub(crate) fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
         "imui_action_basics" => "--features cookbook-imui",
         "imui_debug_draw_basics" => "--features cookbook-imui",
         "imui_editor_controls_basics" => "--features cookbook-imui",
+        "imui_plot_basics" => "--features cookbook-imui-plot",
         "docking_basics" => "--features cookbook-docking",
         "embedded_viewport_basics" => "--features cookbook-interop",
         "external_texture_import_basics" => "--features cookbook-interop",
@@ -572,6 +573,10 @@ mod tests {
         assert_eq!(
             cookbook_example_feature_hint("imui_editor_controls_basics"),
             Some("--features cookbook-imui")
+        );
+        assert_eq!(
+            cookbook_example_feature_hint("imui_plot_basics"),
+            Some("--features cookbook-imui-plot")
         );
     }
 

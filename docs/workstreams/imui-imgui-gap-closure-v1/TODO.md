@@ -83,6 +83,17 @@ Last updated: 2026-06-05
       `apps/fret-devtools/src/native.rs`, and `apps/fret-devtools-mcp/src/native.rs` alias that
       owner while keeping their existing projection/UI responsibilities.
 
+## Plot Adapter Teaching Surface - 2026-06-05
+
+- [x] Promote the optional `fret-plot/imui` adapter into a first-party cookbook teaching surface
+      without moving plot policy into `fret-imui` or `fret-ui-kit::imui`.
+      Result: `apps/fret-cookbook/examples/imui_plot_basics.rs` now hosts
+      `fret_plot::imui::line_plot_panel(...)` inside the root `fret::imui` lane, wires
+      caller-owned `PlotState` / `PlotOutput`, and keeps stable `cookbook.imui_plot_basics.*`
+      readouts. `apps/fret-cookbook/Cargo.toml` owns the opt-in `cookbook-imui-plot` feature,
+      `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
+      imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching
