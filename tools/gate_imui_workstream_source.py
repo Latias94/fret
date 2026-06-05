@@ -1084,6 +1084,63 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/input_modes.rs"),
+            required=[
+                "use super::*;",
+                "mod activation;",
+                "mod no_inputs;",
+                "mod passthrough;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn floating_window_",
+                "fn hit_test_passthrough",
+                "fn no_inputs_is_click_through",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/input_modes/activation.rs"),
+            required=[
+                "fn floating_window_activate_on_click_can_be_disabled_for_content()",
+                "fn floating_window_focus_on_click_can_be_independent_from_z_order_activation()",
+                "fn floating_window_activate_on_click_can_be_disabled_for_resize_handles()",
+            ],
+            forbidden=[
+                "fn floating_window_no_inputs_",
+                "fn no_inputs_is_click_through",
+                "fn floating_window_pointer_passthrough",
+                "fn hit_test_passthrough",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/input_modes/no_inputs.rs"),
+            required=[
+                "fn floating_window_inputs_enabled_false_blocks_child_pressables()",
+                "fn floating_window_no_inputs_is_skipped_by_focus_traversal()",
+                "fn floating_window_no_inputs_allows_underlay_hit_testing()",
+                "fn no_inputs_is_click_through_and_skips_focus_traversal()",
+            ],
+            forbidden=[
+                "fn floating_window_activate_on_click",
+                "fn floating_window_focus_on_click",
+                "fn floating_window_pointer_passthrough",
+                "fn hit_test_passthrough",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/input_modes/passthrough.rs"),
+            required=[
+                "fn floating_window_pointer_passthrough_allows_underlay_hit_testing()",
+                "fn hit_test_passthrough_keeps_focus_traversal_and_nav_highlight()",
+            ],
+            forbidden=[
+                "fn floating_window_no_inputs_",
+                "fn no_inputs_is_click_through",
+                "fn floating_window_activate_on_click",
+                "fn floating_window_focus_on_click",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_demo.rs"),
             required=[
                 "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: String) -> AnyElement",

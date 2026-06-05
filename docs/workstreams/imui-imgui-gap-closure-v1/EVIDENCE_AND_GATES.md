@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Floating Input Modes Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` floating input-mode proof surface is split by behavior owner
+without changing floating-window runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/floating/input_modes.rs` is now a thin module hub for
+  `activation`, `no_inputs`, and `passthrough` proof owners.
+- `ecosystem/fret-imui/src/tests/floating/input_modes/activation.rs` owns activate-on-click,
+  focus-on-click, and resize-handle activation proof.
+- `ecosystem/fret-imui/src/tests/floating/input_modes/no_inputs.rs` owns `inputs_enabled=false`,
+  no-input focus traversal, no-input underlay hit-testing, and click-through/focus-skip proof.
+- `ecosystem/fret-imui/src/tests/floating/input_modes/passthrough.rs` owns pointer pass-through
+  hit-testing plus nav-highlight/hover-query proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui floating::input_modes --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## IMUI Plot Adapter Cookbook Teaching Surface Evidence - 2026-06-05
 
 Claim verified: the optional `fret-plot/imui` adapter now has a first-party cookbook teaching

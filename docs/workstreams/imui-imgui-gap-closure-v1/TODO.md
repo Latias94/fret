@@ -94,6 +94,16 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Floating Input Modes Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` floating input-mode proof file into activation, no-inputs, and
+      pass-through child owners without changing floating-window behavior, public APIs, or runtime
+      implementation code.
+      Result: `ecosystem/fret-imui/src/tests/floating/input_modes.rs` is now a thin module hub.
+      `input_modes/activation.rs` owns activate/focus-on-click proof, `input_modes/no_inputs.rs`
+      owns no-input and click-through/focus-skip proof, and `input_modes/passthrough.rs` owns
+      pointer pass-through and nav-highlight proof. The IMUI source gate freezes the split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching

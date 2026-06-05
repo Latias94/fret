@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi floating input-mode proof owner-split result:
+`ecosystem/fret-imui/src/tests/floating/input_modes.rs` now keeps only child-owner routing for the
+floating input-mode proof surface. `input_modes/activation.rs` owns activate-on-click,
+focus-on-click, and resize-handle activation tests; `input_modes/no_inputs.rs` owns
+`inputs_enabled=false`, no-input focus traversal, no-input underlay hit-testing, and click-through
+focus-skip tests; `input_modes/passthrough.rs` owns pointer-pass-through hit-testing plus
+nav-highlight/hover-query behavior. No `fret-ui-kit::imui` runtime implementation, `fret-imui`
+public facade, or floating option API changed.
+
 2026-06-05 IMUI plot adapter cookbook teaching surface result:
 `apps/fret-cookbook/examples/imui_plot_basics.rs` now provides the first-party opt-in plot adapter
 teaching path. The lesson hosts `fret_plot::imui::line_plot_panel(...)` under
