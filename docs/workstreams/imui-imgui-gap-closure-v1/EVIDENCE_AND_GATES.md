@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Layout Collections Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` layout-collections root proof surface is split by container
+helper, porting-sugar, menu/tab, virtual-list, and text-helper behavior owner without changing
+layout/collection runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` now keeps only shared imports
+  plus child-owner routing for `containers`, `porting_sugar`, `menu_tabs`, `virtual_list`,
+  `text_helpers`, and the existing `region_containers` / `table` owners.
+- `layout_collections/containers.rs` owns horizontal/vertical/grid/scroll helper layout proof.
+- `layout_collections/porting_sugar.rs` owns items/same-line/spacing/dummy/indent token proof.
+- `layout_collections/menu_tabs.rs` owns menu-bar and tab-bar layout plus semantics proof.
+- `layout_collections/virtual_list.rs` owns small render-window scroll-to-row and fixed-row
+  clipping proof.
+- `layout_collections/text_helpers.rs` owns separator-text and bullet-text layout proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui composition::layout_collections --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Popup Hover-Flags Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` popup hover-flags proof surface is split by disabled-scope,

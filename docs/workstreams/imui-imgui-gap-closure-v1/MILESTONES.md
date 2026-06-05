@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi layout-collections proof owner-split result:
+`ecosystem/fret-imui/src/tests/composition/layout_collections.rs` now keeps only shared imports and
+child-owner routing for the layout/collection proof surface. `layout_collections/containers.rs`
+owns horizontal/vertical/grid/scroll helper layout proof, `porting_sugar.rs` owns items/same-line/
+spacing/dummy/indent token proof, `menu_tabs.rs` owns menu-bar and tab-bar layout plus semantics
+proof, `virtual_list.rs` owns small render-window scroll-to-row and fixed-row clipping proof, and
+`text_helpers.rs` owns separator-text and bullet-text layout proof. Existing `region_containers`
+and `table` child owners remain unchanged. No `fret-ui-kit::imui` runtime implementation,
+`fret-imui` public facade, or layout/collection option API changed.
+
 2026-06-05 Fret-ImUi popup hover-flags proof owner-split result:
 `ecosystem/fret-imui/src/tests/popup_hover/hover_flags.rs` now keeps only child-owner routing for
 the popup hover-flags proof surface. `hover_flags/disabled_scope.rs` owns disabled underlay

@@ -94,6 +94,20 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Layout Collections Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` layout-collections root proof file into container helper,
+      porting-sugar, menu/tab, virtual-list, and text-helper child owners without changing
+      layout/collection runtime behavior, public APIs, or the `fret-ui-kit::imui` implementation.
+      Result: `composition/layout_collections.rs` now keeps only shared imports and module routing.
+      `layout_collections/containers.rs` owns horizontal/vertical/grid/scroll helper layout proof,
+      `layout_collections/porting_sugar.rs` owns items/same-line/spacing/dummy/indent token proof,
+      `layout_collections/menu_tabs.rs` owns menu-bar and tab-bar layout plus semantics proof,
+      `layout_collections/virtual_list.rs` owns small render-window scroll-to-row and fixed-row
+      clipping proof, and `layout_collections/text_helpers.rs` owns separator-text and bullet-text
+      layout proof. Existing `region_containers` and `table` child owners remain unchanged. The
+      IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Popup Hover-Flags Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` popup hover-flags proof file into disabled-scope, tooltip-delay,
