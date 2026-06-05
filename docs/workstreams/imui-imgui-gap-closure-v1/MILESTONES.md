@@ -157,6 +157,14 @@ hover switching, and `grace_corridor.rs` owns grace/safe corridor tests plus its
 geometry/timer helpers. No `fret-ui-kit::imui` menu runtime implementation, `fret-imui` public
 facade, or menu option API changed.
 
+2026-06-06 Fret-ImUi submenu grace-corridor proof deeper owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor.rs` now keeps
+only child-owner routing for the grace-corridor proof surface. `grace_corridor/deferral.rs` owns
+sibling-switch deferral inside the pointer grace corridor, `safe_corridor.rs` owns safe-hover
+corridor close-timer cancellation, `geometry.rs` owns grace/safe corridor point discovery, and
+`timers.rs` owns close/grace timer-token filtering. No `fret-ui-kit::imui` menu runtime
+implementation, `fret-imui` public facade, or menu option API changed.
+
 2026-06-05 Fret-ImUi floating input-mode proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/input_modes.rs` now keeps only child-owner routing for the
 floating input-mode proof surface. `input_modes/activation.rs` owns activate-on-click,

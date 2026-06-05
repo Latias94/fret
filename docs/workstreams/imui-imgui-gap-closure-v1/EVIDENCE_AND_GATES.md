@@ -513,6 +513,35 @@ Focused gates:
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Submenu Grace Corridor Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` submenu grace-corridor proof surface is split into focused child
+owners without changing menu runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor.rs` is now a
+  thin module hub for `deferral`, `safe_corridor`, `geometry`, and `timers` proof/helper owners.
+- `grace_corridor/deferral.rs` owns the sibling-switch deferral proof inside the pointer grace
+  corridor, including the raw hover signal assertions.
+- `grace_corridor/safe_corridor.rs` owns safe-hover corridor close-timer cancellation proof.
+- `grace_corridor/geometry.rs` owns grace-corridor transition-point discovery and safe/unsafe
+  hover-corridor point discovery.
+- `grace_corridor/timers.rs` owns non-repeating timer-token filtering shared by the two proofs.
+- `tools/gate_imui_workstream_source.py` now freezes the hub/child-owner boundary and rejects the
+  two proof bodies, geometry helper bodies, or timer helper body drifting back into the hub.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_hover --no-fail-fast`: pass; 6
+  submenu-hover tests run.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Floating Input Modes Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` floating input-mode proof surface is split by behavior owner

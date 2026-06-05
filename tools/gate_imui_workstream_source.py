@@ -38220,6 +38220,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor.rs"),
             required=[
+                "use super::*;",
+                "mod deferral;",
+                "mod geometry;",
+                "mod safe_corridor;",
+                "mod timers;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn begin_submenu_helper_defers_sibling_switch_inside_grace_corridor()",
                 "fn begin_submenu_helper_safe_corridor_cancels_close_timer()",
                 "find_grace_corridor_transition_points(",
@@ -38229,13 +38237,77 @@ def main() -> None:
                 "history.response().pointer_hovered_raw()",
                 "history.response().pointer_hovered_raw_below_barrier()",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor/deferral.rs"),
+            required=[
+                "fn begin_submenu_helper_defers_sibling_switch_inside_grace_corridor()",
+                "find_grace_corridor_transition_points(",
+                "pending_nonrepeating_timer_tokens_after(",
+                "history.response().hovered()",
+                "history.response().pointer_hovered_raw()",
+                "history.response().pointer_hovered_raw_below_barrier()",
+            ],
             forbidden=[
                 "fn begin_menu_helper_hover_switches_top_level",
                 "fn begin_submenu_helper_hover_opens_submenu",
                 "fn begin_submenu_helper_hover_switches_sibling",
+                "fn begin_submenu_helper_safe_corridor",
+                "find_safe_hover_corridor_points(",
                 "history.response().core.",
                 "history.response().pointer_hovered_raw)",
                 "history.response().pointer_hovered_raw_below_barrier)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor/safe_corridor.rs"),
+            required=[
+                "fn begin_submenu_helper_safe_corridor_cancels_close_timer()",
+                "find_safe_hover_corridor_points(",
+                "pending_nonrepeating_timer_tokens_after(",
+            ],
+            forbidden=[
+                "fn begin_menu_helper_hover_switches_top_level",
+                "fn begin_submenu_helper_hover_opens_submenu",
+                "fn begin_submenu_helper_hover_switches_sibling",
+                "fn begin_submenu_helper_defers_sibling",
+                "find_grace_corridor_transition_points(",
+                "history.response().core.",
+                "history.response().hovered()",
+                "history.response().pointer_hovered_raw)",
+                "history.response().pointer_hovered_raw_below_barrier)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor/geometry.rs"),
+            required=[
+                "pub(super) fn find_grace_corridor_transition_points(",
+                "pointer_grace_intent::grace_intent_from_exit_point(",
+                "pointer_grace_intent::is_pointer_in_grace_area(",
+                "pub(super) fn find_safe_hover_corridor_points(",
+                "pointer_grace_intent::last_pointer_is_safe(pos, geometry, buffer)",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn begin_submenu_helper",
+                "pending_nonrepeating_timer_tokens_after(",
+                "dispatch_all_timers(",
+                "history.response().hovered()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor/timers.rs"),
+            required=[
+                "pub(super) fn pending_nonrepeating_timer_tokens_after(",
+                "Effect::SetTimer {",
+                "repeat.is_none() && *effect_after == after",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn begin_submenu_helper",
+                "find_grace_corridor_transition_points(",
+                "find_safe_hover_corridor_points(",
+                "history.response().hovered()",
             ],
         ),
         SourceCheck(
