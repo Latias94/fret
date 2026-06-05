@@ -105,6 +105,15 @@ ArrowDown focus navigation proof; `shortcuts.rs` owns focused-popup-item shortcu
 semantics proof. No `fret-ui-kit::imui` popup/menu runtime implementation, `fret-imui` public
 facade, or popup/menu option API changed.
 
+2026-06-06 Fret-ImUi popup item-pointer proof owner-split result:
+`ecosystem/fret-imui/src/tests/popup_hover/item_pointer.rs` now keeps only child-owner routing for
+the popup item pointer proof surface. `item_pointer/close.rs` owns close-on-menu-item-click proof
+plus hit-test ancestry validation, `click.rs` owns direct pointer click `clicked()` reporting,
+`delayed.rs` owns delayed-frame click observability, `idle_frames.rs` owns idle-frame without
+render click observability, and `move_delayed.rs` owns pointer move plus click after extra frames.
+No `fret-ui-kit::imui` popup/menu runtime implementation, `fret-imui` public facade, or popup/menu
+option API changed.
+
 2026-06-05 Fret-ImUi floating movement/z-order proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` now keeps only child-owner routing for
 the floating movement, window-control, and z-order proof surface. `movement_z_order/movement.rs`

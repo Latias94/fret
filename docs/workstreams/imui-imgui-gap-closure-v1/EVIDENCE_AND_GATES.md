@@ -341,6 +341,36 @@ Focused gates:
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Popup Item-Pointer Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` popup item-pointer proof surface is split by close, direct-click,
+delayed-click, idle-frame click, and move-then-click behavior owner without
+changing popup/menu runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/popup_hover/item_pointer.rs` now keeps only child-owner routing
+  for `click`, `close`, `delayed`, `idle_frames`, and `move_delayed`.
+- `item_pointer/close.rs` owns close-on-menu-item-click proof plus hit-test ancestry validation.
+- `item_pointer/click.rs` owns direct pointer click `clicked()` reporting proof.
+- `item_pointer/delayed.rs` owns delayed-frame click observability proof.
+- `item_pointer/idle_frames.rs` owns idle-frame without render click observability proof.
+- `item_pointer/move_delayed.rs` owns pointer move plus click after extra frames.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui popup_hover::item_pointer --no-fail-fast`: pass; 5
+  item-pointer tests run.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` floating movement/z-order proof surface is split by movement,

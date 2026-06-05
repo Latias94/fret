@@ -231,6 +231,18 @@ Last updated: 2026-06-06
       plus `shortcut_repeat` opt-in proof; and `item_keyboard/checkbox_semantics.rs` owns menu-item
       checkbox checked-state semantics proof. The IMUI source gate freezes the child-owner split.
 
+## Fret-ImUi Popup Item-Pointer Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` popup item-pointer proof file into close, direct-click, delayed-click,
+      idle-frame click, and move-then-click child owners without changing popup/menu runtime
+      behavior, public APIs, or the `fret-ui-kit::imui` popup/menu policy implementation.
+      Result: `popup_hover/item_pointer.rs` is now a thin module hub.
+      `item_pointer/close.rs` owns close-on-menu-item-click proof plus hit-test ancestry
+      validation; `item_pointer/click.rs` owns direct pointer click `clicked()` reporting proof;
+      `item_pointer/delayed.rs` owns delayed-frame click observability; `idle_frames.rs` owns idle
+      frame without render click observability; and `move_delayed.rs` owns pointer move plus click
+      after extra frames. The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating movement/z-order proof file into movement, window-control,
