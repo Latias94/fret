@@ -1,6 +1,6 @@
 //! Winit `ApplicationHandler` integration.
 
-use super::redraw_hitch::{RedrawPhase, measure_redraw_phase, redraw_hitch_config};
+use super::redraw_hitch::redraw_hitch_config;
 use super::*;
 
 use fret_core::time::Instant;
@@ -499,101 +499,30 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         target_updates,
                     );
 
-                    let (draw_result, present_elapsed) = measure_redraw_phase(
-                        RedrawPhase::Present,
-                        hitch_config.is_some(),
-                        || -> Result<(), fret_render::RenderError> {
-                            let frame_view =
-                                super::window_redraw_present_target::acquire_window_redraw_present_frame(
-                                    surface,
-                                )?;
-
-                            let clear_color =
-                                super::window_redraw_clear_color::resolve_window_redraw_clear_color(
-                                    &self.app,
-                                    app_window,
-                                    self.config.clear_color,
-                                );
-                            let present_target =
-                                super::window_redraw_present_target::prepare_window_redraw_present_target(
-                                    super::window_redraw_present_target::WindowRedrawPresentTargetInput {
-                                        context,
-                                        surface,
-                                        frame_view,
-                                    },
-                                );
-
-                            let ui_cmd =
-                                super::window_redraw_render_scene::record_window_redraw_render_scene(
-                                    super::window_redraw_render_scene::WindowRedrawRenderSceneInput {
-                                        renderer,
-                                        context,
-                                        surface,
-                                        target_view: present_target.target_view(),
-                                        scene: &state.scene,
-                                        clear_color,
-                                        scale_factor,
-                                    },
-                                );
-                            super::window_redraw_post_render_diagnostics::publish_window_redraw_post_render_diagnostics(
-                                super::window_redraw_post_render_diagnostics::WindowRedrawPostRenderDiagnosticsInput {
-                                    app: &mut self.app,
-                                    driver: &mut self.driver,
-                                    renderer,
-                                    context,
-                                    app_window,
-                                    user: &mut state.user,
-                                    tick_id: self.tick_id,
-                                    frame_id: self.frame_id,
-                                    text_diagnostics,
-                                },
-                            );
-
-                            let capture_commands =
-                                super::window_redraw_present_capture_commands::prepare_window_redraw_present_capture_commands(
-                                    super::window_redraw_present_capture_commands::WindowRedrawPresentCaptureCommandsInput {
-                                        command_buffers: engine_command_buffers,
-                                        ui_cmd,
-                                        #[cfg(feature = "diag-screenshots")]
-                                        diag_screenshots: self.diag_screenshots.as_mut(),
-                                        bundle_screenshots: &mut self.diag_bundle_screenshots,
-                                        #[cfg(feature = "diag-screenshots")]
-                                        app_window,
-                                        frame_view: present_target.frame_view(),
-                                        device: &context.device,
-                                        surface_format: surface.format(),
-                                        surface_size: surface.size(),
-                                    },
-                                );
-
-                            super::window_redraw_present_submit::submit_window_redraw_present_frame(
-                                super::window_redraw_present_submit::WindowRedrawPresentSubmitInput {
-                                    context,
-                                    command_buffers: capture_commands.command_buffers,
-                                    present_target,
-                                },
-                            );
-                            super::window_redraw_present_finish::finish_window_redraw_present_frame(
-                                super::window_redraw_present_finish::WindowRedrawPresentFinishInput {
-                                    app: &mut self.app,
-                                    frame_id: &mut self.frame_id,
-                                    app_window,
-                                    keepalive: engine_keepalive,
-                                    #[cfg(feature = "diag-screenshots")]
-                                    diag_screenshots: self.diag_screenshots.as_mut(),
-                                    bundle_screenshots: &self.diag_bundle_screenshots,
-                                    device: &context.device,
-                                    #[cfg(feature = "diag-screenshots")]
-                                    screenshot_inflight: capture_commands.screenshot_inflight,
-                                    bundle_screenshot_readback: capture_commands
-                                        .bundle_screenshot_readback,
-                                    surface_format: surface.format(),
-                                },
-                            );
-
-                            Ok(())
-                        },
-                    );
+                    let (draw_result, present_elapsed) =
+                        super::window_redraw_present::present_window_redraw_frame(
+                            super::window_redraw_present::WindowRedrawPresentInput {
+                                app: &mut self.app,
+                                driver: &mut self.driver,
+                                renderer,
+                                context,
+                                surface,
+                                app_window,
+                                user: &mut state.user,
+                                scene: &state.scene,
+                                tick_id: self.tick_id,
+                                frame_id: &mut self.frame_id,
+                                scale_factor,
+                                clear_color: self.config.clear_color,
+                                engine_command_buffers,
+                                engine_keepalive,
+                                text_diagnostics,
+                                #[cfg(feature = "diag-screenshots")]
+                                diag_screenshots: &mut self.diag_screenshots,
+                                bundle_screenshots: &mut self.diag_bundle_screenshots,
+                                hitch_enabled: hitch_config.is_some(),
+                            },
+                        );
                     if let Some(elapsed) = present_elapsed {
                         hitch_present_ms = Some(elapsed.as_millis() as u64);
                     }

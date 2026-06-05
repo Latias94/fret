@@ -208,6 +208,7 @@ mod window_redraw_frame_prepare;
 mod window_redraw_hitch_summary;
 mod window_redraw_pending_wheel;
 mod window_redraw_post_render_diagnostics;
+mod window_redraw_present;
 mod window_redraw_present_capture_commands;
 mod window_redraw_present_error;
 mod window_redraw_present_finish;
