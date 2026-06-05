@@ -14597,7 +14597,25 @@ def main() -> None:
                 "fn line_plot_panel_paints_plot_image_overlay_on_declarative_path(",
                 "fn line_plot_panel_paints_tag_x_and_y_overlays_on_declarative_path(",
                 "fn line_plot_panel_drags_x_line_output_on_declarative_path(",
+                "mod cursor_readout;",
+            ],
+            forbidden=[
+                "fret_authoring::UiWriter",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs"),
+            required=[
+                "use super::*;",
+                "fn line_plot_panel_updates_output_cursor_on_pointer_move(",
+                "fn line_plot_panel_paints_cursor_readout_without_output_model_on_declarative_path(",
+                "fn line_plot_panel_paints_series_readout_rows_on_declarative_cursor_overlay(",
+                "fn line_plot_panel_paints_right_axis_series_readout_with_right_axis_formatter_on_declarative_path(",
                 "fn line_plot_panel_paints_linked_cursor_readout_from_state_on_declarative_path(",
+                "PlotOutput::default()",
+                "published.snapshot.cursor",
+                "paint mouse readout overlay chrome",
+                "paint one vertical guide when no local cursor is active",
             ],
             forbidden=[
                 "fret_authoring::UiWriter",

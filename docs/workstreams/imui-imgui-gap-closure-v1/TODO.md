@@ -6883,8 +6883,16 @@ opening the slice.
       without changing implementation code, public panel props, optional IMUI adapter routing, test
       host behavior, or declarative paint/drag coverage.
       Result: `ecosystem/fret-plot/src/declarative/tests.rs` owns the `TestHost`, scene helpers,
-      paint regressions, drag output regressions, and linked-cursor/readout regressions;
-      `declarative.rs` keeps `#[cfg(test)] mod tests;` only.
+      paint regressions, drag output regressions, and child test-owner routing; `declarative.rs`
+      keeps `#[cfg(test)] mod tests;` only.
+- [x] Split Fret Plot declarative cursor output/readout regression tests out of the root test owner
+      without changing implementation code, public panel props, optional IMUI adapter routing,
+      output cursor publication, mouse cursor readout chrome/text, series readout rows, right-axis
+      formatter readout, linked-cursor precedence, or declarative line painting preservation.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared `TestHost`,
+      `FakeServices`, scene helpers, and non-readout regression suites while
+      `ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs` owns the cursor output,
+      cursor readout, series readout, right-axis readout, and linked-cursor readout tests.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.

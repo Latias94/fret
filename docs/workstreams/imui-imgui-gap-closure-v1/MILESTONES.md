@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative cursor-readout test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
+scene helpers, non-readout paint/interaction regression suites, and `mod cursor_readout;` routing.
+`ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs` owns cursor output publication,
+mouse cursor readout chrome/text, per-series readout rows, right-axis formatter readout, and
+linked-cursor precedence tests. No plot implementation, public panel prop, optional `fret-plot/imui`
+adapter routing, or runtime behavior changed.
+
 2026-06-05 collection proof browser input-runtime owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` now keeps child-region
 mounting, browser/content/scope test IDs, asset-grid owner mounting, and marquee overlay rendering.

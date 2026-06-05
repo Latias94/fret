@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret Plot Declarative Cursor-Readout Test Owner Split Evidence - 2026-06-05
+
+Claim verified: declarative plot cursor output/readout regression tests moved out of the root
+declarative plot test owner without changing plot implementation code, public panel props, optional
+`fret-plot/imui` adapter routing, cursor output publication, mouse cursor readout chrome/text,
+series readout rows, right-axis formatter readout, linked-cursor precedence, or declarative line
+painting preservation.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
+  scene helpers, non-readout paint/interaction regression suites, and `mod cursor_readout;` routing.
+- `ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs` owns the cursor output publication,
+  mouse cursor readout, per-series readout, right-axis readout, and linked-cursor readout tests.
+- `tools/gate_imui_workstream_source.py` now freezes the root test owner routing and the
+  cursor-readout child owner markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new cursor-readout test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings from
+  `fret-plot`.
+- `cargo nextest run -p fret-plot cursor_readout --no-fail-fast`: pass, 5 passed and 84 skipped.
+
 ## Collection Proof Browser Input-Runtime Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof browser pointer/wheel/input runtime moved out of the child-region

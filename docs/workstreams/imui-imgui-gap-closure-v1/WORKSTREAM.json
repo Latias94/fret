@@ -2034,6 +2034,7 @@
     "ecosystem/fret-plot/src/declarative/series_paint/shaded.rs",
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
+    "ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve/floating_hit.rs",
