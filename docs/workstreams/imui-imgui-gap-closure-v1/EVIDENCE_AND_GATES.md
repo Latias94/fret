@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Table Visibility Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` table visibility proof surface is split by runtime filtering,
+visibility menu item, and header context-menu behavior owner without changing table runtime code,
+public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs` now keeps
+  only shared imports and child-owner routing for `runtime_filtering`, `menu_items`, and
+  `header_context_menu`.
+- `table/visibility/runtime_filtering.rs` owns hidden-column rendering and runtime
+  `ImUiTableColumnVisibilityState::apply_to_columns(...)` proof.
+- `table/visibility/menu_items.rs` owns single visibility menu item toggling and repeated
+  menu-item filtering/state writeback proof.
+- `table/visibility/header_context_menu.rs` owns sortable/plain table header context-menu open,
+  item activation, and post-toggle table filtering proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui layout_collections::table --no-fail-fast`: pass after an initial
+  build-lock timeout rerun; 13 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with a Git line-ending warning for
+  `ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs`.
+
 ## Fret-ImUi Layout Collections Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` layout-collections root proof surface is split by container

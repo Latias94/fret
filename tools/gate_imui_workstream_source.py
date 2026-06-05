@@ -3584,6 +3584,11 @@ def main() -> None:
                 "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs",
                 "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs",
                 "rejects table helper",
+                "Fret-ImUi Table Visibility Proof Owner Split Evidence - 2026-06-05",
+                "table/visibility/runtime_filtering.rs",
+                "table/visibility/menu_items.rs",
+                "table/visibility/header_context_menu.rs",
+                "runtime filtering,",
                 "Kit IMUI Source Thinness Guard - 2026-06-03",
                 "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
                 "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",
@@ -13272,20 +13277,93 @@ def main() -> None:
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs"),
             required=[
                 "use super::*;",
-                "fn table_helper_skips_hidden_columns_in_header_and_body()",
-                "fn table_helper_applies_runtime_column_visibility_state()",
-                "fn table_column_visibility_menu_item_updates_visibility_state()",
-                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
-                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
-                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
-                "ImUiTableColumnVisibilityState::new",
-                "table_column_visibility_header_context_menu(",
+                "mod header_context_menu;",
+                "mod menu_items;",
+                "mod runtime_filtering;",
             ],
             forbidden=[
                 "fn table_helper_pins_left_and_right_columns_while_center_columns_scroll()",
                 "fn table_plain_header_left_click_does_not_activate_or_click()",
                 "fn table_helper_applies_explicit_row_and_cell_background_overrides()",
                 "fn first_solid_quad_index(",
+                "fn table_helper_skips_hidden_columns_in_header_and_body()",
+                "fn table_helper_applies_runtime_column_visibility_state()",
+                "fn table_column_visibility_menu_item_updates_visibility_state()",
+                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/runtime_filtering.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn table_helper_skips_hidden_columns_in_header_and_body()",
+                "TableColumn::px(\"Status\", Px(96.0)).hidden()",
+                "\"imui-table-hidden-column.header.cell.status\"",
+                "\"imui-table-hidden-column.row.0.cell.status\"",
+                "fn table_helper_applies_runtime_column_visibility_state()",
+                "ImUiTableColumnVisibilityState::new",
+                "visibility.apply_to_columns(&columns)",
+                "\"imui-table-runtime-column-visibility.header.cell.status\"",
+                "\"imui-table-runtime-column-visibility.row.0.cell.owner\"",
+            ],
+            forbidden=[
+                "fn table_column_visibility_menu_item_updates_visibility_state()",
+                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
+                "table_column_visibility_menu_item(",
+                "table_column_visibility_header_context_menu(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/menu_items.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn table_column_visibility_menu_item_updates_visibility_state()",
+                "table_column_visibility_menu_item(",
+                "\"imui-table-column-visibility-menu.status\"",
+                "state.is_visible(\"status\", column.visible())",
+                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
+                "table_column_visibility_menu_items(",
+                "\"imui-table-column-visibility-menu-items.item.status\"",
+                "\"imui-table-column-visibility-menu-items-applied.row.0.cell.status\"",
+            ],
+            forbidden=[
+                "fn table_helper_skips_hidden_columns_in_header_and_body()",
+                "fn table_helper_applies_runtime_column_visibility_state()",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
+                "ImUiTableColumnVisibilityState::new",
+                "table_column_visibility_header_context_menu(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/header_context_menu.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+                "table_column_visibility_header_context_menu(",
+                "\"imui-table-header-visibility-menu.menu.item.status\"",
+                "\"imui-table-header-visibility-menu.header.cell.status\"",
+                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
+                "\"imui-table-plain-header-visibility-menu.menu.item.status\"",
+                "plain_header_clicked",
+            ],
+            forbidden=[
+                "fn table_helper_skips_hidden_columns_in_header_and_body()",
+                "fn table_helper_applies_runtime_column_visibility_state()",
+                "fn table_column_visibility_menu_item_updates_visibility_state()",
+                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
+                "ImUiTableColumnVisibilityState::new",
+                "table_column_visibility_menu_item(",
             ],
         ),
         SourceCheck(
@@ -16200,6 +16278,21 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs"),
             required=[
+                "mod header_context_menu;",
+                "mod menu_items;",
+                "mod runtime_filtering;",
+            ],
+            forbidden=[
+                "fn table_helper_skips_hidden_columns_in_header_and_body()",
+                "fn table_column_visibility_menu_item_updates_visibility_state()",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/runtime_filtering.rs"
+            ),
+            required=[
                 "fn table_helper_skips_hidden_columns_in_header_and_body()",
                 "TableColumn::px(\"Status\", Px(96.0)).hidden()",
                 "\"imui-table-hidden-column.header.cell.status\"",
@@ -16209,13 +16302,35 @@ def main() -> None:
                 "visibility.apply_to_columns(&columns)",
                 "\"imui-table-runtime-column-visibility.header.cell.status\"",
                 "\"imui-table-runtime-column-visibility.row.0.cell.owner\"",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/menu_items.rs"
+            ),
+            required=[
                 "fn table_column_visibility_menu_item_updates_visibility_state()",
                 "table_column_visibility_menu_item(",
                 "\"imui-table-column-visibility-menu.status\"",
                 "state.is_visible(\"status\", column.visible())",
+                "fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns()",
+                "table_column_visibility_menu_items(",
+                "\"imui-table-column-visibility-menu-items.item.status\"",
+                "\"imui-table-column-visibility-menu-items-applied.header.cell.status\"",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/header_context_menu.rs"
+            ),
+            required=[
                 "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
                 "table_column_visibility_header_context_menu(",
                 "\"imui-table-header-visibility-menu.menu.item.status\"",
+                "fn table_column_visibility_header_context_menu_opens_from_plain_header()",
+                "\"imui-table-plain-header-visibility-menu.menu.item.status\"",
             ],
             forbidden=[],
         ),

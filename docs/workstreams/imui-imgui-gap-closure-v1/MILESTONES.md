@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi table visibility proof owner-split result:
+`ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs` now keeps only
+shared imports and child-owner routing for the table visibility proof surface.
+`table/visibility/runtime_filtering.rs` owns hidden-column rendering and runtime visibility-state
+column filtering proof, `menu_items.rs` owns single and repeated column-visibility menu item
+state writeback proof, and `header_context_menu.rs` owns sortable/plain table header context-menu
+open, item activation, and post-toggle filtering proof. No `fret-ui-kit::imui` table runtime
+implementation, `fret-imui` public facade, or table/visibility option API changed.
+
 2026-06-05 Fret-ImUi layout-collections proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` now keeps only shared imports and
 child-owner routing for the layout/collection proof surface. `layout_collections/containers.rs`

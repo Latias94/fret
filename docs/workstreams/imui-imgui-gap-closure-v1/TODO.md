@@ -94,6 +94,19 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Table Visibility Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` table visibility proof file into runtime-filtering, menu-item, and
+      header context-menu child owners without changing table runtime behavior, public APIs, or
+      the `fret-ui-kit::imui` table/visibility implementation.
+      Result: `composition/layout_collections/table/visibility.rs` now keeps only shared imports
+      and module routing. `table/visibility/runtime_filtering.rs` owns hidden-column rendering and
+      runtime visibility-state column filtering proof, `table/visibility/menu_items.rs` owns
+      single/repeated visibility menu item state writeback proof, and
+      `table/visibility/header_context_menu.rs` owns sortable/plain header context-menu open,
+      item activation, and post-toggle filtering proof. The IMUI source gate freezes the
+      child-owner split.
+
 ## Fret-ImUi Layout Collections Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` layout-collections root proof file into container helper,
