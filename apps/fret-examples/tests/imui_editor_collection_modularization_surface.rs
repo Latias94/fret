@@ -16,6 +16,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
+    let selection_commands_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs");
 
     for needle in [
         "mod collection;",
@@ -191,14 +193,28 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "mod commands;",
+        "pub(super) use commands::{",
         "pub(super) struct ProofCollectionKeyboardState",
         "pub(super) fn proof_collection_assets_in_visible_order(",
         "pub(super) fn proof_collection_keyboard_selection(",
-        "pub(super) fn proof_collection_duplicate_selection(",
     ] {
         assert!(
             selection_source.contains(needle),
-            "the demo-local collection selection owner should keep pure selection state transitions explicit; missing `{needle}`"
+            "the demo-local collection selection owner should keep pure selection state and command delegation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) struct ProofCollectionDeleteResult",
+        "pub(in super::super) struct ProofCollectionDuplicateResult",
+        "pub(in super::super) fn proof_collection_delete_selection(",
+        "pub(in super::super) fn proof_collection_duplicate_selection(",
+        "fn proof_collection_unique_copy_text(",
+    ] {
+        assert!(
+            selection_commands_source.contains(needle),
+            "the demo-local collection selection command owner should keep duplicate/delete state transitions explicit; missing `{needle}`"
         );
     }
 }

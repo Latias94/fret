@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof selection-command owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps visible-order
+projection, selected-asset lookup, active-id fallback, select-all, context-menu selection, and
+keyboard navigation, while delegating duplicate/delete command transitions through
+`selection/commands.rs`. `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/
+commands.rs` owns `ProofCollectionDeleteResult`, `ProofCollectionDuplicateResult`,
+Delete/Backspace and Primary+D shortcut matching, duplicate/delete state transitions, copy-suffix
+generation, and command-transition unit tests. Public call sites still import through
+`collection::selection`, so command buttons, keyboard dispatch, and context menu routing remain
+unchanged while the source/surface gates now freeze duplicate/delete transitions separately from
+the selection-navigation owner.
+
 2026-06-05 collection proof browser-scope owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now delegates the browser region
 through `render_collection_browser_scope(...)` after computing visible assets, keys, active asset,

@@ -3,6 +3,50 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Selection-Command Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof duplicate/delete command transitions moved out of the selection
+navigation owner without changing Delete/Backspace handling, Primary+D handling, duplicate
+copy-suffix policy, delete refocus, duplicate reselect behavior, command button routing, keyboard
+routing, context-menu routing, or the app-owned no-helper-widening boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps
+  `ProofCollectionKeyboardState`, visible-order projection, selected-asset lookup, active-id
+  fallback, select-all, context-menu selection, and keyboard navigation.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs` owns
+  `ProofCollectionDeleteResult`, `ProofCollectionDuplicateResult`, Delete/Backspace and Primary+D
+  shortcut matching, duplicate/delete pure state transitions, copy-suffix generation, and
+  command-transition unit tests.
+- Existing callers still import through `collection::selection`, so
+  `command_buttons.rs`, `keyboard.rs`, and `context_menu.rs` do not need a second command module
+  dependency.
+- The collection source gate and workstream source gate now treat `selection/commands.rs` as a
+  separate owner and prevent copy-suffix/delete transition logic from drifting back into
+  `selection.rs`.
+- The collection surface tests now include `selection/commands.rs` in their composed source
+  bundles, and the modularization surface test freezes the command owner markers separately from
+  selection navigation markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new selection-command
+  owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_keyboard_owner_surface --no-fail-fast`:
+  attempted and timed out after 300 seconds; one residual `rustc.exe` process for this Fret
+  workspace was stopped before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Browser-Scope Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof browser child-region and pointer runtime moved out of the

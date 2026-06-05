@@ -77,6 +77,9 @@ def main() -> None:
     collection_selection = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
     )
+    collection_selection_commands = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs"
+    )
     collection_children = (
         collection_asset_grid,
         collection_browser_scope,
@@ -90,6 +93,7 @@ def main() -> None:
         collection_readouts,
         collection_rename,
         collection_selection,
+        collection_selection_commands,
     )
 
     checks = [
@@ -412,21 +416,51 @@ def main() -> None:
             "collection selection owner",
             collection_selection,
             required=[
+                "mod commands;",
+                "pub(super) use commands::{",
                 "pub(super) struct ProofCollectionKeyboardState {",
-                "pub(super) struct ProofCollectionDeleteResult {",
-                "pub(super) struct ProofCollectionDuplicateResult {",
                 "pub(super) fn proof_collection_assets_in_visible_order(",
                 "pub(super) fn proof_collection_selected_assets",
                 "pub(super) fn proof_collection_active_id(",
                 "pub(super) fn proof_collection_select_all_shortcut_matches(",
-                "pub(super) fn proof_collection_duplicate_shortcut_matches(",
                 "pub(super) fn proof_collection_select_all_selection(",
                 "pub(super) fn proof_collection_context_menu_selection(",
                 "pub(super) fn proof_collection_keyboard_selection(",
-                "pub(super) fn proof_collection_delete_key_matches(",
-                "pub(super) fn proof_collection_delete_selection(",
-                "pub(super) fn proof_collection_duplicate_selection(",
                 "fn proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile()",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "HashSet",
+                "fn proof_collection_unique_copy_text(",
+                "fn proof_collection_duplicate_label_candidate(",
+                "fn proof_collection_duplicate_id_candidate(",
+                "fn proof_collection_duplicate_path_candidate(",
+                "pub(super) fn proof_collection_duplicate_selection(",
+                "pub(super) fn proof_collection_delete_selection(",
+                "pub(super) fn proof_collection_delete_key_matches(",
+                "pub(super) fn proof_collection_duplicate_shortcut_matches(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection command owner",
+            collection_selection_commands,
+            required=[
+                "pub(in super::super) struct ProofCollectionDeleteResult {",
+                "pub(in super::super) struct ProofCollectionDuplicateResult {",
+                "pub(in super::super) fn proof_collection_delete_key_matches(",
+                "pub(in super::super) fn proof_collection_delete_selection(",
+                "pub(in super::super) fn proof_collection_duplicate_shortcut_matches(",
+                "pub(in super::super) fn proof_collection_duplicate_selection(",
+                "fn proof_collection_unique_copy_text(",
+                "fn proof_collection_duplicate_label_candidate(",
+                "fn proof_collection_duplicate_id_candidate(",
+                "fn proof_collection_duplicate_path_candidate(",
+                "fn proof_collection_duplicate_shortcut_matches_primary_d_only()",
                 "fn proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy()",
                 "fn proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item()",
             ],
@@ -437,6 +471,8 @@ def main() -> None:
                 "drag_preview_ghost",
                 "kit::ButtonOptions",
                 "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(

@@ -7907,3 +7907,15 @@ opening the slice.
       model/scroll updates, background box-select transitions, context-menu anchor publication,
       marquee overlay mounting, and asset-grid owner mounting. The collection source gate,
       workstream source gate, manifest, and surface tests now include the browser-scope owner.
+- [x] Split collection proof duplicate/delete command transitions out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the
+      demo-local `collection/selection/commands.rs` child owner without changing Delete/Backspace
+      handling, Primary+D handling, duplicate copy-suffix policy, delete refocus, selection
+      reselect behavior, command button routing, keyboard routing, context-menu routing, or the
+      app-owned no-helper-widening boundary. Result: `selection.rs` keeps visible-order projection,
+      active-id fallback, select-all, context-menu selection, and keyboard navigation, while
+      `selection/commands.rs` owns `ProofCollectionDeleteResult`,
+      `ProofCollectionDuplicateResult`, duplicate/delete shortcut matching, duplicate/delete pure
+      state transitions, copy-suffix generation, and command-transition unit tests. Existing call
+      sites still import through `collection::selection`, and the collection source gate,
+      workstream source gate, manifest, and surface tests now include the selection command owner.
