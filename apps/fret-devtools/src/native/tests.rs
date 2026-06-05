@@ -1167,7 +1167,11 @@ fn guide_recent_evidence_state_projects_target_and_report() {
     assert_eq!(target.id, "failed-gate");
     assert!(!recent.bundle_dir_available);
     assert!(recent.rerunnable);
-    assert!(recent.report_text.contains("failed_evidence_target: gate failed-gate"));
+    assert!(
+        recent
+            .report_text
+            .contains("failed_evidence_target: gate | failed | failed-gate")
+    );
     assert!(recent.report_text.contains("failed_evidence_rerunnable: gate"));
 }
 
@@ -1807,8 +1811,12 @@ fn gate_profile_panel_state_defaults_to_stale_paint_scene() {
     let panel = collect_gate_profile_panel_state(&app, &st);
     assert_eq!(panel.selected_profile_id.as_ref(), "stale-paint-scene");
     assert!(panel.selected_profile_label.contains("stale-paint-scene"));
-    assert!(panel.command_preview.contains("Select a script-target gate profile."));
-    assert!(!panel.copy_enabled);
+    assert!(panel.command_preview.contains("--check-stale-paint <test-id>"));
+    assert!(panel.command_preview.contains("--check-stale-scene <test-id>"));
+    assert!(panel
+        .command_state_line
+        .contains("missing inputs: script.json, test-id"));
+    assert!(panel.copy_enabled);
     assert!(!panel.run_enabled);
     assert!(
         panel
@@ -1835,8 +1843,8 @@ fn header_next_action_lines_project_recent_evidence_state() {
         recent_evidence_next: "rerun the latest failed evidence".to_string(),
     };
     let text = header_next_action_lines_for_artifacts_root("target/fret-diag", &state).join("\n");
-    assert!(text.contains("selected session: session-1"));
-    assert!(text.contains("regression failing rows: 3"));
+    assert!(text.contains("session scope: selected session-1; 2 sessions connected"));
+    assert!(text.contains("regression: aggregate loaded with 3 non-passing summary row(s)"));
     assert!(text.contains("recent evidence next: rerun the latest failed evidence"));
 }
 

@@ -35246,3 +35246,28 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-06 DevTools native command catalog owner split:
+
+- Claim: DevTools GUI command IDs, first-open document/route constants, workflow route constants,
+  follow-up command constants, and Demo/Metrics/Debug command constants moved out of
+  `apps/fret-devtools/src/native.rs` into the private child owner
+  `apps/fret-devtools/src/native/command_catalog.rs` without changing command strings, route IDs,
+  workflow IDs, first-open line projection, copy-command dispatch, or Demo/Metrics/Debug route
+  behavior.
+- Evidence anchors: `native.rs` now declares `#[path = "native/command_catalog.rs"] mod
+  command_catalog;` and imports `use command_catalog::*;`, while `command_catalog.rs` owns the
+  static DevTools command/document catalog with `pub(super)` visibility. `tools/gate_imui_workstream_source.py`
+  now source-checks the catalog owner and rejects selected catalog constants drifting back into
+  `native.rs`.
+- Passed: `cargo fmt --package fret-devtools`.
+- Passed: `cargo fmt --package fret-devtools -- --check`.
+- Passed: `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast`
+  (1 test passed, 95 skipped).
+- Passed: `cargo nextest run -p fret-devtools --no-fail-fast` after refreshing three stale
+  state-projection assertions to the current richer line formats (96 tests passed).
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check` with only the existing Git warning that
+  `apps/fret-devtools/src/native.rs` will normalize CRLF to LF when touched.
