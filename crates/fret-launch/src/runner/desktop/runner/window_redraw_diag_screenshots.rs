@@ -6,6 +6,8 @@ use super::diag_bundle_screenshots::{DiagBundleScreenshotCapture, PendingScreens
 use super::diag_screenshots::{DiagScreenshotCapture, InFlightCapture};
 #[cfg(feature = "diag-screenshots")]
 use fret_core::AppWindowId;
+#[cfg(feature = "diag-screenshots")]
+use slotmap::Key as _;
 
 pub(super) struct WindowRedrawBundleScreenshotReadback {
     pending: PendingScreenshotReadback,

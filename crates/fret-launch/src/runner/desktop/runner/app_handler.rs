@@ -7,9 +7,6 @@ use fret_core::time::Instant;
 #[cfg(target_os = "macos")]
 use objc2_metal::MTLDevice as _;
 
-#[cfg(feature = "diag-screenshots")]
-use slotmap::Key as _;
-
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     fn device_event(
         &mut self,
