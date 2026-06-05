@@ -1060,6 +1060,10 @@ def main() -> None:
                 "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/collapsing_header.rs",
                 "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_context_menu.rs",
                 "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_layout.rs",
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts.rs",
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/repeat.rs",
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/response_edges.rs",
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/trigger_scoping.rs",
                 "ecosystem/fret-imui/Cargo.toml",
                 "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py",
                 "python tools/gate_imui_editor_collection_source.py",
@@ -1192,6 +1196,88 @@ def main() -> None:
                 "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
                 "activate_shortcut: Some(shortcut)",
                 "context_menu_requested()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts.rs"),
+            required=[
+                "use super::*;",
+                "mod repeat;",
+                "mod response_edges;",
+                "mod trigger_scoping;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn begin_submenu_activate_shortcut_repeat_is_opt_in()",
+                "fn menu_and_submenu_helpers_report_toggle_and_trigger_edges()",
+                "begin_submenu_with_options(",
+                "menu.response().activated()",
+                "shortcut_repeat: true",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/trigger_scoping.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger()",
+                "imui-begin-submenu-shortcut.file.recent",
+                "activate_shortcut: Some(shortcut)",
+                "focus_test_id(",
+                "key_down_ctrl(",
+            ],
+            forbidden=[
+                "fn begin_submenu_activate_shortcut_repeat_is_opt_in()",
+                "fn menu_and_submenu_helpers_report_toggle_and_trigger_edges()",
+                "shortcut_repeat: true",
+                "key_down_ctrl_repeat(",
+                "menu.response().activated()",
+                "submenu.opened()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/repeat.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn begin_submenu_activate_shortcut_repeat_is_opt_in()",
+                "imui-begin-submenu-repeat.file.default",
+                "imui-begin-submenu-repeat.file.repeat",
+                "shortcut_repeat: true",
+                "key_down_ctrl_repeat(",
+                "expected repeated keydown to retrigger only when shortcut_repeat is enabled",
+            ],
+            forbidden=[
+                "fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn menu_and_submenu_helpers_report_toggle_and_trigger_edges()",
+                "imui-begin-submenu-shortcut.file.recent",
+                "menu.response().activated()",
+                "submenu.opened()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/response_edges.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn menu_and_submenu_helpers_report_toggle_and_trigger_edges()",
+                "menu.response().activated()",
+                "menu.response().deactivated()",
+                "submenu.opened()",
+                "submenu.clicked()",
+                "pointer_down_at(",
+                "pointer_up_at(",
+            ],
+            forbidden=[
+                "fn begin_submenu_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn begin_submenu_activate_shortcut_repeat_is_opt_in()",
+                "activate_shortcut: Some(shortcut)",
+                "shortcut_repeat: true",
+                "key_down_ctrl_repeat(",
             ],
         ),
         SourceCheck(
@@ -3797,6 +3883,11 @@ def main() -> None:
                 "disclosure_tree/tree_context_menu.rs",
                 "disclosure_tree/tree_layout.rs",
                 "checkbox `activate_shortcut` Shift+F10 context-menu",
+                "Fret-ImUi Submenu Shortcuts Proof Owner Split Evidence - 2026-06-06",
+                "submenu_shortcuts/trigger_scoping.rs",
+                "submenu_shortcuts/repeat.rs",
+                "submenu_shortcuts/response_edges.rs",
+                "focused-trigger shortcut scoping",
                 "Kit IMUI Source Thinness Guard - 2026-06-03",
                 "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
                 "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",

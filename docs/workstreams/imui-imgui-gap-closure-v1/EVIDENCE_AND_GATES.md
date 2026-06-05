@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-06
 
+## Fret-ImUi Submenu Shortcuts Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` submenu-shortcuts proof surface is split by focused-trigger
+shortcut scoping, shortcut-repeat opt-in, and menu/submenu response-edge owner without changing
+menu/submenu runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts.rs` now keeps only shared
+  imports and child-owner routing for `trigger_scoping`, `repeat`, and `response_edges`.
+- `submenu_shortcuts/trigger_scoping.rs` owns focused-trigger shortcut scoping proof for
+  `begin_submenu_with_options(...)`.
+- `submenu_shortcuts/repeat.rs` owns `shortcut_repeat=true` opt-in behavior proof.
+- `submenu_shortcuts/response_edges.rs` owns menu/submenu opened/closed/clicked and
+  activated/deactivated response-edge proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts --no-fail-fast`: pass,
+  3 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Disclosure Tree Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` disclosure-tree proof surface is split by checkbox context-menu,

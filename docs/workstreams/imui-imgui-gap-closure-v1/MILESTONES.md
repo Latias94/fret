@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi submenu-shortcuts proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts.rs` now keeps only shared
+imports and child-owner routing for the submenu shortcut proof surface.
+`submenu_shortcuts/trigger_scoping.rs` owns focused-trigger shortcut scoping proof,
+`repeat.rs` owns `shortcut_repeat=true` opt-in behavior proof, and `response_edges.rs` owns
+menu/submenu opened/closed/clicked plus activated/deactivated response-edge proof. No
+`fret-ui-kit::imui` menu/submenu runtime implementation, `fret-imui` public facade, or
+menu/submenu option API changed.
+
 2026-06-06 Fret-ImUi disclosure-tree proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs` now keeps only shared
 imports and child-owner routing for the disclosure/tree shortcut proof surface.

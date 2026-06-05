@@ -107,6 +107,17 @@ Last updated: 2026-06-06
       `disclosure_tree/tree_layout.rs` owns open-parent tree-node child vertical-stacking proof.
       The IMUI source gate freezes the child-owner split.
 
+## Fret-ImUi Submenu Shortcuts Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` submenu-shortcuts proof file into focused-trigger scoping,
+      shortcut-repeat, and response-edge child owners without changing menu/submenu runtime
+      behavior, public APIs, or the `fret-ui-kit::imui` menu/submenu implementation.
+      Result: `interaction_menu_tabs/submenu_shortcuts.rs` now keeps only shared imports and
+      module routing. `submenu_shortcuts/trigger_scoping.rs` owns focused-trigger shortcut scoping
+      proof, `submenu_shortcuts/repeat.rs` owns `shortcut_repeat=true` opt-in behavior proof, and
+      `submenu_shortcuts/response_edges.rs` owns menu/submenu opened/closed/clicked plus
+      activated/deactivated response-edge proof. The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Table Header Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` table header proof file into plain-header and sortable-header child
