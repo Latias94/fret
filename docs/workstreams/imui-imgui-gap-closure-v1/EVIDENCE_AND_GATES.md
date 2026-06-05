@@ -29487,6 +29487,35 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit popup option types/runtime owner split:
+
+- Claim: ColorEdit popup picker/numeric/side-preview option type records and popup runtime snapshot
+  state moved from `ecosystem/fret-ui-editor/src/controls/color_edit/options/popup.rs` into private
+  child owners without changing picker/numeric/side-preview defaults, visible-content predicates,
+  picker option override behavior, runtime default synchronization, public option type names,
+  public ColorEdit API, or IMUI facade behavior.
+- Evidence anchors: `options/popup.rs` now declares `mod types;` and `mod runtime;`, re-exports
+  `ColorEditPopupPicker`, `ColorEditPopupNumericInputs`, `ColorEditPopupSidePreview`, and
+  `ColorEditPopupRuntimeOptions`, and keeps `ColorEditPopupOptions`,
+  `has_visible_content_with_swatches(...)`, `shows_alpha_bar(...)`,
+  `shows_picker_options(...)`, `runtime_defaults(...)`, and `with_runtime_options(...)`.
+  `options/popup/types.rs` owns the popup option enums, defaults, and side-preview helper
+  predicates. `options/popup/runtime.rs` owns `ColorEditPopupRuntimeOptions` and
+  `sync_defaults(...)`. `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the popup options child-owner
+  boundaries.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Passed: `git diff --cached --check`.
+
 2026-06-05 editor ColorEdit popup swatch slot child-owner split:
 
 - Claim: ColorEdit popup preset swatch activation, delivered palette-slot drop dispatch, and

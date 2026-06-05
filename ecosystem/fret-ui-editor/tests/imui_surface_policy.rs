@@ -58,6 +58,10 @@ const COLOR_EDIT_OPTIONS_POLICIES_RS: &str =
     include_str!("../src/controls/color_edit/options/policies.rs");
 const COLOR_EDIT_OPTIONS_POPUP_RS: &str =
     include_str!("../src/controls/color_edit/options/popup.rs");
+const COLOR_EDIT_OPTIONS_POPUP_RUNTIME_RS: &str =
+    include_str!("../src/controls/color_edit/options/popup/runtime.rs");
+const COLOR_EDIT_OPTIONS_POPUP_TYPES_RS: &str =
+    include_str!("../src/controls/color_edit/options/popup/types.rs");
 const COLOR_EDIT_RECORDS_RS: &str = include_str!("../src/controls/color_edit/records.rs");
 const COLOR_EDIT_RECORDS_DRAG_DROP_RS: &str =
     include_str!("../src/controls/color_edit/records/drag_drop.rs");
@@ -795,9 +799,17 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("impl Default for ColorEditDragDropOptions"));
     assert!(COLOR_EDIT_RECORDS_DRAG_DROP_RS.contains("pub enum ColorEditDragDropComponents"));
     assert!(COLOR_EDIT_RECORDS_DRAG_DROP_RS.contains("pub struct ColorEditDragDropPayload"));
-    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("pub enum ColorEditPopupPicker"));
-    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
-    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("struct ColorEditPopupRuntimeOptions"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("mod runtime;"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("mod types;"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains(
+        "pub(in crate::controls::color_edit) use self::runtime::ColorEditPopupRuntimeOptions"
+    ));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("pub use self::types::{"));
+    assert!(!COLOR_EDIT_OPTIONS_POPUP_RS.contains("pub enum ColorEditPopupPicker"));
+    assert!(!COLOR_EDIT_OPTIONS_POPUP_RS.contains("struct ColorEditPopupRuntimeOptions"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_TYPES_RS.contains("pub enum ColorEditPopupPicker"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_TYPES_RS.contains("ColorEditPopupPicker::HsvHueWheel"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_RUNTIME_RS.contains("struct ColorEditPopupRuntimeOptions"));
     assert!(COLOR_EDIT_STATE_RS.contains("fn popup_open_model<"));
     assert!(COLOR_EDIT_STATE_RS.contains("fn tooltip_open_model<"));
     assert!(COLOR_EDIT_STATE_RS.contains("fn copy_menu_open_model<"));
@@ -806,8 +818,8 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_STATE_RS.contains("fn error_model<"));
     assert!(COLOR_EDIT_STATE_RS.contains("fn popup_runtime_options_model<"));
     assert!(COLOR_EDIT_STATE_RS.contains("fn sync_popup_runtime_options<"));
-    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("pub enum ColorEditPopupNumericInputs"));
-    assert!(COLOR_EDIT_OPTIONS_POPUP_RS.contains("pub enum ColorEditPopupSidePreview"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_TYPES_RS.contains("pub enum ColorEditPopupNumericInputs"));
+    assert!(COLOR_EDIT_OPTIONS_POPUP_TYPES_RS.contains("pub enum ColorEditPopupSidePreview"));
     assert!(!COLOR_EDIT_OPTIONS_RS.contains("pub struct ColorEditTooltipOptions"));
     assert!(COLOR_EDIT_OPTIONS_RS.contains("pub tooltip: ColorEditTooltipOptions"));
     assert!(COLOR_EDIT_OPTIONS_POLICIES_RS.contains("pub struct ColorEditTooltipOptions"));

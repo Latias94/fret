@@ -1292,6 +1292,8 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/options.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/options/policies.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/options/popup.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/options/popup/runtime.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/options/popup/types.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/records.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/records/drag_drop.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/records/eyedropper.rs",

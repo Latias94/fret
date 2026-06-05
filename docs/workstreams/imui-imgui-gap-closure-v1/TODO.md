@@ -7749,3 +7749,13 @@ opening the slice.
       palette slot callback dispatch, and `slot/visual.rs` owns preview container chrome. The
       workstream manifest, source gate, and `imui_surface_policy` freeze the slot child owner
       boundaries.
+- [x] Split editor `ColorEdit` popup option enum types and runtime snapshot into private popup
+      option child owners without changing picker/numeric/side-preview defaults, visible-content
+      predicates, picker option override behavior, runtime default synchronization, public option
+      type names, or public ColorEdit / IMUI facade APIs.
+      Result: `options/popup.rs` now keeps `ColorEditPopupOptions`, visible-content predicates,
+      alpha/picker option gates, runtime default construction, runtime override application, and
+      stable re-exports. The new `options/popup/types.rs` owns popup picker/numeric/side-preview
+      enum records and defaults, while `options/popup/runtime.rs` owns
+      `ColorEditPopupRuntimeOptions` and `sync_defaults(...)`. The workstream manifest, source
+      gate, and `imui_surface_policy` freeze the popup options child owner boundaries.

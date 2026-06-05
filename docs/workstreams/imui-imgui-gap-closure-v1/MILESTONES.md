@@ -7511,3 +7511,15 @@ Preset activation semantics, drag/drop payload publication, palette slot drop ca
 preview rendering, a11y value formatting, and public ColorEdit / IMUI facade APIs remain unchanged,
 and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the slot child-owner
 split.
+
+2026-06-05 editor ColorEdit popup option types/runtime owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/options/popup.rs` now keeps
+`ColorEditPopupOptions`, visible-content predicates, alpha/picker option gates, runtime defaults
+construction, runtime override application, and stable re-exports only. The new
+`options/popup/types.rs` owns `ColorEditPopupPicker`, `ColorEditPopupNumericInputs`,
+`ColorEditPopupSidePreview`, their defaults, and the side-preview helper predicates. The new
+`options/popup/runtime.rs` owns `ColorEditPopupRuntimeOptions` plus `sync_defaults(...)`.
+Picker/numeric/side-preview defaults, popup visible-content behavior, picker runtime override
+semantics, runtime default synchronization, public option type names, and public ColorEdit / IMUI
+facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
+`imui_surface_policy` freeze the popup options child-owner split.

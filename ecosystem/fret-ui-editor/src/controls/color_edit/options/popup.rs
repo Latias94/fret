@@ -1,72 +1,10 @@
-/// Picker surface shown inside the `ColorEdit` popup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditPopupPicker {
-    /// Dear ImGui's default `PickerHueBar` shape: saturation/value area plus a hue bar.
-    HsvHueBar,
-    /// Dear ImGui's `PickerHueWheel` shape.
-    ///
-    /// Use `ColorEditPopupPicker::HsvHueWheel` for a hue wheel plus a rotated saturation/value
-    /// triangle.
-    HsvHueWheel,
-    /// Hide the picker surface while keeping other popup affordances available.
-    Hidden,
-}
+mod runtime;
+mod types;
 
-impl Default for ColorEditPopupPicker {
-    fn default() -> Self {
-        Self::HsvHueBar
-    }
-}
-
-/// Numeric edit rows shown inside the `ColorEdit` popup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditPopupNumericInputs {
-    /// Show both RGB and HSV numeric rows.
-    RgbAndHsv,
-    /// Show only the RGB numeric row.
-    Rgb,
-    /// Show only the HSV numeric row.
-    Hsv,
-    /// Hide numeric edit rows.
-    Hidden,
-}
-
-impl Default for ColorEditPopupNumericInputs {
-    fn default() -> Self {
-        Self::RgbAndHsv
-    }
-}
-
-/// Side preview surface shown inside the `ColorEdit` popup.
-///
-/// Dear ImGui's picker shows a current preview by default and, when a reference color is provided,
-/// an original preview that restores the reference when activated. Fret keeps the same behavior as
-/// explicit per-control popup policy instead of global picker flags.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ColorEditPopupSidePreview {
-    /// Hide the popup side preview row.
-    Hidden,
-    /// Show only the current color preview.
-    Current,
-    /// Show the current color and the reference captured when the popup opened.
-    CurrentAndOriginal,
-}
-
-impl ColorEditPopupSidePreview {
-    pub(in crate::controls::color_edit) fn has_visible_content(self) -> bool {
-        self != Self::Hidden
-    }
-
-    pub(in crate::controls::color_edit) fn shows_original(self) -> bool {
-        self == Self::CurrentAndOriginal
-    }
-}
-
-impl Default for ColorEditPopupSidePreview {
-    fn default() -> Self {
-        Self::CurrentAndOriginal
-    }
-}
+pub(in crate::controls::color_edit) use self::runtime::ColorEditPopupRuntimeOptions;
+pub use self::types::{
+    ColorEditPopupNumericInputs, ColorEditPopupPicker, ColorEditPopupSidePreview,
+};
 
 /// Per-control popup defaults for editor `ColorEdit`.
 ///
@@ -148,27 +86,6 @@ impl Default for ColorEditPopupOptions {
             presets: true,
             alpha_bar: true,
             picker_options: true,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::controls::color_edit) struct ColorEditPopupRuntimeOptions {
-    pub(in crate::controls::color_edit) default_picker: ColorEditPopupPicker,
-    pub(in crate::controls::color_edit) picker: ColorEditPopupPicker,
-    pub(in crate::controls::color_edit) default_alpha_bar: bool,
-    pub(in crate::controls::color_edit) alpha_bar: bool,
-}
-
-impl ColorEditPopupRuntimeOptions {
-    pub(in crate::controls::color_edit) fn sync_defaults(&mut self, defaults: Self) {
-        if self.default_picker != defaults.default_picker {
-            self.default_picker = defaults.default_picker;
-            self.picker = defaults.picker;
-        }
-        if self.default_alpha_bar != defaults.default_alpha_bar {
-            self.default_alpha_bar = defaults.default_alpha_bar;
-            self.alpha_bar = defaults.alpha_bar;
         }
     }
 }
