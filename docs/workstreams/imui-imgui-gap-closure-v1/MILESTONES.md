@@ -1,7 +1,15 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-05
+Last updated: 2026-06-06
+
+2026-06-06 Fret-ImUi table header proof owner-split result:
+`ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs` now keeps only
+shared imports and child-owner routing for the table header proof surface. `table/header/plain.rs`
+owns plain header left-click non-activation plus keyboard context-menu request proof, while
+`table/header/sortable.rs` owns sortable header right-click and keyboard context-menu request
+proof including context-menu anchor checks. No `fret-ui-kit::imui` table runtime implementation,
+`fret-imui` public facade, or table/header option API changed.
 
 2026-06-05 Fret-ImUi region-containers proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs` now keeps only

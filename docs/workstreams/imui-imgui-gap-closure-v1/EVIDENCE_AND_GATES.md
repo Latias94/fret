@@ -1,7 +1,37 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-05
+Last updated: 2026-06-06
+
+## Fret-ImUi Table Header Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` table header proof surface is split by plain-header and
+sortable-header behavior owner without changing table runtime code, public APIs, option names, or
+test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs` now keeps only
+  shared imports and child-owner routing for `plain` and `sortable`.
+- `table/header/plain.rs` owns plain header left-click non-activation and keyboard context-menu
+  request proof.
+- `table/header/sortable.rs` owns sortable header right-click and keyboard context-menu request
+  proof, including context-menu anchor checks.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui composition::layout_collections::table::header --no-fail-fast`:
+  pass, 4 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with a Git line-ending warning for
+  `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs`.
 
 ## Fret-ImUi Region Containers Proof Owner Split Evidence - 2026-06-05
 

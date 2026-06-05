@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-05
+Last updated: 2026-06-06
 
 ## Worktree Convergence - 2026-05-26
 
@@ -93,6 +93,17 @@ Last updated: 2026-06-05
       readouts. `apps/fret-cookbook/Cargo.toml` owns the opt-in `cookbook-imui-plot` feature,
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
+
+## Fret-ImUi Table Header Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` table header proof file into plain-header and sortable-header child
+      owners without changing table runtime behavior, public APIs, or the `fret-ui-kit::imui`
+      table/header implementation.
+      Result: `composition/layout_collections/table/header.rs` now keeps only shared imports and
+      module routing. `table/header/plain.rs` owns plain header left-click non-activation plus
+      keyboard context-menu request proof, while `table/header/sortable.rs` owns sortable header
+      right-click and keyboard context-menu request proof including context-menu anchor checks. The
+      IMUI source gate freezes the child-owner split.
 
 ## Fret-ImUi Region Containers Proof Split - 2026-06-05
 
