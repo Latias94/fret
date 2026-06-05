@@ -7850,3 +7850,14 @@ opening the slice.
       single-asset fallback, preview title/subtitle projection, drop status projection, and
       drag/drop unit tests. The collection source gate, workstream source gate, manifest, and
       surface tests now include the drag/drop owner.
+- [x] Split collection proof context-menu popup workflow out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/context_menu.rs` child owner without changing popup anchor handoff, visible-order
+      asset reads, selection readout text, duplicate/rename/delete/dismiss menu entries, shortcut
+      labels, popup close behavior, or the app-owned model write boundary.
+      Result: `collection.rs` keeps the tile/background context-menu trigger handling and delegates
+      to `render_collection_context_menu(...)`, while `collection/context_menu.rs` owns
+      `ProofCollectionContextMenuModels`, popup open-at handling, menu item construction,
+      duplicate/delete state-transition routing, inline-rename startup routing, and command-status
+      model writes. The collection source gate, workstream source gate, manifest, and surface tests
+      now include the context-menu owner.

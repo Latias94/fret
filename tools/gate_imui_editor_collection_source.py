@@ -44,6 +44,9 @@ def main() -> None:
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
+    collection_context_menu = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs"
+    )
     collection_drag_drop = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs"
     )
@@ -64,6 +67,7 @@ def main() -> None:
     )
     collection_children = (
         collection_box_select,
+        collection_context_menu,
         collection_drag_drop,
         collection_geometry,
         collection_models,
@@ -96,6 +100,7 @@ def main() -> None:
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
                 "mod box_select;",
+                "mod context_menu;",
                 "mod drag_drop;",
                 "mod models;",
                 "mod rename;",
@@ -134,6 +139,36 @@ def main() -> None:
                 "kit::ChildRegionOptions",
                 "kit::GridOptions",
                 "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection context menu owner",
+            collection_context_menu,
+            required=[
+                "pub(super) struct ProofCollectionContextMenuModels {",
+                "pub(super) fn render_collection_context_menu(",
+                "PROOF_COLLECTION_CONTEXT_MENU_POPUP_ID",
+                "ui.open_popup_at(",
+                "ui.begin_popup_menu(",
+                "proof_collection_begin_rename_session(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "kit::MenuItemOptions {",
+                "\"imui-editor-proof.authoring.imui.collection.context-menu.selection-readout\"",
+                "\"imui-editor-proof.authoring.imui.collection.context-menu.duplicate-selected\"",
+                "\"imui-editor-proof.authoring.imui.collection.context-menu.rename\"",
+                "\"imui-editor-proof.authoring.imui.collection.context-menu.delete-selected\"",
+                "\"imui-editor-proof.authoring.imui.collection.context-menu.dismiss\"",
+            ],
+            forbidden=[
+                "drag_source_with_options",
+                "drop_target::<",
+                "drag_preview_ghost",
+                "TextField::new(",
+                "PointerRegionProps",
+                "proof_collection_box_select_selection(",
+                "proof_collection_drag_payload_for_asset(",
             ],
         ),
         SourceCheck(

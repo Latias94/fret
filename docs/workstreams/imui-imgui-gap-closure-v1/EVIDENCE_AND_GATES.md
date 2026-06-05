@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Context-Menu Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof context-menu popup workflow moved out of the render/root owner
+without changing popup anchor handoff, visible-order asset reads, selection readout text,
+duplicate/rename/delete/dismiss menu entries, shortcut labels, popup close behavior, or the
+app-owned model write boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps tile/background
+  context-menu trigger handling and delegates popup workflow through
+  `render_collection_context_menu(...)`.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` owns
+  `ProofCollectionContextMenuModels`, popup open-at handling, selection readout mounting, menu item
+  construction, duplicate/delete state-transition routing, inline-rename startup routing, dismiss
+  entry wiring, and command-status model writes.
+- The collection context-menu surface test now composes `context_menu.rs` and freezes
+  duplicate/rename/delete/dismiss routing through the app-owned selection/rename state-transition
+  helpers.
+- The collection source tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `context_menu.rs`, `drag_drop.rs`, `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and
+  `selection.rs` for app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new context-menu owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_context_menu_surface --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  attempted and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/`rustc`
+  processes were cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Drag/Drop Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof drag/drop payload and status projection moved out of the

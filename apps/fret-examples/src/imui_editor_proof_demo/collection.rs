@@ -24,6 +24,7 @@ use super::{
 };
 
 mod box_select;
+mod context_menu;
 mod drag_drop;
 mod geometry;
 mod models;
@@ -35,6 +36,7 @@ use box_select::{
     ProofCollectionBoxSelectSession, ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
     proof_collection_box_select_active_rect, proof_collection_box_select_selection,
 };
+use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
 use drag_drop::{
     ProofCollectionDragPayload, proof_collection_drag_payload_for_asset,
     proof_collection_drag_preview_subtitle, proof_collection_drag_preview_title,
@@ -152,7 +154,7 @@ pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]
     .into()
 }
 
-fn proof_collection_readout_text(
+pub(super) fn proof_collection_readout_text(
     ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
     text: impl Into<Arc<str>>,
     test_id: &'static str,
@@ -1334,196 +1336,21 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         },
     );
 
-    let collection_context_menu_popup_id =
-        "imui-editor-proof.authoring.imui.collection.context-menu";
-    let collection_context_menu_anchor = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_context_menu_anchor_model, |state| state);
-    if let Some(anchor) = collection_context_menu_anchor {
-        ui.open_popup_at(
-            collection_context_menu_popup_id,
-            Rect::new(anchor, Size::new(Px(1.0), Px(1.0))),
-        );
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_context_menu_anchor_model, |state| *state = None);
-    }
-
-    let collection_context_menu_open = ui.popup_open_model(collection_context_menu_popup_id);
-    let popup_collection_selection = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_selection_model, |state| state);
-    let popup_collection_keyboard = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_keyboard_model, |state| state);
-    let popup_collection_assets = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_assets_model, |state| state.clone());
-    let popup_collection_reverse_order = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_reverse_order_model, |state| state);
-    let popup_visible_assets = proof_collection_assets_in_visible_order(
-        Arc::<[ProofCollectionAsset]>::from(popup_collection_assets.clone()),
-        popup_collection_reverse_order,
+    render_collection_context_menu(
+        ui,
+        ProofCollectionContextMenuModels {
+            anchor: collection_context_menu_anchor_model.clone(),
+            selection: collection_selection_model.clone(),
+            keyboard: collection_keyboard_model.clone(),
+            assets: collection_assets_model.clone(),
+            reverse_order: collection_reverse_order_model.clone(),
+            command_status: collection_command_status_model.clone(),
+            rename_session: collection_rename_session_model.clone(),
+            rename_draft: collection_rename_draft_model.clone(),
+            rename_focus_pending: collection_rename_focus_pending_model.clone(),
+            rename_status: collection_rename_status_model.clone(),
+        },
     );
-    ui.begin_popup_menu(collection_context_menu_popup_id, None, |ui| {
-        let rename_session = proof_collection_begin_rename_session(
-            &popup_visible_assets,
-            &popup_collection_selection,
-            &popup_collection_keyboard,
-        );
-        proof_collection_readout_text(
-            ui,
-            format!(
-                "Selection: {} item(s)",
-                popup_collection_selection.selected_count()
-            ),
-            "imui-editor-proof.authoring.imui.collection.context-menu.selection-readout",
-        );
-        ui.separator();
-
-        let duplicate_from_menu = ui.menu_item_with_options(
-            "Duplicate selected assets",
-            kit::MenuItemOptions {
-                enabled: !popup_collection_selection.is_empty(),
-                close_popup: Some(collection_context_menu_open.clone()),
-                shortcut: Some(Arc::from("Primary+D")),
-                test_id: Some(Arc::from(
-                    "imui-editor-proof.authoring.imui.collection.context-menu.duplicate-selected",
-                )),
-                ..Default::default()
-            },
-        );
-        if duplicate_from_menu.clicked()
-            && let Some(duplicate) = proof_collection_duplicate_selection(
-                &popup_visible_assets,
-                &popup_collection_assets,
-                &popup_collection_selection,
-                &popup_collection_keyboard,
-                popup_collection_reverse_order,
-            )
-        {
-            let command_status = proof_collection_duplicate_status(&duplicate.duplicated_assets);
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&collection_assets_model, |state| {
-                    *state = duplicate.next_assets.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&collection_selection_model, |state| {
-                    *state = duplicate.next_selection.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&collection_keyboard_model, |state| {
-                    *state = duplicate.next_keyboard.clone();
-                });
-            proof_collection_set_command_status(
-                ui.cx_mut().app,
-                &collection_command_status_model,
-                command_status,
-            );
-        }
-
-        let rename_from_menu = ui.menu_item_with_options(
-            "Rename active asset",
-            kit::MenuItemOptions {
-                enabled: rename_session.is_some(),
-                close_popup: Some(collection_context_menu_open.clone()),
-                shortcut: Some(Arc::from("F2")),
-                test_id: Some(Arc::from(
-                    "imui-editor-proof.authoring.imui.collection.context-menu.rename",
-                )),
-                ..Default::default()
-            },
-        );
-        if rename_from_menu.clicked()
-            && let Some(session) = rename_session
-        {
-            proof_collection_begin_inline_rename_in_app(
-                ui.cx_mut().app,
-                &collection_rename_session_model,
-                &collection_rename_draft_model,
-                &collection_rename_focus_pending_model,
-                &collection_rename_status_model,
-                &session,
-            );
-        }
-
-        let delete_from_menu = ui.menu_item_with_options(
-            "Delete selected assets",
-            kit::MenuItemOptions {
-                enabled: !popup_collection_selection.is_empty(),
-                close_popup: Some(collection_context_menu_open.clone()),
-                shortcut: Some(Arc::from("Del")),
-                test_id: Some(Arc::from(
-                    "imui-editor-proof.authoring.imui.collection.context-menu.delete-selected",
-                )),
-                ..Default::default()
-            },
-        );
-        if delete_from_menu.clicked()
-            && let Some(delete) = proof_collection_delete_selection(
-                &popup_visible_assets,
-                &popup_collection_assets,
-                &popup_collection_selection,
-                &popup_collection_keyboard,
-            )
-        {
-            let command_status = proof_collection_delete_status(&delete.deleted_assets);
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&collection_assets_model, |state| {
-                    *state = delete.remaining_assets.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&collection_selection_model, |state| {
-                    *state = delete.next_selection.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&collection_keyboard_model, |state| {
-                    *state = delete.next_keyboard.clone();
-                });
-            proof_collection_set_command_status(
-                ui.cx_mut().app,
-                &collection_command_status_model,
-                command_status,
-            );
-        }
-
-        let _ = ui.menu_item_with_options(
-            "Dismiss quick actions",
-            kit::MenuItemOptions {
-                close_popup: Some(collection_context_menu_open.clone()),
-                test_id: Some(Arc::from(
-                    "imui-editor-proof.authoring.imui.collection.context-menu.dismiss",
-                )),
-                ..Default::default()
-            },
-        );
-    });
 
     if let Some(session) = collection_rename_session.as_ref()
         && !collection_assets

@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof context-menu owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps tile/background
+context-menu trigger handling and delegates the popup workflow through
+`render_collection_context_menu(...)`. `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs`
+owns `ProofCollectionContextMenuModels`, popup open-at handling, menu item construction,
+selection readout mounting, duplicate/delete state-transition routing, inline-rename startup
+routing, dismiss entry wiring, and command-status model writes. Popup anchor handoff, shortcut
+labels, duplicate/rename/delete/dismiss behavior, and the app-owned/no-public-helper boundary
+remain unchanged, and the source/surface gates now freeze context-menu popup workflow separately
+from the root render owner.
+
 2026-06-05 collection proof drag/drop owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps drag source installation,
 drag preview ghost/card mounting, drop-target routing, delivered-payload model writes, and visible

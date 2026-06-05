@@ -3,6 +3,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
+    let context_menu_source =
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
     let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
@@ -37,6 +39,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod box_select;",
+        "mod context_menu;",
         "mod drag_drop;",
         "mod geometry;",
         "mod models;",
@@ -59,6 +62,19 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             box_select_source.contains(needle),
             "the demo-local collection box-select owner should keep marquee selection state explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionContextMenuModels",
+        "pub(super) fn render_collection_context_menu(",
+        "PROOF_COLLECTION_CONTEXT_MENU_POPUP_ID",
+        "ui.begin_popup_menu(",
+        "kit::MenuItemOptions {",
+    ] {
+        assert!(
+            context_menu_source.contains(needle),
+            "the demo-local collection context-menu owner should keep popup workflow explicit; missing `{needle}`"
         );
     }
 
