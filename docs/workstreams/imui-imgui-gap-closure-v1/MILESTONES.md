@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative right-axis paint test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
+primary axis-label, draggable-output regression suites, and child test-owner routing.
+`ecosystem/fret-plot/src/declarative/tests/right_axis.rs` owns custom right-axis formatter labels,
+right-axis series bounds, and Right2/Right3 series bounds projection regressions. No plot
+implementation, public panel prop, optional `fret-plot/imui` adapter routing, primary axes/grid
+test, primary axis-label test, or draggable-output test changed.
+
 2026-06-05 Fret Plot declarative view/pan test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
 right-axis paint, draggable-output regression suites, and child test-owner routing.

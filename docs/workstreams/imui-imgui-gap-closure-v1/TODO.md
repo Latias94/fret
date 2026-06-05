@@ -6943,6 +6943,14 @@ opening the slice.
       axes/grid, right-axis paint, draggable-output regression suites, and child test-owner routing
       while `ecosystem/fret-plot/src/declarative/tests/view_pan.rs` owns controlled view-bounds
       publication, pan mutation, X/Y pan-lock, and both-axis no-op tests.
+- [x] Split Fret Plot declarative right-axis and multi-right-axis paint regression tests out of the
+      root test owner without changing implementation code, public panel props, optional IMUI
+      adapter routing, custom right-axis label formatters, Right/Right2/Right3 axis bounds
+      projection, primary axes/grid tests, primary axis-label tests, or draggable output tests.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared harness, root
+      axes/grid, primary axis-label, draggable-output regression suites, and child test-owner
+      routing while `ecosystem/fret-plot/src/declarative/tests/right_axis.rs` owns right-axis
+      formatter labels, right-axis series bounds, and Right2/Right3 series bounds projection tests.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
