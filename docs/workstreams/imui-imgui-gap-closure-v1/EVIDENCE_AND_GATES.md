@@ -35224,3 +35224,25 @@ Focused gates:
 - Passed: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` (10 tests passed, 178 skipped).
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-06 fret-imui sortable proof owner split:
+
+- Claim: `ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs` was split into a thin hub
+  plus sortable fixture/runner and scenario child proof owners without changing row reorder
+  semantics, preview/delivered status assertions, public APIs, or the
+  `fret-ui-kit::recipes::imui_sortable` implementation.
+- Evidence anchors: `sortable.rs` now declares only `mod fixtures;` and `mod scenario;`;
+  `sortable/fixtures.rs` owns sortable item fixtures, row rendering, reorder application, and
+  visible-order formatting proof; `sortable/scenario.rs` owns the drag/drop reorder behavior
+  proof. `interaction_drag/mod.rs` no longer owns sortable-only item fixtures or row rendering,
+  while `tools/gate_imui_workstream_source.py` freezes the hub/fixture/scenario owner boundary.
+- Passed: `cargo fmt --package fret-imui`.
+- Passed: `cargo fmt --package fret-imui -- --check`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `cargo nextest run -p fret-imui sortable --no-fail-fast` on retry after an initial
+  command timeout during build/lock wait (5 tests passed, 184 skipped).
+- Passed: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` (11 tests passed, 178 skipped).
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

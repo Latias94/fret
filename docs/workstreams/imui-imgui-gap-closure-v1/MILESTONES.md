@@ -3,13 +3,22 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi sortable proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs` now keeps only shared imports and
+child-owner routing for the sortable proof surface. `sortable/fixtures.rs` owns sortable item
+fixtures, row rendering, reorder application, and visible-order formatting proof, while
+`sortable/scenario.rs` owns the drag/drop reorder behavior proof. The parent
+`interaction_drag/mod.rs` no longer carries sortable-only fixtures and keeps only shared drag
+payload support plus child routing. No `fret-ui-kit::recipes::imui_sortable` implementation,
+`fret-imui` public facade, or option API changed.
+
 2026-06-06 Fret-ImUi collection-drag proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_drag/collection_drag.rs` now keeps only shared imports
 and child-owner routing for the collection-drag proof surface. `collection_drag/fixtures.rs` owns
 collection asset fixtures, selected-asset projection, and payload formation proof for selected
 versus unselected drags, while `collection_drag/scenario.rs` owns the visible-order flip
 drag/drop behavior proof. The parent `interaction_drag/mod.rs` no longer carries collection-only
-fixtures and keeps shared drag/sortable proof support. No `fret-ui-kit::imui` drag/drop or
+fixtures and keeps shared drag payload support plus child routing. No `fret-ui-kit::imui` drag/drop or
 multi-select runtime implementation, `fret-imui` public facade, or option API changed.
 
 2026-06-06 Fret-ImUi drag-preview proof owner-split result:

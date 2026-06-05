@@ -275,8 +275,19 @@ Last updated: 2026-06-06
       `collection_drag/fixtures.rs` owns collection asset fixtures, selected-asset projection, and
       payload formation proof for selected versus unselected drags, while
       `collection_drag/scenario.rs` owns the order-flip drag/drop behavior proof. The
-      `interaction_drag/mod.rs` parent now keeps only shared drag/sortable fixtures. The IMUI
+      `interaction_drag/mod.rs` parent now keeps only shared drag payload support and child routing. The IMUI
       source gate and workstream source bundle freeze the child-owner split.
+
+## Fret-ImUi Sortable Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` sortable proof file into sortable fixture/runner and scenario child
+      owners without changing row reorder semantics, preview/delivered status assertions, public
+      APIs, or the `fret-ui-kit::recipes::imui_sortable` implementation.
+      Result: `interaction_drag/sortable.rs` is now a thin module hub.
+      `sortable/fixtures.rs` owns sortable item fixtures, row rendering, reorder application, and
+      visible-order formatting proof, while `sortable/scenario.rs` owns the drag/drop reorder
+      behavior proof. The `interaction_drag/mod.rs` parent no longer carries sortable-only
+      fixtures. The IMUI source gate and workstream source bundle freeze the child-owner split.
 
 ## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
 

@@ -2183,7 +2183,10 @@
     "ecosystem/fret-imui/src/tests/interaction_drag/drag_preview/local_ghost.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/fixtures.rs",
-    "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario.rs"
+    "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/sortable/fixtures.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/sortable/scenario.rs"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
