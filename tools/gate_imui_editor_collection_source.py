@@ -44,6 +44,9 @@ def main() -> None:
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
+    collection_command_buttons = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs"
+    )
     collection_context_menu = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs"
     )
@@ -70,6 +73,7 @@ def main() -> None:
     )
     collection_children = (
         collection_box_select,
+        collection_command_buttons,
         collection_context_menu,
         collection_drag_drop,
         collection_geometry,
@@ -104,6 +108,7 @@ def main() -> None:
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
                 "mod box_select;",
+                "mod command_buttons;",
                 "mod context_menu;",
                 "mod drag_drop;",
                 "mod keyboard;",
@@ -141,6 +146,37 @@ def main() -> None:
                 "DragPreviewGhostOptions",
                 "drag_preview_ghost",
                 "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection command buttons owner",
+            collection_command_buttons,
+            required=[
+                "pub(super) struct ProofCollectionCommandButtonModels {",
+                "pub(super) struct ProofCollectionCommandButtonState<'a> {",
+                "pub(super) fn render_collection_command_buttons(",
+                "let duplicate_selected = ui.button_with_options(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "let delete_selected = ui.button_with_options(",
+                "proof_collection_delete_selection(",
+                "proof_collection_set_command_status(",
+                "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+                "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+                "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "cx.key_on_key_down_for(",
+                "ui.begin_popup_menu(",
+                "drag_source_with_options",
+                "drop_target::<",
+                "drag_preview_ghost",
+                "PointerRegionProps",
+                "TextField::new(",
                 "kit::ChildRegionOptions",
                 "kit::GridOptions",
                 "kit::MenuItemOptions",
@@ -326,6 +362,8 @@ def main() -> None:
             collection,
             required=[
                 "struct ProofCollectionDuplicateResult {",
+                "render_collection_command_buttons(",
+                "pub(super) fn render_collection_command_buttons(",
                 "fn proof_collection_command_package_line() -> String {",
                 "fn proof_collection_command_status_line(status: &str) -> String {",
                 "fn proof_collection_duplicate_shortcut_matches(",
@@ -352,6 +390,21 @@ def main() -> None:
                 "struct ImUiCollectionCommandPackage",
             ],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection command button delegation",
+            collection,
+            required=[
+                "mod command_buttons;",
+                "use command_buttons::{",
+                "render_collection_command_buttons(",
+                "ProofCollectionCommandButtonModels {",
+                "ProofCollectionCommandButtonState {",
+            ],
+            forbidden=[
+                "let duplicate_selected = ui.button_with_options(",
+                "proof_collection_set_command_status(",
+            ],
         ),
         SourceCheck(
             "collection context menu",

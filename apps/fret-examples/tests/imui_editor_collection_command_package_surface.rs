@@ -1,9 +1,14 @@
 #[test]
 fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explicit() {
+    let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let command_buttons_source =
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let source = concat!(
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
         "\n",
@@ -48,6 +53,27 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
             "imui_editor_proof_demo should keep the collection command-package slice explicit and app-owned; missing `{needle}`"
         );
     }
+
+    for needle in [
+        "pub(super) struct ProofCollectionCommandButtonModels",
+        "pub(super) struct ProofCollectionCommandButtonState",
+        "pub(super) fn render_collection_command_buttons(",
+        "let duplicate_selected = ui.button_with_options(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "let delete_selected = ui.button_with_options(",
+        "proof_collection_delete_selection(",
+        "proof_collection_set_command_status(",
+    ] {
+        assert!(
+            command_buttons_source.contains(needle),
+            "collection command-buttons owner should route explicit command buttons through app-owned state transitions; missing `{needle}`"
+        );
+    }
+    assert!(
+        !collection_source.contains("let duplicate_selected = ui.button_with_options("),
+        "collection root should delegate explicit command buttons to the command-buttons owner"
+    );
 
     for needle in [
         "fret_ui_kit::imui::collection_command_package",

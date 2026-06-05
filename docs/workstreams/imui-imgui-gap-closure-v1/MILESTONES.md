@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof command-buttons owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps readouts and delegates the
+explicit Duplicate/Rename/Delete button row through `render_collection_command_buttons(...)`.
+`apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` owns
+`ProofCollectionCommandButtonModels`, `ProofCollectionCommandButtonState`, duplicate/rename/delete
+button construction, duplicate/delete state-transition routing, inline-rename startup routing, app
+model writeback, and command-status publication. Button labels/test IDs, enabled-state policy,
+duplicate/rename/delete behavior, and the app-owned/no-public-helper boundary remain unchanged, and
+the source/surface gates now freeze explicit command buttons separately from the root render owner.
+
 2026-06-05 collection proof keyboard handler owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps pointer-region focus/
 capture behavior and delegates scope key handling through `install_collection_keyboard_handler(...)`.

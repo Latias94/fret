@@ -7872,3 +7872,14 @@ opening the slice.
       selection/rename state-transition calls, model writeback, and `host.notify(...)` dispatch.
       The collection source gate, workstream source gate, manifest, and surface tests now include
       the keyboard handler owner.
+- [x] Split collection proof explicit command buttons out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/command_buttons.rs` child owner without changing duplicate, rename, or delete
+      button labels/test IDs, enabled-state policy, duplicate/delete selection transitions,
+      inline-rename startup, command-status writes, or the app-owned no-helper-widening boundary.
+      Result: `collection.rs` keeps readouts and delegates the explicit button row through
+      `render_collection_command_buttons(...)`, while `collection/command_buttons.rs` owns
+      `ProofCollectionCommandButtonModels`, `ProofCollectionCommandButtonState`, duplicate/rename/
+      delete button construction, app model writeback, and command-status publication. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      command-buttons owner.

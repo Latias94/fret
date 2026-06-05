@@ -3,6 +3,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
+    let command_buttons_source =
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
     let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
@@ -40,6 +42,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod box_select;",
+        "mod command_buttons;",
         "mod context_menu;",
         "mod drag_drop;",
         "mod geometry;",
@@ -64,6 +67,18 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             box_select_source.contains(needle),
             "the demo-local collection box-select owner should keep marquee selection state explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionCommandButtonModels",
+        "pub(super) struct ProofCollectionCommandButtonState",
+        "pub(super) fn render_collection_command_buttons(",
+        "proof_collection_set_command_status(",
+    ] {
+        assert!(
+            command_buttons_source.contains(needle),
+            "the demo-local collection command-buttons owner should keep explicit command button routing separate; missing `{needle}`"
         );
     }
 

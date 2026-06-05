@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Command-Buttons Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof explicit command buttons moved out of the render/root owner
+without changing duplicate, rename, or delete button labels/test IDs, enabled-state policy,
+duplicate/delete selection transitions, inline-rename startup, command-status writes, or the
+app-owned no-helper-widening boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps readouts and delegates
+  the explicit Duplicate/Rename/Delete button row through `render_collection_command_buttons(...)`.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` owns
+  `ProofCollectionCommandButtonModels`, `ProofCollectionCommandButtonState`, duplicate/rename/delete
+  button construction, duplicate/delete state-transition routing, inline-rename startup routing,
+  app model writeback, and command-status publication.
+- The command-package surface test now composes `command_buttons.rs`, requires the explicit
+  button-routing owner markers, and asserts that `collection.rs` no longer directly declares the
+  duplicate button workflow.
+- The collection source tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `command_buttons.rs`, `context_menu.rs`, `drag_drop.rs`, `geometry.rs`, `keyboard.rs`,
+  `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new command-buttons
+  owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  attempted and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/`rustc`
+  processes were cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Keyboard Handler Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof keyboard event dispatch moved out of the render/root owner

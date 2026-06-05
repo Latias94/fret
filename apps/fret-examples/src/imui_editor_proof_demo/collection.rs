@@ -5,7 +5,6 @@ use std::sync::Arc;
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret_core::{Color, Point, Px, Rect, Size};
-use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::Length;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
@@ -24,6 +23,7 @@ use super::{
 };
 
 mod box_select;
+mod command_buttons;
 mod context_menu;
 mod drag_drop;
 mod geometry;
@@ -36,6 +36,10 @@ mod selection;
 use box_select::{
     ProofCollectionBoxSelectSession, ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
     proof_collection_box_select_active_rect, proof_collection_box_select_selection,
+};
+use command_buttons::{
+    ProofCollectionCommandButtonModels, ProofCollectionCommandButtonState,
+    render_collection_command_buttons,
 };
 use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
 use drag_drop::{
@@ -65,23 +69,20 @@ use models::{
 use readouts::{
     proof_collection_active_line, proof_collection_assets_line,
     proof_collection_command_package_line, proof_collection_command_status_line,
-    proof_collection_context_menu_line, proof_collection_delete_status,
-    proof_collection_duplicate_status, proof_collection_rename_cancel_status,
+    proof_collection_context_menu_line, proof_collection_rename_cancel_status,
     proof_collection_rename_commit_status, proof_collection_rename_invalid_status,
     proof_collection_rename_line, proof_collection_rename_status_line,
     proof_collection_select_all_line, proof_collection_selection_line,
     proof_collection_visible_order_line,
 };
 use rename::{
-    ProofCollectionRenameSession, proof_collection_begin_inline_rename_in_app,
-    proof_collection_begin_rename_session, proof_collection_commit_rename,
-    proof_collection_inline_rename_focus_state, proof_collection_restore_focus_after_inline_rename,
-    proof_collection_sync_inline_rename_focus,
+    ProofCollectionRenameSession, proof_collection_begin_rename_session,
+    proof_collection_commit_rename, proof_collection_inline_rename_focus_state,
+    proof_collection_restore_focus_after_inline_rename, proof_collection_sync_inline_rename_focus,
 };
 use selection::{
     proof_collection_active_id, proof_collection_assets_in_visible_order,
-    proof_collection_context_menu_selection, proof_collection_delete_selection,
-    proof_collection_duplicate_selection,
+    proof_collection_context_menu_selection,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,17 +92,6 @@ pub(super) struct ProofCollectionAsset {
     pub(super) path: Arc<str>,
     pub(super) kind: Arc<str>,
     pub(super) size_kib: u32,
-}
-
-fn proof_collection_set_command_status(
-    app: &mut KernelApp,
-    command_status_model: &Model<String>,
-    next_status: String,
-) {
-    let _ = app.models_mut().update(command_status_model, |status| {
-        status.clear();
-        status.push_str(&next_status);
-    });
 }
 
 pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {
@@ -351,121 +341,27 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         proof_collection_command_status_line(&collection_command_status),
         "imui-editor-proof.authoring.imui.collection.command-status-readout",
     );
-    let duplicate_selected = ui.button_with_options(
-        "Duplicate selected assets",
-        kit::ButtonOptions {
-            enabled: !collection_selection.is_empty(),
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.duplicate-selected",
-            )),
-            ..Default::default()
+    render_collection_command_buttons(
+        ui,
+        ProofCollectionCommandButtonModels {
+            assets: collection_assets_model.clone(),
+            selection: collection_selection_model.clone(),
+            keyboard: collection_keyboard_model.clone(),
+            command_status: collection_command_status_model.clone(),
+            rename_session: collection_rename_session_model.clone(),
+            rename_draft: collection_rename_draft_model.clone(),
+            rename_focus_pending: collection_rename_focus_pending_model.clone(),
+            rename_status: collection_rename_status_model.clone(),
+        },
+        ProofCollectionCommandButtonState {
+            visible_assets: &collection_assets,
+            stored_assets: &stored_collection_assets,
+            selection: &collection_selection,
+            keyboard: &collection_keyboard,
+            reverse_order: collection_reverse_order,
+            rename_ready_session: collection_rename_ready_session.as_ref(),
         },
     );
-    if duplicate_selected.clicked()
-        && let Some(duplicate) = proof_collection_duplicate_selection(
-            &collection_assets,
-            &stored_collection_assets,
-            &collection_selection,
-            &collection_keyboard,
-            collection_reverse_order,
-        )
-    {
-        let command_status = proof_collection_duplicate_status(&duplicate.duplicated_assets);
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_assets_model, |state| {
-                *state = duplicate.next_assets.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_selection_model, |state| {
-                *state = duplicate.next_selection.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_keyboard_model, |state| {
-                *state = duplicate.next_keyboard.clone();
-            });
-        proof_collection_set_command_status(
-            ui.cx_mut().app,
-            &collection_command_status_model,
-            command_status,
-        );
-    }
-    let rename_active = ui.button_with_options(
-        "Rename active asset",
-        kit::ButtonOptions {
-            enabled: collection_rename_ready_session.is_some(),
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.rename-active",
-            )),
-            ..Default::default()
-        },
-    );
-    if rename_active.clicked()
-        && let Some(session) = collection_rename_ready_session.as_ref()
-    {
-        proof_collection_begin_inline_rename_in_app(
-            ui.cx_mut().app,
-            &collection_rename_session_model,
-            &collection_rename_draft_model,
-            &collection_rename_focus_pending_model,
-            &collection_rename_status_model,
-            session,
-        );
-    }
-    let delete_selected = ui.button_with_options(
-        "Delete selected assets",
-        kit::ButtonOptions {
-            enabled: !collection_selection.is_empty(),
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.delete-selected",
-            )),
-            ..Default::default()
-        },
-    );
-    if delete_selected.clicked()
-        && let Some(delete) = proof_collection_delete_selection(
-            &collection_assets,
-            &stored_collection_assets,
-            &collection_selection,
-            &collection_keyboard,
-        )
-    {
-        let command_status = proof_collection_delete_status(&delete.deleted_assets);
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_assets_model, |state| {
-                *state = delete.remaining_assets.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_selection_model, |state| {
-                *state = delete.next_selection.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_keyboard_model, |state| {
-                *state = delete.next_keyboard.clone();
-            });
-        proof_collection_set_command_status(
-            ui.cx_mut().app,
-            &collection_command_status_model,
-            command_status,
-        );
-    }
 
     ui.child_region_with_options(
         "imui-editor-proof.authoring.imui.collection.browser",
