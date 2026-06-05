@@ -47,6 +47,9 @@ def main() -> None:
     collection_browser_scope = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs"
     )
+    collection_browser_scope_input_runtime = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"
+    )
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
@@ -89,6 +92,7 @@ def main() -> None:
     collection_children = (
         collection_asset_grid,
         collection_browser_scope,
+        collection_browser_scope_input_runtime,
         collection_box_select,
         collection_command_buttons,
         collection_context_menu,
@@ -182,11 +186,25 @@ def main() -> None:
             "collection browser scope owner",
             collection_browser_scope,
             required=[
+                "mod input_runtime;",
+                "use input_runtime::{",
                 "pub(super) struct ProofCollectionBrowserScopeModels {",
                 "pub(super) struct ProofCollectionBrowserScopeState<'a> {",
                 "pub(super) fn render_collection_browser_scope(",
                 "ui.child_region_with_options(",
                 "kit::ChildRegionOptions {",
+                "proof_collection_browser_scope_pointer_props()",
+                "install_collection_browser_scope_input_runtime(",
+                "proof_collection_box_select_active_rect(",
+                "render_collection_asset_grid(",
+                "\"imui-editor-proof.authoring.imui.collection.browser\"",
+                "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
+                "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
+                "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
+                "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
                 "fret_ui::element::PointerRegionProps::default()",
                 "props.capture_phase_pointer_moves = true;",
                 "install_collection_keyboard_handler(",
@@ -198,21 +216,46 @@ def main() -> None:
                 "cx.pointer_region_on_pointer_cancel(",
                 "proof_collection_box_select_selection(",
                 "state.clear();",
-                "proof_collection_box_select_active_rect(",
-                "render_collection_asset_grid(",
-                "\"imui-editor-proof.authoring.imui.collection.browser\"",
-                "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
-                "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
-                "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
-                "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
-            ],
-            forbidden=[
-                "render_collection_first_asset_browser_proof",
                 "ui.button_with_options(",
                 "ui.begin_popup_menu(",
                 "drop_target::<",
                 "TextField::new(",
                 "drag_preview_ghost_with_options(",
+            ],
+        ),
+        SourceCheck(
+            "collection browser input runtime owner",
+            collection_browser_scope_input_runtime,
+            required=[
+                "pub(super) struct ProofCollectionBrowserScopeInputModels {",
+                "pub(super) struct ProofCollectionBrowserScopeInputState<'a> {",
+                "pub(super) fn proof_collection_browser_scope_pointer_props() -> PointerRegionProps {",
+                "props.capture_phase_pointer_moves = true;",
+                "pub(super) fn install_collection_browser_scope_input_runtime(",
+                "install_collection_keyboard_handler(",
+                "cx.pointer_region_on_wheel(",
+                "proof_collection_zoom_request(",
+                "cx.pointer_region_on_pointer_down(",
+                "host.request_focus(acx.target);",
+                "ProofCollectionBoxSelectSession {",
+                "host.capture_pointer();",
+                "cx.pointer_region_on_pointer_move(",
+                "proof_collection_box_select_selection(",
+                "cx.pointer_region_on_pointer_up(",
+                "context_menu_anchor_model_for_up",
+                "state.clear();",
+                "host.release_pointer_capture();",
+                "cx.pointer_region_on_pointer_cancel(",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "ui.child_region_with_options(",
+                "render_collection_asset_grid(",
+                "proof_collection_box_select_active_rect(",
+                "TextField::new(",
+                "drag_preview_ghost_with_options(",
+                "ui.begin_popup_menu(",
+                "ui.button_with_options(",
             ],
         ),
         SourceCheck(

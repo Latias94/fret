@@ -3,6 +3,51 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Browser Input-Runtime Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof browser pointer/wheel/input runtime moved out of the child-region
+render owner without changing child-region IDs, scroll binding, keyboard dispatch, Primary+Wheel
+zoom, background context-menu anchor publication, box-select pointer capture/projection, active-id
+updates/clearing, marquee overlay mounting, asset-grid mounting, or the app-owned
+no-helper-widening boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` now keeps
+  child-region mounting, browser/content/scope test IDs, asset-grid owner mounting, and marquee
+  overlay rendering.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` owns
+  `ProofCollectionBrowserScopeInputModels`, `ProofCollectionBrowserScopeInputState`,
+  pointer-region props, keyboard handler installation, Primary+Wheel zoom routing, background
+  context-menu anchor publication, box-select pointer down/move/up/cancel handling, pointer
+  capture/release, selection projection, and active-id clearing/update behavior.
+- Existing browser rendering still calls `render_collection_asset_grid(...)` from
+  `browser_scope.rs`; the input runtime does not mount grid tiles, inline rename fields, drag
+  ghosts, or marquee overlay chrome.
+- The collection source gate and workstream source gate now treat `browser_scope/input_runtime.rs`
+  as a separate owner and prevent pointer/wheel/box-select runtime from drifting back into
+  `browser_scope.rs`.
+- The collection surface tests now include `browser_scope/input_runtime.rs` in their composed
+  source bundles and freeze input-runtime markers separately from child-region/render markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new browser input-runtime
+  owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --test imui_editor_collection_zoom_surface --no-fail-fast`:
+  timed out after 304 seconds during the existing fret-examples surface-test compile/run path; one
+  residual `rustc.exe` command line scoped to `F:\SourceCodes\Rust\fret` was stopped.
+- `git diff --check`: pass.
+
 ## Collection Proof Selection-Command Sub-Owner Evidence - 2026-06-05
 
 Claim verified: collection proof delete/refocus and duplicate/copy-suffix command transitions moved

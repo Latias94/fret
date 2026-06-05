@@ -5,6 +5,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let browser_input_runtime_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
@@ -73,15 +75,32 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionBrowserScopeState",
         "pub(super) fn render_collection_browser_scope(",
         "ui.child_region_with_options(",
-        "install_collection_keyboard_handler(",
-        "cx.pointer_region_on_wheel(",
-        "cx.pointer_region_on_pointer_down(",
+        "proof_collection_browser_scope_pointer_props()",
+        "install_collection_browser_scope_input_runtime(",
         "render_collection_asset_grid(",
         "imui-editor-proof.authoring.imui.collection.box-select.scope",
     ] {
         assert!(
             browser_scope_source.contains(needle),
             "the demo-local collection browser-scope owner should keep child-region pointer runtime explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeInputModels",
+        "pub(super) struct ProofCollectionBrowserScopeInputState",
+        "pub(super) fn proof_collection_browser_scope_pointer_props()",
+        "pub(super) fn install_collection_browser_scope_input_runtime(",
+        "install_collection_keyboard_handler(",
+        "cx.pointer_region_on_wheel(",
+        "cx.pointer_region_on_pointer_down(",
+        "cx.pointer_region_on_pointer_move(",
+        "cx.pointer_region_on_pointer_up(",
+        "cx.pointer_region_on_pointer_cancel(",
+    ] {
+        assert!(
+            browser_input_runtime_source.contains(needle),
+            "the demo-local collection browser input runtime owner should keep wheel/context/box-select handlers explicit; missing `{needle}`"
         );
     }
 

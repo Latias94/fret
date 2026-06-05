@@ -6,10 +6,8 @@ use fret::imui::{
     kit::{self, ImUiMultiSelectState},
     prelude::*,
 };
-use fret_core::{Color, MouseButton, Point, Px};
+use fret_core::{Color, Point, Px};
 use fret_runtime::Model;
-use fret_ui::action::UiActionHostExt as _;
-use fret_ui::element::Length;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId};
 
@@ -17,17 +15,20 @@ use super::asset_grid::{
     ProofCollectionAssetGridModels, ProofCollectionAssetGridState, render_collection_asset_grid,
 };
 use super::box_select::{
-    ProofCollectionBoxSelectSession, ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
-    proof_collection_box_select_active_rect, proof_collection_box_select_selection,
+    ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
+    proof_collection_box_select_active_rect,
 };
-use super::geometry::{
-    ProofCollectionLayoutMetrics, proof_collection_drag_threshold_met,
-    proof_collection_zoom_request,
-};
-use super::keyboard::{ProofCollectionKeyboardHandlerModels, install_collection_keyboard_handler};
+use super::geometry::ProofCollectionLayoutMetrics;
 use super::rename::ProofCollectionRenameSession;
 use super::selection::ProofCollectionKeyboardState;
 use super::{KernelApp, ProofCollectionAsset};
+
+mod input_runtime;
+
+use input_runtime::{
+    ProofCollectionBrowserScopeInputModels, ProofCollectionBrowserScopeInputState,
+    install_collection_browser_scope_input_runtime, proof_collection_browser_scope_pointer_props,
+};
 
 pub(super) struct ProofCollectionBrowserScopeModels {
     pub(super) assets: Model<Vec<ProofCollectionAsset>>,
@@ -119,238 +120,39 @@ pub(super) fn render_collection_browser_scope(
 
             ui.add_ui(fret_ui_kit::ui::container_build(move |cx, out| {
                 let rendered_items = Rc::new(RefCell::new(Vec::<ProofCollectionRenderedItem>::new()));
-                let mut props = fret_ui::element::PointerRegionProps::default();
-                props.layout.size.width = Length::Fill;
-                props.capture_phase_pointer_moves = true;
 
-                out.push(cx.pointer_region(props, move |cx| {
+                out.push(cx.pointer_region(proof_collection_browser_scope_pointer_props(), move |cx| {
                     let scope_id = cx.root_id();
                     let scope_origin = cx
                         .last_visual_bounds_for_element(scope_id)
                         .or_else(|| cx.last_bounds_for_element(scope_id))
                         .map(|rect| rect.origin);
 
-                    let rendered_items_for_move = rendered_items.clone();
-                    let rendered_items_for_up = rendered_items.clone();
-                    let selection_model_for_down = collection_selection_model.clone();
-                    let selection_model_for_move = collection_selection_model.clone();
-                    let selection_model_for_up = collection_selection_model.clone();
-                    let keyboard_model_for_move = collection_keyboard_model.clone();
-                    let keyboard_model_for_up = collection_keyboard_model.clone();
-                    let keyboard_model_for_clear = collection_keyboard_model.clone();
-                    let context_menu_anchor_model_for_up =
-                        collection_context_menu_anchor_model.clone();
-                    let box_select_model_for_down = collection_box_select_model.clone();
-                    let box_select_model_for_move = collection_box_select_model.clone();
-                    let box_select_model_for_up = collection_box_select_model.clone();
-                    let box_select_model_for_cancel = collection_box_select_model.clone();
-                    let collection_keys_for_move = collection_keys.clone();
-                    let collection_keys_for_up = collection_keys.clone();
-                    let collection_zoom_model_for_wheel = collection_zoom_model.clone();
-                    let collection_scroll_handle_for_wheel = collection_scroll_handle.clone();
-                    let collection_asset_count_for_wheel = collection_assets.len();
-
-                    install_collection_keyboard_handler(
+                    install_collection_browser_scope_input_runtime(
                         cx,
                         scope_id,
-                        collection_layout.columns,
-                        ProofCollectionKeyboardHandlerModels {
+                        ProofCollectionBrowserScopeInputModels {
                             assets: collection_assets_model.clone(),
                             reverse_order: collection_reverse_order_model.clone(),
                             selection: collection_selection_model.clone(),
+                            box_select: collection_box_select_model.clone(),
                             keyboard: collection_keyboard_model.clone(),
+                            zoom: collection_zoom_model.clone(),
+                            context_menu_anchor: collection_context_menu_anchor_model.clone(),
                             rename_session: collection_rename_session_model.clone(),
                             rename_draft: collection_rename_draft_model.clone(),
                             rename_focus_pending: collection_rename_focus_pending_model.clone(),
                             rename_status: collection_rename_status_model.clone(),
                             command_status: collection_command_status_model.clone(),
+                            scroll: collection_scroll_handle.clone(),
+                        },
+                        ProofCollectionBrowserScopeInputState {
+                            keys: &collection_keys,
+                            asset_count: collection_assets.len(),
+                            layout: collection_layout,
+                            rendered_items: rendered_items.clone(),
                         },
                     );
-
-                    cx.pointer_region_on_wheel(Arc::new(move |host, acx, wheel| {
-                        let Some(update) = proof_collection_zoom_request(
-                            collection_layout,
-                            collection_scroll_handle_for_wheel.offset(),
-                            wheel.position_local,
-                            wheel.delta,
-                            wheel.modifiers,
-                            collection_asset_count_for_wheel,
-                        ) else {
-                            return false;
-                        };
-
-                        let _ = host.update_model(&collection_zoom_model_for_wheel, |state| {
-                            *state = update.next_tile_extent;
-                        });
-                        collection_scroll_handle_for_wheel.set_offset(update.next_scroll_offset);
-                        host.notify(acx);
-                        true
-                    }));
-
-                    cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
-                        if down.button != MouseButton::Left {
-                            return false;
-                        }
-
-                        host.request_focus(acx.target);
-                        if down.hit_is_pressable {
-                            return false;
-                        }
-                        let baseline_selected = host
-                            .models_mut()
-                            .read(&selection_model_for_down, |state| state.selected().to_vec())
-                            .unwrap_or_default();
-                        let append_mode = down.modifiers.ctrl || down.modifiers.meta;
-                        let _ = host.update_model(&box_select_model_for_down, |state| {
-                            state.session = Some(ProofCollectionBoxSelectSession {
-                                pointer_id: down.pointer_id,
-                                origin_local: down.position_local,
-                                current_local: down.position_local,
-                                baseline_selected,
-                                append_mode,
-                                threshold_met: false,
-                            });
-                        });
-                        host.capture_pointer();
-                        host.notify(acx);
-                        true
-                    }));
-
-                    cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
-                        if !mv.buttons.left {
-                            return false;
-                        }
-
-                        let session = host
-                            .update_model(&box_select_model_for_move, |state| {
-                                let Some(session) = state.session.as_mut() else {
-                                    return None;
-                                };
-                                if session.pointer_id != mv.pointer_id {
-                                    return None;
-                                }
-
-                                session.current_local = mv.position_local;
-                                if !session.threshold_met {
-                                    session.threshold_met = proof_collection_drag_threshold_met(
-                                        session.origin_local,
-                                        session.current_local,
-                                    );
-                                }
-
-                                Some(session.clone())
-                            })
-                            .flatten();
-
-                        let Some(session) = session else {
-                            return false;
-                        };
-
-                        if session.threshold_met {
-                            let next_selection = proof_collection_box_select_selection(
-                                &collection_keys_for_move,
-                                &rendered_items_for_move.borrow(),
-                                &session,
-                            );
-                            let _ = host.update_model(&selection_model_for_move, |state| {
-                                *state = next_selection.clone();
-                            });
-                            let _ = host.update_model(&keyboard_model_for_move, |state| {
-                                state.active_id = next_selection.first_selected().cloned();
-                            });
-                        }
-
-                        host.notify(acx);
-                        true
-                    }));
-
-                    cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
-                        if up.button == MouseButton::Right && up.is_click {
-                            if up.down_hit_pressable_target.is_some()
-                                || up.down_hit_pressable_target_in_descendant_subtree
-                            {
-                                return false;
-                            }
-
-                            host.request_focus(acx.target);
-                            let position = up.position_window.unwrap_or(up.position);
-                            let _ = host.update_model(&context_menu_anchor_model_for_up, |state| {
-                                *state = Some(position);
-                            });
-                            host.notify(acx);
-                            return true;
-                        }
-
-                        let session = host
-                            .update_model(&box_select_model_for_up, |state| {
-                                let Some(mut session) = state.session.take() else {
-                                    return None;
-                                };
-                                if session.pointer_id != up.pointer_id {
-                                    state.session = Some(session);
-                                    return None;
-                                }
-
-                                session.current_local = up.position_local;
-                                if !session.threshold_met {
-                                    session.threshold_met = proof_collection_drag_threshold_met(
-                                        session.origin_local,
-                                        session.current_local,
-                                    );
-                                }
-
-                                Some(session)
-                            })
-                            .flatten();
-
-                        let Some(session) = session else {
-                            return false;
-                        };
-
-                        host.release_pointer_capture();
-                        if session.threshold_met {
-                            let next_selection = proof_collection_box_select_selection(
-                                &collection_keys_for_up,
-                                &rendered_items_for_up.borrow(),
-                                &session,
-                            );
-                            let _ = host.update_model(&selection_model_for_up, |state| {
-                                *state = next_selection.clone();
-                            });
-                            let _ = host.update_model(&keyboard_model_for_up, |state| {
-                                state.active_id = next_selection.first_selected().cloned();
-                            });
-                        } else if !session.append_mode {
-                            let _ = host.update_model(&selection_model_for_up, |state| {
-                                state.clear();
-                            });
-                            let _ = host.update_model(&keyboard_model_for_clear, |state| {
-                                state.active_id = None;
-                            });
-                        }
-
-                        host.notify(acx);
-                        true
-                    }));
-
-                    cx.pointer_region_on_pointer_cancel(Arc::new(move |host, _acx, cancel| {
-                        let cleared = host
-                            .update_model(&box_select_model_for_cancel, |state| {
-                                let matches_pointer = state
-                                    .session
-                                    .as_ref()
-                                    .is_some_and(|session| session.pointer_id == cancel.pointer_id);
-                                if matches_pointer {
-                                    state.session = None;
-                                }
-                                matches_pointer
-                            })
-                            .unwrap_or(false);
-                        if cleared {
-                            host.release_pointer_capture();
-                        }
-                        cleared
-                    }));
 
                     vec![fret_ui_kit::ui::stack(move |cx| {
                         let rendered_items_for_grid = rendered_items.clone();

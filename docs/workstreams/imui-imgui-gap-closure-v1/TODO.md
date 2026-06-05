@@ -7907,6 +7907,18 @@ opening the slice.
       model/scroll updates, background box-select transitions, context-menu anchor publication,
       marquee overlay mounting, and asset-grid owner mounting. The collection source gate,
       workstream source gate, manifest, and surface tests now include the browser-scope owner.
+- [x] Split collection proof browser input runtime out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` into
+      `collection/browser_scope/input_runtime.rs` without changing child-region IDs, scroll
+      binding, keyboard dispatch, Primary+Wheel zoom, background context-menu anchor publication,
+      box-select pointer capture/projection, active-id updates/clearing, marquee overlay mounting,
+      asset-grid mounting, or the app-owned no-helper-widening boundary. Result:
+      `browser_scope.rs` keeps child-region mounting, browser/content/scope test IDs, asset-grid
+      owner mounting, and marquee overlay rendering, while `browser_scope/input_runtime.rs` owns
+      pointer-region props, keyboard handler installation, wheel/context/box-select pointer
+      handlers, pointer capture/release, selection writes, and active keyboard writes. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      browser input-runtime owner.
 - [x] Split collection proof duplicate/delete command transitions out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the
       demo-local `collection/selection/commands.rs` child owner without changing Delete/Backspace

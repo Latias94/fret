@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof browser input-runtime owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` now keeps child-region
+mounting, browser/content/scope test IDs, asset-grid owner mounting, and marquee overlay rendering.
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` owns
+pointer-region props, keyboard handler installation, Primary+Wheel zoom routing, background
+context-menu anchor publication, box-select pointer down/move/up/cancel handling, pointer capture,
+selection projection, and active-id clearing/update behavior. Child-region IDs, scroll binding,
+zoom, background context menu, box-select, keyboard dispatch, asset-grid rendering, and the
+app-owned/no-public-helper boundary remain unchanged.
+
 2026-06-05 collection proof selection-command sub-owner result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs` is now a light
 hub that re-exports `delete.rs` and `duplicate.rs`. `selection/commands/delete.rs` owns

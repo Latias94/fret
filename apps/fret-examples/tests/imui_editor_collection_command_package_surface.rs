@@ -4,6 +4,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let browser_input_runtime_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let source = concat!(
@@ -12,6 +14,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
         "\n",
@@ -112,16 +116,29 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionBrowserScopeState",
         "pub(super) fn render_collection_browser_scope(",
         "ui.child_region_with_options(",
-        "cx.pointer_region_on_wheel(",
-        "cx.pointer_region_on_pointer_down(",
-        "cx.pointer_region_on_pointer_move(",
-        "cx.pointer_region_on_pointer_up(",
-        "cx.pointer_region_on_pointer_cancel(",
+        "proof_collection_browser_scope_pointer_props()",
+        "install_collection_browser_scope_input_runtime(",
         "render_collection_asset_grid(",
     ] {
         assert!(
             browser_scope_source.contains(needle),
             "collection browser-scope owner should route child-region pointer runtime through app-owned state transitions; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeInputModels",
+        "pub(super) struct ProofCollectionBrowserScopeInputState",
+        "pub(super) fn proof_collection_browser_scope_pointer_props()",
+        "pub(super) fn install_collection_browser_scope_input_runtime(",
+        "cx.pointer_region_on_wheel(",
+        "cx.pointer_region_on_pointer_down(",
+        "cx.pointer_region_on_pointer_move(",
+        "cx.pointer_region_on_pointer_up(",
+        "cx.pointer_region_on_pointer_cancel(",
+    ] {
+        assert!(
+            browser_input_runtime_source.contains(needle),
+            "collection browser input runtime owner should keep wheel/context/box-select handlers explicit; missing `{needle}`"
         );
     }
     assert!(
