@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Menu Activation Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` menu-activation proof surface is split by activation behavior owner
+without changing menu runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs` is now a thin module
+  hub for `command_activation`, `shortcuts`, and `keyboard_navigation` proof owners.
+- `menu_activation/command_activation.rs` owns command item activation, command effect dispatch,
+  and close-after-command proof.
+- `menu_activation/shortcuts.rs` owns focused-trigger shortcut scoping, shortcut-open focus restore,
+  and `shortcut_repeat` opt-in proof.
+- `menu_activation/keyboard_navigation.rs` owns ArrowDown menu opening and horizontal ArrowLeft /
+  ArrowRight top-level switching proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Submenu Hover Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` submenu-hover proof surface is split by menu interaction owner

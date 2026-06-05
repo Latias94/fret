@@ -114,6 +114,19 @@ Last updated: 2026-06-05
       `interaction_menu_tabs/mod.rs` keeps only the shared focus-test-id helper needed by other
       menu tests. The IMUI source gate freezes the child-owner split.
 
+## Fret-ImUi Menu Activation Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` menu-activation proof file into command activation, shortcut
+      activation, and keyboard navigation child owners without changing menu runtime behavior,
+      public APIs, or the `fret-ui-kit::imui` menu policy implementation.
+      Result: `interaction_menu_tabs/menu_activation.rs` is now a thin module hub.
+      `menu_activation/command_activation.rs` owns command item activation and close-after-command
+      proof, `menu_activation/shortcuts.rs` owns focused-trigger shortcut scoping, shortcut-open
+      focus restore, and `shortcut_repeat` opt-in proof, and
+      `menu_activation/keyboard_navigation.rs` owns ArrowDown open/focus plus horizontal
+      ArrowLeft / ArrowRight top-level switching. The IMUI source gate freezes the child-owner
+      split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching

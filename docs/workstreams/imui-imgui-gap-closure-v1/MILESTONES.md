@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi menu-activation proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs` now keeps only child-owner
+routing for the menu-activation proof surface. `menu_activation/command_activation.rs` owns command
+item activation and close-after-command proof, `shortcuts.rs` owns focused-trigger shortcut
+scoping, shortcut-open focus restore, and `shortcut_repeat` opt-in proof, and
+`keyboard_navigation.rs` owns ArrowDown open/focus plus horizontal ArrowLeft / ArrowRight
+top-level switching. No `fret-ui-kit::imui` menu runtime implementation, `fret-imui` public facade,
+or menu option API changed.
+
 2026-06-05 Fret-ImUi submenu-hover proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover.rs` now keeps only child-owner
 routing for the submenu-hover proof surface. `submenu_hover/nested.rs` owns nested submenu

@@ -37313,6 +37313,72 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs"),
+            required=[
+                "use super::*;",
+                "mod command_activation;",
+                "mod keyboard_navigation;",
+                "mod shortcuts;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn begin_menu_",
+                "CommandId::from(\"test.begin-menu.open\")",
+                "shortcut_repeat: true",
+                "KeyCode::ArrowDown",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/command_activation.rs"),
+            required=[
+                "fn begin_menu_helper_toggles_popup_and_closes_after_command_activate()",
+                "menu_item_command_with_options(",
+                "close_popup: Some(open)",
+                "Effect::Command",
+            ],
+            forbidden=[
+                "fn begin_menu_activate_shortcut",
+                "fn begin_menu_arrow_",
+                "fn begin_menu_horizontal_arrows",
+                "shortcut_repeat: true",
+                "KeyCode::ArrowDown",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/keyboard_navigation.rs"),
+            required=[
+                "fn begin_menu_arrow_down_opens_menu_and_focuses_first_item()",
+                "fn begin_menu_horizontal_arrows_switch_active_top_level_menu()",
+                "KeyCode::ArrowDown",
+                "KeyCode::ArrowRight",
+                "KeyCode::ArrowLeft",
+            ],
+            forbidden=[
+                "fn begin_menu_helper_toggles_popup",
+                "fn begin_menu_activate_shortcut",
+                "CommandId::from(\"test.begin-menu.open\")",
+                "shortcut_repeat: true",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/shortcuts.rs"),
+            required=[
+                "fn begin_menu_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn begin_menu_activate_shortcut_keyboard_open_focuses_first_item_and_escape_restores_trigger()",
+                "fn begin_menu_activate_shortcut_repeat_is_opt_in()",
+                "activate_shortcut: Some(shortcut)",
+                "shortcut_repeat: true",
+                "key_down_ctrl_repeat(",
+            ],
+            forbidden=[
+                "fn begin_menu_helper_toggles_popup",
+                "fn begin_menu_arrow_",
+                "fn begin_menu_horizontal_arrows",
+                "CommandId::from(\"test.begin-menu.open\")",
+                "KeyCode::ArrowRight",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover.rs"),
             required=[
                 "use super::*;",
