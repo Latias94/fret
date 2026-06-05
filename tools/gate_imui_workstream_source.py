@@ -37545,6 +37545,69 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_combo/combo_model.rs"),
+            required=[
+                "use super::*;",
+                "mod popup;",
+                "mod selection;",
+                "mod shortcuts;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn combo_model_",
+                "ComboModelOptions {",
+                "shortcut_repeat: true",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_combo/combo_model/popup.rs"),
+            required=[
+                "fn combo_model_popup_escape_closes_and_restores_trigger_focus()",
+                "fn combo_model_popup_scope_override_controls_popup_test_id()",
+                "KeyCode::Escape",
+                "imui-select-popup-scope-override",
+                "imui-popup-imui-select-popup-imui-select-scope",
+            ],
+            forbidden=[
+                "fn combo_model_reports_changed",
+                "fn combo_model_lifecycle_reports_edit",
+                "fn combo_model_activate_shortcut",
+                "shortcut_repeat: true",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_combo/combo_model/selection.rs"),
+            required=[
+                "fn combo_model_reports_changed_once_after_option_pick()",
+                "fn combo_model_lifecycle_reports_edit_on_option_pick()",
+                ".changed()",
+                "resp.edited()",
+                "resp.deactivated_after_edit()",
+                "selected_out.replace(now)",
+            ],
+            forbidden=[
+                "fn combo_model_popup_",
+                "fn combo_model_activate_shortcut",
+                "KeyCode::Escape",
+                "shortcut_repeat: true",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_combo/combo_model/shortcuts.rs"),
+            required=[
+                "fn combo_model_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn combo_model_activate_shortcut_repeat_is_opt_in()",
+                "activate_shortcut: Some(shortcut)",
+                "shortcut_repeat: true",
+                "key_down_ctrl_repeat(",
+            ],
+            forbidden=[
+                "fn combo_model_popup_",
+                "fn combo_model_reports_changed",
+                "fn combo_model_lifecycle_reports_edit",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/combo_controls.rs"),
             required=[
                 "mod entry;",

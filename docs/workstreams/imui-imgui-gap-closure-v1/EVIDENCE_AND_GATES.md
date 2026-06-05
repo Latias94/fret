@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Combo Model Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` combo-model proof surface is split by model-combo behavior owner
+without changing combo-model runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` is now a thin module hub for
+  `selection`, `popup`, and `shortcuts` proof owners.
+- `combo_model/selection.rs` owns changed-on-pick, selected model projection, lifecycle edit, and
+  deactivated-after-edit proof.
+- `combo_model/popup.rs` owns popup Escape close/focus-restore proof and popup scope/test-id
+  override proof.
+- `combo_model/shortcuts.rs` owns focused-trigger shortcut scoping and `shortcut_repeat` opt-in
+  proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui models_combo::combo_model --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Combo Direct Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` direct combo proof surface is split by combo behavior owner

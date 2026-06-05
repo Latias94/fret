@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi combo-model proof owner-split result:
+`ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` now keeps only child-owner routing for
+the combo-model proof surface. `combo_model/selection.rs` owns changed-on-pick, selected model
+projection, lifecycle edit, and deactivated-after-edit proof, `popup.rs` owns popup Escape
+close/focus restore and popup scope/test-id override proof, and `shortcuts.rs` owns focused-trigger
+shortcut scoping and `shortcut_repeat` opt-in proof. No `fret-ui-kit::imui` combo-model runtime
+implementation, `fret-imui` public facade, or combo-model option API changed.
+
 2026-06-05 Fret-ImUi combo-direct proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_combo/combo_direct.rs` now keeps only child-owner routing for
 the direct combo proof surface. `combo_direct/lifecycle.rs` owns popup Escape close/focus restore

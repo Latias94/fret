@@ -139,6 +139,17 @@ Last updated: 2026-06-05
       preview/model projection, and close-after-pick proof. The IMUI source gate freezes the
       child-owner split.
 
+## Fret-ImUi Combo Model Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` combo-model proof file into selection, popup, and shortcut activation
+      child owners without changing combo-model runtime behavior, public APIs, or the
+      `fret-ui-kit::imui` combo-model policy implementation.
+      Result: `models_combo/combo_model.rs` is now a thin module hub. `combo_model/selection.rs`
+      owns changed-on-pick, selected model projection, lifecycle edit, and deactivated-after-edit
+      proof, `combo_model/popup.rs` owns popup Escape close/focus-restore and popup scope/test-id
+      override proof, and `combo_model/shortcuts.rs` owns focused-trigger shortcut scoping and
+      `shortcut_repeat` opt-in proof. The IMUI source gate freezes the child-owner split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching
