@@ -94,6 +94,19 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Popup Hover-Flags Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` popup hover-flags proof file into disabled-scope, tooltip-delay,
+      popup-blocking, active-item, and shared-delay child owners without changing hover runtime
+      behavior, public APIs, or the `fret-ui-kit::imui` hover policy implementation.
+      Result: `popup_hover/hover_flags.rs` is now a thin module hub.
+      `hover_flags/disabled_scope.rs` owns disabled underlay blocking and AllowWhenDisabled hover
+      proof, `hover_flags/tooltip_delay.rs` owns tooltip stationary/delay hover proof,
+      `hover_flags/popup_blocking.rs` owns AllowWhenBlockedByPopup underlay hit-test proof,
+      `hover_flags/active_item.rs` owns AllowWhenBlockedByActiveItem proof while another item is
+      active, and `hover_flags/shared_delay.rs` owns shared versus local hover-delay timer proof.
+      The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Popup Item-Keyboard Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` popup item-keyboard proof file into keyboard-open, arrow-navigation,

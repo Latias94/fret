@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Popup Hover-Flags Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` popup hover-flags proof surface is split by disabled-scope,
+tooltip-delay, popup-blocking, active-item, and shared-delay behavior owner without changing hover
+runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/popup_hover/hover_flags.rs` now keeps only child-owner routing for
+  `disabled_scope`, `tooltip_delay`, `popup_blocking`, `active_item`, and `shared_delay`.
+- `hover_flags/disabled_scope.rs` owns disabled underlay blocking and AllowWhenDisabled hover proof.
+- `hover_flags/tooltip_delay.rs` owns tooltip stationary/delay hover proof.
+- `hover_flags/popup_blocking.rs` owns AllowWhenBlockedByPopup underlay hit-test proof.
+- `hover_flags/active_item.rs` owns AllowWhenBlockedByActiveItem proof while another item is active.
+- `hover_flags/shared_delay.rs` owns shared versus local hover-delay timer proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui popup_hover::hover_flags --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Popup Item-Keyboard Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` popup item-keyboard proof surface is split by keyboard-open,

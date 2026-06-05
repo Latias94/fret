@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi popup hover-flags proof owner-split result:
+`ecosystem/fret-imui/src/tests/popup_hover/hover_flags.rs` now keeps only child-owner routing for
+the popup hover-flags proof surface. `hover_flags/disabled_scope.rs` owns disabled underlay
+blocking and AllowWhenDisabled hover proof, `tooltip_delay.rs` owns tooltip stationary/delay hover
+proof, `popup_blocking.rs` owns AllowWhenBlockedByPopup underlay hit-test proof,
+`active_item.rs` owns AllowWhenBlockedByActiveItem proof while another item is active, and
+`shared_delay.rs` owns shared versus local hover-delay timer proof. No `fret-ui-kit::imui` hover
+runtime implementation, `fret-imui` public facade, or hover flag API changed.
+
 2026-06-05 Fret-ImUi popup item-keyboard proof owner-split result:
 `ecosystem/fret-imui/src/tests/popup_hover/item_keyboard.rs` now keeps only child-owner routing for
 the popup item keyboard proof surface. `item_keyboard/keyboard_open.rs` owns context-menu keyboard
