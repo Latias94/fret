@@ -7861,3 +7861,14 @@ opening the slice.
       duplicate/delete state-transition routing, inline-rename startup routing, and command-status
       model writes. The collection source gate, workstream source gate, manifest, and surface tests
       now include the context-menu owner.
+- [x] Split collection proof keyboard event dispatch out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/keyboard.rs` child owner without changing IME suppression, active rename
+      suppression, Delete/Backspace deletion, F2 rename startup, Primary+A select-all, Primary+D
+      duplicate, Arrow/Home/End navigation, command-status updates, or app-owned model writes.
+      Result: `collection.rs` keeps pointer-region focus/capture and delegates scope key handling
+      through `install_collection_keyboard_handler(...)`, while `collection/keyboard.rs` owns
+      `ProofCollectionKeyboardHandlerModels`, visible-asset/key projection, shortcut routing,
+      selection/rename state-transition calls, model writeback, and `host.notify(...)` dispatch.
+      The collection source gate, workstream source gate, manifest, and surface tests now include
+      the keyboard handler owner.

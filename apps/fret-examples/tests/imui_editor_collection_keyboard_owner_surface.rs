@@ -1,5 +1,7 @@
 #[test]
 fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit() {
+    let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let keyboard_source = include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs");
     let source = concat!(
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
@@ -10,6 +12,8 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/models.rs"),
         "\n",
@@ -27,7 +31,16 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "fn proof_collection_keyboard_next_index(",
         "fn proof_collection_keyboard_move_selection(",
         "imui_editor_proof_demo.model.authoring_parity.collection_keyboard",
-        "cx.key_on_key_down_for(scope_id, Arc::new(move |host, acx, down| {",
+        "pub(super) struct ProofCollectionKeyboardHandlerModels",
+        "pub(super) fn install_collection_keyboard_handler(",
+        "install_collection_keyboard_handler(",
+        "cx.key_on_key_down_for(",
+        "down.ime_composing",
+        "proof_collection_delete_key_matches(down.key)",
+        "proof_collection_rename_shortcut_matches(down.key, down.modifiers)",
+        "proof_collection_select_all_shortcut_matches(down.key, down.modifiers)",
+        "proof_collection_duplicate_shortcut_matches(down.key, down.modifiers)",
+        "host.notify(acx);",
         "host.request_focus(acx.target);",
         "state.active_id = next_selection.first_selected().cloned();",
         "state.active_id = None;",
@@ -39,6 +52,15 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
             "imui_editor_proof_demo should keep the collection keyboard-owner proof explicit and app-owned; missing `{needle}`"
         );
     }
+
+    assert!(
+        !collection_source.contains("cx.key_on_key_down_for("),
+        "collection root should delegate keyboard handler installation to the keyboard owner"
+    );
+    assert!(
+        keyboard_source.contains("cx.key_on_key_down_for("),
+        "collection keyboard owner should keep the scope key handler installation explicit"
+    );
 
     for needle in [
         "fret_ui_kit::imui::collection_keyboard_owner",

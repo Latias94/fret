@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof keyboard handler owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps pointer-region focus/
+capture behavior and delegates scope key handling through `install_collection_keyboard_handler(...)`.
+`apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs` owns
+`ProofCollectionKeyboardHandlerModels`, visible-asset/key projection, IME and active-rename
+suppression, Delete/Backspace/F2/Primary+A/Primary+D/Arrow/Home/End routing, selection/rename
+state-transition calls, command-status model writes, and `host.notify(...)` dispatch. Shortcut
+behavior, model writes, focus handoff, and the app-owned/no-public-helper boundary remain
+unchanged, and the source/surface gates now freeze keyboard event dispatch separately from the root
+render owner.
+
 2026-06-05 collection proof context-menu owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps tile/background
 context-menu trigger handling and delegates the popup workflow through

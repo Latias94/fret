@@ -7,6 +7,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
     let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
+    let keyboard_source = include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
@@ -42,6 +43,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod context_menu;",
         "mod drag_drop;",
         "mod geometry;",
+        "mod keyboard;",
         "mod models;",
         "mod rename;",
         "mod selection;",
@@ -98,6 +100,18 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             geometry_source.contains(needle),
             "the demo-local collection geometry owner should keep the pure geometry test floor explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionKeyboardHandlerModels",
+        "pub(super) fn install_collection_keyboard_handler(",
+        "cx.key_on_key_down_for(",
+        "proof_collection_keyboard_selection(",
+    ] {
+        assert!(
+            keyboard_source.contains(needle),
+            "the demo-local collection keyboard owner should keep scope keyboard dispatch explicit; missing `{needle}`"
         );
     }
 

@@ -53,6 +53,9 @@ def main() -> None:
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
+    collection_keyboard = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs"
+    )
     collection_models = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs"
     )
@@ -70,6 +73,7 @@ def main() -> None:
         collection_context_menu,
         collection_drag_drop,
         collection_geometry,
+        collection_keyboard,
         collection_models,
         collection_readouts,
         collection_rename,
@@ -102,6 +106,7 @@ def main() -> None:
                 "mod box_select;",
                 "mod context_menu;",
                 "mod drag_drop;",
+                "mod keyboard;",
                 "mod models;",
                 "mod rename;",
                 "mod selection;",
@@ -191,6 +196,34 @@ def main() -> None:
                 "drag_preview_ghost",
                 "proof_drag_preview_card",
                 "TextField::new(",
+                "PointerRegionProps",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection keyboard handler owner",
+            collection_keyboard,
+            required=[
+                "pub(super) struct ProofCollectionKeyboardHandlerModels {",
+                "pub(super) fn install_collection_keyboard_handler(",
+                "cx.key_on_key_down_for(",
+                "down.ime_composing",
+                "proof_collection_delete_key_matches(down.key)",
+                "proof_collection_rename_shortcut_matches(down.key, down.modifiers)",
+                "proof_collection_select_all_shortcut_matches(down.key, down.modifiers)",
+                "proof_collection_duplicate_shortcut_matches(down.key, down.modifiers)",
+                "proof_collection_keyboard_selection(",
+                "host.notify(acx);",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "drag_source_with_options",
+                "drop_target::<",
+                "drag_preview_ghost",
                 "PointerRegionProps",
                 "kit::ButtonOptions",
                 "kit::ChildRegionOptions",
@@ -353,7 +386,13 @@ def main() -> None:
                 "fn proof_collection_keyboard_next_index(",
                 "fn proof_collection_keyboard_move_selection(",
                 "imui_editor_proof_demo.model.authoring_parity.collection_keyboard",
-                "cx.key_on_key_down_for(scope_id, Arc::new(move |host, acx, down| {",
+                "install_collection_keyboard_handler(",
+                "pub(super) fn install_collection_keyboard_handler(",
+                "cx.key_on_key_down_for(",
+                "proof_collection_delete_key_matches(down.key)",
+                "proof_collection_rename_shortcut_matches(down.key, down.modifiers)",
+                "proof_collection_select_all_shortcut_matches(down.key, down.modifiers)",
+                "proof_collection_duplicate_shortcut_matches(down.key, down.modifiers)",
                 "host.request_focus(acx.target);",
                 "state.active_id = next_selection.first_selected().cloned();",
                 "state.active_id = None;",

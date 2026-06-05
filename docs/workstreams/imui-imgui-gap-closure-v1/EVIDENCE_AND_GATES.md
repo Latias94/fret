@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Keyboard Handler Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof keyboard event dispatch moved out of the render/root owner
+without changing IME suppression, active rename suppression, Delete/Backspace deletion, F2 rename
+startup, Primary+A select-all, Primary+D duplicate, Arrow/Home/End navigation, command-status
+updates, focus handoff, or app-owned model writes.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps pointer-region
+  focus/capture behavior and delegates scope key handling through
+  `install_collection_keyboard_handler(...)`.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs` owns
+  `ProofCollectionKeyboardHandlerModels`, visible-asset/key projection, IME and active-rename
+  suppression, Delete/Backspace/F2/Primary+A/Primary+D/Arrow/Home/End routing, selection/rename
+  state-transition calls, command-status model writes, and `host.notify(...)` dispatch.
+- The keyboard-owner surface test now composes `keyboard.rs`, requires the handler owner markers,
+  and asserts that `collection.rs` no longer directly installs `cx.key_on_key_down_for(...)`.
+- The collection source tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `context_menu.rs`, `drag_drop.rs`, `geometry.rs`, `keyboard.rs`, `models.rs`, `readouts.rs`,
+  `rename.rs`, and `selection.rs` for app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new keyboard handler
+  owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  attempted and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/`rustc`
+  processes were cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Context-Menu Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof context-menu popup workflow moved out of the render/root owner

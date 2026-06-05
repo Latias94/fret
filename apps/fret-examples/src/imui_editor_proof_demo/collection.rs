@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
-use fret_core::{Color, Modifiers, Point, Px, Rect, Size};
+use fret_core::{Color, Point, Px, Rect, Size};
 use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::Length;
@@ -27,6 +27,7 @@ mod box_select;
 mod context_menu;
 mod drag_drop;
 mod geometry;
+mod keyboard;
 mod models;
 mod readouts;
 mod rename;
@@ -47,6 +48,7 @@ use geometry::{
     proof_collection_drag_threshold_met, proof_collection_layout_metrics,
     proof_collection_localize_rect, proof_collection_zoom_line, proof_collection_zoom_request,
 };
+use keyboard::{ProofCollectionKeyboardHandlerModels, install_collection_keyboard_handler};
 use models::{
     authoring_parity_collection_active_focus_target_model,
     authoring_parity_collection_assets_model, authoring_parity_collection_box_select_model,
@@ -66,24 +68,20 @@ use readouts::{
     proof_collection_context_menu_line, proof_collection_delete_status,
     proof_collection_duplicate_status, proof_collection_rename_cancel_status,
     proof_collection_rename_commit_status, proof_collection_rename_invalid_status,
-    proof_collection_rename_line, proof_collection_rename_ready_status,
-    proof_collection_rename_status_line, proof_collection_select_all_line,
-    proof_collection_select_all_status, proof_collection_selection_line,
+    proof_collection_rename_line, proof_collection_rename_status_line,
+    proof_collection_select_all_line, proof_collection_selection_line,
     proof_collection_visible_order_line,
 };
 use rename::{
     ProofCollectionRenameSession, proof_collection_begin_inline_rename_in_app,
     proof_collection_begin_rename_session, proof_collection_commit_rename,
-    proof_collection_inline_rename_focus_state, proof_collection_rename_shortcut_matches,
-    proof_collection_restore_focus_after_inline_rename, proof_collection_sync_inline_rename_focus,
+    proof_collection_inline_rename_focus_state, proof_collection_restore_focus_after_inline_rename,
+    proof_collection_sync_inline_rename_focus,
 };
 use selection::{
-    ProofCollectionKeyboardState, proof_collection_active_id,
-    proof_collection_assets_in_visible_order, proof_collection_context_menu_selection,
-    proof_collection_delete_key_matches, proof_collection_delete_selection,
-    proof_collection_duplicate_selection, proof_collection_duplicate_shortcut_matches,
-    proof_collection_keyboard_selection, proof_collection_select_all_selection,
-    proof_collection_select_all_shortcut_matches,
+    proof_collection_active_id, proof_collection_assets_in_visible_order,
+    proof_collection_context_menu_selection, proof_collection_delete_selection,
+    proof_collection_duplicate_selection,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -531,13 +529,9 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
 
                     let rendered_items_for_move = rendered_items.clone();
                     let rendered_items_for_up = rendered_items.clone();
-                    let assets_model_for_keys = collection_assets_model.clone();
-                    let reverse_order_model_for_keys = collection_reverse_order_model.clone();
-                    let selection_model_for_keys = collection_selection_model.clone();
                     let selection_model_for_down = collection_selection_model.clone();
                     let selection_model_for_move = collection_selection_model.clone();
                     let selection_model_for_up = collection_selection_model.clone();
-                    let keyboard_model_for_keys = collection_keyboard_model.clone();
                     let keyboard_model_for_move = collection_keyboard_model.clone();
                     let keyboard_model_for_up = collection_keyboard_model.clone();
                     let keyboard_model_for_clear = collection_keyboard_model.clone();
@@ -549,182 +543,26 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                     let box_select_model_for_cancel = collection_box_select_model.clone();
                     let collection_keys_for_move = collection_keys.clone();
                     let collection_keys_for_up = collection_keys.clone();
-                    let collection_layout_columns = collection_layout.columns;
                     let collection_zoom_model_for_wheel = collection_zoom_model.clone();
-                    let rename_session_model_for_keys = collection_rename_session_model.clone();
-                    let rename_draft_model_for_keys = collection_rename_draft_model.clone();
-                    let rename_focus_pending_model_for_keys =
-                        collection_rename_focus_pending_model.clone();
-                    let rename_status_model_for_keys = collection_rename_status_model.clone();
-                    let command_status_model_for_keys = collection_command_status_model.clone();
                     let collection_scroll_handle_for_wheel = collection_scroll_handle.clone();
                     let collection_asset_count_for_wheel = collection_assets.len();
 
-                    cx.key_on_key_down_for(scope_id, Arc::new(move |host, acx, down| {
-                        if down.ime_composing {
-                            return false;
-                        }
-
-                        let selection = host
-                            .models_mut()
-                            .read(&selection_model_for_keys, |state| state.clone())
-                            .unwrap_or_default();
-                        let keyboard = host
-                            .models_mut()
-                            .read(&keyboard_model_for_keys, |state| state.clone())
-                            .unwrap_or_default();
-                        let stored_assets = host
-                            .models_mut()
-                            .read(&assets_model_for_keys, |state| state.clone())
-                            .unwrap_or_default();
-                        let reverse_order = host
-                            .models_mut()
-                            .read(&reverse_order_model_for_keys, |value| *value)
-                            .unwrap_or(false);
-                        let visible_assets = proof_collection_assets_in_visible_order(
-                            Arc::<[ProofCollectionAsset]>::from(stored_assets.clone()),
-                            reverse_order,
-                        );
-                        if host
-                            .models_mut()
-                            .read(&rename_session_model_for_keys, |state| state.is_some())
-                            .unwrap_or(false)
-                        {
-                            return false;
-                        }
-                        let collection_keys_for_keys = visible_assets
-                            .iter()
-                            .map(|asset| asset.id.clone())
-                            .collect::<Vec<_>>();
-                        if down.modifiers == Modifiers::default()
-                            && proof_collection_delete_key_matches(down.key)
-                            && let Some(delete) = proof_collection_delete_selection(
-                                &visible_assets,
-                                &stored_assets,
-                                &selection,
-                                &keyboard,
-                            )
-                        {
-                            let next_status = proof_collection_delete_status(&delete.deleted_assets);
-                            let _ = host.update_model(&assets_model_for_keys, |state| {
-                                *state = delete.remaining_assets.clone();
-                            });
-                            let _ = host.update_model(&selection_model_for_keys, |state| {
-                                *state = delete.next_selection.clone();
-                            });
-                            let _ = host.update_model(&keyboard_model_for_keys, |state| {
-                                *state = delete.next_keyboard.clone();
-                            });
-                            let _ = host.update_model(&command_status_model_for_keys, |status| {
-                                status.clear();
-                                status.push_str(&next_status);
-                            });
-                            host.notify(acx);
-                            return true;
-                        }
-
-                        if proof_collection_rename_shortcut_matches(down.key, down.modifiers)
-                            && let Some(session) = proof_collection_begin_rename_session(
-                                &visible_assets,
-                                &selection,
-                                &keyboard,
-                            )
-                        {
-                            let _ = host.update_model(&rename_session_model_for_keys, |state| {
-                                *state = Some(session.clone());
-                            });
-                            let _ = host.update_model(&rename_draft_model_for_keys, |draft| {
-                                draft.clear();
-                                draft.push_str(session.original_label.as_ref());
-                            });
-                            let _ = host.update_model(&rename_focus_pending_model_for_keys, |state| {
-                                *state = true;
-                            });
-                            let _ = host.update_model(&rename_status_model_for_keys, |status| {
-                                status.clear();
-                                status.push_str(&proof_collection_rename_ready_status(
-                                    session.original_label.as_ref(),
-                                ));
-                            });
-                            host.notify(acx);
-                            return true;
-                        }
-
-                        if proof_collection_select_all_shortcut_matches(
-                            down.key,
-                            down.modifiers,
-                        ) && let Some((next_selection, next_keyboard)) =
-                            proof_collection_select_all_selection(
-                                &collection_keys_for_keys,
-                                &selection,
-                                &keyboard,
-                            )
-                        {
-                            let next_status =
-                                proof_collection_select_all_status(next_selection.selected_count());
-                            let _ = host.update_model(&selection_model_for_keys, |state| {
-                                *state = next_selection.clone();
-                            });
-                            let _ = host.update_model(&keyboard_model_for_keys, |state| {
-                                *state = next_keyboard.clone();
-                            });
-                            let _ = host.update_model(&command_status_model_for_keys, |status| {
-                                status.clear();
-                                status.push_str(&next_status);
-                            });
-                            host.notify(acx);
-                            return true;
-                        }
-
-                        if proof_collection_duplicate_shortcut_matches(
-                            down.key,
-                            down.modifiers,
-                        ) && let Some(duplicate) = proof_collection_duplicate_selection(
-                            &visible_assets,
-                            &stored_assets,
-                            &selection,
-                            &keyboard,
-                            reverse_order,
-                        ) {
-                            let next_status =
-                                proof_collection_duplicate_status(&duplicate.duplicated_assets);
-                            let _ = host.update_model(&assets_model_for_keys, |state| {
-                                *state = duplicate.next_assets.clone();
-                            });
-                            let _ = host.update_model(&selection_model_for_keys, |state| {
-                                *state = duplicate.next_selection.clone();
-                            });
-                            let _ = host.update_model(&keyboard_model_for_keys, |state| {
-                                *state = duplicate.next_keyboard.clone();
-                            });
-                            let _ = host.update_model(&command_status_model_for_keys, |status| {
-                                status.clear();
-                                status.push_str(&next_status);
-                            });
-                            host.notify(acx);
-                            return true;
-                        }
-
-                        let Some((next_selection, next_keyboard)) = proof_collection_keyboard_selection(
-                            &collection_keys_for_keys,
-                            &selection,
-                            &keyboard,
-                            collection_layout_columns,
-                            down.key,
-                            down.modifiers,
-                        ) else {
-                            return false;
-                        };
-
-                        let _ = host.update_model(&selection_model_for_keys, |state| {
-                            *state = next_selection.clone();
-                        });
-                        let _ = host.update_model(&keyboard_model_for_keys, |state| {
-                            *state = next_keyboard.clone();
-                        });
-                        host.notify(acx);
-                        true
-                    }));
+                    install_collection_keyboard_handler(
+                        cx,
+                        scope_id,
+                        collection_layout.columns,
+                        ProofCollectionKeyboardHandlerModels {
+                            assets: collection_assets_model.clone(),
+                            reverse_order: collection_reverse_order_model.clone(),
+                            selection: collection_selection_model.clone(),
+                            keyboard: collection_keyboard_model.clone(),
+                            rename_session: collection_rename_session_model.clone(),
+                            rename_draft: collection_rename_draft_model.clone(),
+                            rename_focus_pending: collection_rename_focus_pending_model.clone(),
+                            rename_status: collection_rename_status_model.clone(),
+                            command_status: collection_command_status_model.clone(),
+                        },
+                    );
 
                     cx.pointer_region_on_wheel(Arc::new(move |host, acx, wheel| {
                         let Some(update) = proof_collection_zoom_request(
