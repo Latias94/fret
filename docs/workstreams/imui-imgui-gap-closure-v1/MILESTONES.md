@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative drag-output test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
+primary axis-label smoke tests, and child test-owner routing.
+`ecosystem/fret-plot/src/declarative/tests/drag_output.rs` owns right-axis Y-line, X-line,
+right-axis point, and right-axis rect drag-output publication regressions, including update/end
+phase and mapped coordinate assertions. No plot implementation, public panel prop, optional
+`fret-plot/imui` adapter routing, primary axes/grid test, or primary axis-label test changed.
+
 2026-06-05 Fret Plot declarative right-axis paint test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
 primary axis-label, draggable-output regression suites, and child test-owner routing.

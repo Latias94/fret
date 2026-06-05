@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret Plot Declarative Drag-Output Test Owner Split Evidence - 2026-06-05
+
+Claim verified: declarative plot draggable-output regression tests moved out of the root
+declarative plot test owner without changing plot implementation code, public panel props, optional
+`fret-plot/imui` adapter routing, right-axis Y-line output, X-line output, right-axis point/rect
+output, drag update/end phase publication, primary axes/grid tests, or primary axis-label tests.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
+  scene helpers, root axes/grid and primary axis-label smoke tests, plus child-owner routing
+  through `mod drag_output;`.
+- `ecosystem/fret-plot/src/declarative/tests/drag_output.rs` owns right-axis Y-line, X-line,
+  right-axis point, and right-axis rect drag-output publication regressions, including update/end
+  phase and mapped coordinate assertions.
+- `tools/gate_imui_workstream_source.py` now freezes the root test owner routing and the
+  drag-output child owner markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new drag-output test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings from
+  `fret-plot`.
+- `cargo nextest run -p fret-plot declarative::tests::drag_output --no-fail-fast`: pass, 4 passed
+  and 85 skipped.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Right-Axis Paint Test Owner Split Evidence - 2026-06-05
 
 Claim verified: declarative plot right-axis and multi-right-axis paint regression tests moved out

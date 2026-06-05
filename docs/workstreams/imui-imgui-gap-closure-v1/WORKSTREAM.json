@@ -2035,6 +2035,7 @@
     "ecosystem/fret-plot/src/declarative/style_helpers.rs",
     "ecosystem/fret-plot/src/declarative/tests.rs",
     "ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs",
+    "ecosystem/fret-plot/src/declarative/tests/drag_output.rs",
     "ecosystem/fret-plot/src/declarative/tests/legend.rs",
     "ecosystem/fret-plot/src/declarative/tests/overlays.rs",
     "ecosystem/fret-plot/src/declarative/tests/query_box_selection.rs",
