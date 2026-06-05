@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi floating window-options proof owner-split result:
+`ecosystem/fret-imui/src/tests/floating/window_options.rs` now keeps only shared imports and
+child-owner routing for the floating window-options proof surface.
+`window_options/disabled_options.rs` owns `closable=false`, `movable=false`, `resizable=false`,
+and `collapsible=false` behavior proof, `resize.rs` owns corner and left-edge resize gesture
+proof, and `collapse.rs` owns title-bar double-click collapse/expand lifecycle proof including
+stable floating area id and resize-handle visibility while collapsed. No `fret-ui-kit::imui`
+floating-window runtime implementation, `fret-imui` public facade, or floating option API changed.
+
 2026-06-05 Fret-ImUi table visibility proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs` now keeps only
 shared imports and child-owner routing for the table visibility proof surface.

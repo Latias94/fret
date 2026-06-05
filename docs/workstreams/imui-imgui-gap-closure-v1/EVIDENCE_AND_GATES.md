@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Floating Window-Options Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` floating window-options proof surface is split by disabled-option,
+resize gesture, and collapse lifecycle behavior owner without changing floating-window runtime
+code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/floating/window_options.rs` now keeps only shared imports and
+  child-owner routing for `disabled_options`, `resize`, and `collapse`.
+- `window_options/disabled_options.rs` owns `closable=false`, `movable=false`, `resizable=false`,
+  and `collapsible=false` behavior proof.
+- `window_options/resize.rs` owns corner and left-edge resize gesture proof.
+- `window_options/collapse.rs` owns title-bar double-click collapse/expand lifecycle proof,
+  stable floating area id checks, and resize-handle visibility while collapsed.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui floating::window_options --no-fail-fast`: pass, 7 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with a Git line-ending warning for
+  `ecosystem/fret-imui/src/tests/floating/window_options.rs`.
+
 ## Fret-ImUi Table Visibility Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` table visibility proof surface is split by runtime filtering,

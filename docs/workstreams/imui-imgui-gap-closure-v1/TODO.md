@@ -94,6 +94,18 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Floating Window-Options Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` floating window-options proof file into disabled-option, resize, and
+      collapse lifecycle child owners without changing floating-window behavior, public APIs, or
+      the `fret-ui-kit::imui` floating implementation.
+      Result: `floating/window_options.rs` now keeps only shared imports and module routing.
+      `window_options/disabled_options.rs` owns `closable=false`, `movable=false`,
+      `resizable=false`, and `collapsible=false` behavior proof, `window_options/resize.rs` owns
+      corner and left-edge resize gesture proof, and `window_options/collapse.rs` owns title-bar
+      double-click collapse/expand lifecycle proof including stable floating area id and
+      resize-handle visibility while collapsed. The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Table Visibility Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` table visibility proof file into runtime-filtering, menu-item, and
