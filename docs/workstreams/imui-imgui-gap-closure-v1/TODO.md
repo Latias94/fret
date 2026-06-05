@@ -243,6 +243,17 @@ Last updated: 2026-06-06
       frame without render click observability; and `move_delayed.rs` owns pointer move plus click
       after extra frames. The IMUI source gate freezes the child-owner split.
 
+## Fret-ImUi Drag Core Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` drag-core proof file into drag signal, threshold metric, and
+      drag/drop helper child owners without changing drag runtime behavior, public APIs, metrics,
+      or the `fret-ui-kit::imui` drag/drop policy implementation.
+      Result: `interaction_drag/drag_core.rs` is now a thin module hub.
+      `drag_core/signals.rs` owns `drag_started` / `dragging` / `drag_stopped` / frame-delta
+      proof, `drag_core/threshold.rs` owns `component.imui.drag_threshold_px` threshold proof,
+      and `drag_core/drop_helper.rs` owns preview/delivered payload helper proof. The IMUI source
+      gate and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating movement/z-order proof file into movement, window-control,

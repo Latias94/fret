@@ -35158,3 +35158,24 @@ Focused gates:
 - Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
+
+2026-06-06 fret-imui drag core proof owner split:
+
+- Claim: `ecosystem/fret-imui/src/tests/interaction_drag/drag_core.rs` was split into a thin hub
+  plus drag signal, threshold metric, and drag/drop helper child proof owners without changing drag
+  runtime behavior, public APIs, metrics, or `fret-ui-kit::imui` drag/drop policy code.
+- Evidence anchors: `drag_core.rs` now declares only `mod drop_helper;`, `mod signals;`, and
+  `mod threshold;`; `drag_core/signals.rs` owns `drag_started` / `dragging` / `drag_stopped` /
+  frame-delta proof; `drag_core/threshold.rs` owns `component.imui.drag_threshold_px` threshold
+  proof; and `drag_core/drop_helper.rs` owns preview/delivered payload proof. `WORKSTREAM.json`
+  lists the hub and child proof owners, while `tools/gate_imui_workstream_source.py` requires the
+  split and rejects test bodies drifting back into the hub.
+- Passed: `cargo fmt --package fret-imui`.
+- Passed: `cargo fmt --package fret-imui -- --check`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check`.
+- Passed: `cargo nextest run -p fret-imui drag_core --no-fail-fast` (3 tests passed, 183 skipped).
+- Passed: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` (8 tests passed, 178 skipped).
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
