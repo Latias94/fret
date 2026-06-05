@@ -3,9 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative wheel-zoom test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root non-wheel
+regression suites, and child test-owner routing. `ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs`
+owns controlled view-bounds zoom, Shift/Ctrl axis-only zoom, axis-region zoom routing, X/Y zoom
+locks, and both-axis lock no-op tests. No plot implementation, public panel prop, optional
+`fret-plot/imui` adapter routing, or runtime behavior changed.
+
 2026-06-05 Fret Plot declarative cursor-readout test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
-scene helpers, non-readout paint/interaction regression suites, and `mod cursor_readout;` routing.
+scene helpers, remaining root regression suites, and `mod cursor_readout;` routing.
 `ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs` owns cursor output publication,
 mouse cursor readout chrome/text, per-series readout rows, right-axis formatter readout, and
 linked-cursor precedence tests. No plot implementation, public panel prop, optional `fret-plot/imui`

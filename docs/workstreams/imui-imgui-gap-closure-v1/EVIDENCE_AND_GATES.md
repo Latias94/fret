@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret Plot Declarative Wheel-Zoom Test Owner Split Evidence - 2026-06-05
+
+Claim verified: declarative plot wheel-zoom regression tests moved out of the root declarative plot
+test owner without changing plot implementation code, public panel props, optional `fret-plot/imui`
+adapter routing, controlled view-bounds zoom, Shift/Ctrl axis-only zoom, axis-region zoom routing,
+X/Y zoom locks, both-axis lock no-op behavior, or declarative line painting/event dispatch setup.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root non-wheel
+  regression suites, and `mod wheel_zoom;` child-owner routing.
+- `ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs` owns controlled view-bounds zoom,
+  Shift/Ctrl axis-only zoom, axis-region zoom routing, X/Y zoom lock, and both-axis lock no-op
+  tests.
+- `tools/gate_imui_workstream_source.py` now freezes the root test owner routing and the
+  wheel-zoom child owner markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new wheel-zoom test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings from
+  `fret-plot`.
+- `cargo nextest run -p fret-plot wheel_zoom --no-fail-fast`: pass, 10 passed and 79 skipped
+  (8 moved declarative wheel tests plus 2 existing input-map wheel tests matched the filter).
+
 ## Fret Plot Declarative Cursor-Readout Test Owner Split Evidence - 2026-06-05
 
 Claim verified: declarative plot cursor output/readout regression tests moved out of the root

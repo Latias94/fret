@@ -14598,6 +14598,7 @@ def main() -> None:
                 "fn line_plot_panel_paints_tag_x_and_y_overlays_on_declarative_path(",
                 "fn line_plot_panel_drags_x_line_output_on_declarative_path(",
                 "mod cursor_readout;",
+                "mod wheel_zoom;",
             ],
             forbidden=[
                 "fret_authoring::UiWriter",
@@ -14616,6 +14617,27 @@ def main() -> None:
                 "published.snapshot.cursor",
                 "paint mouse readout overlay chrome",
                 "paint one vertical guide when no local cursor is active",
+            ],
+            forbidden=[
+                "fret_authoring::UiWriter",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs"),
+            required=[
+                "use super::*;",
+                "fn line_plot_panel_wheel_zooms_controlled_view_bounds_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_shift_modifier_zooms_x_only_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_ctrl_modifier_zooms_y_only_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_on_x_axis_zooms_x_only_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_on_y_axis_zooms_y_only_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_respects_x_zoom_lock_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_respects_y_zoom_lock_on_declarative_path(",
+                "fn line_plot_panel_wheel_zoom_noops_when_both_axes_locked_on_declarative_path(",
+                "PointerEvent::Wheel",
+                "modifiers: Modifiers {",
+                "axis_locks.x.zoom = true;",
+                "axis_locks.y.zoom = true;",
             ],
             forbidden=[
                 "fret_authoring::UiWriter",

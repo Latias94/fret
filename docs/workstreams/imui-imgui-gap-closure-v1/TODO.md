@@ -6890,9 +6890,18 @@ opening the slice.
       output cursor publication, mouse cursor readout chrome/text, series readout rows, right-axis
       formatter readout, linked-cursor precedence, or declarative line painting preservation.
       Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared `TestHost`,
-      `FakeServices`, scene helpers, and non-readout regression suites while
+      `FakeServices`, scene helpers, non-cursor-readout child routing, and root regression suites
+      while
       `ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs` owns the cursor output,
       cursor readout, series readout, right-axis readout, and linked-cursor readout tests.
+- [x] Split Fret Plot declarative wheel-zoom regression tests out of the root test owner without
+      changing implementation code, public panel props, optional IMUI adapter routing, controlled
+      view-bounds zoom, Shift/Ctrl axis-only zoom, axis-region zoom routing, X/Y zoom locks,
+      both-axis lock no-op behavior, or declarative line painting/event dispatch setup.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared harness and root
+      non-wheel regression suites while
+      `ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs` owns the wheel zoom modifier,
+      axis-region, axis-lock, and no-op interaction tests.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
