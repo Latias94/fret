@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative legend test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
+right-axis paint, controlled view/pan, and draggable-output regression suites, plus child
+test-owner routing. `ecosystem/fret-plot/src/declarative/tests/legend.rs` owns legend paint,
+swatch visibility toggle, label pin/unpin, shift-solo restore, and hover-emphasis regressions. No
+plot implementation, public panel prop, optional `fret-plot/imui` adapter routing, right-axis paint
+test, pan test, or draggable-output test changed.
+
 2026-06-05 Fret Plot declarative series paint test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
 legend, pan, and draggable-output regression suites, plus child test-owner routing.

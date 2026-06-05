@@ -6926,6 +6926,14 @@ opening the slice.
       axes/grid, legend, pan, and draggable-output regression suites while
       `ecosystem/fret-plot/src/declarative/tests/series_paint.rs` owns the line, area, stems,
       histogram, bars, candlestick, error-bars, shaded, heatmap, and histogram2d paint tests.
+- [x] Split Fret Plot declarative legend regression tests out of the root test owner without
+      changing implementation code, public panel props, optional IMUI adapter routing, legend
+      swatch/label painting, swatch visibility toggling, label pin/unpin, shift-solo restore,
+      hover emphasis, right-axis paint tests, controlled view/pan tests, or draggable output tests.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared harness, root
+      axes/grid, right-axis paint, controlled view/pan, and draggable-output regression suites
+      while `ecosystem/fret-plot/src/declarative/tests/legend.rs` owns legend paint and interaction
+      tests.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
