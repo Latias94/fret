@@ -7772,3 +7772,12 @@ opening the slice.
       import to the `fret-launch` diag screenshot owner that calls `AppWindowId::data()`. The
       workstream manifest, source gate, and `imui_editor_proof_workbench_shell_surface` freeze the
       owner boundary.
+- [x] Split DevTools Demo/Metrics/Debug workflow readiness/status/result/artifact line projection
+      into a private route child owner without changing route line ordering, action catalog
+      ownership, copy command IDs, workflow readiness reasons, result/artifact command strings,
+      panel button enablement, DevTools native imports, or first-open route metadata.
+      Result: `apps/fret-devtools/src/demo_metrics_debug.rs` keeps route assembly, action-row UI,
+      panel state reads, and stable public re-exports. The new
+      `apps/fret-devtools/src/demo_metrics_debug/workflow.rs` owns workflow readiness, status,
+      result-action, and artifact-action line projection. The workstream manifest, source gate, and
+      existing `fret-devtools` Demo/Metrics/Debug tests freeze the workflow child owner boundary.

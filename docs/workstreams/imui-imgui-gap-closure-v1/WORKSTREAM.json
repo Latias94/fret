@@ -1634,6 +1634,7 @@
     "tools/diag_gate_imui_product_chain.py",
     "apps/fret-devtools/src/demo_metrics_debug.rs",
     "apps/fret-devtools/src/demo_metrics_debug/actions.rs",
+    "apps/fret-devtools/src/demo_metrics_debug/workflow.rs",
     "apps/fret-demo/src/bin/imui_editor_proof_demo.rs",
     "crates/fret-launch/src/runner/desktop/runner/app_handler.rs",
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_diag_screenshots.rs",

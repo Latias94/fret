@@ -7536,3 +7536,14 @@ dock lifecycle callbacks. The same slice also moves the local `slotmap::Key` imp
 auxiliary window behavior, and public IMUI/editor APIs remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus
 `imui_editor_proof_workbench_shell_surface` freeze the shell owner boundary.
+
+2026-06-05 DevTools Demo/Metrics/Debug workflow projection owner split result:
+`apps/fret-devtools/src/demo_metrics_debug.rs` now keeps route assembly, action-row UI, panel state
+reads, and stable public re-exports for the Demo/Metrics/Debug route. The new
+`apps/fret-devtools/src/demo_metrics_debug/workflow.rs` owns workflow readiness, workflow status,
+workflow result-action, and workflow artifact-action line projection for the always-visible
+Demo/Metrics/Debug DevTools surface. Route line ordering, action metadata ownership, copy command
+IDs, workflow readiness reasons, result/artifact command strings, panel button enablement, DevTools
+native imports, and first-open route metadata remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus the existing `fret-devtools` Demo/Metrics/Debug tests
+freeze the workflow child-owner boundary.

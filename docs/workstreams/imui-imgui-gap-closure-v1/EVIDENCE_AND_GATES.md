@@ -29516,6 +29516,32 @@ Focused gates:
 - Passed: `git diff --check`.
 - Passed: `git diff --cached --check`.
 
+2026-06-05 DevTools Demo/Metrics/Debug workflow projection owner split:
+
+- Claim: Demo/Metrics/Debug workflow readiness/status/result/artifact line projection moved from
+  `apps/fret-devtools/src/demo_metrics_debug.rs` into the private child owner
+  `apps/fret-devtools/src/demo_metrics_debug/workflow.rs` without changing route line ordering,
+  action catalog ownership, copy command IDs, workflow readiness reasons, result/artifact command
+  strings, panel button enablement, DevTools native imports, or first-open route metadata.
+- Evidence anchors: `demo_metrics_debug.rs` now declares `mod workflow;`, re-exports
+  `demo_metrics_debug_workflow_readiness_lines(...)`,
+  `demo_metrics_debug_workflow_status_lines(...)`,
+  `demo_metrics_debug_workflow_result_action_lines(...)`, and
+  `demo_metrics_debug_workflow_artifact_action_lines(...)`, and keeps route assembly, panel state
+  reads, and action-row UI. `demo_metrics_debug/workflow.rs` owns the workflow readiness/status/
+  result/artifact line text and command IDs. `tools/gate_imui_workstream_source.py` rejects those
+  workflow line projection details drifting back into the route assembly owner or into
+  `actions.rs`.
+- Passed: `cargo fmt --package fret-devtools -- --check`.
+- Passed:
+  `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_workflow_lines_surface_runtime_readiness_and_status demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates demo_metrics_debug_lines_mark_bundle_actions_runnable_with_selected_bundle --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Passed: `git diff --cached --check`.
+
 2026-06-05 supporting editor proof workbench shell owner split:
 
 - Claim: supporting `imui_editor_proof_demo` dock/window shell policy moved from
