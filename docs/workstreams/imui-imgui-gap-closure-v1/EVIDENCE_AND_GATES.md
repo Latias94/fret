@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-06
 
+## Fret-ImUi Disclosure Tree Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` disclosure-tree proof surface is split by checkbox context-menu,
+collapsing-header shortcut scoping, tree-node context-menu, and tree-node layout owner without
+changing disclosure/tree runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs` now keeps only shared
+  imports and child-owner routing for `checkbox`, `collapsing_header`, `tree_context_menu`, and
+  `tree_layout`.
+- `disclosure_tree/checkbox.rs` owns checkbox `activate_shortcut` Shift+F10 context-menu
+  preservation proof.
+- `disclosure_tree/collapsing_header.rs` owns collapsing-header focused-trigger shortcut scoping
+  proof.
+- `disclosure_tree/tree_context_menu.rs` owns tree-node `activate_shortcut` Shift+F10
+  context-menu preservation proof.
+- `disclosure_tree/tree_layout.rs` owns open-parent tree-node child vertical-stacking proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui interaction_shortcuts::disclosure_tree --no-fail-fast`: pass,
+  4 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with a Git line-ending warning for
+  `ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs`.
+
 ## Fret-ImUi Table Header Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` table header proof surface is split by plain-header and

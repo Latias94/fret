@@ -94,6 +94,19 @@ Last updated: 2026-06-06
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Disclosure Tree Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` disclosure-tree proof file into checkbox, collapsing-header,
+      tree-node context-menu, and tree-node layout child owners without changing disclosure/tree
+      runtime behavior, public APIs, or the `fret-ui-kit::imui` disclosure implementation.
+      Result: `interaction_shortcuts/disclosure_tree.rs` now keeps only shared imports and module
+      routing. `disclosure_tree/checkbox.rs` owns checkbox `activate_shortcut` Shift+F10
+      context-menu preservation proof, `disclosure_tree/collapsing_header.rs` owns
+      collapsing-header focused-trigger shortcut scoping proof, `disclosure_tree/tree_context_menu.rs`
+      owns tree-node `activate_shortcut` Shift+F10 context-menu preservation proof, and
+      `disclosure_tree/tree_layout.rs` owns open-parent tree-node child vertical-stacking proof.
+      The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Table Header Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` table header proof file into plain-header and sortable-header child

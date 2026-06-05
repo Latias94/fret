@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi disclosure-tree proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs` now keeps only shared
+imports and child-owner routing for the disclosure/tree shortcut proof surface.
+`disclosure_tree/checkbox.rs` owns checkbox `activate_shortcut` Shift+F10 context-menu
+preservation proof, `collapsing_header.rs` owns collapsing-header focused-trigger shortcut scoping
+proof, `tree_context_menu.rs` owns tree-node `activate_shortcut` Shift+F10 context-menu
+preservation proof, and `tree_layout.rs` owns open-parent tree-node child vertical-stacking proof.
+No `fret-ui-kit::imui` disclosure/tree runtime implementation, `fret-imui` public facade, or
+disclosure/tree option API changed.
+
 2026-06-06 Fret-ImUi table header proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs` now keeps only
 shared imports and child-owner routing for the table header proof surface. `table/header/plain.rs`

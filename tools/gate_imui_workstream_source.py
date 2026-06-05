@@ -1055,6 +1055,11 @@ def main() -> None:
                 "ecosystem/fret-ui-editor/src/controls/transform_edit/element/section_control.rs",
                 "ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/checkbox.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/collapsing_header.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_context_menu.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_layout.rs",
                 "ecosystem/fret-imui/Cargo.toml",
                 "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py",
                 "python tools/gate_imui_editor_collection_source.py",
@@ -1082,6 +1087,112 @@ def main() -> None:
                 "cargo check -p fret-examples",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs"),
+            required=[
+                "use super::*;",
+                "mod checkbox;",
+                "mod collapsing_header;",
+                "mod tree_context_menu;",
+                "mod tree_layout;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn collapsing_header_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn tree_node_children_stack_vertically_inside_open_parents()",
+                "checkbox_model_with_options(",
+                "collapsing_header_with_options(",
+                "tree_node_with_options(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/checkbox.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "ui.checkbox_model_with_options(",
+                "CheckboxOptions {",
+                "activate_shortcut: Some(shortcut)",
+                "KeyCode::F10",
+                "context_menu_requested()",
+            ],
+            forbidden=[
+                "fn collapsing_header_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn tree_node_children_stack_vertically_inside_open_parents()",
+                "collapsing_header_with_options(",
+                "tree_node_with_options(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/collapsing_header.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn collapsing_header_activate_shortcut_is_scoped_to_focused_trigger()",
+                "ui.collapsing_header_with_options(",
+                "CollapsingHeaderOptions {",
+                "activate_shortcut: Some(shortcut)",
+                "imui-collapsing-shortcut.target",
+                "imui-collapsing-shortcut.other",
+            ],
+            forbidden=[
+                "fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn tree_node_children_stack_vertically_inside_open_parents()",
+                "checkbox_model_with_options(",
+                "tree_node_with_options(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_context_menu.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "ui.tree_node_with_options(",
+                "TreeNodeOptions {",
+                "leaf: true",
+                "activate_shortcut: Some(shortcut)",
+                "KeyCode::F10",
+                "context_menu_requested()",
+            ],
+            forbidden=[
+                "fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn collapsing_header_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn tree_node_children_stack_vertically_inside_open_parents()",
+                "checkbox_model_with_options(",
+                "collapsing_header_with_options(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_layout.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn tree_node_children_stack_vertically_inside_open_parents()",
+                "default_open: true",
+                "content_test_id: Some(Arc::from(\"imui-tree-node-stack.scene.content\"))",
+                "\"imui-tree-node-stack.geometry\"",
+                "\"imui-tree-node-stack.key-light\"",
+                "postfx_bounds.origin.y.0",
+                "key_light_bounds.origin.y.0",
+            ],
+            forbidden=[
+                "fn checkbox_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "fn collapsing_header_activate_shortcut_is_scoped_to_focused_trigger()",
+                "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
+                "activate_shortcut: Some(shortcut)",
+                "context_menu_requested()",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/floating/input_modes.rs"),
@@ -3680,6 +3791,12 @@ def main() -> None:
                 "table/header/plain.rs",
                 "table/header/sortable.rs",
                 "plain header left-click non-activation",
+                "Fret-ImUi Disclosure Tree Proof Owner Split Evidence - 2026-06-06",
+                "disclosure_tree/checkbox.rs",
+                "disclosure_tree/collapsing_header.rs",
+                "disclosure_tree/tree_context_menu.rs",
+                "disclosure_tree/tree_layout.rs",
+                "checkbox `activate_shortcut` Shift+F10 context-menu",
                 "Kit IMUI Source Thinness Guard - 2026-06-03",
                 "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
                 "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",
