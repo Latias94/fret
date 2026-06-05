@@ -1,6 +1,5 @@
 use super::*;
 
-use fret_ui_kit::imui::ImUiMultiSelectState;
 use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
     publish_cross_window_drag_preview_ghost_with_options, render_cross_window_drag_preview_ghosts,
@@ -12,19 +11,6 @@ use fret_ui_kit::recipes::imui_sortable::{
 #[derive(Clone)]
 struct TestDragPayload {
     label: Arc<str>,
-}
-
-#[derive(Clone, PartialEq, Eq)]
-struct TestCollectionAsset {
-    id: Arc<str>,
-    label: Arc<str>,
-    path: Arc<str>,
-}
-
-#[derive(Clone)]
-struct TestCollectionDragPayload {
-    ids: Arc<[Arc<str>]>,
-    paths: Arc<[Arc<str>]>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -54,70 +40,6 @@ fn test_sortable_items() -> Vec<TestSortableItem> {
             label: Arc::from("Key light"),
         },
     ]
-}
-
-fn test_collection_assets() -> Arc<[TestCollectionAsset]> {
-    vec![
-        TestCollectionAsset {
-            id: Arc::from("alpha"),
-            label: Arc::from("Alpha"),
-            path: Arc::from("textures/alpha.ktx2"),
-        },
-        TestCollectionAsset {
-            id: Arc::from("beta"),
-            label: Arc::from("Beta"),
-            path: Arc::from("textures/beta.ktx2"),
-        },
-        TestCollectionAsset {
-            id: Arc::from("gamma"),
-            label: Arc::from("Gamma"),
-            path: Arc::from("textures/gamma.ktx2"),
-        },
-        TestCollectionAsset {
-            id: Arc::from("delta"),
-            label: Arc::from("Delta"),
-            path: Arc::from("textures/delta.ktx2"),
-        },
-    ]
-    .into()
-}
-
-fn selected_test_collection_assets<'a>(
-    assets: &'a [TestCollectionAsset],
-    selection: &ImUiMultiSelectState<Arc<str>>,
-) -> Vec<&'a TestCollectionAsset> {
-    selection
-        .selected()
-        .iter()
-        .filter_map(|id| assets.iter().find(|asset| asset.id == *id))
-        .collect()
-}
-
-fn test_collection_drag_payload_for_asset(
-    assets: &[TestCollectionAsset],
-    selection: &ImUiMultiSelectState<Arc<str>>,
-    dragged: &TestCollectionAsset,
-) -> TestCollectionDragPayload {
-    let selected_assets = selected_test_collection_assets(assets, selection);
-    let payload_assets = if selection.is_selected(&dragged.id) && !selected_assets.is_empty() {
-        selected_assets
-    } else {
-        vec![dragged]
-    };
-
-    let ids = payload_assets
-        .iter()
-        .map(|asset| asset.id.clone())
-        .collect::<Vec<_>>();
-    let paths = payload_assets
-        .iter()
-        .map(|asset| asset.path.clone())
-        .collect::<Vec<_>>();
-
-    TestCollectionDragPayload {
-        ids: ids.into(),
-        paths: paths.into(),
-    }
 }
 
 fn test_sortable_order_line(items: &[TestSortableItem]) -> String {

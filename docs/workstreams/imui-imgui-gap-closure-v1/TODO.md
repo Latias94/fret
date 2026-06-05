@@ -265,6 +265,19 @@ Last updated: 2026-06-06
       transfer, and cancellation cleanup proof. The IMUI source gate and workstream source bundle
       freeze the child-owner split.
 
+## Fret-ImUi Collection Drag Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` collection-drag proof file into collection fixture/payload and
+      scenario child owners without changing selected-set payload formation, visible-order
+      reversal behavior, preview/delivered payload assertions, public APIs, or the
+      `fret-ui-kit::imui` drag/drop and multi-select implementations.
+      Result: `interaction_drag/collection_drag.rs` is now a thin module hub.
+      `collection_drag/fixtures.rs` owns collection asset fixtures, selected-asset projection, and
+      payload formation proof for selected versus unselected drags, while
+      `collection_drag/scenario.rs` owns the order-flip drag/drop behavior proof. The
+      `interaction_drag/mod.rs` parent now keeps only shared drag/sortable fixtures. The IMUI
+      source gate and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating movement/z-order proof file into movement, window-control,

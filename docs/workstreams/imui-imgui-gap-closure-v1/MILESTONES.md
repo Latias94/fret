@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi collection-drag proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_drag/collection_drag.rs` now keeps only shared imports
+and child-owner routing for the collection-drag proof surface. `collection_drag/fixtures.rs` owns
+collection asset fixtures, selected-asset projection, and payload formation proof for selected
+versus unselected drags, while `collection_drag/scenario.rs` owns the visible-order flip
+drag/drop behavior proof. The parent `interaction_drag/mod.rs` no longer carries collection-only
+fixtures and keeps shared drag/sortable proof support. No `fret-ui-kit::imui` drag/drop or
+multi-select runtime implementation, `fret-imui` public facade, or option API changed.
+
 2026-06-06 Fret-ImUi drag-preview proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_drag/drag_preview.rs` now keeps only shared imports and
 child-owner routing for the drag-preview proof surface. `drag_preview/local_ghost.rs` owns local

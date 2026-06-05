@@ -35202,3 +35202,25 @@ Focused gates:
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
+
+2026-06-06 fret-imui collection drag proof owner split:
+
+- Claim: `ecosystem/fret-imui/src/tests/interaction_drag/collection_drag.rs` was split into a thin
+  hub plus collection fixture/payload and scenario child proof owners without changing selected-set
+  payload formation, visible-order reversal behavior, preview/delivered payload assertions, public
+  APIs, or the `fret-ui-kit::imui` drag/drop and multi-select implementations.
+- Evidence anchors: `collection_drag.rs` now declares only `mod fixtures;` and `mod scenario;`;
+  `collection_drag/fixtures.rs` owns collection asset fixtures, selected-asset projection, payload
+  formation, and selected versus unselected payload proofs; `collection_drag/scenario.rs` owns the
+  visible-order flip drag/drop behavior proof. `interaction_drag/mod.rs` no longer owns
+  collection-only asset or payload fixtures, while `tools/gate_imui_workstream_source.py` freezes
+  the hub/fixture/scenario owner boundary.
+- Passed: `cargo fmt --package fret-imui`.
+- Passed: `cargo fmt --package fret-imui -- --check`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `cargo nextest run -p fret-imui collection_drag --no-fail-fast` (3 tests passed, 185 skipped).
+- Passed: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` (10 tests passed, 178 skipped).
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

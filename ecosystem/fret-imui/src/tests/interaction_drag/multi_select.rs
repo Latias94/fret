@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_kit::imui::ImUiMultiSelectState;
 
 #[test]
 fn multi_selectable_supports_plain_toggle_and_range_clicks() {
