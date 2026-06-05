@@ -94,6 +94,19 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Region Containers Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` region-containers proof file into scrolling, menu/popup, chrome,
+      auto-size, and ListBox child owners without changing child-region behavior, public APIs, or
+      the `fret-ui-kit::imui` child-region implementation.
+      Result: `composition/layout_collections/region_containers.rs` now keeps only shared imports
+      and module routing. `region_containers/scrolling.rs` owns stacked-content and scroll-handle
+      forwarding proof, `region_containers/menu_popup.rs` owns menu-bar and popup-menu hosting
+      proof, `region_containers/chrome.rs` owns framed/bare chrome and resize-Y handle chrome
+      proof, `region_containers/auto_size.rs` owns unconstrained height/width auto-size proof, and
+      the existing `region_containers/list_box.rs` remains the ListBox semantics/scroll/selectable
+      proof owner. The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Floating Window-Options Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating window-options proof file into disabled-option, resize, and

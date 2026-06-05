@@ -3671,6 +3671,11 @@ def main() -> None:
                 "window_options/resize.rs",
                 "window_options/collapse.rs",
                 "title-bar double-click collapse/expand lifecycle",
+                "Fret-ImUi Region Containers Proof Owner Split Evidence - 2026-06-05",
+                "region_containers/scrolling.rs",
+                "region_containers/menu_popup.rs",
+                "region_containers/chrome.rs",
+                "region_containers/auto_size.rs",
                 "Kit IMUI Source Thinness Guard - 2026-06-03",
                 "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
                 "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",
@@ -13454,18 +13459,113 @@ def main() -> None:
             ),
             required=[
                 "use super::*;",
+                "mod auto_size;",
+                "mod chrome;",
                 "mod list_box;",
+                "mod menu_popup;",
+                "mod scrolling;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
                 "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
                 "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
                 "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
                 "fn child_region_without_height_constraint_auto_sizes_to_content()",
                 "fn child_region_without_width_constraint_auto_sizes_to_content()",
-            ],
-            forbidden=[
                 "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
                 "ui.list_box_with_options(",
                 "SemanticsRole::ListBox",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/scrolling.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
+                "ScrollHandle::default()",
+                "viewport_test_id: Some(Arc::from(\"imui-child-region.viewport\"))",
+                "content_test_id: Some(Arc::from(\"imui-child-region.content\"))",
+                "handle.max_offset().y.0 > 0.0",
+                "handle.set_offset(Point::new(Px(0.0), Px(80.0)))",
+            ],
+            forbidden=[
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/menu_popup.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "ui.menu_bar_with_options",
+                "ui.begin_menu_with_options",
+                "\"imui-child-region-with-menu.file.open\"",
+                "advance_and_run_frame(",
+            ],
+            forbidden=[
+                "fn child_region_helper_stacks_content",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/chrome.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "ChildRegionChrome::Bare",
+                "\"imui-child-region.chrome.framed\"",
+                "\"imui-child-region.chrome.bare\"",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "ChildRegionResizeYOptions::new()",
+                "\"imui-child-region.resize-y.handle\"",
+            ],
+            forbidden=[
+                "fn child_region_helper_stacks_content",
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "fn child_region_without_width_constraint_auto_sizes_to_content()",
+                "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/auto_size.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "\"imui-child-region.auto-height\"",
+                "\"imui-child-region.auto-height.viewport\"",
+                "\"imui-child-region.auto-height.after\"",
+                "auto-height child region should contain measured content",
+                "following siblings should be pushed below the auto-height child region",
+                "fn child_region_without_width_constraint_auto_sizes_to_content()",
+                "\"imui-child-region.auto-width\"",
+                "\"imui-child-region.auto-width.viewport\"",
+                "\"imui-child-region.auto-width.after\"",
+                "auto-width child region should contain measured content",
+                "following siblings should be pushed after the auto-width child region",
+            ],
+            forbidden=[
+                "fn child_region_helper_stacks_content",
+                "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
+                "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "fn list_box_container_stamps_semantics_scroll_and_hosts_selectables()",
             ],
         ),
         SourceCheck(
@@ -13488,6 +13588,9 @@ def main() -> None:
                 "fn child_region_helper_stacks_content_and_forwards_scroll_options()",
                 "fn child_region_helper_can_host_menu_bar_and_popup_menu()",
                 "fn child_region_helper_can_switch_between_framed_and_bare_chrome()",
+                "fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome()",
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "fn child_region_without_width_constraint_auto_sizes_to_content()",
             ],
         ),
         SourceCheck(
@@ -16431,7 +16534,7 @@ def main() -> None:
         ),
         SourceCheck(
             Path(
-                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs"
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/auto_size.rs"
             ),
             required=[
                 "fn child_region_without_height_constraint_auto_sizes_to_content()",

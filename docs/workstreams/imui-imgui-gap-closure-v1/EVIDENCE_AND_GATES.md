@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Region Containers Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` region-containers proof surface is split by scrolling,
+menu/popup hosting, chrome/resize chrome, auto-size, and ListBox behavior owner without changing
+child-region runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs` now keeps
+  only shared imports and child-owner routing for `scrolling`, `menu_popup`, `chrome`,
+  `auto_size`, and the existing `list_box` owner.
+- `region_containers/scrolling.rs` owns stacked content and scroll-handle forwarding proof.
+- `region_containers/menu_popup.rs` owns child-region menu-bar and popup-menu hosting proof.
+- `region_containers/chrome.rs` owns framed versus bare chrome and resize-Y handle chrome proof.
+- `region_containers/auto_size.rs` owns unconstrained height/width auto-size proof.
+- `region_containers/list_box.rs` remains the ListBox semantics/scroll/selectable proof owner.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui composition::layout_collections::region_containers
+  --no-fail-fast`: pass, 7 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with a Git line-ending warning for
+  `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs`.
+
 ## Fret-ImUi Floating Window-Options Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` floating window-options proof surface is split by disabled-option,

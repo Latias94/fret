@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi region-containers proof owner-split result:
+`ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs` now keeps only
+shared imports and child-owner routing for the region-container proof surface.
+`region_containers/scrolling.rs` owns stacked-content and scroll-handle forwarding proof,
+`menu_popup.rs` owns menu-bar and popup-menu hosting proof, `chrome.rs` owns framed/bare chrome and
+resize-Y handle chrome proof, `auto_size.rs` owns unconstrained height/width auto-size proof, and
+the existing `list_box.rs` continues to own ListBox semantics/scroll/selectable proof. No
+`fret-ui-kit::imui` child-region runtime implementation, `fret-imui` public facade, or
+child-region option API changed.
+
 2026-06-05 Fret-ImUi floating window-options proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/window_options.rs` now keeps only shared imports and
 child-owner routing for the floating window-options proof surface.
