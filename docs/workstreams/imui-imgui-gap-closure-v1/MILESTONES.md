@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi control-geometry proof owner-split result:
+`ecosystem/fret-imui/src/tests/composition/control_geometry.rs` now keeps only shared geometry
+helpers and child-owner routing for the control-geometry proof surface. `control_geometry/variants.rs`
+owns small/arrow/invisible-button and radio mount/bounds proof, `base_controls.rs` owns base
+control hover/focus/pressed/value/selected bounds stability proof, `menu_tabs.rs` owns menu and tab
+trigger hover/focus/press/open/selection bounds stability proof, and `disabled.rs` owns
+enabled-to-disabled bounds stability proof across text, button, selection, menu, submenu, and tab
+controls. No `fret-ui-kit::imui` control runtime implementation, `fret-imui` public facade, or
+control option API changed.
+
 2026-06-05 Fret-ImUi combo-model proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` now keeps only child-owner routing for
 the combo-model proof surface. `combo_model/selection.rs` owns changed-on-pick, selected model

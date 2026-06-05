@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Control Geometry Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` control-geometry proof surface is split by geometry behavior owner
+without changing control runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/control_geometry.rs` now keeps only shared geometry
+  helpers plus child-owner routing for `variants`, `base_controls`, `menu_tabs`, and `disabled`.
+- `control_geometry/variants.rs` owns small/arrow/invisible-button and radio mount/bounds proof.
+- `control_geometry/base_controls.rs` owns base control hover/focus/pressed/value/selected bounds
+  stability proof.
+- `control_geometry/menu_tabs.rs` owns menu and tab trigger hover/focus/press/open/selection bounds
+  stability proof.
+- `control_geometry/disabled.rs` owns enabled-to-disabled bounds stability proof across text,
+  button, selection, menu, submenu, and tab controls.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui composition::control_geometry --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Combo Model Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` combo-model proof surface is split by model-combo behavior owner

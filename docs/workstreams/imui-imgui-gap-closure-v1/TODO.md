@@ -150,6 +150,20 @@ Last updated: 2026-06-05
       override proof, and `combo_model/shortcuts.rs` owns focused-trigger shortcut scoping and
       `shortcut_repeat` opt-in proof. The IMUI source gate freezes the child-owner split.
 
+## Fret-ImUi Control Geometry Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` control-geometry proof file into variants, base-control state,
+      menu/tab trigger state, and disabled-state child owners without changing control runtime
+      behavior, public APIs, or the `fret-ui-kit::imui` control policy implementation.
+      Result: `composition/control_geometry.rs` now keeps only shared geometry helpers and module
+      routing. `control_geometry/variants.rs` owns small/arrow/invisible-button and radio
+      mount/bounds proof, `control_geometry/base_controls.rs` owns base control
+      hover/focus/pressed/value/selected bounds stability proof, `control_geometry/menu_tabs.rs`
+      owns menu and tab trigger hover/focus/press/open/selection bounds stability proof, and
+      `control_geometry/disabled.rs` owns enabled-to-disabled bounds stability proof across text,
+      button, selection, menu, submenu, and tab controls. The IMUI source gate freezes the
+      child-owner split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching
