@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-06
 
+## Fret-ImUi Floating Input Modes Activation Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` floating input-mode activation proof subset is split by content
+activation, focus/z-order, and resize-handle activation owner without changing floating-window
+runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/floating/input_modes/activation.rs` now keeps only shared imports
+  and child-owner routing for `content`, `focus_z_order`, and `resize_handles`.
+- `input_modes/activation/content.rs` owns content activate-on-click disabled z-order proof.
+- `input_modes/activation/focus_z_order.rs` owns focus-on-click without z-order activation proof.
+- `input_modes/activation/resize_handles.rs` owns resize-handle activate-on-click disabled proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui floating::input_modes --no-fail-fast`: pass on retry with a
+  longer command timeout, 9 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Submenu Shortcuts Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` submenu-shortcuts proof surface is split by focused-trigger

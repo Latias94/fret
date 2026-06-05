@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi floating input-mode activation proof owner-split result:
+`ecosystem/fret-imui/src/tests/floating/input_modes/activation.rs` now keeps only shared imports
+and child-owner routing for the activation subset of the floating input-mode proof surface.
+`activation/content.rs` owns content activate-on-click disabled z-order proof,
+`activation/focus_z_order.rs` owns focus-on-click without z-order activation proof, and
+`activation/resize_handles.rs` owns resize-handle activate-on-click disabled proof. No
+`fret-ui-kit::imui` floating runtime implementation, `fret-imui` public facade, or floating option
+API changed.
+
 2026-06-06 Fret-ImUi submenu-shortcuts proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts.rs` now keeps only shared
 imports and child-owner routing for the submenu shortcut proof surface.

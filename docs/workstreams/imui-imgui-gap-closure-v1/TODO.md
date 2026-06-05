@@ -94,6 +94,17 @@ Last updated: 2026-06-06
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Floating Input Modes Activation Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` floating input-mode activation proof owner into content,
+      focus/z-order, and resize-handle child owners without changing floating-window behavior,
+      public APIs, option names, or the `fret-ui-kit::imui` floating implementation.
+      Result: `floating/input_modes/activation.rs` now keeps only shared imports and module
+      routing. `activation/content.rs` owns content activate-on-click disabled z-order proof,
+      `activation/focus_z_order.rs` owns focus-on-click without z-order activation proof, and
+      `activation/resize_handles.rs` owns resize-handle activate-on-click disabled proof. The
+      IMUI source gate and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Disclosure Tree Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` disclosure-tree proof file into checkbox, collapsing-header,
