@@ -254,6 +254,17 @@ Last updated: 2026-06-06
       and `drag_core/drop_helper.rs` owns preview/delivered payload helper proof. The IMUI source
       gate and workstream source bundle freeze the child-owner split.
 
+## Fret-ImUi Drag Preview Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` drag-preview proof file into local ghost and cross-window ghost child
+      owners without changing drag preview runtime behavior, public APIs, overlay routing,
+      cross-window hover transfer semantics, or the `fret-ui-kit::imui` drag-preview recipe.
+      Result: `interaction_drag/drag_preview.rs` is now a thin module hub.
+      `drag_preview/local_ghost.rs` owns local pointer-following ghost placement and release
+      cleanup proof, while `drag_preview/cross_window.rs` owns cross-window ghost publication,
+      transfer, and cancellation cleanup proof. The IMUI source gate and workstream source bundle
+      freeze the child-owner split.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating movement/z-order proof file into movement, window-control,

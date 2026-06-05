@@ -2177,7 +2177,10 @@
     "ecosystem/fret-imui/src/tests/interaction_drag/drag_core.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/drag_core/drop_helper.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/drag_core/signals.rs",
-    "ecosystem/fret-imui/src/tests/interaction_drag/drag_core/threshold.rs"
+    "ecosystem/fret-imui/src/tests/interaction_drag/drag_core/threshold.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/drag_preview.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/drag_preview/cross_window.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/drag_preview/local_ghost.rs"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",

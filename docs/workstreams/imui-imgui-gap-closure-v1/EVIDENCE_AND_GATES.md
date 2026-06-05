@@ -35179,3 +35179,26 @@ Focused gates:
 - Passed: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` (8 tests passed, 178 skipped).
 - Passed: `python tools\gate_imui_workstream_source.py`.
 - Passed: `python tools\check_workstream_catalog.py`.
+
+2026-06-06 fret-imui drag preview proof owner split:
+
+- Claim: `ecosystem/fret-imui/src/tests/interaction_drag/drag_preview.rs` was split into a thin hub
+  plus local ghost and cross-window ghost child proof owners without changing drag preview runtime
+  behavior, public APIs, overlay routing, cross-window hover transfer semantics, or the
+  `fret-ui-kit::imui` drag-preview recipe.
+- Evidence anchors: `drag_preview.rs` now declares only `mod cross_window;` and `mod local_ghost;`;
+  `drag_preview/local_ghost.rs` owns local pointer-following ghost placement and release cleanup
+  proof; and `drag_preview/cross_window.rs` owns cross-window ghost publication, transfer, and
+  cancellation cleanup proof. `WORKSTREAM.json` lists the hub and child proof owners, while
+  `tools/gate_imui_workstream_source.py` requires the split and rejects test bodies drifting back
+  into the hub.
+- Passed: `cargo fmt --package fret-imui`.
+- Passed: `cargo fmt --package fret-imui -- --check`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `cargo nextest run -p fret-imui drag_preview --no-fail-fast` on retry with a longer
+  command timeout after an initial build-lock timeout (2 tests passed, 184 skipped).
+- Passed: `cargo nextest run -p fret-imui interaction_drag --no-fail-fast` (8 tests passed, 178 skipped).
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.

@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi drag-preview proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_drag/drag_preview.rs` now keeps only shared imports and
+child-owner routing for the drag-preview proof surface. `drag_preview/local_ghost.rs` owns local
+pointer-following ghost placement and release cleanup proof, while
+`drag_preview/cross_window.rs` owns cross-window ghost publication, transfer, and cancellation
+cleanup proof. No `fret-ui-kit::imui` drag-preview recipe, `fret-imui` public facade, or
+drag/drop option API changed.
+
 2026-06-06 Fret-ImUi floating input-mode no-input proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/input_modes/no_inputs.rs` now keeps only shared imports and
 child-owner routing for the no-input subset of the floating input-mode proof surface.
