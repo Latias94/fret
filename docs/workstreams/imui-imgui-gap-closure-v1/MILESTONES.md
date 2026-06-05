@@ -7523,3 +7523,16 @@ Picker/numeric/side-preview defaults, popup visible-content behavior, picker run
 semantics, runtime default synchronization, public option type names, and public ColorEdit / IMUI
 facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py` plus
 `imui_surface_policy` freeze the popup options child-owner split.
+
+2026-06-05 supporting editor proof workbench shell owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo.rs` now keeps proof rendering, editor-control
+composition, authoring parity sections, and supporting proof routing while delegating dock/window
+shell behavior to `apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs`. The new
+owner carries the dock panel registry, dock test-id derivation, dock graph ensure/reset policy,
+single-window floating fallback graph, auxiliary-window bootstrap service, window-create specs,
+dock lifecycle callbacks. The same slice also moves the local `slotmap::Key` import to the
+`fret-launch` diag screenshot owner that calls `AppWindowId::data()`. The canonical
+`imui_editor_workbench_demo` product route, supporting dense proof rendering, dock graph defaults,
+auxiliary window behavior, and public IMUI/editor APIs remain unchanged, and
+`tools/gate_imui_workstream_source.py` plus
+`imui_editor_proof_workbench_shell_surface` freeze the shell owner boundary.

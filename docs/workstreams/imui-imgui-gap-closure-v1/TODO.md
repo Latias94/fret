@@ -7759,3 +7759,16 @@ opening the slice.
       enum records and defaults, while `options/popup/runtime.rs` owns
       `ColorEditPopupRuntimeOptions` and `sync_defaults(...)`. The workstream manifest, source
       gate, and `imui_surface_policy` freeze the popup options child owner boundaries.
+- [x] Split supporting `imui_editor_proof_demo` dock/window workbench shell policy into a
+      demo-local child owner without changing the canonical `imui_editor_workbench_demo` route,
+      supporting proof rendering, dock graph defaults, single-window floating fallback,
+      auxiliary-window restore/raise policy, dock invalidation callbacks, or public IMUI/editor
+      APIs.
+      Result: `imui_editor_proof_demo.rs` now keeps proof rendering and delegates dock/window shell
+      behavior through `workbench_shell`. The new
+      `imui_editor_proof_demo/workbench_shell.rs` owns the dock panel registry, dock test-id
+      routing, dock graph reset/ensure policy, auxiliary window bootstrap service, window-create
+      specs, and dock lifecycle callbacks. The same slice also moves the local `slotmap::Key`
+      import to the `fret-launch` diag screenshot owner that calls `AppWindowId::data()`. The
+      workstream manifest, source gate, and `imui_editor_proof_workbench_shell_surface` freeze the
+      owner boundary.

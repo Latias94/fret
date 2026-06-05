@@ -29516,6 +29516,38 @@ Focused gates:
 - Passed: `git diff --check`.
 - Passed: `git diff --cached --check`.
 
+2026-06-05 supporting editor proof workbench shell owner split:
+
+- Claim: supporting `imui_editor_proof_demo` dock/window shell policy moved from
+  `apps/fret-examples/src/imui_editor_proof_demo.rs` into the demo-local
+  `apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs` owner without changing the
+  canonical `imui_editor_workbench_demo` route, supporting proof rendering, dock graph defaults,
+  single-window floating fallback, auxiliary-window restore/raise policy, dock invalidation
+  callbacks, public IMUI/editor APIs, or runner screenshot behavior.
+- Evidence anchors: `imui_editor_proof_demo.rs` declares `mod workbench_shell;` and routes
+  driver hooks, dock registry installation, aux-window bootstrap, dock test-id derivation, dock
+  graph reset, and dock graph ensure calls through `workbench_shell::...`.
+  `workbench_shell.rs` owns `ImUiEditorProofControlsPanelRegistry`, `WindowBootstrapService`,
+  `dock_test_id_for_window(...)`, `ensure_dock_graph(...)`, `reset_dock_graph(...)`,
+  `ensure_aux_window_requested(...)`, `window_create_spec(...)`, `window_created(...)`,
+  `before_close_window(...)`, and dock runtime callback wiring. The supporting proof surface test
+  `apps/fret-examples/tests/imui_editor_proof_workbench_shell_surface.rs` and
+  `tools/gate_imui_workstream_source.py` reject the dock/window owner drifting back into the proof
+  rendering file. `crates/fret-launch/src/runner/desktop/runner/window_redraw_diag_screenshots.rs`
+  now owns the `slotmap::Key` import required for `AppWindowId::data()` after the focused
+  `cargo check` surfaced the misplaced import.
+- Passed: `cargo fmt --package fret-examples --package fret-launch -- --check`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` (with existing dead-code warnings
+  in `fret-chart` and `fret-plot`).
+- Passed: `cargo nextest run -p fret-examples --test imui_editor_proof_workbench_shell_surface --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+- Passed: `git diff --cached --check`.
+
 2026-06-05 editor ColorEdit popup swatch slot child-owner split:
 
 - Claim: ColorEdit popup preset swatch activation, delivered palette-slot drop dispatch, and
