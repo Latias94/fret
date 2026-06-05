@@ -44,6 +44,9 @@ def main() -> None:
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
     )
+    collection_browser_scope = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs"
+    )
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
@@ -76,6 +79,7 @@ def main() -> None:
     )
     collection_children = (
         collection_asset_grid,
+        collection_browser_scope,
         collection_box_select,
         collection_command_buttons,
         collection_context_menu,
@@ -112,6 +116,7 @@ def main() -> None:
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
                 "mod asset_grid;",
+                "mod browser_scope;",
                 "mod box_select;",
                 "mod command_buttons;",
                 "mod context_menu;",
@@ -159,6 +164,43 @@ def main() -> None:
                 "ui.button_with_options(",
                 "ui.begin_popup_menu(",
                 "drop_target::<",
+            ],
+        ),
+        SourceCheck(
+            "collection browser scope owner",
+            collection_browser_scope,
+            required=[
+                "pub(super) struct ProofCollectionBrowserScopeModels {",
+                "pub(super) struct ProofCollectionBrowserScopeState<'a> {",
+                "pub(super) fn render_collection_browser_scope(",
+                "ui.child_region_with_options(",
+                "kit::ChildRegionOptions {",
+                "fret_ui::element::PointerRegionProps::default()",
+                "props.capture_phase_pointer_moves = true;",
+                "install_collection_keyboard_handler(",
+                "cx.pointer_region_on_wheel(",
+                "proof_collection_zoom_request(",
+                "cx.pointer_region_on_pointer_down(",
+                "cx.pointer_region_on_pointer_move(",
+                "cx.pointer_region_on_pointer_up(",
+                "cx.pointer_region_on_pointer_cancel(",
+                "proof_collection_box_select_selection(",
+                "state.clear();",
+                "proof_collection_box_select_active_rect(",
+                "render_collection_asset_grid(",
+                "\"imui-editor-proof.authoring.imui.collection.browser\"",
+                "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
+                "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
+                "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
+                "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+                "TextField::new(",
+                "drag_preview_ghost_with_options(",
             ],
         ),
         SourceCheck(
@@ -447,11 +489,9 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            "collection asset grid delegation",
-            collection,
+            "collection browser scope asset grid mount",
+            collection_browser_scope,
             required=[
-                "mod asset_grid;",
-                "use asset_grid::{",
                 "render_collection_asset_grid(",
                 "ProofCollectionAssetGridModels {",
                 "ProofCollectionAssetGridState {",
@@ -461,6 +501,28 @@ def main() -> None:
                 "TextField::new(",
                 "drag_preview_ghost_with_options(",
                 "render_collection_inline_rename_field(",
+            ],
+        ),
+        SourceCheck(
+            "collection browser scope delegation",
+            collection,
+            required=[
+                "mod browser_scope;",
+                "use browser_scope::{",
+                "render_collection_browser_scope(",
+                "ProofCollectionBrowserScopeModels {",
+                "ProofCollectionBrowserScopeState {",
+            ],
+            forbidden=[
+                "ui.child_region_with_options(",
+                "fret_ui::element::PointerRegionProps::default()",
+                "install_collection_keyboard_handler(",
+                "cx.pointer_region_on_wheel(",
+                "cx.pointer_region_on_pointer_down(",
+                "cx.pointer_region_on_pointer_move(",
+                "cx.pointer_region_on_pointer_up(",
+                "cx.pointer_region_on_pointer_cancel(",
+                "proof_collection_box_select_active_rect(",
             ],
         ),
         SourceCheck(

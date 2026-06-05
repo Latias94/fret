@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof browser-scope owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now delegates the browser region
+through `render_collection_browser_scope(...)` after computing visible assets, keys, active asset,
+rename readiness, and layout readouts. `apps/fret-examples/src/imui_editor_proof_demo/collection/
+browser_scope.rs` owns `ProofCollectionBrowserScopeModels`, `ProofCollectionBrowserScopeState`,
+child-region options, scroll handle binding, pointer-region construction, keyboard handler
+installation, primary-wheel zoom model/scroll updates, background pointer box-select transitions,
+background context-menu anchor publication, marquee overlay mounting, and asset-grid owner
+mounting. Child-region IDs, scroll binding, pointer semantics, keyboard dispatch, zoom behavior,
+box-select projection, and asset-grid tile behavior remain unchanged.
+
 2026-06-05 collection proof asset-grid owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the browser child region,
 pointer/wheel/box-select scope, and marquee overlay mounting, then delegates tile-grid rendering

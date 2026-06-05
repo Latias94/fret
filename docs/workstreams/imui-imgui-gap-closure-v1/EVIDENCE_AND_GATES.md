@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Browser-Scope Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof browser child-region and pointer runtime moved out of the
+render/root owner without changing child-region IDs, scroll binding, keyboard handler installation,
+primary-wheel zoom, background context-menu opening, box-select pointer capture/projection,
+marquee overlay mounting, asset-grid mounting, or the app-owned no-helper-widening boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now delegates the browser region
+  through `render_collection_browser_scope(...)` after computing visible assets, keys, active asset,
+  rename readiness, and layout readouts.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` owns
+  `ProofCollectionBrowserScopeModels`, `ProofCollectionBrowserScopeState`, child-region options,
+  scroll handle binding, pointer-region construction, keyboard handler installation, primary-wheel
+  zoom model/scroll updates, background pointer box-select transitions, background context-menu
+  anchor publication, marquee overlay mounting, and asset-grid owner mounting.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` remains the tile-grid
+  workflow owner; browser scope calls it rather than taking tile selectable/inline-rename/drag-ghost
+  policy back into the root owner.
+- The command-package and modularization surface tests now require the browser-scope owner markers
+  and assert that `collection.rs` no longer directly renders the child-region runtime.
+- The collection source tests and source gates now compose `collection.rs`, `asset_grid.rs`,
+  `browser_scope.rs`, `box_select.rs`, `command_buttons.rs`, `context_menu.rs`, `drag_drop.rs`,
+  `geometry.rs`, `keyboard.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for
+  app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new browser-scope owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `git diff --check`: pass.
+
 ## Collection Proof Asset-Grid Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof asset-grid/tile rendering moved out of the render/root owner without

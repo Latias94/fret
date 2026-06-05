@@ -7895,3 +7895,15 @@ opening the slice.
       drag-source/ghost wiring, rendered-item capture, and tile metadata/path readouts. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       asset-grid owner.
+- [x] Split collection proof browser child-region and pointer runtime out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/browser_scope.rs` child owner without changing child-region IDs, scroll binding,
+      keyboard handler installation, primary-wheel zoom, background context-menu opening,
+      box-select pointer capture/projection, marquee overlay mounting, asset-grid mounting, or the
+      app-owned no-helper-widening boundary. Result: `collection.rs` delegates the browser region
+      through `render_collection_browser_scope(...)`, while `collection/browser_scope.rs` owns
+      `ProofCollectionBrowserScopeModels`, `ProofCollectionBrowserScopeState`, child-region options,
+      scroll handle binding, pointer-region construction, keyboard handler installation, zoom
+      model/scroll updates, background box-select transitions, context-menu anchor publication,
+      marquee overlay mounting, and asset-grid owner mounting. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the browser-scope owner.

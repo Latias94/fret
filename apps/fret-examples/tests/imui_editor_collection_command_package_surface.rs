@@ -2,12 +2,16 @@
 fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explicit() {
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let browser_scope_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let source = concat!(
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
         "\n",
@@ -95,6 +99,28 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
     assert!(
         !collection_source.contains("ui.grid_with_options("),
         "collection root should delegate asset-grid rendering to the asset-grid owner"
+    );
+
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeModels",
+        "pub(super) struct ProofCollectionBrowserScopeState",
+        "pub(super) fn render_collection_browser_scope(",
+        "ui.child_region_with_options(",
+        "cx.pointer_region_on_wheel(",
+        "cx.pointer_region_on_pointer_down(",
+        "cx.pointer_region_on_pointer_move(",
+        "cx.pointer_region_on_pointer_up(",
+        "cx.pointer_region_on_pointer_cancel(",
+        "render_collection_asset_grid(",
+    ] {
+        assert!(
+            browser_scope_source.contains(needle),
+            "collection browser-scope owner should route child-region pointer runtime through app-owned state transitions; missing `{needle}`"
+        );
+    }
+    assert!(
+        !collection_source.contains("ui.child_region_with_options("),
+        "collection root should delegate browser child-region runtime to the browser-scope owner"
     );
 
     for needle in [
