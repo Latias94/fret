@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative query/box selection test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root pan and
+draggable-output regression suites, and child test-owner routing.
+`ecosystem/fret-plot/src/declarative/tests/query_box_selection.rs` owns query drag state/output,
+box-zoom view updates, active/persisted selection rectangles, and query/zoom tooltip regressions.
+No plot implementation, public panel prop, optional `fret-plot/imui` adapter routing, pan test, or
+draggable-output test changed.
+
 2026-06-05 Fret Plot declarative overlay paint test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root
 selection/drag-output regression suites, and child test-owner routing.

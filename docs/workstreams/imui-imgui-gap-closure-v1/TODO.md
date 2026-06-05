@@ -6910,6 +6910,14 @@ opening the slice.
       selection/drag-output regression suites, and child test-owner routing while
       `ecosystem/fret-plot/src/declarative/tests/overlays.rs` owns the overlay paint regression
       suite for reference, draggable, text, tag, image, and right-axis overlay cases.
+- [x] Split Fret Plot declarative query/box selection regression tests out of the root test owner
+      without changing implementation code, public panel props, optional IMUI adapter routing,
+      query drag state/output publication, box-zoom view-bounds updates, active/persisted
+      selection rectangles, query/zoom tooltip text, pan tests, or draggable output tests.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared harness, root pan
+      and draggable-output regression suites, and child test-owner routing while
+      `ecosystem/fret-plot/src/declarative/tests/query_box_selection.rs` owns the query drag,
+      box-zoom, selection-rectangle, and query/zoom tooltip tests.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
