@@ -37315,14 +37315,103 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover.rs"),
             required=[
+                "use super::*;",
+                "mod grace_corridor;",
+                "mod nested;",
+                "mod open_delay;",
+                "mod sibling_switch;",
+                "mod top_level;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn begin_menu_helper",
+                "fn begin_submenu_helper",
+                "history.response().core.",
+                "history.response().pointer_hovered_raw)",
+                "history.response().pointer_hovered_raw_below_barrier)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/grace_corridor.rs"),
+            required=[
+                "fn begin_submenu_helper_defers_sibling_switch_inside_grace_corridor()",
+                "fn begin_submenu_helper_safe_corridor_cancels_close_timer()",
+                "find_grace_corridor_transition_points(",
+                "find_safe_hover_corridor_points(",
+                "pending_nonrepeating_timer_tokens_after(",
                 "history.response().hovered()",
                 "history.response().pointer_hovered_raw()",
                 "history.response().pointer_hovered_raw_below_barrier()",
             ],
             forbidden=[
+                "fn begin_menu_helper_hover_switches_top_level",
+                "fn begin_submenu_helper_hover_opens_submenu",
+                "fn begin_submenu_helper_hover_switches_sibling",
                 "history.response().core.",
                 "history.response().pointer_hovered_raw)",
                 "history.response().pointer_hovered_raw_below_barrier)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/nested.rs"),
+            required=[
+                "fn begin_submenu_helper_opens_nested_menu_and_tracks_expanded_semantics()",
+                "SemanticsRole::MenuItem",
+                "recent_node.flags.expanded",
+            ],
+            forbidden=[
+                "fn begin_menu_helper_hover_switches_top_level",
+                "history.response().hovered()",
+                "find_grace_corridor_transition_points(",
+                "find_safe_hover_corridor_points(",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/open_delay.rs"),
+            required=[
+                "fn begin_submenu_helper_hover_opens_submenu_after_pointer_entry()",
+                "expected submenu open timer to arm",
+                "imui-submenu-hover-switch.file.recent.project",
+            ],
+            forbidden=[
+                "fn begin_menu_helper_hover_switches_top_level",
+                "fn begin_submenu_helper_hover_switches_sibling",
+                "history.response().hovered()",
+                "find_grace_corridor_transition_points(",
+                "find_safe_hover_corridor_points(",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/sibling_switch.rs"),
+            required=[
+                "fn begin_submenu_helper_hover_switches_sibling_after_open_delay()",
+                "history.response().hovered()",
+                "history.response().pointer_hovered_raw()",
+                "history.response().pointer_hovered_raw_below_barrier()",
+            ],
+            forbidden=[
+                "fn begin_menu_helper_hover_switches_top_level",
+                "fn begin_submenu_helper_defers_sibling",
+                "fn begin_submenu_helper_safe_corridor",
+                "find_grace_corridor_transition_points(",
+                "find_safe_hover_corridor_points(",
+                "history.response().core.",
+                "history.response().pointer_hovered_raw)",
+                "history.response().pointer_hovered_raw_below_barrier)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/top_level.rs"),
+            required=[
+                "fn begin_menu_helper_hover_switches_top_level_popup_after_trigger_hover_delay()",
+                "expected hover-switch timer to arm",
+                "imui-menu-hover-switch.edit.copy",
+            ],
+            forbidden=[
+                "fn begin_submenu_helper",
+                "history.response().hovered()",
+                "find_grace_corridor_transition_points(",
+                "find_safe_hover_corridor_points(",
             ],
         ),
         SourceCheck(

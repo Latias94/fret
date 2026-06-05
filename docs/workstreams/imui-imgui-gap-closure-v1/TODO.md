@@ -104,6 +104,16 @@ Last updated: 2026-06-05
       owns no-input and click-through/focus-skip proof, and `input_modes/passthrough.rs` owns
       pointer pass-through and nav-highlight proof. The IMUI source gate freezes the split.
 
+## Fret-ImUi Submenu Hover Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` submenu-hover proof file into nested semantics, top-level hover,
+      submenu open-delay, sibling hover-switch, and grace-corridor child owners without changing
+      menu runtime behavior, public APIs, or the `fret-ui-kit::imui` menu policy implementation.
+      Result: `interaction_menu_tabs/submenu_hover.rs` is now a thin module hub. The grace-corridor
+      proof owns its transition-point and timer helpers locally, while
+      `interaction_menu_tabs/mod.rs` keeps only the shared focus-test-id helper needed by other
+      menu tests. The IMUI source gate freezes the child-owner split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching

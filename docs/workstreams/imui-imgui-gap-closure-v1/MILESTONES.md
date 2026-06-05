@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi submenu-hover proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover.rs` now keeps only child-owner
+routing for the submenu-hover proof surface. `submenu_hover/nested.rs` owns nested submenu
+semantics and command activation, `top_level.rs` owns delayed top-level hover switching,
+`open_delay.rs` owns submenu pointer-entry open-delay, `sibling_switch.rs` owns sibling submenu
+hover switching, and `grace_corridor.rs` owns grace/safe corridor tests plus its local
+geometry/timer helpers. No `fret-ui-kit::imui` menu runtime implementation, `fret-imui` public
+facade, or menu option API changed.
+
 2026-06-05 Fret-ImUi floating input-mode proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/input_modes.rs` now keeps only child-owner routing for the
 floating input-mode proof surface. `input_modes/activation.rs` owns activate-on-click,

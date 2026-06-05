@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Submenu Hover Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` submenu-hover proof surface is split by menu interaction owner
+without changing menu runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover.rs` is now a thin module hub
+  for `nested`, `top_level`, `open_delay`, `sibling_switch`, and `grace_corridor` proof owners.
+- `submenu_hover/nested.rs` owns nested submenu semantics, expanded-state reporting, and command
+  activation proof.
+- `submenu_hover/top_level.rs` owns delayed top-level menu hover switching.
+- `submenu_hover/open_delay.rs` owns submenu pointer-entry open-delay proof.
+- `submenu_hover/sibling_switch.rs` owns sibling submenu hover-switch proof and raw hover signal
+  assertions.
+- `submenu_hover/grace_corridor.rs` owns grace-corridor and safe-corridor proof plus the
+  transition-point and timer helper functions that only those tests use.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_hover --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Floating Input Modes Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` floating input-mode proof surface is split by behavior owner
