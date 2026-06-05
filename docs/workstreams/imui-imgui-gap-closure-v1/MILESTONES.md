@@ -7567,3 +7567,12 @@ still rejecting shared-helper widening. The keyboard surface now checks the
 `ImUiMultiSelectState::first_selected()` accessor instead of the removed direct selected-field
 access, and `tools/gate_imui_editor_collection_source.py` now validates the same composed owner
 bundle.
+
+2026-06-05 collection proof model owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` now owns collection proof
+state/model slot registration: selection, stored assets, reverse order, box-select state, keyboard
+state, zoom extent, scroll handle, context-menu anchor, rename session/draft/focus/status, command
+status, and drop status. `collection.rs` keeps render assembly, pointer/key/menu handling, drag
+preview/drop policy, inline rename behavior, and command execution. The split leaves app-owned
+collection proof behavior unchanged while reducing the root owner and making model slot drift
+visible in `tools/gate_imui_editor_collection_source.py`.

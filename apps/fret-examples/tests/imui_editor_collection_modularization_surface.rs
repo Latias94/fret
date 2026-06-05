@@ -3,6 +3,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
+    let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
 
     for needle in [
         "mod collection;",
@@ -32,6 +33,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod geometry;",
+        "mod models;",
     ] {
         assert!(
             collection_source.contains(needle),
@@ -46,6 +48,17 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             geometry_source.contains(needle),
             "the demo-local collection geometry owner should keep the pure geometry test floor explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn authoring_parity_collection_selection_model<H: UiHost>(",
+        "pub(super) fn authoring_parity_collection_assets_model<H: UiHost>(",
+        "pub(super) fn authoring_parity_collection_scroll_handle<H: UiHost>(",
+    ] {
+        assert!(
+            models_source.contains(needle),
+            "the demo-local collection models owner should keep state slot registration explicit; missing `{needle}`"
         );
     }
 }

@@ -10,7 +10,6 @@ use fret_core::{Color, KeyCode, Modifiers, Point, PointerId, Px, Rect, Size};
 use fret_runtime::{Model, TimerToken};
 use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
 use fret_ui::element::Length;
-use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 use fret_ui_editor::controls::{
     EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldOptions,
@@ -27,6 +26,7 @@ use super::{
 };
 
 mod geometry;
+mod models;
 mod readouts;
 
 use geometry::{
@@ -34,6 +34,19 @@ use geometry::{
     proof_collection_drag_rect, proof_collection_drag_threshold_met,
     proof_collection_layout_metrics, proof_collection_localize_rect,
     proof_collection_rects_intersect, proof_collection_zoom_line, proof_collection_zoom_request,
+};
+use models::{
+    authoring_parity_collection_active_focus_target_model,
+    authoring_parity_collection_assets_model, authoring_parity_collection_box_select_model,
+    authoring_parity_collection_command_status_model,
+    authoring_parity_collection_context_menu_anchor_model,
+    authoring_parity_collection_drop_status_model, authoring_parity_collection_keyboard_model,
+    authoring_parity_collection_rename_draft_model,
+    authoring_parity_collection_rename_focus_pending_model,
+    authoring_parity_collection_rename_session_model,
+    authoring_parity_collection_rename_status_model,
+    authoring_parity_collection_reverse_order_model, authoring_parity_collection_scroll_handle,
+    authoring_parity_collection_selection_model, authoring_parity_collection_zoom_model,
 };
 use readouts::{
     proof_collection_active_line, proof_collection_assets_line,
@@ -884,188 +897,6 @@ pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]
         },
     ]
     .into()
-}
-
-fn authoring_parity_collection_selection_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<ImUiMultiSelectState<Arc<str>>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_selection",
-        |cx| {
-            let assets = authoring_parity_collection_assets();
-            let default_id = assets.first().map(|asset| asset.id.clone());
-            let state = default_id
-                .clone()
-                .map(ImUiMultiSelectState::single)
-                .unwrap_or_default();
-            cx.app.models_mut().insert(state)
-        },
-    )
-}
-
-fn authoring_parity_collection_assets_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Vec<ProofCollectionAsset>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_assets",
-        |cx| {
-            cx.app.models_mut().insert(
-                authoring_parity_collection_assets()
-                    .iter()
-                    .cloned()
-                    .collect::<Vec<_>>(),
-            )
-        },
-    )
-}
-
-fn authoring_parity_collection_reverse_order_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<bool> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_reverse_order",
-        |cx| cx.app.models_mut().insert(false),
-    )
-}
-
-fn authoring_parity_collection_box_select_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<ProofCollectionBoxSelectState> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_box_select",
-        |cx| {
-            cx.app
-                .models_mut()
-                .insert(ProofCollectionBoxSelectState::default())
-        },
-    )
-}
-
-fn authoring_parity_collection_keyboard_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<ProofCollectionKeyboardState> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_keyboard",
-        |cx| {
-            let active_id = authoring_parity_collection_assets()
-                .first()
-                .map(|asset| asset.id.clone());
-            cx.app
-                .models_mut()
-                .insert(ProofCollectionKeyboardState { active_id })
-        },
-    )
-}
-
-fn authoring_parity_collection_zoom_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Px> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_zoom",
-        |cx| {
-            cx.app
-                .models_mut()
-                .insert(Px(PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX))
-        },
-    )
-}
-
-fn authoring_parity_collection_scroll_handle<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> ScrollHandle {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.state.authoring_parity.collection_scroll_handle",
-        |_cx| ScrollHandle::default(),
-    )
-}
-
-fn authoring_parity_collection_context_menu_anchor_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Option<Point>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_context_menu_anchor",
-        |cx| cx.app.models_mut().insert(None::<Point>),
-    )
-}
-
-fn authoring_parity_collection_rename_session_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Option<ProofCollectionRenameSession>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_rename_session",
-        |cx| {
-            cx.app
-                .models_mut()
-                .insert(None::<ProofCollectionRenameSession>)
-        },
-    )
-}
-
-fn authoring_parity_collection_rename_draft_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_rename_draft",
-        |cx| cx.app.models_mut().insert(String::new()),
-    )
-}
-
-fn authoring_parity_collection_rename_focus_pending_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<bool> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_rename_focus_pending",
-        |cx| cx.app.models_mut().insert(false),
-    )
-}
-
-fn authoring_parity_collection_active_focus_target_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Option<GlobalElementId>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_active_focus_target",
-        |cx| cx.app.models_mut().insert(None::<GlobalElementId>),
-    )
-}
-
-fn authoring_parity_collection_rename_status_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_rename_status",
-        |cx| cx.app.models_mut().insert("Idle".to_string()),
-    )
-}
-
-fn authoring_parity_collection_command_status_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_command_status",
-        |cx| cx.app.models_mut().insert("Idle".to_string()),
-    )
-}
-
-fn authoring_parity_collection_drop_status_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.collection_drop_status",
-        |cx| cx.app.models_mut().insert("Idle".to_string()),
-    )
 }
 
 fn proof_collection_readout_text(

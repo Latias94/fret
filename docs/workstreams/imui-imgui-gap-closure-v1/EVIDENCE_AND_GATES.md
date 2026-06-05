@@ -29577,6 +29577,30 @@ Focused gates:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`.
 
+2026-06-05 collection proof model owner split:
+
+- Claim: collection proof model/state slot registration moved from
+  `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` without changing collection
+  proof UI behavior, asset defaults, selection defaults, scroll-handle state, context-menu anchor,
+  inline rename state, command/drop status, or app-owned interaction policy.
+- Evidence anchors: `collection.rs` declares `mod models;` and imports the
+  `authoring_parity_collection_*_model(...)` helpers plus
+  `authoring_parity_collection_scroll_handle(...)` from the child owner. `models.rs` owns those
+  helpers and the stable model/state keys. `tools/gate_imui_editor_collection_source.py` includes
+  the models owner in the composed source bundle and has a dedicated `collection models owner`
+  check.
+- Passed: `cargo fmt --package fret-examples -- --check`.
+- Passed: `cargo check -p fret-examples`.
+- Passed: `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`.
+
 2026-06-05 supporting editor proof workbench shell owner split:
 
 - Claim: supporting `imui_editor_proof_demo` dock/window shell policy moved from

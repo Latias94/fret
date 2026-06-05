@@ -7796,3 +7796,12 @@ opening the slice.
       the keyboard surface asserts `ImUiMultiSelectState::first_selected()` instead of private
       selection-field access. `tools/gate_imui_editor_collection_source.py` uses the same composed
       owner bundle for collection source markers.
+- [x] Split collection proof state/model slot registration out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/models.rs` child owner without changing asset defaults, selection defaults,
+      context-menu anchors, rename state, command/drop status, scroll handle identity, or render
+      call sites.
+      Result: `collection.rs` keeps proof rendering and app-owned interaction policy, while
+      `collection/models.rs` owns every `authoring_parity_collection_*_model(...)` helper plus the
+      collection scroll-handle state slot. The collection source gate and surface tests now include
+      the models owner.

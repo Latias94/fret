@@ -44,10 +44,13 @@ def main() -> None:
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
+    collection_models = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs"
+    )
     collection_readouts = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs"
     )
-    collection_children = (collection_geometry, collection_readouts)
+    collection_children = (collection_geometry, collection_models, collection_readouts)
 
     checks = [
         SourceCheck(
@@ -72,11 +75,40 @@ def main() -> None:
                 "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
+                "mod models;",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],
             forbidden=[],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection models owner",
+            collection_models,
+            required=[
+                "pub(super) fn authoring_parity_collection_selection_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_assets_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_reverse_order_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_box_select_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_keyboard_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_zoom_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_scroll_handle<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_context_menu_anchor_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_rename_session_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_rename_draft_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_rename_focus_pending_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_active_focus_target_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_rename_status_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_command_status_model<H: UiHost>(",
+                "pub(super) fn authoring_parity_collection_drop_status_model<H: UiHost>(",
+                "imui_editor_proof_demo.model.authoring_parity.collection_selection",
+                "imui_editor_proof_demo.state.authoring_parity.collection_scroll_handle",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_readout_text",
+                "proof_collection_drag_rect",
+            ],
         ),
         SourceCheck(
             "collection command package",
