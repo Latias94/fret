@@ -105,6 +105,20 @@ Last updated: 2026-06-06
       `activation/resize_handles.rs` owns resize-handle activate-on-click disabled proof. The
       IMUI source gate and workstream source bundle freeze the child-owner split.
 
+## Fret-ImUi Floating Input Modes No-Inputs Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` floating input-mode no-input proof owner into disabled-inputs,
+      focus-traversal, hit-testing, and click-through child owners without changing
+      floating-window behavior, public APIs, option names, or the `fret-ui-kit::imui` floating
+      implementation.
+      Result: `floating/input_modes/no_inputs.rs` now keeps only shared imports and module
+      routing. `no_inputs/disabled_inputs.rs` owns `inputs_enabled=false` child pressable blocking
+      proof, `no_inputs/focus_traversal.rs` owns no-input focus traversal skipping proof,
+      `no_inputs/hit_testing.rs` owns no-input underlay hit-testing proof, and
+      `no_inputs/click_through.rs` owns floating-area click-through plus focus/nav/hover
+      suppression proof. The IMUI source gate and workstream source bundle freeze the child-owner
+      split.
+
 ## Fret-ImUi Disclosure Tree Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` disclosure-tree proof file into checkbox, collapsing-header,

@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi floating input-mode no-input proof owner-split result:
+`ecosystem/fret-imui/src/tests/floating/input_modes/no_inputs.rs` now keeps only shared imports and
+child-owner routing for the no-input subset of the floating input-mode proof surface.
+`no_inputs/disabled_inputs.rs` owns `inputs_enabled=false` child pressable blocking proof,
+`no_inputs/focus_traversal.rs` owns no-input focus traversal skipping proof,
+`no_inputs/hit_testing.rs` owns no-input underlay hit-testing proof, and
+`no_inputs/click_through.rs` owns floating-area click-through plus focus/nav/hover suppression
+proof. No `fret-ui-kit::imui` floating runtime implementation, `fret-imui` public facade, or
+floating option API changed.
+
 2026-06-06 Fret-ImUi floating input-mode activation proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/input_modes/activation.rs` now keeps only shared imports
 and child-owner routing for the activation subset of the floating input-mode proof surface.
