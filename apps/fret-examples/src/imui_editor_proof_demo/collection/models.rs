@@ -7,12 +7,11 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::super::named_demo_state;
+use super::box_select::ProofCollectionBoxSelectState;
 use super::geometry::PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX;
 use super::rename::ProofCollectionRenameSession;
 use super::selection::ProofCollectionKeyboardState;
-use super::{
-    ProofCollectionAsset, ProofCollectionBoxSelectState, authoring_parity_collection_assets,
-};
+use super::{ProofCollectionAsset, authoring_parity_collection_assets};
 
 pub(super) fn authoring_parity_collection_selection_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

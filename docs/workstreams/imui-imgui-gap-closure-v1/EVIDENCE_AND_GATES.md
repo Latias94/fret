@@ -3,6 +3,48 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Box-Select Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof box-select state and marquee selection projection moved out of the
+render/root owner without changing background pointer capture/release, drag threshold behavior,
+visible-order hit projection, append-vs-replace selection policy, active marquee rect projection,
+marquee overlay mounting, or the decision to keep collection box-select demo-local rather than
+promoting a public `fret-ui-kit::imui` helper.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the pointer-region
+  down/move/up/cancel hooks, focus/capture/release behavior, selection model writes, and marquee
+  overlay mounting.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs` owns
+  `ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,
+  `ProofCollectionBoxSelectState`, hit-test projection, append/replace selection projection,
+  active marquee rect projection, and box-select unit tests.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` imports
+  `ProofCollectionBoxSelectState` from the box-select owner for the box-select model.
+- The collection surface tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for app-owned proof
+  markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new box-select owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --lib proof_collection_box_select --no-fail-fast`: pass, 2
+  migrated box-select owner tests.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_box_select_surface --no-fail-fast`:
+  attempted and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/`rustc`
+  processes were cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Inline Rename Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof inline rename workflow state and focus handoff moved out of the

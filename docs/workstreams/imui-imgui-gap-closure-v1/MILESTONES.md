@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof box-select owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the background pointer
+down/move/up/cancel hooks, focus/capture/release behavior, selection model writes, and marquee
+overlay mounting. `apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs` owns
+`ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,
+`ProofCollectionBoxSelectState`, hit-test projection, append/replace selection projection, active
+marquee rect projection, and box-select unit tests. Background drag thresholding, visible-order
+selection, append-vs-replace behavior, and the app-owned/no-public-helper boundary remain
+unchanged, and the source/surface gates now freeze box-select state separately from the root render
+owner.
+
 2026-06-05 collection proof inline rename owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the inline `TextField`
 mount inside the active asset tile plus render call sites for explicit, keyboard, and context-menu

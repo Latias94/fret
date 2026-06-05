@@ -1652,6 +1652,7 @@
     "apps/fret-examples/tests/imui_editor_proof_workbench_shell_surface.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs",

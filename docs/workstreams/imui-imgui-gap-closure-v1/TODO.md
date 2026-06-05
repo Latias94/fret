@@ -7810,8 +7810,8 @@ opening the slice.
       `collection/selection.rs` child owner without changing active-tile fallback, select-all,
       keyboard navigation, context-menu selection, delete refocus, duplicate copy-suffix policy, or
       render call sites.
-      Result: `collection.rs` keeps proof rendering, inline rename/focus handoff, box-select
-      pointer hooks, and app model writes, while `collection/selection.rs` owns
+      Result: `collection.rs` keeps proof rendering, box-select pointer hooks, drag/drop preview
+      wiring, and app model writes, while `collection/selection.rs` owns
       `ProofCollectionKeyboardState`, delete/duplicate result records, visible-order projection,
       active-id resolution, keyboard/select-all/context-menu selection policy, and duplicate/delete
       pure state transitions. The collection source gate, workstream source gate, manifest, and
@@ -7826,3 +7826,15 @@ opening the slice.
       `ProofCollectionRenameCommit`, inline focus timer state, begin/commit helpers, focus sync,
       focus restore, and rename unit tests. The collection source gate, workstream source gate,
       manifest, and surface tests now include the rename owner.
+- [x] Split collection proof box-select state and marquee selection projection out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/box_select.rs` child owner without changing background pointer capture/release,
+      drag threshold behavior, visible-order hit projection, append-vs-replace selection policy,
+      active marquee rect projection, marquee overlay mounting, or the explicit decision to keep
+      box-select demo-local rather than promoting a public `fret-ui-kit::imui` helper.
+      Result: `collection.rs` keeps the pointer-region down/move/up/cancel hooks, selection model
+      writes, and marquee overlay mounting, while `collection/box_select.rs` owns
+      `ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,
+      `ProofCollectionBoxSelectState`, hit-test projection, append/replace selection projection,
+      active marquee rect projection, and box-select unit tests. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the box-select owner.

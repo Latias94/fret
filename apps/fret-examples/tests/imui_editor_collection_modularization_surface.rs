@@ -2,6 +2,7 @@
 fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
@@ -34,6 +35,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
+        "mod box_select;",
         "mod geometry;",
         "mod models;",
         "mod rename;",
@@ -42,6 +44,19 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             collection_source.contains(needle),
             "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionBoxSelectSession",
+        "pub(super) struct ProofCollectionBoxSelectState",
+        "pub(super) struct ProofCollectionRenderedItem",
+        "pub(super) fn proof_collection_box_select_selection(",
+        "pub(super) fn proof_collection_box_select_active_rect(",
+    ] {
+        assert!(
+            box_select_source.contains(needle),
+            "the demo-local collection box-select owner should keep marquee selection state explicit; missing `{needle}`"
         );
     }
 

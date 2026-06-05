@@ -41,6 +41,9 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
 def main() -> None:
     demo = Path("apps/fret-examples/src/imui_editor_proof_demo.rs")
     collection = Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs")
+    collection_box_select = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
+    )
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
@@ -57,6 +60,7 @@ def main() -> None:
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
     )
     collection_children = (
+        collection_box_select,
         collection_geometry,
         collection_models,
         collection_readouts,
@@ -87,6 +91,7 @@ def main() -> None:
                 "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
+                "mod box_select;",
                 "mod models;",
                 "mod rename;",
                 "mod selection;",
@@ -95,6 +100,36 @@ def main() -> None:
             ],
             forbidden=[],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection box select owner",
+            collection_box_select,
+            required=[
+                "pub(super) struct ProofCollectionRenderedItem {",
+                "pub(super) struct ProofCollectionBoxSelectSession {",
+                "pub(super) struct ProofCollectionBoxSelectState {",
+                "fn proof_collection_box_select_hits(",
+                "fn proof_collection_box_select_state_for_hits(",
+                "pub(super) fn proof_collection_box_select_selection(",
+                "pub(super) fn proof_collection_box_select_active_rect(",
+                "ImUiMultiSelectState::from_ordered_selection(",
+                "fn proof_collection_box_select_replace_uses_visible_collection_order()",
+                "fn proof_collection_box_select_append_preserves_baseline_and_adds_hits()",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "PointerRegionProps",
+                "pointer_region_on_pointer_down",
+                "pointer_region_on_pointer_move",
+                "pointer_region_on_pointer_up",
+                "TextField::new(",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
         ),
         SourceCheck(
             "collection models owner",
