@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative overlay paint test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root
+selection/drag-output regression suites, and child test-owner routing.
+`ecosystem/fret-plot/src/declarative/tests/overlays.rs` owns reference-line, draggable-line,
+draggable-shape, text, tag, image, and right-axis overlay paint regressions. No plot
+implementation, public panel prop, optional `fret-plot/imui` adapter routing, drag-output test, or
+query/box selection test changed.
+
 2026-06-05 Fret Plot declarative wheel-zoom test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root non-wheel
 regression suites, and child test-owner routing. `ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs`

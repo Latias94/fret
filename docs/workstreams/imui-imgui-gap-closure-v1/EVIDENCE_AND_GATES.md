@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret Plot Declarative Overlay Paint Test Owner Split Evidence - 2026-06-05
+
+Claim verified: declarative plot overlay paint regression tests moved out of the root declarative
+plot test owner without changing plot implementation code, public panel props, optional
+`fret-plot/imui` adapter routing, reference-line painting, draggable line/point/rect painting,
+text/tag/image overlay painting, right-axis overlay projection, drag-output tests, or query/box
+selection tests.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
+  scene helpers, root selection/drag-output regression suites, and child-owner routing through
+  `mod overlays;`.
+- `ecosystem/fret-plot/src/declarative/tests/overlays.rs` owns the overlay paint regression suite
+  for reference lines, draggable lines, draggable points/rects, text overlays, tag overlays, image
+  overlays, and right-axis overlay cases.
+- `tools/gate_imui_workstream_source.py` now freezes the root test owner routing and the overlay
+  child owner markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new overlay test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings from
+  `fret-plot`.
+- `cargo nextest run -p fret-plot overlays --no-fail-fast`: pass, 11 passed and 78 skipped.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Wheel-Zoom Test Owner Split Evidence - 2026-06-05
 
 Claim verified: declarative plot wheel-zoom regression tests moved out of the root declarative plot

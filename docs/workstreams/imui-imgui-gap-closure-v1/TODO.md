@@ -6902,6 +6902,14 @@ opening the slice.
       non-wheel regression suites while
       `ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs` owns the wheel zoom modifier,
       axis-region, axis-lock, and no-op interaction tests.
+- [x] Split Fret Plot declarative overlay paint regression tests out of the root test owner without
+      changing implementation code, public panel props, optional IMUI adapter routing, reference
+      lines, draggable lines/points/rects, text overlays, tag overlays, image overlays, right-axis
+      projection, drag-output tests, or query/box selection tests.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared harness, root
+      selection/drag-output regression suites, and child test-owner routing while
+      `ecosystem/fret-plot/src/declarative/tests/overlays.rs` owns the overlay paint regression
+      suite for reference, draggable, text, tag, image, and right-axis overlay cases.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.
