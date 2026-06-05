@@ -7816,3 +7816,13 @@ opening the slice.
       active-id resolution, keyboard/select-all/context-menu selection policy, and duplicate/delete
       pure state transitions. The collection source gate, workstream source gate, manifest, and
       surface tests now include the selection owner.
+- [x] Split collection proof inline rename workflow state and focus handoff out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/rename.rs` child owner without changing F2/explicit/context-menu rename entry
+      points, ready/commit/invalid/cancel status text, label trimming, stable asset ids/order,
+      timer-based input focus handoff, or focus restore after commit/cancel.
+      Result: `collection.rs` keeps the `TextField` mount inside the active asset tile and the
+      render call sites, while `collection/rename.rs` owns `ProofCollectionRenameSession`,
+      `ProofCollectionRenameCommit`, inline focus timer state, begin/commit helpers, focus sync,
+      focus restore, and rename unit tests. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the rename owner.

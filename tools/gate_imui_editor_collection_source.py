@@ -50,6 +50,9 @@ def main() -> None:
     collection_readouts = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs"
     )
+    collection_rename = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs"
+    )
     collection_selection = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
     )
@@ -57,6 +60,7 @@ def main() -> None:
         collection_geometry,
         collection_models,
         collection_readouts,
+        collection_rename,
         collection_selection,
     )
 
@@ -84,6 +88,7 @@ def main() -> None:
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
                 "mod models;",
+                "mod rename;",
                 "mod selection;",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
@@ -117,6 +122,37 @@ def main() -> None:
                 "render_collection_first_asset_browser_proof",
                 "proof_collection_readout_text",
                 "proof_collection_drag_rect",
+            ],
+        ),
+        SourceCheck(
+            "collection inline rename owner",
+            collection_rename,
+            required=[
+                "pub(super) struct ProofCollectionRenameSession {",
+                "pub(super) struct ProofCollectionRenameCommit {",
+                "struct ProofCollectionInlineRenameFocusState {",
+                "pub(super) fn proof_collection_rename_shortcut_matches(",
+                "pub(super) fn proof_collection_begin_rename_session(",
+                "pub(super) fn proof_collection_begin_inline_rename_in_app(",
+                "pub(super) fn proof_collection_commit_rename(",
+                "pub(super) fn proof_collection_inline_rename_focus_state<",
+                "pub(super) fn proof_collection_sync_inline_rename_focus<",
+                "pub(super) fn proof_collection_restore_focus_after_inline_rename(",
+                "proof_collection_rename_ready_status(",
+                "host.request_focus(input_id);",
+                "fn proof_collection_begin_rename_session_prefers_active_visible_asset()",
+                "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(

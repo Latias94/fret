@@ -4,6 +4,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
+    let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
 
     for needle in [
@@ -35,6 +36,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod geometry;",
         "mod models;",
+        "mod rename;",
         "mod selection;",
     ] {
         assert!(
@@ -61,6 +63,18 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             models_source.contains(needle),
             "the demo-local collection models owner should keep state slot registration explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionRenameSession",
+        "pub(super) fn proof_collection_begin_rename_session(",
+        "pub(super) fn proof_collection_commit_rename(",
+        "pub(super) fn proof_collection_sync_inline_rename_focus<",
+    ] {
+        assert!(
+            rename_source.contains(needle),
+            "the demo-local collection rename owner should keep inline rename workflow state explicit; missing `{needle}`"
         );
     }
 

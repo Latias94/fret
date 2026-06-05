@@ -3,9 +3,19 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof inline rename owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the inline `TextField`
+mount inside the active asset tile plus render call sites for explicit, keyboard, and context-menu
+rename entry points. `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` owns
+`ProofCollectionRenameSession`, `ProofCollectionRenameCommit`, inline focus timer state, begin/
+commit helpers, focus sync, focus restore, and rename unit tests. F2, explicit rename, context-menu
+rename, label trimming, stable asset ids/order, status text, and focus handoff behavior remain
+unchanged, and the source/surface gates now freeze rename workflow state separately from the root
+render owner.
+
 2026-06-05 collection proof selection owner-split result:
-`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps proof rendering, inline
-rename/focus handoff, box-select pointer hooks, drag/drop preview wiring, and app model writes.
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` keeps proof rendering, box-select
+pointer hooks, drag/drop preview wiring, and app model writes.
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` owns
 `ProofCollectionKeyboardState`, delete/duplicate result records, visible-order projection,
 active-id resolution, select-all, keyboard navigation, context-menu selection, delete refocus, and

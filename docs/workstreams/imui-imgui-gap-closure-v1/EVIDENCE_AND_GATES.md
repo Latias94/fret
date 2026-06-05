@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Inline Rename Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof inline rename workflow state and focus handoff moved out of the
+render/root owner without changing F2, explicit rename, context-menu rename, label trimming, stable
+asset ids/order, ready/commit/invalid/cancel status text, timer-based input focus handoff, focus
+restore after commit/cancel, or the inline `TextField` mount inside the active asset tile.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the `TextField` mount
+  and render call sites for keyboard, explicit-button, and context-menu rename entry points.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` owns
+  `ProofCollectionRenameSession`, `ProofCollectionRenameCommit`, inline focus timer state,
+  begin/commit helpers, focus sync, focus restore, and rename unit tests.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` imports
+  `ProofCollectionRenameSession` from the rename owner for the rename-session model.
+- The collection surface tests and source gates now compose `collection.rs`, `geometry.rs`,
+  `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new rename owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --lib proof_collection_rename --no-fail-fast`: pass, 1
+  rename shortcut test.
+- `cargo nextest run -p fret-examples --lib proof_collection_begin_rename_session proof_collection_commit_rename --no-fail-fast`:
+  pass, 4 migrated rename owner tests.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_rename_surface --no-fail-fast`:
+  attempted and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/`rustc`
+  processes were cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Selection Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof pure selection and command-result state transitions moved out of

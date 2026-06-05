@@ -1654,6 +1654,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs",
