@@ -7547,3 +7547,13 @@ IDs, workflow readiness reasons, result/artifact command strings, panel button e
 native imports, and first-open route metadata remain unchanged, and
 `tools/gate_imui_workstream_source.py` plus the existing `fret-devtools` Demo/Metrics/Debug tests
 freeze the workflow child-owner boundary.
+
+2026-06-05 DevTools product/first-open gate owner realignment result:
+`tools/diag_gate_imui_product_chain.py` and
+`tools/diag_gate_imui_p2_devtools_first_open.py` now validate the same shared first-open owners
+used by the product code: `fret_first_open::product_workflow::*` for product-chain workflow
+metadata, `fret_first_open::demo_metrics_debug::*` for Demo/Metrics/Debug route/action metadata,
+and `apps/fret-devtools/src/demo_metrics_debug/workflow.rs` for workflow readiness/status/result/
+artifact line projection. The focused discovery gates no longer require local duplicated workflow
+strings, route IDs, action struct fields, or workflow projection text in the old route assembly
+owner.

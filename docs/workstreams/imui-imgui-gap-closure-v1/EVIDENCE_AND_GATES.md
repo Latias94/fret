@@ -29542,6 +29542,26 @@ Focused gates:
 - Passed: `git diff --check`.
 - Passed: `git diff --cached --check`.
 
+2026-06-05 DevTools product/first-open gate owner realignment:
+
+- Claim: product-chain discovery and P2 DevTools first-open discovery gates now follow the shared
+  first-open/product workflow owners instead of requiring duplicated local workflow constants,
+  Demo/Metrics/Debug route IDs, action struct fields, or workflow projection lines in old files.
+- Evidence anchors: `tools/diag_gate_imui_product_chain.py` and
+  `tools/diag_gate_imui_p2_devtools_first_open.py` now require
+  `fret_first_open::product_workflow::{ID,DOC,COMMAND,FOCUSED_COMMAND,LAUNCHED_COMMAND,SUITE,EXPECTED_ARTIFACTS}`
+  and `fret_first_open::demo_metrics_debug::{ROUTE_ID,ACTION_COMMANDS}` source markers. Both gate
+  source bundles include `apps/fret-devtools/src/demo_metrics_debug/workflow.rs`, so workflow
+  readiness/status/result/artifact line projection remains owned by the child module while the
+  route assembly owner stays thin.
+- Passed:
+  `python -m py_compile tools\diag_gate_imui_product_chain.py tools\diag_gate_imui_p2_devtools_first_open.py`.
+- Passed: `python tools\diag_gate_imui_product_chain.py --only discovery`.
+- Passed: `python tools\diag_gate_imui_p2_devtools_first_open.py --discovery-only`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 supporting editor proof workbench shell owner split:
 
 - Claim: supporting `imui_editor_proof_demo` dock/window shell policy moved from

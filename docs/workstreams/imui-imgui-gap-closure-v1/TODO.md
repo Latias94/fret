@@ -7781,3 +7781,10 @@ opening the slice.
       `apps/fret-devtools/src/demo_metrics_debug/workflow.rs` owns workflow readiness, status,
       result-action, and artifact-action line projection. The workstream manifest, source gate, and
       existing `fret-devtools` Demo/Metrics/Debug tests freeze the workflow child owner boundary.
+- [x] Realign the DevTools product-chain and first-open discovery gates with the shared
+      Demo/Metrics/Debug/product workflow owners so the gates no longer require duplicated local
+      route IDs, workflow command strings, action structs, or workflow projection strings.
+      Result: `tools/diag_gate_imui_product_chain.py` and
+      `tools/diag_gate_imui_p2_devtools_first_open.py` now accept
+      `fret_first_open::product_workflow::*`, `fret_first_open::demo_metrics_debug::*`, and the
+      `demo_metrics_debug/workflow.rs` child owner as the canonical source bundle.

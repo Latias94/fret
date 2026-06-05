@@ -140,6 +140,9 @@ DEVTOOLS_GUI_DEMO_METRICS_DEBUG_SOURCE = "apps/fret-devtools/src/demo_metrics_de
 DEVTOOLS_GUI_DEMO_METRICS_DEBUG_ACTIONS_SOURCE = (
     "apps/fret-devtools/src/demo_metrics_debug/actions.rs"
 )
+DEVTOOLS_GUI_DEMO_METRICS_DEBUG_WORKFLOW_SOURCE = (
+    "apps/fret-devtools/src/demo_metrics_debug/workflow.rs"
+)
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
 BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
@@ -516,6 +519,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     demo_metrics_debug_actions_path = (
         repo_root / DEVTOOLS_GUI_DEMO_METRICS_DEBUG_ACTIONS_SOURCE
     )
+    demo_metrics_debug_workflow_path = (
+        repo_root / DEVTOOLS_GUI_DEMO_METRICS_DEBUG_WORKFLOW_SOURCE
+    )
     gate_profile_path = repo_root / DEVTOOLS_GATE_PROFILE_SOURCE
     protocol_path = repo_root / DEVTOOLS_PROTOCOL_SOURCE
     bootstrap_ws_path = repo_root / BOOTSTRAP_DEVTOOLS_WS_SOURCE
@@ -542,6 +548,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         demo_metrics_debug_actions_source = demo_metrics_debug_actions_path.read_text(
             encoding="utf-8"
         )
+        demo_metrics_debug_workflow_source = (
+            demo_metrics_debug_workflow_path.read_text(encoding="utf-8")
+        )
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
         protocol_source = protocol_path.read_text(encoding="utf-8")
         bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
@@ -564,6 +573,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             recent_evidence_source,
             demo_metrics_debug_source,
             demo_metrics_debug_actions_source,
+            demo_metrics_debug_workflow_source,
             gate_profile_source,
             protocol_source,
             bootstrap_ws_source,
@@ -573,13 +583,16 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     )
 
     for marker in (
-        'const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain"',
-        'const IMUI_PRODUCT_WORKFLOW_DOC: &str =',
-        'const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py"',
+        "const IMUI_PRODUCT_WORKFLOW_ID: &str = fret_first_open::product_workflow::ID;",
+        "const IMUI_PRODUCT_WORKFLOW_DOC: &str = fret_first_open::product_workflow::DOC;",
+        "const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = fret_first_open::product_workflow::COMMAND;",
         'const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =',
+        "fret_first_open::product_workflow::FOCUSED_COMMAND;",
         'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
-        'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
-        'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
+        "fret_first_open::product_workflow::LAUNCHED_COMMAND;",
+        "const IMUI_PRODUCT_WORKFLOW_SUITE: &str = fret_first_open::product_workflow::SUITE;",
+        'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] =',
+        "fret_first_open::product_workflow::EXPECTED_ARTIFACTS;",
         'const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood"',
         'const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release"',
         'const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json"',
@@ -589,7 +602,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_DOGFOOD_RUN_PACK_COMMAND: &str =',
         'const DEVTOOLS_DOGFOOD_PACK_COMMAND: &str =',
         'const DEVTOOLS_DOGFOOD_VIEWER_COMMAND: &str = "pnpm -C tools/fret-bundle-viewer dev"',
-        'const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
+        "const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;",
         "const DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC: &str =",
         "const DEVTOOLS_DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =",
         "const DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =",
@@ -604,12 +617,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =',
         'const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =',
-        "struct DemoMetricsDebugActionSpec",
-        "id: &'static str",
-        "category: &'static str",
-        "requires_bundle: bool",
-        "primary: bool",
-        "const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[",
+        "type DemoMetricsDebugActionSpec = fret_first_open::demo_metrics_debug::RouteCommand;",
+        "fret_first_open::demo_metrics_debug::ACTION_COMMANDS",
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
@@ -1036,13 +1045,16 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md"',
         'const DEVTOOLS_MCP_DOC: &str =',
         "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md",
-        'const IMUI_PRODUCT_WORKFLOW_ID: &str = "imui-product-chain"',
-        'const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = "python tools/diag_gate_imui_product_chain.py"',
+        "const IMUI_PRODUCT_WORKFLOW_ID: &str = fret_first_open::product_workflow::ID;",
+        "const IMUI_PRODUCT_WORKFLOW_COMMAND: &str = fret_first_open::product_workflow::COMMAND;",
         'const IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND: &str =',
+        "fret_first_open::product_workflow::FOCUSED_COMMAND;",
         'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
-        'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
-        'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
-        'const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
+        "fret_first_open::product_workflow::LAUNCHED_COMMAND;",
+        "const IMUI_PRODUCT_WORKFLOW_SUITE: &str = fret_first_open::product_workflow::SUITE;",
+        'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] =',
+        "fret_first_open::product_workflow::EXPECTED_ARTIFACTS;",
+        "const DEMO_METRICS_DEBUG_ROUTE_ID: &str = fret_first_open::demo_metrics_debug::ROUTE_ID;",
         "const DEMO_METRICS_DEBUG_OWNER_DOC: &str =",
         "const DEMO_METRICS_DEBUG_ACTION_METADATA_DOC: &str =",
         "const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =",
@@ -1050,12 +1062,8 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         "const DOCKING_ARBITRATION_COMMAND: &str =",
         "const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str =",
         "const DOCKING_POLICY_SKIP_COMMAND: &str =",
-        "struct DemoMetricsDebugActionSpec",
-        "id: &'static str",
-        "category: &'static str",
-        "requires_bundle: bool",
-        "primary: bool",
-        "const DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[",
+        "type DemoMetricsDebugActionSpec = fret_first_open::demo_metrics_debug::RouteCommand;",
+        "fret_first_open::demo_metrics_debug::ACTION_COMMANDS",
         'const DEMO_EDITOR_WORKBENCH_COMMAND: &str =',
         'const DEMO_EDITOR_PROOF_COMMAND: &str =',
         'const DEBUG_TRACE_COMMAND: &str =',
