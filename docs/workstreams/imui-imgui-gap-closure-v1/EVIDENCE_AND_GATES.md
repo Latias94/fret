@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Drag/Drop Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof drag/drop payload and status projection moved out of the
+render/root owner without changing selected-set payload formation, single-asset fallback when the
+dragged item is not selected, preview title/subtitle text, delivered/preview drop status text,
+drag-source/ghost mounting, drop-target routing, or the app-owned collection mutation boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the drag source
+  installation, drag preview ghost/card mounting, drop-target routing, delivered-payload model
+  writes, and visible drop-status readout.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs` owns
+  `ProofCollectionDragPayload`, selected-set payload formation, single-asset fallback, preview
+  title/subtitle projection, drop status projection, and drag/drop unit tests.
+- The collection surface tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `drag_drop.rs`, `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for
+  app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new drag/drop owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --lib proof_collection_drag_payload --no-fail-fast`: pass, 2
+  migrated drag/drop owner tests.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --no-fail-fast`:
+  attempted and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/`rustc`
+  processes were cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Box-Select Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof box-select state and marquee selection projection moved out of the
@@ -23,8 +61,8 @@ Evidence:
 - `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` imports
   `ProofCollectionBoxSelectState` from the box-select owner for the box-select model.
 - The collection surface tests and source gates now compose `collection.rs`, `box_select.rs`,
-  `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for app-owned proof
-  markers.
+  `drag_drop.rs`, `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for
+  app-owned proof markers.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new box-select owner.
 
 Focused gates:
@@ -61,8 +99,9 @@ Evidence:
   begin/commit helpers, focus sync, focus restore, and rename unit tests.
 - `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` imports
   `ProofCollectionRenameSession` from the rename owner for the rename-session model.
-- The collection surface tests and source gates now compose `collection.rs`, `geometry.rs`,
-  `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for app-owned proof markers.
+- The collection surface tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `drag_drop.rs`, `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for
+  app-owned proof markers.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new rename owner.
 
 Focused gates:
@@ -104,8 +143,9 @@ Evidence:
 - `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` and
   `apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` import the selection
   owner directly for keyboard state and active/selected projections.
-- The collection surface tests and source gates now compose `collection.rs`, `geometry.rs`,
-  `models.rs`, `readouts.rs`, and `selection.rs` for app-owned proof markers.
+- The collection surface tests and source gates now compose `collection.rs`, `box_select.rs`,
+  `drag_drop.rs`, `geometry.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for
+  app-owned proof markers.
 - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new selection owner.
 
 Focused gates:

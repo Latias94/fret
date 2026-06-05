@@ -7838,3 +7838,15 @@ opening the slice.
       `ProofCollectionBoxSelectState`, hit-test projection, append/replace selection projection,
       active marquee rect projection, and box-select unit tests. The collection source gate,
       workstream source gate, manifest, and surface tests now include the box-select owner.
+- [x] Split collection proof drag/drop payload and status projection out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/drag_drop.rs` child owner without changing selected-set payload formation,
+      single-asset fallback for unselected dragged items, preview title/subtitle text,
+      delivered/preview drop status text, drag-source/ghost mounting, drop-target routing, or the
+      app-owned collection mutation boundary.
+      Result: `collection.rs` keeps drag source installation, drag preview ghost/card mounting,
+      drop-target routing, delivered-payload model writes, and visible drop-status readout, while
+      `collection/drag_drop.rs` owns `ProofCollectionDragPayload`, selected-set payload formation,
+      single-asset fallback, preview title/subtitle projection, drop status projection, and
+      drag/drop unit tests. The collection source gate, workstream source gate, manifest, and
+      surface tests now include the drag/drop owner.

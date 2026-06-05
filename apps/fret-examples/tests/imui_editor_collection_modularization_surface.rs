@@ -3,6 +3,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
+    let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
@@ -36,6 +37,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod box_select;",
+        "mod drag_drop;",
         "mod geometry;",
         "mod models;",
         "mod rename;",
@@ -57,6 +59,19 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             box_select_source.contains(needle),
             "the demo-local collection box-select owner should keep marquee selection state explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionDragPayload",
+        "pub(super) fn proof_collection_drag_payload_for_asset(",
+        "pub(super) fn proof_collection_drag_preview_title(",
+        "pub(super) fn proof_collection_drag_preview_subtitle(",
+        "pub(super) fn proof_collection_drop_status(",
+    ] {
+        assert!(
+            drag_drop_source.contains(needle),
+            "the demo-local collection drag/drop owner should keep payload and status projection explicit; missing `{needle}`"
         );
     }
 

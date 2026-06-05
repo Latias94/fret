@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof drag/drop owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps drag source installation,
+drag preview ghost/card mounting, drop-target routing, delivered-payload model writes, and visible
+drop-status readout. `apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs` owns
+`ProofCollectionDragPayload`, selected-set payload formation, single-asset fallback, preview
+title/subtitle projection, drop status projection, and drag/drop unit tests. Selected-set drag,
+unselected single-asset fallback, preview/delivered status text, and the app-owned mutation
+boundary remain unchanged, and the source/surface gates now freeze drag/drop payload projection
+separately from the root render owner.
+
 2026-06-05 collection proof box-select owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the background pointer
 down/move/up/cancel hooks, focus/capture/release behavior, selection model writes, and marquee
