@@ -1601,6 +1601,23 @@ Each TODO is labeled:
       - Focused default and `diag-screenshots` runner compile, Linux capability posture regression,
         source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
         compositor acceptance.
+    - [x] 2026-06-05 runner surface bootstrap owner split keeps surface-creation lifecycle
+      bootstrap orchestration out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M151_RUNNER_SURFACE_BOOTSTRAP_OWNER_SPLIT_2026-06-05.md`
+      - `crates/fret-launch/src/runner/desktop/runner/surface_bootstrap.rs` owns
+        `handle_can_create_surfaces`.
+      - The owner sequences can-create-surface diagnostics, WGPU init blocked gating,
+        missing-surface recovery, mobile main-window creation, RenderDoc pre-WGPU initialization,
+        WgpuInit default/provided/factory paths, Android SwiftShader guard, adapter diagnostics,
+        renderer bootstrap, factory surface attach, driver initialization, startup incoming-open
+        delivery, initial redraw/font-rescan scheduling, and post-bootstrap effect drain.
+      - `app_handler.rs` keeps only the `ApplicationHandler::can_create_surfaces` trait hook
+        dispatch.
+      - Marker: winit surface creation lifecycle bootstrap from can_create_surfaces dispatch through
+        driver initialization and post-bootstrap effect drain.
+      - Focused default and `diag-screenshots` runner compile, Linux capability posture regression,
+        source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
+        compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
