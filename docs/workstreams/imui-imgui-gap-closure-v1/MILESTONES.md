@@ -7557,3 +7557,13 @@ and `apps/fret-devtools/src/demo_metrics_debug/workflow.rs` for workflow readine
 artifact line projection. The focused discovery gates no longer require local duplicated workflow
 strings, route IDs, action struct fields, or workflow projection text in the old route assembly
 owner.
+
+2026-06-05 collection proof surface-test owner realignment result:
+`apps/fret-examples/tests/imui_editor_collection_*_surface.rs` now treats the collection proof
+surface as the composed demo-local owner set: `collection.rs`, `collection/geometry.rs`, and
+`collection/readouts.rs`. This keeps box-select, command package, context-menu, delete, keyboard,
+rename, select-all, text-role, and zoom tests aligned with the existing child-owner split while
+still rejecting shared-helper widening. The keyboard surface now checks the
+`ImUiMultiSelectState::first_selected()` accessor instead of the removed direct selected-field
+access, and `tools/gate_imui_editor_collection_source.py` now validates the same composed owner
+bundle.

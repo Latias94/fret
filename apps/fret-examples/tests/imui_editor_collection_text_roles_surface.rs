@@ -1,6 +1,12 @@
 #[test]
 fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
-    let source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let source = concat!(
+        include_str!("../src/imui_editor_proof_demo/collection.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),
+    );
 
     for needle in [
         "proof_compact_readout_element",

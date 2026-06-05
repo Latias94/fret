@@ -15,6 +15,7 @@ class SourceCheck:
     path: Path
     required: list[str]
     forbidden: list[str]
+    extra_paths: tuple[Path, ...] = ()
 
 
 def read_source(path: Path) -> str:
@@ -25,7 +26,10 @@ def read_source(path: Path) -> str:
 
 
 def check_source(check: SourceCheck, failures: list[str]) -> None:
-    source = read_source(check.path)
+    source = "\n".join(
+        [read_source(check.path)]
+        + [read_source(extra_path) for extra_path in check.extra_paths]
+    )
     for marker in check.required:
         if marker not in source:
             failures.append(f"{check.label}: {check.path.as_posix()}: missing {marker}")
@@ -37,6 +41,13 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
 def main() -> None:
     demo = Path("apps/fret-examples/src/imui_editor_proof_demo.rs")
     collection = Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs")
+    collection_geometry = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
+    )
+    collection_readouts = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs"
+    )
+    collection_children = (collection_geometry, collection_readouts)
 
     checks = [
         SourceCheck(
@@ -65,6 +76,7 @@ def main() -> None:
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],
             forbidden=[],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection command package",
@@ -96,6 +108,7 @@ def main() -> None:
                 "pub fn collection_duplicate_selected",
                 "struct ImUiCollectionCommandPackage",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection context menu",
@@ -118,6 +131,7 @@ def main() -> None:
                 "pub fn collection_context_menu",
                 "struct ImUiCollectionContextMenu",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection keyboard owner",
@@ -144,6 +158,7 @@ def main() -> None:
                 "SetItemKeyOwner",
                 "state.active_id = next_selection.selected.first().cloned();",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection select all",
@@ -156,13 +171,14 @@ def main() -> None:
                 "proof_collection_select_all_shortcut_matches(",
                 "KeyCode::KeyA",
                 "proof_collection_select_all_selection(",
-                "ui.text(proof_collection_select_all_line());",
+                "proof_collection_readout_text(\n        ui,\n        proof_collection_select_all_line(),",
             ],
             forbidden=[
                 "fret_ui_kit::imui::collection_select_all",
                 "pub fn collection_select_all",
                 "struct ImUiCollectionSelectAll",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection inline rename",
@@ -189,7 +205,7 @@ def main() -> None:
                 "TextFieldBlurBehavior::Cancel",
                 "proof_collection_inline_rename_focus_state(",
                 "proof_collection_sync_inline_rename_focus(",
-                "ui.text(proof_collection_rename_line());",
+                "proof_collection_readout_text(\n        ui,\n        proof_collection_rename_line(),",
             ],
             forbidden=[
                 "ui.begin_popup_modal_with_options(",
@@ -202,6 +218,7 @@ def main() -> None:
                 "pub fn collection_rename",
                 "struct ImUiCollectionRename",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection delete action",
@@ -224,6 +241,7 @@ def main() -> None:
                 "pub fn delete_selected_assets",
                 "struct ImUiCollectionDeleteAction",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection box select",
@@ -252,6 +270,7 @@ def main() -> None:
                 "struct ImUiCollectionBoxSelect",
                 "fn proof_collection_normalize_selection(",
             ],
+            extra_paths=collection_children,
         ),
         SourceCheck(
             "collection zoom",
@@ -279,6 +298,7 @@ def main() -> None:
                 "pub fn collection_layout_metrics",
                 "struct ImUiCollectionZoom",
             ],
+            extra_paths=collection_children,
         ),
     ]
 

@@ -1,6 +1,12 @@
 #[test]
 fn imui_editor_proof_demo_keeps_collection_box_select_app_owned_and_explicit() {
-    let source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let source = concat!(
+        include_str!("../src/imui_editor_proof_demo/collection.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),
+    );
 
     for needle in [
         "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",

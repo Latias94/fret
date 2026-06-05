@@ -7788,3 +7788,11 @@ opening the slice.
       `tools/diag_gate_imui_p2_devtools_first_open.py` now accept
       `fret_first_open::product_workflow::*`, `fret_first_open::demo_metrics_debug::*`, and the
       `demo_metrics_debug/workflow.rs` child owner as the canonical source bundle.
+- [x] Realign collection proof surface tests with the existing `collection/readouts.rs` and
+      `collection/geometry.rs` child owners so the tests keep proving the app-owned proof surface
+      without requiring readout/geometry helpers to drift back into `collection.rs`.
+      Result: the collection command, keyboard, select-all, rename, delete, box-select, zoom,
+      context-menu, and text-role surface tests now read the collection root plus child owners, and
+      the keyboard surface asserts `ImUiMultiSelectState::first_selected()` instead of private
+      selection-field access. `tools/gate_imui_editor_collection_source.py` uses the same composed
+      owner bundle for collection source markers.

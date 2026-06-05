@@ -1648,6 +1648,7 @@
     "apps/fret-examples/tests/imui_editor_collection_delete_action_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_text_roles_surface.rs",
     "apps/fret-examples/tests/imui_editor_proof_workbench_shell_surface.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",

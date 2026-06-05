@@ -1,6 +1,12 @@
 #[test]
 fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit() {
-    let source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let source = concat!(
+        include_str!("../src/imui_editor_proof_demo/collection.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),
+    );
 
     for needle in [
         "struct ProofCollectionKeyboardState {",
@@ -11,7 +17,7 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "imui_editor_proof_demo.model.authoring_parity.collection_keyboard",
         "cx.key_on_key_down_for(scope_id, Arc::new(move |host, acx, down| {",
         "host.request_focus(acx.target);",
-        "state.active_id = next_selection.selected.first().cloned();",
+        "state.active_id = next_selection.first_selected().cloned();",
         "state.active_id = None;",
         "\"Active tile: none. Click background to focus the collection scope, then use Arrow/Home/End to drive selection app-locally.\"",
         "\"Active tile: {}. Shift+Arrow/Home/End extends from the current anchor; Escape clears the selection without widening shared IMUI helper ownership.\"",

@@ -29562,6 +29562,21 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 collection proof surface-test owner realignment:
+
+- Claim: collection proof surface tests now validate the composed demo-local owner set rather than
+  requiring readout and geometry helpers to live in `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`.
+- Evidence anchors: the collection surface tests read `collection.rs`, `collection/geometry.rs`,
+  and `collection/readouts.rs` together for box-select, command package, context-menu, delete,
+  keyboard, rename, select-all, text-role, and zoom proof assertions. The keyboard surface also
+  asserts `next_selection.first_selected().cloned()` to match the current private-field
+  `ImUiMultiSelectState` contract.
+- Passed: `cargo fmt --package fret-examples`.
+- Passed: `python -m py_compile tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`.
+
 2026-06-05 supporting editor proof workbench shell owner split:
 
 - Claim: supporting `imui_editor_proof_demo` dock/window shell policy moved from
