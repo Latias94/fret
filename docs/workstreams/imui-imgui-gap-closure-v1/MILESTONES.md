@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi popup item-keyboard proof owner-split result:
+`ecosystem/fret-imui/src/tests/popup_hover/item_keyboard.rs` now keeps only child-owner routing for
+the popup item keyboard proof surface. `item_keyboard/keyboard_open.rs` owns context-menu keyboard
+open, first-item focus, and Escape focus-restore proof; `arrow_nav.rs` owns popup item ArrowUp /
+ArrowDown focus navigation proof; `shortcuts.rs` owns focused-popup-item shortcut scoping plus
+`shortcut_repeat` opt-in proof; and `checkbox_semantics.rs` owns menu-item checkbox checked-state
+semantics proof. No `fret-ui-kit::imui` popup/menu runtime implementation, `fret-imui` public
+facade, or popup/menu option API changed.
+
 2026-06-05 Fret-ImUi floating movement/z-order proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` now keeps only child-owner routing for
 the floating movement, window-control, and z-order proof surface. `movement_z_order/movement.rs`

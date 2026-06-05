@@ -94,6 +94,18 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Popup Item-Keyboard Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` popup item-keyboard proof file into keyboard-open, arrow-navigation,
+      shortcut, and checkbox-semantics child owners without changing popup/menu runtime behavior,
+      public APIs, or the `fret-ui-kit::imui` popup/menu policy implementation.
+      Result: `popup_hover/item_keyboard.rs` is now a thin module hub.
+      `item_keyboard/keyboard_open.rs` owns context-menu keyboard open, first-item focus, and
+      Escape focus-restore proof; `item_keyboard/arrow_nav.rs` owns popup item ArrowUp/ArrowDown
+      focus navigation proof; `item_keyboard/shortcuts.rs` owns focused-popup-item shortcut scoping
+      plus `shortcut_repeat` opt-in proof; and `item_keyboard/checkbox_semantics.rs` owns menu-item
+      checkbox checked-state semantics proof. The IMUI source gate freezes the child-owner split.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating movement/z-order proof file into movement, window-control,
