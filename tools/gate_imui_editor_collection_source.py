@@ -41,6 +41,9 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
 def main() -> None:
     demo = Path("apps/fret-examples/src/imui_editor_proof_demo.rs")
     collection = Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs")
+    collection_asset_grid = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
+    )
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
@@ -72,6 +75,7 @@ def main() -> None:
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
     )
     collection_children = (
+        collection_asset_grid,
         collection_box_select,
         collection_command_buttons,
         collection_context_menu,
@@ -107,6 +111,7 @@ def main() -> None:
                 "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
+                "mod asset_grid;",
                 "mod box_select;",
                 "mod command_buttons;",
                 "mod context_menu;",
@@ -120,6 +125,41 @@ def main() -> None:
             ],
             forbidden=[],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection asset grid owner",
+            collection_asset_grid,
+            required=[
+                "pub(super) struct ProofCollectionAssetGridModels {",
+                "pub(super) struct ProofCollectionAssetGridState<'a> {",
+                "pub(super) fn render_collection_asset_grid(",
+                "fn render_collection_asset_tile(",
+                "fn render_collection_inline_rename_field(",
+                "ui.grid_with_options(",
+                "ui.multi_selectable_with_options(",
+                "proof_collection_context_menu_selection(",
+                "TextField::new(",
+                "EditorTextSelectionBehavior::SelectAllOnFocus",
+                "TextFieldBlurBehavior::Cancel",
+                "drag_preview_ghost_with_options(",
+                "ProofCollectionRenderedItem {",
+                "\"imui-editor-proof.authoring.imui.collection.grid\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "cx.pointer_region_on_wheel(",
+                "cx.pointer_region_on_pointer_down(",
+                "cx.pointer_region_on_pointer_move(",
+                "cx.pointer_region_on_pointer_up(",
+                "cx.pointer_region_on_pointer_cancel(",
+                "kit::ChildRegionOptions",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+            ],
         ),
         SourceCheck(
             "collection box select owner",
@@ -404,6 +444,23 @@ def main() -> None:
             forbidden=[
                 "let duplicate_selected = ui.button_with_options(",
                 "proof_collection_set_command_status(",
+            ],
+        ),
+        SourceCheck(
+            "collection asset grid delegation",
+            collection,
+            required=[
+                "mod asset_grid;",
+                "use asset_grid::{",
+                "render_collection_asset_grid(",
+                "ProofCollectionAssetGridModels {",
+                "ProofCollectionAssetGridState {",
+            ],
+            forbidden=[
+                "ui.grid_with_options(",
+                "TextField::new(",
+                "drag_preview_ghost_with_options(",
+                "render_collection_inline_rename_field(",
             ],
         ),
         SourceCheck(

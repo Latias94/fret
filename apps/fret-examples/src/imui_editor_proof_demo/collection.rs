@@ -1,27 +1,19 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
-use fret_core::{Color, Point, Px, Rect, Size};
+use fret_core::{Color, Px};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::Length;
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
-use fret_ui_editor::controls::{
-    EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldOptions,
-    TextFieldOutcome,
-};
-use fret_ui_editor::primitives::EditSessionOutcome;
-use fret_ui_kit::recipes::imui_drag_preview::{
-    DragPreviewGhostOptions, drag_preview_ghost_with_options,
-};
+use fret_ui::{ElementContext, UiHost};
 
 use super::{
-    KernelApp, named_demo_state, proof_compact_readout_element, proof_drag_preview_card,
-    proof_section_chrome_label,
+    KernelApp, named_demo_state, proof_compact_readout_element, proof_section_chrome_label,
 };
 
+mod asset_grid;
 mod box_select;
 mod command_buttons;
 mod context_menu;
@@ -33,6 +25,9 @@ mod readouts;
 mod rename;
 mod selection;
 
+use asset_grid::{
+    ProofCollectionAssetGridModels, ProofCollectionAssetGridState, render_collection_asset_grid,
+};
 use box_select::{
     ProofCollectionBoxSelectSession, ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
     proof_collection_box_select_active_rect, proof_collection_box_select_selection,
@@ -42,15 +37,11 @@ use command_buttons::{
     render_collection_command_buttons,
 };
 use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
-use drag_drop::{
-    ProofCollectionDragPayload, proof_collection_drag_payload_for_asset,
-    proof_collection_drag_preview_subtitle, proof_collection_drag_preview_title,
-    proof_collection_drop_status,
-};
+use drag_drop::{ProofCollectionDragPayload, proof_collection_drop_status};
 use geometry::{
     PROOF_COLLECTION_GRID_FALLBACK_COLUMNS, PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX,
     proof_collection_drag_threshold_met, proof_collection_layout_metrics,
-    proof_collection_localize_rect, proof_collection_zoom_line, proof_collection_zoom_request,
+    proof_collection_zoom_line, proof_collection_zoom_request,
 };
 use keyboard::{ProofCollectionKeyboardHandlerModels, install_collection_keyboard_handler};
 use models::{
@@ -69,21 +60,12 @@ use models::{
 use readouts::{
     proof_collection_active_line, proof_collection_assets_line,
     proof_collection_command_package_line, proof_collection_command_status_line,
-    proof_collection_context_menu_line, proof_collection_rename_cancel_status,
-    proof_collection_rename_commit_status, proof_collection_rename_invalid_status,
-    proof_collection_rename_line, proof_collection_rename_status_line,
-    proof_collection_select_all_line, proof_collection_selection_line,
-    proof_collection_visible_order_line,
+    proof_collection_context_menu_line, proof_collection_rename_line,
+    proof_collection_rename_status_line, proof_collection_select_all_line,
+    proof_collection_selection_line, proof_collection_visible_order_line,
 };
-use rename::{
-    ProofCollectionRenameSession, proof_collection_begin_rename_session,
-    proof_collection_commit_rename, proof_collection_inline_rename_focus_state,
-    proof_collection_restore_focus_after_inline_rename, proof_collection_sync_inline_rename_focus,
-};
-use selection::{
-    proof_collection_active_id, proof_collection_assets_in_visible_order,
-    proof_collection_context_menu_selection,
-};
+use rename::proof_collection_begin_rename_session;
+use selection::{proof_collection_active_id, proof_collection_assets_in_visible_order};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct ProofCollectionAsset {
@@ -650,380 +632,32 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                         let grid = fret_ui_kit::ui::container_build(
                             move |cx: &mut ElementContext<'_, KernelApp>, out| {
                                 imui_build(cx, out, |ui| {
-                                    ui.grid_with_options(
-                                        kit::GridOptions {
-                                            columns: collection_layout.columns,
-                                            column_gap: fret_ui_kit::MetricRef::space(
-                                                fret_ui_kit::Space::N2,
-                                            ),
-                                            row_gap: fret_ui_kit::MetricRef::space(
-                                                fret_ui_kit::Space::N2,
-                                            ),
-                                            row_items: fret_ui_kit::Items::Stretch,
-                                            test_id: Some(Arc::from(
-                                                "imui-editor-proof.authoring.imui.collection.grid",
-                                            )),
-                                            ..Default::default()
+                                    render_collection_asset_grid(
+                                        ui,
+                                        ProofCollectionAssetGridModels {
+                                            assets: collection_assets_model.clone(),
+                                            selection: collection_selection_model.clone(),
+                                            keyboard: collection_keyboard_model.clone(),
+                                            context_menu_anchor: collection_context_menu_anchor_model
+                                                .clone(),
+                                            active_focus_target: collection_active_focus_target_model
+                                                .clone(),
+                                            rename_session: collection_rename_session_model.clone(),
+                                            rename_draft: collection_rename_draft_model.clone(),
+                                            rename_focus_pending:
+                                                collection_rename_focus_pending_model.clone(),
+                                            rename_status: collection_rename_status_model.clone(),
                                         },
-                                        |ui| {
-                                            for asset in &collection_assets {
-                                                let payload = proof_collection_drag_payload_for_asset(
-                                                    &collection_assets,
-                                                    &collection_selection,
-                                                    asset,
-                                                );
-                                                let preview_title =
-                                                    proof_collection_drag_preview_title(&payload);
-                                                let preview_subtitle =
-                                                    proof_collection_drag_preview_subtitle(&payload);
-                                                let ghost_id = format!(
-                                                    "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
-                                                    asset.id
-                                                );
-
-                                                ui.id(asset.id.clone(), |ui| {
-                                                    ui.vertical_with_options(
-                                                        kit::VerticalOptions {
-                                                            layout: fret_ui_kit::LayoutRefinement::default()
-                                                                .flex_1()
-                                                                .min_h(collection_layout.tile_min_height),
-                                                            gap: fret_ui_kit::MetricRef::space(
-                                                                fret_ui_kit::Space::N1,
-                                                            ),
-                                                            test_id: Some(Arc::from(format!(
-                                                                "imui-editor-proof.authoring.imui.collection.asset.{}",
-                                                                asset.id
-                                                            ))),
-                                                            ..Default::default()
-                                                        },
-                                                        |ui| {
-                                                            let trigger = ui
-                                                                .multi_selectable_with_options(
-                                                                    asset.label.clone(),
-                                                                    &collection_selection_model,
-                                                                    &collection_keys,
-                                                                    asset.id.clone(),
-                                                                    kit::SelectableOptions {
-                                                                        focusable: false,
-                                                                        test_id: Some(Arc::from(format!(
-                                                                            "imui-editor-proof.authoring.imui.collection.asset.{}.select",
-                                                                            asset.id
-                                                                        ))),
-                                                                        ..Default::default()
-                                                                    },
-                                                                );
-                                                            if collection_active_id
-                                                                .as_ref()
-                                                                .is_some_and(|active_id| active_id == &asset.id)
-                                                                && let Some(focus_target) = trigger.id()
-                                                            {
-                                                                let _ = ui
-                                                                    .cx_mut()
-                                                                    .app
-                                                                    .models_mut()
-                                                                    .update(
-                                                                        &collection_active_focus_target_model,
-                                                                        |state| {
-                                                                            *state = Some(focus_target);
-                                                                        },
-                                                                    );
-                                                            }
-                                                            if trigger.clicked() {
-                                                                let _ = ui
-                                                                    .cx_mut()
-                                                                    .app
-                                                                    .models_mut()
-                                                                    .update(
-                                                                        &collection_keyboard_model,
-                                                                        |state| {
-                                                                            state.active_id =
-                                                                                Some(asset.id.clone());
-                                                                        },
-                                                                    );
-                                                            }
-                                                            if trigger.context_menu_requested() {
-                                                                let (next_selection, next_keyboard) =
-                                                                    proof_collection_context_menu_selection(
-                                                                        &collection_selection,
-                                                                        asset.id.clone(),
-                                                                    );
-                                                                let anchor = trigger
-                                                                    .context_menu_anchor()
-                                                                    .or(trigger.rect().map(|rect| rect.origin));
-                                                                let _ = ui
-                                                                    .cx_mut()
-                                                                    .app
-                                                                    .models_mut()
-                                                                    .update(
-                                                                        &collection_selection_model,
-                                                                        |state| {
-                                                                            *state = next_selection.clone();
-                                                                        },
-                                                                    );
-                                                                let _ = ui
-                                                                    .cx_mut()
-                                                                    .app
-                                                                    .models_mut()
-                                                                    .update(
-                                                                        &collection_keyboard_model,
-                                                                        |state| {
-                                                                            *state = next_keyboard.clone();
-                                                                        },
-                                                                    );
-                                                                let _ = ui
-                                                                    .cx_mut()
-                                                                    .app
-                                                                    .models_mut()
-                                                                    .update(
-                                                                        &collection_context_menu_anchor_model,
-                                                                        |state| {
-                                                                            *state = anchor;
-                                                                        },
-                                                                    );
-                                                            }
-                                                            if collection_rename_session
-                                                                .as_ref()
-                                                                .is_some_and(|session| session.target_id == asset.id)
-                                                            {
-                                                                let rename_input_id =
-                                                                    Rc::new(Cell::new(None::<GlobalElementId>));
-                                                                let rename_session_model_for_outcome =
-                                                                    collection_rename_session_model.clone();
-                                                                let rename_draft_model_for_outcome =
-                                                                    collection_rename_draft_model.clone();
-                                                                let rename_assets_model_for_outcome =
-                                                                    collection_assets_model.clone();
-                                                                let rename_status_model_for_outcome =
-                                                                    collection_rename_status_model.clone();
-                                                                let rename_focus_pending_model_for_outcome =
-                                                                    collection_rename_focus_pending_model.clone();
-                                                                let rename_restore_focus_target_model =
-                                                                    collection_active_focus_target_model.clone();
-                                                                let inline_test_id: Arc<str> = Arc::from(format!(
-                                                                    "imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline",
-                                                                    asset.id
-                                                                ));
-                                                                let inline_id_source: Arc<str> =
-                                                                    Arc::from(format!(
-                                                                        "imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline",
-                                                                        asset.id
-                                                                    ));
-                                                                let field = TextField::new(
-                                                                    collection_rename_draft_model.clone(),
-                                                                )
-                                                                .on_outcome(Some(Arc::new(
-                                                                    move |host, action_cx, outcome: TextFieldOutcome| {
-                                                                        let session = host
-                                                                            .models_mut()
-                                                                            .read(
-                                                                                &rename_session_model_for_outcome,
-                                                                                |state| state.clone(),
-                                                                            )
-                                                                            .ok()
-                                                                            .flatten();
-                                                                        let Some(session) = session else {
-                                                                            return;
-                                                                        };
-
-                                                                        match outcome {
-                                                                            EditSessionOutcome::Committed => {
-                                                                                let draft = host
-                                                                                    .models_mut()
-                                                                                    .read(
-                                                                                        &rename_draft_model_for_outcome,
-                                                                                        |state| state.clone(),
-                                                                                    )
-                                                                                    .unwrap_or_default();
-                                                                                let stored_assets = host
-                                                                                    .models_mut()
-                                                                                    .read(
-                                                                                        &rename_assets_model_for_outcome,
-                                                                                        |state| state.clone(),
-                                                                                    )
-                                                                                    .unwrap_or_default();
-                                                                                if let Some(commit) =
-                                                                                    proof_collection_commit_rename(
-                                                                                        &stored_assets,
-                                                                                        &session,
-                                                                                        &draft,
-                                                                                    )
-                                                                                {
-                                                                                    let _ = host.update_model(
-                                                                                        &rename_assets_model_for_outcome,
-                                                                                        |state| {
-                                                                                            *state = commit.renamed_assets.clone();
-                                                                                        },
-                                                                                    );
-                                                                                    let _ = host.update_model(
-                                                                                        &rename_status_model_for_outcome,
-                                                                                        |status| {
-                                                                                            status.clear();
-                                                                                            status.push_str(
-                                                                                                &proof_collection_rename_commit_status(
-                                                                                                    commit.previous_label.as_ref(),
-                                                                                                    commit.next_label.as_ref(),
-                                                                                                ),
-                                                                                            );
-                                                                                        },
-                                                                                    );
-                                                                                    let _ = host.update_model(
-                                                                                        &rename_session_model_for_outcome,
-                                                                                        |state| *state = None,
-                                                                                    );
-                                                                                    let _ = host.update_model(
-                                                                                        &rename_focus_pending_model_for_outcome,
-                                                                                        |state| *state = false,
-                                                                                    );
-                                                                                    proof_collection_restore_focus_after_inline_rename(
-                                                                                        host,
-                                                                                        action_cx,
-                                                                                        &rename_restore_focus_target_model,
-                                                                                    );
-                                                                                } else {
-                                                                                    let _ = host.update_model(
-                                                                                        &rename_status_model_for_outcome,
-                                                                                        |status| {
-                                                                                            status.clear();
-                                                                                            status.push_str(
-                                                                                                &proof_collection_rename_invalid_status(
-                                                                                                    session.original_label.as_ref(),
-                                                                                                ),
-                                                                                            );
-                                                                                        },
-                                                                                    );
-                                                                                    let _ = host.update_model(
-                                                                                        &rename_focus_pending_model_for_outcome,
-                                                                                        |state| *state = true,
-                                                                                    );
-                                                                                    host.request_redraw(action_cx.window);
-                                                                                }
-                                                                            }
-                                                                            EditSessionOutcome::Canceled => {
-                                                                                let _ = host.update_model(
-                                                                                    &rename_status_model_for_outcome,
-                                                                                    |status| {
-                                                                                        status.clear();
-                                                                                        status.push_str(
-                                                                                            &proof_collection_rename_cancel_status(
-                                                                                                session.original_label.as_ref(),
-                                                                                            ),
-                                                                                        );
-                                                                                    },
-                                                                                );
-                                                                                let _ = host.update_model(
-                                                                                    &rename_session_model_for_outcome,
-                                                                                    |state| *state = None,
-                                                                                );
-                                                                                let _ = host.update_model(
-                                                                                    &rename_focus_pending_model_for_outcome,
-                                                                                    |state| *state = false,
-                                                                                );
-                                                                                proof_collection_restore_focus_after_inline_rename(
-                                                                                    host,
-                                                                                    action_cx,
-                                                                                    &rename_restore_focus_target_model,
-                                                                                );
-                                                                            }
-                                                                        }
-                                                                    },
-                                                                )))
-                                                                .options(TextFieldOptions {
-                                                                    id_source: Some(inline_id_source),
-                                                                    placeholder: Some(Arc::from(
-                                                                        "Rename active asset",
-                                                                    )),
-                                                                    selection_behavior:
-                                                                        EditorTextSelectionBehavior::SelectAllOnFocus,
-                                                                    blur_behavior:
-                                                                        TextFieldBlurBehavior::Cancel,
-                                                                    test_id: Some(inline_test_id),
-                                                                    input_id_out: Some(
-                                                                        rename_input_id.clone(),
-                                                                    ),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(ui.cx_mut());
-                                                                ui.add(field);
-                                                                if let Some(input_id) =
-                                                                    rename_input_id.get()
-                                                                {
-                                                                    let focus_state =
-                                                                        proof_collection_inline_rename_focus_state(
-                                                                            ui.cx_mut(),
-                                                                        );
-                                                                    proof_collection_sync_inline_rename_focus(
-                                                                        ui.cx_mut(),
-                                                                        input_id,
-                                                                        collection_rename_focus_pending,
-                                                                        &collection_rename_focus_pending_model,
-                                                                        &focus_state,
-                                                                    );
-                                                                }
-                                                                ui.text_wrapped(
-                                                                    "Inline rename stays app-owned: Enter commits; Escape or blur cancels without widening shared IMUI helpers.",
-                                                                );
-                                                            }
-                                                            let source = ui
-                                                                .drag_source_with_options(
-                                                                    trigger,
-                                                                    payload.clone(),
-                                                                    kit::DragSourceOptions::default(),
-                                                                );
-                                                            let _ = drag_preview_ghost_with_options(
-                                                                ui,
-                                                                ghost_id.as_str(),
-                                                                source,
-                                                                DragPreviewGhostOptions {
-                                                                    test_id: Some(Arc::from(format!(
-                                                                        "imui-editor-proof.authoring.imui.collection.asset.{}.ghost",
-                                                                        asset.id
-                                                                    ))),
-                                                                    ..Default::default()
-                                                                },
-                                                                proof_drag_preview_card(
-                                                                    preview_title.clone(),
-                                                                    preview_subtitle.clone(),
-                                                                ),
-                                                            );
-
-                                                            if let Some(scope_origin) = scope_origin
-                                                                && let Some(bounds) = trigger
-                                                                    .id()
-                                                                    .and_then(|element_id| {
-                                                                        ui.cx_mut()
-                                                                            .last_visual_bounds_for_element(element_id)
-                                                                    })
-                                                                    .or(trigger.rect())
-                                                            {
-                                                                rendered_items_for_grid.borrow_mut().push(
-                                                                    ProofCollectionRenderedItem {
-                                                                        id: asset.id.clone(),
-                                                                        local_bounds:
-                                                                            proof_collection_localize_rect(
-                                                                                bounds,
-                                                                                scope_origin,
-                                                                            ),
-                                                                    },
-                                                                );
-                                                            }
-
-                                                            proof_collection_readout_text(
-                                                                ui,
-                                                                format!(
-                                                                    "{} | {} KiB",
-                                                                    asset.kind, asset.size_kib
-                                                                ),
-                                                                "imui-editor-proof.authoring.imui.collection.asset.metadata",
-                                                            );
-                                                            proof_collection_readout_text(
-                                                                ui,
-                                                                asset.path.clone(),
-                                                                "imui-editor-proof.authoring.imui.collection.asset.path",
-                                                            );
-                                                        },
-                                                    );
-                                                });
-                                            }
+                                        ProofCollectionAssetGridState {
+                                            assets: &collection_assets,
+                                            keys: &collection_keys,
+                                            selection: &collection_selection,
+                                            active_id: collection_active_id.as_ref(),
+                                            rename_session: collection_rename_session.as_ref(),
+                                            rename_focus_pending: collection_rename_focus_pending,
+                                            layout: collection_layout,
+                                            scope_origin,
+                                            rendered_items: rendered_items_for_grid.clone(),
                                         },
                                     );
                                 });

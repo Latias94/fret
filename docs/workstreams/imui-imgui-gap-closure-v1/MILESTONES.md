@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof asset-grid owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps the browser child region,
+pointer/wheel/box-select scope, and marquee overlay mounting, then delegates tile-grid rendering
+through `render_collection_asset_grid(...)`. `apps/fret-examples/src/imui_editor_proof_demo/
+collection/asset_grid.rs` owns `ProofCollectionAssetGridModels`, `ProofCollectionAssetGridState`,
+grid construction, tile selectable/context-menu trigger routing, active focus target capture,
+inline-rename field mounting/outcome routing, drag-source/ghost wiring, rendered-item capture, and
+tile metadata/path readouts. Grid/tile/inline-rename/ghost labels and test IDs remain unchanged, and
+the source/surface gates now freeze the asset-grid workflow separately from the root browser owner.
+
 2026-06-05 collection proof command-buttons owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps readouts and delegates the
 explicit Duplicate/Rename/Delete button row through `render_collection_command_buttons(...)`.

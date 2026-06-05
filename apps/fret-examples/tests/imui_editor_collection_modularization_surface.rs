@@ -2,6 +2,7 @@
 fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
+    let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
@@ -41,6 +42,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
+        "mod asset_grid;",
         "mod box_select;",
         "mod command_buttons;",
         "mod context_menu;",
@@ -54,6 +56,21 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             collection_source.contains(needle),
             "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionAssetGridModels",
+        "pub(super) struct ProofCollectionAssetGridState",
+        "pub(super) fn render_collection_asset_grid(",
+        "ui.grid_with_options(",
+        "TextField::new(",
+        "drag_preview_ghost_with_options(",
+        "ProofCollectionRenderedItem {",
+    ] {
+        assert!(
+            asset_grid_source.contains(needle),
+            "the demo-local collection asset-grid owner should keep tile-grid interaction explicit; missing `{needle}`"
         );
     }
 

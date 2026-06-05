@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Asset-Grid Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof asset-grid/tile rendering moved out of the render/root owner without
+changing grid test IDs, selectable labels/test IDs, active-focus capture, context-menu trigger
+routing, inline-rename field behavior, drag-preview ghost behavior, rendered-item capture for
+box-select, or the app-owned no-helper-widening boundary.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` keeps the browser child region,
+  pointer/wheel/box-select scope, and marquee overlay mounting, then delegates tile-grid rendering
+  through `render_collection_asset_grid(...)`.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` owns
+  `ProofCollectionAssetGridModels`, `ProofCollectionAssetGridState`, grid construction, tile
+  selectable/context-menu trigger routing, active focus target capture, inline-rename field
+  mounting/outcome routing, drag-source/ghost wiring, rendered-item capture, and tile metadata/path
+  readouts.
+- The command-package and modularization surface tests now require the asset-grid owner markers and
+  assert that `collection.rs` no longer directly renders the grid workflow.
+- The collection source tests and source gates now compose `collection.rs`, `asset_grid.rs`,
+  `box_select.rs`, `command_buttons.rs`, `context_menu.rs`, `drag_drop.rs`, `geometry.rs`,
+  `keyboard.rs`, `models.rs`, `readouts.rs`, `rename.rs`, and `selection.rs` for app-owned proof
+  markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new asset-grid owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  attempted and timed out after 300 seconds; residual `cargo`/`cargo-nextest`/`rustc` processes were
+  cleared before continuing.
+- `git diff --check`: pass.
+
 ## Collection Proof Command-Buttons Owner Split Evidence - 2026-06-05
 
 Claim verified: collection proof explicit command buttons moved out of the render/root owner

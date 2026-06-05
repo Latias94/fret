@@ -7883,3 +7883,15 @@ opening the slice.
       delete button construction, app model writeback, and command-status publication. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       command-buttons owner.
+- [x] Split collection proof asset-grid/tile rendering out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/asset_grid.rs` child owner without changing grid test IDs, selectable labels/test
+      IDs, active-focus capture, context-menu trigger routing, inline-rename field behavior,
+      drag-preview ghost behavior, rendered-item capture for box-select, or the app-owned
+      no-helper-widening boundary. Result: `collection.rs` keeps the browser child region,
+      pointer/wheel/box-select scope, and marquee overlay mounting, while `collection/asset_grid.rs`
+      owns `ProofCollectionAssetGridModels`, `ProofCollectionAssetGridState`, grid construction,
+      tile selectable/context-menu trigger routing, inline-rename field mounting/outcome routing,
+      drag-source/ghost wiring, rendered-item capture, and tile metadata/path readouts. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      asset-grid owner.

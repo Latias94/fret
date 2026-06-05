@@ -3,6 +3,8 @@ fn imui_editor_proof_demo_keeps_collection_box_select_app_owned_and_explicit() {
     let source = concat!(
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
