@@ -7498,3 +7498,16 @@ it declares private palette, drag/drop, and eyedropper child modules and keeps t
 contents, drag/drop payload component behavior, palette slot drop conversion, eyedropper sample
 alpha policy, and IMUI facade APIs remain unchanged, and `tools/gate_imui_workstream_source.py`
 plus `imui_surface_policy` freeze the records hub/child split.
+
+2026-06-05 editor ColorEdit popup swatch slot child-owner split result:
+`ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches/slot.rs` now keeps preset swatch
+pressable/root orchestration, focus/a11y props, drag-source install, drop-target hover updates,
+test-id routing, and final a11y value assignment only. The new `slot/activation.rs` owns preset
+activation writeback into the color model, hex draft, error state, popup open state, and redraw.
+The new `slot/delivery.rs` owns delivered color drop retrieval, `ColorEditPaletteSlotDrop`
+construction, app callback dispatch, and redraw. The new `slot/visual.rs` owns selected/drop-over
+preview container chrome, clipped fill layout, border/ring selection, and preview stack mounting.
+Preset activation semantics, drag/drop payload publication, palette slot drop callback behavior,
+preview rendering, a11y value formatting, and public ColorEdit / IMUI facade APIs remain unchanged,
+and `tools/gate_imui_workstream_source.py` plus `imui_surface_policy` freeze the slot child-owner
+split.

@@ -7738,3 +7738,14 @@ opening the slice.
       `records/drag_drop.rs` owns drag/drop payload and palette slot drop records, and
       `records/eyedropper.rs` owns eyedropper request/callback records. The workstream manifest,
       source gate, and `imui_surface_policy` freeze the public-record child owner boundaries.
+- [x] Split editor `ColorEdit` popup swatch slot activation, drop delivery, and visual container
+      into private slot child owners without changing preset activation, model/draft/error
+      writeback, popup close behavior, drag-source publishing, drop-target hover state,
+      palette-slot callback dispatch, preview visuals, a11y value, or public ColorEdit / IMUI facade
+      behavior.
+      Result: `popup/swatches/slot.rs` keeps pressable/root orchestration, drag-source install,
+      drop-target hover update, test-id routing, and a11y value assignment. The new
+      `slot/activation.rs` owns preset activation writeback, `slot/delivery.rs` owns delivered
+      palette slot callback dispatch, and `slot/visual.rs` owns preview container chrome. The
+      workstream manifest, source gate, and `imui_surface_policy` freeze the slot child owner
+      boundaries.

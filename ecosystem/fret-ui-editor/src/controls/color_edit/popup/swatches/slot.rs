@@ -1,26 +1,27 @@
+mod activation;
+mod delivery;
+mod visual;
+
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Px};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost, UiActionHostAdapter};
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PressableA11y, PressableProps,
-    SizeStyle,
-};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::primitives::colors::{editor_border, editor_focus_ring};
 
+use self::activation::{PresetSwatchActivateArgs, preset_swatch_on_activate};
+use self::delivery::{PresetSwatchDropDeliveryArgs, deliver_preset_swatch_drop};
+use self::visual::{PresetSwatchVisualArgs, preset_swatch_visual};
 use super::super::super::drag_drop::{
-    ColorDragDropStore, install_color_drag_source, take_delivered_color_drop,
-    update_color_drop_target,
+    ColorDragDropStore, install_color_drag_source, update_color_drop_target,
 };
 use super::super::super::model::{color_from_rgb_preserving_alpha, format_hex};
 use super::super::super::{
     ColorEditAlphaPreview, ColorEditDragDropOptions, ColorEditDragDropPayload,
-    ColorEditPaletteEntry, ColorEditPaletteSlotDrop, OnColorEditPaletteSlotDrop,
+    ColorEditPaletteEntry, OnColorEditPaletteSlotDrop,
 };
-use super::super::preview::color_preview_stack;
 
 pub(super) fn preset_swatch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -44,19 +45,15 @@ pub(super) fn preset_swatch<H: UiHost>(
     let name = entry.name.clone();
     let rgb = entry.rgb;
     let color = color_from_rgb_preserving_alpha(rgb, current_alpha);
-    let on_activate: OnActivate =
-        Arc::new(move |host, action_cx: ActionCx, _reason: ActivateReason| {
-            let current = host.models_mut().get_copied(&model).unwrap_or(color);
-            let color = color_from_rgb_preserving_alpha(rgb, current.a);
-            let formatted = format_hex(color, show_alpha);
-            let _ = host.models_mut().update(&model, |c| *c = color);
-            let _ = host
-                .models_mut()
-                .update(&draft, |s| *s = formatted.as_ref().to_string());
-            let _ = host.models_mut().update(&error, |e| *e = None);
-            let _ = host.models_mut().update(&open, |v| *v = false);
-            host.request_redraw(action_cx.window);
-        });
+    let on_activate = preset_swatch_on_activate(PresetSwatchActivateArgs {
+        model: model.clone(),
+        draft: draft.clone(),
+        error: error.clone(),
+        open: open.clone(),
+        color,
+        rgb,
+        show_alpha,
+    });
 
     let theme = Theme::global(&*cx.app);
     let idle_border_color = editor_border(theme);
@@ -114,25 +111,15 @@ pub(super) fn preset_swatch<H: UiHost>(
                 source_options.enabled && on_palette_slot_drop_for_render.is_some(),
             );
             let active = selected || drop_over;
-            let border_width = if active { Px(2.0) } else { Px(1.0) };
-            vec![cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    border: Edges::all(border_width),
-                    border_color: Some(if active { ring } else { idle_border_color }),
-                    corner_radii: Corners::all(Px(5.0)),
-                    padding: Edges::all(border_width).into(),
-                    ..Default::default()
+            vec![preset_swatch_visual(
+                cx,
+                PresetSwatchVisualArgs {
+                    color,
+                    alpha_preview,
+                    active,
+                    ring,
+                    idle_border_color,
                 },
-                move |cx| vec![color_preview_stack(cx, color, Px(5.0), alpha_preview)],
             )]
         },
     );
@@ -140,19 +127,17 @@ pub(super) fn preset_swatch<H: UiHost>(
     if let Some(test_id) = test_id {
         swatch = swatch.test_id(test_id);
     }
-    if enabled
-        && drag_drop_options.enabled
-        && let Some(on_palette_slot_drop) = on_palette_slot_drop
-        && let Some(payload) = take_delivered_color_drop(cx, &drag_drop_store, swatch.id)
-    {
-        let action_cx = ActionCx {
-            window: cx.window,
-            target: swatch.id,
-        };
-        let event = ColorEditPaletteSlotDrop::new(index, entry, payload);
-        let mut host = UiActionHostAdapter { app: cx.app };
-        on_palette_slot_drop(&mut host, action_cx, event);
-        host.request_redraw(action_cx.window);
-    }
+    deliver_preset_swatch_drop(
+        cx,
+        PresetSwatchDropDeliveryArgs {
+            index,
+            entry,
+            enabled,
+            drag_drop_options,
+            drag_drop_store,
+            swatch_id: swatch.id,
+            on_palette_slot_drop,
+        },
+    );
     swatch.a11y_value(format_hex(color, show_alpha))
 }

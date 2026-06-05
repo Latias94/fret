@@ -162,6 +162,12 @@ const COLOR_EDIT_POPUP_SWATCHES_RS: &str =
     include_str!("../src/controls/color_edit/popup/swatches.rs");
 const COLOR_EDIT_POPUP_SWATCHES_SLOT_RS: &str =
     include_str!("../src/controls/color_edit/popup/swatches/slot.rs");
+const COLOR_EDIT_POPUP_SWATCHES_SLOT_ACTIVATION_RS: &str =
+    include_str!("../src/controls/color_edit/popup/swatches/slot/activation.rs");
+const COLOR_EDIT_POPUP_SWATCHES_SLOT_DELIVERY_RS: &str =
+    include_str!("../src/controls/color_edit/popup/swatches/slot/delivery.rs");
+const COLOR_EDIT_POPUP_SWATCHES_SLOT_VISUAL_RS: &str =
+    include_str!("../src/controls/color_edit/popup/swatches/slot/visual.rs");
 const COLOR_EDIT_POPUP_TOOLTIP_RS: &str =
     include_str!("../src/controls/color_edit/popup/tooltip.rs");
 const COLOR_EDIT_POPUP_TOOLTIP_PANEL_RS: &str =
@@ -449,9 +455,26 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_POPUP_SWATCHES_RS.contains("take_delivered_color_drop("));
     assert!(!COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteSlotDrop::new("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("fn preset_swatch<"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("mod activation;"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("mod delivery;"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("mod visual;"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("preset_swatch_on_activate("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("install_color_drag_source("));
-    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("take_delivered_color_drop("));
-    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("ColorEditPaletteSlotDrop::new("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("update_color_drop_target("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("deliver_preset_swatch_drop("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("preset_swatch_visual("));
+    assert!(!COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("take_delivered_color_drop("));
+    assert!(!COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("ColorEditPaletteSlotDrop::new("));
+    assert!(!COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("color_preview_stack("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_ACTIVATION_RS.contains("fn preset_swatch_on_activate("));
+    assert!(
+        COLOR_EDIT_POPUP_SWATCHES_SLOT_ACTIVATION_RS
+            .contains("host.request_redraw(action_cx.window)")
+    );
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_DELIVERY_RS.contains("take_delivered_color_drop(cx,"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_DELIVERY_RS.contains("ColorEditPaletteSlotDrop::new("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_DELIVERY_RS.contains("UiActionHostAdapter"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_VISUAL_RS.contains("color_preview_stack("));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("use fill::{"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("mod side;"));
     assert!(COLOR_EDIT_POPUP_PREVIEW_RS.contains("use side::{"));
@@ -1071,10 +1094,13 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(!COLOR_EDIT_POPUP_BODY_RS.contains("color_eyedropper_action("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("ColorEditPaletteEntry"));
     assert!(COLOR_EDIT_POPUP_SWATCHES_RS.contains("fn history_swatches<"));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("preset_swatch_on_activate("));
     assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("install_color_drag_source("));
-    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("take_delivered_color_drop("));
-    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("ColorEditPaletteSlotDrop::new("));
-    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("color_preview_stack("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("deliver_preset_swatch_drop("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_RS.contains("preset_swatch_visual("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_DELIVERY_RS.contains("take_delivered_color_drop("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_DELIVERY_RS.contains("ColorEditPaletteSlotDrop::new("));
+    assert!(COLOR_EDIT_POPUP_SWATCHES_SLOT_VISUAL_RS.contains("color_preview_stack("));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("mod panel;"));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn request_color_tooltip_overlay<"));
     assert!(COLOR_EDIT_POPUP_TOOLTIP_RS.contains("fn color_tooltip_lines("));

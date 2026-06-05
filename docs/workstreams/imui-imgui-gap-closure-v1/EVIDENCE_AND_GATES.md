@@ -29487,6 +29487,34 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-05 editor ColorEdit popup swatch slot child-owner split:
+
+- Claim: ColorEdit popup preset swatch activation, delivered palette-slot drop dispatch, and
+  preview container rendering moved from
+  `ecosystem/fret-ui-editor/src/controls/color_edit/popup/swatches/slot.rs` into private slot child
+  owners without changing preset activation, model/draft/error writeback, popup close behavior,
+  drag-source payload publication, drop-target hover state, palette-slot callback dispatch, preview
+  visuals, a11y value formatting, public ColorEdit API, or IMUI facade behavior.
+- Evidence anchors: `popup/swatches/slot.rs` now declares `mod activation;`, `mod delivery;`, and
+  `mod visual;` while keeping the preset swatch pressable, focus/a11y props, drag-source install,
+  drop-target hover update, test-id routing, and final a11y value assignment. `slot/activation.rs`
+  owns `PresetSwatchActivateArgs` and `preset_swatch_on_activate(...)`. `slot/delivery.rs` owns
+  `PresetSwatchDropDeliveryArgs`, delivered drop retrieval, `ColorEditPaletteSlotDrop::new(...)`,
+  `UiActionHostAdapter` callback dispatch, and redraw. `slot/visual.rs` owns
+  `PresetSwatchVisualArgs`, preview container chrome, and `color_preview_stack(...)` mounting.
+  `WORKSTREAM.json`, `tools/gate_imui_workstream_source.py`, and
+  `ecosystem/fret-ui-editor/tests/imui_surface_policy.rs` freeze the slot child-owner boundaries.
+- Passed: `cargo fmt --package fret-ui-editor`.
+- Passed: `cargo fmt --package fret-ui-editor -- --check`.
+- Passed: `cargo check -p fret-ui-editor --features imui`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --test imui_surface_policy --no-fail-fast`.
+- Passed: `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check`.
+
 2026-06-05 editor ColorEdit public records child-owner split:
 
 - Claim: ColorEdit public palette, drag/drop, and eyedropper records moved from the aggregate
