@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi floating movement/z-order proof owner-split result:
+`ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` now keeps only child-owner routing for
+the floating movement, window-control, and z-order proof surface. `movement_z_order/movement.rs`
+owns title-bar and floating-area drag movement proof, `window_controls.rs` owns window response
+position/size reporting plus close-button and Escape close proof, and `z_order.rs` owns floating
+area and floating layer bring-to-front hit-test order proof. No `fret-ui-kit::imui` floating
+runtime implementation, `fret-imui` public facade, or floating option API changed.
+
 2026-06-05 Fret-ImUi control-geometry proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/control_geometry.rs` now keeps only shared geometry
 helpers and child-owner routing for the control-geometry proof surface. `control_geometry/variants.rs`

@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret-ImUi Floating Movement/Z-Order Proof Owner Split Evidence - 2026-06-05
+
+Claim verified: the `fret-imui` floating movement/z-order proof surface is split by movement,
+window-control, and z-order behavior owner without changing floating runtime code, public APIs,
+option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` now keeps only child-owner routing
+  for `movement`, `window_controls`, and `z_order`.
+- `movement_z_order/movement.rs` owns title-bar and floating-area drag movement proof.
+- `movement_z_order/window_controls.rs` owns window response position/size reporting plus
+  close-button and Escape close proof.
+- `movement_z_order/z_order.rs` owns floating area and floating layer bring-to-front hit-test order
+  proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui floating::movement_z_order --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Control Geometry Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` control-geometry proof surface is split by geometry behavior owner

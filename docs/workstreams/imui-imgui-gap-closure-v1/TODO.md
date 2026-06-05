@@ -94,6 +94,18 @@ Last updated: 2026-06-05
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Floating Movement/Z-Order Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` floating movement/z-order proof file into movement, window-control,
+      and z-order child owners without changing floating runtime behavior, public APIs, or the
+      `fret-ui-kit::imui` floating policy implementation.
+      Result: `floating/movement_z_order.rs` is now a thin module hub.
+      `movement_z_order/movement.rs` owns title-bar and floating-area drag movement proof,
+      `movement_z_order/window_controls.rs` owns window response position/size reporting plus
+      close-button and Escape close proof, and `movement_z_order/z_order.rs` owns floating area and
+      floating layer bring-to-front hit-test order proof. The IMUI source gate freezes the
+      child-owner split.
+
 ## Fret-ImUi Floating Input Modes Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating input-mode proof file into activation, no-inputs, and
