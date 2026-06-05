@@ -35271,3 +35271,29 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check` with only the existing Git warning that
   `apps/fret-devtools/src/native.rs` will normalize CRLF to LF when touched.
+
+2026-06-06 DevTools Guide Recent Evidence panel owner split:
+
+- Claim: the DevTools Guide tab Recent Evidence action row and panel assembly moved out of
+  `apps/fret-devtools/src/native.rs` into the private child owner
+  `apps/fret-devtools/src/native/guide_recent_evidence_panel.rs` without changing action command
+  IDs, disabled-state policy, report projection, recent failed evidence selection/rerun behavior,
+  or the surrounding Guide tab composition.
+- Evidence anchors: `native.rs` now declares
+  `#[path = "native/guide_recent_evidence_panel.rs"] mod guide_recent_evidence_panel;` and keeps
+  only the high-level `devtools_guide_panel(...)` composition call. `guide_recent_evidence_state.rs`
+  still owns state projection, while `guide_recent_evidence_panel.rs` owns
+  `FirstOpenRecentEvidenceActionSpec`, `first_open_recent_evidence_action_specs(...)`,
+  `first_open_recent_evidence_action_row(...)`, and `guide_recent_evidence_panel(...)`.
+  `tools/diag_gate_imui_p2_devtools_first_open.py`, `tools/diag_gate_imui_product_chain.py`, and
+  `tools/gate_imui_workstream_source.py` now read/source-check the new panel owner.
+- Passed: `cargo fmt --package fret-devtools`.
+- Passed: `cargo fmt --package fret-devtools --check`.
+- Passed: `cargo nextest run -p fret-devtools --no-fail-fast` (96 tests passed).
+- Passed:
+  `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check` with only the existing Git warning that
+  `apps/fret-devtools/src/native.rs` and `apps/fret-devtools/src/native/tests.rs` will normalize
+  CRLF to LF when touched.

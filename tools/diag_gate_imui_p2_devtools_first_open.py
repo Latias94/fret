@@ -42,6 +42,9 @@ DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE = "apps/fret-devtools/src/native/discovery_l
 DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
     "apps/fret-devtools/src/native/guide_reference_panels.rs"
 )
+DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/guide_recent_evidence_panel.rs"
+)
 DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.rs"
 DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE = "apps/fret-devtools/src/native/gate_profile_state.rs"
 DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE = "apps/fret-devtools/src/native/workflow_panel_state.rs"
@@ -497,6 +500,9 @@ def _validate_devtools_gui_first_open_source(
     followup_path = cwd / DEVTOOLS_GUI_FOLLOWUP_SOURCE
     discovery_lines_path = cwd / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     guide_reference_panels_path = cwd / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
+    guide_recent_evidence_panel_path = (
+        cwd / DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE
+    )
     header_state_path = cwd / DEVTOOLS_GUI_HEADER_STATE_SOURCE
     gate_profile_state_path = cwd / DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE
     workflow_panel_state_path = cwd / DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE
@@ -526,6 +532,7 @@ def _validate_devtools_gui_first_open_source(
             followup_path=str(followup_path),
             discovery_lines_path=str(discovery_lines_path),
             guide_reference_panels_path=str(guide_reference_panels_path),
+            guide_recent_evidence_panel_path=str(guide_recent_evidence_panel_path),
             header_state_path=str(header_state_path),
             gate_profile_state_path=str(gate_profile_state_path),
             workflow_panel_state_path=str(workflow_panel_state_path),
@@ -550,6 +557,9 @@ def _validate_devtools_gui_first_open_source(
         discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
         guide_reference_panels_source = guide_reference_panels_path.read_text(
             encoding="utf-8"
+        )
+        guide_recent_evidence_panel_source = (
+            guide_recent_evidence_panel_path.read_text(encoding="utf-8")
         )
         header_state_source = header_state_path.read_text(encoding="utf-8")
         gate_profile_state_source = gate_profile_state_path.read_text(encoding="utf-8")
@@ -584,6 +594,7 @@ def _validate_devtools_gui_first_open_source(
             followup_source,
             discovery_lines_source,
             guide_reference_panels_source,
+            guide_recent_evidence_panel_source,
             header_state_source,
             gate_profile_state_source,
             workflow_panel_state_source,

@@ -1,8 +1,9 @@
 use super::*;
+use super::gate_profile_state::collect_gate_profile_panel_state;
+use super::guide_recent_evidence_state::collect_guide_recent_evidence_state;
 use super::header_state::{
     HeaderDiagnosticsState, header_next_action_lines_for_artifacts_root,
 };
-use super::gate_profile_state::collect_gate_profile_panel_state;
 use super::recent_evidence::recent_evidence_next_action;
 use super::workflow_panel_state::collect_workflow_panel_state;
 

@@ -132,6 +132,9 @@ DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE = "apps/fret-devtools/src/native/discovery_l
 DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
     "apps/fret-devtools/src/native/guide_reference_panels.rs"
 )
+DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/guide_recent_evidence_panel.rs"
+)
 DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.rs"
 DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE = "apps/fret-devtools/src/native/gate_profile_state.rs"
 DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE = "apps/fret-devtools/src/native/workflow_panel_state.rs"
@@ -511,6 +514,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
     discovery_lines_path = repo_root / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     guide_reference_panels_path = repo_root / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
+    guide_recent_evidence_panel_path = (
+        repo_root / DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE
+    )
     header_state_path = repo_root / DEVTOOLS_GUI_HEADER_STATE_SOURCE
     gate_profile_state_path = repo_root / DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE
     workflow_panel_state_path = repo_root / DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE
@@ -537,6 +543,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
         guide_reference_panels_source = guide_reference_panels_path.read_text(
             encoding="utf-8"
+        )
+        guide_recent_evidence_panel_source = (
+            guide_recent_evidence_panel_path.read_text(encoding="utf-8")
         )
         header_state_source = header_state_path.read_text(encoding="utf-8")
         gate_profile_state_source = gate_profile_state_path.read_text(encoding="utf-8")
@@ -567,6 +576,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             gate_run_source,
             discovery_lines_source,
             guide_reference_panels_source,
+            guide_recent_evidence_panel_source,
             header_state_source,
             gate_profile_state_source,
             workflow_panel_state_source,

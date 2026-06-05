@@ -53,6 +53,8 @@ mod gate_profile_state;
 mod guide_reference_panels;
 #[path = "native/guide_recent_evidence_state.rs"]
 mod guide_recent_evidence_state;
+#[path = "native/guide_recent_evidence_panel.rs"]
+mod guide_recent_evidence_panel;
 #[path = "native/header_state.rs"]
 mod header_state;
 mod pack;
@@ -74,8 +76,11 @@ use demo_metrics_debug::{
     devtools_demo_metrics_debug_panel,
 };
 use gate_profile_state::{collect_gate_profile_panel_state, gate_profile_select_items};
+use guide_recent_evidence_panel::{
+    first_open_recent_evidence_action_row, first_open_recent_evidence_action_specs,
+    guide_recent_evidence_panel,
+};
 use guide_reference_panels::{dogfood_reference_panel, first_open_reference_panel};
-use guide_recent_evidence_state::collect_guide_recent_evidence_state;
 use header_state::{collect_header_diagnostics_state, header_next_action_lines};
 use discovery_lines::{
     devtools_dogfood_workflow_lines, devtools_first_open_lines,
@@ -1473,58 +1478,6 @@ fn diag_section(
         ),
         |_cx| [block],
     )
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct FirstOpenRecentEvidenceActionSpec {
-    label: &'static str,
-    command: &'static str,
-    disabled: bool,
-}
-
-fn first_open_recent_evidence_action_specs(
-    has_failed_evidence: bool,
-    failed_evidence_rerunnable: bool,
-) -> Vec<FirstOpenRecentEvidenceActionSpec> {
-    vec![
-        FirstOpenRecentEvidenceActionSpec {
-            label: "Copy recent evidence report",
-            command: CMD_COPY_RECENT_EVIDENCE_REPORT,
-            disabled: false,
-        },
-        FirstOpenRecentEvidenceActionSpec {
-            label: "Select failed evidence",
-            command: CMD_SELECT_RECENT_FAILED_EVIDENCE,
-            disabled: !has_failed_evidence,
-        },
-        FirstOpenRecentEvidenceActionSpec {
-            label: "Rerun failed evidence",
-            command: CMD_RERUN_RECENT_FAILED_EVIDENCE,
-            disabled: !failed_evidence_rerunnable,
-        },
-    ]
-}
-
-fn first_open_recent_evidence_action_row(
-    cx: &mut ElementContext<'_, App>,
-    specs: &[FirstOpenRecentEvidenceActionSpec],
-) -> AnyElement {
-    let actions = specs
-        .iter()
-        .map(|spec| {
-            shadcn::Button::new(spec.label)
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(spec.disabled)
-                .on_click(spec.command)
-                .into_element(cx)
-        })
-        .collect::<Vec<_>>();
-    ui::h_row(|_cx| actions)
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx)
 }
 
 fn resizable_body(
@@ -2946,73 +2899,7 @@ fn right_panel(
 }
 
 fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let recent = collect_guide_recent_evidence_state(cx.app, st);
-    let recent_evidence_actions = ui::h_row(|cx| {
-        [
-            shadcn::Button::new("Copy recent evidence report")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .on_click(CMD_COPY_RECENT_EVIDENCE_REPORT)
-                .into_element(cx),
-            shadcn::Button::new("Select failed evidence")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(recent.target.is_none())
-                .on_click(CMD_SELECT_RECENT_FAILED_EVIDENCE)
-                .into_element(cx),
-            shadcn::Button::new("Rerun failed evidence")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(!recent.rerunnable)
-                .on_click(CMD_RERUN_RECENT_FAILED_EVIDENCE)
-                .into_element(cx),
-            shadcn::Button::new("Copy failed evidence path")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(recent.target.is_none())
-                .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_PATH)
-                .into_element(cx),
-            shadcn::Button::new("Copy failed bundle dir")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(!recent.bundle_dir_available)
-                .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_BUNDLE_DIR)
-                .into_element(cx),
-            shadcn::Button::new("Copy failed evidence command")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(recent.target.is_none())
-                .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_COMMAND)
-                .into_element(cx),
-            shadcn::Button::new("Copy failed evidence JSON")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(recent.target.is_none())
-                .on_click(CMD_COPY_RECENT_FAILED_EVIDENCE_JSON)
-                .into_element(cx),
-            shadcn::Button::new("Open failed evidence JSON")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .disabled(recent.target.is_none())
-                .on_click(CMD_OPEN_RECENT_FAILED_EVIDENCE_JSON)
-                .into_element(cx),
-        ]
-    })
-    .gap(fret_ui_kit::Space::N2)
-    .items_center()
-    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx);
-    let recent_evidence_blob = text_blob_sized(
-        cx,
-        recent.report_text,
-        Px(132.0),
-    );
-    let recent_evidence_panel = diag_section(
-        cx,
-        "Recent Evidence",
-        "Latest GUI-launched gate, workflow, and follow-up artifacts restored from the shared diagnostics histories.",
-        vec![recent_evidence_actions, recent_evidence_blob],
-    );
+    let recent_evidence_panel = guide_recent_evidence_panel(cx, st);
     let first_open_panel = first_open_reference_panel(cx, st);
     let dogfood_workflow_panel = dogfood_reference_panel(cx, st);
     let demo_metrics_debug_panel = devtools_demo_metrics_debug_panel(cx, st);
