@@ -8,9 +8,10 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::super::named_demo_state;
 use super::geometry::PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX;
+use super::selection::ProofCollectionKeyboardState;
 use super::{
-    ProofCollectionAsset, ProofCollectionBoxSelectState, ProofCollectionKeyboardState,
-    ProofCollectionRenameSession, authoring_parity_collection_assets,
+    ProofCollectionAsset, ProofCollectionBoxSelectState, ProofCollectionRenameSession,
+    authoring_parity_collection_assets,
 };
 
 pub(super) fn authoring_parity_collection_selection_model<H: UiHost>(

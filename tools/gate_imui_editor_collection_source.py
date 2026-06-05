@@ -50,7 +50,15 @@ def main() -> None:
     collection_readouts = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs"
     )
-    collection_children = (collection_geometry, collection_models, collection_readouts)
+    collection_selection = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
+    )
+    collection_children = (
+        collection_geometry,
+        collection_models,
+        collection_readouts,
+        collection_selection,
+    )
 
     checks = [
         SourceCheck(
@@ -76,6 +84,7 @@ def main() -> None:
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
                 "mod models;",
+                "mod selection;",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],
@@ -108,6 +117,37 @@ def main() -> None:
                 "render_collection_first_asset_browser_proof",
                 "proof_collection_readout_text",
                 "proof_collection_drag_rect",
+            ],
+        ),
+        SourceCheck(
+            "collection selection owner",
+            collection_selection,
+            required=[
+                "pub(super) struct ProofCollectionKeyboardState {",
+                "pub(super) struct ProofCollectionDeleteResult {",
+                "pub(super) struct ProofCollectionDuplicateResult {",
+                "pub(super) fn proof_collection_assets_in_visible_order(",
+                "pub(super) fn proof_collection_selected_assets",
+                "pub(super) fn proof_collection_active_id(",
+                "pub(super) fn proof_collection_select_all_shortcut_matches(",
+                "pub(super) fn proof_collection_duplicate_shortcut_matches(",
+                "pub(super) fn proof_collection_select_all_selection(",
+                "pub(super) fn proof_collection_context_menu_selection(",
+                "pub(super) fn proof_collection_keyboard_selection(",
+                "pub(super) fn proof_collection_delete_key_matches(",
+                "pub(super) fn proof_collection_delete_selection(",
+                "pub(super) fn proof_collection_duplicate_selection(",
+                "fn proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile()",
+                "fn proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy()",
+                "fn proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item()",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
             ],
         ),
         SourceCheck(

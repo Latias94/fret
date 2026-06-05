@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
 
-use super::{
-    ProofCollectionAsset, ProofCollectionKeyboardState, proof_collection_active_id,
-    proof_collection_selected_assets,
+use super::ProofCollectionAsset;
+use super::selection::{
+    ProofCollectionKeyboardState, proof_collection_active_id, proof_collection_selected_assets,
 };
 
 pub(super) fn proof_collection_selection_line(

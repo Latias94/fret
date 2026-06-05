@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof selection owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps proof rendering, inline
+rename/focus handoff, box-select pointer hooks, drag/drop preview wiring, and app model writes.
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` owns
+`ProofCollectionKeyboardState`, delete/duplicate result records, visible-order projection,
+active-id resolution, select-all, keyboard navigation, context-menu selection, delete refocus, and
+duplicate copy-suffix state transitions. `models.rs` and `readouts.rs` import the selection owner
+instead of reaching back through the root module, and source/surface gates now treat selection as a
+separate demo-local owner without widening any shared IMUI helper.
+
 2026-06-03 IMUI begin-menu trigger-flow owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps enabled/state setup, popup
 request/body routing, disabled-popup cleanup, and final `DisclosureResponse` shaping.

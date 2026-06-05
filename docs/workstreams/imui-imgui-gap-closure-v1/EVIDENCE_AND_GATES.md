@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Collection Proof Selection Owner Split Evidence - 2026-06-05
+
+Claim verified: collection proof pure selection and command-result state transitions moved out of
+the render/root owner without changing active-tile fallback, select-all, keyboard navigation,
+context-menu selection, delete refocus, duplicate copy-suffix policy, inline rename routing,
+box-select pointer hooks, drag/drop preview wiring, or app model write call sites.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps proof rendering, inline
+  rename/focus handoff, box-select pointer hooks, drag/drop preview wiring, command-status model
+  writes, and root UI orchestration.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` owns
+  `ProofCollectionKeyboardState`, delete/duplicate result records, visible-order projection,
+  active-id resolution, select-all, keyboard navigation, context-menu selection, delete refocus,
+  and duplicate copy-suffix state transitions.
+- `apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs` and
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` import the selection
+  owner directly for keyboard state and active/selected projections.
+- The collection surface tests and source gates now compose `collection.rs`, `geometry.rs`,
+  `models.rs`, `readouts.rs`, and `selection.rs` for app-owned proof markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new selection owner.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples`: pass.
+- `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_editor_collection_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-examples`: pass with existing dead-code warnings from `fret-plot` and
+  `fret-chart`.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`:
+  attempted twice and timed out during test-target compilation; residual `cargo`/`cargo-nextest`/
+  `rustc`/`link` processes were cleaned up before continuing.
+- `cargo test -p fret-examples --test imui_editor_collection_modularization_surface -- --nocapture`:
+  attempted and timed out during test-target compilation; residual compilation processes were
+  cleaned up before continuing.
+
 ## Kit IMUI Begin-Menu Trigger Flow Owner Split Evidence - 2026-06-03
 
 Claim verified: begin-menu trigger mounting and trigger-driven open-state synchronization moved out

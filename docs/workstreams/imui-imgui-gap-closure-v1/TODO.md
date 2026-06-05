@@ -7805,3 +7805,14 @@ opening the slice.
       `collection/models.rs` owns every `authoring_parity_collection_*_model(...)` helper plus the
       collection scroll-handle state slot. The collection source gate and surface tests now include
       the models owner.
+- [x] Split collection proof pure selection and command-result state transitions out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/selection.rs` child owner without changing active-tile fallback, select-all,
+      keyboard navigation, context-menu selection, delete refocus, duplicate copy-suffix policy, or
+      render call sites.
+      Result: `collection.rs` keeps proof rendering, inline rename/focus handoff, box-select
+      pointer hooks, and app model writes, while `collection/selection.rs` owns
+      `ProofCollectionKeyboardState`, delete/duplicate result records, visible-order projection,
+      active-id resolution, keyboard/select-all/context-menu selection policy, and duplicate/delete
+      pure state transitions. The collection source gate, workstream source gate, manifest, and
+      surface tests now include the selection owner.

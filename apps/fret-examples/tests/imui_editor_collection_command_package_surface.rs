@@ -8,6 +8,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/models.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection.rs"),
     );
 
     for needle in [
