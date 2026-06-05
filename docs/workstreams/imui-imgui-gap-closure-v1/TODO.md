@@ -6934,6 +6934,15 @@ opening the slice.
       axes/grid, right-axis paint, controlled view/pan, and draggable-output regression suites
       while `ecosystem/fret-plot/src/declarative/tests/legend.rs` owns legend paint and interaction
       tests.
+- [x] Split Fret Plot declarative controlled-view and pan regression tests out of the root test
+      owner without changing implementation code, public panel props, optional IMUI adapter
+      routing, caller-controlled view-bounds publication, pan gesture behavior, X/Y pan locks,
+      both-axis lock no-op behavior, axes/grid tests, right-axis paint tests, or draggable output
+      tests.
+      Result: `ecosystem/fret-plot/src/declarative/tests.rs` keeps the shared harness, root
+      axes/grid, right-axis paint, draggable-output regression suites, and child test-owner routing
+      while `ecosystem/fret-plot/src/declarative/tests/view_pan.rs` owns controlled view-bounds
+      publication, pan mutation, X/Y pan-lock, and both-axis no-op tests.
 - [x] Split Fret Plot declarative interaction event routing out of the implementation root without
       changing paint owners, output publication, public panel props, optional IMUI adapter routing,
       or state model ownership.

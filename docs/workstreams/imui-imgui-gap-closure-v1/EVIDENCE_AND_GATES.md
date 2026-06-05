@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret Plot Declarative View/Pan Test Owner Split Evidence - 2026-06-05
+
+Claim verified: declarative plot controlled-view and pan regression tests moved out of the root
+declarative plot test owner without changing plot implementation code, public panel props, optional
+`fret-plot/imui` adapter routing, caller-controlled view-bounds publication, pan gesture mutation,
+X/Y pan-lock behavior, both-axis pan no-op behavior, axes/grid tests, right-axis paint tests, or
+draggable output tests.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
+  scene helpers, root axes/grid, right-axis paint, and draggable-output regression suites, plus
+  child-owner routing through `mod view_pan;`.
+- `ecosystem/fret-plot/src/declarative/tests/view_pan.rs` owns caller-controlled view-bounds
+  publication, pan mutation, X/Y pan-lock, and both-axis pan no-op regressions.
+- `tools/gate_imui_workstream_source.py` now freezes the root test owner routing and the view/pan
+  child owner markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new view/pan test owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings from
+  `fret-plot`.
+- `cargo nextest run -p fret-plot view_pan --no-fail-fast`: pass, 5 passed and 84 skipped.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Legend Test Owner Split Evidence - 2026-06-05
 
 Claim verified: declarative plot legend regression tests moved out of the root declarative plot

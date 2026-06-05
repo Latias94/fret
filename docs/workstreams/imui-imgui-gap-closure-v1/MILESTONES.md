@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative view/pan test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
+right-axis paint, draggable-output regression suites, and child test-owner routing.
+`ecosystem/fret-plot/src/declarative/tests/view_pan.rs` owns caller-controlled view-bounds
+publication, pan gesture mutation, X/Y pan-lock, and both-axis pan no-op regressions. No plot
+implementation, public panel prop, optional `fret-plot/imui` adapter routing, axes/grid test,
+right-axis paint test, or draggable-output test changed.
+
 2026-06-05 Fret Plot declarative legend test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
 right-axis paint, controlled view/pan, and draggable-output regression suites, plus child
