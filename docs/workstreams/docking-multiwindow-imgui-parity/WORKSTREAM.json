@@ -613,6 +613,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M151_RUNNER_SURFACE_BOOTSTRAP_OWNER_SPLIT_2026-06-05.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
@@ -942,6 +946,7 @@
     "crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs",
     "crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs",
     "crates/fret-launch/src/runner/desktop/runner/event_routing.rs",
+    "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs",
     "crates/fret-launch/src/runner/desktop/runner/mod.rs",
     "crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/incoming_open_effects.rs",

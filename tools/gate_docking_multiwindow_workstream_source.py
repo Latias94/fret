@@ -6283,7 +6283,7 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
-        Path("crates/fret-launch/src/runner/desktop/runner/event_routing.rs"),
+        Path("crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs"),
         required=[
             "super::window_position::WindowClientOriginDiagnostics",
             "super::window_position::local_pos_for_screen_pos",

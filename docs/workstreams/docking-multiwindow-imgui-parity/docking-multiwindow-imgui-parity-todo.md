@@ -63,7 +63,7 @@ Each TODO is labeled:
   - Goal: reduce `cursor_screen_pos` drift when the cursor is outside any window during dock drag.
   - Evidence anchors:
     - Cursor screen position updates: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
-    - Cross-window routing uses `cursor_screen_pos`: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+    - Cross-window routing uses `cursor_screen_pos`: `crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs`
     - Online calibration + sampling: `crates/fret-launch/src/runner/desktop/runner/macos_cursor.rs` (`MacCursorTransform`, `macos_mouse_location`, `macos_refresh_cursor_screen_pos_from_nsevent`)
     - Screen-keyed transform table + bootstrap: `crates/fret-launch/src/runner/desktop/runner/macos_cursor.rs` (`MacCursorTransformTable`, `macos_refresh_cursor_screen_pos_for_dock_drag`)
     - Button events also refresh/calibrate (not only pointer-move): `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` (`PointerButton` path)
@@ -178,7 +178,7 @@ Each TODO is labeled:
     - Cross-window drag sessions: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
   - Evidence anchors:
     - Cursor override integration (diagnostics): `crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs`
-    - Hover routing under follow: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`route_internal_drag_hover_from_cursor`)
+    - Hover routing under follow: `crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs` (`route_internal_drag_hover_from_cursor`)
     - Window move/follow: `crates/fret-launch/src/runner/desktop/runner/docking/follow.rs`
   - Acceptance (manual; Windows with 2 monitors at different scale factors):
     - Tear off a tab to a DockFloating OS window.
@@ -263,7 +263,7 @@ Each TODO is labeled:
     - Capability keys + enums: `crates/fret-runtime/src/capabilities.rs`
     - Re-exports: `crates/fret-runtime/src/lib.rs`
     - Backend values + clamp: `crates/fret-launch/src/runner/desktop/runner/mod.rs`, `crates/fret-launch/src/runner/web.rs`
-    - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+    - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs`
     - Docking UI gating (tear-off affordance): `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
 
 - [x] DW-P1-win-002 Windows placement correctness under DPI and decorations.
@@ -279,7 +279,7 @@ Each TODO is labeled:
       - `crates/fret-runtime/src/drag.rs` (`diag_moving_window_*`)
       - `crates/fret-runtime/src/interaction_diagnostics.rs` (`moving_window_*`)
       - `crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs` (screen-space continuity across dock-drag source remaps)
-      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`apply_drag_window_geometry_diagnostics`)
+      - `crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs` (`apply_drag_window_geometry_diagnostics`)
       - `crates/fret-diag/src/commands/dock_routing.rs` (`move_grab_delta`)
       - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-windows-tearoff-placement-capture.debug.json`
       - `tools/diag-campaigns/imui-p3-windows-placement-real-host.json`
@@ -1618,6 +1618,19 @@ Each TODO is labeled:
       - Focused default and `diag-screenshots` runner compile, Linux capability posture regression,
         source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
         compositor acceptance.
+    - [x] 2026-06-06 runner internal drag routing owner split keeps cross-window docking drag
+      routing out of generic event delivery:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md`
+      - `crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs` owns
+        `internal_drag_routing_pointer_id`, `clear_internal_drag_hover_if_needed`,
+        `route_internal_drag_hover_from_cursor`, `route_internal_drag_drop_from_cursor`, and
+        internal drag geometry diagnostics.
+      - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` keeps only ordinary
+        window event delivery and platform completion dispatch.
+      - Marker: runner-routed InternalDrag Enter/Over/Drop for cross-window docking hand feel.
+      - Focused default and `diag-screenshots` runner compile, Linux capability posture regression,
+        module-size guard, source gate, JSON shape, catalog, layering, and diff checks passed
+        locally without recording Wayland compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

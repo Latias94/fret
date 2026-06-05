@@ -533,6 +533,11 @@ Platform note:
   (moves `ApplicationHandler::can_create_surfaces` lifecycle bootstrap orchestration into
   `surface_bootstrap.rs` while leaving only hook dispatch in `app_handler.rs`; projection marker:
   surface creation lifecycle bootstrap)
+- Latest runner internal drag routing owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md`
+  (moves cross-window internal drag pointer lookup, hover/drop routing, and drag diagnostics into
+  `internal_drag_routing.rs` while leaving ordinary window event delivery in `event_routing.rs`;
+  projection marker: runner-routed InternalDrag Enter/Over/Drop for docking multi-window hand feel)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
