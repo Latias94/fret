@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret-ImUi combo-direct proof owner-split result:
+`ecosystem/fret-imui/src/tests/models_combo/combo_direct.rs` now keeps only child-owner routing for
+the direct combo proof surface. `combo_direct/lifecycle.rs` owns popup Escape close/focus restore
+and open-session edge reporting proof, `shortcuts.rs` owns focused-trigger shortcut scoping and
+`shortcut_repeat` opt-in proof, and `selection.rs` owns selectable-row commit, selected
+preview/model projection, and close-after-pick proof. No `fret-ui-kit::imui` combo runtime
+implementation, `fret-imui` public facade, or combo option API changed.
+
 2026-06-05 Fret-ImUi menu-activation proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs` now keeps only child-owner
 routing for the menu-activation proof surface. `menu_activation/command_activation.rs` owns command

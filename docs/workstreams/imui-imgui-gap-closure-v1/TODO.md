@@ -127,6 +127,18 @@ Last updated: 2026-06-05
       ArrowLeft / ArrowRight top-level switching. The IMUI source gate freezes the child-owner
       split.
 
+## Fret-ImUi Combo Direct Proof Split - 2026-06-05
+
+- [x] Split the `fret-imui` direct combo proof file into lifecycle, shortcut activation, and
+      selection-commit child owners without changing combo runtime behavior, public APIs, or the
+      `fret-ui-kit::imui` combo policy implementation.
+      Result: `models_combo/combo_direct.rs` is now a thin module hub. `combo_direct/lifecycle.rs`
+      owns popup Escape close/focus-restore and open-session edge reporting proof,
+      `combo_direct/shortcuts.rs` owns focused-trigger shortcut scoping and `shortcut_repeat`
+      opt-in proof, and `combo_direct/selection.rs` owns selectable-row commit, selected
+      preview/model projection, and close-after-pick proof. The IMUI source gate freezes the
+      child-owner split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching
