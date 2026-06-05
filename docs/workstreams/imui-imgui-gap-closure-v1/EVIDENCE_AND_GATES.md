@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-05
 
+## Fret Plot Declarative Series Paint Test Owner Split Evidence - 2026-06-05
+
+Claim verified: declarative plot series paint regression tests moved out of the root declarative
+plot test owner without changing plot implementation code, public panel props, optional
+`fret-plot/imui` adapter routing, line/area/stems painting, histogram/bar/candlestick/error-bar/
+shaded painting, heatmap/histogram2d painting, axes/grid tests, legend tests, pan tests, or
+draggable output tests.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/tests.rs` now keeps the shared `TestHost`, `FakeServices`,
+  scene helpers, root axes/grid, legend, pan, and draggable-output regression suites, and
+  child-owner routing through `mod series_paint;`.
+- `ecosystem/fret-plot/src/declarative/tests/series_paint.rs` owns the line, area, stems,
+  histogram, bars, candlestick, error-bars, shaded, heatmap, and histogram2d paint regression
+  suite.
+- `tools/gate_imui_workstream_source.py` now freezes the root test owner routing and the series
+  paint child owner markers.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` tracks the new series paint test
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings from
+  `fret-plot`.
+- `cargo nextest run -p fret-plot series_paint --no-fail-fast`: pass, 11 passed and 78 skipped.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `git diff --check`: pass.
+
 ## Fret Plot Declarative Query/Box Selection Test Owner Split Evidence - 2026-06-05
 
 Claim verified: declarative plot query/box selection regression tests moved out of the root

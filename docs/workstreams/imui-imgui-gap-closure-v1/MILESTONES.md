@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 Fret Plot declarative series paint test owner-split result:
+`ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root axes/grid,
+legend, pan, and draggable-output regression suites, plus child test-owner routing.
+`ecosystem/fret-plot/src/declarative/tests/series_paint.rs` owns line, area, stems, histogram,
+bars, candlestick, error-bars, shaded, heatmap, and histogram2d paint regressions. No plot
+implementation, public panel prop, optional `fret-plot/imui` adapter routing, axes/grid test,
+legend test, pan test, or draggable-output test changed.
+
 2026-06-05 Fret Plot declarative query/box selection test owner-split result:
 `ecosystem/fret-plot/src/declarative/tests.rs` now keeps shared harness state, root pan and
 draggable-output regression suites, and child test-owner routing.

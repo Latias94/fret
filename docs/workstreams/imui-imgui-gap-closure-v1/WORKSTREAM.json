@@ -2037,6 +2037,7 @@
     "ecosystem/fret-plot/src/declarative/tests/cursor_readout.rs",
     "ecosystem/fret-plot/src/declarative/tests/overlays.rs",
     "ecosystem/fret-plot/src/declarative/tests/query_box_selection.rs",
+    "ecosystem/fret-plot/src/declarative/tests/series_paint.rs",
     "ecosystem/fret-plot/src/declarative/tests/wheel_zoom.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve.rs",
     "ecosystem/fret-docking/src/dock/drop_resolve/diagnostics.rs",
