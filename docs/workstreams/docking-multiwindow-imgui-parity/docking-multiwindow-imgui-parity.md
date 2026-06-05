@@ -524,6 +524,10 @@ Platform note:
   `docs/workstreams/docking-multiwindow-imgui-parity/M149_RUNNER_WINDOW_REDRAW_PRESENT_OWNER_SPLIT_2026-06-05.md`
   (moves redraw-time present-phase orchestration into `window_redraw_present.rs` while leaving
   winit scheduling, present error recovery, and hitch summary orchestration in `app_handler.rs`)
+- Latest runner window redraw requested owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M150_RUNNER_WINDOW_REDRAW_REQUESTED_OWNER_SPLIT_2026-06-05.md`
+  (moves redraw-time frame-drive orchestration into `window_redraw.rs` while leaving
+  `WindowEvent::RedrawRequested` dispatch in `app_handler.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

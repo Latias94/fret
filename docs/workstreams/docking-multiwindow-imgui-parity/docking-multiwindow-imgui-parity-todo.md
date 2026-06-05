@@ -1585,6 +1585,22 @@ Each TODO is labeled:
       - Focused default and `diag-screenshots` runner compile, Linux capability posture regression,
         source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
         compositor acceptance.
+    - [x] 2026-06-05 runner window redraw requested owner split keeps redraw frame-drive
+      orchestration out of the application handler:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M150_RUNNER_WINDOW_REDRAW_REQUESTED_OWNER_SPLIT_2026-06-05.md`
+      - `crates/fret-launch/src/runner/desktop/runner/window_redraw.rs` owns
+        `handle_window_redraw_requested`.
+      - The owner sequences pending wheel drain, window environment refresh, pre-render effect
+        drain, diagnostic screenshot polling, pending surface resize, frame prepare, app render,
+        text input, accessibility, engine record, webview sync, target updates, present dispatch,
+        RenderDoc bracketing, present error recovery, hitch summary, Android soft-input forcing,
+        and post-render effect drain.
+      - `app_handler.rs` keeps only the `WindowEvent::RedrawRequested` match arm dispatch.
+      - Marker: redraw-time frame-drive orchestration from RedrawRequested dispatch through
+        post-render effect drain.
+      - Focused default and `diag-screenshots` runner compile, Linux capability posture regression,
+        source gate, JSON shape, catalog, and diff checks passed locally without recording Wayland
+        compositor acceptance.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.
