@@ -27,6 +27,10 @@ fn imui_editor_proof_demo_keeps_collection_select_all_app_owned_and_explicit() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename.rs"),
     );
 

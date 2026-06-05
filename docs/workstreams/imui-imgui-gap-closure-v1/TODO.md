@@ -7919,3 +7919,15 @@ opening the slice.
       state transitions, copy-suffix generation, and command-transition unit tests. Existing call
       sites still import through `collection::selection`, and the collection source gate,
       workstream source gate, manifest, and surface tests now include the selection command owner.
+- [x] Split collection proof selection command delete/refocus and duplicate/copy-suffix workflows
+      out of the `collection/selection/commands.rs` hub into
+      `collection/selection/commands/delete.rs` and
+      `collection/selection/commands/duplicate.rs` without changing the `collection::selection`
+      import surface, command button routing, keyboard routing, context-menu routing, delete
+      refocus behavior, duplicate insertion order, visible-order copy reselect behavior, or the
+      app-owned no-helper-widening boundary. Result: `selection/commands.rs` is now a re-export hub,
+      `delete.rs` owns
+      `ProofCollectionDeleteResult`, Delete/Backspace matching, deletion, refocus, and delete
+      tests, and `duplicate.rs` owns `ProofCollectionDuplicateResult`, Primary+D matching,
+      copy-suffix generation, duplicate insertion/reselect, and duplicate tests. The collection
+      source gate, workstream source gate, manifest, and surface tests now include both sub-owners.

@@ -3,14 +3,25 @@
 Status: Active
 Last updated: 2026-06-05
 
+2026-06-05 collection proof selection-command sub-owner result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs` is now a light
+hub that re-exports `delete.rs` and `duplicate.rs`. `selection/commands/delete.rs` owns
+`ProofCollectionDeleteResult`, Delete/Backspace matching, delete state transitions, next-active
+refocus, and delete command tests. `selection/commands/duplicate.rs` owns
+`ProofCollectionDuplicateResult`, Primary+D matching, copy-suffix generation, duplicate insertion,
+visible-order copy reselect, and duplicate command tests. Existing command buttons, keyboard
+dispatch, and context-menu call sites still import through `collection::selection`, while the
+source/surface gates now freeze delete/refocus and duplicate/copy-suffix as separate workflow
+owners.
+
 2026-06-05 collection proof selection-command owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps visible-order
 projection, selected-asset lookup, active-id fallback, select-all, context-menu selection, and
 keyboard navigation, while delegating duplicate/delete command transitions through
-`selection/commands.rs`. `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/
-commands.rs` owns `ProofCollectionDeleteResult`, `ProofCollectionDuplicateResult`,
-Delete/Backspace and Primary+D shortcut matching, duplicate/delete state transitions, copy-suffix
-generation, and command-transition unit tests. Public call sites still import through
+`selection/commands.rs`. `selection/commands.rs` owns `ProofCollectionDeleteResult`,
+`ProofCollectionDuplicateResult`, Delete/Backspace and Primary+D shortcut matching,
+duplicate/delete state transitions, copy-suffix generation, and command-transition unit tests.
+Public call sites still import through
 `collection::selection`, so command buttons, keyboard dispatch, and context menu routing remain
 unchanged while the source/surface gates now freeze duplicate/delete transitions separately from
 the selection-navigation owner.

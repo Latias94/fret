@@ -1665,6 +1665,8 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",

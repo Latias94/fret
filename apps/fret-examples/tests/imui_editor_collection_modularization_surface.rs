@@ -18,6 +18,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
     let selection_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs");
+    let selection_delete_commands_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs");
+    let selection_duplicate_commands_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs");
 
     for needle in [
         "mod collection;",
@@ -206,15 +210,38 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "pub(in super::super) struct ProofCollectionDeleteResult",
-        "pub(in super::super) struct ProofCollectionDuplicateResult",
-        "pub(in super::super) fn proof_collection_delete_selection(",
-        "pub(in super::super) fn proof_collection_duplicate_selection(",
-        "fn proof_collection_unique_copy_text(",
+        "mod delete;",
+        "mod duplicate;",
+        "pub(in super::super) use delete::{",
     ] {
         assert!(
             selection_commands_source.contains(needle),
-            "the demo-local collection selection command owner should keep duplicate/delete state transitions explicit; missing `{needle}`"
+            "the demo-local collection selection command hub should keep sub-owner re-exports explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super::super) struct ProofCollectionDeleteResult",
+        "pub(in super::super::super) fn proof_collection_delete_selection(",
+        "pub(in super::super::super) fn proof_collection_delete_key_matches(",
+        "proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item",
+    ] {
+        assert!(
+            selection_delete_commands_source.contains(needle),
+            "the demo-local collection delete command owner should keep delete/refocus transitions explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super::super) struct ProofCollectionDuplicateResult",
+        "pub(in super::super::super) fn proof_collection_duplicate_selection(",
+        "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
+        "fn proof_collection_unique_copy_text(",
+        "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
+    ] {
+        assert!(
+            selection_duplicate_commands_source.contains(needle),
+            "the demo-local collection duplicate command owner should keep copy-suffix/reselect transitions explicit; missing `{needle}`"
         );
     }
 }
