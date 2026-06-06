@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-06-06
 
+## Fret-ImUi Radio Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` radio proof surface is split by clicked, shortcut-scoping, and
+context-menu owner without changing radio runtime code, public APIs, option names, or test
+semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_controls/radio.rs` now keeps only shared imports and
+  child-owner routing for `clicked`, `shortcuts`, and `context_menu`.
+- `radio/clicked.rs` owns one-frame clicked response proof.
+- `radio/shortcuts.rs` owns focused activate-shortcut scoping proof.
+- `radio/context_menu.rs` owns Shift+F10 context-menu request proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui models_controls::radio --no-fail-fast`: pass, 3 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Label Identity Table Header Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` label-identity table-header proof surface is split by

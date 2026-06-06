@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi radio proof owner-split result:
+`ecosystem/fret-imui/src/tests/models_controls/radio.rs` now keeps only shared imports and
+child-owner routing for the radio proof surface. `radio/clicked.rs` owns one-frame clicked response
+proof, `radio/shortcuts.rs` owns focused activate-shortcut scoping proof, and
+`radio/context_menu.rs` owns Shift+F10 context-menu request proof. No `fret-ui-kit::imui` radio
+runtime implementation, `fret-imui` public facade, or radio option API changed.
+
 2026-06-06 Fret-ImUi label-identity table-header proof owner-split result:
 `ecosystem/fret-imui/src/tests/label_identity/table_headers.rs` now keeps only shared imports and
 child-owner routing for the label-identity table-header proof surface.

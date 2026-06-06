@@ -94,6 +94,17 @@ Last updated: 2026-06-06
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Radio Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` radio proof owner into clicked, shortcut-scoping, and context-menu
+      child owners without changing radio runtime behavior, public APIs, option names, or the
+      `fret-ui-kit::imui` radio implementation.
+      Result: `models_controls/radio.rs` now keeps only shared imports and module routing.
+      `radio/clicked.rs` owns one-frame clicked response proof, `radio/shortcuts.rs` owns focused
+      activate-shortcut scoping proof, and `radio/context_menu.rs` owns Shift+F10 context-menu
+      request proof. The IMUI source gate and workstream source bundle freeze the child-owner
+      split.
+
 ## Fret-ImUi Label Identity Table Header Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` label-identity table-header proof owner into visible-label,
