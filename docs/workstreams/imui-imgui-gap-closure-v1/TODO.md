@@ -7735,7 +7735,7 @@ opening the slice.
 - [x] Guard the current `fret-ui-kit::imui` owner-split posture with a source-thinness gate.
       Result: `tools/gate_imui_workstream_source.py` now scans production
       `ecosystem/fret-ui-kit/src/imui/**/*.rs` files, skips test-only paths, and fails any owner
-      above `IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180`. This keeps the already-split kit IMUI
+      above `IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 100`. This keeps the already-split kit IMUI
       implementation from regressing back into large policy/assembly files while leaving tests and
       behavior unchanged.
 - [x] Split `fret-imui` layout-collection table proof tests into a private owner module.

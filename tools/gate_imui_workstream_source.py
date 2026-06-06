@@ -47,7 +47,7 @@ OPAQUE_STRUCT_SUFFIXES = (
 )
 
 IMUI_KIT_SOURCE_THINNESS_ROOT = Path("ecosystem/fret-ui-kit/src/imui")
-IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180
+IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 100
 IMUI_KIT_SOURCE_THINNESS_EXCLUDED_DIRS = {"tests"}
 
 IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
@@ -4327,8 +4327,8 @@ def main() -> None:
                 "`shortcut_repeat` opt-in repeated-keydown behavior proof",
                 "cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation::shortcuts --no-fail-fast",
                 "Kit IMUI Source Thinness Guard - 2026-06-03",
-                "ecosystem/fret-ui-kit/src/imui production files stay below 180 lines",
-                "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 180",
+                "ecosystem/fret-ui-kit/src/imui production files stay below 100 lines",
+                "IMUI_KIT_SOURCE_THINNESS_MAX_LINES = 100",
                 "check_imui_kit_source_thinness",
                 "Docking Declarative Interaction Type Owner Split - 2026-06-03",
                 "docking declarative interaction record type owner",
