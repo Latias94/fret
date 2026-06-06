@@ -148,6 +148,14 @@ render click observability, and `move_delayed.rs` owns pointer move plus click a
 No `fret-ui-kit::imui` popup/menu runtime implementation, `fret-imui` public facade, or popup/menu
 option API changed.
 
+2026-06-06 Fret-ImUi popup lifecycle/modal proof owner-split result:
+`ecosystem/fret-imui/src/tests/popup_hover/lifecycle_modal.rs` now keeps only shared imports and
+child-owner routing for the popup lifecycle/modal proof surface. `lifecycle_modal/scope.rs` owns
+`drop_popup_scope(...)` close/forget proof, `lifecycle_modal/auto_close.rs` owns no-keep-alive
+auto-close proof, and `lifecycle_modal/modal_dismiss.rs` owns default outside-press prevention,
+Escape dismissal, and opt-in outside-press close proof. No `fret-ui-kit::imui` popup/modal runtime
+implementation, `fret-imui` public facade, or popup/menu option API changed.
+
 2026-06-05 Fret-ImUi floating movement/z-order proof owner-split result:
 `ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` now keeps only child-owner routing for
 the floating movement, window-control, and z-order proof surface. `movement_z_order/movement.rs`

@@ -254,6 +254,18 @@ Last updated: 2026-06-06
       frame without render click observability; and `move_delayed.rs` owns pointer move plus click
       after extra frames. The IMUI source gate freezes the child-owner split.
 
+## Fret-ImUi Popup Lifecycle/Modal Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` popup lifecycle/modal proof file into popup scope, auto-close, and
+      modal dismissal child owners without changing popup/menu/modal runtime behavior, public APIs,
+      or the `fret-ui-kit::imui` popup/modal policy implementation.
+      Result: `popup_hover/lifecycle_modal.rs` is now a thin module hub.
+      `lifecycle_modal/scope.rs` owns `drop_popup_scope(...)` close/forget proof,
+      `lifecycle_modal/auto_close.rs` owns no-keep-alive auto-close proof, and
+      `lifecycle_modal/modal_dismiss.rs` owns default outside-press prevention, Escape dismissal,
+      and opt-in outside-press close proof. The IMUI source gate and workstream source bundle
+      freeze the child-owner split.
+
 ## Fret-ImUi Drag Core Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` drag-core proof file into drag signal, threshold metric, and

@@ -398,6 +398,34 @@ Focused gates:
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Popup Lifecycle/Modal Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` popup lifecycle/modal proof surface is split by popup scope,
+auto-close, and modal-dismissal owner without changing popup/menu/modal runtime code, public APIs,
+option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/popup_hover/lifecycle_modal.rs` now keeps only shared imports and
+  child-owner routing for `scope`, `auto_close`, and `modal_dismiss`.
+- `lifecycle_modal/scope.rs` owns `drop_popup_scope(...)` close/forget proof.
+- `lifecycle_modal/auto_close.rs` owns no-keep-alive auto-close proof.
+- `lifecycle_modal/modal_dismiss.rs` owns default outside-press prevention, Escape dismissal, and
+  opt-in outside-press close proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui popup_hover::lifecycle_modal --no-fail-fast`: pass, 4 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Floating Movement/Z-Order Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` floating movement/z-order proof surface is split by movement,
