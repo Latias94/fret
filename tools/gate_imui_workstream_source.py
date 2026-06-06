@@ -1694,6 +1694,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options.rs"),
             required=[
+                "use super::*;",
+                "mod closable;",
+                "mod collapsible;",
+                "mod movable;",
+                "mod resizable;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()",
                 "fn floating_window_movable_false_does_not_move_when_dragging_title_bar()",
                 "fn floating_window_resizable_false_hides_resize_handles()",
@@ -1703,13 +1711,96 @@ def main() -> None:
                 "movable: false",
                 "resizable: false",
                 "collapsible: false",
-            ],
-            forbidden=[
                 "fn floating_window_resizes_when_dragging_corner_handle()",
                 "fn floating_window_resizes_from_left_updates_origin_and_width()",
                 "fn floating_window_title_bar_double_click_toggles_collapsed()",
                 "expected window to grow wider",
                 "expected floating area id stable across collapse",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/closable.rs"),
+            required=[
+                "use super::*;",
+                "fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()",
+                "open_window_options_with_behavior",
+                "closable: false",
+                "imui.float_window.close:demo",
+                "KeyCode::Escape",
+            ],
+            forbidden=[
+                "fn floating_window_movable_false",
+                "fn floating_window_resizable_false",
+                "fn floating_window_collapsible_false",
+                "movable: false",
+                "resizable: false",
+                "collapsible: false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/movable.rs"),
+            required=[
+                "use super::*;",
+                "fn floating_window_movable_false_does_not_move_when_dragging_title_bar()",
+                "window_behavior_options",
+                "movable: false",
+                "pointer_down_at(",
+                "pointer_move_at(",
+                "pointer_up_at_with_is_click(",
+            ],
+            forbidden=[
+                "fn floating_window_closable_false",
+                "fn floating_window_resizable_false",
+                "fn floating_window_collapsible_false",
+                "closable: false",
+                "resizable: false",
+                "collapsible: false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/resizable.rs"),
+            required=[
+                "use super::*;",
+                "fn floating_window_resizable_false_hides_resize_handles()",
+                "resizable_window_options_with_behavior",
+                "resizable: false",
+                "imui.float_window.resize.corner:demo",
+            ],
+            forbidden=[
+                "fn floating_window_closable_false",
+                "fn floating_window_movable_false",
+                "fn floating_window_collapsible_false",
+                "closable: false",
+                "movable: false",
+                "collapsible: false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/collapsible.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn floating_window_collapsible_false_does_not_toggle_on_title_double_click()",
+                "resizable_window_options_with_behavior",
+                "collapsible: false",
+                "double_click_at(",
+            ],
+            forbidden=[
+                "fn floating_window_closable_false",
+                "fn floating_window_movable_false",
+                "fn floating_window_resizable_false",
+                "closable: false",
+                "movable: false",
+                "resizable: false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
             ],
         ),
         SourceCheck(
@@ -39895,6 +39986,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options.rs"),
             required=[
+                "use super::*;",
+                "mod closable;",
+                "mod collapsible;",
+                "mod movable;",
+                "mod resizable;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()",
                 "fn floating_window_movable_false_does_not_move_when_dragging_title_bar()",
                 "fn floating_window_resizable_false_hides_resize_handles()",
@@ -39902,8 +40001,68 @@ def main() -> None:
                 "open_window_options_with_behavior",
                 "window_behavior_options",
                 "resizable_window_options_with_behavior",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/closable.rs"),
+            required=[
+                "fn floating_window_closable_false_hides_close_button_and_escape_does_not_close()",
+                "open_window_options_with_behavior",
+                "closable: false",
             ],
             forbidden=[
+                "fn floating_window_movable_false",
+                "fn floating_window_resizable_false",
+                "fn floating_window_collapsible_false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/movable.rs"),
+            required=[
+                "fn floating_window_movable_false_does_not_move_when_dragging_title_bar()",
+                "window_behavior_options",
+                "movable: false",
+            ],
+            forbidden=[
+                "fn floating_window_closable_false",
+                "fn floating_window_resizable_false",
+                "fn floating_window_collapsible_false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/resizable.rs"),
+            required=[
+                "fn floating_window_resizable_false_hides_resize_handles()",
+                "resizable_window_options_with_behavior",
+                "resizable: false",
+            ],
+            forbidden=[
+                "fn floating_window_closable_false",
+                "fn floating_window_movable_false",
+                "fn floating_window_collapsible_false",
+                "fn floating_window_resizes_when_dragging_corner_handle()",
+                "fn floating_window_title_bar_double_click_toggles_collapsed()",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/collapsible.rs"
+            ),
+            required=[
+                "fn floating_window_collapsible_false_does_not_toggle_on_title_double_click()",
+                "resizable_window_options_with_behavior",
+                "collapsible: false",
+            ],
+            forbidden=[
+                "fn floating_window_closable_false",
+                "fn floating_window_movable_false",
+                "fn floating_window_resizable_false",
                 "fn floating_window_resizes_when_dragging_corner_handle()",
                 "fn floating_window_title_bar_double_click_toggles_collapsed()",
             ],

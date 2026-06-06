@@ -237,10 +237,13 @@ Last updated: 2026-06-06
       collapse lifecycle child owners without changing floating-window behavior, public APIs, or
       the `fret-ui-kit::imui` floating implementation.
       Result: `floating/window_options.rs` now keeps only shared imports and module routing.
-      `window_options/disabled_options.rs` owns `closable=false`, `movable=false`,
-      `resizable=false`, and `collapsible=false` behavior proof, `window_options/resize.rs` owns
-      corner and left-edge resize gesture proof, and `window_options/collapse.rs` owns title-bar
-      double-click collapse/expand lifecycle proof including stable floating area id and
+      `window_options/disabled_options.rs` routes disabled-option proof owners,
+      `disabled_options/closable.rs` owns `closable=false` proof,
+      `disabled_options/movable.rs` owns `movable=false` proof,
+      `disabled_options/resizable.rs` owns `resizable=false` proof, and
+      `disabled_options/collapsible.rs` owns `collapsible=false` proof. `window_options/resize.rs`
+      owns corner and left-edge resize gesture proof, and `window_options/collapse.rs` owns
+      title-bar double-click collapse/expand lifecycle proof including stable floating area id and
       resize-handle visibility while collapsed. The IMUI source gate freezes the child-owner split.
 
 ## Fret-ImUi Table Visibility Proof Split - 2026-06-05

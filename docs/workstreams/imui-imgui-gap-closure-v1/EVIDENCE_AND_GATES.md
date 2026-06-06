@@ -308,8 +308,11 @@ Evidence:
 
 - `ecosystem/fret-imui/src/tests/floating/window_options.rs` now keeps only shared imports and
   child-owner routing for `disabled_options`, `resize`, and `collapse`.
-- `window_options/disabled_options.rs` owns `closable=false`, `movable=false`, `resizable=false`,
-  and `collapsible=false` behavior proof.
+- `window_options/disabled_options.rs` routes disabled-option proof owners.
+- `window_options/disabled_options/closable.rs` owns `closable=false` proof.
+- `window_options/disabled_options/movable.rs` owns `movable=false` proof.
+- `window_options/disabled_options/resizable.rs` owns `resizable=false` proof.
+- `window_options/disabled_options/collapsible.rs` owns `collapsible=false` proof.
 - `window_options/resize.rs` owns corner and left-edge resize gesture proof.
 - `window_options/collapse.rs` owns title-bar double-click collapse/expand lifecycle proof,
   stable floating area id checks, and resize-handle visibility while collapsed.
