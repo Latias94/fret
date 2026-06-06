@@ -47,6 +47,8 @@ mod followup;
 #[path = "native/followup_panel.rs"]
 mod followup_panel;
 mod gate_run;
+#[path = "native/run_history_panel.rs"]
+mod run_history_panel;
 #[path = "native/command_catalog.rs"]
 mod command_catalog;
 #[path = "native/gate_profile_state.rs"]
@@ -101,6 +103,7 @@ use recent_evidence::{
     recent_failed_evidence_rerun_command_from_state,
     recent_failed_evidence_rerun_unavailable_reason_from_state,
 };
+use run_history_panel::{gate_run_history_list, workflow_run_history_list};
 use workflow_panel_state::collect_workflow_panel_state;
 #[cfg(test)]
 use recent_evidence::{
@@ -4724,116 +4727,6 @@ fn shell_quote_for_display(value: &str) -> String {
         return value.to_string();
     }
     format!("'{}'", value.replace('\'', "'\\''"))
-}
-
-fn gate_run_history_list(
-    cx: &mut ElementContext<'_, App>,
-    selected_result_path_model: &Model<Option<Arc<str>>>,
-    entries: &[gate_run::GateRunResultHistoryEntry],
-    active_result_path: Option<&str>,
-) -> AnyElement {
-    if entries.is_empty() {
-        return text_blob_sized(cx, "gate run history: <none>".to_string(), Px(84.0));
-    }
-
-    let mut rows: Vec<AnyElement> = Vec::new();
-    for entry in entries.iter().take(8) {
-        let is_selected = active_result_path.is_some_and(|path| path == entry.result_path);
-        let result_path = entry.result_path.clone();
-        let selected_result_path_model = selected_result_path_model.clone();
-        let label = format!(
-            "{} | {} | {}",
-            entry.status,
-            entry.id,
-            short_artifact_result_path(&entry.result_path)
-        );
-        let on_activate: fret_ui::action::OnActivate =
-            Arc::new(move |host, action_cx, _reason| {
-                let _ = host
-                    .models_mut()
-                    .update(&selected_result_path_model, |value| {
-                        *value = Some(Arc::<str>::from(result_path.clone()))
-                    });
-                host.request_redraw(action_cx.window);
-            });
-        rows.push(
-            shadcn::Button::new(label)
-                .variant(if is_selected {
-                    shadcn::ButtonVariant::Secondary
-                } else {
-                    shadcn::ButtonVariant::Ghost
-                })
-                .size(shadcn::ButtonSize::Sm)
-                .on_activate(on_activate)
-                .into_element(cx),
-        );
-    }
-
-    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
-        .gap(fret_ui_kit::Space::N1)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx)])
-    .refine_layout(
-        fret_ui_kit::LayoutRefinement::default()
-            .w_full()
-            .min_h(Px(116.0)),
-    )
-    .into_element(cx)
-}
-
-fn workflow_run_history_list(
-    cx: &mut ElementContext<'_, App>,
-    selected_result_path_model: &Model<Option<Arc<str>>>,
-    entries: &[workflow_run::WorkflowRunResultHistoryEntry],
-    active_result_path: Option<&str>,
-) -> AnyElement {
-    if entries.is_empty() {
-        return text_blob_sized(cx, "workflow run history: <none>".to_string(), Px(84.0));
-    }
-
-    let mut rows: Vec<AnyElement> = Vec::new();
-    for entry in entries.iter().take(8) {
-        let is_selected = active_result_path.is_some_and(|path| path == entry.result_path);
-        let result_path = entry.result_path.clone();
-        let selected_result_path_model = selected_result_path_model.clone();
-        let label = format!(
-            "{} | {} | {}",
-            entry.status,
-            entry.id,
-            short_artifact_result_path(&entry.result_path)
-        );
-        let on_activate: fret_ui::action::OnActivate =
-            Arc::new(move |host, action_cx, _reason| {
-                let _ = host
-                    .models_mut()
-                    .update(&selected_result_path_model, |value| {
-                        *value = Some(Arc::<str>::from(result_path.clone()))
-                    });
-                host.request_redraw(action_cx.window);
-            });
-        rows.push(
-            shadcn::Button::new(label)
-                .variant(if is_selected {
-                    shadcn::ButtonVariant::Secondary
-                } else {
-                    shadcn::ButtonVariant::Ghost
-                })
-                .size(shadcn::ButtonSize::Sm)
-                .on_activate(on_activate)
-                .into_element(cx),
-        );
-    }
-
-    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
-        .gap(fret_ui_kit::Space::N1)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx)])
-    .refine_layout(
-        fret_ui_kit::LayoutRefinement::default()
-            .w_full()
-            .min_h(Px(116.0)),
-    )
-    .into_element(cx)
 }
 
 fn short_artifact_result_path(path: &str) -> String {

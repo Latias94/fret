@@ -42,6 +42,9 @@ DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
 DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/followup_panel.rs"
 )
+DEVTOOLS_GUI_RUN_HISTORY_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/run_history_panel.rs"
+)
 DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE = "apps/fret-devtools/src/native/discovery_lines.rs"
 DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
     "apps/fret-devtools/src/native/guide_reference_panels.rs"
@@ -508,6 +511,7 @@ def _validate_devtools_gui_first_open_source(
     workflow_run_path = cwd / DEVTOOLS_GUI_WORKFLOW_RUN_SOURCE
     followup_path = cwd / DEVTOOLS_GUI_FOLLOWUP_SOURCE
     followup_panel_path = cwd / DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE
+    run_history_panel_path = cwd / DEVTOOLS_GUI_RUN_HISTORY_PANEL_SOURCE
     discovery_lines_path = cwd / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     guide_reference_panels_path = cwd / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
     guide_recent_evidence_panel_path = (
@@ -542,6 +546,7 @@ def _validate_devtools_gui_first_open_source(
             workflow_run_path=str(workflow_run_path),
             followup_path=str(followup_path),
             followup_panel_path=str(followup_panel_path),
+            run_history_panel_path=str(run_history_panel_path),
             discovery_lines_path=str(discovery_lines_path),
             guide_reference_panels_path=str(guide_reference_panels_path),
             guide_recent_evidence_panel_path=str(guide_recent_evidence_panel_path),
@@ -568,6 +573,7 @@ def _validate_devtools_gui_first_open_source(
         workflow_run_source = workflow_run_path.read_text(encoding="utf-8")
         followup_source = followup_path.read_text(encoding="utf-8")
         followup_panel_source = followup_panel_path.read_text(encoding="utf-8")
+        run_history_panel_source = run_history_panel_path.read_text(encoding="utf-8")
         discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
         guide_reference_panels_source = guide_reference_panels_path.read_text(
             encoding="utf-8"
@@ -608,6 +614,7 @@ def _validate_devtools_gui_first_open_source(
             workflow_run_source,
             followup_source,
             followup_panel_source,
+            run_history_panel_source,
             discovery_lines_source,
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,

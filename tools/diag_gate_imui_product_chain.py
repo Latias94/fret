@@ -158,6 +158,9 @@ DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
 DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/followup_panel.rs"
 )
+DEVTOOLS_GUI_RUN_HISTORY_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/run_history_panel.rs"
+)
 DEVTOOLS_MCP_SOURCE = "apps/fret-devtools-mcp/src/native.rs"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -522,6 +525,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
     followup_panel_path = repo_root / DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE
+    run_history_panel_path = repo_root / DEVTOOLS_GUI_RUN_HISTORY_PANEL_SOURCE
     discovery_lines_path = repo_root / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     guide_reference_panels_path = repo_root / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
     guide_recent_evidence_panel_path = (
@@ -552,6 +556,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         followup_panel_source = followup_panel_path.read_text(encoding="utf-8")
+        run_history_panel_source = run_history_panel_path.read_text(encoding="utf-8")
         discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
         guide_reference_panels_source = guide_reference_panels_path.read_text(
             encoding="utf-8"
@@ -588,6 +593,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             semantics_source,
             gate_run_source,
             followup_panel_source,
+            run_history_panel_source,
             discovery_lines_source,
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,
