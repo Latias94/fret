@@ -606,8 +606,9 @@ Evidence:
 
 - `ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` is now a thin module hub for
   `selection`, `popup`, and `shortcuts` proof owners.
-- `combo_model/selection.rs` owns changed-on-pick, selected model projection, lifecycle edit, and
-  deactivated-after-edit proof.
+- `combo_model/selection.rs` routes combo-model selection proof owners.
+- `combo_model/selection/changed.rs` owns changed-on-pick plus selected model projection proof.
+- `combo_model/selection/lifecycle.rs` owns lifecycle edit plus deactivated-after-edit proof.
 - `combo_model/popup.rs` owns popup Escape close/focus-restore proof and popup scope/test-id
   override proof.
 - `combo_model/shortcuts.rs` routes combo-model shortcut proof owners.

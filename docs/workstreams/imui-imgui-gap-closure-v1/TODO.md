@@ -454,9 +454,11 @@ Last updated: 2026-06-06
       child owners without changing combo-model runtime behavior, public APIs, or the
       `fret-ui-kit::imui` combo-model policy implementation.
       Result: `models_combo/combo_model.rs` is now a thin module hub. `combo_model/selection.rs`
-      owns changed-on-pick, selected model projection, lifecycle edit, and deactivated-after-edit
-      proof, `combo_model/popup.rs` owns popup Escape close/focus-restore and popup scope/test-id
-      override proof, and `combo_model/shortcuts.rs` routes combo-model shortcut proof owners.
+      routes combo-model selection proof owners, `combo_model/selection/changed.rs` owns
+      changed-on-pick plus selected model projection proof, `combo_model/selection/lifecycle.rs`
+      owns lifecycle edit plus deactivated-after-edit proof, `combo_model/popup.rs` owns popup
+      Escape close/focus-restore and popup scope/test-id override proof, and
+      `combo_model/shortcuts.rs` routes combo-model shortcut proof owners.
       `combo_model/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof, and
       `combo_model/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof. The IMUI source gate
       freezes the child-owner split.
