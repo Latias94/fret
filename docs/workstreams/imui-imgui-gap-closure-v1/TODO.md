@@ -453,8 +453,10 @@ Last updated: 2026-06-06
       Result: `models_combo/combo_model.rs` is now a thin module hub. `combo_model/selection.rs`
       owns changed-on-pick, selected model projection, lifecycle edit, and deactivated-after-edit
       proof, `combo_model/popup.rs` owns popup Escape close/focus-restore and popup scope/test-id
-      override proof, and `combo_model/shortcuts.rs` owns focused-trigger shortcut scoping and
-      `shortcut_repeat` opt-in proof. The IMUI source gate freezes the child-owner split.
+      override proof, and `combo_model/shortcuts.rs` routes combo-model shortcut proof owners.
+      `combo_model/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof, and
+      `combo_model/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof. The IMUI source gate
+      freezes the child-owner split.
 
 ## Fret-ImUi Control Geometry Proof Split - 2026-06-05
 

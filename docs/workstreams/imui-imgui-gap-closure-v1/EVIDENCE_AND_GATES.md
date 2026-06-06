@@ -608,8 +608,9 @@ Evidence:
   deactivated-after-edit proof.
 - `combo_model/popup.rs` owns popup Escape close/focus-restore proof and popup scope/test-id
   override proof.
-- `combo_model/shortcuts.rs` owns focused-trigger shortcut scoping and `shortcut_repeat` opt-in
-  proof.
+- `combo_model/shortcuts.rs` routes combo-model shortcut proof owners.
+- `combo_model/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof.
+- `combo_model/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof.
 - `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
   freeze the proof split.
 
