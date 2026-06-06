@@ -19766,6 +19766,28 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Slider Test Owner-Split Evidence - 2026-06-06
+
+Claim verified: IMUI slider model proofs now have separate test owners for changed/semantics and
+pointer lifecycle behavior without changing runtime APIs, event sequencing, semantics projection, or
+model update expectations.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_controls/slider.rs` keeps slider proof module wiring.
+- `ecosystem/fret-imui/src/tests/models_controls/slider/changed.rs` owns changed and semantics proof.
+- `ecosystem/fret-imui/src/tests/models_controls/slider/lifecycle.rs` owns pointer lifecycle proof.
+- `tools/gate_imui_workstream_source.py` now rejects slider proof bodies from drifting back into
+  `slider.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui models_controls::slider --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Drag Source Hook Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI drag source hook installation moved into a private owner without changing
