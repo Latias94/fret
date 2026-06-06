@@ -105,6 +105,16 @@ Last updated: 2026-06-06
       request proof. The IMUI source gate and workstream source bundle freeze the child-owner
       split.
 
+## Fret-ImUi Switch Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` switch proof owner into changed and shortcut-scoping child owners
+      without changing switch runtime behavior, public APIs, option names, or the
+      `fret-ui-kit::imui` switch implementation.
+      Result: `models_controls/switch.rs` now keeps only shared imports and module routing.
+      `switch/changed.rs` owns one-frame changed response and model writeback proof, while
+      `switch/shortcuts.rs` owns focused activate-shortcut scoping proof. The IMUI source gate
+      and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Label Identity Table Header Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` label-identity table-header proof owner into visible-label,

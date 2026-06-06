@@ -19788,6 +19788,28 @@ Focused gates:
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `git diff --check`: pass.
 
+## Switch Test Owner-Split Evidence - 2026-06-06
+
+Claim verified: IMUI switch model proofs now have separate test owners for changed/model writeback
+and focused activate-shortcut scoping without changing runtime APIs, event sequencing, option
+names, or model update expectations.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_controls/switch.rs` keeps switch proof module wiring.
+- `ecosystem/fret-imui/src/tests/models_controls/switch/changed.rs` owns changed proof.
+- `ecosystem/fret-imui/src/tests/models_controls/switch/shortcuts.rs` owns focused shortcut proof.
+- `tools/gate_imui_workstream_source.py` now rejects switch proof bodies from drifting back into
+  `switch.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui models_controls::switch --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Drag Source Hook Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI drag source hook installation moved into a private owner without changing
