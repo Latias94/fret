@@ -94,6 +94,17 @@ Last updated: 2026-06-06
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Tabs Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` tab-bar proof owner into selection, response-edge, and
+      shortcut-scoping child owners without changing tab runtime behavior, public APIs, option
+      names, or the `fret-ui-kit::imui` tab implementation.
+      Result: `interaction_menu_tabs/tabs.rs` now keeps only shared imports and module routing.
+      `tabs/selection.rs` owns selected-panel/model writeback plus selected semantics proof,
+      `tabs/response_edges.rs` owns selected-change and trigger activation/deactivation edge
+      proof, and `tabs/shortcut_scoping.rs` owns focused-trigger shortcut scoping proof. The IMUI
+      source gate and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Floating Input Modes Activation Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` floating input-mode activation proof owner into content,

@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi tabs proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs.rs` now keeps only shared imports and
+child-owner routing for the tab-bar proof surface. `tabs/selection.rs` owns selected panel/model
+writeback plus selected semantics proof, `tabs/response_edges.rs` owns selected-change and trigger
+activation/deactivation edge proof, and `tabs/shortcut_scoping.rs` owns focused-trigger shortcut
+scoping proof. No `fret-ui-kit::imui` tab runtime implementation, `fret-imui` public facade, or
+tab option API changed.
+
 2026-06-06 Fret-ImUi sortable proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs` now keeps only shared imports and
 child-owner routing for the sortable proof surface. `sortable/fixtures.rs` owns sortable item

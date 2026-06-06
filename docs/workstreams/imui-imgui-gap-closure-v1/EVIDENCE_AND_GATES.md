@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-06-06
 
+## Fret-ImUi Tabs Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` tab-bar proof surface is split by selection, response-edge, and
+shortcut-scoping owner without changing tab runtime code, public APIs, option names, or test
+semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs.rs` now keeps only shared imports and
+  child-owner routing for `response_edges`, `selection`, and `shortcut_scoping`.
+- `tabs/selection.rs` owns selected panel/model writeback plus selected semantics proof.
+- `tabs/response_edges.rs` owns selected-change and trigger activation/deactivation edge proof.
+- `tabs/shortcut_scoping.rs` owns focused-trigger shortcut scoping proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: pass, 3 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Floating Input Modes No-Inputs Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` floating input-mode no-input proof subset is split by disabled
