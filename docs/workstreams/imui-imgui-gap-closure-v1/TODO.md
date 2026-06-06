@@ -94,6 +94,16 @@ Last updated: 2026-06-06
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Checkbox Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` checkbox proof owner into changed and shortcut-scoping child owners
+      without changing checkbox runtime behavior, public APIs, option names, or the
+      `fret-ui-kit::imui` checkbox implementation.
+      Result: `models_controls/checkbox.rs` now keeps only shared imports and module routing.
+      `checkbox/changed.rs` owns one-frame changed response and model writeback proof, while
+      `checkbox/shortcuts.rs` owns focused activate-shortcut scoping proof. The IMUI source gate
+      and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Radio Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` radio proof owner into clicked, shortcut-scoping, and context-menu

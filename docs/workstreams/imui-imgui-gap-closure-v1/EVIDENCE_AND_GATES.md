@@ -19766,6 +19766,28 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Checkbox Test Owner-Split Evidence - 2026-06-06
+
+Claim verified: IMUI checkbox model proofs now have separate test owners for changed/model
+writeback and focused activate-shortcut scoping without changing runtime APIs, event sequencing,
+option names, or model update expectations.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_controls/checkbox.rs` keeps checkbox proof module wiring.
+- `ecosystem/fret-imui/src/tests/models_controls/checkbox/changed.rs` owns changed proof.
+- `ecosystem/fret-imui/src/tests/models_controls/checkbox/shortcuts.rs` owns focused shortcut proof.
+- `tools/gate_imui_workstream_source.py` now rejects checkbox proof bodies from drifting back into
+  `checkbox.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui models_controls::checkbox --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Slider Test Owner-Split Evidence - 2026-06-06
 
 Claim verified: IMUI slider model proofs now have separate test owners for changed/semantics and
