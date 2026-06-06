@@ -224,7 +224,7 @@ def _check_docs(failures: list[str]) -> None:
     _require_markers(
         Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
         required=[
-            "\"updated\": \"2026-06-05\"",
+            "\"updated\": \"2026-06-06\"",
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
             "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
@@ -322,6 +322,8 @@ def _check_docs(failures: list[str]) -> None:
             "M149_RUNNER_WINDOW_REDRAW_PRESENT_OWNER_SPLIT_2026-06-05.md",
             "M150_RUNNER_WINDOW_REDRAW_REQUESTED_OWNER_SPLIT_2026-06-05.md",
             "M151_RUNNER_SURFACE_BOOTSTRAP_OWNER_SPLIT_2026-06-05.md",
+            "M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md",
+            "M153_RUNNER_INTERNAL_DRAG_MOVING_WINDOW_OWNER_SPLIT_2026-06-06.md",
             "python tools/gate_docking_multiwindow_workstream_source.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py --reuse-built",
@@ -359,6 +361,8 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/docking/follow.rs",
             "crates/fret-launch/src/runner/desktop/runner/docking/pointer.rs",
             "crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs",
+            "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs",
+            "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing/moving_window.rs",
             "crates/fret-launch/src/runner/desktop/runner/change_propagation.rs",
             "crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
@@ -5267,6 +5271,33 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M153_RUNNER_INTERNAL_DRAG_MOVING_WINDOW_OWNER_SPLIT_2026-06-06.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing/moving_window.rs",
+            "`HoveredWindowUnderMovingWindow` sampling",
+            "DockFloating follow state",
+            "non-main drag source",
+            "WindowUnderCursorSource",
+            "diagnostic cursor isolation",
+            "private owner split only",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "python tools\\gate_docking_multiwindow_workstream_source.py",
+            "python tools\\check_layering.py",
+            "git diff --check",
+            "does not close `DW-P1-linux-003`",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod change_propagation;",
@@ -6285,12 +6316,42 @@ def _check_docs(failures: list[str]) -> None:
     _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs"),
         required=[
+            "mod moving_window;",
             "super::window_position::WindowClientOriginDiagnostics",
             "super::window_position::local_pos_for_screen_pos",
+            "self.resolve_internal_drag_moving_window(drag_kind, drag_source_window)",
+            "self.window_under_internal_drag_moving_window(",
+            "under_moving_window.window",
+            "under_moving_window.source",
         ],
         forbidden=[
             "super::window::WindowClientOriginDiagnostics",
             "super::window::local_pos_for_screen_pos",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/internal_drag_routing/moving_window.rs"),
+        required=[
+            "pub(super) struct MovingWindowUnderTarget",
+            "pub(super) fn resolve_internal_drag_moving_window",
+            "pub(super) fn window_under_internal_drag_moving_window",
+            "fn moving_window_under_target_candidates",
+            "self.dock_tearoff_follow",
+            "follow.source_window == drag_source_window",
+            "fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL",
+            ".filter(|w| self.main_window.is_some_and(|main| *w != main))",
+            "return MovingWindowUnderTarget::default();",
+            "self.window_under_cursor_platform(candidate, Some(moving_window))",
+            "self.window_under_cursor_best_effort(candidate, Some(moving_window))",
+            "hit.window.filter(|window| *window != moving_window)",
+            "fret_runtime::WindowUnderCursorSource::Unknown",
+            "self.diag_pointer_input_isolation_active()",
+            "self.clamp_screen_pos_to_window_client(moving_window, screen_pos)",
+            "self.window_client_rect_screen(moving_window)",
+        ],
+        forbidden=[
+            "pub fn ",
         ],
         failures=failures,
     )

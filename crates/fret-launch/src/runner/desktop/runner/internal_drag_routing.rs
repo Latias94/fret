@@ -1,5 +1,7 @@
 use super::*;
 
+mod moving_window;
+
 fn env_flag_is_true(name: &str) -> bool {
     std::env::var_os(name).is_some_and(|v| {
         let v = v.to_string_lossy();
@@ -171,72 +173,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let mut moving_window = self
-            .dock_tearoff_follow
-            .filter(|follow| follow.source_window == drag_source_window)
-            .map(|follow| follow.window)
-            .or_else(|| {
-                matches!(
-                    drag_kind,
-                    fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
-                )
-                .then_some(drag_source_window)
-                .filter(|w| self.main_window.is_some_and(|main| *w != main))
-            });
+        let mut moving_window =
+            self.resolve_internal_drag_moving_window(drag_kind, drag_source_window);
         let peek_behind_moving_window = self.dock_tearoff_follow.is_some_and(|follow| {
             follow.source_window == drag_source_window && follow.transparent_payload_applied
         });
         let prefer_not = peek_behind_moving_window.then_some(moving_window).flatten();
 
         let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
-        let mut window_under_moving_window = None;
-        let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
-        if let Some(moving_window) = moving_window {
-            let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
-            if allow_window_under_cursor {
-                // When scripted diagnostics inject cursor overrides in window-client coordinates,
-                // the simulated cursor may temporarily drift outside the moving window while the
-                // runner is also updating OS window positions (tear-off follow).
-                //
-                // Prefer sampling a few stable points inside the moving window to recover the
-                // "window under moving window" result that an OS cursor would report.
-                let mut candidates = Vec::with_capacity(3);
-                candidates.push(screen_pos);
-                if diag_cursor_override_active {
-                    if let Some(clamped) =
-                        self.clamp_screen_pos_to_window_client(moving_window, screen_pos)
-                    {
-                        candidates.push(clamped);
-                    }
-                    if let Some((origin, size)) = self.window_client_rect_screen(moving_window) {
-                        candidates.push(winit::dpi::PhysicalPosition::new(
-                            origin.x + (size.width as f64) * 0.5,
-                            origin.y + (size.height as f64) * 0.5,
-                        ));
-                    }
-                }
-
-                for candidate in candidates {
-                    let hit = if reliable_window_under_cursor {
-                        self.window_under_cursor_platform(candidate, Some(moving_window))
-                    } else {
-                        self.window_under_cursor_best_effort(candidate, Some(moving_window))
-                    };
-                    if matches!(
-                        window_under_moving_window_source,
-                        fret_runtime::WindowUnderCursorSource::Unknown
-                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
-                    {
-                        window_under_moving_window_source = hit.source;
-                    }
-                    if let Some(w) = hit.window.filter(|w| *w != moving_window) {
-                        window_under_moving_window_source = hit.source;
-                        window_under_moving_window = Some(w);
-                        break;
-                    }
-                }
-            }
-        }
+        let mut under_moving_window = self.window_under_internal_drag_moving_window(
+            moving_window,
+            screen_pos,
+            allow_window_under_cursor,
+            reliable_window_under_cursor,
+        );
         let hovered = if reliable_window_under_cursor {
             if allow_window_under_cursor {
                 let hit = self.window_under_cursor_platform(screen_pos, prefer_not);
@@ -303,10 +253,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             || std::env::var_os("FRET_DOCK_DRAG_HOVER_UNDER_MOVING_WINDOW").is_some();
         let hovered = if hover_under_moving_window
             && allow_window_under_cursor
-            && window_under_moving_window.is_some()
+            && under_moving_window.window.is_some()
         {
-            window_under_cursor_source = window_under_moving_window_source;
-            window_under_moving_window
+            window_under_cursor_source = under_moving_window.source;
+            under_moving_window.window
         } else {
             hovered
         };
@@ -388,46 +338,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && self.main_window.is_some_and(|main| current != main)
         {
             moving_window = Some(current);
-            window_under_moving_window = None;
-            window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
-            if allow_window_under_cursor {
-                let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
-                let mut candidates = Vec::with_capacity(3);
-                candidates.push(screen_pos);
-                if diag_cursor_override_active {
-                    if let Some(clamped) =
-                        self.clamp_screen_pos_to_window_client(current, screen_pos)
-                    {
-                        candidates.push(clamped);
-                    }
-                    if let Some((origin, size)) = self.window_client_rect_screen(current) {
-                        candidates.push(winit::dpi::PhysicalPosition::new(
-                            origin.x + (size.width as f64) * 0.5,
-                            origin.y + (size.height as f64) * 0.5,
-                        ));
-                    }
-                }
-
-                for candidate in candidates {
-                    let hit = if reliable_window_under_cursor {
-                        self.window_under_cursor_platform(candidate, Some(current))
-                    } else {
-                        self.window_under_cursor_best_effort(candidate, Some(current))
-                    };
-                    if matches!(
-                        window_under_moving_window_source,
-                        fret_runtime::WindowUnderCursorSource::Unknown
-                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
-                    {
-                        window_under_moving_window_source = hit.source;
-                    }
-                    if let Some(w) = hit.window.filter(|w| *w != current) {
-                        window_under_moving_window_source = hit.source;
-                        window_under_moving_window = Some(w);
-                        break;
-                    }
-                }
-            }
+            under_moving_window = self.window_under_internal_drag_moving_window(
+                moving_window,
+                screen_pos,
+                allow_window_under_cursor,
+                reliable_window_under_cursor,
+            );
         }
 
         if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
@@ -470,8 +386,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.position = pos;
             d.window_under_cursor_source = window_under_cursor_source;
             d.moving_window = moving_window;
-            d.window_under_moving_window = window_under_moving_window;
-            d.window_under_moving_window_source = window_under_moving_window_source;
+            d.window_under_moving_window = under_moving_window.window;
+            d.window_under_moving_window_source = under_moving_window.source;
             d.diag_cursor_screen_pos_raw_physical_px =
                 Some(Point::new(Px(screen_pos.x as f32), Px(screen_pos.y as f32)));
             d.diag_cursor_screen_pos_used_physical_px = Some(Point::new(
@@ -513,9 +429,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             drag_source_window,
             current,
             moving_window,
-            window_under_moving_window,
+            under_moving_window.window,
             window_under_cursor_source,
-            window_under_moving_window_source,
+            under_moving_window.source,
             screen_pos.x,
             screen_pos.y,
             pos.x.0,
@@ -585,66 +501,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let reliable_window_under_cursor =
             caps.ui.window_hover_detection == fret_runtime::WindowHoverDetectionQuality::Reliable;
 
-        let mut moving_window = self
-            .dock_tearoff_follow
-            .filter(|follow| follow.source_window == drag_source_window)
-            .map(|follow| follow.window)
-            .or_else(|| {
-                matches!(
-                    drag_kind,
-                    fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
-                )
-                .then_some(drag_source_window)
-                .filter(|w| self.main_window.is_some_and(|main| *w != main))
-            });
+        let mut moving_window =
+            self.resolve_internal_drag_moving_window(drag_kind, drag_source_window);
         let peek_behind_moving_window = self.dock_tearoff_follow.is_some_and(|follow| {
             follow.source_window == drag_source_window && follow.transparent_payload_applied
         });
         let prefer_not = peek_behind_moving_window.then_some(moving_window).flatten();
 
         let mut window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Unknown;
-        let mut window_under_moving_window = None;
-        let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
-        if let Some(moving_window) = moving_window {
-            let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
-            if allow_window_under_cursor {
-                let mut candidates = Vec::with_capacity(3);
-                candidates.push(screen_pos);
-                if diag_cursor_override_active {
-                    if let Some(clamped) =
-                        self.clamp_screen_pos_to_window_client(moving_window, screen_pos)
-                    {
-                        candidates.push(clamped);
-                    }
-                    if let Some((origin, size)) = self.window_client_rect_screen(moving_window) {
-                        candidates.push(winit::dpi::PhysicalPosition::new(
-                            origin.x + (size.width as f64) * 0.5,
-                            origin.y + (size.height as f64) * 0.5,
-                        ));
-                    }
-                }
-
-                for candidate in candidates {
-                    let hit = if reliable_window_under_cursor {
-                        self.window_under_cursor_platform(candidate, Some(moving_window))
-                    } else {
-                        self.window_under_cursor_best_effort(candidate, Some(moving_window))
-                    };
-                    if matches!(
-                        window_under_moving_window_source,
-                        fret_runtime::WindowUnderCursorSource::Unknown
-                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
-                    {
-                        window_under_moving_window_source = hit.source;
-                    }
-                    if let Some(w) = hit.window.filter(|w| *w != moving_window) {
-                        window_under_moving_window_source = hit.source;
-                        window_under_moving_window = Some(w);
-                        break;
-                    }
-                }
-            }
-        }
+        let mut under_moving_window = self.window_under_internal_drag_moving_window(
+            moving_window,
+            screen_pos,
+            allow_window_under_cursor,
+            reliable_window_under_cursor,
+        );
         let mut target = if reliable_window_under_cursor {
             let mut out = None;
             if allow_window_under_cursor {
@@ -706,7 +576,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             drag_kind,
             fret_app::DRAG_KIND_DOCK_PANEL | fret_runtime::DRAG_KIND_DOCK_TABS
         ) && let Some(moving_window) = moving_window
-            && window_under_moving_window.is_some()
+            && under_moving_window.window.is_some()
         {
             // Only treat the "window under moving window" as the drop target when the cursor is
             // actually inside (or very near) the moving window. During tear-off, scripts (and
@@ -730,8 +600,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         && screen_pos.y <= max_y
                 });
             if cursor_in_moving_window || cursor_near_moving_window {
-                target = window_under_moving_window;
-                window_under_cursor_source = window_under_moving_window_source;
+                target = under_moving_window.window;
+                window_under_cursor_source = under_moving_window.source;
             }
         }
 
@@ -773,46 +643,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && self.main_window.is_some_and(|main| target != main)
         {
             moving_window = Some(target);
-            window_under_moving_window = None;
-            window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
-            if allow_window_under_cursor {
-                let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
-                let mut candidates = Vec::with_capacity(3);
-                candidates.push(screen_pos);
-                if diag_cursor_override_active {
-                    if let Some(clamped) =
-                        self.clamp_screen_pos_to_window_client(target, screen_pos)
-                    {
-                        candidates.push(clamped);
-                    }
-                    if let Some((origin, size)) = self.window_client_rect_screen(target) {
-                        candidates.push(winit::dpi::PhysicalPosition::new(
-                            origin.x + (size.width as f64) * 0.5,
-                            origin.y + (size.height as f64) * 0.5,
-                        ));
-                    }
-                }
-
-                for candidate in candidates {
-                    let hit = if reliable_window_under_cursor {
-                        self.window_under_cursor_platform(candidate, Some(target))
-                    } else {
-                        self.window_under_cursor_best_effort(candidate, Some(target))
-                    };
-                    if matches!(
-                        window_under_moving_window_source,
-                        fret_runtime::WindowUnderCursorSource::Unknown
-                    ) && !matches!(hit.source, fret_runtime::WindowUnderCursorSource::Unknown)
-                    {
-                        window_under_moving_window_source = hit.source;
-                    }
-                    if let Some(w) = hit.window.filter(|w| *w != target) {
-                        window_under_moving_window_source = hit.source;
-                        window_under_moving_window = Some(w);
-                        break;
-                    }
-                }
-            }
+            under_moving_window = self.window_under_internal_drag_moving_window(
+                moving_window,
+                screen_pos,
+                allow_window_under_cursor,
+                reliable_window_under_cursor,
+            );
         }
 
         if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
@@ -844,8 +680,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.position = pos;
             d.window_under_cursor_source = window_under_cursor_source;
             d.moving_window = moving_window;
-            d.window_under_moving_window = window_under_moving_window;
-            d.window_under_moving_window_source = window_under_moving_window_source;
+            d.window_under_moving_window = under_moving_window.window;
+            d.window_under_moving_window_source = under_moving_window.source;
             d.diag_cursor_screen_pos_raw_physical_px =
                 Some(Point::new(Px(screen_pos.x as f32), Px(screen_pos.y as f32)));
             d.diag_cursor_screen_pos_used_physical_px = Some(Point::new(
@@ -872,9 +708,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             pos.x.0,
             pos.y.0,
             moving_window,
-            window_under_moving_window,
+            under_moving_window.window,
             window_under_cursor_source,
-            window_under_moving_window_source,
+            under_moving_window.source,
         ));
 
         let dispatched =

@@ -3,7 +3,7 @@
   "slug": "docking-multiwindow-imgui-parity",
   "title": "Docking Multi-Window ImGui Parity",
   "status": "active",
-  "updated": "2026-06-05",
+  "updated": "2026-06-06",
   "scope_kind": "execution",
   "lane_slug": "imui-docking",
   "problem": "Close the remaining runner/backend-owned editor-grade multi-window docking hand-feel gaps without widening `crates/fret-ui` or reopening generic `imui` helper growth.",
@@ -617,6 +617,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md"
     },
     {
+      "role": "status",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M153_RUNNER_INTERNAL_DRAG_MOVING_WINDOW_OWNER_SPLIT_2026-06-06.md"
+    },
+    {
       "role": "runbook",
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M2_WINDOWS_MIXED_DPI_CAPTURE_PLAN_2026-04-13.md"
     },
@@ -885,6 +889,8 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M149_RUNNER_WINDOW_REDRAW_PRESENT_OWNER_SPLIT_2026-06-05.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M150_RUNNER_WINDOW_REDRAW_REQUESTED_OWNER_SPLIT_2026-06-05.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M151_RUNNER_SURFACE_BOOTSTRAP_OWNER_SPLIT_2026-06-05.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M153_RUNNER_INTERNAL_DRAG_MOVING_WINDOW_OWNER_SPLIT_2026-06-06.md",
     "crates/fret-launch/src/runner/desktop/runner/change_propagation.rs",
     "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/cursor_effects.rs",
@@ -905,6 +911,8 @@
     "crates/fret-launch/src/runner/desktop/runner/shell_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/streaming_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/surface_bootstrap.rs",
+    "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs",
+    "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing/moving_window.rs",
     "crates/fret-launch/src/runner/desktop/runner/surface_lifecycle.rs",
     "crates/fret-launch/src/runner/desktop/runner/text_effects.rs",
     "crates/fret-launch/src/runner/desktop/runner/timers.rs",
