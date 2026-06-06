@@ -21257,8 +21257,10 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/image_item_controls/behavior.rs` owns pressable behavior
   installation, keyboard-activation lifecycle marking, context-menu key handling, transient clicked
   reads, and `ResponseExt` population.
-- `ecosystem/fret-imui/src/tests/models_controls/image_item.rs` covers image-button click and
-  Shift+F10 behavior at the thin `fret-imui` facade layer.
+- `ecosystem/fret-imui/src/tests/models_controls/image_item.rs` keeps image-item proof module wiring
+  and shared image sizing at the thin `fret-imui` facade layer.
+- `ecosystem/fret-imui/src/tests/models_controls/image_item/clicked.rs` owns image-button clicked proof.
+- `ecosystem/fret-imui/src/tests/models_controls/image_item/context_menu.rs` owns Shift+F10 context-menu proof.
 - `tools/gate_imui_workstream_source.py` now requires the image-item behavior owner and rejects
   pressable behavior bodies from drifting back into `image_item_controls.rs`.
 

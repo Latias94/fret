@@ -104,6 +104,16 @@ Last updated: 2026-06-06
       `checkbox/shortcuts.rs` owns focused activate-shortcut scoping proof. The IMUI source gate
       and workstream source bundle freeze the child-owner split.
 
+## Fret-ImUi Image Item Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` image-item proof owner into clicked and context-menu child owners
+      without changing image-item/image-button runtime behavior, public APIs, option names, or the
+      `fret-ui-kit::imui` image-item implementation.
+      Result: `models_controls/image_item.rs` now keeps shared image-size setup and module
+      routing. `image_item/clicked.rs` owns one-frame clicked response proof, while
+      `image_item/context_menu.rs` owns Shift+F10 context-menu request proof. The IMUI source gate
+      and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Radio Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` radio proof owner into clicked, shortcut-scoping, and context-menu
