@@ -11,6 +11,15 @@ activation/deactivation edge proof, and `tabs/shortcut_scoping.rs` owns focused-
 scoping proof. No `fret-ui-kit::imui` tab runtime implementation, `fret-imui` public facade, or
 tab option API changed.
 
+2026-06-06 Fret-ImUi menu-activation shortcut deeper proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/shortcuts.rs` now keeps only
+shared imports and child-owner routing for the begin-menu activate-shortcut proof surface.
+`shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof,
+`shortcuts/focus_restore.rs` owns shortcut-open first-item focus plus Escape trigger-restore proof,
+and `shortcuts/repeat.rs` owns `shortcut_repeat` opt-in repeated-keydown behavior proof. No
+`fret-ui-kit::imui` menu runtime implementation, `fret-imui` public facade, or menu option API
+changed.
+
 2026-06-06 Fret-ImUi sortable proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs` now keeps only shared imports and
 child-owner routing for the sortable proof surface. `sortable/fixtures.rs` owns sortable item
@@ -201,8 +210,9 @@ implementation, `fret-imui` public facade, or combo option API changed.
 2026-06-05 Fret-ImUi menu-activation proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs` now keeps only child-owner
 routing for the menu-activation proof surface. `menu_activation/command_activation.rs` owns command
-item activation and close-after-command proof, `shortcuts.rs` owns focused-trigger shortcut
-scoping, shortcut-open focus restore, and `shortcut_repeat` opt-in proof, and
+item activation and close-after-command proof, `shortcuts.rs` routes focused-trigger shortcut
+scoping, shortcut-open focus restore, and `shortcut_repeat` opt-in proof to its deeper child
+owners, and
 `keyboard_navigation.rs` owns ArrowDown open/focus plus horizontal ArrowLeft / ArrowRight
 top-level switching. No `fret-ui-kit::imui` menu runtime implementation, `fret-imui` public facade,
 or menu option API changed.

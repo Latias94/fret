@@ -362,11 +362,23 @@ Last updated: 2026-06-06
       public APIs, or the `fret-ui-kit::imui` menu policy implementation.
       Result: `interaction_menu_tabs/menu_activation.rs` is now a thin module hub.
       `menu_activation/command_activation.rs` owns command item activation and close-after-command
-      proof, `menu_activation/shortcuts.rs` owns focused-trigger shortcut scoping, shortcut-open
-      focus restore, and `shortcut_repeat` opt-in proof, and
+      proof, `menu_activation/shortcuts.rs` routes focused-trigger shortcut scoping,
+      shortcut-open focus restore, and `shortcut_repeat` opt-in proof to its deeper child owners,
+      and
       `menu_activation/keyboard_navigation.rs` owns ArrowDown open/focus plus horizontal
       ArrowLeft / ArrowRight top-level switching. The IMUI source gate freezes the child-owner
       split.
+
+## Fret-ImUi Menu Activation Shortcut Deeper Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` begin-menu activate-shortcut proof owner into focus-scope,
+      focus-restore, and repeat child owners without changing menu runtime behavior, public APIs,
+      option names, or the `fret-ui-kit::imui` menu implementation.
+      Result: `interaction_menu_tabs/menu_activation/shortcuts.rs` is now a thin module hub.
+      `shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof,
+      `shortcuts/focus_restore.rs` owns shortcut-open first-item focus plus Escape trigger-restore
+      proof, and `shortcuts/repeat.rs` owns `shortcut_repeat` opt-in repeated-keydown behavior
+      proof. The IMUI source gate and workstream source bundle freeze the deeper child-owner split.
 
 ## Fret-ImUi Combo Direct Proof Split - 2026-06-05
 

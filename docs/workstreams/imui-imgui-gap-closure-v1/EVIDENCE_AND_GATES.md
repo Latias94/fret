@@ -30,6 +30,34 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Menu Activation Shortcut Deeper Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` begin-menu activate-shortcut proof owner is split by focus-scope,
+focus-restore, and repeat behavior without changing menu runtime code, public APIs, option names,
+or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/shortcuts.rs` now keeps only
+  shared imports and child-owner routing for `focus_scope`, `focus_restore`, and `repeat`.
+- `shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof.
+- `shortcuts/focus_restore.rs` owns shortcut-open first-item focus plus Escape trigger-restore proof.
+- `shortcuts/repeat.rs` owns `shortcut_repeat` opt-in repeated-keydown behavior proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the deeper proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui --check`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation::shortcuts --no-fail-fast`:
+  pass, 3 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Floating Input Modes No-Inputs Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` floating input-mode no-input proof subset is split by disabled
@@ -579,8 +607,8 @@ Evidence:
   hub for `command_activation`, `shortcuts`, and `keyboard_navigation` proof owners.
 - `menu_activation/command_activation.rs` owns command item activation, command effect dispatch,
   and close-after-command proof.
-- `menu_activation/shortcuts.rs` owns focused-trigger shortcut scoping, shortcut-open focus restore,
-  and `shortcut_repeat` opt-in proof.
+- `menu_activation/shortcuts.rs` routes focused-trigger shortcut scoping, shortcut-open focus
+  restore, and `shortcut_repeat` opt-in proof to its deeper child owners.
 - `menu_activation/keyboard_navigation.rs` owns ArrowDown menu opening and horizontal ArrowLeft /
   ArrowRight top-level switching proof.
 - `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
