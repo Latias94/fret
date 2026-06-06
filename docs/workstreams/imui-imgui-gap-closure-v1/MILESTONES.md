@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-06
 
+2026-06-06 Fret-ImUi label-identity table-header proof owner-split result:
+`ecosystem/fret-imui/src/tests/label_identity/table_headers.rs` now keeps only shared imports and
+child-owner routing for the label-identity table-header proof surface.
+`table_headers/visible_labels.rs` owns visible header/cell label suffix stripping and stable test-id
+proof, `table_headers/sortable.rs` owns sortable header response/click proof, and
+`table_headers/resizable.rs` owns resize-handle drag response proof. No `fret-ui-kit::imui` table
+runtime implementation, `fret-imui` public facade, or table/header option API changed.
+
 2026-06-06 Fret-ImUi tabs proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs.rs` now keeps only shared imports and
 child-owner routing for the tab-bar proof surface. `tabs/selection.rs` owns selected panel/model

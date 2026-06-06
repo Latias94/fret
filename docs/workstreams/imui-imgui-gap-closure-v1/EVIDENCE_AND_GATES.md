@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-06-06
 
+## Fret-ImUi Label Identity Table Header Proof Owner Split Evidence - 2026-06-06
+
+Claim verified: the `fret-imui` label-identity table-header proof surface is split by
+visible-label, sortable-response, and resizable-response owner without changing table runtime code,
+public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/label_identity/table_headers.rs` now keeps only shared imports and
+  child-owner routing for `visible_labels`, `sortable`, and `resizable`.
+- `table_headers/visible_labels.rs` owns visible header/cell label suffix stripping and stable
+  test-id proof.
+- `table_headers/sortable.rs` owns sortable header response/click proof.
+- `table_headers/resizable.rs` owns resize-handle drag response proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo nextest run -p fret-imui label_identity::table_headers --no-fail-fast`: pass, 3 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass after tightening the sortable owner source
+  marker to the rustfmt-stable `.header("asset-name")` chain-call anchor.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Tabs Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` tab-bar proof surface is split by selection, response-edge, and

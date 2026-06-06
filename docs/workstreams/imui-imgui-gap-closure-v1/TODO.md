@@ -94,6 +94,18 @@ Last updated: 2026-06-06
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
 
+## Fret-ImUi Label Identity Table Header Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` label-identity table-header proof owner into visible-label,
+      sortable-response, and resizable-response child owners without changing table runtime
+      behavior, public APIs, option names, or the `fret-ui-kit::imui` table/header
+      implementation.
+      Result: `label_identity/table_headers.rs` now keeps only shared imports and module routing.
+      `table_headers/visible_labels.rs` owns visible header/cell label suffix stripping and stable
+      test-id proof, `table_headers/sortable.rs` owns sortable header response/click proof, and
+      `table_headers/resizable.rs` owns resize-handle drag response proof. The IMUI source gate
+      and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Tabs Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` tab-bar proof owner into selection, response-edge, and
