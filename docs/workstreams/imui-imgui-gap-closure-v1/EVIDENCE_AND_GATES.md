@@ -434,8 +434,10 @@ Evidence:
 - `item_keyboard/keyboard_open.rs` owns context-menu keyboard open, first-item focus, and Escape
   focus-restore proof.
 - `item_keyboard/arrow_nav.rs` owns popup item ArrowUp/ArrowDown focus navigation proof.
-- `item_keyboard/shortcuts.rs` owns focused-popup-item shortcut scoping plus `shortcut_repeat`
-  opt-in proof.
+- `item_keyboard/shortcuts.rs` routes popup-item shortcut proof owners.
+- `item_keyboard/shortcuts/focus_scope.rs` owns focused-popup-item shortcut scoping plus
+  arrow-navigation preservation proof.
+- `item_keyboard/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof.
 - `item_keyboard/checkbox_semantics.rs` owns menu-item checkbox checked-state semantics proof.
 - `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
   freeze the proof split.

@@ -2144,6 +2144,8 @@
     "ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/checkbox_semantics.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/keyboard_open.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/shortcuts.rs",
+    "ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/shortcuts/focus_scope.rs",
+    "ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/shortcuts/repeat.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/item_pointer.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/item_pointer/click.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/item_pointer/close.rs",

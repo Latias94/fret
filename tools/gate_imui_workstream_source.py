@@ -39953,6 +39953,12 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/shortcuts.rs"),
             required=[
+                "use super::*;",
+                "mod focus_scope;",
+                "mod repeat;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arrow_nav()",
                 "fn menu_item_activate_shortcut_repeat_is_opt_in()",
                 "ctrl_shortcut(KeyCode::KeyK)",
@@ -39960,8 +39966,55 @@ def main() -> None:
                 "shortcut_repeat: true",
                 "focus_test_id(",
                 "imui-popup-shortcut-repeat.repeat",
+                "fn context_menu_popup_keyboard_open",
+                "fn context_menu_popup_arrow",
+                "fn menu_item_checkbox",
+                "KeyCode::Escape",
+                "SemanticsRole::MenuItemCheckbox",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/shortcuts/focus_scope.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arrow_nav()",
+                "ctrl_shortcut(KeyCode::KeyK)",
+                "KeyCode::ArrowDown",
+                "ui.request_semantics_snapshot()",
+                "imui-popup-shortcut-item-b",
             ],
             forbidden=[
+                "fn menu_item_activate_shortcut_repeat_is_opt_in()",
+                "key_down_ctrl_repeat(",
+                "shortcut_repeat: true",
+                "imui-popup-shortcut-repeat",
+                "fn context_menu_popup_keyboard_open",
+                "fn context_menu_popup_arrow",
+                "fn menu_item_checkbox",
+                "KeyCode::Escape",
+                "SemanticsRole::MenuItemCheckbox",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/popup_hover/item_keyboard/shortcuts/repeat.rs"),
+            required=[
+                "use super::*;",
+                "fn menu_item_activate_shortcut_repeat_is_opt_in()",
+                "ctrl_shortcut(KeyCode::KeyJ)",
+                "ctrl_shortcut(KeyCode::KeyK)",
+                "key_down_ctrl_repeat(",
+                "shortcut_repeat: true",
+                "focus_test_id(",
+                "imui-popup-shortcut-repeat.repeat",
+                "expected repeated keydown to be ignored unless shortcut_repeat is enabled",
+                "expected repeated keydown to retrigger only when shortcut_repeat is enabled",
+            ],
+            forbidden=[
+                "fn menu_item_activate_shortcut_is_scoped_to_focused_popup_item_and_preserves_arrow_nav()",
+                "ui.request_semantics_snapshot()",
+                "imui-popup-shortcut-item-b",
                 "fn context_menu_popup_keyboard_open",
                 "fn context_menu_popup_arrow",
                 "fn menu_item_checkbox",
