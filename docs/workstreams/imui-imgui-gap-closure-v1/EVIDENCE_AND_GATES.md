@@ -635,8 +635,9 @@ Evidence:
   `lifecycle`, `selection`, and `shortcuts` proof owners.
 - `combo_direct/lifecycle.rs` owns popup Escape close/focus-restore proof and open-session edge
   reporting proof.
-- `combo_direct/shortcuts.rs` owns focused-trigger shortcut scoping and `shortcut_repeat` opt-in
-  proof.
+- `combo_direct/shortcuts.rs` routes direct-combo shortcut proof owners.
+- `combo_direct/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof.
+- `combo_direct/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof.
 - `combo_direct/selection.rs` owns selectable-row commit, selected preview/model projection, and
   close-after-pick proof.
 - `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`

@@ -2185,6 +2185,8 @@
     "ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle.rs",
     "ecosystem/fret-imui/src/tests/models_combo/combo_direct/selection.rs",
     "ecosystem/fret-imui/src/tests/models_combo/combo_direct/shortcuts.rs",
+    "ecosystem/fret-imui/src/tests/models_combo/combo_direct/shortcuts/focus_scope.rs",
+    "ecosystem/fret-imui/src/tests/models_combo/combo_direct/shortcuts/repeat.rs",
     "ecosystem/fret-imui/src/tests/models_combo/combo_model.rs",
     "ecosystem/fret-imui/src/tests/models_combo/combo_model/popup.rs",
     "ecosystem/fret-imui/src/tests/models_combo/combo_model/selection.rs",
