@@ -1,4 +1,8 @@
 use super::*;
+use super::followup_panel::{
+    materialize_baseline_compare_followup_command, runnable_followup_command_action_lines,
+    selected_followup_readiness_lines,
+};
 use super::gate_profile_state::collect_gate_profile_panel_state;
 use super::guide_recent_evidence_state::collect_guide_recent_evidence_state;
 use super::header_state::{

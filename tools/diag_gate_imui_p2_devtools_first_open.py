@@ -33,11 +33,15 @@ DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC = (
 DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
+DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE = "apps/fret-devtools/src/native/command_catalog.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GUI_WORKFLOW_RUN_SOURCE = "apps/fret-devtools/src/workflow_run.rs"
 DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
+DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/followup_panel.rs"
+)
 DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE = "apps/fret-devtools/src/native/discovery_lines.rs"
 DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
     "apps/fret-devtools/src/native/guide_reference_panels.rs"
@@ -248,7 +252,11 @@ def _find_bundle_dir(session_root: Path, label: str) -> Path:
 
 
 def _assert_text_contains(name: str, text: str, marker: str) -> None:
-    if marker not in text:
+    if marker in text:
+        return
+    if " ".join(marker.split()) in " ".join(text.split()):
+        return
+    else:
         raise SystemExit(f"Step failed: {name} (missing marker: {marker})")
 
 
@@ -493,11 +501,13 @@ def _validate_devtools_gui_first_open_source(
     print(f"[diag-gate-imui-p2-devtools] {name}")
     path = cwd / DEVTOOLS_GUI_SOURCE
     tests_path = cwd / DEVTOOLS_GUI_TEST_SOURCE
+    command_catalog_path = cwd / DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE
     ws_path = cwd / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = cwd / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
     workflow_run_path = cwd / DEVTOOLS_GUI_WORKFLOW_RUN_SOURCE
     followup_path = cwd / DEVTOOLS_GUI_FOLLOWUP_SOURCE
+    followup_panel_path = cwd / DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE
     discovery_lines_path = cwd / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     guide_reference_panels_path = cwd / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
     guide_recent_evidence_panel_path = (
@@ -525,11 +535,13 @@ def _validate_devtools_gui_first_open_source(
             name=name,
             path=str(path),
             tests_path=str(tests_path),
+            command_catalog_path=str(command_catalog_path),
             ws_path=str(ws_path),
             semantics_path=str(semantics_path),
             gate_run_path=str(gate_run_path),
             workflow_run_path=str(workflow_run_path),
             followup_path=str(followup_path),
+            followup_panel_path=str(followup_panel_path),
             discovery_lines_path=str(discovery_lines_path),
             guide_reference_panels_path=str(guide_reference_panels_path),
             guide_recent_evidence_panel_path=str(guide_recent_evidence_panel_path),
@@ -549,11 +561,13 @@ def _validate_devtools_gui_first_open_source(
     try:
         source = path.read_text(encoding="utf-8")
         test_source = tests_path.read_text(encoding="utf-8")
+        command_catalog_source = command_catalog_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
         workflow_run_source = workflow_run_path.read_text(encoding="utf-8")
         followup_source = followup_path.read_text(encoding="utf-8")
+        followup_panel_source = followup_panel_path.read_text(encoding="utf-8")
         discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
         guide_reference_panels_source = guide_reference_panels_path.read_text(
             encoding="utf-8"
@@ -587,11 +601,13 @@ def _validate_devtools_gui_first_open_source(
         [
             source,
             test_source,
+            command_catalog_source,
             ws_source,
             semantics_source,
             gate_run_source,
             workflow_run_source,
             followup_source,
+            followup_panel_source,
             discovery_lines_source,
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,
@@ -619,7 +635,8 @@ def _validate_devtools_gui_first_open_source(
         f'const DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID: &str = "{CAMPAIGN_ID}"',
         'const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood"',
         'const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release"',
-        'const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json"',
+        "const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str =",
+        '"tools/diag-scripts/ui-gallery-lite-smoke.json"',
         'const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =',
         'const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =',
         'const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =',

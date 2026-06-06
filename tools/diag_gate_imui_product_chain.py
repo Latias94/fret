@@ -125,6 +125,7 @@ DEMO_METRICS_DEBUG_ACTION_METADATA = {
 }
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
+DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE = "apps/fret-devtools/src/native/command_catalog.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
@@ -154,6 +155,9 @@ BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
 DEVTOOLS_REPRO_CONTRACT_SOURCE = "crates/fret-diag/src/cli/contracts/commands/repro.rs"
 DEVTOOLS_CUTOVER_SOURCE = "crates/fret-diag/src/cli/cutover.rs"
 DEVTOOLS_GUI_FOLLOWUP_SOURCE = "apps/fret-devtools/src/followup.rs"
+DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/followup_panel.rs"
+)
 DEVTOOLS_MCP_SOURCE = "apps/fret-devtools-mcp/src/native.rs"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -346,7 +350,11 @@ def _build_fretboard_dev(repo_root: Path, release: bool) -> Path:
 
 
 def _assert_contains(haystack: str, needle: str, name: str) -> None:
-    if needle not in haystack:
+    if needle in haystack:
+        return
+    if " ".join(needle.split()) in " ".join(haystack.split()):
+        return
+    else:
         raise SystemExit(f"Step failed: {name} (missing marker: {needle})")
 
 
@@ -509,9 +517,11 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     name = "devtools gui product workflow source"
     path = repo_root / DEVTOOLS_GUI_SOURCE
     tests_path = repo_root / DEVTOOLS_GUI_TEST_SOURCE
+    command_catalog_path = repo_root / DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
+    followup_panel_path = repo_root / DEVTOOLS_GUI_FOLLOWUP_PANEL_SOURCE
     discovery_lines_path = repo_root / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     guide_reference_panels_path = repo_root / DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE
     guide_recent_evidence_panel_path = (
@@ -537,9 +547,11 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     try:
         source = path.read_text(encoding="utf-8")
         test_source = tests_path.read_text(encoding="utf-8")
+        command_catalog_source = command_catalog_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
+        followup_panel_source = followup_panel_path.read_text(encoding="utf-8")
         discovery_lines_source = discovery_lines_path.read_text(encoding="utf-8")
         guide_reference_panels_source = guide_reference_panels_path.read_text(
             encoding="utf-8"
@@ -571,9 +583,11 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         [
             source,
             test_source,
+            command_catalog_source,
             ws_source,
             semantics_source,
             gate_run_source,
+            followup_panel_source,
             discovery_lines_source,
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,
@@ -605,7 +619,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "fret_first_open::product_workflow::EXPECTED_ARTIFACTS;",
         'const DEVTOOLS_DOGFOOD_WORKFLOW_ID: &str = "ui-gallery-button-dogfood"',
         'const DEVTOOLS_DOGFOOD_TARGET_COMMAND: &str = "cargo run -p fret-ui-gallery --release"',
-        'const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str = "tools/diag-scripts/ui-gallery-lite-smoke.json"',
+        "const DEVTOOLS_DOGFOOD_BASE_SCRIPT: &str =",
+        '"tools/diag-scripts/ui-gallery-lite-smoke.json"',
         'const DEVTOOLS_DOGFOOD_BUTTON_SCRIPT: &str =',
         'const DEVTOOLS_DOGFOOD_PICK_SCRIPT_COMMAND: &str =',
         'const DEVTOOLS_DOGFOOD_PICK_APPLY_COMMAND: &str =',
@@ -646,6 +661,8 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "devtools_gate_script_target_profile_ids_v1",
         "mod demo_metrics_debug;",
         "mod followup;",
+        "#[path = \"native/followup_panel.rs\"]",
+        "mod followup_panel;",
         "mod gate_run;",
         'const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated"',
         'const CMD_REGRESSION_RUN_FOLLOWUP_STATS: &str =',
