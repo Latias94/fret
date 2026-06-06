@@ -156,6 +156,14 @@ position/size reporting plus close-button and Escape close proof, and `z_order.r
 area and floating layer bring-to-front hit-test order proof. No `fret-ui-kit::imui` floating
 runtime implementation, `fret-imui` public facade, or floating option API changed.
 
+2026-06-06 Fret-ImUi floating z-order deeper proof owner-split result:
+`ecosystem/fret-imui/src/tests/floating/movement_z_order/z_order.rs` now keeps only shared imports
+and child-owner routing for the z-order subset of the floating movement/z-order proof surface.
+`z_order/area.rs` owns floating-area bring-to-front hit-test order proof, while
+`z_order/layer.rs` owns floating-window/layer bring-to-front hit-test order proof. No
+`fret-ui-kit::imui` floating runtime implementation, `fret-imui` public facade, or floating option
+API changed.
+
 2026-06-05 Fret-ImUi control-geometry proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/control_geometry.rs` now keeps only shared geometry
 helpers and child-owner routing for the control-geometry proof surface. `control_geometry/variants.rs`

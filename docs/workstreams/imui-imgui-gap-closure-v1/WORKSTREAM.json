@@ -2100,6 +2100,8 @@
     "ecosystem/fret-imui/src/tests/floating/movement_z_order/movement.rs",
     "ecosystem/fret-imui/src/tests/floating/movement_z_order/window_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/movement_z_order/z_order.rs",
+    "ecosystem/fret-imui/src/tests/floating/movement_z_order/z_order/area.rs",
+    "ecosystem/fret-imui/src/tests/floating/movement_z_order/z_order/layer.rs",
     "ecosystem/fret-imui/src/tests/floating/window_options.rs",
     "ecosystem/fret-imui/src/tests/floating/window_options/collapse.rs",
     "ecosystem/fret-imui/src/tests/floating/window_options/disabled_options.rs",

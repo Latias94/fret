@@ -312,6 +312,17 @@ Last updated: 2026-06-06
       floating layer bring-to-front hit-test order proof. The IMUI source gate freezes the
       child-owner split.
 
+## Fret-ImUi Floating Z-Order Deeper Proof Split - 2026-06-06
+
+- [x] Split the `fret-imui` floating z-order proof child owner into floating-area and
+      floating-layer/window child owners without changing floating runtime behavior, public APIs,
+      or the `fret-ui-kit::imui` floating policy implementation.
+      Result: `floating/movement_z_order/z_order.rs` now keeps only shared imports and
+      child-owner routing. `z_order/area.rs` owns floating-area bring-to-front hit-test order
+      proof, while `z_order/layer.rs` owns floating-window/layer bring-to-front hit-test order
+      proof. The IMUI source gate and workstream source bundle freeze the deeper child-owner
+      split.
+
 ## Fret-ImUi Floating Input Modes Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` floating input-mode proof file into activation, no-inputs, and
