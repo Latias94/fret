@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-31
+Catalog updated: 2026-06-06
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -18,7 +18,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 540
+- Dedicated directories: 541
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -425,6 +425,17 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-models-text-final-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md`
   - Scope: closed after retiring the legacy `models_text.rs` aggregate and moving its remaining
     basic changed-signal, lifecycle/bounds, and push-id identity coverage into dedicated modules.
+
+- Closed narrow floating-layer dismissal test-architecture follow-on:
+  - `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/DESIGN.md`
+  - `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/TODO.md`
+  - `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/MILESTONES.md`
+  - `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/CLOSEOUT_AUDIT_2026-06-06.md`
+  - Scope: closed after splitting menu and click-through popover outside-press dismissal proofs out
+    of the `floating/layer_dismissal.rs` aggregate hub while keeping overlay behavior, public APIs,
+    and runtime contracts unchanged.
 
 - Closed narrow P1 text input named filter policy follow-on:
   - `docs/workstreams/imui-text-input-filter-policy-v1/WORKSTREAM.json`
@@ -2176,6 +2187,7 @@ Rule:
 - `docs/workstreams/imui-models-text-command-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting completion, history, undo/redo, and repeat opt-in command tests out of the remaining `models_text.rs` proof file without behavior or API changes)
 - `docs/workstreams/imui-models-text-area-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting multiline textarea read-only, Tab policy, changed-signal, and lifecycle tests out of the remaining `models_text.rs` proof file without behavior or API changes)
 - `docs/workstreams/imui-models-text-final-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on retiring the legacy `models_text.rs` aggregate after moving basic changed-signal, single-line lifecycle/bounds, and push-id identity tests into dedicated modules)
+- `docs/workstreams/imui-floating-layer-dismissal-test-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow test-architecture follow-on splitting menu and click-through popover outside-press dismissal proofs out of the `floating/layer_dismissal.rs` aggregate hub without behavior or API changes)
 - `docs/workstreams/imui-text-input-filter-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for Dear ImGui-style named character filters on single-line IMUI input text backed by a generic runtime insertion filter)
 - `docs/workstreams/imui-text-input-custom-filter-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a Fret-native custom insertion filter equivalent to Dear ImGui CallbackCharFilter without mutable-buffer callback widening)
 - `docs/workstreams/imui-text-input-undo-command-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for app-owned single-line IMUI undo/redo command routing on Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z without runtime undo-stack ownership)

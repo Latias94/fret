@@ -21028,6 +21028,83 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("docs/workstreams/imui-floating-layer-dismissal-test-split-v1/WORKSTREAM.json"),
+            required=[
+                '"slug": "imui-floating-layer-dismissal-test-split-v1"',
+                '"status": "closed"',
+                '"scope_kind": "closeout"',
+                '"follow_on_of": "imui-imgui-gap-closure-v1"',
+                '"path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/DESIGN.md"',
+                '"path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/TODO.md"',
+                '"path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/MILESTONES.md"',
+                '"path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/EVIDENCE_AND_GATES.md"',
+                '"path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/CLOSEOUT_AUDIT_2026-06-06.md"',
+                "ecosystem/fret-imui/src/tests/floating/layer_dismissal.rs",
+                "ecosystem/fret-imui/src/tests/floating/layer_dismissal/menu.rs",
+                "ecosystem/fret-imui/src/tests/floating/layer_dismissal/popover.rs",
+                "cargo nextest run -p fret-imui floating::layer_dismissal --no-fail-fast",
+                "python tools/gate_imui_workstream_source.py",
+                '"default_action": "start_follow_on"',
+            ],
+            forbidden=[
+                '"status": "active"',
+                '"default_action": "continue"',
+                "runtime contract changes",
+                "public API changes",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/layer_dismissal.rs"),
+            required=[
+                "use super::*;",
+                "mod menu;",
+                "mod popover;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn floating_layer_menu_outside_press_dismisses_without_activating_underlay",
+                "fn floating_layer_popover_outside_press_allows_underlay_activation_when_click_through",
+                "OverlayController::stack_snapshot_for_window",
+                "FloatingLayerOverlayVariant::",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/layer_dismissal/menu.rs"),
+            required=[
+                "use super::*;",
+                "fn floating_layer_menu_outside_press_dismisses_without_activating_underlay()",
+                "FloatingLayerOverlayVariant::Menu",
+                "PointerOcclusion::None",
+                "expected menu overlay to enable pointer occlusion (disableOutsidePointerEvents)",
+                "expected outside press to dismiss the menu",
+                "expected window A to remain top after non-click-through outside press",
+                "expected window B not to activate on a non-click-through outside press",
+            ],
+            forbidden=[
+                "FloatingLayerOverlayVariant::Popover",
+                "blocks_underlay_input",
+                "imui-floating-layer-popover-dismiss-click-through",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/floating/layer_dismissal/popover.rs"),
+            required=[
+                "use super::*;",
+                "fn floating_layer_popover_outside_press_allows_underlay_activation_when_click_through()",
+                "FloatingLayerOverlayVariant::Popover",
+                "PointerOcclusion::None",
+                "!popover_entry.blocks_underlay_input",
+                "expected click-through popover to not block underlay input",
+                "expected outside press to dismiss the popover",
+                "expected window B to activate on click-through outside press",
+            ],
+            forbidden=[
+                "FloatingLayerOverlayVariant::Menu",
+                "disableOutsidePointerEvents",
+                "imui-floating-layer-menu-dismiss-no-click-through",
+            ],
+        ),
+        SourceCheck(
             Path("docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json"),
             required=[
                 '"slug": "imui-kit-owner-split-v1"',
@@ -59104,7 +59181,7 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/README.md"),
             required=[
-                "Dedicated directories: 540",
+                "Dedicated directories: 541",
                 "`docs/workstreams/imui-style-theme-editor-proof-v1/`",
                 "closed narrow proof for Dear ImGui-style editor theme preset switching in `fret-ui-editor`",
                 "without moving `GetStyle` / `PushStyleVar` / global style-stack policy into runtime",

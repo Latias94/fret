@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "imui-floating-layer-dismissal-test-split-v1",
+  "title": "ImUi Floating Layer Dismissal Test Split v1",
+  "status": "closed",
+  "updated": "2026-06-06",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-imgui-gap-closure-v1",
+  "problem": "Keep IMUI floating-layer dismissal proofs reviewable by splitting the menu and click-through popover outside-press cases out of the `floating/layer_dismissal.rs` aggregate hub without changing overlay behavior, runtime contracts, or public APIs.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/CLOSEOUT_AUDIT_2026-06-06.md"
+    }
+  ],
+  "repro": {
+    "summary": "The floating layer dismissal hub is module-only, and the menu/popover outside-press proofs still pass through the focused `floating::layer_dismissal` nextest filter.",
+    "commands": [
+      "cargo nextest run -p fret-imui floating::layer_dismissal --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "format fret-imui",
+      "command": "cargo fmt --package fret-imui"
+    },
+    {
+      "name": "focused floating layer dismissal tests",
+      "command": "cargo nextest run -p fret-imui floating::layer_dismissal --no-fail-fast"
+    },
+    {
+      "name": "imui source gate",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-floating-layer-dismissal-test-split-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-imui/src/tests/floating/layer_dismissal.rs",
+    "ecosystem/fret-imui/src/tests/floating/layer_dismissal/menu.rs",
+    "ecosystem/fret-imui/src/tests/floating/layer_dismissal/popover.rs",
+    "tools/gate_imui_workstream_source.py",
+    "docs/workstreams/imui-floating-layer-dismissal-test-split-v1/CLOSEOUT_AUDIT_2026-06-06.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This mechanical floating-layer dismissal proof split is closed. Future overlay behavior changes should start a behavior-specific follow-on instead of adding more cases back into the `layer_dismissal.rs` hub."
+  }
+}
