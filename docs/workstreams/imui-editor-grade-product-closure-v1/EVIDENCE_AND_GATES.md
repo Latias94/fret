@@ -9,7 +9,11 @@ retained-canvas compatibility behavior:
 
 - IMUI plot shaded-band decimation owner split - 2026-06-07.
 - `ecosystem/fret-plot/src/plot/decimate.rs` keeps the decimation facade, shared `SamplePoint`,
-  point-cloud decimation, visible-slice helpers, and polyline decimation.
+  thin point-cloud delegation, and polyline decimation.
+- `ecosystem/fret-plot/src/plot/decimate/common.rs` owns shared visible-range, device-point-budget,
+  and visible sorted-slice helpers.
+- `ecosystem/fret-plot/src/plot/decimate/points.rs` owns scatter/point-cloud decimation and
+  closest-to-device-pixel-center bucket selection.
 - `ecosystem/fret-plot/src/plot/decimate/band.rs` owns shaded-band resampling, band min/max
   bucketing, fill/upper/lower path emission, and band sample projection.
 - The public crate-local `decimate_shaded_band(...)` path remains available through the root
@@ -20,8 +24,8 @@ retained-canvas compatibility behavior:
   `BandPoint` / `BandDecimator`.
 - Evidence anchor: `decimate/band.rs` carries `BandPoint`, `BandDecimator`, and
   `decimate_shaded_band(...)`.
-- Evidence anchor: `tools/gate_imui_workstream_source.py` now freezes the split so shaded-band
-  logic cannot drift back into the point/polyline decimation root.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` now freezes the split so shaded-band,
+  point-cloud, and shared helper logic cannot drift back into the polyline decimation root.
 
 Fresh gates:
 
