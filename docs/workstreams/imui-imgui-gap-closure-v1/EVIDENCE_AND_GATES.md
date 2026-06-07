@@ -36243,3 +36243,40 @@ Fret Examples Collection Keyboard Selection Policy Owner Split Evidence - 2026-0
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Selection Projection Owner Split Evidence - 2026-06-08:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` was split so
+  collection selection projection helpers now live in the demo-local
+  `collection/selection/projection.rs` child owner without changing visible-order projection,
+  selected-asset lookup, active-tile fallback, readout/rename/drag/context-menu/keyboard command
+  imports, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/selection.rs` declares `mod projection;` and re-exports
+  `proof_collection_assets_in_visible_order(...)`, `proof_collection_selected_assets(...)`, and
+  `proof_collection_active_id(...)` while retaining `ProofCollectionKeyboardState` and child-owner
+  routing. `collection/selection/projection.rs` owns the visible-order reverse projection,
+  selected-asset `HashMap` lookup, anchor/first-selected/first-visible active fallback chain, and
+  the shared selection projection call surface. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the selection projection-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py` after updating one stale SourceCheck that
+  still expected `selection.rs` to import `ImUiMultiSelectState` directly.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_context_menu_surface --no-fail-fast`
+  after an initial command timeout left the same Fret nextest build chain running; the rerun passed
+  4/4 tests.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.

@@ -8626,3 +8626,14 @@ opening the slice.
       keyboard next-index/range helpers, and the keyboard selection unit tests. The collection
       source gate, workstream source gate, manifest, and surface tests now include the keyboard
       selection child owner.
+- [x] Split collection selection projection policy out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the demo-local
+      `collection/selection/projection.rs` child owner without changing visible-order projection,
+      selected-asset lookup, active-tile fallback, readout/rename/drag/context-menu/keyboard command
+      imports, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `selection.rs` keeps `ProofCollectionKeyboardState` and
+      command/context-menu/keyboard/projection/select-all re-exports while
+      `selection/projection.rs` owns `proof_collection_assets_in_visible_order(...)`,
+      `proof_collection_selected_assets(...)`, and `proof_collection_active_id(...)`. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the selection
+      projection child owner.

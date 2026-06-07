@@ -8254,3 +8254,12 @@ extension, Escape clear behavior, and primary-modifier shortcut bypass through t
 the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the keyboard selection owner
 boundary.
+
+2026-06-08 collection selection projection owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps
+`ProofCollectionKeyboardState` plus command/context-menu/keyboard/projection/select-all re-exports
+while routing visible-order projection, selected-asset lookup, and active-tile fallback through the
+demo-local `collection/selection/projection.rs` child owner. Public crate APIs, readout/rename/
+drag/context-menu/keyboard command imports, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests now
+freeze the selection projection owner boundary.

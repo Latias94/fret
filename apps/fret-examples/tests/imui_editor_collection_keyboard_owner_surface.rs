@@ -35,6 +35,8 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection/projection.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs"),

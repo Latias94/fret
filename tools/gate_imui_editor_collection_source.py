@@ -140,6 +140,9 @@ def main() -> None:
     collection_selection_keyboard = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs"
     )
+    collection_selection_projection = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/projection.rs"
+    )
     collection_selection_select_all = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs"
     )
@@ -184,6 +187,7 @@ def main() -> None:
         collection_selection,
         collection_selection_context_menu,
         collection_selection_keyboard,
+        collection_selection_projection,
         collection_selection_select_all,
         collection_selection_commands,
         collection_selection_command_delete,
@@ -1363,15 +1367,14 @@ def main() -> None:
                 "mod commands;",
                 "mod context_menu;",
                 "mod keyboard;",
+                "mod projection;",
                 "mod select_all;",
                 "pub(super) use commands::{",
                 "pub(super) use context_menu::proof_collection_context_menu_selection;",
                 "pub(super) use keyboard::proof_collection_keyboard_selection;",
+                "pub(super) use projection::{",
                 "pub(super) use select_all::{",
                 "pub(super) struct ProofCollectionKeyboardState {",
-                "pub(super) fn proof_collection_assets_in_visible_order(",
-                "pub(super) fn proof_collection_selected_assets",
-                "pub(super) fn proof_collection_active_id(",
             ],
             forbidden=[
                 "render_collection_first_asset_browser_proof",
@@ -1394,6 +1397,10 @@ def main() -> None:
                 "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
                 "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
                 "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
+                "pub(super) fn proof_collection_assets_in_visible_order(",
+                "pub(super) fn proof_collection_selected_assets",
+                "pub(super) fn proof_collection_active_id(",
+                "collect::<HashMap<_, _>>()",
                 "pub(super) fn proof_collection_select_all_shortcut_matches(",
                 "pub(super) fn proof_collection_select_all_selection(",
                 "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
@@ -1404,6 +1411,33 @@ def main() -> None:
                 "drag_preview_ghost",
                 "kit::ButtonOptions",
                 "kit::ChildRegionOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection projection owner",
+            collection_selection_projection,
+            required=[
+                "pub(in super::super) fn proof_collection_assets_in_visible_order(",
+                "pub(in super::super) fn proof_collection_selected_assets",
+                "pub(in super::super) fn proof_collection_active_id(",
+                "collect::<HashMap<_, _>>()",
+                "selection.first_selected().cloned().filter(contains)",
+                "collection_keys.first().cloned()",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_keyboard_selection(",
+                "proof_collection_select_all_selection(",
+                "proof_collection_context_menu_selection(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(
