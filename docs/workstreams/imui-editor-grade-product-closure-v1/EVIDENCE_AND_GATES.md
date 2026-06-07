@@ -2,6 +2,38 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI DevTools native owner split refresh - 2026-06-07
+
+This maintenance slice keeps the DevTools GUI productization path moving without widening
+`fret-imui` or runtime contracts:
+
+- IMUI DevTools native owner split refresh - 2026-06-07.
+- `apps/fret-devtools/src/native.rs` now stays closer to app wiring/state bootstrap while large
+  DevTools GUI owners live in focused sibling modules.
+- `apps/fret-devtools/src/native/regression_panel.rs` owns the Regression Workspace UI surface.
+- `apps/fret-devtools/src/native/script_studio_panel.rs` owns the Script Studio panel, script
+  validation, step palette, selector helpers, and predicate helpers.
+- `apps/fret-devtools/src/native/command_handlers.rs` owns DevTools command dispatch and
+  GUI-launched diagnostics follow-up actions.
+- `apps/fret-devtools/src/native/ui_primitives.rs` owns shared diagnostic card/section/text
+  primitives used by the split panels.
+- The source gates now include the new owner files in the DevTools GUI product-chain and
+  first-open source bundles, keeping source ownership visible to future maintenance.
+- Evidence anchor: native shell registration imports `regression_panel`, `script_studio_panel`,
+  `command_handlers`, and `ui_primitives` from focused sibling owners.
+- Evidence anchor: workstream/product-chain/first-open gates all read the split owner sources.
+- Evidence anchor: `native.rs` dropped to the app-shell scale after moving the largest panel and
+  command-dispatch blocks out of the monolithic file.
+
+Fresh gates:
+
+- `cargo fmt -p fret-devtools` - passed.
+- `python tools/gate_imui_workstream_source.py` - passed.
+- `python tools/diag_gate_imui_product_chain.py --only source-gates` - passed.
+- `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built` - passed.
+- `cargo nextest run -p fret-devtools --no-fail-fast --status-level fail` - passed, 96/96.
+- `python tools/check_layering.py` - passed.
+
 ## IMUI Demo/Metrics/Debug P0 gap matrix refresh - 2026-06-03
 
 This maintenance slice keeps the product-closure read aligned with the closed
