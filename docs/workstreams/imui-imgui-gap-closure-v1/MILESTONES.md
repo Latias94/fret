@@ -8234,3 +8234,13 @@ shortcut matching and visible-order full-selection policy through the demo-local
 anchor preservation/fallback, active-tile preservation/fallback, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the select-all policy owner boundary.
+
+2026-06-08 collection context-menu selection policy owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps shared selection
+state, visible-order projection, selected-asset projection, active-id fallback, keyboard navigation
+policy, and command/context-menu/select-all re-exports while routing right-click selection
+replacement, selected-range preservation, and active-tile update policy through the demo-local
+`collection/selection/context_menu.rs` child owner. Public crate APIs, asset-grid imports, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the context-menu selection owner
+boundary.

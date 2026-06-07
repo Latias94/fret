@@ -8605,3 +8605,13 @@ opening the slice.
       `proof_collection_select_all_selection(...)`, and the select-all unit tests. The collection
       source gate, workstream source gate, manifest, and surface tests now include the select-all
       child owner.
+- [x] Split collection context-menu selection policy out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the demo-local
+      `collection/selection/context_menu.rs` child owner without changing right-click selection
+      replacement, selected-range preservation, active-tile updates, asset-grid call imports,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result: `selection.rs` keeps
+      shared selection state, visible-order projection, selected-asset projection, active-id
+      fallback, keyboard navigation policy, and command/context-menu/select-all re-exports while
+      `selection/context_menu.rs` owns `proof_collection_context_menu_selection(...)` and the
+      context-menu selection unit tests. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the context-menu selection child owner.

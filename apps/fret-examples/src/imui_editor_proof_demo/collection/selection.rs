@@ -7,6 +7,7 @@ use fret_core::{KeyCode, Modifiers};
 use super::ProofCollectionAsset;
 
 mod commands;
+mod context_menu;
 mod select_all;
 
 pub(super) use commands::{
@@ -14,6 +15,7 @@ pub(super) use commands::{
     proof_collection_delete_key_matches, proof_collection_delete_selection,
     proof_collection_duplicate_selection, proof_collection_duplicate_shortcut_matches,
 };
+pub(super) use context_menu::proof_collection_context_menu_selection;
 pub(super) use select_all::{
     proof_collection_select_all_selection, proof_collection_select_all_shortcut_matches,
 };
@@ -64,24 +66,6 @@ pub(super) fn proof_collection_active_id(
         .or_else(|| selection.anchor().cloned().filter(contains))
         .or_else(|| selection.first_selected().cloned().filter(contains))
         .or_else(|| collection_keys.first().cloned())
-}
-
-pub(super) fn proof_collection_context_menu_selection(
-    selection: &ImUiMultiSelectState<Arc<str>>,
-    asset_id: Arc<str>,
-) -> (ImUiMultiSelectState<Arc<str>>, ProofCollectionKeyboardState) {
-    let next_selection = if selection.is_selected(&asset_id) {
-        selection.clone()
-    } else {
-        ImUiMultiSelectState::single(asset_id.clone())
-    };
-
-    (
-        next_selection,
-        ProofCollectionKeyboardState {
-            active_id: Some(asset_id),
-        },
-    )
 }
 
 pub(super) fn proof_collection_keyboard_next_index(
@@ -309,32 +293,5 @@ mod tests {
             .is_none(),
             "collection keyboard owner should stay app-local and avoid claiming primary-modifier shortcuts"
         );
-    }
-
-    #[test]
-    fn proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile() {
-        let selection = selection_state(&["stone-albedo", "stone-normal"], Some("stone-albedo"));
-
-        let (next_selection, next_keyboard) =
-            proof_collection_context_menu_selection(&selection, Arc::from("dust-mask"));
-
-        assert_eq!(selected_ids(&next_selection), vec!["dust-mask"]);
-        assert_eq!(anchor_id(&next_selection), Some("dust-mask"));
-        assert_eq!(next_keyboard.active_id, Some(Arc::from("dust-mask")));
-    }
-
-    #[test]
-    fn proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile() {
-        let selection = selection_state(&["stone-normal", "stone-orm"], Some("stone-normal"));
-
-        let (next_selection, next_keyboard) =
-            proof_collection_context_menu_selection(&selection, Arc::from("stone-orm"));
-
-        assert_eq!(
-            selected_ids(&next_selection),
-            vec!["stone-normal", "stone-orm"]
-        );
-        assert_eq!(anchor_id(&next_selection), Some("stone-normal"));
-        assert_eq!(next_keyboard.active_id, Some(Arc::from("stone-orm")));
     }
 }

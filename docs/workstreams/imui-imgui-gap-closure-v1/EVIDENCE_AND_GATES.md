@@ -36163,3 +36163,42 @@ Fret Examples Collection Select-All Policy Owner Split Evidence - 2026-06-08:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+
+Fret Examples Collection Context-Menu Selection Policy Owner Split Evidence - 2026-06-08:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` was split so
+  collection context-menu selection policy now lives in the demo-local
+  `collection/selection/context_menu.rs` child owner without changing right-click selection
+  replacement, selected-range preservation, active-tile updates, asset-grid call imports, public
+  crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/selection.rs` declares `mod context_menu;` and re-exports
+  `proof_collection_context_menu_selection(...)` while retaining shared
+  `ProofCollectionKeyboardState`, visible-order projection, selected-asset projection,
+  active-id fallback, and keyboard navigation policy. `collection/selection/context_menu.rs` owns
+  `proof_collection_context_menu_selection(...)`, `ImUiMultiSelectState::single(asset_id.clone())`,
+  active-tile update projection, and the two context-menu selection unit tests.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the
+  context-menu selection policy-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed:
+  `cargo nextest run -p fret-examples context_menu_selection --no-fail-fast` after an initial
+  command timeout left the same Fret nextest build chain running; the rerun passed 2/2 tests.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_keyboard_owner_surface --no-fail-fast`;
+  3/3 tests passed.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
