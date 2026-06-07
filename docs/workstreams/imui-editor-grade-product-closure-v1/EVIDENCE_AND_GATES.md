@@ -2,6 +2,34 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI plot shaded-band decimation owner split - 2026-06-07
+
+This maintenance slice keeps the plot adapter decimation path readable without changing the
+retained-canvas compatibility behavior:
+
+- IMUI plot shaded-band decimation owner split - 2026-06-07.
+- `ecosystem/fret-plot/src/plot/decimate.rs` keeps the decimation facade, shared `SamplePoint`,
+  point-cloud decimation, visible-slice helpers, and polyline decimation.
+- `ecosystem/fret-plot/src/plot/decimate/band.rs` owns shaded-band resampling, band min/max
+  bucketing, fill/upper/lower path emission, and band sample projection.
+- The public crate-local `decimate_shaded_band(...)` path remains available through the root
+  decimation module re-export.
+- Shaded-band behavior for sorted X resampling and missing-point segment breaks remains covered by
+  existing unit tests.
+- Evidence anchor: `decimate.rs` re-exports the shaded-band owner and no longer contains
+  `BandPoint` / `BandDecimator`.
+- Evidence anchor: `decimate/band.rs` carries `BandPoint`, `BandDecimator`, and
+  `decimate_shaded_band(...)`.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` now freezes the split so shaded-band
+  logic cannot drift back into the point/polyline decimation root.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed.
+- `cargo nextest run -p fret-plot shaded_band --no-fail-fast` - passed, 2/2.
+- `python tools/gate_imui_workstream_source.py` - passed.
+
 ## IMUI DevTools native owner split refresh - 2026-06-07
 
 This maintenance slice keeps the DevTools GUI productization path moving without widening
