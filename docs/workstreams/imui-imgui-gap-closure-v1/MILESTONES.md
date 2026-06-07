@@ -8173,3 +8173,13 @@ handling, focus restore/sync, inline test ID, placeholder, selection/blur policy
 inline rename prose. Public crate APIs, text content, field behavior, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, and surface tests now freeze the asset-grid inline-rename owner boundary.
+
+2026-06-07 collection asset-grid metadata owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` now keeps grid/tile
+interaction, context-menu selection routing, inline rename delegation, drag preview, and
+rendered-item tracking while delegating metadata/path readout mounting through
+`render_collection_asset_metadata_readouts(...)`. The demo-local
+`collection/asset_grid/metadata.rs` owns the asset kind/size line, asset path line, readout helper
+calls, and metadata/path test IDs. Public crate APIs, text content, tile render order, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate, workstream
+source gate, and surface tests now freeze the asset-grid metadata owner boundary.

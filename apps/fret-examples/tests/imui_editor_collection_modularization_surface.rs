@@ -8,6 +8,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let asset_grid_inline_rename_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
+    let asset_grid_metadata_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/metadata.rs");
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
@@ -543,7 +545,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn render_collection_asset_grid(",
         "ui.grid_with_options(",
         "mod inline_rename;",
+        "mod metadata;",
         "render_collection_inline_rename_field(",
+        "render_collection_asset_metadata_readouts(",
         "drag_preview_ghost_with_options(",
         "ProofCollectionRenderedItem {",
     ] {
@@ -566,6 +570,20 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             asset_grid_inline_rename_source.contains(needle),
             "the demo-local collection asset-grid inline-rename owner should keep TextField workflow explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn render_collection_asset_metadata_readouts(",
+        "proof_collection_readout_text(",
+        "format!(\"{} | {} KiB\", asset.kind, asset.size_kib)",
+        "\"imui-editor-proof.authoring.imui.collection.asset.metadata\"",
+        "asset.path.clone()",
+        "\"imui-editor-proof.authoring.imui.collection.asset.path\"",
+    ] {
+        assert!(
+            asset_grid_metadata_source.contains(needle),
+            "the demo-local collection asset-grid metadata owner should keep asset readout text explicit; missing `{needle}`"
         );
     }
 

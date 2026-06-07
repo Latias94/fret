@@ -35733,6 +35733,39 @@ Fret Examples Collection Asset Grid Inline Rename Owner Split Evidence - 2026-06
 - Passed: `git diff --check` with only a Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Asset Grid Metadata Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` was split so
+  asset metadata/path readout mounting now lives in the demo-local
+  `collection/asset_grid/metadata.rs` child owner without changing metadata formatting, path text,
+  text-role helper usage, test IDs, tile render order, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `asset_grid.rs` declares `mod metadata;`, imports
+  `render_collection_asset_metadata_readouts(...)`, and delegates the tile metadata/path readouts.
+  `collection/asset_grid/metadata.rs` owns `render_collection_asset_metadata_readouts(...)`,
+  `proof_collection_readout_text(...)`, the `format!("{} | {} KiB", asset.kind, asset.size_kib)`
+  metadata line, `asset.path.clone()`, and the metadata/path test IDs. `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`,
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs`, and
+  `apps/fret-examples/tests/imui_editor_collection_text_roles_surface.rs` freeze the
+  asset-grid/metadata-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+  Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  2 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`;
+  validated 541 dedicated directories and 47 standalone markdown files.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Derived State Owner Split Evidence - 2026-06-07:
 
 - Claim verified: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so

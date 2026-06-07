@@ -22,13 +22,14 @@ use super::drag_drop::{
     proof_collection_drag_preview_title,
 };
 use super::geometry::{ProofCollectionLayoutMetrics, proof_collection_localize_rect};
-use super::proof_collection_readout_text;
 use super::rename::ProofCollectionRenameSession;
 use super::selection::{ProofCollectionKeyboardState, proof_collection_context_menu_selection};
 
 mod inline_rename;
+mod metadata;
 
 use inline_rename::render_collection_inline_rename_field;
+use metadata::render_collection_asset_metadata_readouts;
 
 pub(super) struct ProofCollectionAssetGridModels {
     pub(super) assets: Model<Vec<ProofCollectionAsset>>,
@@ -215,16 +216,7 @@ fn render_collection_asset_tile(
                         });
                 }
 
-                proof_collection_readout_text(
-                    ui,
-                    format!("{} | {} KiB", asset.kind, asset.size_kib),
-                    "imui-editor-proof.authoring.imui.collection.asset.metadata",
-                );
-                proof_collection_readout_text(
-                    ui,
-                    asset.path.clone(),
-                    "imui-editor-proof.authoring.imui.collection.asset.path",
-                );
+                render_collection_asset_metadata_readouts(ui, asset);
             },
         );
     });

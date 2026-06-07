@@ -8536,3 +8536,12 @@ opening the slice.
       mounting while delegating inline rename field rendering through
       `render_collection_inline_rename_field(...)`. The collection source gate, workstream source
       gate, and surface tests now include the asset-grid inline-rename owner.
+- [x] Split collection asset-grid metadata/path readout mounting out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the demo-local
+      `collection/asset_grid/metadata.rs` child owner without changing metadata text formatting,
+      path text, text-role helper usage, test IDs, tile render order, public crate APIs, or the
+      app-owned no-helper-widening boundary. Result: `asset_grid.rs` keeps grid/tile interaction,
+      context-menu selection, inline rename delegation, drag preview, and rendered-item tracking
+      while delegating asset metadata/path readouts through
+      `render_collection_asset_metadata_readouts(...)`. The collection source gate, workstream source
+      gate, and surface tests now include the asset-grid metadata owner.

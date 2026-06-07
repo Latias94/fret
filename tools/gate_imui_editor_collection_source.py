@@ -53,6 +53,9 @@ def main() -> None:
     collection_asset_grid_inline_rename = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"
     )
+    collection_asset_grid_metadata = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/metadata.rs"
+    )
     collection_assets = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/assets.rs"
     )
@@ -131,6 +134,7 @@ def main() -> None:
     collection_children = (
         collection_asset_grid,
         collection_asset_grid_inline_rename,
+        collection_asset_grid_metadata,
         collection_assets,
         collection_browser_scope,
         collection_browser_scope_input_runtime,
@@ -742,8 +746,11 @@ def main() -> None:
                 "pub(super) fn render_collection_asset_grid(",
                 "fn render_collection_asset_tile(",
                 "mod inline_rename;",
+                "mod metadata;",
                 "use inline_rename::render_collection_inline_rename_field;",
+                "use metadata::render_collection_asset_metadata_readouts;",
                 "render_collection_inline_rename_field(",
+                "render_collection_asset_metadata_readouts(",
                 "ui.grid_with_options(",
                 "ui.multi_selectable_with_options(",
                 "proof_collection_context_menu_selection(",
@@ -760,6 +767,9 @@ def main() -> None:
                 "EditorTextSelectionBehavior::SelectAllOnFocus",
                 "TextFieldBlurBehavior::Cancel",
                 "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
+                "proof_collection_readout_text(",
+                "imui-editor-proof.authoring.imui.collection.asset.metadata",
+                "imui-editor-proof.authoring.imui.collection.asset.path",
                 "cx.pointer_region_on_wheel(",
                 "cx.pointer_region_on_pointer_down(",
                 "cx.pointer_region_on_pointer_move(",
@@ -794,6 +804,30 @@ def main() -> None:
                 "ui.multi_selectable_with_options(",
                 "drag_preview_ghost_with_options(",
                 "ProofCollectionRenderedItem {",
+                "cx.pointer_region_on_wheel(",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+            ],
+        ),
+        SourceCheck(
+            "collection asset grid metadata owner",
+            collection_asset_grid_metadata,
+            required=[
+                "pub(super) fn render_collection_asset_metadata_readouts(",
+                "proof_collection_readout_text(",
+                "format!(\"{} | {} KiB\", asset.kind, asset.size_kib)",
+                "\"imui-editor-proof.authoring.imui.collection.asset.metadata\"",
+                "asset.path.clone()",
+                "\"imui-editor-proof.authoring.imui.collection.asset.path\"",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "ui.grid_with_options(",
+                "ui.multi_selectable_with_options(",
+                "drag_preview_ghost_with_options(",
+                "ProofCollectionRenderedItem {",
+                "TextField::new(",
                 "cx.pointer_region_on_wheel(",
                 "ui.button_with_options(",
                 "ui.begin_popup_menu(",
