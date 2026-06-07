@@ -53,6 +53,9 @@ DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/guide_recent_evidence_panel.rs"
 )
 DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.rs"
+DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/diagnostics_tree_panel.rs"
+)
 DEVTOOLS_GUI_INSPECT_PANEL_SOURCE = "apps/fret-devtools/src/native/inspect_panel.rs"
 DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE = "apps/fret-devtools/src/native/gate_profile_state.rs"
 DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE = "apps/fret-devtools/src/native/workflow_panel_state.rs"
@@ -519,6 +522,7 @@ def _validate_devtools_gui_first_open_source(
         cwd / DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE
     )
     header_state_path = cwd / DEVTOOLS_GUI_HEADER_STATE_SOURCE
+    diagnostics_tree_panel_path = cwd / DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE
     inspect_panel_path = cwd / DEVTOOLS_GUI_INSPECT_PANEL_SOURCE
     gate_profile_state_path = cwd / DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE
     workflow_panel_state_path = cwd / DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE
@@ -553,6 +557,7 @@ def _validate_devtools_gui_first_open_source(
             guide_reference_panels_path=str(guide_reference_panels_path),
             guide_recent_evidence_panel_path=str(guide_recent_evidence_panel_path),
             header_state_path=str(header_state_path),
+            diagnostics_tree_panel_path=str(diagnostics_tree_panel_path),
             inspect_panel_path=str(inspect_panel_path),
             gate_profile_state_path=str(gate_profile_state_path),
             workflow_panel_state_path=str(workflow_panel_state_path),
@@ -585,6 +590,9 @@ def _validate_devtools_gui_first_open_source(
             guide_recent_evidence_panel_path.read_text(encoding="utf-8")
         )
         header_state_source = header_state_path.read_text(encoding="utf-8")
+        diagnostics_tree_panel_source = diagnostics_tree_panel_path.read_text(
+            encoding="utf-8"
+        )
         inspect_panel_source = inspect_panel_path.read_text(encoding="utf-8")
         gate_profile_state_source = gate_profile_state_path.read_text(encoding="utf-8")
         workflow_panel_state_source = workflow_panel_state_path.read_text(
@@ -623,6 +631,7 @@ def _validate_devtools_gui_first_open_source(
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,
             header_state_source,
+            diagnostics_tree_panel_source,
             inspect_panel_source,
             gate_profile_state_source,
             workflow_panel_state_source,
@@ -701,6 +710,9 @@ def _validate_devtools_gui_first_open_source(
         "mod demo_metrics_debug;",
         "mod gate_run;",
         "mod workflow_run;",
+        "#[path = \"native/diagnostics_tree_panel.rs\"]",
+        "mod diagnostics_tree_panel;",
+        "use diagnostics_tree_panel::{element_tree_panel, layout_tree_panel, semantics_panel};",
         "#[path = \"native/inspect_panel.rs\"]",
         "mod inspect_panel;",
         'let details_tab = app.models_mut().insert(Some(Arc::<str>::from("guide")));',
