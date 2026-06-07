@@ -7,6 +7,16 @@ use super::selection::{
     ProofCollectionKeyboardState, proof_collection_active_id, proof_collection_selected_assets,
 };
 
+mod status;
+
+pub(super) use status::{
+    proof_collection_command_status_line, proof_collection_delete_status,
+    proof_collection_duplicate_status, proof_collection_rename_cancel_status,
+    proof_collection_rename_commit_status, proof_collection_rename_invalid_status,
+    proof_collection_rename_ready_status, proof_collection_rename_status_line,
+    proof_collection_select_all_status,
+};
+
 pub(super) fn proof_collection_selection_line(
     assets: &[ProofCollectionAsset],
     selection: &ImUiMultiSelectState<Arc<str>>,
@@ -67,10 +77,6 @@ pub(super) fn proof_collection_command_package_line() -> String {
     "Duplicate, delete, rename, and select-all stay inside one app-owned collection command package; duplicate/delete/rename now route across keyboard, explicit buttons, and context menu without widening shared IMUI helpers.".to_string()
 }
 
-pub(super) fn proof_collection_command_status_line(status: &str) -> String {
-    format!("Command status: {status}")
-}
-
 pub(super) fn proof_collection_select_all_line() -> String {
     "Primary+A selects all visible assets inside the focused collection scope.".to_string()
 }
@@ -82,50 +88,4 @@ pub(super) fn proof_collection_rename_line() -> String {
 pub(super) fn proof_collection_context_menu_line() -> String {
     "Right-click an asset or the collection background to open app-local collection actions."
         .to_string()
-}
-
-pub(super) fn proof_collection_select_all_status(selected_count: usize) -> String {
-    format!("Selected all {selected_count} visible asset(s).")
-}
-
-pub(super) fn proof_collection_rename_ready_status(label: &str) -> String {
-    format!(
-        "Rename ready: {label}. The inline editor will focus, Enter commits, and Escape or blur cancels."
-    )
-}
-
-pub(super) fn proof_collection_rename_commit_status(previous: &str, next: &str) -> String {
-    format!("Renamed {previous} -> {next}.")
-}
-
-pub(super) fn proof_collection_rename_invalid_status(label: &str) -> String {
-    format!("Rename for {label} still needs a non-empty label.")
-}
-
-pub(super) fn proof_collection_rename_cancel_status(label: &str) -> String {
-    format!("Rename canceled for {label}.")
-}
-
-pub(super) fn proof_collection_rename_status_line(status: &str) -> String {
-    format!("Rename status: {status}")
-}
-
-pub(super) fn proof_collection_duplicate_status(
-    duplicated_assets: &[ProofCollectionAsset],
-) -> String {
-    let labels = duplicated_assets
-        .iter()
-        .map(|asset| asset.label.as_ref())
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("Duplicated {} asset(s): {labels}", duplicated_assets.len())
-}
-
-pub(super) fn proof_collection_delete_status(deleted_assets: &[ProofCollectionAsset]) -> String {
-    let labels = deleted_assets
-        .iter()
-        .map(|asset| asset.label.as_ref())
-        .collect::<Vec<_>>()
-        .join(", ");
-    format!("Deleted {} asset(s): {labels}", deleted_assets.len())
 }

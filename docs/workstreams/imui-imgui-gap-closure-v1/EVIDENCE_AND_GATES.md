@@ -36280,3 +36280,36 @@ Fret Examples Collection Selection Projection Owner Split Evidence - 2026-06-08:
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Readout Status Owner Split Evidence - 2026-06-08:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` was split so
+  collection readout status formatting now lives in the demo-local
+  `collection/readouts/status.rs` child owner without changing command status text, rename status
+  text, select-all status text, duplicate/delete status text, existing `readouts::...` imports,
+  public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/readouts.rs` declares `mod status;` and re-exports command,
+  rename, select-all, duplicate, and delete status helpers while retaining line readouts for
+  selection, command package, select-all, rename, and context-menu proof text.
+  `collection/readouts/status.rs` owns `proof_collection_command_status_line(...)`,
+  `proof_collection_select_all_status(...)`, the rename-ready/commit/invalid/cancel/status-line
+  helpers, `proof_collection_duplicate_status(...)`, and `proof_collection_delete_status(...)`.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the readout status
+  owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.

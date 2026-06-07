@@ -8263,3 +8263,12 @@ demo-local `collection/selection/projection.rs` child owner. Public crate APIs, 
 drag/context-menu/keyboard command imports, and the app-owned no-helper-widening boundary remain
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests now
 freeze the selection projection owner boundary.
+
+2026-06-08 collection readout status owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` now keeps line readouts plus
+status formatter re-exports while routing command status, rename status, select-all status,
+duplicate status, and delete status formatting through the demo-local
+`collection/readouts/status.rs` child owner. Existing `readouts::...` imports, public crate APIs,
+all status text, and the app-owned no-helper-widening boundary remain unchanged, while the
+collection source gate, workstream source gate, manifest, and surface tests now freeze the readout
+status owner boundary.

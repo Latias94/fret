@@ -8637,3 +8637,12 @@ opening the slice.
       `proof_collection_selected_assets(...)`, and `proof_collection_active_id(...)`. The collection
       source gate, workstream source gate, manifest, and surface tests now include the selection
       projection child owner.
+- [x] Split collection readout status formatting out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs` into the demo-local
+      `collection/readouts/status.rs` child owner without changing command status text, rename
+      status text, select-all status text, duplicate/delete status text, existing
+      `readouts::...` imports, public crate APIs, or the app-owned no-helper-widening boundary.
+      Result: `readouts.rs` keeps line readouts plus status formatter re-exports while
+      `readouts/status.rs` owns command/rename/select-all/duplicate/delete status strings. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      readout status child owner.

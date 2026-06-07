@@ -35,6 +35,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/readouts/status.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection.rs"),
