@@ -3,6 +3,8 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
     let main_source = include_str!("../src/imui_editor_proof_demo.rs");
     let helper_source = include_str!("../src/imui_editor_proof_demo/proof_helpers.rs");
     let authoring_parity_source = include_str!("../src/imui_editor_proof_demo/authoring_parity.rs");
+    let authoring_parity_shared_state_source =
+        include_str!("../src/imui_editor_proof_demo/authoring_parity/shared_state.rs");
 
     for needle in [
         "fn proof_imui_section_text(",
@@ -31,7 +33,9 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         );
     }
 
-    let combined_source = format!("{main_source}\n{helper_source}\n{authoring_parity_source}");
+    let combined_source = format!(
+        "{main_source}\n{helper_source}\n{authoring_parity_source}\n{authoring_parity_shared_state_source}"
+    );
     for needle in [
         "fret_ui_kit::ui::text(",
         "let headline =",

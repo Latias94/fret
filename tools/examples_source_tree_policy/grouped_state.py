@@ -713,11 +713,18 @@ SELECTED_GROUPED_STATE_POLICIES = [
         ],
     ),
     (
-        'imui_editor_proof_demo/authoring_parity.rs',
+        'imui_editor_proof_demo/authoring_parity/shared_state.rs',
         [
-            'pub(super) fn render_shared_state(',
+            'pub(in super::super) fn render_shared_state(',
             'let shared = cx.data().selector_model_paint(',
-            '(&name_model, &drag_value_model, &numeric_input_model, &slider_model, &enabled_model, &shading_model, &gradient_angle_model, &gradient_stops_model,)',
+            '&name_model,',
+            '&drag_value_model,',
+            '&numeric_input_model,',
+            '&slider_model,',
+            '&enabled_model,',
+            '&shading_model,',
+            '&gradient_angle_model,',
+            '&gradient_stops_model,',
         ],
         [
             'let shared = (',

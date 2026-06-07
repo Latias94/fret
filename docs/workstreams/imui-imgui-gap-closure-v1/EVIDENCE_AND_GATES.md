@@ -35539,3 +35539,39 @@ Focused gates:
 - Passed: `git diff --check` with only the existing Git warning that
   `apps/fret-devtools/src/native.rs` and `apps/fret-devtools/src/native/tests.rs` will normalize
   CRLF to LF when touched.
+
+Fret Examples Authoring Parity Shared-State/Model Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs` was split into a
+  thin hub plus `authoring_parity/models.rs` and `authoring_parity/shared_state.rs` child owners
+  without changing the `authoring_parity::...` import surface, shared model slot keys, outliner
+  fixtures, collection drag-asset seed projection, shared readout text, test IDs, public crate
+  APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `authoring_parity.rs` is now a thin hub that declares only `mod models;` and
+  `mod shared_state;` plus re-exports the existing call surface; `authoring_parity/models.rs`
+  owns authoring parity model slot registration, authoring fixtures, outliner fixtures, and
+  collection drag-asset seed projection; `authoring_parity/shared_state.rs` owns shared-state
+  readout projection and compact readout mounting. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_facade_teaching_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the affected surface tests freeze the hub/child
+  owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo nextest run -p fret-examples --test imui_editor_proof_text_roles_surface --test imui_editor_collection_modularization_surface --no-fail-fast`
+  on retry with a longer command timeout after an initial build-lock/build timeout (2 tests
+  passed).
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_facade_teaching_source.py tools\gate_imui_workstream_source.py tools\examples_source_tree_policy\advanced_helpers.py tools\examples_source_tree_policy\grouped_state.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_facade_teaching_source.py`.
+- Passed: `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: targeted examples source tree policy check for the updated
+  `authoring_parity/shared_state.rs` `advanced_helpers` and `grouped_state` entries (2 targeted
+  entries checked).
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed: `git diff --check` with only Git CRLF normalization warnings for touched Python gate
+  files.
+- Noted unrelated existing failure: `python tools\gate_examples_source_tree_policy.py` currently
+  reports stale source markers in `hello_counter_demo.rs`, `editor_notes_demo.rs`, `todo_demo.rs`,
+  `api_workbench_lite_demo.rs`, and `embedded_viewport_demo.rs`; those files were not touched by
+  this authoring parity owner split.

@@ -8047,3 +8047,14 @@ status, and drop status. `collection.rs` keeps render assembly, pointer/key/menu
 preview/drop policy, inline rename behavior, and command execution. The split leaves app-owned
 collection proof behavior unchanged while reducing the root owner and making model slot drift
 visible in `tools/gate_imui_editor_collection_source.py`.
+
+2026-06-07 authoring parity shared-state/model owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs` is now a hub that declares
+`models` and `shared_state` child owners and re-exports the existing `authoring_parity::...` call
+surface. `authoring_parity.rs` is now a hub. `authoring_parity/models.rs` owns model slot registration,
+authoring fixtures, outliner fixtures, and collection drag-asset seed projection.
+`authoring_parity/shared_state.rs` owns shared-state readout projection and compact readout
+mounting. Shared model keys, readout text, test IDs, collection drag seeds, public crate APIs, and
+the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+facade teaching gate, workstream source gate, manifest, and surface tests now freeze the
+hub/child-owner boundary.

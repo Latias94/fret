@@ -2,6 +2,8 @@
 fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
     let authoring_parity_source = include_str!("../src/imui_editor_proof_demo/authoring_parity.rs");
+    let authoring_parity_models_source =
+        include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let browser_scope_source =
@@ -52,14 +54,28 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "pub(super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
-        "super::collection::authoring_parity_collection_assets()",
-        "pub(super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
-        "pub(super) fn outliner_items_model<H: UiHost>(",
+        "mod models;",
+        "mod shared_state;",
+        "pub(super) use models::{",
+        "drag_assets",
+        "outliner_items_model",
+        "pub(super) use shared_state::render_shared_state;",
     ] {
         assert!(
             authoring_parity_source.contains(needle),
-            "the demo-local authoring parity owner should own shared proof state and fixtures; missing `{needle}`"
+            "the demo-local authoring parity hub should re-export split owner surfaces; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
+        "super::super::collection::authoring_parity_collection_assets()",
+        "pub(in super::super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
+        "pub(in super::super) fn outliner_items_model<H: UiHost>(",
+    ] {
+        assert!(
+            authoring_parity_models_source.contains(needle),
+            "the demo-local authoring parity model owner should own shared proof fixtures; missing `{needle}`"
         );
     }
 

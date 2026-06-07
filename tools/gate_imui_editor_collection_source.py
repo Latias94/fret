@@ -43,6 +43,9 @@ def main() -> None:
     authoring_parity = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs"
     )
+    authoring_parity_models = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/models.rs"
+    )
     collection = Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs")
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
@@ -130,13 +133,30 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            "modularization authoring parity owner",
+            "modularization authoring parity hub",
             authoring_parity,
             required=[
-                "pub(super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
-                "super::collection::authoring_parity_collection_assets()",
-                "pub(super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
-                "pub(super) fn outliner_items_model<H: UiHost>(",
+                "mod models;",
+                "mod shared_state;",
+                "pub(super) use models::{",
+                "drag_assets",
+                "outliner_items_model",
+                "pub(super) use shared_state::render_shared_state;",
+            ],
+            forbidden=[
+                "fn drag_assets(",
+                "fn outliner_items_model(",
+                "fn render_shared_state(",
+            ],
+        ),
+        SourceCheck(
+            "modularization authoring parity model owner",
+            authoring_parity_models,
+            required=[
+                "pub(in super::super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
+                "super::super::collection::authoring_parity_collection_assets()",
+                "pub(in super::super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
+                "pub(in super::super) fn outliner_items_model<H: UiHost>(",
             ],
             forbidden=[],
         ),

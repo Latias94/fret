@@ -8414,3 +8414,13 @@ opening the slice.
       tests, and `duplicate.rs` owns `ProofCollectionDuplicateResult`, Primary+D matching,
       copy-suffix generation, duplicate insertion/reselect, and duplicate tests. The collection
       source gate, workstream source gate, manifest, and surface tests now include both sub-owners.
+- [x] Split authoring parity shared-state readout and model/fixture registration out of
+      `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs` into the demo-local
+      `authoring_parity/models.rs` and `authoring_parity/shared_state.rs` child owners without
+      changing the `authoring_parity::...` import surface, shared model slot keys, outliner
+      fixtures, collection drag-asset seed projection, shared readout text, test IDs, or the
+      app-owned no-helper-widening boundary. Result: `authoring_parity.rs` is now a hub,
+      `authoring_parity/models.rs` owns authoring parity model slots and fixtures, and
+      `authoring_parity/shared_state.rs` owns shared-state readout projection. The collection
+      source gate, facade teaching gate, workstream source gate, manifest, and surface tests now
+      include both child owners.

@@ -63,11 +63,11 @@ ADVANCED_HELPER_CONTEXT_POLICIES = [
     ),
     (
         'app_component_cx',
-        'imui_editor_proof_demo/authoring_parity.rs',
+        'imui_editor_proof_demo/authoring_parity/shared_state.rs',
         [
-            "pub(super) fn render_shared_state(",
+            "pub(in super::super) fn render_shared_state(",
             "cx: &mut AppComponentCx<'_>,",
-            ") -> impl IntoUiElement<super::KernelApp> + use<>",
+            ") -> impl IntoUiElement<super::super::KernelApp> + use<>",
         ],
         [
             "cx: &mut ElementContext<'_, KernelApp>,",

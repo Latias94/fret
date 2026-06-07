@@ -27,6 +27,8 @@ ACTIVE_FACADE_TEACHING_PATHS = [
     "apps/fret-examples/src/imui_editor_workbench_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/models.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/shared_state.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs",
     "apps/fret-examples-imui/src/imui_hello_demo.rs",
@@ -473,8 +475,18 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs"),
             required=[
-                "pub(super) fn render_shared_state(",
-                ") -> impl IntoUiElement<super::KernelApp> + use<> {",
+                "mod models;",
+                "mod shared_state;",
+                "pub(super) use models::{",
+                "pub(super) use shared_state::render_shared_state;",
+            ],
+            forbidden=COMMON_DELETED_OR_NON_TEACHING,
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/shared_state.rs"),
+            required=[
+                "pub(in super::super) fn render_shared_state(",
+                ") -> impl IntoUiElement<super::super::KernelApp> + use<> {",
                 "proof_compact_readout_element(",
             ],
             forbidden=COMMON_DELETED_OR_NON_TEACHING,
