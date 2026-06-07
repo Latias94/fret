@@ -52,6 +52,7 @@ DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
 DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/guide_recent_evidence_panel.rs"
 )
+DEVTOOLS_GUI_GUIDE_PANEL_SOURCE = "apps/fret-devtools/src/native/guide_panel.rs"
 DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.rs"
 DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/diagnostics_tree_panel.rs"
@@ -524,6 +525,7 @@ def _validate_devtools_gui_first_open_source(
     guide_recent_evidence_panel_path = (
         cwd / DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE
     )
+    guide_panel_path = cwd / DEVTOOLS_GUI_GUIDE_PANEL_SOURCE
     header_state_path = cwd / DEVTOOLS_GUI_HEADER_STATE_SOURCE
     diagnostics_tree_panel_path = cwd / DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE
     semantics_detail_panel_path = cwd / DEVTOOLS_GUI_SEMANTICS_DETAIL_PANEL_SOURCE
@@ -560,6 +562,7 @@ def _validate_devtools_gui_first_open_source(
             discovery_lines_path=str(discovery_lines_path),
             guide_reference_panels_path=str(guide_reference_panels_path),
             guide_recent_evidence_panel_path=str(guide_recent_evidence_panel_path),
+            guide_panel_path=str(guide_panel_path),
             header_state_path=str(header_state_path),
             diagnostics_tree_panel_path=str(diagnostics_tree_panel_path),
             semantics_detail_panel_path=str(semantics_detail_panel_path),
@@ -594,6 +597,7 @@ def _validate_devtools_gui_first_open_source(
         guide_recent_evidence_panel_source = (
             guide_recent_evidence_panel_path.read_text(encoding="utf-8")
         )
+        guide_panel_source = guide_panel_path.read_text(encoding="utf-8")
         header_state_source = header_state_path.read_text(encoding="utf-8")
         diagnostics_tree_panel_source = diagnostics_tree_panel_path.read_text(
             encoding="utf-8"
@@ -638,6 +642,7 @@ def _validate_devtools_gui_first_open_source(
             discovery_lines_source,
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,
+            guide_panel_source,
             header_state_source,
             diagnostics_tree_panel_source,
             semantics_detail_panel_source,
@@ -719,6 +724,9 @@ def _validate_devtools_gui_first_open_source(
         "mod demo_metrics_debug;",
         "mod gate_run;",
         "mod workflow_run;",
+        "#[path = \"native/guide_panel.rs\"]",
+        "mod guide_panel;",
+        "use guide_panel::devtools_guide_panel;",
         "#[path = \"native/diagnostics_tree_panel.rs\"]",
         "mod diagnostics_tree_panel;",
         "use diagnostics_tree_panel::{element_tree_panel, layout_tree_panel, semantics_panel};",

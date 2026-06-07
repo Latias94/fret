@@ -136,6 +136,7 @@ DEVTOOLS_GUI_GUIDE_REFERENCE_PANELS_SOURCE = (
 DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/guide_recent_evidence_panel.rs"
 )
+DEVTOOLS_GUI_GUIDE_PANEL_SOURCE = "apps/fret-devtools/src/native/guide_panel.rs"
 DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.rs"
 DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/diagnostics_tree_panel.rs"
@@ -538,6 +539,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     guide_recent_evidence_panel_path = (
         repo_root / DEVTOOLS_GUI_GUIDE_RECENT_EVIDENCE_PANEL_SOURCE
     )
+    guide_panel_path = repo_root / DEVTOOLS_GUI_GUIDE_PANEL_SOURCE
     header_state_path = repo_root / DEVTOOLS_GUI_HEADER_STATE_SOURCE
     diagnostics_tree_panel_path = repo_root / DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE
     semantics_detail_panel_path = repo_root / DEVTOOLS_GUI_SEMANTICS_DETAIL_PANEL_SOURCE
@@ -574,6 +576,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         guide_recent_evidence_panel_source = (
             guide_recent_evidence_panel_path.read_text(encoding="utf-8")
         )
+        guide_panel_source = guide_panel_path.read_text(encoding="utf-8")
         header_state_source = header_state_path.read_text(encoding="utf-8")
         diagnostics_tree_panel_source = diagnostics_tree_panel_path.read_text(
             encoding="utf-8"
@@ -614,6 +617,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             discovery_lines_source,
             guide_reference_panels_source,
             guide_recent_evidence_panel_source,
+            guide_panel_source,
             header_state_source,
             diagnostics_tree_panel_source,
             semantics_detail_panel_source,
@@ -690,6 +694,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "#[path = \"native/followup_panel.rs\"]",
         "mod followup_panel;",
         "mod gate_run;",
+        "#[path = \"native/guide_panel.rs\"]",
+        "mod guide_panel;",
+        "use guide_panel::devtools_guide_panel;",
         "#[path = \"native/diagnostics_tree_panel.rs\"]",
         "mod diagnostics_tree_panel;",
         "use diagnostics_tree_panel::{element_tree_panel, layout_tree_panel, semantics_panel};",
