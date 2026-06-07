@@ -8509,3 +8509,13 @@ opening the slice.
       `clear_stale_collection_rename_session(...)`, while `collection/lifecycle.rs` owns the
       rename-session existence check and model updates. The collection source gate, workstream
       source gate, manifest, and surface tests now include the lifecycle owner.
+- [x] Split collection proof child render-state projection out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/render_states.rs` child owner without changing status readout inputs, command
+      button inputs, browser-scope inputs, render order, public crate APIs, model keys, or the
+      app-owned no-helper-widening boundary. Result: `collection.rs` keeps render ordering and
+      delegates status, command-button, and browser-scope render-state projection through
+      `proof_collection_render_states(...)`, while `collection/render_states.rs` owns
+      `ProofCollectionRenderStates` and the three child render-state DTO assemblies. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the render-state
+      owner.

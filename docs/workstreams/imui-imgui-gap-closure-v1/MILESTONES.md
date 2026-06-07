@@ -8143,3 +8143,14 @@ the active rename target still exists and clearing `rename_session` plus `rename
 when it does not. Public crate APIs, model keys, render call sites, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the lifecycle owner boundary.
+
+2026-06-07 collection proof render state owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render ordering and
+delegates status, command-button, and browser-scope render-state projection through
+`proof_collection_render_states(...)`. The demo-local `collection/render_states.rs` owns status,
+command-button, and browser-scope render-state projection by assembling
+`ProofCollectionStatusReadoutState`, `ProofCollectionCommandButtonState`, and
+`ProofCollectionBrowserScopeState` from the runtime and derived collection state. Public crate APIs,
+model keys, child render behavior, and the app-owned no-helper-widening boundary remain unchanged,
+while the collection source gate, workstream source gate, manifest, and surface tests now freeze
+the render-state owner boundary.

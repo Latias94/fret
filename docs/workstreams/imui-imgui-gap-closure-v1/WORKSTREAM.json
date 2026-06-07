@@ -1674,6 +1674,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/import_target.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/lifecycle.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/order_toggle.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/render_states.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/status_readouts.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs",

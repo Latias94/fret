@@ -104,6 +104,9 @@ def main() -> None:
     collection_readouts = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs"
     )
+    collection_render_states = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/render_states.rs"
+    )
     collection_status_readouts = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/status_readouts.rs"
     )
@@ -142,6 +145,7 @@ def main() -> None:
         collection_models,
         collection_order_toggle,
         collection_readouts,
+        collection_render_states,
         collection_status_readouts,
         collection_rename,
         collection_selection,
@@ -218,6 +222,7 @@ def main() -> None:
                 "mod models;",
                 "mod order_toggle;",
                 "mod rename;",
+                "mod render_states;",
                 "mod runtime_state;",
                 "mod selection;",
                 "mod status_readouts;",
@@ -229,14 +234,16 @@ def main() -> None:
                 "use import_target::render_collection_import_target;",
                 "use lifecycle::clear_stale_collection_rename_session;",
                 "use order_toggle::render_collection_order_toggle;",
+                "use render_states::proof_collection_render_states;",
                 "use runtime_state::proof_collection_runtime_state;",
                 "render_collection_import_target(ui);",
                 "render_collection_order_toggle(",
                 "proof_collection_derived_state(",
                 "proof_collection_runtime_state(",
                 "proof_collection_child_models(&collection_runtime.models)",
+                "proof_collection_render_states(",
                 "clear_stale_collection_rename_session(",
-                "use status_readouts::{",
+                "use status_readouts::render_collection_status_readouts;",
                 "render_collection_status_readouts(",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
@@ -252,9 +259,7 @@ def main() -> None:
                 "use derived_state::proof_collection_derived_state;",
                 "let collection_state = proof_collection_derived_state(",
                 "&collection_state.assets",
-                "&collection_state.keys",
-                "collection_state.active_id.as_ref()",
-                "collection_state.rename_ready_session.as_ref()",
+                "&collection_state,",
             ],
             forbidden=[
                 "proof_collection_assets_in_visible_order(",
@@ -303,8 +308,8 @@ def main() -> None:
                 "collection_runtime.models.reverse_order",
                 "collection_runtime.snapshot.stored_assets",
                 "collection_runtime.snapshot.selection",
-                "collection_runtime.snapshot.layout",
-                "collection_runtime.snapshot.rename_session()",
+                "collection_runtime.snapshot.keyboard",
+                "&collection_runtime,",
             ],
             forbidden=[
                 "authoring_parity_collection_selection_model(ui.cx_mut())",
@@ -376,8 +381,8 @@ def main() -> None:
                 "browser_scope,",
                 "context_menu,",
                 "} = proof_collection_child_models(&collection_runtime.models);",
-                "render_collection_command_buttons(\n        ui,\n        command_buttons,",
-                "render_collection_browser_scope(\n        ui,\n        browser_scope,",
+                "render_collection_command_buttons(ui, command_buttons, render_states.command_buttons);",
+                "render_collection_browser_scope(ui, browser_scope, render_states.browser_scope);",
                 "render_collection_context_menu(ui, context_menu);",
             ],
             forbidden=[
@@ -455,6 +460,54 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            "collection render state delegation",
+            collection,
+            required=[
+                "mod render_states;",
+                "use render_states::proof_collection_render_states;",
+                "let render_states = proof_collection_render_states(",
+                "&collection_runtime",
+                "&collection_state",
+                "collection_reverse_order",
+                "render_collection_status_readouts(ui, render_states.status_readouts);",
+                "render_states.command_buttons",
+                "render_collection_browser_scope(ui, browser_scope, render_states.browser_scope);",
+            ],
+            forbidden=[
+                "ProofCollectionStatusReadoutState {",
+                "ProofCollectionCommandButtonState {",
+                "ProofCollectionBrowserScopeState {",
+                "collection_runtime.snapshot.rename_status.as_str()",
+                "collection_runtime.snapshot.command_status.as_str()",
+                "collection_runtime.snapshot.rename_session()",
+                "collection_state.rename_ready_session.as_ref()",
+            ],
+        ),
+        SourceCheck(
+            "collection render state owner",
+            collection_render_states,
+            required=[
+                "pub(super) struct ProofCollectionRenderStates",
+                "pub(super) fn proof_collection_render_states<'a>(",
+                "runtime: &'a ProofCollectionRuntimeState",
+                "state: &'a ProofCollectionDerivedState",
+                "status_readouts: ProofCollectionStatusReadoutState {",
+                "command_buttons: ProofCollectionCommandButtonState {",
+                "browser_scope: ProofCollectionBrowserScopeState {",
+                "rename_ready_session: state.rename_ready_session.as_ref()",
+                "rename_session: runtime.snapshot.rename_session()",
+                "rename_focus_pending: runtime.snapshot.rename_focus_pending",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "render_collection_status_readouts(",
+                "render_collection_command_buttons(",
+                "render_collection_browser_scope(",
+                "ui.",
+                "TextField::new(",
+            ],
+        ),
+        SourceCheck(
             "collection root chrome delegation",
             collection,
             required=[
@@ -492,9 +545,8 @@ def main() -> None:
             collection,
             required=[
                 "mod status_readouts;",
-                "use status_readouts::{",
-                "ProofCollectionStatusReadoutState {",
-                "render_collection_status_readouts(",
+                "use status_readouts::render_collection_status_readouts;",
+                "render_collection_status_readouts(ui, render_states.status_readouts);",
             ],
             forbidden=[
                 "proof_collection_assets_line(",
@@ -1134,10 +1186,10 @@ def main() -> None:
             collection,
             required=[
                 "mod command_buttons;",
-                "use command_buttons::{",
-                "render_collection_command_buttons(",
+                "use command_buttons::render_collection_command_buttons;",
+                "render_collection_command_buttons(ui, command_buttons, render_states.command_buttons);",
                 "command_buttons,",
-                "ProofCollectionCommandButtonState {",
+                "render_states.command_buttons",
             ],
             forbidden=[
                 "let duplicate_selected = ui.button_with_options(",
@@ -1165,10 +1217,10 @@ def main() -> None:
             collection,
             required=[
                 "mod browser_scope;",
-                "use browser_scope::{",
-                "render_collection_browser_scope(",
+                "use browser_scope::render_collection_browser_scope;",
+                "render_collection_browser_scope(ui, browser_scope, render_states.browser_scope);",
                 "browser_scope,",
-                "ProofCollectionBrowserScopeState {",
+                "render_states.browser_scope",
             ],
             forbidden=[
                 "ui.child_region_with_options(",

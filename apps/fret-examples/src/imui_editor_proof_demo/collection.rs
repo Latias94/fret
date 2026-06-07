@@ -20,6 +20,7 @@ mod models;
 mod order_toggle;
 mod readouts;
 mod rename;
+mod render_states;
 mod runtime_state;
 mod selection;
 mod status_readouts;
@@ -27,17 +28,18 @@ mod status_readouts;
 pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};
 pub(super) use chrome::proof_collection_readout_text;
 
-use browser_scope::{ProofCollectionBrowserScopeState, render_collection_browser_scope};
+use browser_scope::render_collection_browser_scope;
 use child_models::{ProofCollectionChildModels, proof_collection_child_models};
 use chrome::proof_collection_section_label;
-use command_buttons::{ProofCollectionCommandButtonState, render_collection_command_buttons};
+use command_buttons::render_collection_command_buttons;
 use context_menu::render_collection_context_menu;
 use derived_state::proof_collection_derived_state;
 use import_target::render_collection_import_target;
 use lifecycle::clear_stale_collection_rename_session;
 use order_toggle::render_collection_order_toggle;
+use render_states::proof_collection_render_states;
 use runtime_state::proof_collection_runtime_state;
-use status_readouts::{ProofCollectionStatusReadoutState, render_collection_status_readouts};
+use status_readouts::render_collection_status_readouts;
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
     proof_collection_section_label(
@@ -71,45 +73,15 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         browser_scope,
         context_menu,
     } = proof_collection_child_models(&collection_runtime.models);
-
-    render_collection_status_readouts(
-        ui,
-        ProofCollectionStatusReadoutState {
-            assets: &collection_state.assets,
-            selection: &collection_runtime.snapshot.selection,
-            keyboard: &collection_runtime.snapshot.keyboard,
-            layout: collection_runtime.snapshot.layout,
-            rename_status: collection_runtime.snapshot.rename_status.as_str(),
-            command_status: collection_runtime.snapshot.command_status.as_str(),
-        },
-    );
-    render_collection_command_buttons(
-        ui,
-        command_buttons,
-        ProofCollectionCommandButtonState {
-            visible_assets: &collection_state.assets,
-            stored_assets: &collection_runtime.snapshot.stored_assets,
-            selection: &collection_runtime.snapshot.selection,
-            keyboard: &collection_runtime.snapshot.keyboard,
-            reverse_order: collection_reverse_order,
-            rename_ready_session: collection_state.rename_ready_session.as_ref(),
-        },
+    let render_states = proof_collection_render_states(
+        &collection_runtime,
+        &collection_state,
+        collection_reverse_order,
     );
 
-    render_collection_browser_scope(
-        ui,
-        browser_scope,
-        ProofCollectionBrowserScopeState {
-            assets: &collection_state.assets,
-            keys: &collection_state.keys,
-            selection: &collection_runtime.snapshot.selection,
-            box_select: &collection_runtime.snapshot.box_select,
-            active_id: collection_state.active_id.as_ref(),
-            rename_session: collection_runtime.snapshot.rename_session(),
-            rename_focus_pending: collection_runtime.snapshot.rename_focus_pending,
-            layout: collection_runtime.snapshot.layout,
-        },
-    );
+    render_collection_status_readouts(ui, render_states.status_readouts);
+    render_collection_command_buttons(ui, command_buttons, render_states.command_buttons);
+    render_collection_browser_scope(ui, browser_scope, render_states.browser_scope);
 
     render_collection_context_menu(ui, context_menu);
 

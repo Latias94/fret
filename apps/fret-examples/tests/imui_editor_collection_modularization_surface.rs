@@ -31,6 +31,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let order_toggle_source =
         include_str!("../src/imui_editor_proof_demo/collection/order_toggle.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
+    let render_states_source =
+        include_str!("../src/imui_editor_proof_demo/collection/render_states.rs");
     let runtime_state_source =
         include_str!("../src/imui_editor_proof_demo/collection/runtime_state.rs");
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
@@ -114,6 +116,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod models;",
         "mod order_toggle;",
         "mod rename;",
+        "mod render_states;",
         "mod runtime_state;",
         "mod selection;",
         "mod status_readouts;",
@@ -125,14 +128,16 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "use import_target::render_collection_import_target;",
         "use lifecycle::clear_stale_collection_rename_session;",
         "use order_toggle::render_collection_order_toggle;",
+        "use render_states::proof_collection_render_states;",
         "use runtime_state::proof_collection_runtime_state;",
         "render_collection_import_target(ui);",
         "render_collection_order_toggle(",
         "proof_collection_derived_state(",
         "proof_collection_runtime_state(",
         "proof_collection_child_models(&collection_runtime.models)",
+        "proof_collection_render_states(",
         "clear_stale_collection_rename_session(",
-        "use status_readouts::{",
+        "use status_readouts::render_collection_status_readouts;",
         "render_collection_status_readouts(",
     ] {
         assert!(
@@ -312,6 +317,39 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !collection_source.contains(needle),
             "the collection root should route stale rename cleanup through collection/lifecycle.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionRenderStates",
+        "pub(super) fn proof_collection_render_states<'a>(",
+        "runtime: &'a ProofCollectionRuntimeState",
+        "state: &'a ProofCollectionDerivedState",
+        "status_readouts: ProofCollectionStatusReadoutState {",
+        "command_buttons: ProofCollectionCommandButtonState {",
+        "browser_scope: ProofCollectionBrowserScopeState {",
+        "rename_ready_session: state.rename_ready_session.as_ref()",
+        "rename_session: runtime.snapshot.rename_session()",
+        "rename_focus_pending: runtime.snapshot.rename_focus_pending",
+    ] {
+        assert!(
+            render_states_source.contains(needle),
+            "the demo-local collection render-state owner should keep child render-state projection explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "ProofCollectionStatusReadoutState {",
+        "ProofCollectionCommandButtonState {",
+        "ProofCollectionBrowserScopeState {",
+        "collection_runtime.snapshot.rename_status.as_str()",
+        "collection_runtime.snapshot.command_status.as_str()",
+        "collection_runtime.snapshot.rename_session()",
+        "collection_state.rename_ready_session.as_ref()",
+    ] {
+        assert!(
+            !collection_source.contains(needle),
+            "the collection root should route child render-state projection through collection/render_states.rs; unexpected `{needle}`"
         );
     }
 
