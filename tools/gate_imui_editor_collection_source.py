@@ -62,6 +62,9 @@ def main() -> None:
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
+    collection_chrome = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/chrome.rs"
+    )
     collection_command_buttons = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs"
     )
@@ -104,6 +107,7 @@ def main() -> None:
         collection_browser_scope,
         collection_browser_scope_input_runtime,
         collection_box_select,
+        collection_chrome,
         collection_command_buttons,
         collection_context_menu,
         collection_drag_drop,
@@ -174,6 +178,7 @@ def main() -> None:
                 "mod assets;",
                 "mod browser_scope;",
                 "mod box_select;",
+                "mod chrome;",
                 "mod command_buttons;",
                 "mod context_menu;",
                 "mod drag_drop;",
@@ -182,11 +187,46 @@ def main() -> None:
                 "mod rename;",
                 "mod selection;",
                 "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
+                "pub(super) use chrome::proof_collection_readout_text;",
+                "use chrome::proof_collection_section_label;",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],
             forbidden=[],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection root chrome delegation",
+            collection,
+            required=[
+                "mod chrome;",
+                "pub(super) use chrome::proof_collection_readout_text;",
+                "use chrome::proof_collection_section_label;",
+            ],
+            forbidden=[
+                "fn proof_collection_readout_text(",
+                "fn proof_collection_section_label(",
+                "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
+                "proof_section_chrome_label(cx, text, test_id)",
+            ],
+        ),
+        SourceCheck(
+            "collection chrome owner",
+            collection_chrome,
+            required=[
+                "pub(in super::super) fn proof_collection_readout_text(",
+                "pub(super) fn proof_collection_section_label(",
+                "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
+                "proof_section_chrome_label(cx, text, test_id)",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "selector_model_paint",
+                "render_collection_asset_grid",
+                "render_collection_context_menu",
+                "ui.button_with_options(",
+                "TextField::new(",
+            ],
         ),
         SourceCheck(
             "collection assets owner",

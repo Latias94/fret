@@ -8067,3 +8067,14 @@ Stored asset ids, labels, paths, kinds, sizes, authoring parity drag-asset seed 
 crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
 source gate, workstream source gate, manifest, and surface tests now freeze the assets owner
 boundary.
+
+2026-06-07 collection proof chrome/readout owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+delegates section/readout element construction through the demo-local `collection/chrome.rs` child
+owner. `collection/chrome.rs` owns `proof_collection_readout_text(...)`,
+`proof_collection_section_label(...)`, `proof_compact_readout_element(...)` mounting, and
+`proof_section_chrome_label(...)` mounting. Section label text, compact readout text, readout test
+IDs, sibling child-owner imports through `collection::proof_collection_readout_text(...)`, public
+crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
+source gate, workstream source gate, manifest, and surface tests now freeze the chrome owner
+boundary.

@@ -2,17 +2,14 @@ use std::sync::Arc;
 
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
-use fret_core::Px;
-use fret_ui::UiHost;
 
-use super::{
-    KernelApp, named_demo_state, proof_compact_readout_element, proof_section_chrome_label,
-};
+use super::KernelApp;
 
 mod asset_grid;
 mod assets;
 mod box_select;
 mod browser_scope;
+mod chrome;
 mod command_buttons;
 mod context_menu;
 mod drag_drop;
@@ -24,11 +21,13 @@ mod rename;
 mod selection;
 
 pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};
+pub(super) use chrome::proof_collection_readout_text;
 
 use browser_scope::{
     ProofCollectionBrowserScopeModels, ProofCollectionBrowserScopeState,
     render_collection_browser_scope,
 };
+use chrome::proof_collection_section_label;
 use command_buttons::{
     ProofCollectionCommandButtonModels, ProofCollectionCommandButtonState,
     render_collection_command_buttons,
@@ -61,25 +60,6 @@ use readouts::{
 };
 use rename::proof_collection_begin_rename_session;
 use selection::{proof_collection_active_id, proof_collection_assets_in_visible_order};
-
-pub(super) fn proof_collection_readout_text(
-    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
-    text: impl Into<Arc<str>>,
-    test_id: &'static str,
-) {
-    let element =
-        ui.with_cx_mut(|cx| proof_compact_readout_element(cx, text, Arc::<str>::from(test_id)));
-    ui.add(element);
-}
-
-fn proof_collection_section_label(
-    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
-    text: &'static str,
-    test_id: &'static str,
-) {
-    let element = ui.with_cx_mut(|cx| proof_section_chrome_label(cx, text, test_id));
-    ui.add(element);
-}
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
     proof_collection_section_label(

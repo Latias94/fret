@@ -9,6 +9,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let chrome_source = include_str!("../src/imui_editor_proof_demo/collection/chrome.rs");
     let browser_input_runtime_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
@@ -87,6 +88,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod assets;",
         "mod browser_scope;",
         "mod box_select;",
+        "mod chrome;",
         "mod command_buttons;",
         "mod context_menu;",
         "mod drag_drop;",
@@ -96,10 +98,36 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod rename;",
         "mod selection;",
         "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
+        "pub(super) use chrome::proof_collection_readout_text;",
+        "use chrome::proof_collection_section_label;",
     ] {
         assert!(
             collection_source.contains(needle),
             "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) fn proof_collection_readout_text(",
+        "pub(super) fn proof_collection_section_label(",
+        "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
+        "proof_section_chrome_label(cx, text, test_id)",
+    ] {
+        assert!(
+            chrome_source.contains(needle),
+            "the demo-local collection chrome owner should keep readout/title mounting explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn proof_collection_readout_text(",
+        "fn proof_collection_section_label(",
+        "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
+        "proof_section_chrome_label(cx, text, test_id)",
+    ] {
+        assert!(
+            !collection_source.contains(needle),
+            "the collection root should route chrome/readout mounting through collection/chrome.rs; unexpected `{needle}`"
         );
     }
 

@@ -35603,3 +35603,33 @@ Fret Examples Collection Asset Fixture Owner Split Evidence - 2026-06-07:
 - Passed:
   `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `git diff --check` with only Git CRLF normalization warnings for touched files.
+
+Fret Examples Collection Chrome/Readout Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection
+  proof section label and compact readout mounting now live in the demo-local
+  `collection/chrome.rs` child owner without changing section label text, compact readout text,
+  readout test IDs, sibling child-owner imports through
+  `collection::proof_collection_readout_text(...)`, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `collection.rs` declares `mod chrome;`, re-exports
+  `proof_collection_readout_text(...)`, and imports `proof_collection_section_label(...)` for root
+  render assembly. `collection/chrome.rs` owns `proof_collection_readout_text(...)`,
+  `proof_collection_section_label(...)`, `proof_compact_readout_element(...)` mounting, and
+  `proof_section_chrome_label(...)` mounting. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` freeze the
+  root/chrome-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`
+  on retry with a longer command timeout after an initial build timeout left stale cargo/rustc
+  processes for this same Fret test command (1 test passed).
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only Git CRLF normalization warnings for touched files.

@@ -8433,3 +8433,13 @@ opening the slice.
       fixture call surface, while `collection/assets.rs` owns `ProofCollectionAsset` plus the
       authoring parity collection asset defaults. The collection source gate, workstream source
       gate, manifest, and surface tests now include the assets owner.
+- [x] Split collection proof chrome/readout mounting out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/chrome.rs` child owner without changing section label text, compact readout text,
+      readout test IDs, the `collection::proof_collection_readout_text(...)` call surface used by
+      sibling child owners, or the app-owned no-helper-widening boundary. Result: `collection.rs`
+      keeps render assembly and delegates section/readout element construction through the chrome
+      owner, while `collection/chrome.rs` owns `proof_collection_readout_text(...)`,
+      `proof_collection_section_label(...)`, `proof_compact_readout_element(...)` mounting, and
+      `proof_section_chrome_label(...)` mounting. The collection source gate, workstream source
+      gate, manifest, and surface tests now include the chrome owner.
