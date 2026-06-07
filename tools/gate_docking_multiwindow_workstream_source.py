@@ -224,7 +224,7 @@ def _check_docs(failures: list[str]) -> None:
     _require_markers(
         Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
         required=[
-            "\"updated\": \"2026-06-06\"",
+            "\"updated\": \"2026-06-07\"",
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
             "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
@@ -324,6 +324,7 @@ def _check_docs(failures: list[str]) -> None:
             "M151_RUNNER_SURFACE_BOOTSTRAP_OWNER_SPLIT_2026-06-05.md",
             "M152_RUNNER_INTERNAL_DRAG_ROUTING_OWNER_SPLIT_2026-06-06.md",
             "M153_RUNNER_INTERNAL_DRAG_MOVING_WINDOW_OWNER_SPLIT_2026-06-06.md",
+            "M154_RUNNER_HOOKED_DRIVER_OWNER_SPLIT_2026-06-07.md",
             "python tools/gate_docking_multiwindow_workstream_source.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py --reuse-built",
@@ -363,6 +364,8 @@ def _check_docs(failures: list[str]) -> None:
             "crates/fret-launch/src/runner/desktop/runner/docking/poll_up.rs",
             "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing.rs",
             "crates/fret-launch/src/runner/desktop/runner/internal_drag_routing/moving_window.rs",
+            "crates/fret-launch/src/runner/desktop/runner/run.rs",
+            "crates/fret-launch/src/runner/desktop/runner/run/hooked_driver.rs",
             "crates/fret-launch/src/runner/desktop/runner/change_propagation.rs",
             "crates/fret-launch/src/runner/desktop/runner/clipboard_effects.rs",
             "crates/fret-launch/src/runner/desktop/runner/command_effects.rs",
@@ -5298,6 +5301,36 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M154_RUNNER_HOOKED_DRIVER_OWNER_SPLIT_2026-06-07.md"),
+        required=[
+            "Status: local owner split; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` open",
+            "crates/fret-launch/src/runner/desktop/runner/run.rs",
+            "crates/fret-launch/src/runner/desktop/runner/run/hooked_driver.rs",
+            "HookedDriver::new",
+            "`WinitAppDriver` forwarding",
+            "`FRET_DIAG_RENDERER_PERF`",
+            "renderer perf enabling",
+            "accessibility forwarding",
+            "run entrypoint facade remains thin",
+            "cargo check -p fret-launch --lib",
+            "cargo nextest run -p fret-launch --lib winit_app_builder --no-fail-fast",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "python tools\\gate_docking_multiwindow_workstream_source.py",
+            "python tools\\gate_imui_workstream_source.py",
+            "python tools\\check_layering.py",
+            "git diff --check",
+            "does not close `DW-P1-linux-003`",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("crates/fret-launch/src/runner/desktop/runner/mod.rs"),
         required=[
             "mod change_propagation;",
@@ -6352,6 +6385,57 @@ def _check_docs(failures: list[str]) -> None:
         ],
         forbidden=[
             "pub fn ",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/run.rs"),
+        required=[
+            "mod hooked_driver;",
+            "use hooked_driver::HookedDriver;",
+            "pub fn run_app<D: super::WinitAppDriver + 'static>",
+            "pub fn run_app_with_event_loop<D: super::WinitAppDriver + 'static>",
+            "fn run_app_with_event_loop_and_asset_reload<D: super::WinitAppDriver + 'static>",
+            "pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self",
+            "pub struct WinitAppBuilder<D>",
+            "HookedDriver::new(",
+            "fn apply_asset_mount<D: super::WinitAppDriver + 'static>",
+            "fn apply_asset_mounts<D: super::WinitAppDriver + 'static>",
+            "winit_app_builder_with_asset_startup_installs_selected_packaged_lane",
+        ],
+        forbidden=[
+            "struct HookedDriver<D>",
+            "impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D>",
+            "fn record_engine_frame(",
+            "fn record_engine_commands(",
+            "fn accessibility_replace_selected_text(",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("crates/fret-launch/src/runner/desktop/runner/run/hooked_driver.rs"),
+        required=[
+            "pub(super) struct HookedDriver<D>",
+            "pub(super) fn new(",
+            "on_main_window_created: Option<Box<OnMainWindowCreatedHook>>",
+            "on_gpu_ready: Option<Box<OnGpuReadyHook>>",
+            "impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D>",
+            "std::env::var_os(\"FRET_DIAG_RENDERER_PERF\")",
+            "renderer.set_perf_enabled(true)",
+            "fn record_engine_frame(",
+            "fn record_engine_commands(",
+            "fn handle_command(",
+            "fn handle_event(",
+            "fn window_created(",
+            "fn before_close_window(",
+            "fn accessibility_replace_selected_text(",
+        ],
+        forbidden=[
+            "pub struct WinitAppBuilder",
+            "EventLoop::builder()",
+            "run_app_with_event_loop_and_asset_reload",
+            "AssetStartupPlan",
+            "mod tests {",
         ],
         failures=failures,
     )

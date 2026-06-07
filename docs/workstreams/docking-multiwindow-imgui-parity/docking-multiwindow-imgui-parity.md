@@ -538,6 +538,14 @@ Platform note:
   (moves cross-window internal drag pointer lookup, hover/drop routing, and drag diagnostics into
   `internal_drag_routing.rs` while leaving ordinary window event delivery in `event_routing.rs`;
   projection marker: runner-routed InternalDrag Enter/Over/Drop for docking multi-window hand feel)
+- Latest runner internal drag moving-window owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M153_RUNNER_INTERNAL_DRAG_MOVING_WINDOW_OWNER_SPLIT_2026-06-06.md`
+  (moves DockFloating follow / non-main-source moving-window resolution and
+  `HoveredWindowUnderMovingWindow` target sampling into `internal_drag_routing/moving_window.rs`)
+- Latest runner hooked-driver owner split:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M154_RUNNER_HOOKED_DRIVER_OWNER_SPLIT_2026-06-07.md`
+  (moves launch hook dispatch and `WinitAppDriver` forwarding into `run/hooked_driver.rs` while
+  leaving run entrypoints, `WinitRunner::new`, and `WinitAppBuilder` in `run.rs`)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
