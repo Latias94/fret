@@ -62,6 +62,9 @@ def main() -> None:
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
+    collection_child_models = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/child_models.rs"
+    )
     collection_chrome = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/chrome.rs"
     )
@@ -122,6 +125,7 @@ def main() -> None:
         collection_browser_scope,
         collection_browser_scope_input_runtime,
         collection_box_select,
+        collection_child_models,
         collection_chrome,
         collection_command_buttons,
         collection_context_menu,
@@ -198,6 +202,7 @@ def main() -> None:
                 "mod assets;",
                 "mod browser_scope;",
                 "mod box_select;",
+                "mod child_models;",
                 "mod chrome;",
                 "mod command_buttons;",
                 "mod context_menu;",
@@ -213,6 +218,7 @@ def main() -> None:
                 "mod status_readouts;",
                 "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
                 "pub(super) use chrome::proof_collection_readout_text;",
+                "use child_models::{ProofCollectionChildModels, proof_collection_child_models};",
                 "use chrome::proof_collection_section_label;",
                 "use derived_state::proof_collection_derived_state;",
                 "use import_target::render_collection_import_target;",
@@ -222,6 +228,7 @@ def main() -> None:
                 "render_collection_order_toggle(",
                 "proof_collection_derived_state(",
                 "proof_collection_runtime_state(",
+                "proof_collection_child_models(&collection_runtime.models)",
                 "use status_readouts::{",
                 "render_collection_status_readouts(",
                 "#[cfg(test)]",
@@ -347,6 +354,53 @@ def main() -> None:
                 "render_collection_command_buttons",
                 "render_collection_import_target",
                 "ui.button_with_options(",
+                "TextField::new(",
+            ],
+        ),
+        SourceCheck(
+            "collection child model delegation",
+            collection,
+            required=[
+                "mod child_models;",
+                "use child_models::{ProofCollectionChildModels, proof_collection_child_models};",
+                "let ProofCollectionChildModels {",
+                "command_buttons,",
+                "browser_scope,",
+                "context_menu,",
+                "} = proof_collection_child_models(&collection_runtime.models);",
+                "render_collection_command_buttons(\n        ui,\n        command_buttons,",
+                "render_collection_browser_scope(\n        ui,\n        browser_scope,",
+                "render_collection_context_menu(ui, context_menu);",
+            ],
+            forbidden=[
+                "ProofCollectionCommandButtonModels {",
+                "ProofCollectionBrowserScopeModels {",
+                "ProofCollectionContextMenuModels {",
+            ],
+        ),
+        SourceCheck(
+            "collection child model owner",
+            collection_child_models,
+            required=[
+                "pub(super) struct ProofCollectionChildModels",
+                "pub(super) fn proof_collection_child_models(",
+                "models: &ProofCollectionRuntimeModels",
+                "command_buttons: ProofCollectionCommandButtonModels {",
+                "browser_scope: ProofCollectionBrowserScopeModels {",
+                "context_menu: ProofCollectionContextMenuModels {",
+                "assets: models.assets.clone()",
+                "selection: models.selection.clone()",
+                "keyboard: models.keyboard.clone()",
+                "rename_session: models.rename_session.clone()",
+                "scroll: models.scroll.clone()",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "render_collection_browser_scope(",
+                "render_collection_command_buttons(",
+                "render_collection_context_menu(",
+                "selector_model_paint(",
+                "ui.",
                 "TextField::new(",
             ],
         ),
@@ -1032,12 +1086,13 @@ def main() -> None:
                 "mod command_buttons;",
                 "use command_buttons::{",
                 "render_collection_command_buttons(",
-                "ProofCollectionCommandButtonModels {",
+                "command_buttons,",
                 "ProofCollectionCommandButtonState {",
             ],
             forbidden=[
                 "let duplicate_selected = ui.button_with_options(",
                 "proof_collection_set_command_status(",
+                "ProofCollectionCommandButtonModels {",
             ],
         ),
         SourceCheck(
@@ -1062,7 +1117,7 @@ def main() -> None:
                 "mod browser_scope;",
                 "use browser_scope::{",
                 "render_collection_browser_scope(",
-                "ProofCollectionBrowserScopeModels {",
+                "browser_scope,",
                 "ProofCollectionBrowserScopeState {",
             ],
             forbidden=[
@@ -1075,6 +1130,7 @@ def main() -> None:
                 "cx.pointer_region_on_pointer_up(",
                 "cx.pointer_region_on_pointer_cancel(",
                 "proof_collection_box_select_active_rect(",
+                "ProofCollectionBrowserScopeModels {",
             ],
         ),
         SourceCheck(

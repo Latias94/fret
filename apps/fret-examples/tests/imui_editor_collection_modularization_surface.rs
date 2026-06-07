@@ -9,6 +9,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let child_models_source =
+        include_str!("../src/imui_editor_proof_demo/collection/child_models.rs");
     let chrome_source = include_str!("../src/imui_editor_proof_demo/collection/chrome.rs");
     let browser_input_runtime_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
@@ -98,6 +100,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod assets;",
         "mod browser_scope;",
         "mod box_select;",
+        "mod child_models;",
         "mod chrome;",
         "mod command_buttons;",
         "mod context_menu;",
@@ -114,6 +117,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod status_readouts;",
         "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
         "pub(super) use chrome::proof_collection_readout_text;",
+        "use child_models::{ProofCollectionChildModels, proof_collection_child_models};",
         "use chrome::proof_collection_section_label;",
         "use derived_state::proof_collection_derived_state;",
         "use import_target::render_collection_import_target;",
@@ -123,6 +127,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "render_collection_order_toggle(",
         "proof_collection_derived_state(",
         "proof_collection_runtime_state(",
+        "proof_collection_child_models(&collection_runtime.models)",
         "use status_readouts::{",
         "render_collection_status_readouts(",
     ] {
@@ -243,6 +248,36 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !collection_source.contains(needle),
             "the collection root should route runtime model/snapshot reads through collection/runtime_state.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionChildModels",
+        "pub(super) fn proof_collection_child_models(",
+        "models: &ProofCollectionRuntimeModels",
+        "command_buttons: ProofCollectionCommandButtonModels {",
+        "browser_scope: ProofCollectionBrowserScopeModels {",
+        "context_menu: ProofCollectionContextMenuModels {",
+        "assets: models.assets.clone()",
+        "selection: models.selection.clone()",
+        "keyboard: models.keyboard.clone()",
+        "rename_session: models.rename_session.clone()",
+        "scroll: models.scroll.clone()",
+    ] {
+        assert!(
+            child_models_source.contains(needle),
+            "the demo-local collection child-model owner should keep child model bundle projection explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "ProofCollectionCommandButtonModels {",
+        "ProofCollectionBrowserScopeModels {",
+        "ProofCollectionContextMenuModels {",
+    ] {
+        assert!(
+            !collection_source.contains(needle),
+            "the collection root should route child model bundle projection through collection/child_models.rs; unexpected `{needle}`"
         );
     }
 

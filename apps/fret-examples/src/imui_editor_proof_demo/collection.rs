@@ -6,6 +6,7 @@ mod asset_grid;
 mod assets;
 mod box_select;
 mod browser_scope;
+mod child_models;
 mod chrome;
 mod command_buttons;
 mod context_menu;
@@ -25,16 +26,11 @@ mod status_readouts;
 pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};
 pub(super) use chrome::proof_collection_readout_text;
 
-use browser_scope::{
-    ProofCollectionBrowserScopeModels, ProofCollectionBrowserScopeState,
-    render_collection_browser_scope,
-};
+use browser_scope::{ProofCollectionBrowserScopeState, render_collection_browser_scope};
+use child_models::{ProofCollectionChildModels, proof_collection_child_models};
 use chrome::proof_collection_section_label;
-use command_buttons::{
-    ProofCollectionCommandButtonModels, ProofCollectionCommandButtonState,
-    render_collection_command_buttons,
-};
-use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
+use command_buttons::{ProofCollectionCommandButtonState, render_collection_command_buttons};
+use context_menu::render_collection_context_menu;
 use derived_state::proof_collection_derived_state;
 use import_target::render_collection_import_target;
 use order_toggle::render_collection_order_toggle;
@@ -68,6 +64,11 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         &collection_runtime.snapshot.selection,
         &collection_runtime.snapshot.keyboard,
     );
+    let ProofCollectionChildModels {
+        command_buttons,
+        browser_scope,
+        context_menu,
+    } = proof_collection_child_models(&collection_runtime.models);
 
     render_collection_status_readouts(
         ui,
@@ -82,16 +83,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     );
     render_collection_command_buttons(
         ui,
-        ProofCollectionCommandButtonModels {
-            assets: collection_runtime.models.assets.clone(),
-            selection: collection_runtime.models.selection.clone(),
-            keyboard: collection_runtime.models.keyboard.clone(),
-            command_status: collection_runtime.models.command_status.clone(),
-            rename_session: collection_runtime.models.rename_session.clone(),
-            rename_draft: collection_runtime.models.rename_draft.clone(),
-            rename_focus_pending: collection_runtime.models.rename_focus_pending.clone(),
-            rename_status: collection_runtime.models.rename_status.clone(),
-        },
+        command_buttons,
         ProofCollectionCommandButtonState {
             visible_assets: &collection_state.assets,
             stored_assets: &collection_runtime.snapshot.stored_assets,
@@ -104,22 +96,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
 
     render_collection_browser_scope(
         ui,
-        ProofCollectionBrowserScopeModels {
-            assets: collection_runtime.models.assets.clone(),
-            reverse_order: collection_runtime.models.reverse_order.clone(),
-            selection: collection_runtime.models.selection.clone(),
-            box_select: collection_runtime.models.box_select.clone(),
-            keyboard: collection_runtime.models.keyboard.clone(),
-            zoom: collection_runtime.models.zoom.clone(),
-            context_menu_anchor: collection_runtime.models.context_menu_anchor.clone(),
-            active_focus_target: collection_runtime.models.active_focus_target.clone(),
-            rename_session: collection_runtime.models.rename_session.clone(),
-            rename_draft: collection_runtime.models.rename_draft.clone(),
-            rename_focus_pending: collection_runtime.models.rename_focus_pending.clone(),
-            rename_status: collection_runtime.models.rename_status.clone(),
-            command_status: collection_runtime.models.command_status.clone(),
-            scroll: collection_runtime.models.scroll.clone(),
-        },
+        browser_scope,
         ProofCollectionBrowserScopeState {
             assets: &collection_state.assets,
             keys: &collection_state.keys,
@@ -132,21 +109,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         },
     );
 
-    render_collection_context_menu(
-        ui,
-        ProofCollectionContextMenuModels {
-            anchor: collection_runtime.models.context_menu_anchor.clone(),
-            selection: collection_runtime.models.selection.clone(),
-            keyboard: collection_runtime.models.keyboard.clone(),
-            assets: collection_runtime.models.assets.clone(),
-            reverse_order: collection_runtime.models.reverse_order.clone(),
-            command_status: collection_runtime.models.command_status.clone(),
-            rename_session: collection_runtime.models.rename_session.clone(),
-            rename_draft: collection_runtime.models.rename_draft.clone(),
-            rename_focus_pending: collection_runtime.models.rename_focus_pending.clone(),
-            rename_status: collection_runtime.models.rename_status.clone(),
-        },
-    );
+    render_collection_context_menu(ui, context_menu);
 
     if let Some(session) = collection_runtime.snapshot.rename_session.as_ref()
         && !collection_state

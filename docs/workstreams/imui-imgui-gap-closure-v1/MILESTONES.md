@@ -8125,3 +8125,12 @@ the `authoring_parity_collection_*` model lookups, `selector_model_paint(...)` r
 `proof_collection_layout_metrics(...)` projection. Public crate APIs and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the runtime-state owner boundary.
+
+2026-06-07 collection proof child model bundle owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render ordering and
+delegates command-buttons, browser-scope, and context-menu model bundle construction through
+`proof_collection_child_models(...)`. The demo-local `collection/child_models.rs` owns
+`ProofCollectionChildModels` plus command-buttons, browser-scope, and context-menu model bundle projection
+from `ProofCollectionRuntimeModels`. Public crate APIs and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the child-model owner boundary.

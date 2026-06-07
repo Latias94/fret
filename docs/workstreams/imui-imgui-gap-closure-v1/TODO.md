@@ -8490,3 +8490,13 @@ opening the slice.
       `ProofCollectionRuntimeState`, `ProofCollectionRuntimeModels`, and
       `ProofCollectionRuntimeSnapshot`. The collection source gate, workstream source gate,
       manifest, and surface tests now include the runtime-state owner.
+- [x] Split collection proof child model bundle projection out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/child_models.rs` child owner without changing command button, browser scope, or
+      context menu model handles, render call sites, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `collection.rs` keeps render ordering and delegates
+      command-buttons, browser-scope, and context-menu model bundle construction through
+      `proof_collection_child_models(...)`, while `collection/child_models.rs` owns
+      `ProofCollectionChildModels` and the clone projection from `ProofCollectionRuntimeModels`.
+      The collection source gate, workstream source gate, manifest, and surface tests now include
+      the child-model owner.

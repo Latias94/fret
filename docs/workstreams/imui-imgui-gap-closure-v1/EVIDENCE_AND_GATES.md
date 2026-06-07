@@ -35634,6 +35634,33 @@ Fret Examples Collection Derived State Owner Split Evidence - 2026-06-07:
 - Passed: `git diff --check` with only a Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Child Model Bundle Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection
+  proof command-buttons, browser-scope, and context-menu model bundle projection now lives in the
+  demo-local `collection/child_models.rs` child owner without changing model handles, render call
+  sites, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection.rs` declares `mod child_models;` and delegates through
+  `proof_collection_child_models(...)`. `collection/child_models.rs` owns
+  `ProofCollectionChildModels`, command-buttons/browser-scope/context-menu model bundle
+  construction, and clone projection from `ProofCollectionRuntimeModels`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` freeze the
+  root/child-model-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`;
+  1 test passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Runtime State Owner Split Evidence - 2026-06-07:
 
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection
