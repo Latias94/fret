@@ -40,6 +40,9 @@ def check_source(check: SourceCheck, failures: list[str]) -> None:
 
 def main() -> None:
     demo = Path("apps/fret-examples/src/imui_editor_proof_demo.rs")
+    authoring_parity = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs"
+    )
     collection = Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs")
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
@@ -113,16 +116,29 @@ def main() -> None:
             "modularization demo routing",
             demo,
             required=[
+                "mod authoring_parity;",
                 "mod collection;",
                 "collection::render_collection_first_asset_browser_proof(ui);",
-                "collection::authoring_parity_collection_assets()",
+                "authoring_parity::drag_assets()",
             ],
             forbidden=[
                 "fn proof_collection_assets_in_visible_order(",
                 "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "struct ProofCollectionAsset {",
                 "fn proof_collection_drag_rect_normalizes_drag_direction()",
+                "collection::authoring_parity_collection_assets()",
             ],
+        ),
+        SourceCheck(
+            "modularization authoring parity owner",
+            authoring_parity,
+            required=[
+                "pub(super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
+                "super::collection::authoring_parity_collection_assets()",
+                "pub(super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
+                "pub(super) fn outliner_items_model<H: UiHost>(",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             "modularization collection owner",

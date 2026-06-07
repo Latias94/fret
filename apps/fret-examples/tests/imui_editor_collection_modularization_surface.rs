@@ -1,6 +1,7 @@
 #[test]
 fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let demo_source = include_str!("../src/imui_editor_proof_demo.rs");
+    let authoring_parity_source = include_str!("../src/imui_editor_proof_demo/authoring_parity.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let browser_scope_source =
@@ -26,13 +27,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs");
 
     for needle in [
+        "mod authoring_parity;",
         "mod collection;",
         "collection::render_collection_first_asset_browser_proof(ui);",
-        "collection::authoring_parity_collection_assets()",
+        "authoring_parity::drag_assets()",
     ] {
         assert!(
             demo_source.contains(needle),
-            "imui_editor_proof_demo should keep the collection proof routed through the demo-local module; missing `{needle}`"
+            "imui_editor_proof_demo should keep the collection proof routed through demo-local owners; missing `{needle}`"
         );
     }
 
@@ -41,10 +43,23 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "struct ProofCollectionAsset {",
         "fn proof_collection_drag_rect_normalizes_drag_direction()",
+        "collection::authoring_parity_collection_assets()",
     ] {
         assert!(
             !demo_source.contains(needle),
             "imui_editor_proof_demo should not keep the collection implementation inline after modularization; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
+        "super::collection::authoring_parity_collection_assets()",
+        "pub(super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
+        "pub(super) fn outliner_items_model<H: UiHost>(",
+    ] {
+        assert!(
+            authoring_parity_source.contains(needle),
+            "the demo-local authoring parity owner should own shared proof state and fixtures; missing `{needle}`"
         );
     }
 

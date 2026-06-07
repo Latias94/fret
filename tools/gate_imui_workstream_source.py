@@ -26065,7 +26065,7 @@ def main() -> None:
             Path("docs/workstreams/imui-editor-proof-collection-modularization-v1/M1_DEMO_LOCAL_COLLECTION_MODULE_SLICE_2026-04-23.md"),
             required=[
                 "The collection proof now lives in one demo-local `collection.rs` module under `imui_editor_proof_demo`.",
-                "The host file now routes collection rendering through `collection::render_collection_first_asset_browser_proof(ui)` and uses `collection::authoring_parity_collection_assets()` for the drag-chip seed set.",
+                "The host file now routes collection rendering through `collection::render_collection_first_asset_browser_proof(ui)`; the demo-local `authoring_parity.rs` owner consumes `collection::authoring_parity_collection_assets()` for the drag-chip seed set.",
                 "Collection unit tests now live beside the module and the new modularization surface test freezes the host/module boundary explicitly.",
                 "Existing collection surface tests now read `collection.rs` for behavior anchors instead of pretending the host still owns the implementation inline.",
                 "No new public `fret-imui`, `fret-ui-kit::imui`, or `crates/fret-ui` API is admitted in this lane.",
@@ -26143,9 +26143,10 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
             required=[
+                "mod authoring_parity;",
                 "mod collection;",
                 "collection::render_collection_first_asset_browser_proof(ui);",
-                "collection::authoring_parity_collection_assets()",
+                "authoring_parity::drag_assets()",
             ],
             forbidden=[
                 "row_cx.row_options",
@@ -26153,7 +26154,18 @@ def main() -> None:
                 "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "struct ProofCollectionAsset {",
                 "fn proof_collection_drag_rect_normalizes_drag_direction()",
+                "collection::authoring_parity_collection_assets()",
             ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs"),
+            required=[
+                "pub(super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
+                "super::collection::authoring_parity_collection_assets()",
+                "pub(super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
+                "pub(super) fn outliner_items_model<H: UiHost>(",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo/collection.rs"),

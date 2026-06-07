@@ -43,6 +43,7 @@ use fret_ui_kit::recipes::imui_sortable::{
 };
 
 mod asset_ref;
+mod authoring_parity;
 mod collection;
 mod proof_helpers;
 mod workbench_shell;
@@ -357,15 +358,15 @@ where
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
     let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
-    let parity_name_model = authoring_parity_name_model(cx);
-    let parity_drag_value_model = authoring_parity_drag_value_model(cx);
-    let parity_numeric_input_model = authoring_parity_numeric_input_model(cx);
-    let parity_slider_model = authoring_parity_slider_model(cx);
-    let parity_enabled_model = authoring_parity_enabled_model(cx);
-    let parity_shading_model = authoring_parity_shading_model(cx);
-    let parity_gradient_angle_model = authoring_parity_gradient_angle_model(cx);
-    let parity_gradient_stops_model = authoring_parity_gradient_stops_model(cx);
-    let parity_gradient_next_id_model = authoring_parity_gradient_next_id_model(cx);
+    let parity_name_model = authoring_parity::name_model(cx);
+    let parity_drag_value_model = authoring_parity::drag_value_model(cx);
+    let parity_numeric_input_model = authoring_parity::numeric_input_model(cx);
+    let parity_slider_model = authoring_parity::slider_model(cx);
+    let parity_enabled_model = authoring_parity::enabled_model(cx);
+    let parity_shading_model = authoring_parity::shading_model(cx);
+    let parity_gradient_angle_model = authoring_parity::gradient_angle_model(cx);
+    let parity_gradient_stops_model = authoring_parity::gradient_stops_model(cx);
+    let parity_gradient_next_id_model = authoring_parity::gradient_next_id_model(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -2729,8 +2730,8 @@ fn render_authoring_parity_imui_group(
             "Drag an asset chip onto the material slot. Payload and preview stay app-defined.",
         );
 
-        let asset_slot_model = authoring_parity_asset_slot_model(ui.cx_mut());
-        let asset_chips = authoring_parity_drag_assets();
+        let asset_slot_model = authoring_parity::asset_slot_model(ui.cx_mut());
+        let asset_chips = authoring_parity::drag_assets();
 
         ui.horizontal(|ui| {
             for (ix, asset) in asset_chips.iter().enumerate() {
@@ -2813,8 +2814,8 @@ fn render_authoring_parity_imui_group(
             "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
         );
 
-        let outliner_items_model = authoring_parity_outliner_items_model(ui.cx_mut());
-        let outliner_status_model = authoring_parity_outliner_status_model(ui.cx_mut());
+        let outliner_items_model = authoring_parity::outliner_items_model(ui.cx_mut());
+        let outliner_status_model = authoring_parity::outliner_status_model(ui.cx_mut());
         let outliner_items = proof_outliner_items_snapshot(ui.cx_mut().app, &outliner_items_model);
         let mut pending_reorder: Option<(
             Arc<str>,
@@ -3039,28 +3040,6 @@ fn authoring_parity_shading_items() -> Arc<[EnumSelectItem]> {
         EnumSelectItem::new("lit", "Lit"),
         EnumSelectItem::new("unlit", "Unlit"),
         EnumSelectItem::new("matcap", "Matcap"),
-    ]
-    .into()
-}
-
-fn authoring_parity_outliner_items() -> Arc<[ProofOutlinerItem]> {
-    vec![
-        ProofOutlinerItem {
-            id: Arc::from("camera"),
-            label: Arc::from("Camera"),
-        },
-        ProofOutlinerItem {
-            id: Arc::from("cube"),
-            label: Arc::from("Cube"),
-        },
-        ProofOutlinerItem {
-            id: Arc::from("key-light"),
-            label: Arc::from("Key light"),
-        },
-        ProofOutlinerItem {
-            id: Arc::from("post-fx"),
-            label: Arc::from("Post FX"),
-        },
     ]
     .into()
 }
@@ -3394,160 +3373,6 @@ fn editor_demo_transform_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>
     })
 }
 
-fn authoring_parity_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.name",
-        |cx| cx.app.models_mut().insert("Shared Cube".to_string()),
-    )
-}
-
-fn authoring_parity_drag_value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.drag_value",
-        |cx| cx.app.models_mut().insert(1.250_f64),
-    )
-}
-
-fn authoring_parity_numeric_input_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.numeric_input",
-        |cx| cx.app.models_mut().insert(0.875_f64),
-    )
-}
-
-fn authoring_parity_slider_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.slider",
-        |cx| cx.app.models_mut().insert(0.35_f64),
-    )
-}
-
-fn authoring_parity_enabled_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.enabled",
-        |cx| cx.app.models_mut().insert(true),
-    )
-}
-
-fn authoring_parity_shading_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Option<Arc<str>>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.shading",
-        |cx| {
-            cx.app
-                .models_mut()
-                .insert(Some::<Arc<str>>(Arc::from("lit")))
-        },
-    )
-}
-
-fn authoring_parity_gradient_angle_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<f64> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.gradient_angle",
-        |cx| cx.app.models_mut().insert(90.0_f64),
-    )
-}
-
-fn authoring_parity_gradient_stops_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Vec<GradientDemoStop>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.gradient_stops",
-        |cx| {
-            let stop_0_pos = cx.app.models_mut().insert(0.0_f64);
-            let stop_0_color = cx.app.models_mut().insert(Color {
-                a: 1.0,
-                ..Color::from_srgb_hex_rgb(0x14_b8_a6)
-            });
-            let stop_1_pos = cx.app.models_mut().insert(1.0_f64);
-            let stop_1_color = cx.app.models_mut().insert(Color {
-                a: 1.0,
-                ..Color::from_srgb_hex_rgb(0xf9_73_16)
-            });
-
-            cx.app.models_mut().insert(vec![
-                GradientDemoStop {
-                    id: 1,
-                    position: stop_0_pos,
-                    color: stop_0_color,
-                },
-                GradientDemoStop {
-                    id: 2,
-                    position: stop_1_pos,
-                    color: stop_1_color,
-                },
-            ])
-        },
-    )
-}
-
-fn authoring_parity_gradient_next_id_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<u64> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.gradient_next_id",
-        |cx| cx.app.models_mut().insert(3_u64),
-    )
-}
-
-fn authoring_parity_asset_slot_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.asset_slot",
-        |cx| {
-            cx.app
-                .models_mut()
-                .insert(asset_ref::DEFAULT_ASSET.to_string())
-        },
-    )
-}
-
-fn authoring_parity_drag_assets() -> Arc<[ProofDragAsset]> {
-    collection::authoring_parity_collection_assets()
-        .iter()
-        .take(3)
-        .map(|asset| ProofDragAsset {
-            label: asset.label.clone(),
-            path: asset.path.clone(),
-        })
-        .collect::<Vec<_>>()
-        .into()
-}
-
-fn authoring_parity_outliner_items_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<Vec<ProofOutlinerItem>> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.outliner_items",
-        |cx| {
-            cx.app
-                .models_mut()
-                .insert(authoring_parity_outliner_items().iter().cloned().collect())
-        },
-    )
-}
-
-fn authoring_parity_outliner_status_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<String> {
-    named_demo_state(
-        cx,
-        "imui_editor_proof_demo.model.authoring_parity.outliner_status",
-        |cx| cx.app.models_mut().insert("Idle".to_string()),
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3702,7 +3527,7 @@ mod tests {
 
     #[test]
     fn proof_outliner_reorder_moves_item_after_target() {
-        let mut items = authoring_parity_outliner_items()
+        let mut items = authoring_parity::outliner_items()
             .iter()
             .cloned()
             .collect::<Vec<_>>();
@@ -3721,7 +3546,7 @@ mod tests {
 
     #[test]
     fn proof_outliner_reorder_moves_item_before_target() {
-        let mut items = authoring_parity_outliner_items()
+        let mut items = authoring_parity::outliner_items()
             .iter()
             .cloned()
             .collect::<Vec<_>>();
