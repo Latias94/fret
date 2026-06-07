@@ -8424,3 +8424,12 @@ opening the slice.
       `authoring_parity/shared_state.rs` owns shared-state readout projection. The collection
       source gate, facade teaching gate, workstream source gate, manifest, and surface tests now
       include both child owners.
+- [x] Split collection proof asset fixture record/defaults out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/assets.rs` child owner without changing stored asset defaults, asset ids,
+      labels, paths, kinds, sizes, the `collection::authoring_parity_collection_assets()` call
+      surface, authoring parity drag-asset seed projection, or the app-owned no-helper-widening
+      boundary. Result: `collection.rs` keeps render assembly and re-exports the existing asset
+      fixture call surface, while `collection/assets.rs` owns `ProofCollectionAsset` plus the
+      authoring parity collection asset defaults. The collection source gate, workstream source
+      gate, manifest, and surface tests now include the assets owner.

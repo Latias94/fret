@@ -35575,3 +35575,31 @@ Fret Examples Authoring Parity Shared-State/Model Owner Split Evidence - 2026-06
   reports stale source markers in `hello_counter_demo.rs`, `editor_notes_demo.rs`, `todo_demo.rs`,
   `api_workbench_lite_demo.rs`, and `embedded_viewport_demo.rs`; those files were not touched by
   this authoring parity owner split.
+
+Fret Examples Collection Asset Fixture Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so the collection
+  asset fixture record and defaults now live in the demo-local `collection/assets.rs` child owner
+  without changing stored asset defaults, asset ids, labels, paths, kinds, sizes, the
+  `collection::authoring_parity_collection_assets()` call surface, authoring parity drag-asset seed
+  projection, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection.rs` declares `mod assets;` and re-exports
+  `ProofCollectionAsset` plus `authoring_parity_collection_assets` through the existing collection
+  call surface. `collection/assets.rs` owns `ProofCollectionAsset` and the authoring parity
+  collection asset defaults, including the `stone-albedo` fixture and
+  `textures/stone/albedo.ktx2` path. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` freeze the
+  root/child-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`
+  on retry with a longer command timeout after an initial build-lock/build timeout (1 test passed).
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only Git CRLF normalization warnings for touched files.

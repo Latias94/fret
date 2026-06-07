@@ -50,6 +50,9 @@ def main() -> None:
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
     )
+    collection_assets = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/assets.rs"
+    )
     collection_browser_scope = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs"
     )
@@ -97,6 +100,7 @@ def main() -> None:
     )
     collection_children = (
         collection_asset_grid,
+        collection_assets,
         collection_browser_scope,
         collection_browser_scope_input_runtime,
         collection_box_select,
@@ -164,10 +168,10 @@ def main() -> None:
             "modularization collection owner",
             collection,
             required=[
-                "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
                 "pub(super) fn render_collection_first_asset_browser_proof(",
                 "ui: &mut ImUi<'_, '_, KernelApp>",
                 "mod asset_grid;",
+                "mod assets;",
                 "mod browser_scope;",
                 "mod box_select;",
                 "mod command_buttons;",
@@ -177,11 +181,28 @@ def main() -> None:
                 "mod models;",
                 "mod rename;",
                 "mod selection;",
+                "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],
             forbidden=[],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection assets owner",
+            collection_assets,
+            required=[
+                "pub(in super::super) struct ProofCollectionAsset {",
+                "pub(in super::super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
+                'id: Arc::from("stone-albedo")',
+                'path: Arc::from("textures/stone/albedo.ktx2")',
+                'kind: Arc::from("Texture")',
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_readout_text",
+                "proof_collection_assets_in_visible_order",
+            ],
         ),
         SourceCheck(
             "collection asset grid owner",

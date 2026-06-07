@@ -8058,3 +8058,12 @@ mounting. Shared model keys, readout text, test IDs, collection drag seeds, publ
 the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 facade teaching gate, workstream source gate, manifest, and surface tests now freeze the
 hub/child-owner boundary.
+
+2026-06-07 collection proof assets owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+re-exports the existing `collection::authoring_parity_collection_assets()` call surface through the
+demo-local `assets` child owner. `collection/assets.rs` owns `ProofCollectionAsset` plus the authoring parity collection asset defaults.
+Stored asset ids, labels, paths, kinds, sizes, authoring parity drag-asset seed projection, public
+crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
+source gate, workstream source gate, manifest, and surface tests now freeze the assets owner
+boundary.

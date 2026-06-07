@@ -6,6 +6,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
     let browser_input_runtime_source =
@@ -80,10 +81,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "pub(super) fn render_collection_first_asset_browser_proof(",
         "ui: &mut ImUi<'_, '_, KernelApp>",
         "mod asset_grid;",
+        "mod assets;",
         "mod browser_scope;",
         "mod box_select;",
         "mod command_buttons;",
@@ -94,10 +95,24 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod models;",
         "mod rename;",
         "mod selection;",
+        "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
     ] {
         assert!(
             collection_source.contains(needle),
             "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) struct ProofCollectionAsset {",
+        "pub(in super::super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
+        "ProofCollectionAsset {",
+        "id: Arc::from(\"stone-albedo\")",
+        "path: Arc::from(\"textures/stone/albedo.ktx2\")",
+    ] {
+        assert!(
+            assets_source.contains(needle),
+            "the demo-local collection assets owner should keep asset fixtures explicit; missing `{needle}`"
         );
     }
 

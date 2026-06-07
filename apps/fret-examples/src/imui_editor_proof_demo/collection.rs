@@ -10,6 +10,7 @@ use super::{
 };
 
 mod asset_grid;
+mod assets;
 mod box_select;
 mod browser_scope;
 mod command_buttons;
@@ -21,6 +22,8 @@ mod models;
 mod readouts;
 mod rename;
 mod selection;
+
+pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};
 
 use browser_scope::{
     ProofCollectionBrowserScopeModels, ProofCollectionBrowserScopeState,
@@ -58,63 +61,6 @@ use readouts::{
 };
 use rename::proof_collection_begin_rename_session;
 use selection::{proof_collection_active_id, proof_collection_assets_in_visible_order};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct ProofCollectionAsset {
-    pub(super) id: Arc<str>,
-    pub(super) label: Arc<str>,
-    pub(super) path: Arc<str>,
-    pub(super) kind: Arc<str>,
-    pub(super) size_kib: u32,
-}
-
-pub(super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {
-    vec![
-        ProofCollectionAsset {
-            id: Arc::from("stone-albedo"),
-            label: Arc::from("Stone Albedo"),
-            path: Arc::from("textures/stone/albedo.ktx2"),
-            kind: Arc::from("Texture"),
-            size_kib: 512,
-        },
-        ProofCollectionAsset {
-            id: Arc::from("stone-normal"),
-            label: Arc::from("Stone Normal"),
-            path: Arc::from("textures/stone/normal.ktx2"),
-            kind: Arc::from("Texture"),
-            size_kib: 384,
-        },
-        ProofCollectionAsset {
-            id: Arc::from("stone-orm"),
-            label: Arc::from("Stone ORM"),
-            path: Arc::from("textures/stone/orm.ktx2"),
-            kind: Arc::from("Texture"),
-            size_kib: 256,
-        },
-        ProofCollectionAsset {
-            id: Arc::from("moss-overlay"),
-            label: Arc::from("Moss Overlay"),
-            path: Arc::from("textures/moss/overlay.ktx2"),
-            kind: Arc::from("Texture"),
-            size_kib: 196,
-        },
-        ProofCollectionAsset {
-            id: Arc::from("pebble-height"),
-            label: Arc::from("Pebble Height"),
-            path: Arc::from("textures/pebble/height.ktx2"),
-            kind: Arc::from("Height"),
-            size_kib: 164,
-        },
-        ProofCollectionAsset {
-            id: Arc::from("dust-mask"),
-            label: Arc::from("Dust Mask"),
-            path: Arc::from("textures/shared/dust-mask.ktx2"),
-            kind: Arc::from("Mask"),
-            size_kib: 72,
-        },
-    ]
-    .into()
-}
 
 pub(super) fn proof_collection_readout_text(
     ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
