@@ -35766,6 +35766,45 @@ Fret Examples Collection Asset Grid Metadata Owner Split Evidence - 2026-06-07:
 - Passed: `git diff --check` with only a Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Browser Scope Chrome Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` was split so
+  child-region option/test-id construction and box-select marquee chrome now live in the
+  demo-local `collection/browser_scope/chrome.rs` child owner without changing child-region IDs,
+  scroll binding, pointer runtime installation, asset-grid mounting, box-select selection behavior,
+  zoom behavior, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `browser_scope.rs` declares `mod chrome;`, imports
+  `collection_browser_child_region_options(...)`, `collection_browser_box_select_marquee(...)`, and
+  `collection_browser_box_select_scope_id(...)`, and keeps child-region mounting, pointer-region
+  runtime installation, asset-grid mounting, rendered-item tracking, active box-select rect lookup,
+  and marquee mounting decisions. `collection/browser_scope/chrome.rs` owns
+  `collection_browser_child_region_options(...)`, `collection_browser_child_region_id()`,
+  `collection_browser_box_select_scope_id()`, `kit::ChildRegionOptions`, `kit::ScrollOptions`,
+  `fret_ui_kit::LayoutRefinement::default().w_full().h_px(Px(220.0))`, browser/content/viewport
+  test IDs, and marquee fill/border/test-id chrome. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`,
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs`,
+  `apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs`,
+  `apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs`, and
+  `apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs` freeze the
+  browser-scope/chrome-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+  Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --no-fail-fast`;
+  4 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`;
+  validated 541 dedicated directories and 47 standalone markdown files.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Asset Grid Chrome Owner Split Evidence - 2026-06-07:
 
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` was split so

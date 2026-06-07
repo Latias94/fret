@@ -8,6 +8,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let browser_scope_chrome_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs");
     let browser_input_runtime_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
     let command_buttons_source =
@@ -22,6 +24,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
         "\n",
@@ -176,6 +180,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionBrowserScopeState",
         "pub(super) fn render_collection_browser_scope(",
         "ui.child_region_with_options(",
+        "mod chrome;",
+        "collection_browser_child_region_options(",
+        "collection_browser_box_select_marquee(",
+        "collection_browser_box_select_scope_id()",
         "proof_collection_browser_scope_pointer_props()",
         "install_collection_browser_scope_input_runtime(",
         "render_collection_asset_grid(",
@@ -183,6 +191,38 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         assert!(
             browser_scope_source.contains(needle),
             "collection browser-scope owner should route child-region pointer runtime through app-owned state transitions; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn collection_browser_child_region_options(",
+        "pub(super) fn collection_browser_box_select_marquee(",
+        "kit::ChildRegionOptions",
+        "kit::ScrollOptions",
+        "\"imui-editor-proof.authoring.imui.collection.browser\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
+        ".border_1()",
+    ] {
+        assert!(
+            browser_scope_chrome_source.contains(needle),
+            "collection browser-scope chrome owner should keep option/test-id and marquee chrome construction explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "kit::ChildRegionOptions",
+        "kit::ScrollOptions",
+        "\"imui-editor-proof.authoring.imui.collection.browser\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
+        ".border_1()",
+    ] {
+        assert!(
+            !browser_scope_source.contains(needle),
+            "collection browser-scope owner should delegate option/test-id and marquee chrome construction to the chrome owner; unexpected `{needle}`"
         );
     }
     for needle in [

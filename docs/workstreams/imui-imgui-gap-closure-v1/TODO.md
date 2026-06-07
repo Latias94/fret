@@ -8556,3 +8556,15 @@ opening the slice.
       construction through helpers such as `collection_asset_grid_options(...)`. The collection
       source gate, workstream source gate, manifest, and surface tests now include the asset-grid
       chrome owner.
+- [x] Split collection browser-scope chrome/options construction out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` into the
+      demo-local `collection/browser_scope/chrome.rs` child owner without changing child-region
+      IDs, scroll binding, browser/content/scope test IDs, marquee fill/border chrome, asset-grid
+      mounting, pointer runtime installation, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `browser_scope.rs` keeps child-region mounting,
+      pointer-region runtime installation, asset-grid mounting, active box-select rect lookup, and
+      marquee mounting decisions while `collection/browser_scope/chrome.rs` owns child-region
+      options, scroll options, browser/content/scope test IDs, and marquee element chrome through
+      helpers such as `collection_browser_child_region_options(...)`. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the browser-scope chrome
+      owner.

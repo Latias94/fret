@@ -8194,3 +8194,12 @@ selectable focus policy, drag-preview ghost IDs, and the grid/tile/selectable/gh
 Public crate APIs, tile render order, selection behavior, drag preview behavior, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the asset-grid chrome owner boundary.
+
+2026-06-07 collection browser-scope chrome owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` now keeps
+child-region mounting, pointer-region runtime installation, asset-grid owner mounting, active
+box-select rect lookup, and marquee mounting decisions while routing child-region options, browser/content/scope test IDs, and marquee chrome through the demo-local
+`collection/browser_scope/chrome.rs` child owner. Public crate APIs, child-region IDs, scroll
+binding, box-select selection behavior, zoom behavior, and the app-owned no-helper-widening
+boundary remain unchanged, while the collection source gate, workstream source gate, manifest, and
+surface tests now freeze the browser-scope chrome owner boundary.

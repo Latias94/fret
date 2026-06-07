@@ -15,6 +15,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let browser_scope_chrome_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs");
     let child_models_source =
         include_str!("../src/imui_editor_proof_demo/collection/child_models.rs");
     let chrome_source = include_str!("../src/imui_editor_proof_demo/collection/chrome.rs");
@@ -512,14 +514,56 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionBrowserScopeState",
         "pub(super) fn render_collection_browser_scope(",
         "ui.child_region_with_options(",
+        "mod chrome;",
+        "collection_browser_child_region_options(",
+        "collection_browser_box_select_marquee(",
+        "collection_browser_box_select_scope_id()",
         "proof_collection_browser_scope_pointer_props()",
         "install_collection_browser_scope_input_runtime(",
         "render_collection_asset_grid(",
-        "imui-editor-proof.authoring.imui.collection.box-select.scope",
     ] {
         assert!(
             browser_scope_source.contains(needle),
             "the demo-local collection browser-scope owner should keep child-region pointer runtime explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "kit::ChildRegionOptions",
+        "kit::ScrollOptions",
+        "fret_ui_kit::LayoutRefinement::default()",
+        "pub(super) fn collection_browser_child_region_id() -> &'static str",
+        "pub(super) fn collection_browser_child_region_options(",
+        "pub(super) fn collection_browser_box_select_scope_id() -> &'static str",
+        "pub(super) fn collection_browser_box_select_marquee(",
+        "\"imui-editor-proof.authoring.imui.collection.browser\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
+        "Color { a: 0.14, ..ring }",
+        "Color { a: 0.88, ..ring }",
+        ".absolute()",
+        ".border_1()",
+    ] {
+        assert!(
+            browser_scope_chrome_source.contains(needle),
+            "the demo-local collection browser-scope chrome owner should keep child-region option/test-id and marquee chrome construction explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "kit::ChildRegionOptions",
+        "kit::ScrollOptions",
+        "\"imui-editor-proof.authoring.imui.collection.browser\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.viewport\"",
+        "\"imui-editor-proof.authoring.imui.collection.browser.content\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
+        "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
+        "Color { a:",
+        ".border_1()",
+    ] {
+        assert!(
+            !browser_scope_source.contains(needle),
+            "the demo-local collection browser-scope owner should delegate option/test-id and marquee chrome construction to browser_scope/chrome.rs; unexpected `{needle}`"
         );
     }
 

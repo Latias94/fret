@@ -2,11 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret::imui::{
-    kit::{self, ImUiMultiSelectState},
-    prelude::*,
-};
-use fret_core::{Color, Point, Px};
+use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
+use fret_core::{Point, Px};
 use fret_runtime::Model;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId};
@@ -23,8 +20,13 @@ use super::rename::ProofCollectionRenameSession;
 use super::selection::ProofCollectionKeyboardState;
 use super::{KernelApp, ProofCollectionAsset};
 
+mod chrome;
 mod input_runtime;
 
+use chrome::{
+    collection_browser_box_select_marquee, collection_browser_box_select_scope_id,
+    collection_browser_child_region_id, collection_browser_child_region_options,
+};
 use input_runtime::{
     ProofCollectionBrowserScopeInputModels, ProofCollectionBrowserScopeInputState,
     install_collection_browser_scope_input_runtime, proof_collection_browser_scope_pointer_props,
@@ -74,26 +76,8 @@ pub(super) fn render_collection_browser_scope(
     let collection_scroll_handle = models.scroll.clone();
 
     ui.child_region_with_options(
-        "imui-editor-proof.authoring.imui.collection.browser",
-        kit::ChildRegionOptions {
-            layout: fret_ui_kit::LayoutRefinement::default()
-                .w_full()
-                .h_px(Px(220.0)),
-            scroll: kit::ScrollOptions {
-                handle: Some(collection_scroll_handle.clone()),
-                viewport_test_id: Some(Arc::from(
-                    "imui-editor-proof.authoring.imui.collection.browser.viewport",
-                )),
-                ..Default::default()
-            },
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.browser",
-            )),
-            content_test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.browser.content",
-            )),
-            ..Default::default()
-        },
+        collection_browser_child_region_id(),
+        collection_browser_child_region_options(collection_scroll_handle.clone()),
         move |ui| {
             let collection_assets = collection_assets.clone();
             let collection_keys = collection_keys.clone();
@@ -119,114 +103,112 @@ pub(super) fn render_collection_browser_scope(
             let collection_layout = collection_layout;
 
             ui.add_ui(fret_ui_kit::ui::container_build(move |cx, out| {
-                let rendered_items = Rc::new(RefCell::new(Vec::<ProofCollectionRenderedItem>::new()));
+                let rendered_items =
+                    Rc::new(RefCell::new(Vec::<ProofCollectionRenderedItem>::new()));
 
-                out.push(cx.pointer_region(proof_collection_browser_scope_pointer_props(), move |cx| {
-                    let scope_id = cx.root_id();
-                    let scope_origin = cx
-                        .last_visual_bounds_for_element(scope_id)
-                        .or_else(|| cx.last_bounds_for_element(scope_id))
-                        .map(|rect| rect.origin);
+                out.push(cx.pointer_region(
+                    proof_collection_browser_scope_pointer_props(),
+                    move |cx| {
+                        let scope_id = cx.root_id();
+                        let scope_origin = cx
+                            .last_visual_bounds_for_element(scope_id)
+                            .or_else(|| cx.last_bounds_for_element(scope_id))
+                            .map(|rect| rect.origin);
 
-                    install_collection_browser_scope_input_runtime(
-                        cx,
-                        scope_id,
-                        ProofCollectionBrowserScopeInputModels {
-                            assets: collection_assets_model.clone(),
-                            reverse_order: collection_reverse_order_model.clone(),
-                            selection: collection_selection_model.clone(),
-                            box_select: collection_box_select_model.clone(),
-                            keyboard: collection_keyboard_model.clone(),
-                            zoom: collection_zoom_model.clone(),
-                            context_menu_anchor: collection_context_menu_anchor_model.clone(),
-                            rename_session: collection_rename_session_model.clone(),
-                            rename_draft: collection_rename_draft_model.clone(),
-                            rename_focus_pending: collection_rename_focus_pending_model.clone(),
-                            rename_status: collection_rename_status_model.clone(),
-                            command_status: collection_command_status_model.clone(),
-                            scroll: collection_scroll_handle.clone(),
-                        },
-                        ProofCollectionBrowserScopeInputState {
-                            keys: &collection_keys,
-                            asset_count: collection_assets.len(),
-                            layout: collection_layout,
-                            rendered_items: rendered_items.clone(),
-                        },
-                    );
-
-                    vec![fret_ui_kit::ui::stack(move |cx| {
-                        let rendered_items_for_grid = rendered_items.clone();
-                        let grid = fret_ui_kit::ui::container_build(
-                            move |cx: &mut ElementContext<'_, KernelApp>, out| {
-                                imui_build(cx, out, |ui| {
-                                    render_collection_asset_grid(
-                                        ui,
-                                        ProofCollectionAssetGridModels {
-                                            assets: collection_assets_model.clone(),
-                                            selection: collection_selection_model.clone(),
-                                            keyboard: collection_keyboard_model.clone(),
-                                            context_menu_anchor: collection_context_menu_anchor_model
-                                                .clone(),
-                                            active_focus_target: collection_active_focus_target_model
-                                                .clone(),
-                                            rename_session: collection_rename_session_model.clone(),
-                                            rename_draft: collection_rename_draft_model.clone(),
-                                            rename_focus_pending:
-                                                collection_rename_focus_pending_model.clone(),
-                                            rename_status: collection_rename_status_model.clone(),
-                                        },
-                                        ProofCollectionAssetGridState {
-                                            assets: &collection_assets,
-                                            keys: &collection_keys,
-                                            selection: &collection_selection,
-                                            active_id: collection_active_id.as_ref(),
-                                            rename_session: collection_rename_session.as_ref(),
-                                            rename_focus_pending: collection_rename_focus_pending,
-                                            layout: collection_layout,
-                                            scope_origin,
-                                            rendered_items: rendered_items_for_grid.clone(),
-                                        },
-                                    );
-                                });
+                        install_collection_browser_scope_input_runtime(
+                            cx,
+                            scope_id,
+                            ProofCollectionBrowserScopeInputModels {
+                                assets: collection_assets_model.clone(),
+                                reverse_order: collection_reverse_order_model.clone(),
+                                selection: collection_selection_model.clone(),
+                                box_select: collection_box_select_model.clone(),
+                                keyboard: collection_keyboard_model.clone(),
+                                zoom: collection_zoom_model.clone(),
+                                context_menu_anchor: collection_context_menu_anchor_model.clone(),
+                                rename_session: collection_rename_session_model.clone(),
+                                rename_draft: collection_rename_draft_model.clone(),
+                                rename_focus_pending: collection_rename_focus_pending_model.clone(),
+                                rename_status: collection_rename_status_model.clone(),
+                                command_status: collection_command_status_model.clone(),
+                                scroll: collection_scroll_handle.clone(),
                             },
-                        )
-                        .w_full()
-                        .into_element(cx);
+                            ProofCollectionBrowserScopeInputState {
+                                keys: &collection_keys,
+                                asset_count: collection_assets.len(),
+                                layout: collection_layout,
+                                rendered_items: rendered_items.clone(),
+                            },
+                        );
 
-                        let mut layers = vec![grid];
-                        if let Some(drag_rect) =
-                            proof_collection_box_select_active_rect(&collection_box_select)
-                        {
-                            let theme = fret_ui::Theme::global(&*cx.app);
-                            let ring = theme.color_token("ring");
-                            let fill = Color { a: 0.14, ..ring };
-                            let border = Color { a: 0.88, ..ring };
-                            layers.push(
-                                fret_ui_kit::ui::container(
-                                    |_cx| Vec::<fret_ui::element::AnyElement>::new(),
-                                )
-                                .absolute()
-                                .left_px(drag_rect.origin.x)
-                                .top_px(drag_rect.origin.y)
-                                .w_px(drag_rect.size.width)
-                                .h_px(drag_rect.size.height)
-                                .bg(fret_ui_kit::ColorRef::Color(fill))
-                                .border_1()
-                                .border_color(fret_ui_kit::ColorRef::Color(border))
-                                .test_id(
-                                    "imui-editor-proof.authoring.imui.collection.box-select.marquee",
-                                )
-                                .into_element(cx),
-                            );
-                        }
-                        layers
-                    })
-                    .relative()
-                    .w_full()
-                    .h_full()
-                    .test_id("imui-editor-proof.authoring.imui.collection.box-select.scope")
-                    .into_element(cx)]
-                }));
+                        vec![
+                            fret_ui_kit::ui::stack(move |cx| {
+                                let rendered_items_for_grid = rendered_items.clone();
+                                let grid =
+                                    fret_ui_kit::ui::container_build(
+                                        move |cx: &mut ElementContext<'_, KernelApp>, out| {
+                                            imui_build(cx, out, |ui| {
+                                                render_collection_asset_grid(
+                                                    ui,
+                                                    ProofCollectionAssetGridModels {
+                                                        assets: collection_assets_model.clone(),
+                                                        selection: collection_selection_model
+                                                            .clone(),
+                                                        keyboard: collection_keyboard_model.clone(),
+                                                        context_menu_anchor:
+                                                            collection_context_menu_anchor_model
+                                                                .clone(),
+                                                        active_focus_target:
+                                                            collection_active_focus_target_model
+                                                                .clone(),
+                                                        rename_session:
+                                                            collection_rename_session_model.clone(),
+                                                        rename_draft: collection_rename_draft_model
+                                                            .clone(),
+                                                        rename_focus_pending:
+                                                            collection_rename_focus_pending_model
+                                                                .clone(),
+                                                        rename_status:
+                                                            collection_rename_status_model.clone(),
+                                                    },
+                                                    ProofCollectionAssetGridState {
+                                                        assets: &collection_assets,
+                                                        keys: &collection_keys,
+                                                        selection: &collection_selection,
+                                                        active_id: collection_active_id.as_ref(),
+                                                        rename_session: collection_rename_session
+                                                            .as_ref(),
+                                                        rename_focus_pending:
+                                                            collection_rename_focus_pending,
+                                                        layout: collection_layout,
+                                                        scope_origin,
+                                                        rendered_items: rendered_items_for_grid
+                                                            .clone(),
+                                                    },
+                                                );
+                                            });
+                                        },
+                                    )
+                                    .w_full()
+                                    .into_element(cx);
+
+                                let mut layers = vec![grid];
+                                if let Some(drag_rect) =
+                                    proof_collection_box_select_active_rect(&collection_box_select)
+                                {
+                                    layers
+                                        .push(collection_browser_box_select_marquee(cx, drag_rect));
+                                }
+                                layers
+                            })
+                            .relative()
+                            .w_full()
+                            .h_full()
+                            .test_id(collection_browser_box_select_scope_id())
+                            .into_element(cx),
+                        ]
+                    },
+                ));
             }));
         },
     );
