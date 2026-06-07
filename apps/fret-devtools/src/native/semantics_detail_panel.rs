@@ -7,7 +7,8 @@ use fret_ui::element::AnyElement;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
-use super::{semantics, text_blob, State};
+use super::ui_primitives::text_blob;
+use super::{semantics, State};
 
 pub(super) fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     let fallback = cx

@@ -34,6 +34,7 @@ DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC = "docs/workstreams/docking-multiwindo
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE = "apps/fret-devtools/src/native/command_catalog.rs"
+DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE = "apps/fret-devtools/src/native/ui_primitives.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
@@ -513,6 +514,7 @@ def _validate_devtools_gui_first_open_source(
     path = cwd / DEVTOOLS_GUI_SOURCE
     tests_path = cwd / DEVTOOLS_GUI_TEST_SOURCE
     command_catalog_path = cwd / DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE
+    ui_primitives_path = cwd / DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE
     ws_path = cwd / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = cwd / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
@@ -552,6 +554,7 @@ def _validate_devtools_gui_first_open_source(
             path=str(path),
             tests_path=str(tests_path),
             command_catalog_path=str(command_catalog_path),
+            ui_primitives_path=str(ui_primitives_path),
             ws_path=str(ws_path),
             semantics_path=str(semantics_path),
             gate_run_path=str(gate_run_path),
@@ -583,6 +586,7 @@ def _validate_devtools_gui_first_open_source(
         source = path.read_text(encoding="utf-8")
         test_source = tests_path.read_text(encoding="utf-8")
         command_catalog_source = command_catalog_path.read_text(encoding="utf-8")
+        ui_primitives_source = ui_primitives_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
@@ -632,6 +636,7 @@ def _validate_devtools_gui_first_open_source(
             source,
             test_source,
             command_catalog_source,
+            ui_primitives_source,
             ws_source,
             semantics_source,
             gate_run_source,
@@ -722,6 +727,9 @@ def _validate_devtools_gui_first_open_source(
         "devtools_gate_script_target_command",
         "devtools_gate_script_target_profile_ids_v1",
         "mod demo_metrics_debug;",
+        "#[path = \"native/ui_primitives.rs\"]",
+        "mod ui_primitives;",
+        "use ui_primitives::{diag_card, diag_section, text_blob, text_blob_sized};",
         "mod gate_run;",
         "mod workflow_run;",
         "#[path = \"native/guide_panel.rs\"]",

@@ -126,6 +126,7 @@ DEMO_METRICS_DEBUG_ACTION_METADATA = {
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE = "apps/fret-devtools/src/native/command_catalog.rs"
+DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE = "apps/fret-devtools/src/native/ui_primitives.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
@@ -529,6 +530,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     path = repo_root / DEVTOOLS_GUI_SOURCE
     tests_path = repo_root / DEVTOOLS_GUI_TEST_SOURCE
     command_catalog_path = repo_root / DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE
+    ui_primitives_path = repo_root / DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
@@ -564,6 +566,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         source = path.read_text(encoding="utf-8")
         test_source = tests_path.read_text(encoding="utf-8")
         command_catalog_source = command_catalog_path.read_text(encoding="utf-8")
+        ui_primitives_source = ui_primitives_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
@@ -609,6 +612,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             source,
             test_source,
             command_catalog_source,
+            ui_primitives_source,
             ws_source,
             semantics_source,
             gate_run_source,
@@ -690,6 +694,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "devtools_gate_script_target_command",
         "devtools_gate_script_target_profile_ids_v1",
         "mod demo_metrics_debug;",
+        "#[path = \"native/ui_primitives.rs\"]",
+        "mod ui_primitives;",
+        "use ui_primitives::{diag_card, diag_section, text_blob, text_blob_sized};",
         "mod followup;",
         "#[path = \"native/followup_panel.rs\"]",
         "mod followup_panel;",

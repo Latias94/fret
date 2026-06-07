@@ -8,7 +8,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui_kit::ui;
 
-use super::{diag_section, text_blob_sized};
+use super::ui_primitives::{diag_section, text_blob_sized};
 
 pub(super) fn inspect_panel(
     cx: &mut ElementContext<'_, App>,

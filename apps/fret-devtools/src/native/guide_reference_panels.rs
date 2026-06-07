@@ -3,7 +3,8 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 
 use super::discovery_lines::{devtools_dogfood_workflow_lines, devtools_first_open_lines};
-use super::{State, diag_section};
+use super::ui_primitives::diag_section;
+use super::State;
 
 pub(super) fn first_open_reference_panel(
     cx: &mut ElementContext<'_, App>,

@@ -14,10 +14,11 @@ use super::{
     CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS, CMD_RUN_DEMO_METRICS_DEBUG_DOCKING_WORKFLOW,
     CMD_RUN_DEMO_METRICS_DEBUG_PERF_WORKFLOW, CMD_COPY_WORKFLOW_RESULT_PATH,
     CMD_LOAD_WORKFLOW_REGRESSION_INDEX, CMD_LOAD_WORKFLOW_REGRESSION_SUMMARY,
-    CMD_OPEN_WORKFLOW_RESULT_JSON, State, devtools_workflow_commands_from_state, diag_section,
+    CMD_OPEN_WORKFLOW_RESULT_JSON, State, devtools_workflow_commands_from_state,
     selected_workflow_run_regression_index_path_from_state,
     selected_workflow_run_regression_summary_path_from_state,
 };
+use super::ui_primitives::diag_section;
 use fret_app::{App, CommandId};
 use fret_ui::element::AnyElement;
 use fret_ui::ElementContext;

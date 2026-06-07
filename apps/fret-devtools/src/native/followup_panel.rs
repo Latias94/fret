@@ -9,9 +9,8 @@ use fret_ui::element::AnyElement;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
-use super::{
-    CMD_REGRESSION_RUN_FOLLOWUP_COMMAND, followup, shell_quote_for_display, text_blob_sized,
-};
+use super::{CMD_REGRESSION_RUN_FOLLOWUP_COMMAND, followup, shell_quote_for_display};
+use super::ui_primitives::text_blob_sized;
 
 pub(super) fn followup_history_list(
     cx: &mut ElementContext<'_, App>,

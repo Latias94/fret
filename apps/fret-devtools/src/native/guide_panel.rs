@@ -27,10 +27,9 @@ use super::gate_profile_state::{collect_gate_profile_panel_state, gate_profile_s
 use super::guide_recent_evidence_panel::guide_recent_evidence_panel;
 use super::guide_reference_panels::{dogfood_reference_panel, first_open_reference_panel};
 use super::run_history_panel::{gate_run_history_list, workflow_run_history_list};
+use super::ui_primitives::{diag_section, text_blob_sized};
 use super::workflow_panel_state::collect_workflow_panel_state;
-use super::{
-    State, diag_section, gate_run, text_blob_sized, workflow_run,
-};
+use super::{State, gate_run, workflow_run};
 
 pub(super) fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     let recent_evidence_panel = guide_recent_evidence_panel(cx, st);

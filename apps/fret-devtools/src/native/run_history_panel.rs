@@ -8,7 +8,8 @@ use fret_ui::element::AnyElement;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
-use super::{gate_run, short_artifact_result_path, text_blob_sized, workflow_run};
+use super::ui_primitives::text_blob_sized;
+use super::{gate_run, short_artifact_result_path, workflow_run};
 
 pub(super) fn gate_run_history_list(
     cx: &mut ElementContext<'_, App>,

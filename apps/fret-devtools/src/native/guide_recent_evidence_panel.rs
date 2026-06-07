@@ -6,12 +6,12 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
 use super::guide_recent_evidence_state::collect_guide_recent_evidence_state;
+use super::ui_primitives::{diag_section, text_blob_sized};
 use super::{
     CMD_COPY_RECENT_EVIDENCE_REPORT, CMD_COPY_RECENT_FAILED_EVIDENCE_BUNDLE_DIR,
     CMD_COPY_RECENT_FAILED_EVIDENCE_COMMAND, CMD_COPY_RECENT_FAILED_EVIDENCE_JSON,
     CMD_COPY_RECENT_FAILED_EVIDENCE_PATH, CMD_OPEN_RECENT_FAILED_EVIDENCE_JSON,
-    CMD_RERUN_RECENT_FAILED_EVIDENCE, CMD_SELECT_RECENT_FAILED_EVIDENCE, State, diag_section,
-    text_blob_sized,
+    CMD_RERUN_RECENT_FAILED_EVIDENCE, CMD_SELECT_RECENT_FAILED_EVIDENCE, State,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
