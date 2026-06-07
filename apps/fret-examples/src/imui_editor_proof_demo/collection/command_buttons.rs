@@ -1,10 +1,15 @@
 use std::sync::Arc;
 
-use fret::imui::{
-    kit::{self, ImUiMultiSelectState},
-    prelude::*,
-};
+use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret_runtime::Model;
+
+mod chrome;
+
+use chrome::{
+    collection_delete_selected_button_options, collection_delete_selected_label,
+    collection_duplicate_selected_button_options, collection_duplicate_selected_label,
+    collection_rename_active_button_options, collection_rename_active_label,
+};
 
 use super::super::KernelApp;
 use super::ProofCollectionAsset;
@@ -41,14 +46,8 @@ pub(super) fn render_collection_command_buttons(
     state: ProofCollectionCommandButtonState<'_>,
 ) {
     let duplicate_selected = ui.button_with_options(
-        "Duplicate selected assets",
-        kit::ButtonOptions {
-            enabled: !state.selection.is_empty(),
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.duplicate-selected",
-            )),
-            ..Default::default()
-        },
+        collection_duplicate_selected_label(),
+        collection_duplicate_selected_button_options(!state.selection.is_empty()),
     );
     if duplicate_selected.clicked()
         && let Some(duplicate) = proof_collection_duplicate_selection(
@@ -89,14 +88,8 @@ pub(super) fn render_collection_command_buttons(
     }
 
     let rename_active = ui.button_with_options(
-        "Rename active asset",
-        kit::ButtonOptions {
-            enabled: state.rename_ready_session.is_some(),
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.rename-active",
-            )),
-            ..Default::default()
-        },
+        collection_rename_active_label(),
+        collection_rename_active_button_options(state.rename_ready_session.is_some()),
     );
     if rename_active.clicked()
         && let Some(session) = state.rename_ready_session
@@ -112,14 +105,8 @@ pub(super) fn render_collection_command_buttons(
     }
 
     let delete_selected = ui.button_with_options(
-        "Delete selected assets",
-        kit::ButtonOptions {
-            enabled: !state.selection.is_empty(),
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.delete-selected",
-            )),
-            ..Default::default()
-        },
+        collection_delete_selected_label(),
+        collection_delete_selected_button_options(!state.selection.is_empty()),
     );
     if delete_selected.clicked()
         && let Some(delete) = proof_collection_delete_selection(

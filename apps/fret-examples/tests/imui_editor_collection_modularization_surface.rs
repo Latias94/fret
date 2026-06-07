@@ -25,6 +25,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
+    let command_buttons_chrome_source =
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs");
     let context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
     let derived_state_source =
@@ -693,11 +695,52 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionCommandButtonModels",
         "pub(super) struct ProofCollectionCommandButtonState",
         "pub(super) fn render_collection_command_buttons(",
+        "mod chrome;",
+        "collection_duplicate_selected_label()",
+        "collection_duplicate_selected_button_options(!state.selection.is_empty())",
+        "collection_rename_active_label()",
+        "collection_rename_active_button_options(state.rename_ready_session.is_some())",
+        "collection_delete_selected_label()",
+        "collection_delete_selected_button_options(!state.selection.is_empty())",
         "proof_collection_set_command_status(",
     ] {
         assert!(
             command_buttons_source.contains(needle),
             "the demo-local collection command-buttons owner should keep explicit command button routing separate; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "kit::ButtonOptions",
+        "\"Duplicate selected assets\"",
+        "\"Rename active asset\"",
+        "\"Delete selected assets\"",
+        "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+        "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+    ] {
+        assert!(
+            !command_buttons_source.contains(needle),
+            "the demo-local collection command-buttons owner should delegate button chrome/test IDs to command_buttons/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn collection_duplicate_selected_label() -> &'static str",
+        "pub(super) fn collection_rename_active_label() -> &'static str",
+        "pub(super) fn collection_delete_selected_label() -> &'static str",
+        "pub(super) fn collection_duplicate_selected_button_options(enabled: bool) -> kit::ButtonOptions",
+        "pub(super) fn collection_rename_active_button_options(enabled: bool) -> kit::ButtonOptions",
+        "pub(super) fn collection_delete_selected_button_options(enabled: bool) -> kit::ButtonOptions",
+        "kit::ButtonOptions",
+        "\"Duplicate selected assets\"",
+        "\"Rename active asset\"",
+        "\"Delete selected assets\"",
+        "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+        "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+    ] {
+        assert!(
+            command_buttons_chrome_source.contains(needle),
+            "the demo-local collection command-buttons chrome owner should keep button label/options/test-id construction explicit; missing `{needle}`"
         );
     }
 

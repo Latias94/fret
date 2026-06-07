@@ -83,6 +83,9 @@ def main() -> None:
     collection_command_buttons = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs"
     )
+    collection_command_buttons_chrome = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons/chrome.rs"
+    )
     collection_context_menu = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs"
     )
@@ -150,6 +153,7 @@ def main() -> None:
         collection_child_models,
         collection_chrome,
         collection_command_buttons,
+        collection_command_buttons_chrome,
         collection_context_menu,
         collection_derived_state,
         collection_runtime_state,
@@ -1072,15 +1076,19 @@ def main() -> None:
                 "pub(super) struct ProofCollectionCommandButtonModels {",
                 "pub(super) struct ProofCollectionCommandButtonState<'a> {",
                 "pub(super) fn render_collection_command_buttons(",
+                "mod chrome;",
                 "let duplicate_selected = ui.button_with_options(",
+                "collection_duplicate_selected_label()",
+                "collection_duplicate_selected_button_options(!state.selection.is_empty())",
                 "proof_collection_duplicate_selection(",
+                "collection_rename_active_label()",
+                "collection_rename_active_button_options(state.rename_ready_session.is_some())",
                 "proof_collection_begin_inline_rename_in_app(",
                 "let delete_selected = ui.button_with_options(",
+                "collection_delete_selected_label()",
+                "collection_delete_selected_button_options(!state.selection.is_empty())",
                 "proof_collection_delete_selection(",
                 "proof_collection_set_command_status(",
-                "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
-                "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
-                "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
             ],
             forbidden=[
                 "render_collection_first_asset_browser_proof",
@@ -1091,9 +1099,46 @@ def main() -> None:
                 "drag_preview_ghost",
                 "PointerRegionProps",
                 "TextField::new(",
+                "kit::ButtonOptions",
                 "kit::ChildRegionOptions",
                 "kit::GridOptions",
                 "kit::MenuItemOptions",
+                "\"Duplicate selected assets\"",
+                "\"Rename active asset\"",
+                "\"Delete selected assets\"",
+                "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+                "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+                "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+            ],
+        ),
+        SourceCheck(
+            "collection command buttons chrome owner",
+            collection_command_buttons_chrome,
+            required=[
+                "pub(super) fn collection_duplicate_selected_label() -> &'static str",
+                "pub(super) fn collection_rename_active_label() -> &'static str",
+                "pub(super) fn collection_delete_selected_label() -> &'static str",
+                "pub(super) fn collection_duplicate_selected_button_options(enabled: bool) -> kit::ButtonOptions",
+                "pub(super) fn collection_rename_active_button_options(enabled: bool) -> kit::ButtonOptions",
+                "pub(super) fn collection_delete_selected_button_options(enabled: bool) -> kit::ButtonOptions",
+                "fn collection_command_button_options(enabled: bool, test_id: &'static str) -> kit::ButtonOptions",
+                "kit::ButtonOptions",
+                "\"Duplicate selected assets\"",
+                "\"Rename active asset\"",
+                "\"Delete selected assets\"",
+                "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+                "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+                "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+            ],
+            forbidden=[
+                "render_collection_command_buttons(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "proof_collection_delete_selection(",
+                "proof_collection_set_command_status(",
+                "Model<",
+                "ImUiMultiSelectState",
+                "ui.button_with_options(",
             ],
         ),
         SourceCheck(

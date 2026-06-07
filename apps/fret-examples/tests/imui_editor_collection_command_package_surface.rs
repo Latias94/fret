@@ -14,6 +14,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
+    let command_buttons_chrome_source =
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs");
     let source = concat!(
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
@@ -32,6 +34,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
         "\n",
@@ -87,16 +91,57 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionCommandButtonModels",
         "pub(super) struct ProofCollectionCommandButtonState",
         "pub(super) fn render_collection_command_buttons(",
+        "mod chrome;",
         "let duplicate_selected = ui.button_with_options(",
+        "collection_duplicate_selected_label()",
+        "collection_duplicate_selected_button_options(!state.selection.is_empty())",
         "proof_collection_duplicate_selection(",
+        "collection_rename_active_label()",
+        "collection_rename_active_button_options(state.rename_ready_session.is_some())",
         "proof_collection_begin_inline_rename_in_app(",
         "let delete_selected = ui.button_with_options(",
+        "collection_delete_selected_label()",
+        "collection_delete_selected_button_options(!state.selection.is_empty())",
         "proof_collection_delete_selection(",
         "proof_collection_set_command_status(",
     ] {
         assert!(
             command_buttons_source.contains(needle),
             "collection command-buttons owner should route explicit command buttons through app-owned state transitions; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "kit::ButtonOptions",
+        "\"Duplicate selected assets\"",
+        "\"Rename active asset\"",
+        "\"Delete selected assets\"",
+        "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+        "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+    ] {
+        assert!(
+            !command_buttons_source.contains(needle),
+            "collection command-buttons owner should delegate button chrome construction to command_buttons/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn collection_duplicate_selected_label() -> &'static str",
+        "pub(super) fn collection_rename_active_label() -> &'static str",
+        "pub(super) fn collection_delete_selected_label() -> &'static str",
+        "pub(super) fn collection_duplicate_selected_button_options(enabled: bool) -> kit::ButtonOptions",
+        "pub(super) fn collection_rename_active_button_options(enabled: bool) -> kit::ButtonOptions",
+        "pub(super) fn collection_delete_selected_button_options(enabled: bool) -> kit::ButtonOptions",
+        "kit::ButtonOptions",
+        "\"Duplicate selected assets\"",
+        "\"Rename active asset\"",
+        "\"Delete selected assets\"",
+        "\"imui-editor-proof.authoring.imui.collection.duplicate-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-active\"",
+        "\"imui-editor-proof.authoring.imui.collection.delete-selected\"",
+    ] {
+        assert!(
+            command_buttons_chrome_source.contains(needle),
+            "collection command-buttons chrome owner should keep option/test-id construction explicit; missing `{needle}`"
         );
     }
     assert!(

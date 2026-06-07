@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 2026-06-06 Fret-ImUi radio proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_controls/radio.rs` now keeps only shared imports and
@@ -8203,3 +8203,13 @@ box-select rect lookup, and marquee mounting decisions while routing child-regio
 binding, box-select selection behavior, zoom behavior, and the app-owned no-helper-widening
 boundary remain unchanged, while the collection source gate, workstream source gate, manifest, and
 surface tests now freeze the browser-scope chrome owner boundary.
+
+2026-06-07 collection command-buttons chrome owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` now keeps
+Duplicate/Rename/Delete button mounting, clicked-response routing, duplicate/delete state
+transitions, inline-rename startup routing, app model writes, and command-status publication while
+routing button labels, enabled-state option construction, and button test IDs through the
+demo-local `collection/command_buttons/chrome.rs` child owner. Public crate APIs, button labels,
+test IDs, enabled-state policy, command behavior, and the app-owned no-helper-widening boundary
+remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
+tests now freeze the command-buttons chrome owner boundary.

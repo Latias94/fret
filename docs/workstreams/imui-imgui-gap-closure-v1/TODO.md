@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 ## Worktree Convergence - 2026-05-26
 
@@ -8568,3 +8568,15 @@ opening the slice.
       helpers such as `collection_browser_child_region_options(...)`. The collection source gate,
       workstream source gate, manifest, and surface tests now include the browser-scope chrome
       owner.
+- [x] Split collection command button chrome/options construction out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` into the
+      demo-local `collection/command_buttons/chrome.rs` child owner without changing duplicate,
+      rename, or delete button labels/test IDs, enabled-state policy, duplicate/delete state
+      transitions, inline-rename startup, app model writes, command-status publication, public crate
+      APIs, or the app-owned no-helper-widening boundary. Result: `command_buttons.rs` keeps button
+      mounting, clicked-response routing, duplicate/delete/rename behavior, model writes, and
+      command-status publication while `collection/command_buttons/chrome.rs` owns button labels,
+      `kit::ButtonOptions`, enabled flag forwarding, and duplicate/rename/delete test IDs through
+      helpers such as `collection_duplicate_selected_button_options(...)`. The collection source
+      gate, workstream source gate, manifest, and surface tests now include the command-buttons
+      chrome owner.

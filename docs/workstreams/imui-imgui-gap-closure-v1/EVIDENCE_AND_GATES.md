@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 ## Fret-ImUi Radio Proof Owner Split Evidence - 2026-06-06
 
@@ -35603,6 +35603,44 @@ Fret Examples Collection Asset Fixture Owner Split Evidence - 2026-06-07:
 - Passed:
   `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `git diff --check` with only Git CRLF normalization warnings for touched files.
+
+Fret Examples Collection Command-Buttons Chrome Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` was split so
+  duplicate/rename/delete button labels, `kit::ButtonOptions`, enabled-state forwarding, and stable
+  button test IDs now live in the demo-local `collection/command_buttons/chrome.rs` child owner
+  without changing button labels/test IDs, enabled-state policy, duplicate/delete selection
+  transitions, inline-rename startup, app model writes, command-status publication, public crate
+  APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `command_buttons.rs` declares `mod chrome;`, imports
+  `collection_duplicate_selected_label(...)`, `collection_rename_active_label(...)`,
+  `collection_delete_selected_label(...)`, and the matching `*_button_options(...)` helpers, and
+  keeps button mounting, clicked-response routing, duplicate/delete/rename behavior, app model
+  writes, and `proof_collection_set_command_status(...)`. `collection/command_buttons/chrome.rs`
+  owns the `Duplicate selected assets`, `Rename active asset`, and `Delete selected assets` labels,
+  `kit::ButtonOptions`, enabled flag forwarding, and the duplicate/rename/delete test IDs.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`,
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs`,
+  `apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs`,
+  `apps/fret-examples/tests/imui_editor_collection_delete_action_surface.rs`, and
+  `apps/fret-examples/tests/imui_editor_collection_rename_surface.rs` freeze the
+  command-buttons/chrome-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+  Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --no-fail-fast`;
+  4 tests passed on rerun with a longer timeout after the first attempt timed out during test-target
+  compilation. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`;
+  validated 541 dedicated directories and 47 standalone markdown files.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 
 Fret Examples Collection Lifecycle Cleanup Owner Split Evidence - 2026-06-07:
 
