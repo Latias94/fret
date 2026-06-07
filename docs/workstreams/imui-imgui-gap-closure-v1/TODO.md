@@ -8654,3 +8654,12 @@ opening the slice.
       plus focus helper re-exports while `rename/focus.rs` owns inline rename focus state,
       timer-driven focus sync, and post-rename focus restore. The collection source gate,
       workstream source gate, manifest, and surface tests now include the rename focus child owner.
+- [x] Split collection duplicate command copy naming out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs`
+      into the demo-local `collection/selection/commands/duplicate/naming.rs` child owner without
+      changing duplicate shortcut matching, duplicate insertion order, copied-selection repair,
+      active copied-tile preservation, copy suffix text, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `duplicate.rs` keeps duplicate command flow, result DTO,
+      selection repair, and tests while `duplicate/naming.rs` owns copy id/label/path suffix
+      generation and per-field uniqueness tracking. The collection source gate, workstream source
+      gate, manifest, and surface tests now include the duplicate naming child owner.

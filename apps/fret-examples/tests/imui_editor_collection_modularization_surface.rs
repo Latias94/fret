@@ -67,6 +67,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs");
     let selection_duplicate_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs");
+    let selection_duplicate_naming_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs"
+    );
     let status_readouts_source =
         include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs");
 
@@ -1150,15 +1153,65 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "mod naming;",
+        "use naming::ProofCollectionDuplicateNameRegistry;",
         "pub(in super::super::super) struct ProofCollectionDuplicateResult",
         "pub(in super::super::super) fn proof_collection_duplicate_selection(",
         "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
-        "fn proof_collection_unique_copy_text(",
+        "ProofCollectionDuplicateNameRegistry::from_assets(stored_assets)",
+        "name_registry.duplicate_id(asset.id.as_ref())",
+        "name_registry.duplicate_label(asset.label.as_ref())",
+        "name_registry.duplicate_path(asset.path.as_ref())",
         "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
     ] {
         assert!(
             selection_duplicate_commands_source.contains(needle),
-            "the demo-local collection duplicate command owner should keep copy-suffix/reselect transitions explicit; missing `{needle}`"
+            "the demo-local collection duplicate command owner should keep duplicate flow and naming-owner delegation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn proof_collection_unique_copy_text(",
+        "fn proof_collection_duplicate_label_candidate(",
+        "fn proof_collection_duplicate_id_candidate(",
+        "fn proof_collection_duplicate_path_candidate(",
+        "pub(super) struct ProofCollectionDuplicateNameRegistry",
+        "pub(super) fn from_assets(stored_assets: &[ProofCollectionAsset]) -> Self",
+        "pub(super) fn duplicate_id(&mut self, id: &str) -> Arc<str>",
+        "pub(super) fn duplicate_label(&mut self, label: &str) -> Arc<str>",
+        "pub(super) fn duplicate_path(&mut self, path: &str) -> Arc<str>",
+        "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
+    ] {
+        assert!(
+            selection_duplicate_naming_source.contains(needle),
+            "the demo-local collection duplicate naming owner should keep copy-suffix generation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn proof_collection_unique_copy_text(",
+        "fn proof_collection_duplicate_label_candidate(",
+        "fn proof_collection_duplicate_id_candidate(",
+        "fn proof_collection_duplicate_path_candidate(",
+        "HashSet",
+    ] {
+        assert!(
+            !selection_duplicate_commands_source.contains(needle),
+            "the demo-local collection duplicate command owner should route naming through duplicate/naming.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "struct ProofCollectionDuplicateResult",
+        "fn proof_collection_duplicate_selection(",
+        "fn proof_collection_duplicate_shortcut_matches(",
+        "ImUiMultiSelectState",
+        "ProofCollectionKeyboardState",
+        "proof_collection_assets_in_visible_order",
+    ] {
+        assert!(
+            !selection_duplicate_naming_source.contains(needle),
+            "the demo-local collection duplicate naming owner should not take duplicate command flow; unexpected `{needle}`"
         );
     }
 }

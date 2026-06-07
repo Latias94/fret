@@ -8281,3 +8281,12 @@ timer-driven focus sync, and post-rename focus restore through the demo-local
 APIs, focus handoff behavior, and the app-owned no-helper-widening boundary remain unchanged, while
 the collection source gate, workstream source gate, manifest, and surface tests now freeze the
 rename focus owner boundary.
+
+2026-06-08 collection duplicate naming owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs` now
+keeps duplicate shortcut matching, duplicate command flow, result DTO, copied-selection repair, and
+active copied-tile preservation while routing copy id/label/path suffix generation through the
+demo-local `collection/selection/commands/duplicate/naming.rs` child owner. Public crate APIs,
+copy suffix text, duplicate insertion order, keyboard/button/context-menu command behavior, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the duplicate naming owner boundary.

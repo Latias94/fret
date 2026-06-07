@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
@@ -9,6 +9,10 @@ use super::super::{
     ProofCollectionKeyboardState, proof_collection_active_id,
     proof_collection_assets_in_visible_order,
 };
+
+mod naming;
+
+use naming::ProofCollectionDuplicateNameRegistry;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(in super::super::super) struct ProofCollectionDuplicateResult {
@@ -26,49 +30,6 @@ pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(
         && !modifiers.alt
         && !modifiers.shift
         && (modifiers.ctrl || modifiers.meta)
-}
-
-fn proof_collection_duplicate_label_candidate(label: &str, index: usize) -> String {
-    if index == 1 {
-        format!("{label} Copy")
-    } else {
-        format!("{label} Copy {index}")
-    }
-}
-
-fn proof_collection_duplicate_id_candidate(id: &str, index: usize) -> String {
-    if index == 1 {
-        format!("{id}-copy")
-    } else {
-        format!("{id}-copy-{index}")
-    }
-}
-
-fn proof_collection_duplicate_path_candidate(path: &str, index: usize) -> String {
-    let suffix = if index == 1 {
-        "-copy".to_string()
-    } else {
-        format!("-copy-{index}")
-    };
-
-    match path.rsplit_once('.') {
-        Some((stem, ext)) if !ext.contains('/') => format!("{stem}{suffix}.{ext}"),
-        _ => format!("{path}{suffix}"),
-    }
-}
-
-fn proof_collection_unique_copy_text(
-    used: &mut HashSet<String>,
-    candidate: impl Fn(usize) -> String,
-) -> Arc<str> {
-    let mut index = 1;
-    loop {
-        let value = candidate(index);
-        if used.insert(value.clone()) {
-            return Arc::from(value);
-        }
-        index += 1;
-    }
 }
 
 pub(in super::super::super) fn proof_collection_duplicate_selection(
@@ -92,31 +53,14 @@ pub(in super::super::super) fn proof_collection_duplicate_selection(
         .map(|asset| asset.id.clone())
         .collect::<Vec<_>>();
     let active_id = proof_collection_active_id(&visible_keys, selection, keyboard);
-    let mut used_ids = stored_assets
-        .iter()
-        .map(|asset| asset.id.to_string())
-        .collect::<HashSet<_>>();
-    let mut used_labels = stored_assets
-        .iter()
-        .map(|asset| asset.label.to_string())
-        .collect::<HashSet<_>>();
-    let mut used_paths = stored_assets
-        .iter()
-        .map(|asset| asset.path.to_string())
-        .collect::<HashSet<_>>();
+    let mut name_registry = ProofCollectionDuplicateNameRegistry::from_assets(stored_assets);
     let mut duplicates_by_source = HashMap::<Arc<str>, ProofCollectionAsset>::new();
 
     for asset in &selected_visible_assets {
         let duplicate = ProofCollectionAsset {
-            id: proof_collection_unique_copy_text(&mut used_ids, |index| {
-                proof_collection_duplicate_id_candidate(asset.id.as_ref(), index)
-            }),
-            label: proof_collection_unique_copy_text(&mut used_labels, |index| {
-                proof_collection_duplicate_label_candidate(asset.label.as_ref(), index)
-            }),
-            path: proof_collection_unique_copy_text(&mut used_paths, |index| {
-                proof_collection_duplicate_path_candidate(asset.path.as_ref(), index)
-            }),
+            id: name_registry.duplicate_id(asset.id.as_ref()),
+            label: name_registry.duplicate_label(asset.label.as_ref()),
+            path: name_registry.duplicate_path(asset.path.as_ref()),
             kind: asset.kind.clone(),
             size_kib: asset.size_kib,
         };
@@ -136,13 +80,13 @@ pub(in super::super::super) fn proof_collection_duplicate_selection(
         Arc::<[ProofCollectionAsset]>::from(remaining_and_duplicates.clone()),
         reverse_order,
     );
-    let duplicated_ids_set = duplicates_by_source
+    let duplicate_ids = duplicates_by_source
         .values()
-        .map(|asset| asset.id.as_ref())
-        .collect::<HashSet<_>>();
+        .map(|asset| asset.id.clone())
+        .collect::<Vec<_>>();
     let duplicated_assets = next_visible_assets
         .iter()
-        .filter(|asset| duplicated_ids_set.contains(asset.id.as_ref()))
+        .filter(|asset| duplicate_ids.contains(&asset.id))
         .cloned()
         .collect::<Vec<_>>();
     let duplicated_ids = duplicated_assets

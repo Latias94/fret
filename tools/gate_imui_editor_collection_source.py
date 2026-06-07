@@ -161,6 +161,9 @@ def main() -> None:
     collection_selection_command_duplicate = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs"
     )
+    collection_selection_command_duplicate_naming = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs"
+    )
     collection_children = (
         collection_asset_grid,
         collection_asset_grid_chrome,
@@ -200,6 +203,7 @@ def main() -> None:
         collection_selection_commands,
         collection_selection_command_delete,
         collection_selection_command_duplicate,
+        collection_selection_command_duplicate_naming,
     )
 
     checks = [
@@ -1709,13 +1713,15 @@ def main() -> None:
             "collection duplicate command owner",
             collection_selection_command_duplicate,
             required=[
+                "mod naming;",
+                "use naming::ProofCollectionDuplicateNameRegistry;",
                 "pub(in super::super::super) struct ProofCollectionDuplicateResult {",
                 "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
                 "pub(in super::super::super) fn proof_collection_duplicate_selection(",
-                "fn proof_collection_unique_copy_text(",
-                "fn proof_collection_duplicate_label_candidate(",
-                "fn proof_collection_duplicate_id_candidate(",
-                "fn proof_collection_duplicate_path_candidate(",
+                "ProofCollectionDuplicateNameRegistry::from_assets(stored_assets)",
+                "name_registry.duplicate_id(asset.id.as_ref())",
+                "name_registry.duplicate_label(asset.label.as_ref())",
+                "name_registry.duplicate_path(asset.path.as_ref())",
                 "fn proof_collection_duplicate_shortcut_matches_primary_d_only()",
                 "fn proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy()",
             ],
@@ -1723,6 +1729,49 @@ def main() -> None:
                 "ProofCollectionDeleteResult",
                 "proof_collection_delete_selection(",
                 "proof_collection_delete_key_matches(",
+                "fn proof_collection_unique_copy_text(",
+                "fn proof_collection_duplicate_label_candidate(",
+                "fn proof_collection_duplicate_id_candidate(",
+                "fn proof_collection_duplicate_path_candidate(",
+                "HashSet",
+                "pub(super) struct ProofCollectionDuplicateNameRegistry",
+                "render_collection_first_asset_browser_proof",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection duplicate naming owner",
+            collection_selection_command_duplicate_naming,
+            required=[
+                "pub(super) struct ProofCollectionDuplicateNameRegistry",
+                "used_ids: HashSet<String>",
+                "used_labels: HashSet<String>",
+                "used_paths: HashSet<String>",
+                "pub(super) fn from_assets(stored_assets: &[ProofCollectionAsset]) -> Self",
+                "pub(super) fn duplicate_id(&mut self, id: &str) -> Arc<str>",
+                "pub(super) fn duplicate_label(&mut self, label: &str) -> Arc<str>",
+                "pub(super) fn duplicate_path(&mut self, path: &str) -> Arc<str>",
+                "fn proof_collection_unique_copy_text(",
+                "fn proof_collection_duplicate_label_candidate(",
+                "fn proof_collection_duplicate_id_candidate(",
+                "fn proof_collection_duplicate_path_candidate(",
+                "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
+            ],
+            forbidden=[
+                "ProofCollectionDuplicateResult",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_duplicate_shortcut_matches(",
+                "ImUiMultiSelectState",
+                "ProofCollectionKeyboardState",
+                "proof_collection_assets_in_visible_order",
+                "ProofCollectionDeleteResult",
+                "proof_collection_delete_selection(",
                 "render_collection_first_asset_browser_proof",
                 "TextField",
                 "DragPreviewGhostOptions",
