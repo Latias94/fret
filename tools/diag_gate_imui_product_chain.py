@@ -128,6 +128,7 @@ DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE = "apps/fret-devtools/src/native/command_catalog.rs"
 DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE = "apps/fret-devtools/src/native/ui_primitives.rs"
 DEVTOOLS_GUI_REGRESSION_PANEL_SOURCE = "apps/fret-devtools/src/native/regression_panel.rs"
+DEVTOOLS_GUI_SCRIPT_STUDIO_PANEL_SOURCE = "apps/fret-devtools/src/native/script_studio_panel.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
 DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
@@ -533,6 +534,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     command_catalog_path = repo_root / DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE
     ui_primitives_path = repo_root / DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE
     regression_panel_path = repo_root / DEVTOOLS_GUI_REGRESSION_PANEL_SOURCE
+    script_studio_panel_path = repo_root / DEVTOOLS_GUI_SCRIPT_STUDIO_PANEL_SOURCE
     ws_path = repo_root / DEVTOOLS_GUI_WS_SOURCE
     semantics_path = repo_root / DEVTOOLS_GUI_SEMANTICS_SOURCE
     gate_run_path = repo_root / DEVTOOLS_GUI_GATE_RUN_SOURCE
@@ -570,6 +572,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         command_catalog_source = command_catalog_path.read_text(encoding="utf-8")
         ui_primitives_source = ui_primitives_path.read_text(encoding="utf-8")
         regression_panel_source = regression_panel_path.read_text(encoding="utf-8")
+        script_studio_panel_source = script_studio_panel_path.read_text(encoding="utf-8")
         ws_source = ws_path.read_text(encoding="utf-8")
         semantics_source = semantics_path.read_text(encoding="utf-8")
         gate_run_source = gate_run_path.read_text(encoding="utf-8")
@@ -617,6 +620,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             command_catalog_source,
             ui_primitives_source,
             regression_panel_source,
+            script_studio_panel_source,
             ws_source,
             semantics_source,
             gate_run_source,
@@ -704,6 +708,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "#[path = \"native/regression_panel.rs\"]",
         "mod regression_panel;",
         "use regression_panel::regression_panel;",
+        "#[path = \"native/script_studio_panel.rs\"]",
+        "mod script_studio_panel;",
+        "use script_studio_panel::center_panel;",
         "mod followup;",
         "#[path = \"native/followup_panel.rs\"]",
         "mod followup_panel;",
