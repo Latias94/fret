@@ -8711,3 +8711,16 @@ opening the slice.
       resolution, modifier filtering, and the focused zoom request unit tests. The collection
       source gate, workstream source gate, manifest, and surface tests now include the geometry
       zoom child owner.
+- [x] Split collection browser input box-select pointer session transitions out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
+      into the demo-local `collection/browser_scope/input_runtime/box_select/session.rs` child
+      owner without changing left-button background arming, pressable-origin suppression after
+      focus request, baseline selection capture, append-mode semantics, drag-threshold handling,
+      pointer-id mismatch restoration, pointer cancel behavior, selection/active-id updates,
+      click-clear behavior, public crate APIs, or the app-owned no-helper-widening boundary.
+      Result: `box_select.rs` keeps pointer event registration, context-menu pre-handler ordering,
+      capture/release, selection publication, active-id publication, and click-clear runtime while
+      `box_select/session.rs` owns `proof_collection_browser_scope_box_select_can_start_from_down(...)`,
+      session construction, move/up/cancel transitions, threshold detection, and focused unit
+      tests. The collection source gate, workstream source gate, manifest, and surface tests now
+      include the box-select session child owner.

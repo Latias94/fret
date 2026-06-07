@@ -25,6 +25,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let browser_input_box_select_runtime_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs"
     );
+    let browser_input_box_select_session_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session.rs"
+    );
     let browser_input_context_menu_runtime_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
     );
@@ -736,6 +739,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeModels",
         "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState",
         "pub(super) fn install_collection_browser_scope_box_select_runtime(",
+        "mod session;",
+        "use session::{",
         "cx.pointer_region_on_pointer_down(",
         "host.request_focus(acx.target);",
         "proof_collection_browser_scope_box_select_can_start_from_down(",
@@ -753,14 +758,62 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "proof_collection_browser_scope_box_select_cancel_pointer(",
         "proof_collection_box_select_selection(",
         "state.active_id = next_selection.first_selected().cloned();",
+    ] {
+        assert!(
+            browser_input_box_select_runtime_source.contains(needle),
+            "the demo-local collection browser input box-select runtime owner should keep pointer event wiring and selection publication explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ProofCollectionBoxSelectSession {",
+        "fn proof_collection_browser_scope_box_select_can_start_from_down(",
+        "fn proof_collection_browser_scope_box_select_session_from_down(",
+        "fn proof_collection_browser_scope_box_select_update_session_position(",
+        "fn proof_collection_browser_scope_box_select_session_for_move(",
+        "fn proof_collection_browser_scope_box_select_session_for_up(",
+        "fn proof_collection_browser_scope_box_select_cancel_pointer(",
         "box_select_down_arms_left_background_session",
         "box_select_move_marks_threshold_for_matching_pointer",
         "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
         "box_select_cancel_clears_matching_pointer_only",
     ] {
         assert!(
-            browser_input_box_select_runtime_source.contains(needle),
-            "the demo-local collection browser input box-select runtime owner should keep pointer session runtime explicit; missing `{needle}`"
+            !browser_input_box_select_runtime_source.contains(needle),
+            "the demo-local collection browser input box-select runtime owner should route pure pointer session transitions through box_select/session.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_browser_scope_box_select_can_start_from_down(",
+        "pub(super) fn proof_collection_browser_scope_box_select_session_from_down(",
+        "fn proof_collection_browser_scope_box_select_update_session_position(",
+        "pub(super) fn proof_collection_browser_scope_box_select_session_for_move(",
+        "pub(super) fn proof_collection_browser_scope_box_select_session_for_up(",
+        "pub(super) fn proof_collection_browser_scope_box_select_cancel_pointer(",
+        "proof_collection_drag_threshold_met(",
+        "ProofCollectionBoxSelectSession {",
+        "box_select_down_arms_left_background_session",
+        "box_select_move_marks_threshold_for_matching_pointer",
+        "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
+        "box_select_cancel_clears_matching_pointer_only",
+    ] {
+        assert!(
+            browser_input_box_select_session_source.contains(needle),
+            "the demo-local collection browser input box-select session owner should keep pure pointer session transitions explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeModels",
+        "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState",
+        "pub(super) fn install_collection_browser_scope_box_select_runtime(",
+        "BeforeCollectionBrowserScopeBoxSelectPointerUp",
+        "cx.pointer_region_on_pointer_down(",
+        "publish_collection_browser_scope_box_select_threshold_selection(",
+        "proof_collection_box_select_selection(",
+        "state.active_id = next_selection.first_selected().cloned();",
+    ] {
+        assert!(
+            !browser_input_box_select_session_source.contains(needle),
+            "the demo-local collection browser input box-select session owner should not take runtime event/model publication; unexpected `{needle}`"
         );
     }
     for needle in [

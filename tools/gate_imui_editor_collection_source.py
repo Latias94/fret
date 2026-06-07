@@ -74,6 +74,9 @@ def main() -> None:
     collection_browser_scope_input_box_select_runtime = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs"
     )
+    collection_browser_scope_input_box_select_session = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session.rs"
+    )
     collection_browser_scope_input_context_menu_runtime = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
     )
@@ -186,6 +189,7 @@ def main() -> None:
         collection_browser_scope_chrome,
         collection_browser_scope_input_runtime,
         collection_browser_scope_input_box_select_runtime,
+        collection_browser_scope_input_box_select_session,
         collection_browser_scope_input_context_menu_runtime,
         collection_browser_scope_input_zoom_runtime,
         collection_box_select,
@@ -1197,6 +1201,8 @@ def main() -> None:
                 "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState",
                 "pub(super) fn install_collection_browser_scope_box_select_runtime(",
                 "BeforeCollectionBrowserScopeBoxSelectPointerUp",
+                "mod session;",
+                "use session::{",
                 "cx.pointer_region_on_pointer_down(",
                 "host.request_focus(acx.target);",
                 "proof_collection_browser_scope_box_select_can_start_from_down(",
@@ -1214,10 +1220,6 @@ def main() -> None:
                 "proof_collection_browser_scope_box_select_cancel_pointer(",
                 "proof_collection_box_select_selection(",
                 "state.active_id = next_selection.first_selected().cloned();",
-                "box_select_down_arms_left_background_session",
-                "box_select_move_marks_threshold_for_matching_pointer",
-                "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
-                "box_select_cancel_clears_matching_pointer_only",
             ],
             forbidden=[
                 "pub(super) struct ProofCollectionBrowserScopeInputModels",
@@ -1229,6 +1231,45 @@ def main() -> None:
                 "up.down_hit_pressable_target.is_some()",
                 "up.position_window.unwrap_or(up.position)",
                 "*state = Some(position);",
+                "ProofCollectionBoxSelectSession {",
+                "fn proof_collection_browser_scope_box_select_can_start_from_down(",
+                "fn proof_collection_browser_scope_box_select_session_from_down(",
+                "fn proof_collection_browser_scope_box_select_update_session_position(",
+                "fn proof_collection_browser_scope_box_select_session_for_move(",
+                "fn proof_collection_browser_scope_box_select_session_for_up(",
+                "fn proof_collection_browser_scope_box_select_cancel_pointer(",
+                "box_select_down_arms_left_background_session",
+                "box_select_move_marks_threshold_for_matching_pointer",
+                "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
+                "box_select_cancel_clears_matching_pointer_only",
+            ],
+        ),
+        SourceCheck(
+            "collection browser input box-select session owner",
+            collection_browser_scope_input_box_select_session,
+            required=[
+                "pub(super) fn proof_collection_browser_scope_box_select_can_start_from_down(",
+                "pub(super) fn proof_collection_browser_scope_box_select_session_from_down(",
+                "fn proof_collection_browser_scope_box_select_update_session_position(",
+                "pub(super) fn proof_collection_browser_scope_box_select_session_for_move(",
+                "pub(super) fn proof_collection_browser_scope_box_select_session_for_up(",
+                "pub(super) fn proof_collection_browser_scope_box_select_cancel_pointer(",
+                "proof_collection_drag_threshold_met(",
+                "ProofCollectionBoxSelectSession {",
+                "box_select_down_arms_left_background_session",
+                "box_select_move_marks_threshold_for_matching_pointer",
+                "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
+                "box_select_cancel_clears_matching_pointer_only",
+            ],
+            forbidden=[
+                "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeModels",
+                "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState",
+                "pub(super) fn install_collection_browser_scope_box_select_runtime(",
+                "BeforeCollectionBrowserScopeBoxSelectPointerUp",
+                "cx.pointer_region_on_pointer_down(",
+                "publish_collection_browser_scope_box_select_threshold_selection(",
+                "proof_collection_box_select_selection(",
+                "state.active_id = next_selection.first_selected().cloned();",
             ],
         ),
         SourceCheck(
