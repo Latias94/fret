@@ -8106,3 +8106,12 @@ order` / `Reverse visible order` button labels, order-toggle test ID, model upda
 visible-order state. Public crate APIs and the app-owned no-helper-widening boundary remain
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
 now freeze the order-toggle owner boundary.
+
+2026-06-07 collection proof derived state owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+delegates visible asset/key/active/rename-ready projection through
+`proof_collection_derived_state(...)`. The demo-local `collection/derived_state.rs` owns
+`ProofCollectionDerivedState`, visible-order asset projection, visible key projection, active-tile
+fallback projection, and inline-rename ready-session derivation. Public crate APIs and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the derived-state owner boundary.

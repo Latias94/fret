@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::prelude::*;
 
@@ -12,6 +10,7 @@ mod browser_scope;
 mod chrome;
 mod command_buttons;
 mod context_menu;
+mod derived_state;
 mod drag_drop;
 mod geometry;
 mod import_target;
@@ -36,6 +35,7 @@ use command_buttons::{
     render_collection_command_buttons,
 };
 use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
+use derived_state::proof_collection_derived_state;
 use geometry::{
     PROOF_COLLECTION_GRID_FALLBACK_COLUMNS, PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX,
     proof_collection_layout_metrics,
@@ -54,8 +54,6 @@ use models::{
     authoring_parity_collection_selection_model, authoring_parity_collection_zoom_model,
 };
 use order_toggle::render_collection_order_toggle;
-use rename::proof_collection_begin_rename_session;
-use selection::{proof_collection_active_id, proof_collection_assets_in_visible_order};
 use status_readouts::{ProofCollectionStatusReadoutState, render_collection_status_readouts};
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
@@ -143,21 +141,9 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         collection_reverse_order,
     );
 
-    let collection_assets = proof_collection_assets_in_visible_order(
-        Arc::<[ProofCollectionAsset]>::from(stored_collection_assets.clone()),
+    let collection_state = proof_collection_derived_state(
+        &stored_collection_assets,
         collection_reverse_order,
-    );
-    let collection_keys = collection_assets
-        .iter()
-        .map(|asset| asset.id.clone())
-        .collect::<Vec<_>>();
-    let collection_active_id = proof_collection_active_id(
-        &collection_keys,
-        &collection_selection,
-        &collection_keyboard,
-    );
-    let collection_rename_ready_session = proof_collection_begin_rename_session(
-        &collection_assets,
         &collection_selection,
         &collection_keyboard,
     );
@@ -165,7 +151,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     render_collection_status_readouts(
         ui,
         ProofCollectionStatusReadoutState {
-            assets: &collection_assets,
+            assets: &collection_state.assets,
             selection: &collection_selection,
             keyboard: &collection_keyboard,
             layout: collection_layout,
@@ -186,12 +172,12 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
             rename_status: collection_rename_status_model.clone(),
         },
         ProofCollectionCommandButtonState {
-            visible_assets: &collection_assets,
+            visible_assets: &collection_state.assets,
             stored_assets: &stored_collection_assets,
             selection: &collection_selection,
             keyboard: &collection_keyboard,
             reverse_order: collection_reverse_order,
-            rename_ready_session: collection_rename_ready_session.as_ref(),
+            rename_ready_session: collection_state.rename_ready_session.as_ref(),
         },
     );
 
@@ -214,11 +200,11 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
             scroll: collection_scroll_handle.clone(),
         },
         ProofCollectionBrowserScopeState {
-            assets: &collection_assets,
-            keys: &collection_keys,
+            assets: &collection_state.assets,
+            keys: &collection_state.keys,
             selection: &collection_selection,
             box_select: &collection_box_select,
-            active_id: collection_active_id.as_ref(),
+            active_id: collection_state.active_id.as_ref(),
             rename_session: collection_rename_session.as_ref(),
             rename_focus_pending: collection_rename_focus_pending,
             layout: collection_layout,
@@ -242,7 +228,8 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     );
 
     if let Some(session) = collection_rename_session.as_ref()
-        && !collection_assets
+        && !collection_state
+            .assets
             .iter()
             .any(|asset| asset.id == session.target_id)
     {

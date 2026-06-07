@@ -71,6 +71,9 @@ def main() -> None:
     collection_context_menu = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs"
     )
+    collection_derived_state = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/derived_state.rs"
+    )
     collection_drag_drop = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs"
     )
@@ -119,6 +122,7 @@ def main() -> None:
         collection_chrome,
         collection_command_buttons,
         collection_context_menu,
+        collection_derived_state,
         collection_drag_drop,
         collection_geometry,
         collection_import_target,
@@ -193,6 +197,7 @@ def main() -> None:
                 "mod chrome;",
                 "mod command_buttons;",
                 "mod context_menu;",
+                "mod derived_state;",
                 "mod drag_drop;",
                 "mod keyboard;",
                 "mod import_target;",
@@ -204,10 +209,12 @@ def main() -> None:
                 "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
                 "pub(super) use chrome::proof_collection_readout_text;",
                 "use chrome::proof_collection_section_label;",
+                "use derived_state::proof_collection_derived_state;",
                 "use import_target::render_collection_import_target;",
                 "use order_toggle::render_collection_order_toggle;",
                 "render_collection_import_target(ui);",
                 "render_collection_order_toggle(",
+                "proof_collection_derived_state(",
                 "use status_readouts::{",
                 "render_collection_status_readouts(",
                 "#[cfg(test)]",
@@ -215,6 +222,55 @@ def main() -> None:
             ],
             forbidden=[],
             extra_paths=collection_children,
+        ),
+        SourceCheck(
+            "collection derived state delegation",
+            collection,
+            required=[
+                "mod derived_state;",
+                "use derived_state::proof_collection_derived_state;",
+                "let collection_state = proof_collection_derived_state(",
+                "&collection_state.assets",
+                "&collection_state.keys",
+                "collection_state.active_id.as_ref()",
+                "collection_state.rename_ready_session.as_ref()",
+            ],
+            forbidden=[
+                "proof_collection_assets_in_visible_order(",
+                "proof_collection_active_id(",
+                "proof_collection_begin_rename_session(",
+                "let collection_keys =",
+                "let collection_active_id =",
+                "let collection_rename_ready_session =",
+            ],
+        ),
+        SourceCheck(
+            "collection derived state owner",
+            collection_derived_state,
+            required=[
+                "pub(super) struct ProofCollectionDerivedState",
+                "pub(super) fn proof_collection_derived_state(",
+                "stored_assets: &[ProofCollectionAsset]",
+                "reverse_order: bool",
+                "proof_collection_assets_in_visible_order(",
+                "Arc::<[ProofCollectionAsset]>::from(stored_assets.to_vec())",
+                "let keys = assets",
+                ".map(|asset| asset.id.clone())",
+                ".collect::<Vec<_>>();",
+                "proof_collection_active_id(&keys, selection, keyboard)",
+                "proof_collection_begin_rename_session(&assets, selection, keyboard)",
+                "rename_ready_session",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "render_collection_browser_scope",
+                "render_collection_status_readouts",
+                "render_collection_command_buttons",
+                "render_collection_import_target",
+                "ui.",
+                "kit::ButtonOptions",
+                "TextField::new(",
+            ],
         ),
         SourceCheck(
             "collection root chrome delegation",

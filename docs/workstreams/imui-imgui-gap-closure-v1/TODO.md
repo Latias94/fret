@@ -8470,3 +8470,13 @@ opening the slice.
       `render_collection_order_toggle(...)`, while `collection/order_toggle.rs` owns the toggle
       button workflow. The collection source gate, workstream source gate, manifest, and surface
       tests now include the order-toggle owner.
+- [x] Split collection proof derived visible state out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/derived_state.rs` child owner without changing visible-order asset projection,
+      visible key projection, active-tile fallback, inline-rename ready-session derivation, render
+      call sites, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `collection.rs` keeps render assembly and delegates the visible asset/key/active/rename-ready
+      projection through `proof_collection_derived_state(...)`, while `collection/derived_state.rs`
+      owns `ProofCollectionDerivedState` plus the composed calls into the selection and rename
+      owners. The collection source gate, workstream source gate, manifest, and surface tests now
+      include the derived-state owner.
