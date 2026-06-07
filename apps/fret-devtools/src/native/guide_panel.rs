@@ -21,13 +21,15 @@ use super::command_catalog::{
     CMD_OPEN_WORKFLOW_RESULT_JSON, CMD_OPEN_WORKFLOW_SUITE_SUMMARY, CMD_RUN_WORKFLOW_SUMMARIZE,
     CMD_WORKFLOW_RUN_SELECTED,
 };
+use super::demo_metrics_debug::devtools_demo_metrics_debug_panel;
+use super::discovery_lines::{devtools_gate_command_lines, devtools_workflow_run_lines};
 use super::gate_profile_state::{collect_gate_profile_panel_state, gate_profile_select_items};
+use super::guide_recent_evidence_panel::guide_recent_evidence_panel;
+use super::guide_reference_panels::{dogfood_reference_panel, first_open_reference_panel};
+use super::run_history_panel::{gate_run_history_list, workflow_run_history_list};
 use super::workflow_panel_state::collect_workflow_panel_state;
 use super::{
-    State, devtools_demo_metrics_debug_panel, devtools_gate_command_lines,
-    devtools_workflow_run_lines, diag_section,
-    dogfood_reference_panel, first_open_reference_panel, guide_recent_evidence_panel,
-    gate_run, gate_run_history_list, text_blob_sized, workflow_run, workflow_run_history_list,
+    State, diag_section, gate_run, text_blob_sized, workflow_run,
 };
 
 pub(super) fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {

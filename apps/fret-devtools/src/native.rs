@@ -79,7 +79,6 @@ mod ws;
 use command_catalog::*;
 use demo_metrics_debug::{
     demo_metrics_debug_action_command_for_copy_command, demo_metrics_debug_action_command_text,
-    devtools_demo_metrics_debug_panel,
 };
 use diagnostics_tree_panel::{element_tree_panel, layout_tree_panel, semantics_panel};
 use followup_panel::{
@@ -89,15 +88,12 @@ use followup_panel::{
 use guide_panel::devtools_guide_panel;
 use guide_recent_evidence_panel::{
     first_open_recent_evidence_action_row, first_open_recent_evidence_action_specs,
-    guide_recent_evidence_panel,
 };
-use guide_reference_panels::{dogfood_reference_panel, first_open_reference_panel};
 use header_state::{collect_header_diagnostics_state, header_next_action_lines};
 use inspect_panel::{inspect_hover_bounds_lines, inspect_overlay_hook_lines, inspect_panel};
 use discovery_lines::{
-    devtools_dogfood_workflow_lines, devtools_first_open_lines,
-    devtools_first_open_next_action_lines, devtools_gate_command_lines,
-    devtools_workflow_commands, devtools_workflow_run_lines, workflow_handoff_readiness_lines,
+    devtools_first_open_next_action_lines, devtools_workflow_commands,
+    workflow_handoff_readiness_lines,
 };
 use recent_evidence::{
     RecentEvidenceRerunCommand, RecentEvidenceTarget,
@@ -107,8 +103,12 @@ use recent_evidence::{
     recent_failed_evidence_rerun_command_from_state,
     recent_failed_evidence_rerun_unavailable_reason_from_state,
 };
-use run_history_panel::{gate_run_history_list, workflow_run_history_list};
 use semantics_detail_panel::sem_node_panel;
+#[cfg(test)]
+use discovery_lines::{
+    devtools_dogfood_workflow_lines, devtools_first_open_lines, devtools_gate_command_lines,
+    devtools_workflow_run_lines,
+};
 #[cfg(test)]
 use recent_evidence::{
     devtools_recent_evidence_lines, recent_evidence_status_failed,
