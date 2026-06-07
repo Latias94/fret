@@ -8500,3 +8500,12 @@ opening the slice.
       `ProofCollectionChildModels` and the clone projection from `ProofCollectionRuntimeModels`.
       The collection source gate, workstream source gate, manifest, and surface tests now include
       the child-model owner.
+- [x] Split collection proof stale rename lifecycle cleanup out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/lifecycle.rs` child owner without changing rename-session clearing semantics,
+      rename-focus clearing semantics, render call sites, public crate APIs, model keys, or the
+      app-owned no-helper-widening boundary. Result: `collection.rs` keeps render ordering and
+      delegates stale inline-rename session cleanup through
+      `clear_stale_collection_rename_session(...)`, while `collection/lifecycle.rs` owns the
+      rename-session existence check and model updates. The collection source gate, workstream
+      source gate, manifest, and surface tests now include the lifecycle owner.

@@ -92,6 +92,9 @@ def main() -> None:
     collection_keyboard = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs"
     )
+    collection_lifecycle = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/lifecycle.rs"
+    )
     collection_models = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs"
     )
@@ -135,6 +138,7 @@ def main() -> None:
         collection_geometry,
         collection_import_target,
         collection_keyboard,
+        collection_lifecycle,
         collection_models,
         collection_order_toggle,
         collection_readouts,
@@ -210,6 +214,7 @@ def main() -> None:
                 "mod drag_drop;",
                 "mod keyboard;",
                 "mod import_target;",
+                "mod lifecycle;",
                 "mod models;",
                 "mod order_toggle;",
                 "mod rename;",
@@ -222,6 +227,7 @@ def main() -> None:
                 "use chrome::proof_collection_section_label;",
                 "use derived_state::proof_collection_derived_state;",
                 "use import_target::render_collection_import_target;",
+                "use lifecycle::clear_stale_collection_rename_session;",
                 "use order_toggle::render_collection_order_toggle;",
                 "use runtime_state::proof_collection_runtime_state;",
                 "render_collection_import_target(ui);",
@@ -229,6 +235,7 @@ def main() -> None:
                 "proof_collection_derived_state(",
                 "proof_collection_runtime_state(",
                 "proof_collection_child_models(&collection_runtime.models)",
+                "clear_stale_collection_rename_session(",
                 "use status_readouts::{",
                 "render_collection_status_readouts(",
                 "#[cfg(test)]",
@@ -297,7 +304,7 @@ def main() -> None:
                 "collection_runtime.snapshot.stored_assets",
                 "collection_runtime.snapshot.selection",
                 "collection_runtime.snapshot.layout",
-                "collection_runtime.snapshot.rename_session.as_ref()",
+                "collection_runtime.snapshot.rename_session()",
             ],
             forbidden=[
                 "authoring_parity_collection_selection_model(ui.cx_mut())",
@@ -326,6 +333,7 @@ def main() -> None:
                 "pub(super) struct ProofCollectionRuntimeState",
                 "pub(super) struct ProofCollectionRuntimeModels",
                 "pub(super) struct ProofCollectionRuntimeSnapshot",
+                "pub(super) fn rename_session(&self) -> Option<&ProofCollectionRenameSession>",
                 "pub(super) fn proof_collection_runtime_state(",
                 "selection: authoring_parity_collection_selection_model(ui.cx_mut())",
                 "assets: authoring_parity_collection_assets_model(ui.cx_mut())",
@@ -401,6 +409,48 @@ def main() -> None:
                 "render_collection_context_menu(",
                 "selector_model_paint(",
                 "ui.",
+                "TextField::new(",
+            ],
+        ),
+        SourceCheck(
+            "collection lifecycle delegation",
+            collection,
+            required=[
+                "mod lifecycle;",
+                "use lifecycle::clear_stale_collection_rename_session;",
+                "clear_stale_collection_rename_session(",
+                "&collection_runtime.models",
+                "&collection_runtime.snapshot",
+                "&collection_state.assets",
+            ],
+            forbidden=[
+                "snapshot.rename_session.as_ref()",
+                "models.rename_session",
+                "models.rename_focus_pending",
+                ".update(&collection_runtime.models.rename_session",
+                ".update(&collection_runtime.models.rename_focus_pending",
+            ],
+        ),
+        SourceCheck(
+            "collection lifecycle owner",
+            collection_lifecycle,
+            required=[
+                "pub(super) fn clear_stale_collection_rename_session(",
+                "models: &ProofCollectionRuntimeModels",
+                "snapshot: &ProofCollectionRuntimeSnapshot",
+                "assets: &[ProofCollectionAsset]",
+                "snapshot.rename_session.as_ref()",
+                "!assets.iter().any(|asset| asset.id == session.target_id)",
+                ".update(&models.rename_session, |state| *state = None)",
+                ".update(&models.rename_focus_pending, |state| *state = false)",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "render_collection_browser_scope(",
+                "render_collection_command_buttons(",
+                "render_collection_context_menu(",
+                "render_collection_import_target(",
+                "ui.button_with_options(",
                 "TextField::new(",
             ],
         ),

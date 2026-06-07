@@ -26,6 +26,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let import_target_source =
         include_str!("../src/imui_editor_proof_demo/collection/import_target.rs");
     let keyboard_source = include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs");
+    let lifecycle_source = include_str!("../src/imui_editor_proof_demo/collection/lifecycle.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
     let order_toggle_source =
         include_str!("../src/imui_editor_proof_demo/collection/order_toggle.rs");
@@ -109,6 +110,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod geometry;",
         "mod import_target;",
         "mod keyboard;",
+        "mod lifecycle;",
         "mod models;",
         "mod order_toggle;",
         "mod rename;",
@@ -121,6 +123,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "use chrome::proof_collection_section_label;",
         "use derived_state::proof_collection_derived_state;",
         "use import_target::render_collection_import_target;",
+        "use lifecycle::clear_stale_collection_rename_session;",
         "use order_toggle::render_collection_order_toggle;",
         "use runtime_state::proof_collection_runtime_state;",
         "render_collection_import_target(ui);",
@@ -128,6 +131,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "proof_collection_derived_state(",
         "proof_collection_runtime_state(",
         "proof_collection_child_models(&collection_runtime.models)",
+        "clear_stale_collection_rename_session(",
         "use status_readouts::{",
         "render_collection_status_readouts(",
     ] {
@@ -199,6 +203,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionRuntimeState",
         "pub(super) struct ProofCollectionRuntimeModels",
         "pub(super) struct ProofCollectionRuntimeSnapshot",
+        "pub(super) fn rename_session(&self) -> Option<&ProofCollectionRenameSession>",
         "pub(super) fn proof_collection_runtime_state(",
         "selection: authoring_parity_collection_selection_model(ui.cx_mut())",
         "assets: authoring_parity_collection_assets_model(ui.cx_mut())",
@@ -278,6 +283,35 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !collection_source.contains(needle),
             "the collection root should route child model bundle projection through collection/child_models.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn clear_stale_collection_rename_session(",
+        "models: &ProofCollectionRuntimeModels",
+        "snapshot: &ProofCollectionRuntimeSnapshot",
+        "assets: &[ProofCollectionAsset]",
+        "snapshot.rename_session.as_ref()",
+        "!assets.iter().any(|asset| asset.id == session.target_id)",
+        ".update(&models.rename_session, |state| *state = None)",
+        ".update(&models.rename_focus_pending, |state| *state = false)",
+    ] {
+        assert!(
+            lifecycle_source.contains(needle),
+            "the demo-local collection lifecycle owner should keep stale rename cleanup explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "snapshot.rename_session.as_ref()",
+        "models.rename_session",
+        "models.rename_focus_pending",
+        ".update(&collection_runtime.models.rename_session",
+        ".update(&collection_runtime.models.rename_focus_pending",
+    ] {
+        assert!(
+            !collection_source.contains(needle),
+            "the collection root should route stale rename cleanup through collection/lifecycle.rs; unexpected `{needle}`"
         );
     }
 

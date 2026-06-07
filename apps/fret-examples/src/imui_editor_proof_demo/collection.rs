@@ -15,6 +15,7 @@ mod drag_drop;
 mod geometry;
 mod import_target;
 mod keyboard;
+mod lifecycle;
 mod models;
 mod order_toggle;
 mod readouts;
@@ -33,6 +34,7 @@ use command_buttons::{ProofCollectionCommandButtonState, render_collection_comma
 use context_menu::render_collection_context_menu;
 use derived_state::proof_collection_derived_state;
 use import_target::render_collection_import_target;
+use lifecycle::clear_stale_collection_rename_session;
 use order_toggle::render_collection_order_toggle;
 use runtime_state::proof_collection_runtime_state;
 use status_readouts::{ProofCollectionStatusReadoutState, render_collection_status_readouts};
@@ -103,7 +105,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
             selection: &collection_runtime.snapshot.selection,
             box_select: &collection_runtime.snapshot.box_select,
             active_id: collection_state.active_id.as_ref(),
-            rename_session: collection_runtime.snapshot.rename_session.as_ref(),
+            rename_session: collection_runtime.snapshot.rename_session(),
             rename_focus_pending: collection_runtime.snapshot.rename_focus_pending,
             layout: collection_runtime.snapshot.layout,
         },
@@ -111,27 +113,12 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
 
     render_collection_context_menu(ui, context_menu);
 
-    if let Some(session) = collection_runtime.snapshot.rename_session.as_ref()
-        && !collection_state
-            .assets
-            .iter()
-            .any(|asset| asset.id == session.target_id)
-    {
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_runtime.models.rename_session, |state| {
-                *state = None
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_runtime.models.rename_focus_pending, |state| {
-                *state = false
-            });
-    }
+    clear_stale_collection_rename_session(
+        ui,
+        &collection_runtime.models,
+        &collection_runtime.snapshot,
+        &collection_state.assets,
+    );
 
     render_collection_import_target(ui);
 }

@@ -60,6 +60,12 @@ pub(super) struct ProofCollectionRuntimeSnapshot {
     pub(super) layout: ProofCollectionLayoutMetrics,
 }
 
+impl ProofCollectionRuntimeSnapshot {
+    pub(super) fn rename_session(&self) -> Option<&ProofCollectionRenameSession> {
+        self.rename_session.as_ref()
+    }
+}
+
 pub(super) fn proof_collection_runtime_state(
     ui: &mut ImUi<'_, '_, KernelApp>,
 ) -> ProofCollectionRuntimeState {
