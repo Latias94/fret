@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 ## Worktree Convergence - 2026-05-26
 
@@ -8579,4 +8579,17 @@ opening the slice.
       `kit::ButtonOptions`, enabled flag forwarding, and duplicate/rename/delete test IDs through
       helpers such as `collection_duplicate_selected_button_options(...)`. The collection source
       gate, workstream source gate, manifest, and surface tests now include the command-buttons
+      chrome owner.
+- [x] Split collection context-menu chrome/options construction out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` into the
+      demo-local `collection/context_menu/chrome.rs` child owner without changing popup ID,
+      selection readout ID, duplicate/rename/delete/dismiss labels, shortcuts, menu-item test IDs,
+      popup anchor handoff, duplicate/delete state transitions, inline-rename startup, app model
+      writes, command-status publication, public crate APIs, or the app-owned no-helper-widening
+      boundary. Result: `context_menu.rs` keeps popup lifecycle, menu mounting, clicked-response
+      routing, duplicate/delete/rename behavior, model writes, and command-status publication while
+      `collection/context_menu/chrome.rs` owns popup/readout IDs, menu labels, `kit::MenuItemOptions`,
+      shortcut text, close-popup forwarding, and duplicate/rename/delete/dismiss test IDs through
+      helpers such as `collection_context_menu_duplicate_selected_options(...)`. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the context-menu
       chrome owner.

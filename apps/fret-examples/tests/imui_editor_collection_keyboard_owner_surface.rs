@@ -17,6 +17,8 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),

@@ -39,6 +39,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
@@ -79,7 +81,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\"Command status: {status}\"",
         "proof_collection_duplicate_shortcut_matches(",
         "KeyCode::KeyD",
-        "shortcut: Some(Arc::from(\"Primary+D\"))",
+        "Some(\"Primary+D\")",
+        "shortcut: shortcut.map(Arc::from)",
     ] {
         assert!(
             source.contains(needle),

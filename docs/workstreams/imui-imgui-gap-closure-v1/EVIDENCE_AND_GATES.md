@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 ## Fret-ImUi Radio Proof Owner Split Evidence - 2026-06-06
 
@@ -36089,3 +36089,40 @@ Fret Examples Collection Chrome/Readout Owner Split Evidence - 2026-06-07:
 - Passed:
   `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `git diff --check` with only Git CRLF normalization warnings for touched files.
+
+Fret Examples Collection Context Menu Chrome Owner Split Evidence - 2026-06-08:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` was split so
+  collection context-menu popup/readout IDs, labels, shortcut text, close-popup option
+  construction, and menu-item test IDs now live in the demo-local
+  `collection/context_menu/chrome.rs` child owner without changing popup anchor handoff,
+  duplicate/delete state transitions, inline-rename startup, app model writes, command-status
+  publication, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/context_menu.rs` declares `mod chrome;` and delegates through
+  helpers such as `collection_context_menu_popup_id()`,
+  `collection_context_menu_duplicate_selected_label()`, and
+  `collection_context_menu_duplicate_selected_options(...)` while retaining `ui.open_popup_at(...)`,
+  `ui.begin_popup_menu(...)`, `proof_collection_duplicate_selection(...)`,
+  `proof_collection_delete_selection(...)`, and
+  `proof_collection_begin_inline_rename_in_app(...)`. `collection/context_menu/chrome.rs` owns
+  `collection_context_menu_*_label()`, `collection_context_menu_*_options(...)`,
+  `collection_context_menu_action_options(...)`, `kit::MenuItemOptions`, shortcut text
+  `Primary+D` / `F2` / `Del`, and all context-menu test IDs. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the context-menu chrome-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`
+  after an initial command timeout left the same Fret nextest build chain running; the rerun passed
+  10/10 tests. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.

@@ -29,6 +29,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs");
     let context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
+    let context_menu_chrome_source =
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs");
     let derived_state_source =
         include_str!("../src/imui_editor_proof_demo/collection/derived_state.rs");
     let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
@@ -747,13 +749,68 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "pub(super) struct ProofCollectionContextMenuModels",
         "pub(super) fn render_collection_context_menu(",
-        "PROOF_COLLECTION_CONTEXT_MENU_POPUP_ID",
+        "mod chrome;",
+        "collection_context_menu_popup_id()",
+        "collection_context_menu_selection_readout_id()",
+        "collection_context_menu_duplicate_selected_options(",
+        "collection_context_menu_rename_active_options(",
+        "collection_context_menu_delete_selected_options(",
+        "collection_context_menu_dismiss_options(",
         "ui.begin_popup_menu(",
-        "kit::MenuItemOptions {",
     ] {
         assert!(
             context_menu_source.contains(needle),
             "the demo-local collection context-menu owner should keep popup workflow explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "PROOF_COLLECTION_CONTEXT_MENU_POPUP_ID",
+        "kit::MenuItemOptions",
+        "\"Duplicate selected assets\"",
+        "\"Rename active asset\"",
+        "\"Delete selected assets\"",
+        "\"Dismiss quick actions\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.selection-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.duplicate-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.rename\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.delete-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.dismiss\"",
+    ] {
+        assert!(
+            !context_menu_source.contains(needle),
+            "the demo-local collection context-menu owner should delegate menu chrome/test IDs to context_menu/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn collection_context_menu_popup_id() -> &'static str",
+        "pub(super) fn collection_context_menu_selection_readout_id() -> &'static str",
+        "pub(super) fn collection_context_menu_duplicate_selected_label() -> &'static str",
+        "pub(super) fn collection_context_menu_rename_active_label() -> &'static str",
+        "pub(super) fn collection_context_menu_delete_selected_label() -> &'static str",
+        "pub(super) fn collection_context_menu_dismiss_label() -> &'static str",
+        "pub(super) fn collection_context_menu_duplicate_selected_options(",
+        "pub(super) fn collection_context_menu_rename_active_options(",
+        "pub(super) fn collection_context_menu_delete_selected_options(",
+        "pub(super) fn collection_context_menu_dismiss_options(",
+        "fn collection_context_menu_action_options(",
+        "kit::MenuItemOptions",
+        "\"Duplicate selected assets\"",
+        "\"Rename active asset\"",
+        "\"Delete selected assets\"",
+        "\"Dismiss quick actions\"",
+        "\"Primary+D\"",
+        "\"F2\"",
+        "\"Del\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.selection-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.duplicate-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.rename\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.delete-selected\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu.dismiss\"",
+    ] {
+        assert!(
+            context_menu_chrome_source.contains(needle),
+            "the demo-local collection context-menu chrome owner should keep popup/menu option/test-id construction explicit; missing `{needle}`"
         );
     }
 
