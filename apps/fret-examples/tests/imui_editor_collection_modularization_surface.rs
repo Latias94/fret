@@ -31,6 +31,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs");
     let selection_duplicate_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs");
+    let status_readouts_source =
+        include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs");
 
     for needle in [
         "mod authoring_parity;",
@@ -100,11 +102,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod models;",
         "mod rename;",
         "mod selection;",
+        "mod status_readouts;",
         "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
         "pub(super) use chrome::proof_collection_readout_text;",
         "use chrome::proof_collection_section_label;",
         "use import_target::render_collection_import_target;",
         "render_collection_import_target(ui);",
+        "use status_readouts::{",
+        "render_collection_status_readouts(",
     ] {
         assert!(
             collection_source.contains(needle),
@@ -133,6 +138,68 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !collection_source.contains(needle),
             "the collection root should route chrome/readout mounting through collection/chrome.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionStatusReadoutState",
+        "pub(super) fn render_collection_status_readouts(",
+        "proof_collection_assets_line(state.assets)",
+        "proof_collection_visible_order_line(state.assets)",
+        "proof_collection_selection_line(state.assets, state.selection)",
+        "proof_collection_active_line(state.assets, state.selection, state.keyboard)",
+        "proof_collection_zoom_line(state.layout)",
+        "proof_collection_select_all_line()",
+        "proof_collection_rename_line()",
+        "proof_collection_context_menu_line()",
+        "proof_collection_command_package_line()",
+        "proof_collection_rename_status_line(state.rename_status)",
+        "proof_collection_command_status_line(state.command_status)",
+        "\"imui-editor-proof.authoring.imui.collection.assets-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.visible-order-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.selection-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.active-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.zoom-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.select-all-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.command-package-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-status-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.command-status-readout\"",
+    ] {
+        assert!(
+            status_readouts_source.contains(needle),
+            "the demo-local collection status-readouts owner should keep readout mounting explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "proof_collection_assets_line(",
+        "proof_collection_visible_order_line(",
+        "proof_collection_selection_line(",
+        "proof_collection_active_line(",
+        "proof_collection_zoom_line(",
+        "proof_collection_select_all_line(",
+        "proof_collection_rename_line(",
+        "proof_collection_context_menu_line(",
+        "proof_collection_command_package_line(",
+        "proof_collection_rename_status_line(",
+        "proof_collection_command_status_line(",
+        "\"imui-editor-proof.authoring.imui.collection.assets-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.visible-order-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.selection-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.active-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.zoom-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.select-all-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.context-menu-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.command-package-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.rename-status-readout\"",
+        "\"imui-editor-proof.authoring.imui.collection.command-status-readout\"",
+    ] {
+        assert!(
+            !collection_source.contains(needle),
+            "the collection root should route status readouts through collection/status_readouts.rs; unexpected `{needle}`"
         );
     }
 

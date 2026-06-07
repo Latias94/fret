@@ -8088,3 +8088,12 @@ projection, drop-status model update, and drop-status readout test ID. Drag payl
 drop-status formatting, public crate APIs, and the app-owned no-helper-widening boundary remain
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
 now freeze the import-target owner boundary.
+
+2026-06-07 collection proof status readout owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+delegates readout mounting through `render_collection_status_readouts(...)`. The demo-local
+`collection/status_readouts.rs` owns the status readout mounting workflow: assets, visible order,
+selection, active tile, zoom, select-all, rename, context-menu, command package, rename status, and
+command status readouts. Readout text, readout test IDs, projection functions, public crate APIs,
+and the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the status-readouts owner boundary.

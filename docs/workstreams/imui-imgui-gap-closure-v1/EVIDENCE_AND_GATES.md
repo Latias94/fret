@@ -35638,6 +35638,36 @@ Fret Examples Collection Import Target Owner Split Evidence - 2026-06-07:
 - Passed: `git diff --check` with only a Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Status Readout Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection
+  proof status readout mounting now lives in the demo-local `collection/status_readouts.rs` child
+  owner without changing readout text, readout test IDs, visible-order/selection/active/zoom
+  projections, rename/command status projection, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `collection.rs` declares `mod status_readouts;` and delegates through
+  `render_collection_status_readouts(...)`. `collection/status_readouts.rs` owns
+  `ProofCollectionStatusReadoutState`, `render_collection_status_readouts(...)`, all collection
+  status readout test IDs from `imui-editor-proof.authoring.imui.collection.assets-readout` through
+  `imui-editor-proof.authoring.imui.collection.command-status-readout`, and the line-projection
+  calls into `readouts.rs`/`geometry.rs`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` freeze the
+  root/status-readouts-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`;
+  1 test passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Chrome/Readout Owner Split Evidence - 2026-06-07:
 
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection

@@ -8452,3 +8452,12 @@ opening the slice.
       `render_collection_import_target(ui)`, while `collection/import_target.rs` owns the import
       target button/drop-target/status readout workflow. The collection source gate, workstream
       source gate, manifest, and surface tests now include the import-target owner.
+- [x] Split collection proof status readout mounting out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/status_readouts.rs` child owner without changing readout text, readout test IDs,
+      visible-order/selection/active/zoom projections, rename/command status projection, or the
+      app-owned no-helper-widening boundary. Result: `collection.rs` keeps render assembly and
+      delegates status readout mounting through `render_collection_status_readouts(...)`, while
+      `collection/status_readouts.rs` owns the status readout mounting workflow. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the
+      status-readouts owner.

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::advanced::view::AppRenderDataExt as _;
-use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
+use fret::imui::{kit, prelude::*};
 
 use super::KernelApp;
 
@@ -20,6 +20,7 @@ mod models;
 mod readouts;
 mod rename;
 mod selection;
+mod status_readouts;
 
 pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};
 pub(super) use chrome::proof_collection_readout_text;
@@ -36,7 +37,7 @@ use command_buttons::{
 use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
 use geometry::{
     PROOF_COLLECTION_GRID_FALLBACK_COLUMNS, PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX,
-    proof_collection_layout_metrics, proof_collection_zoom_line,
+    proof_collection_layout_metrics,
 };
 use import_target::render_collection_import_target;
 use models::{
@@ -51,15 +52,9 @@ use models::{
     authoring_parity_collection_reverse_order_model, authoring_parity_collection_scroll_handle,
     authoring_parity_collection_selection_model, authoring_parity_collection_zoom_model,
 };
-use readouts::{
-    proof_collection_active_line, proof_collection_assets_line,
-    proof_collection_command_package_line, proof_collection_command_status_line,
-    proof_collection_context_menu_line, proof_collection_rename_line,
-    proof_collection_rename_status_line, proof_collection_select_all_line,
-    proof_collection_selection_line, proof_collection_visible_order_line,
-};
 use rename::proof_collection_begin_rename_session;
 use selection::{proof_collection_active_id, proof_collection_assets_in_visible_order};
+use status_readouts::{ProofCollectionStatusReadoutState, render_collection_status_readouts};
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
     proof_collection_section_label(
@@ -181,64 +176,16 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         &collection_keyboard,
     );
 
-    proof_collection_readout_text(
+    render_collection_status_readouts(
         ui,
-        proof_collection_assets_line(&collection_assets),
-        "imui-editor-proof.authoring.imui.collection.assets-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_visible_order_line(&collection_assets),
-        "imui-editor-proof.authoring.imui.collection.visible-order-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_selection_line(&collection_assets, &collection_selection),
-        "imui-editor-proof.authoring.imui.collection.selection-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_active_line(
-            &collection_assets,
-            &collection_selection,
-            &collection_keyboard,
-        ),
-        "imui-editor-proof.authoring.imui.collection.active-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_zoom_line(collection_layout),
-        "imui-editor-proof.authoring.imui.collection.zoom-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_select_all_line(),
-        "imui-editor-proof.authoring.imui.collection.select-all-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_rename_line(),
-        "imui-editor-proof.authoring.imui.collection.rename-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_context_menu_line(),
-        "imui-editor-proof.authoring.imui.collection.context-menu-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_command_package_line(),
-        "imui-editor-proof.authoring.imui.collection.command-package-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_rename_status_line(&collection_rename_status),
-        "imui-editor-proof.authoring.imui.collection.rename-status-readout",
-    );
-    proof_collection_readout_text(
-        ui,
-        proof_collection_command_status_line(&collection_command_status),
-        "imui-editor-proof.authoring.imui.collection.command-status-readout",
+        ProofCollectionStatusReadoutState {
+            assets: &collection_assets,
+            selection: &collection_selection,
+            keyboard: &collection_keyboard,
+            layout: collection_layout,
+            rename_status: collection_rename_status.as_str(),
+            command_status: collection_command_status.as_str(),
+        },
     );
     render_collection_command_buttons(
         ui,
