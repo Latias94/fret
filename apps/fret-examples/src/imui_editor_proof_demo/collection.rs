@@ -30,7 +30,7 @@ pub(super) use chrome::proof_collection_readout_text;
 
 use browser_scope::render_collection_browser_scope;
 use child_models::{ProofCollectionChildModels, proof_collection_child_models};
-use chrome::proof_collection_section_label;
+use chrome::render_collection_header;
 use command_buttons::render_collection_command_buttons;
 use context_menu::render_collection_context_menu;
 use derived_state::proof_collection_derived_state;
@@ -42,17 +42,7 @@ use runtime_state::proof_collection_runtime_state;
 use status_readouts::render_collection_status_readouts;
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
-    proof_collection_section_label(
-        ui,
-        "Collection-first asset browser proof",
-        "imui-editor-proof.authoring.imui.collection.title",
-    );
-    ui.text_wrapped(
-        "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
-    );
-    ui.text_wrapped(
-        "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
-    );
+    render_collection_header(ui);
 
     let collection_runtime = proof_collection_runtime_state(ui);
 

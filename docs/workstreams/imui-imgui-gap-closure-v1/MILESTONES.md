@@ -8154,3 +8154,11 @@ command-button, and browser-scope render-state projection by assembling
 model keys, child render behavior, and the app-owned no-helper-widening boundary remain unchanged,
 while the collection source gate, workstream source gate, manifest, and surface tests now freeze
 the render-state owner boundary.
+
+2026-06-07 collection proof chrome header owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render ordering and
+delegates title/prose mounting through `render_collection_header(...)`. The demo-local `collection/chrome.rs` owns
+title and explanatory proof prose mounting: the section label, title test ID, stable-key proof prose,
+and background-drag proof prose. Public crate APIs, text content, render order, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, and surface tests now freeze the chrome-header owner boundary.

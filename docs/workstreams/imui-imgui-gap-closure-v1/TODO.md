@@ -8519,3 +8519,11 @@ opening the slice.
       `ProofCollectionRenderStates` and the three child render-state DTO assemblies. The collection
       source gate, workstream source gate, manifest, and surface tests now include the render-state
       owner.
+- [x] Split collection proof chrome header/prose mounting out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/chrome.rs` header owner without changing title text, title test ID, explanatory
+      prose text, render order, public crate APIs, or the app-owned no-helper-widening boundary.
+      Result: `collection.rs` keeps render ordering and delegates title/prose mounting through
+      `render_collection_header(...)`, while `collection/chrome.rs` owns the section label and
+      explanatory proof prose. The collection source gate, workstream source gate, and surface tests
+      now include the chrome-header owner.

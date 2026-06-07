@@ -123,7 +123,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
         "pub(super) use chrome::proof_collection_readout_text;",
         "use child_models::{ProofCollectionChildModels, proof_collection_child_models};",
-        "use chrome::proof_collection_section_label;",
+        "use chrome::render_collection_header;",
         "use derived_state::proof_collection_derived_state;",
         "use import_target::render_collection_import_target;",
         "use lifecycle::clear_stale_collection_rename_session;",
@@ -139,6 +139,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "clear_stale_collection_rename_session(",
         "use status_readouts::render_collection_status_readouts;",
         "render_collection_status_readouts(",
+        "render_collection_header(ui);",
     ] {
         assert!(
             collection_source.contains(needle),
@@ -148,7 +149,11 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     for needle in [
         "pub(in super::super) fn proof_collection_readout_text(",
+        "pub(super) fn render_collection_header(",
         "pub(super) fn proof_collection_section_label(",
+        "Collection-first asset browser proof",
+        "Stable keys keep browser selection pinned while visible order flips",
+        "Background drag now draws a marquee and updates grid selection app-locally",
         "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
         "proof_section_chrome_label(cx, text, test_id)",
     ] {
@@ -160,7 +165,11 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     for needle in [
         "fn proof_collection_readout_text(",
+        "fn render_collection_header(",
         "fn proof_collection_section_label(",
+        "Collection-first asset browser proof",
+        "Stable keys keep browser selection pinned while visible order flips",
+        "Background drag now draws a marquee and updates grid selection app-locally",
         "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
         "proof_section_chrome_label(cx, text, test_id)",
     ] {

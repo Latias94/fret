@@ -14,6 +14,20 @@ pub(in super::super) fn proof_collection_readout_text(
     ui.add(element);
 }
 
+pub(super) fn render_collection_header(ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized)) {
+    proof_collection_section_label(
+        ui,
+        "Collection-first asset browser proof",
+        "imui-editor-proof.authoring.imui.collection.title",
+    );
+    ui.text_wrapped(
+        "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
+    );
+    ui.text_wrapped(
+        "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
+    );
+}
+
 pub(super) fn proof_collection_section_label(
     ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
     text: &'static str,
