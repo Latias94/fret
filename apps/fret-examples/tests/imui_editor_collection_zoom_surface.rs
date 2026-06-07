@@ -11,6 +11,10 @@ fn imui_editor_proof_demo_keeps_collection_zoom_app_owned_and_explicit() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
@@ -74,7 +78,7 @@ fn imui_editor_proof_demo_keeps_collection_zoom_app_owned_and_explicit() {
         "handle: Some(scroll)",
         "proof_collection_zoom_request(",
         "collection_layout.columns",
-        "collection_scroll_handle_for_wheel.set_offset(update.next_scroll_offset);",
+        "collection_scroll_handle.set_offset(update.next_scroll_offset);",
     ] {
         assert!(
             source.contains(needle),

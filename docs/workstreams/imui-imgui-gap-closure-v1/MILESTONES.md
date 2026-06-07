@@ -8290,3 +8290,14 @@ demo-local `collection/selection/commands/duplicate/naming.rs` child owner. Publ
 copy suffix text, duplicate insertion order, keyboard/button/context-menu command behavior, and the
 app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the duplicate naming owner boundary.
+
+2026-06-08 collection browser input zoom runtime owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` now keeps
+pointer props, keyboard handler installation, background context-menu anchor publication,
+box-select pointer down/move/up/cancel handling, pointer capture/release, and cancel behavior while
+routing Primary+Wheel zoom runtime through the demo-local
+`collection/browser_scope/input_runtime/zoom.rs` child owner. Primary+Wheel zoom request semantics,
+tile extent writes, scroll anchor updates, wheel modifier handling, browser input runtime imports,
+and the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the browser input zoom runtime
+owner boundary.

@@ -8663,3 +8663,14 @@ opening the slice.
       selection repair, and tests while `duplicate/naming.rs` owns copy id/label/path suffix
       generation and per-field uniqueness tracking. The collection source gate, workstream source
       gate, manifest, and surface tests now include the duplicate naming child owner.
+- [x] Split collection browser input Primary+Wheel zoom runtime out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs`
+      into the demo-local `collection/browser_scope/input_runtime/zoom.rs` child owner without
+      changing Primary+Wheel zoom request semantics, tile extent writes, scroll anchor updates,
+      wheel modifier handling, browser input runtime imports, or the app-owned no-helper-widening
+      boundary. Result: `input_runtime.rs` keeps pointer props, keyboard handler installation,
+      background context-menu anchor publication, box-select pointer handling, pointer capture, and
+      cancel behavior while `input_runtime/zoom.rs` owns `cx.pointer_region_on_wheel(...)`,
+      `proof_collection_zoom_request(...)`, zoom model writes, scroll offset updates, and notify.
+      The collection source gate, workstream source gate, manifest, and surface tests now include
+      the browser input zoom runtime child owner.

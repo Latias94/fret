@@ -14,16 +14,17 @@ use super::super::box_select::{
     ProofCollectionBoxSelectSession, ProofCollectionBoxSelectState, ProofCollectionRenderedItem,
     proof_collection_box_select_selection,
 };
-use super::super::geometry::{
-    ProofCollectionLayoutMetrics, proof_collection_drag_threshold_met,
-    proof_collection_zoom_request,
-};
+use super::super::geometry::{ProofCollectionLayoutMetrics, proof_collection_drag_threshold_met};
 use super::super::keyboard::{
     ProofCollectionKeyboardHandlerModels, install_collection_keyboard_handler,
 };
 use super::super::rename::ProofCollectionRenameSession;
 use super::super::selection::ProofCollectionKeyboardState;
 use super::super::{KernelApp, ProofCollectionAsset};
+
+mod zoom;
+
+use zoom::install_collection_browser_scope_zoom_runtime;
 
 pub(super) struct ProofCollectionBrowserScopeInputModels {
     pub(super) assets: Model<Vec<ProofCollectionAsset>>,
@@ -79,9 +80,6 @@ pub(super) fn install_collection_browser_scope_input_runtime(
     let box_select_model_for_cancel = models.box_select.clone();
     let collection_keys_for_move = collection_keys.clone();
     let collection_keys_for_up = collection_keys;
-    let collection_zoom_model_for_wheel = models.zoom.clone();
-    let collection_scroll_handle_for_wheel = models.scroll.clone();
-    let collection_asset_count_for_wheel = state.asset_count;
 
     install_collection_keyboard_handler(
         cx,
@@ -100,25 +98,13 @@ pub(super) fn install_collection_browser_scope_input_runtime(
         },
     );
 
-    cx.pointer_region_on_wheel(Arc::new(move |host, acx, wheel| {
-        let Some(update) = proof_collection_zoom_request(
-            collection_layout,
-            collection_scroll_handle_for_wheel.offset(),
-            wheel.position_local,
-            wheel.delta,
-            wheel.modifiers,
-            collection_asset_count_for_wheel,
-        ) else {
-            return false;
-        };
-
-        let _ = host.update_model(&collection_zoom_model_for_wheel, |state| {
-            *state = update.next_tile_extent;
-        });
-        collection_scroll_handle_for_wheel.set_offset(update.next_scroll_offset);
-        host.notify(acx);
-        true
-    }));
+    install_collection_browser_scope_zoom_runtime(
+        cx,
+        collection_layout,
+        models.scroll.clone(),
+        models.zoom.clone(),
+        state.asset_count,
+    );
 
     cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
         if down.button != MouseButton::Left {

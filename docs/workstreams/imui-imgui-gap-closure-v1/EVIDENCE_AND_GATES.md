@@ -36399,3 +36399,41 @@ Fret Examples Collection Duplicate Naming Owner Split Evidence - 2026-06-08:
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
   standalone markdown files.
+
+Fret Examples Collection Browser Input Zoom Runtime Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` was
+  split so Primary+Wheel zoom runtime now lives in the demo-local
+  `collection/browser_scope/input_runtime/zoom.rs` child owner without changing zoom request
+  semantics, tile extent writes, scroll anchor updates, wheel modifier handling, browser input
+  runtime imports, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `browser_scope/input_runtime.rs` declares `mod zoom;`, imports
+  `install_collection_browser_scope_zoom_runtime(...)`, and keeps pointer props, keyboard handler
+  installation, background context-menu anchor publication, box-select pointer down/move/up/cancel
+  handling, pointer capture/release, and cancel behavior. `browser_scope/input_runtime/zoom.rs`
+  owns `cx.pointer_region_on_wheel(...)`, `proof_collection_zoom_request(...)`,
+  `collection_scroll_handle.offset()`, wheel position/delta/modifier forwarding,
+  `host.update_model(&collection_zoom_model, ...)`, scroll offset updates, and `host.notify(acx)`.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the browser input
+  zoom runtime owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `cargo nextest run -p fret-examples proof_collection_zoom --no-fail-fast`; 2/2 tests
+  passed, covering tile extent/scroll anchor updates and non-primary wheel rejection. Existing
+  dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.

@@ -22,6 +22,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let chrome_source = include_str!("../src/imui_editor_proof_demo/collection/chrome.rs");
     let browser_input_runtime_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
+    let browser_input_zoom_runtime_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
+    );
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
@@ -674,12 +677,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "mod zoom;",
+        "use zoom::install_collection_browser_scope_zoom_runtime;",
         "pub(super) struct ProofCollectionBrowserScopeInputModels",
         "pub(super) struct ProofCollectionBrowserScopeInputState",
         "pub(super) fn proof_collection_browser_scope_pointer_props()",
         "pub(super) fn install_collection_browser_scope_input_runtime(",
         "install_collection_keyboard_handler(",
-        "cx.pointer_region_on_wheel(",
+        "install_collection_browser_scope_zoom_runtime(",
         "cx.pointer_region_on_pointer_down(",
         "cx.pointer_region_on_pointer_move(",
         "cx.pointer_region_on_pointer_up(",
@@ -688,6 +693,49 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             browser_input_runtime_source.contains(needle),
             "the demo-local collection browser input runtime owner should keep wheel/context/box-select handlers explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "cx.pointer_region_on_wheel(",
+        "proof_collection_zoom_request(",
+        "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+    ] {
+        assert!(
+            !browser_input_runtime_source.contains(needle),
+            "the demo-local collection browser input runtime owner should route wheel zoom through input_runtime/zoom.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn install_collection_browser_scope_zoom_runtime(",
+        "cx.pointer_region_on_wheel(",
+        "proof_collection_zoom_request(",
+        "collection_scroll_handle.offset()",
+        "wheel.position_local",
+        "wheel.delta",
+        "wheel.modifiers",
+        "host.update_model(&collection_zoom_model",
+        "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+        "host.notify(acx);",
+    ] {
+        assert!(
+            browser_input_zoom_runtime_source.contains(needle),
+            "the demo-local collection browser input zoom runtime owner should keep Primary+Wheel zoom explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeInputModels",
+        "pub(super) struct ProofCollectionBrowserScopeInputState",
+        "install_collection_keyboard_handler(",
+        "cx.pointer_region_on_pointer_down(",
+        "cx.pointer_region_on_pointer_move(",
+        "cx.pointer_region_on_pointer_up(",
+        "cx.pointer_region_on_pointer_cancel(",
+        "proof_collection_box_select_selection(",
+        "context_menu_anchor_model_for_up",
+    ] {
+        assert!(
+            !browser_input_zoom_runtime_source.contains(needle),
+            "the demo-local collection browser input zoom runtime owner should not take keyboard/context/box-select runtime; unexpected `{needle}`"
         );
     }
 

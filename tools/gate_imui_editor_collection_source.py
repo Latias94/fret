@@ -71,6 +71,9 @@ def main() -> None:
     collection_browser_scope_input_runtime = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"
     )
+    collection_browser_scope_input_zoom_runtime = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
+    )
     collection_box_select = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs"
     )
@@ -173,6 +176,7 @@ def main() -> None:
         collection_browser_scope,
         collection_browser_scope_chrome,
         collection_browser_scope_input_runtime,
+        collection_browser_scope_input_zoom_runtime,
         collection_box_select,
         collection_child_models,
         collection_chrome,
@@ -1132,8 +1136,9 @@ def main() -> None:
                 "props.capture_phase_pointer_moves = true;",
                 "pub(super) fn install_collection_browser_scope_input_runtime(",
                 "install_collection_keyboard_handler(",
-                "cx.pointer_region_on_wheel(",
-                "proof_collection_zoom_request(",
+                "mod zoom;",
+                "use zoom::install_collection_browser_scope_zoom_runtime;",
+                "install_collection_browser_scope_zoom_runtime(",
                 "cx.pointer_region_on_pointer_down(",
                 "host.request_focus(acx.target);",
                 "ProofCollectionBoxSelectSession {",
@@ -1155,6 +1160,37 @@ def main() -> None:
                 "drag_preview_ghost_with_options(",
                 "ui.begin_popup_menu(",
                 "ui.button_with_options(",
+                "cx.pointer_region_on_wheel(",
+                "proof_collection_zoom_request(",
+                "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+            ],
+        ),
+        SourceCheck(
+            "collection browser input zoom runtime owner",
+            collection_browser_scope_input_zoom_runtime,
+            required=[
+                "pub(super) fn install_collection_browser_scope_zoom_runtime(",
+                "cx.pointer_region_on_wheel(",
+                "proof_collection_zoom_request(",
+                "collection_scroll_handle.offset()",
+                "wheel.position_local",
+                "wheel.delta",
+                "wheel.modifiers",
+                "host.update_model(&collection_zoom_model",
+                "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+                "host.notify(acx);",
+            ],
+            forbidden=[
+                "pub(super) struct ProofCollectionBrowserScopeInputModels",
+                "pub(super) struct ProofCollectionBrowserScopeInputState",
+                "install_collection_keyboard_handler(",
+                "cx.pointer_region_on_pointer_down(",
+                "cx.pointer_region_on_pointer_move(",
+                "cx.pointer_region_on_pointer_up(",
+                "cx.pointer_region_on_pointer_cancel(",
+                "proof_collection_box_select_selection(",
+                "context_menu_anchor_model_for_up",
+                "ProofCollectionBoxSelectSession",
             ],
         ),
         SourceCheck(
@@ -2058,7 +2094,7 @@ def main() -> None:
                 "handle: Some(scroll)",
                 "proof_collection_zoom_request(",
                 "collection_layout.columns",
-                "collection_scroll_handle_for_wheel.set_offset(update.next_scroll_offset);",
+                "collection_scroll_handle.set_offset(update.next_scroll_offset);",
             ],
             forbidden=[
                 "fret_ui_kit::imui::collection_zoom",
