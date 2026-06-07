@@ -35604,6 +35604,40 @@ Fret Examples Collection Asset Fixture Owner Split Evidence - 2026-06-07:
   `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
 - Passed: `git diff --check` with only Git CRLF normalization warnings for touched files.
 
+Fret Examples Collection Import Target Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so the collection
+  proof import target button, drop target, drop-status model update, and drop-status readout now
+  live in the demo-local `collection/import_target.rs` child owner without changing the import
+  target button label, import target test ID
+  `imui-editor-proof.authoring.imui.collection.import-target`, drop-status readout test ID
+  `imui-editor-proof.authoring.imui.collection.drop-status-readout`, delivered/preview/active status
+  text, drag payload type, drop-status formatter, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `collection.rs` declares `mod import_target;` and delegates through
+  `render_collection_import_target(ui)`. `collection/import_target.rs` owns
+  `render_collection_import_target(...)`, `authoring_parity_collection_drop_status_model(...)`
+  access, `ui.drop_target::<ProofCollectionDragPayload>(...)`, delivered/preview status
+  projection through `proof_collection_drop_status(...)`, the import target test ID, and the
+  drop-status readout test ID. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` freeze the
+  root/import-target-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`
+  on rerun after an initial 184s build timeout; 1 test passed. Existing dead-code warnings remained
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Chrome/Readout Owner Split Evidence - 2026-06-07:
 
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection

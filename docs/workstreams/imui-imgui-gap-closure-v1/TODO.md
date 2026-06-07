@@ -8443,3 +8443,12 @@ opening the slice.
       `proof_collection_section_label(...)`, `proof_compact_readout_element(...)` mounting, and
       `proof_section_chrome_label(...)` mounting. The collection source gate, workstream source
       gate, manifest, and surface tests now include the chrome owner.
+- [x] Split collection proof import target/drop-status UI out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/import_target.rs` child owner without changing the import target button label,
+      import target test ID, drop-status readout test ID, delivered/preview/active status text,
+      drag payload type, drop-status formatter, or the app-owned no-helper-widening boundary.
+      Result: `collection.rs` keeps render assembly and delegates the import target through
+      `render_collection_import_target(ui)`, while `collection/import_target.rs` owns the import
+      target button/drop-target/status readout workflow. The collection source gate, workstream
+      source gate, manifest, and surface tests now include the import-target owner.

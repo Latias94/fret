@@ -77,6 +77,9 @@ def main() -> None:
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
+    collection_import_target = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/import_target.rs"
+    )
     collection_keyboard = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs"
     )
@@ -112,6 +115,7 @@ def main() -> None:
         collection_context_menu,
         collection_drag_drop,
         collection_geometry,
+        collection_import_target,
         collection_keyboard,
         collection_models,
         collection_readouts,
@@ -183,12 +187,15 @@ def main() -> None:
                 "mod context_menu;",
                 "mod drag_drop;",
                 "mod keyboard;",
+                "mod import_target;",
                 "mod models;",
                 "mod rename;",
                 "mod selection;",
                 "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
                 "pub(super) use chrome::proof_collection_readout_text;",
                 "use chrome::proof_collection_section_label;",
+                "use import_target::render_collection_import_target;",
+                "render_collection_import_target(ui);",
                 "#[cfg(test)]",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
             ],
@@ -226,6 +233,49 @@ def main() -> None:
                 "render_collection_context_menu",
                 "ui.button_with_options(",
                 "TextField::new(",
+            ],
+        ),
+        SourceCheck(
+            "collection import target delegation",
+            collection,
+            required=[
+                "mod import_target;",
+                "use import_target::render_collection_import_target;",
+                "render_collection_import_target(ui);",
+            ],
+            forbidden=[
+                "ProofCollectionDragPayload",
+                "proof_collection_drop_status(",
+                "authoring_parity_collection_drop_status_model",
+                "ui.drop_target::<",
+                '"imui-editor-proof.authoring.imui.collection.import-target"',
+                '"imui-editor-proof.authoring.imui.collection.drop-status-readout"',
+            ],
+        ),
+        SourceCheck(
+            "collection import target owner",
+            collection_import_target,
+            required=[
+                "pub(super) fn render_collection_import_target(",
+                "authoring_parity_collection_drop_status_model(ui.cx_mut())",
+                "ui.button_with_options(",
+                "ui.drop_target::<ProofCollectionDragPayload>(import_trigger)",
+                'proof_collection_drop_status("Delivered", &payload)',
+                'proof_collection_drop_status("Preview", &payload)',
+                '"Compatible collection drag active"',
+                '"imui-editor-proof.authoring.imui.collection.import-target"',
+                '"imui-editor-proof.authoring.imui.collection.drop-status-readout"',
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "render_collection_asset_grid",
+                "render_collection_context_menu",
+                "drag_source_with_options",
+                "TextField::new(",
+                "PointerRegionProps",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(

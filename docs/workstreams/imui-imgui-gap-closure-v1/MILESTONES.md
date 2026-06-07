@@ -8078,3 +8078,13 @@ IDs, sibling child-owner imports through `collection::proof_collection_readout_t
 crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
 source gate, workstream source gate, manifest, and surface tests now freeze the chrome owner
 boundary.
+
+2026-06-07 collection proof import target/drop-status owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+delegates the import target through `render_collection_import_target(ui)`. The demo-local
+`collection/import_target.rs` owns the import target button/drop-target/status readout workflow:
+the `Import selected set to bundle` button, import target test ID, delivered/preview/active status
+projection, drop-status model update, and drop-status readout test ID. Drag payload construction,
+drop-status formatting, public crate APIs, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the import-target owner boundary.

@@ -14,6 +14,7 @@ mod command_buttons;
 mod context_menu;
 mod drag_drop;
 mod geometry;
+mod import_target;
 mod keyboard;
 mod models;
 mod readouts;
@@ -33,18 +34,17 @@ use command_buttons::{
     render_collection_command_buttons,
 };
 use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
-use drag_drop::{ProofCollectionDragPayload, proof_collection_drop_status};
 use geometry::{
     PROOF_COLLECTION_GRID_FALLBACK_COLUMNS, PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX,
     proof_collection_layout_metrics, proof_collection_zoom_line,
 };
+use import_target::render_collection_import_target;
 use models::{
     authoring_parity_collection_active_focus_target_model,
     authoring_parity_collection_assets_model, authoring_parity_collection_box_select_model,
     authoring_parity_collection_command_status_model,
     authoring_parity_collection_context_menu_anchor_model,
-    authoring_parity_collection_drop_status_model, authoring_parity_collection_keyboard_model,
-    authoring_parity_collection_rename_draft_model,
+    authoring_parity_collection_keyboard_model, authoring_parity_collection_rename_draft_model,
     authoring_parity_collection_rename_focus_pending_model,
     authoring_parity_collection_rename_session_model,
     authoring_parity_collection_rename_status_model,
@@ -95,7 +95,6 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     let collection_command_status_model =
         authoring_parity_collection_command_status_model(ui.cx_mut());
     let collection_scroll_handle = authoring_parity_collection_scroll_handle(ui.cx_mut());
-    let collection_drop_status_model = authoring_parity_collection_drop_status_model(ui.cx_mut());
     let stored_collection_assets = ui
         .cx_mut()
         .data()
@@ -328,44 +327,5 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
             });
     }
 
-    let import_trigger = ui.button_with_options(
-        "Import selected set to bundle",
-        kit::ButtonOptions {
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.import-target",
-            )),
-            ..Default::default()
-        },
-    );
-    let import_drop = ui.drop_target::<ProofCollectionDragPayload>(import_trigger);
-    if let Some(payload) = import_drop.delivered_payload() {
-        let next_status = proof_collection_drop_status("Delivered", &payload);
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_drop_status_model, |status| {
-                status.clear();
-                status.push_str(&next_status);
-            });
-    }
-
-    let persisted_collection_status = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_drop_status_model, |value| value);
-    let visible_collection_status = if let Some(payload) = import_drop.delivered_payload() {
-        proof_collection_drop_status("Delivered", &payload)
-    } else if let Some(payload) = import_drop.preview_payload() {
-        proof_collection_drop_status("Preview", &payload)
-    } else if import_drop.active() {
-        "Compatible collection drag active".to_string()
-    } else {
-        persisted_collection_status
-    };
-    proof_collection_readout_text(
-        ui,
-        visible_collection_status,
-        "imui-editor-proof.authoring.imui.collection.drop-status-readout",
-    );
+    render_collection_import_target(ui);
 }
