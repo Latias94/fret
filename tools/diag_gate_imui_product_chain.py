@@ -140,6 +140,9 @@ DEVTOOLS_GUI_HEADER_STATE_SOURCE = "apps/fret-devtools/src/native/header_state.r
 DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE = (
     "apps/fret-devtools/src/native/diagnostics_tree_panel.rs"
 )
+DEVTOOLS_GUI_SEMANTICS_DETAIL_PANEL_SOURCE = (
+    "apps/fret-devtools/src/native/semantics_detail_panel.rs"
+)
 DEVTOOLS_GUI_INSPECT_PANEL_SOURCE = "apps/fret-devtools/src/native/inspect_panel.rs"
 DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE = "apps/fret-devtools/src/native/gate_profile_state.rs"
 DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE = "apps/fret-devtools/src/native/workflow_panel_state.rs"
@@ -537,6 +540,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     )
     header_state_path = repo_root / DEVTOOLS_GUI_HEADER_STATE_SOURCE
     diagnostics_tree_panel_path = repo_root / DEVTOOLS_GUI_DIAGNOSTICS_TREE_PANEL_SOURCE
+    semantics_detail_panel_path = repo_root / DEVTOOLS_GUI_SEMANTICS_DETAIL_PANEL_SOURCE
     inspect_panel_path = repo_root / DEVTOOLS_GUI_INSPECT_PANEL_SOURCE
     gate_profile_state_path = repo_root / DEVTOOLS_GUI_GATE_PROFILE_STATE_SOURCE
     workflow_panel_state_path = repo_root / DEVTOOLS_GUI_WORKFLOW_PANEL_STATE_SOURCE
@@ -574,6 +578,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         diagnostics_tree_panel_source = diagnostics_tree_panel_path.read_text(
             encoding="utf-8"
         )
+        semantics_detail_panel_source = semantics_detail_panel_path.read_text(
+            encoding="utf-8"
+        )
         inspect_panel_source = inspect_panel_path.read_text(encoding="utf-8")
         gate_profile_state_source = gate_profile_state_path.read_text(encoding="utf-8")
         workflow_panel_state_source = workflow_panel_state_path.read_text(
@@ -609,6 +616,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             guide_recent_evidence_panel_source,
             header_state_source,
             diagnostics_tree_panel_source,
+            semantics_detail_panel_source,
             inspect_panel_source,
             gate_profile_state_source,
             workflow_panel_state_source,
@@ -685,6 +693,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "#[path = \"native/diagnostics_tree_panel.rs\"]",
         "mod diagnostics_tree_panel;",
         "use diagnostics_tree_panel::{element_tree_panel, layout_tree_panel, semantics_panel};",
+        "#[path = \"native/semantics_detail_panel.rs\"]",
+        "mod semantics_detail_panel;",
+        "use semantics_detail_panel::sem_node_panel;",
         "#[path = \"native/inspect_panel.rs\"]",
         "mod inspect_panel;",
         'const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated"',
@@ -792,6 +803,9 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "Live Inspect Overlay Hooks",
         "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
         "Raw Inspect Payloads",
+        "Live semantics JSON",
+        "hit_test.explain status={}",
+        "children: <none>",
         "VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16)",
         "options.items_revision = rows_key",
         "let mut stack = Vec::with_capacity(index.roots.len().max(1));",
