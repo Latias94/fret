@@ -36127,6 +36127,52 @@ Fret Examples Collection Context Menu Chrome Owner Split Evidence - 2026-06-08:
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Inline-Rename Focus Owner Split Evidence - 2026-06-08:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` was split so
+  inline-rename focus handoff runtime now lives in the demo-local `collection/rename/focus.rs`
+  child owner without changing focus handoff, timer arming, focus restore, existing
+  `collection::rename::...` imports, public crate APIs, or the app-owned no-helper-widening
+  boundary.
+- Evidence anchors: `collection/rename.rs` declares `mod focus;` and re-exports
+  `proof_collection_inline_rename_focus_state(...)`,
+  `proof_collection_sync_inline_rename_focus(...)`, and
+  `proof_collection_restore_focus_after_inline_rename(...)` while retaining
+  `ProofCollectionRenameSession`, `ProofCollectionRenameCommit`, shortcut matching,
+  begin-inline-rename app model updates, commit policy, and rename unit tests.
+  `collection/rename/focus.rs` owns `ProofCollectionInlineRenameFocusState`, timer-token storage,
+  `cx.timer_add_on_timer_for(...)`, `host.request_focus(input_id)`, and post-rename focus restore.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the rename focus
+  owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Not counted as evidence: initial parallel `cargo nextest run -p fret-examples
+  proof_collection_rename --no-fail-fast` and collection surface nextest commands timed out while
+  leaving a Cargo/Rustc build chain running. The build chain ended naturally before sequential
+  reruns.
+- Passed: `cargo nextest run -p fret-examples proof_collection_rename --no-fail-fast`; 1/1
+  shortcut test passed.
+- Passed: `cargo nextest run -p fret-examples proof_collection_begin_rename --no-fail-fast`; 2/2
+  begin-session tests passed after brief Cargo lock waiting.
+- Passed: `cargo nextest run -p fret-examples proof_collection_commit_rename --no-fail-fast`; 2/2
+  commit tests passed after brief Cargo lock waiting.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Select-All Policy Owner Split Evidence - 2026-06-08:
 
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` was split so

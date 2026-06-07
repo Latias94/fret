@@ -8272,3 +8272,12 @@ duplicate status, and delete status formatting through the demo-local
 all status text, and the app-owned no-helper-widening boundary remain unchanged, while the
 collection source gate, workstream source gate, manifest, and surface tests now freeze the readout
 status owner boundary.
+
+2026-06-08 collection inline-rename focus owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps rename
+session/commit state plus focus helper re-exports while routing inline-rename focus state,
+timer-driven focus sync, and post-rename focus restore through the demo-local
+`collection/rename/focus.rs` child owner. Existing `collection::rename::...` imports, public crate
+APIs, focus handoff behavior, and the app-owned no-helper-widening boundary remain unchanged, while
+the collection source gate, workstream source gate, manifest, and surface tests now freeze the
+rename focus owner boundary.

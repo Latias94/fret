@@ -56,6 +56,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/rename/focus.rs"),
     );
 
     for needle in [

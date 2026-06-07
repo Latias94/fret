@@ -46,6 +46,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let readout_status_source =
         include_str!("../src/imui_editor_proof_demo/collection/readouts/status.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
+    let rename_focus_source =
+        include_str!("../src/imui_editor_proof_demo/collection/rename/focus.rs");
     let render_states_source =
         include_str!("../src/imui_editor_proof_demo/collection/render_states.rs");
     let runtime_state_source =
@@ -958,14 +960,69 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "mod focus;",
+        "pub(super) use focus::{",
+        "proof_collection_inline_rename_focus_state",
+        "proof_collection_restore_focus_after_inline_rename",
+        "proof_collection_sync_inline_rename_focus",
         "pub(super) struct ProofCollectionRenameSession",
+        "pub(super) struct ProofCollectionRenameCommit",
         "pub(super) fn proof_collection_begin_rename_session(",
+        "pub(super) fn proof_collection_begin_inline_rename_in_app(",
         "pub(super) fn proof_collection_commit_rename(",
-        "pub(super) fn proof_collection_sync_inline_rename_focus<",
+        "proof_collection_rename_ready_status(",
+        "fn proof_collection_begin_rename_session_prefers_active_visible_asset()",
+        "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
     ] {
         assert!(
             rename_source.contains(needle),
-            "the demo-local collection rename owner should keep inline rename workflow state explicit; missing `{needle}`"
+            "the demo-local collection rename hub should keep pure rename workflow state and focus re-exports explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "struct ProofCollectionInlineRenameFocusState",
+        "fn proof_collection_inline_rename_focus_state<",
+        "fn proof_collection_sync_inline_rename_focus<",
+        "fn proof_collection_restore_focus_after_inline_rename(",
+        "timer_add_on_timer_for(",
+        "host.request_focus(input_id);",
+    ] {
+        assert!(
+            !rename_source.contains(needle),
+            "the demo-local collection rename hub should route focus runtime through rename/focus.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) struct ProofCollectionInlineRenameFocusState",
+        "timer: Option<TimerToken>",
+        "pub(in super::super) fn proof_collection_inline_rename_focus_state<",
+        "pub(in super::super) fn proof_collection_sync_inline_rename_focus<",
+        "pub(in super::super) fn proof_collection_restore_focus_after_inline_rename(",
+        "cx.timer_add_on_timer_for(",
+        "host.request_focus(input_id);",
+        "host.request_redraw(action_cx.window);",
+        "Duration::ZERO",
+    ] {
+        assert!(
+            rename_focus_source.contains(needle),
+            "the demo-local collection rename focus owner should keep focus handoff runtime explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct ProofCollectionRenameSession",
+        "pub(super) struct ProofCollectionRenameCommit",
+        "proof_collection_begin_rename_session(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_commit_rename(",
+        "proof_collection_rename_ready_status(",
+        "ImUiMultiSelectState",
+    ] {
+        assert!(
+            !rename_focus_source.contains(needle),
+            "the demo-local collection rename focus owner should not take rename state/commit policy; unexpected `{needle}`"
         );
     }
 

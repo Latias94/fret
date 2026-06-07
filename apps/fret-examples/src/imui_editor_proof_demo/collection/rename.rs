@@ -1,16 +1,20 @@
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::sync::Arc;
 
 use fret::imui::kit::ImUiMultiSelectState;
 use fret_core::{KeyCode, Modifiers};
-use fret_runtime::{Model, TimerToken};
-use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
+use fret_runtime::Model;
 
 use super::super::KernelApp;
 use super::ProofCollectionAsset;
 use super::readouts::proof_collection_rename_ready_status;
 use super::selection::{ProofCollectionKeyboardState, proof_collection_active_id};
+
+mod focus;
+
+pub(super) use focus::{
+    proof_collection_inline_rename_focus_state, proof_collection_restore_focus_after_inline_rename,
+    proof_collection_sync_inline_rename_focus,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct ProofCollectionRenameSession {
@@ -24,11 +28,6 @@ pub(super) struct ProofCollectionRenameCommit {
     pub(super) previous_label: Arc<str>,
     pub(super) next_label: Arc<str>,
     pub(super) renamed_assets: Vec<ProofCollectionAsset>,
-}
-
-#[derive(Debug, Default)]
-pub(super) struct ProofCollectionInlineRenameFocusState {
-    timer: Option<TimerToken>,
 }
 
 pub(super) fn proof_collection_rename_shortcut_matches(key: KeyCode, modifiers: Modifiers) -> bool {
@@ -111,93 +110,6 @@ pub(super) fn proof_collection_commit_rename(
         next_label,
         renamed_assets,
     })
-}
-
-#[track_caller]
-pub(super) fn proof_collection_inline_rename_focus_state<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Arc<Mutex<ProofCollectionInlineRenameFocusState>> {
-    cx.slot_state(
-        || Arc::new(Mutex::new(ProofCollectionInlineRenameFocusState::default())),
-        |state| state.clone(),
-    )
-}
-
-pub(super) fn proof_collection_sync_inline_rename_focus<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    input_id: GlobalElementId,
-    pending_focus: bool,
-    pending_focus_model: &Model<bool>,
-    focus_state: &Arc<Mutex<ProofCollectionInlineRenameFocusState>>,
-) {
-    let (cancel_token, arm_token) = {
-        let mut state = focus_state.lock().unwrap_or_else(|err| err.into_inner());
-        match (pending_focus, state.timer) {
-            (true, None) => {
-                let token = cx.app.next_timer_token();
-                state.timer = Some(token);
-                (None, Some(token))
-            }
-            (false, Some(token)) => {
-                state.timer = None;
-                (Some(token), None)
-            }
-            _ => (None, None),
-        }
-    };
-
-    if let Some(token) = cancel_token {
-        cx.cancel_timer(token);
-    }
-    if let Some(token) = arm_token {
-        cx.set_timer_for(input_id, token, Duration::ZERO);
-    }
-
-    let focus_state_for_timer = focus_state.clone();
-    let pending_focus_model_for_timer = pending_focus_model.clone();
-    cx.timer_add_on_timer_for(
-        input_id,
-        Arc::new(move |host, action_cx, token| {
-            {
-                let mut state = focus_state_for_timer
-                    .lock()
-                    .unwrap_or_else(|err| err.into_inner());
-                if state.timer != Some(token) {
-                    return false;
-                }
-                state.timer = None;
-            }
-
-            let pending = host
-                .update_model(&pending_focus_model_for_timer, |value| {
-                    std::mem::take(value)
-                })
-                .unwrap_or(false);
-            if !pending {
-                return false;
-            }
-
-            host.request_focus(input_id);
-            host.request_redraw(action_cx.window);
-            false
-        }),
-    );
-}
-
-pub(super) fn proof_collection_restore_focus_after_inline_rename(
-    host: &mut dyn UiFocusActionHost,
-    action_cx: fret_ui::action::ActionCx,
-    focus_target_model: &Model<Option<GlobalElementId>>,
-) {
-    let target = host
-        .models_mut()
-        .read(focus_target_model, |state| *state)
-        .ok()
-        .flatten();
-    if let Some(target) = target {
-        host.request_focus(target);
-        host.request_redraw(action_cx.window);
-    }
 }
 
 #[cfg(test)]

@@ -8646,3 +8646,11 @@ opening the slice.
       `readouts/status.rs` owns command/rename/select-all/duplicate/delete status strings. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       readout status child owner.
+- [x] Split collection inline-rename focus runtime out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` into the demo-local
+      `collection/rename/focus.rs` child owner without changing focus handoff, timer arming,
+      focus restore, existing `collection::rename::...` imports, public crate APIs, or the
+      app-owned no-helper-widening boundary. Result: `rename.rs` keeps rename session/commit state
+      plus focus helper re-exports while `rename/focus.rs` owns inline rename focus state,
+      timer-driven focus sync, and post-rename focus restore. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the rename focus child owner.

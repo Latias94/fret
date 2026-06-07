@@ -134,6 +134,9 @@ def main() -> None:
     collection_rename = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs"
     )
+    collection_rename_focus = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/focus.rs"
+    )
     collection_selection = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
     )
@@ -188,6 +191,7 @@ def main() -> None:
         collection_render_states,
         collection_status_readouts,
         collection_rename,
+        collection_rename_focus,
         collection_selection,
         collection_selection_context_menu,
         collection_selection_keyboard,
@@ -1420,25 +1424,64 @@ def main() -> None:
             ],
         ),
         SourceCheck(
-            "collection inline rename owner",
+            "collection inline rename hub",
             collection_rename,
             required=[
+                "mod focus;",
+                "pub(super) use focus::{",
+                "proof_collection_inline_rename_focus_state",
+                "proof_collection_restore_focus_after_inline_rename",
+                "proof_collection_sync_inline_rename_focus",
                 "pub(super) struct ProofCollectionRenameSession {",
                 "pub(super) struct ProofCollectionRenameCommit {",
-                "struct ProofCollectionInlineRenameFocusState {",
                 "pub(super) fn proof_collection_rename_shortcut_matches(",
                 "pub(super) fn proof_collection_begin_rename_session(",
                 "pub(super) fn proof_collection_begin_inline_rename_in_app(",
                 "pub(super) fn proof_collection_commit_rename(",
-                "pub(super) fn proof_collection_inline_rename_focus_state<",
-                "pub(super) fn proof_collection_sync_inline_rename_focus<",
-                "pub(super) fn proof_collection_restore_focus_after_inline_rename(",
                 "proof_collection_rename_ready_status(",
-                "host.request_focus(input_id);",
                 "fn proof_collection_begin_rename_session_prefers_active_visible_asset()",
                 "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
             ],
             forbidden=[
+                "struct ProofCollectionInlineRenameFocusState",
+                "fn proof_collection_inline_rename_focus_state<",
+                "fn proof_collection_sync_inline_rename_focus<",
+                "fn proof_collection_restore_focus_after_inline_rename(",
+                "timer_add_on_timer_for(",
+                "host.request_focus(input_id);",
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection inline rename focus owner",
+            collection_rename_focus,
+            required=[
+                "pub(in super::super) struct ProofCollectionInlineRenameFocusState",
+                "timer: Option<TimerToken>",
+                "pub(in super::super) fn proof_collection_inline_rename_focus_state<",
+                "pub(in super::super) fn proof_collection_sync_inline_rename_focus<",
+                "pub(in super::super) fn proof_collection_restore_focus_after_inline_rename(",
+                "cx.timer_add_on_timer_for(",
+                "host.request_focus(input_id);",
+                "host.request_redraw(action_cx.window);",
+                "Duration::ZERO",
+            ],
+            forbidden=[
+                "pub(super) struct ProofCollectionRenameSession",
+                "pub(super) struct ProofCollectionRenameCommit",
+                "proof_collection_begin_rename_session(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "proof_collection_commit_rename(",
+                "proof_collection_rename_ready_status(",
+                "ImUiMultiSelectState",
                 "render_collection_first_asset_browser_proof",
                 "TextField::new(",
                 "TextFieldOptions {",

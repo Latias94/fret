@@ -1687,6 +1687,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/focus.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts/status.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/runtime_state.rs",
