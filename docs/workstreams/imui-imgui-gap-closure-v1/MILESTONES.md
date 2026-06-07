@@ -8313,3 +8313,16 @@ request, context-menu anchor model writes, pointer-up box-select release orderin
 app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the browser input context-menu
 runtime owner boundary.
+
+2026-06-08 collection browser input box-select runtime owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` now keeps
+pointer props, keyboard handler installation, Primary+Wheel zoom installation, context-menu anchor
+priority, and child runtime installation while routing left-button background box-select pointer
+down/move/up/cancel session runtime through the demo-local
+`collection/browser_scope/input_runtime/box_select.rs` child owner. Left-button background arming,
+pressable-origin suppression after focus request, baseline selection capture, append-mode
+semantics, drag-threshold handling, selection/active-id updates, click-clear behavior, pointer
+capture/release, pointer cancel, background right-click context-menu priority on pointer-up, and
+the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the browser input box-select runtime
+owner boundary.

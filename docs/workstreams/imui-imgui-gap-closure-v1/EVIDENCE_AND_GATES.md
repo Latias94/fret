@@ -36173,6 +36173,52 @@ Fret Examples Collection Inline-Rename Focus Owner Split Evidence - 2026-06-08:
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Browser Input Box-Select Runtime Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` was
+  split so left-button background box-select pointer runtime now lives in the demo-local
+  `collection/browser_scope/input_runtime/box_select.rs` child owner without changing left-button
+  background arming, pressable-origin suppression after focus request, baseline selection capture,
+  append-mode semantics, drag-threshold handling, selection/active-id updates, click-clear
+  behavior, pointer capture/release, pointer cancel, background right-click context-menu priority
+  on pointer-up, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `browser_scope/input_runtime.rs` declares `mod box_select;`, imports
+  `install_collection_browser_scope_box_select_runtime(...)`, keeps pointer props, keyboard handler
+  installation, Primary+Wheel zoom installation, context-menu anchor priority, and passes the
+  right-click context-menu pre-handler into the box-select child runtime. `browser_scope/input_runtime/box_select.rs`
+  owns `ProofCollectionBrowserScopeBoxSelectRuntimeModels`,
+  `ProofCollectionBrowserScopeBoxSelectRuntimeState`, pointer down/move/up/cancel registrations,
+  left-button/pressable filtering, baseline selection capture, append-mode session creation,
+  drag-threshold updates, selection publication, active-id updates, clear-on-click, pointer
+  capture/release, cancel clearing, and focused unit tests for down/move/up/cancel cases.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the browser input
+  box-select runtime owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `cargo nextest run -p fret-examples box_select --no-fail-fast`; 9/9 tests passed,
+  covering the new browser input box-select runtime tests plus the existing box-select selection
+  tests. The command waited for Cargo package-cache locks while another nextest command compiled,
+  then completed successfully. Existing dead-code warnings remained in `fret-chart` and
+  `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. The command waited for Cargo package-cache/build-directory locks while the
+  focused nextest command compiled, then completed successfully. Existing dead-code warnings
+  remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Browser Input Context-Menu Runtime Owner Split Evidence - 2026-06-08:
 
 - Claim:

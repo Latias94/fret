@@ -12,6 +12,9 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs");
     let browser_input_runtime_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
+    let browser_input_box_select_runtime_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs"
+    );
     let browser_input_context_menu_runtime_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
     );
@@ -36,6 +39,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
+        "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs"
+        ),
         "\n",
         include_str!(
             "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
@@ -304,8 +311,11 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         );
     }
     for needle in [
+        "mod box_select;",
         "mod context_menu;",
         "mod zoom;",
+        "use box_select::{",
+        "install_collection_browser_scope_box_select_runtime,",
         "use context_menu::publish_collection_browser_scope_context_menu_anchor;",
         "use zoom::install_collection_browser_scope_zoom_runtime;",
         "pub(super) struct ProofCollectionBrowserScopeInputModels",
@@ -314,10 +324,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) fn install_collection_browser_scope_input_runtime(",
         "publish_collection_browser_scope_context_menu_anchor(",
         "install_collection_browser_scope_zoom_runtime(",
-        "cx.pointer_region_on_pointer_down(",
-        "cx.pointer_region_on_pointer_move(",
-        "cx.pointer_region_on_pointer_up(",
-        "cx.pointer_region_on_pointer_cancel(",
+        "install_collection_browser_scope_box_select_runtime(",
+        "ProofCollectionBrowserScopeBoxSelectRuntimeModels {",
+        "ProofCollectionBrowserScopeBoxSelectRuntimeState {",
+        "context_menu_anchor_model_for_up",
     ] {
         assert!(
             browser_input_runtime_source.contains(needle),
@@ -331,10 +341,67 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "up.down_hit_pressable_target.is_some()",
         "up.position_window.unwrap_or(up.position)",
         "*state = Some(position);",
+        "cx.pointer_region_on_pointer_down(",
+        "cx.pointer_region_on_pointer_move(",
+        "cx.pointer_region_on_pointer_up(",
+        "cx.pointer_region_on_pointer_cancel(",
+        "host.request_focus(acx.target);",
+        "ProofCollectionBoxSelectSession {",
+        "host.capture_pointer();",
+        "proof_collection_box_select_selection(",
+        "state.clear();",
+        "host.release_pointer_capture();",
     ] {
         assert!(
             !browser_input_runtime_source.contains(needle),
-            "collection browser input runtime owner should route wheel zoom through input_runtime/zoom.rs; unexpected `{needle}`"
+            "collection browser input runtime owner should route wheel/context/box-select child behavior through child runtime owners; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeModels",
+        "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState",
+        "pub(super) fn install_collection_browser_scope_box_select_runtime(",
+        "cx.pointer_region_on_pointer_down(",
+        "host.request_focus(acx.target);",
+        "proof_collection_browser_scope_box_select_can_start_from_down(",
+        "proof_collection_browser_scope_box_select_session_from_down(",
+        "host.capture_pointer();",
+        "cx.pointer_region_on_pointer_move(",
+        "proof_collection_browser_scope_box_select_session_for_move(",
+        "publish_collection_browser_scope_box_select_threshold_selection(",
+        "cx.pointer_region_on_pointer_up(",
+        "before_box_select_pointer_up(host, acx, &up)",
+        "proof_collection_browser_scope_box_select_session_for_up(",
+        "host.release_pointer_capture();",
+        "state.clear();",
+        "cx.pointer_region_on_pointer_cancel(",
+        "proof_collection_browser_scope_box_select_cancel_pointer(",
+        "proof_collection_box_select_selection(",
+        "state.active_id = next_selection.first_selected().cloned();",
+        "box_select_down_arms_left_background_session",
+        "box_select_move_marks_threshold_for_matching_pointer",
+        "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
+        "box_select_cancel_clears_matching_pointer_only",
+    ] {
+        assert!(
+            browser_input_box_select_runtime_source.contains(needle),
+            "collection browser input box-select runtime owner should keep pointer session runtime explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeInputModels",
+        "pub(super) struct ProofCollectionBrowserScopeInputState",
+        "install_collection_keyboard_handler(",
+        "install_collection_browser_scope_zoom_runtime(",
+        "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
+        "proof_collection_zoom_request(",
+        "up.down_hit_pressable_target.is_some()",
+        "up.position_window.unwrap_or(up.position)",
+        "*state = Some(position);",
+    ] {
+        assert!(
+            !browser_input_box_select_runtime_source.contains(needle),
+            "collection browser input box-select runtime owner should not take parent keyboard/zoom/context-menu responsibilities; unexpected `{needle}`"
         );
     }
     for needle in [
