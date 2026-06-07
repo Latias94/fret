@@ -8615,3 +8615,14 @@ opening the slice.
       `selection/context_menu.rs` owns `proof_collection_context_menu_selection(...)` and the
       context-menu selection unit tests. The collection source gate, workstream source gate,
       manifest, and surface tests now include the context-menu selection child owner.
+- [x] Split collection keyboard selection policy out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the demo-local
+      `collection/selection/keyboard.rs` child owner without changing arrow-key movement,
+      Shift-range extension, Escape clear behavior, primary-modifier shortcut bypass, keyboard
+      handler imports, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `selection.rs` keeps shared selection state, visible-order projection, selected-asset
+      projection, active-id fallback, and command/context-menu/keyboard/select-all re-exports while
+      `selection/keyboard.rs` owns `proof_collection_keyboard_selection(...)`,
+      keyboard next-index/range helpers, and the keyboard selection unit tests. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the keyboard
+      selection child owner.

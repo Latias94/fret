@@ -50,6 +50,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
     let selection_context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/context_menu.rs");
+    let selection_keyboard_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard.rs");
     let selection_select_all_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs");
     let selection_commands_source =
@@ -879,17 +881,34 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "mod commands;",
         "mod context_menu;",
+        "mod keyboard;",
         "mod select_all;",
         "pub(super) use commands::{",
         "pub(super) use context_menu::proof_collection_context_menu_selection;",
+        "pub(super) use keyboard::proof_collection_keyboard_selection;",
         "pub(super) use select_all::{",
         "pub(super) struct ProofCollectionKeyboardState",
         "pub(super) fn proof_collection_assets_in_visible_order(",
-        "pub(super) fn proof_collection_keyboard_selection(",
     ] {
         assert!(
             selection_source.contains(needle),
             "the demo-local collection selection owner should keep pure selection state and command delegation explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(in super::super) fn proof_collection_keyboard_selection(",
+        "fn proof_collection_keyboard_next_index(",
+        "fn proof_collection_keyboard_move_selection(",
+        "proof_collection_active_id(collection_keys, selection, keyboard)",
+        "ImUiMultiSelectState::from_ordered_selection(",
+        "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+        "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+        "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+        "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
+    ] {
+        assert!(
+            selection_keyboard_source.contains(needle),
+            "the demo-local collection keyboard selection owner should keep arrow/range/Escape policy explicit; missing `{needle}`"
         );
     }
     for needle in [
@@ -922,6 +941,13 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn proof_collection_context_menu_selection(",
         "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
         "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
+        "pub(super) fn proof_collection_keyboard_selection(",
+        "fn proof_collection_keyboard_next_index(",
+        "fn proof_collection_keyboard_move_selection(",
+        "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+        "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+        "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+        "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
         "pub(super) fn proof_collection_select_all_shortcut_matches(",
         "pub(super) fn proof_collection_select_all_selection(",
         "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
