@@ -8700,3 +8700,14 @@ opening the slice.
       active-id updates, clear-on-click, and focused unit tests. The collection source gate,
       workstream source gate, manifest, and surface tests now include the browser input box-select
       runtime child owner.
+- [x] Split collection geometry Primary+Wheel zoom math out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` into the demo-local
+      `collection/geometry/zoom.rs` child owner without changing tile extent clamping, hovered row
+      anchoring, Primary+Wheel modifier handling, readout text, existing `geometry::...` imports,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result: `geometry.rs` keeps
+      base layout metrics, drag/local rectangle helpers, grid fallback constants, and zoom
+      re-exports while `geometry/zoom.rs` owns `ProofCollectionZoomUpdate`,
+      `proof_collection_zoom_line(...)`, `proof_collection_zoom_request(...)`, hovered-index
+      resolution, modifier filtering, and the focused zoom request unit tests. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the geometry
+      zoom child owner.

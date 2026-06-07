@@ -8326,3 +8326,12 @@ capture/release, pointer cancel, background right-click context-menu priority on
 the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the browser input box-select runtime
 owner boundary.
+
+2026-06-08 collection geometry zoom owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` now keeps base layout
+metrics, drag/local rectangle helpers, grid fallback constants, and zoom re-exports while routing
+Primary+Wheel zoom math through the demo-local `collection/geometry/zoom.rs` child owner. Tile
+extent clamping, hovered row anchoring, Primary+Wheel modifier filtering, readout text, existing
+`geometry::...` imports, public crate APIs, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the geometry zoom owner boundary.
