@@ -23,13 +23,13 @@ use fret_ui_editor::composites::{
     PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
-    Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOutcome,
-    EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, NumericInput, NumericInputOptions, NumericValidateFn,
-    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
-    TextAssistFieldSurface, TextField, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
-    TextFieldOutcome, TransformEdit, TransformEditAxisOutcome, TransformEditOptions, Vec3Edit,
-    VecEditAxisOutcome, VecEditOptions,
+    AssetRefField, AssetRefFieldOptions, AssetRefFieldValue, Checkbox, ColorEdit, ColorEditOptions,
+    DragValue, DragValueOutcome, EditorTextSelectionBehavior, EnumSelect, EnumSelectItem,
+    EnumSelectOptions, FieldStatus, FieldStatusBadge, NumericInput, NumericInputOptions,
+    NumericValidateFn, NumericValueConstraints, OnAssetRefFieldAction, Slider, SliderOptions,
+    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
+    TextFieldBlurBehavior, TextFieldMode, TextFieldOptions, TextFieldOutcome, TransformEdit,
+    TransformEditAxisOutcome, TransformEditOptions, Vec3Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::theme::EditorThemePresetV1;
@@ -53,6 +53,8 @@ const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
 const ENV_EDITOR_PRESET: &str = "FRET_IMUI_EDITOR_PRESET";
 const ENV_PROOF_LAYOUT: &str = "FRET_IMUI_EDITOR_PROOF_LAYOUT";
+const EDITOR_DEMO_DEFAULT_ASSET: &str = "textures/default/basecolor.ktx2";
+const EDITOR_DEMO_CHOSEN_ASSET: &str = "textures/props/brushed-metal-albedo.ktx2";
 const EDITOR_HOST_BASE_COLOR: shadcn::themes::ShadcnBaseColor =
     shadcn::themes::ShadcnBaseColor::Slate;
 const EDITOR_HOST_DEFAULT_SCHEME: shadcn::themes::ShadcnColorScheme =
@@ -152,6 +154,44 @@ fn record_text_field_outcome(
         text.push_str(next);
     });
     host.request_redraw(action_cx.window);
+}
+
+fn editor_asset_ref_value(path: &str) -> Option<AssetRefFieldValue> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let label = trimmed
+        .rsplit(|c| c == '/' || c == '\\')
+        .next()
+        .filter(|label| !label.is_empty())
+        .unwrap_or(trimmed);
+    Some(
+        AssetRefFieldValue::new(label)
+            .path(trimmed)
+            .icon(fret_icons::ids::ui::FILE),
+    )
+}
+
+fn record_editor_asset_ref_action(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    _action_cx: fret_ui::action::ActionCx,
+    asset_slot_model: &Model<String>,
+    action_model: &Model<String>,
+    action_label: &'static str,
+    next_asset: Option<&'static str>,
+) {
+    if let Some(next_asset) = next_asset {
+        let _ = host.models_mut().update(asset_slot_model, |value| {
+            value.clear();
+            value.push_str(next_asset);
+        });
+    }
+    let _ = host.models_mut().update(action_model, |value| {
+        value.clear();
+        value.push_str(action_label);
+    });
 }
 
 fn render_editor_name_assist_surface(
@@ -327,6 +367,8 @@ where
     let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
     let editor_shading_model = editor_demo_shading_model(cx);
     let editor_base_color_model = editor_demo_base_color_model(cx);
+    let editor_asset_slot_model = editor_demo_asset_slot_model(cx);
+    let editor_asset_action_model = editor_demo_asset_action_model(cx);
     let editor_name_model = editor_demo_name_model(cx);
     let editor_buffered_name_model = editor_demo_buffered_name_model(cx);
     let editor_inline_rename_model = editor_demo_inline_rename_model(cx);
@@ -575,6 +617,11 @@ where
                                 let show_metallic = material_show_all || matches("metallic");
                                 let show_base_color =
                                     material_show_all || matches("base") || matches("color");
+                                let show_asset_ref = material_show_all
+                                    || matches("asset")
+                                    || matches("texture")
+                                    || matches("map")
+                                    || matches("base");
                                 let show_shading_model =
                                     material_show_all || matches("shading") || matches("model");
                                 let show_alpha_clip =
@@ -599,6 +646,7 @@ where
                                     || show_roughness
                                     || show_metallic
                                     || show_base_color
+                                    || show_asset_ref
                                     || show_shading_model
                                     || show_alpha_clip
                                     || show_cast_shadows
@@ -1359,6 +1407,115 @@ where
                                                                     ..Default::default()
                                                                 })
                                                                 .into_element(cx)
+                                                            },
+                                                        ));
+                                                    }
+
+                                                    if show_asset_ref {
+                                                        let assigned_asset = editor_string_model_readout(
+                                                            cx,
+                                                            &editor_asset_slot_model,
+                                                        );
+                                                        let asset_value =
+                                                            editor_asset_ref_value(&assigned_asset);
+                                                        let choose_slot_model =
+                                                            editor_asset_slot_model.clone();
+                                                        let choose_action_model =
+                                                            editor_asset_action_model.clone();
+                                                        let reveal_slot_model =
+                                                            editor_asset_slot_model.clone();
+                                                        let reveal_action_model =
+                                                            editor_asset_action_model.clone();
+                                                        let clear_slot_model =
+                                                            editor_asset_slot_model.clone();
+                                                        let clear_action_model =
+                                                            editor_asset_action_model.clone();
+
+                                                        let on_choose: OnAssetRefFieldAction =
+                                                            Arc::new(move |host, action_cx| {
+                                                                record_editor_asset_ref_action(
+                                                                    host,
+                                                                    action_cx,
+                                                                    &choose_slot_model,
+                                                                    &choose_action_model,
+                                                                    "Chose alternate base texture",
+                                                                    Some(EDITOR_DEMO_CHOSEN_ASSET),
+                                                                );
+                                                            });
+                                                        let on_reveal: OnAssetRefFieldAction =
+                                                            Arc::new(move |host, action_cx| {
+                                                                record_editor_asset_ref_action(
+                                                                    host,
+                                                                    action_cx,
+                                                                    &reveal_slot_model,
+                                                                    &reveal_action_model,
+                                                                    "Reveal requested",
+                                                                    None,
+                                                                );
+                                                            });
+                                                        let on_clear: OnAssetRefFieldAction =
+                                                            Arc::new(move |host, action_cx| {
+                                                                record_editor_asset_ref_action(
+                                                                    host,
+                                                                    action_cx,
+                                                                    &clear_slot_model,
+                                                                    &clear_action_model,
+                                                                    "Cleared base texture",
+                                                                    Some(""),
+                                                                );
+                                                            });
+
+                                                        rows.push(row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Base texture"),
+                                                            |cx| {
+                                                                AssetRefField::new(asset_value)
+                                                                    .options(AssetRefFieldOptions {
+                                                                        test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.material.base-texture",
+                                                                        )),
+                                                                        value_test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.material.base-texture.value",
+                                                                        )),
+                                                                        choose_test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.material.base-texture.choose",
+                                                                        )),
+                                                                        reveal_test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.material.base-texture.reveal",
+                                                                        )),
+                                                                        clear_test_id: Some(Arc::from(
+                                                                            "imui-editor-proof.editor.material.base-texture.clear",
+                                                                        )),
+                                                                        status: Some(FieldStatus::Dirty),
+                                                                        on_choose: Some(on_choose),
+                                                                        on_reveal: Some(on_reveal),
+                                                                        on_clear: Some(on_clear),
+                                                                        ..Default::default()
+                                                                    })
+                                                                    .into_element(cx)
+                                                            },
+                                                        ));
+
+                                                        let asset_action = editor_string_model_readout(
+                                                            cx,
+                                                            &editor_asset_action_model,
+                                                        );
+                                                        rows.push(row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Texture action"),
+                                                            move |cx| {
+                                                                let readout = if asset_action.trim().is_empty() {
+                                                                    "Idle".to_string()
+                                                                } else {
+                                                                    asset_action.clone()
+                                                                };
+                                                                proof_compact_readout(
+                                                                    cx,
+                                                                    readout,
+                                                                    Some(Arc::from(
+                                                                        "imui-editor-proof.editor.material.base-texture.action",
+                                                                    )),
+                                                                )
                                                             },
                                                         ));
                                                     }
@@ -3169,6 +3326,20 @@ fn editor_demo_base_color_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Mo
     })
 }
 
+fn editor_demo_asset_slot_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.asset_slot", |cx| {
+        cx.app
+            .models_mut()
+            .insert(EDITOR_DEMO_DEFAULT_ASSET.to_string())
+    })
+}
+
+fn editor_demo_asset_action_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.asset_action", |cx| {
+        cx.app.models_mut().insert(String::new())
+    })
+}
+
 fn editor_demo_position_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> (Model<f64>, Model<f64>, Model<f64>) {
@@ -3488,7 +3659,7 @@ fn authoring_parity_asset_slot_model<H: UiHost>(cx: &mut ElementContext<'_, H>) 
         |cx| {
             cx.app
                 .models_mut()
-                .insert("textures/default/basecolor.ktx2".to_string())
+                .insert(EDITOR_DEMO_DEFAULT_ASSET.to_string())
         },
     )
 }

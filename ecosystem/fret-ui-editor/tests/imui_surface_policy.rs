@@ -1,6 +1,7 @@
 #![cfg(feature = "imui")]
 
 const IMUI_RS: &str = include_str!("../src/imui.rs");
+const ASSET_REF_FIELD_RS: &str = include_str!("../src/controls/asset_ref_field.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_ELEMENT_RS: &str = include_str!("../src/controls/color_edit/element.rs");
 const COLOR_EDIT_ELEMENT_AFFORDANCE_RS: &str =
@@ -1245,6 +1246,41 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
 }
 
 #[test]
+fn asset_ref_field_stays_a_ui_only_editor_shell() {
+    for needle in [
+        "UI-only asset reference field for editor inspectors.",
+        "The control intentionally does not resolve, browse, or load assets.",
+        "pub struct AssetRefFieldValue",
+        "pub struct AssetRefFieldOptions",
+        "pub type OnAssetRefFieldAction",
+        "pub on_choose: Option<OnAssetRefFieldAction>",
+        "pub on_reveal: Option<OnAssetRefFieldAction>",
+        "pub on_clear: Option<OnAssetRefFieldAction>",
+        "editor_joined_input_frame_segments_with_overrides",
+        "FieldStatusBadge::new(status)",
+    ] {
+        assert!(
+            ASSET_REF_FIELD_RS.contains(needle),
+            "AssetRefField should keep the UI shell contract visible; missing `{needle}`"
+        );
+    }
+
+    for unexpected in [
+        "fret_ui_assets",
+        "fret-ui-assets",
+        "AssetCache",
+        "ResolvedAsset",
+        "QueryState",
+        "std::fs",
+    ] {
+        assert!(
+            !ASSET_REF_FIELD_RS.contains(unexpected),
+            "AssetRefField must not own asset systems or loading state; unexpected `{unexpected}`"
+        );
+    }
+}
+
+#[test]
 fn imui_module_stays_a_thin_into_element_adapter_layer() {
     let normalized = normalize_ws(IMUI_RS);
 
@@ -1261,6 +1297,7 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         "pub fn numeric_input<H, T>(ui: &mut impl UiWriter<H>, control: NumericInput<T>)",
         "pub fn slider<H, T>(ui: &mut impl UiWriter<H>, control: Slider<T>)",
         "pub fn enum_select<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: EnumSelect) {",
+        "pub fn asset_ref_field<H: UiHost + 'static>(",
         "pub fn editor_theme_preset_picker<H: UiHost + 'static>(",
         "pub fn mini_search_box<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: MiniSearchBox) {",
         "pub fn text_assist_field<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TextAssistField) {",
@@ -1309,7 +1346,7 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
             IMUI_RS,
             "add_editor_element(ui, move |cx| control.into_element(cx));",
         ),
-        17,
+        18,
         "imui.rs should keep each promoted control adapter as a one-hop `into_element` forwarder",
     );
 

@@ -1,5 +1,6 @@
 //! Editor controls (interactive widgets built from primitives).
 
+pub mod asset_ref_field;
 pub mod axis_drag_value;
 pub mod checkbox;
 pub mod color_edit;
@@ -20,6 +21,9 @@ pub use crate::primitives::{
     EditorTextCancelBehavior, EditorTextSelectionBehavior, NumericPresentation, NumericTextAffixes,
     NumericValueConstraints, affixed_number_format, affixed_number_parse, degrees_format,
     degrees_parse, fixed_decimals_format, plain_number_parse,
+};
+pub use asset_ref_field::{
+    AssetRefField, AssetRefFieldOptions, AssetRefFieldValue, OnAssetRefFieldAction,
 };
 pub use axis_drag_value::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, AxisDragValueResetAction,

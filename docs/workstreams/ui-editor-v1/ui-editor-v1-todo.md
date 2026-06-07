@@ -1,7 +1,7 @@
 # `fret-ui-editor` v1 — TODO Tracker
 
 Status: Active tracker (workstream note; not an ADR)  
-Last updated: 2026-02-16
+Last updated: 2026-06-07
 
 Related:
 
@@ -222,9 +222,12 @@ adding new runtime contracts unless evidence demands it.
   - Evidence: `ecosystem/fret-ui-editor/src/controls/transform_edit.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [~] `EnumSelect` (filterable select surface).
   - Evidence: `ecosystem/fret-ui-editor/src/controls/enum_select.rs`, `apps/fret-examples/src/imui_editor_proof_demo.rs`
-- [ ] `AssetRefField` (UI shell):
+- [~] `AssetRefField` (UI shell):
   - [ ] supports async loading states via optional query glue
-  - [ ] does not define an asset system; caller supplies data and callbacks
+  - [x] does not define an asset system; caller supplies data and callbacks
+    - Evidence: `ecosystem/fret-ui-editor/src/controls/asset_ref_field.rs`
+    - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs` (`imui-editor-proof.editor.material.base-texture`)
+    - Evidence: `apps/fret-examples/tests/imui_editor_asset_ref_field_surface.rs`
 - [x] `InspectorPanel` recipe (search + grid + toolbar slots).
   - Evidence: `ecosystem/fret-ui-editor/src/composites/inspector_panel.rs`
   - Evidence: `apps/fret-examples/src/imui_editor_proof_demo.rs`

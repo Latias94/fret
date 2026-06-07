@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-06-06",
+  "updated": "2026-06-07",
   "scope_kind": "execution",
   "lane_slug": "imui-docking",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
@@ -157,7 +157,7 @@
     },
     {
       "name": "imui component surface editor anchors",
-      "command": "rg -n \"pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)\" ecosystem/fret-ui-editor/src/imui.rs"
+      "command": "rg -n \"pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|asset_ref_field|property_grid|gradient_editor|inspector_panel)\" ecosystem/fret-ui-editor/src/imui.rs"
     },
     {
       "name": "imui component surface upstream anchors",
@@ -1272,6 +1272,7 @@
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs",
+    "ecosystem/fret-ui-editor/src/controls/asset_ref_field.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element/affordance.rs",
@@ -1467,6 +1468,7 @@
     "ecosystem/fret-ui-editor/src/controls/transform_edit/sections.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit/sync.rs",
     "ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs",
+    "ecosystem/fret-ui-editor/tests/asset_ref_field_api_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs",
@@ -1655,6 +1657,7 @@
     "apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_text_roles_surface.rs",
     "apps/fret-examples/tests/imui_editor_proof_workbench_shell_surface.rs",
+    "apps/fret-examples/tests/imui_editor_asset_ref_field_surface.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs",
