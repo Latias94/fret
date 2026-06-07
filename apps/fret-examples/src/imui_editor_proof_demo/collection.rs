@@ -1,4 +1,3 @@
-use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::prelude::*;
 
 use super::KernelApp;
@@ -19,6 +18,7 @@ mod models;
 mod order_toggle;
 mod readouts;
 mod rename;
+mod runtime_state;
 mod selection;
 mod status_readouts;
 
@@ -36,24 +36,9 @@ use command_buttons::{
 };
 use context_menu::{ProofCollectionContextMenuModels, render_collection_context_menu};
 use derived_state::proof_collection_derived_state;
-use geometry::{
-    PROOF_COLLECTION_GRID_FALLBACK_COLUMNS, PROOF_COLLECTION_TILE_EXTENT_DEFAULT_PX,
-    proof_collection_layout_metrics,
-};
 use import_target::render_collection_import_target;
-use models::{
-    authoring_parity_collection_active_focus_target_model,
-    authoring_parity_collection_assets_model, authoring_parity_collection_box_select_model,
-    authoring_parity_collection_command_status_model,
-    authoring_parity_collection_context_menu_anchor_model,
-    authoring_parity_collection_keyboard_model, authoring_parity_collection_rename_draft_model,
-    authoring_parity_collection_rename_focus_pending_model,
-    authoring_parity_collection_rename_session_model,
-    authoring_parity_collection_rename_status_model,
-    authoring_parity_collection_reverse_order_model, authoring_parity_collection_scroll_handle,
-    authoring_parity_collection_selection_model, authoring_parity_collection_zoom_model,
-};
 use order_toggle::render_collection_order_toggle;
+use runtime_state::proof_collection_runtime_state;
 use status_readouts::{ProofCollectionStatusReadoutState, render_collection_status_readouts};
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
@@ -69,113 +54,49 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
     );
 
-    let collection_selection_model = authoring_parity_collection_selection_model(ui.cx_mut());
-    let collection_assets_model = authoring_parity_collection_assets_model(ui.cx_mut());
-    let collection_reverse_order_model =
-        authoring_parity_collection_reverse_order_model(ui.cx_mut());
-    let collection_box_select_model = authoring_parity_collection_box_select_model(ui.cx_mut());
-    let collection_keyboard_model = authoring_parity_collection_keyboard_model(ui.cx_mut());
-    let collection_zoom_model = authoring_parity_collection_zoom_model(ui.cx_mut());
-    let collection_context_menu_anchor_model =
-        authoring_parity_collection_context_menu_anchor_model(ui.cx_mut());
-    let collection_rename_session_model =
-        authoring_parity_collection_rename_session_model(ui.cx_mut());
-    let collection_rename_draft_model = authoring_parity_collection_rename_draft_model(ui.cx_mut());
-    let collection_rename_focus_pending_model =
-        authoring_parity_collection_rename_focus_pending_model(ui.cx_mut());
-    let collection_active_focus_target_model =
-        authoring_parity_collection_active_focus_target_model(ui.cx_mut());
-    let collection_rename_status_model =
-        authoring_parity_collection_rename_status_model(ui.cx_mut());
-    let collection_command_status_model =
-        authoring_parity_collection_command_status_model(ui.cx_mut());
-    let collection_scroll_handle = authoring_parity_collection_scroll_handle(ui.cx_mut());
-    let stored_collection_assets = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_assets_model, |state| state.clone());
-    let collection_selection = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_selection_model, |state| state);
-    let collection_box_select = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_box_select_model, |state| state);
-    let collection_keyboard = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_keyboard_model, |state| state);
-    let collection_tile_extent = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_zoom_model, |state| state);
-    let collection_reverse_order = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_reverse_order_model, |value| value);
-    let collection_rename_status = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_rename_status_model, |state| state.clone());
-    let collection_command_status = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_command_status_model, |state| state.clone());
-    let collection_rename_session = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_rename_session_model, |state| state.clone());
-    let collection_rename_focus_pending = ui
-        .cx_mut()
-        .data()
-        .selector_model_paint(&collection_rename_focus_pending_model, |state| state);
-    let collection_layout = proof_collection_layout_metrics(
-        collection_scroll_handle.viewport_size().width,
-        collection_tile_extent,
-    );
+    let collection_runtime = proof_collection_runtime_state(ui);
 
     let collection_reverse_order = render_collection_order_toggle(
         ui,
-        &collection_reverse_order_model,
-        collection_reverse_order,
+        &collection_runtime.models.reverse_order,
+        collection_runtime.snapshot.reverse_order,
     );
 
     let collection_state = proof_collection_derived_state(
-        &stored_collection_assets,
+        &collection_runtime.snapshot.stored_assets,
         collection_reverse_order,
-        &collection_selection,
-        &collection_keyboard,
+        &collection_runtime.snapshot.selection,
+        &collection_runtime.snapshot.keyboard,
     );
 
     render_collection_status_readouts(
         ui,
         ProofCollectionStatusReadoutState {
             assets: &collection_state.assets,
-            selection: &collection_selection,
-            keyboard: &collection_keyboard,
-            layout: collection_layout,
-            rename_status: collection_rename_status.as_str(),
-            command_status: collection_command_status.as_str(),
+            selection: &collection_runtime.snapshot.selection,
+            keyboard: &collection_runtime.snapshot.keyboard,
+            layout: collection_runtime.snapshot.layout,
+            rename_status: collection_runtime.snapshot.rename_status.as_str(),
+            command_status: collection_runtime.snapshot.command_status.as_str(),
         },
     );
     render_collection_command_buttons(
         ui,
         ProofCollectionCommandButtonModels {
-            assets: collection_assets_model.clone(),
-            selection: collection_selection_model.clone(),
-            keyboard: collection_keyboard_model.clone(),
-            command_status: collection_command_status_model.clone(),
-            rename_session: collection_rename_session_model.clone(),
-            rename_draft: collection_rename_draft_model.clone(),
-            rename_focus_pending: collection_rename_focus_pending_model.clone(),
-            rename_status: collection_rename_status_model.clone(),
+            assets: collection_runtime.models.assets.clone(),
+            selection: collection_runtime.models.selection.clone(),
+            keyboard: collection_runtime.models.keyboard.clone(),
+            command_status: collection_runtime.models.command_status.clone(),
+            rename_session: collection_runtime.models.rename_session.clone(),
+            rename_draft: collection_runtime.models.rename_draft.clone(),
+            rename_focus_pending: collection_runtime.models.rename_focus_pending.clone(),
+            rename_status: collection_runtime.models.rename_status.clone(),
         },
         ProofCollectionCommandButtonState {
             visible_assets: &collection_state.assets,
-            stored_assets: &stored_collection_assets,
-            selection: &collection_selection,
-            keyboard: &collection_keyboard,
+            stored_assets: &collection_runtime.snapshot.stored_assets,
+            selection: &collection_runtime.snapshot.selection,
+            keyboard: &collection_runtime.snapshot.keyboard,
             reverse_order: collection_reverse_order,
             rename_ready_session: collection_state.rename_ready_session.as_ref(),
         },
@@ -184,50 +105,50 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     render_collection_browser_scope(
         ui,
         ProofCollectionBrowserScopeModels {
-            assets: collection_assets_model.clone(),
-            reverse_order: collection_reverse_order_model.clone(),
-            selection: collection_selection_model.clone(),
-            box_select: collection_box_select_model.clone(),
-            keyboard: collection_keyboard_model.clone(),
-            zoom: collection_zoom_model.clone(),
-            context_menu_anchor: collection_context_menu_anchor_model.clone(),
-            active_focus_target: collection_active_focus_target_model.clone(),
-            rename_session: collection_rename_session_model.clone(),
-            rename_draft: collection_rename_draft_model.clone(),
-            rename_focus_pending: collection_rename_focus_pending_model.clone(),
-            rename_status: collection_rename_status_model.clone(),
-            command_status: collection_command_status_model.clone(),
-            scroll: collection_scroll_handle.clone(),
+            assets: collection_runtime.models.assets.clone(),
+            reverse_order: collection_runtime.models.reverse_order.clone(),
+            selection: collection_runtime.models.selection.clone(),
+            box_select: collection_runtime.models.box_select.clone(),
+            keyboard: collection_runtime.models.keyboard.clone(),
+            zoom: collection_runtime.models.zoom.clone(),
+            context_menu_anchor: collection_runtime.models.context_menu_anchor.clone(),
+            active_focus_target: collection_runtime.models.active_focus_target.clone(),
+            rename_session: collection_runtime.models.rename_session.clone(),
+            rename_draft: collection_runtime.models.rename_draft.clone(),
+            rename_focus_pending: collection_runtime.models.rename_focus_pending.clone(),
+            rename_status: collection_runtime.models.rename_status.clone(),
+            command_status: collection_runtime.models.command_status.clone(),
+            scroll: collection_runtime.models.scroll.clone(),
         },
         ProofCollectionBrowserScopeState {
             assets: &collection_state.assets,
             keys: &collection_state.keys,
-            selection: &collection_selection,
-            box_select: &collection_box_select,
+            selection: &collection_runtime.snapshot.selection,
+            box_select: &collection_runtime.snapshot.box_select,
             active_id: collection_state.active_id.as_ref(),
-            rename_session: collection_rename_session.as_ref(),
-            rename_focus_pending: collection_rename_focus_pending,
-            layout: collection_layout,
+            rename_session: collection_runtime.snapshot.rename_session.as_ref(),
+            rename_focus_pending: collection_runtime.snapshot.rename_focus_pending,
+            layout: collection_runtime.snapshot.layout,
         },
     );
 
     render_collection_context_menu(
         ui,
         ProofCollectionContextMenuModels {
-            anchor: collection_context_menu_anchor_model.clone(),
-            selection: collection_selection_model.clone(),
-            keyboard: collection_keyboard_model.clone(),
-            assets: collection_assets_model.clone(),
-            reverse_order: collection_reverse_order_model.clone(),
-            command_status: collection_command_status_model.clone(),
-            rename_session: collection_rename_session_model.clone(),
-            rename_draft: collection_rename_draft_model.clone(),
-            rename_focus_pending: collection_rename_focus_pending_model.clone(),
-            rename_status: collection_rename_status_model.clone(),
+            anchor: collection_runtime.models.context_menu_anchor.clone(),
+            selection: collection_runtime.models.selection.clone(),
+            keyboard: collection_runtime.models.keyboard.clone(),
+            assets: collection_runtime.models.assets.clone(),
+            reverse_order: collection_runtime.models.reverse_order.clone(),
+            command_status: collection_runtime.models.command_status.clone(),
+            rename_session: collection_runtime.models.rename_session.clone(),
+            rename_draft: collection_runtime.models.rename_draft.clone(),
+            rename_focus_pending: collection_runtime.models.rename_focus_pending.clone(),
+            rename_status: collection_runtime.models.rename_status.clone(),
         },
     );
 
-    if let Some(session) = collection_rename_session.as_ref()
+    if let Some(session) = collection_runtime.snapshot.rename_session.as_ref()
         && !collection_state
             .assets
             .iter()
@@ -237,12 +158,14 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
             .cx_mut()
             .app
             .models_mut()
-            .update(&collection_rename_session_model, |state| *state = None);
+            .update(&collection_runtime.models.rename_session, |state| {
+                *state = None
+            });
         let _ = ui
             .cx_mut()
             .app
             .models_mut()
-            .update(&collection_rename_focus_pending_model, |state| {
+            .update(&collection_runtime.models.rename_focus_pending, |state| {
                 *state = false
             });
     }

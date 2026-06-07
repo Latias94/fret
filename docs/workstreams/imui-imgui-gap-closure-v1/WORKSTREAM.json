@@ -1681,6 +1681,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/runtime_state.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete.rs",

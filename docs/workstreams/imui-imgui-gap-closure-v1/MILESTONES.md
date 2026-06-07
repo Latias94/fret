@@ -8115,3 +8115,13 @@ delegates visible asset/key/active/rename-ready projection through
 fallback projection, and inline-rename ready-session derivation. Public crate APIs and the
 app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the derived-state owner boundary.
+
+2026-06-07 collection proof runtime state owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+delegates model handle gathering, selector snapshot reads, and layout projection through
+`proof_collection_runtime_state(...)`. The demo-local `collection/runtime_state.rs` owns
+`ProofCollectionRuntimeState`, `ProofCollectionRuntimeModels`, `ProofCollectionRuntimeSnapshot`,
+the `authoring_parity_collection_*` model lookups, `selector_model_paint(...)` reads, and
+`proof_collection_layout_metrics(...)` projection. Public crate APIs and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the runtime-state owner boundary.

@@ -8480,3 +8480,13 @@ opening the slice.
       owns `ProofCollectionDerivedState` plus the composed calls into the selection and rename
       owners. The collection source gate, workstream source gate, manifest, and surface tests now
       include the derived-state owner.
+- [x] Split collection proof runtime model/snapshot reads out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/runtime_state.rs` child owner without changing model keys, selector snapshot
+      timing, layout metrics projection, render call sites, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `collection.rs` keeps render assembly and delegates
+      model handle gathering, selector snapshots, and layout projection through
+      `proof_collection_runtime_state(...)`, while `collection/runtime_state.rs` owns
+      `ProofCollectionRuntimeState`, `ProofCollectionRuntimeModels`, and
+      `ProofCollectionRuntimeSnapshot`. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the runtime-state owner.
