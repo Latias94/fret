@@ -134,6 +134,9 @@ def main() -> None:
     collection_selection = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs"
     )
+    collection_selection_select_all = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs"
+    )
     collection_selection_commands = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs"
     )
@@ -173,6 +176,7 @@ def main() -> None:
         collection_status_readouts,
         collection_rename,
         collection_selection,
+        collection_selection_select_all,
         collection_selection_commands,
         collection_selection_command_delete,
         collection_selection_command_duplicate,
@@ -1349,13 +1353,13 @@ def main() -> None:
             collection_selection,
             required=[
                 "mod commands;",
+                "mod select_all;",
                 "pub(super) use commands::{",
+                "pub(super) use select_all::{",
                 "pub(super) struct ProofCollectionKeyboardState {",
                 "pub(super) fn proof_collection_assets_in_visible_order(",
                 "pub(super) fn proof_collection_selected_assets",
                 "pub(super) fn proof_collection_active_id(",
-                "pub(super) fn proof_collection_select_all_shortcut_matches(",
-                "pub(super) fn proof_collection_select_all_selection(",
                 "pub(super) fn proof_collection_context_menu_selection(",
                 "pub(super) fn proof_collection_keyboard_selection(",
                 "fn proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile()",
@@ -1371,11 +1375,43 @@ def main() -> None:
                 "pub(super) fn proof_collection_delete_selection(",
                 "pub(super) fn proof_collection_delete_key_matches(",
                 "pub(super) fn proof_collection_duplicate_shortcut_matches(",
+                "pub(super) fn proof_collection_select_all_shortcut_matches(",
+                "pub(super) fn proof_collection_select_all_selection(",
+                "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+                "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+                "proof_collection_select_all_shortcut_matches_primary_a_only",
                 "TextField",
                 "DragPreviewGhostOptions",
                 "drag_preview_ghost",
                 "kit::ButtonOptions",
                 "kit::ChildRegionOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection select-all owner",
+            collection_selection_select_all,
+            required=[
+                "pub(in super::super) fn proof_collection_select_all_shortcut_matches(",
+                "pub(in super::super) fn proof_collection_select_all_selection(",
+                "proof_collection_active_id(collection_keys, selection, keyboard)",
+                "ImUiMultiSelectState::from_ordered_selection(",
+                "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+                "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+                "proof_collection_select_all_shortcut_matches_primary_a_only",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_keyboard_selection(",
+                "proof_collection_context_menu_selection(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(

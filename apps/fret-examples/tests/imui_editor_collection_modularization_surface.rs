@@ -48,6 +48,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let runtime_state_source =
         include_str!("../src/imui_editor_proof_demo/collection/runtime_state.rs");
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
+    let selection_select_all_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs");
     let selection_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs");
     let selection_delete_commands_source =
@@ -874,7 +876,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     for needle in [
         "mod commands;",
+        "mod select_all;",
         "pub(super) use commands::{",
+        "pub(super) use select_all::{",
         "pub(super) struct ProofCollectionKeyboardState",
         "pub(super) fn proof_collection_assets_in_visible_order(",
         "pub(super) fn proof_collection_keyboard_selection(",
@@ -882,6 +886,32 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             selection_source.contains(needle),
             "the demo-local collection selection owner should keep pure selection state and command delegation explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(in super::super) fn proof_collection_select_all_shortcut_matches(",
+        "pub(in super::super) fn proof_collection_select_all_selection(",
+        "proof_collection_active_id(collection_keys, selection, keyboard)",
+        "ImUiMultiSelectState::from_ordered_selection(",
+        "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+        "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+        "proof_collection_select_all_shortcut_matches_primary_a_only",
+    ] {
+        assert!(
+            selection_select_all_source.contains(needle),
+            "the demo-local collection select-all owner should keep shortcut and full visible-order selection policy explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_select_all_shortcut_matches(",
+        "pub(super) fn proof_collection_select_all_selection(",
+        "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+        "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+        "proof_collection_select_all_shortcut_matches_primary_a_only",
+    ] {
+        assert!(
+            !selection_source.contains(needle),
+            "the demo-local collection selection root should delegate select-all policy to selection/select_all.rs; unexpected `{needle}`"
         );
     }
 

@@ -53,6 +53,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs"),

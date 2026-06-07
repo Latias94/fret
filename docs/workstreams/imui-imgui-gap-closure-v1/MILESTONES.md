@@ -8224,3 +8224,13 @@ child owner. Public crate APIs, popup behavior, menu labels, test IDs, shortcut 
 behavior, and the app-owned no-helper-widening boundary remain unchanged, while the collection
 source gate, workstream source gate, manifest, and surface tests now freeze the context-menu chrome
 owner boundary.
+
+2026-06-08 collection select-all policy owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps shared selection
+state, visible-order projection, selected-asset projection, active-id fallback, context-menu
+selection, keyboard navigation policy, and command/select-all re-exports while routing `Primary+A`
+shortcut matching and visible-order full-selection policy through the demo-local
+`collection/selection/select_all.rs` child owner. Public crate APIs, keyboard dispatch imports,
+anchor preservation/fallback, active-tile preservation/fallback, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the select-all policy owner boundary.

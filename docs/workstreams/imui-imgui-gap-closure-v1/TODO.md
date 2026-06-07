@@ -8593,3 +8593,15 @@ opening the slice.
       helpers such as `collection_context_menu_duplicate_selected_options(...)`. The collection
       source gate, workstream source gate, manifest, and surface tests now include the context-menu
       chrome owner.
+- [x] Split collection select-all shortcut/selection policy out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the demo-local
+      `collection/selection/select_all.rs` child owner without changing `Primary+A` matching,
+      visible-order full-selection semantics, anchor preservation/fallback, active-tile
+      preservation/fallback, keyboard dispatch imports, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `selection.rs` keeps shared selection state, visible-order
+      projection, selected-asset projection, active-id fallback, context-menu selection, keyboard
+      navigation policy, and command/select-all re-exports while `selection/select_all.rs` owns
+      `proof_collection_select_all_shortcut_matches(...)`,
+      `proof_collection_select_all_selection(...)`, and the select-all unit tests. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the select-all
+      child owner.
