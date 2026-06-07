@@ -1422,6 +1422,7 @@ def _validate_devtools_cross_cutting_hygiene(
     fret_ui_readme_path = cwd / FRET_UI_README
     fret_ui_source_dir = cwd / FRET_UI_SOURCE_DIR
     devtools_source_path = cwd / DEVTOOLS_GUI_SOURCE
+    devtools_guide_panel_path = cwd / DEVTOOLS_GUI_GUIDE_PANEL_SOURCE
     devtools_discovery_lines_path = cwd / DEVTOOLS_GUI_DISCOVERY_LINES_SOURCE
     if progress is not None:
         progress.record(
@@ -1434,6 +1435,7 @@ def _validate_devtools_cross_cutting_hygiene(
             fret_ui_readme_path=str(fret_ui_readme_path),
             fret_ui_source_dir=str(fret_ui_source_dir),
             devtools_source_path=str(devtools_source_path),
+            devtools_guide_panel_path=str(devtools_guide_panel_path),
             devtools_discovery_lines_path=str(devtools_discovery_lines_path),
         )
 
@@ -1442,7 +1444,12 @@ def _validate_devtools_cross_cutting_hygiene(
     viewer_parser = _read_text_for_gate(name, viewer_parser_path, progress)
     viewer_zip = _read_text_for_gate(name, viewer_zip_path, progress)
     fret_ui_readme = _read_text_for_gate(name, fret_ui_readme_path, progress)
-    devtools_source = _read_text_for_gate(name, devtools_source_path, progress)
+    devtools_source = "\n".join(
+        [
+            _read_text_for_gate(name, devtools_source_path, progress),
+            _read_text_for_gate(name, devtools_guide_panel_path, progress),
+        ]
+    )
     devtools_discovery_lines_source = _read_text_for_gate(
         name, devtools_discovery_lines_path, progress
     )
@@ -1542,6 +1549,7 @@ def _validate_devtools_cross_cutting_hygiene(
             viewer_zip_path=str(viewer_zip_path),
             fret_ui_readme_path=str(fret_ui_readme_path),
             devtools_source_path=str(devtools_source_path),
+            devtools_guide_panel_path=str(devtools_guide_panel_path),
             devtools_discovery_lines_path=str(devtools_discovery_lines_path),
         )
 
