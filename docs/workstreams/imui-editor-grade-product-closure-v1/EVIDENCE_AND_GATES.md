@@ -2,37 +2,49 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
-## IMUI plot shaded-band decimation owner split - 2026-06-07
+## IMUI plot decimation owner split - 2026-06-07
 
 This maintenance slice keeps the plot adapter decimation path readable without changing the
 retained-canvas compatibility behavior:
 
-- IMUI plot shaded-band decimation owner split - 2026-06-07.
+- IMUI plot decimation owner split - 2026-06-07.
 - `ecosystem/fret-plot/src/plot/decimate.rs` keeps the decimation facade, shared `SamplePoint`,
-  thin point-cloud delegation, and polyline decimation.
+  thin point-cloud delegation, thin polyline delegation, and the existing unit test host.
 - `ecosystem/fret-plot/src/plot/decimate/common.rs` owns shared visible-range, device-point-budget,
   and visible sorted-slice helpers.
 - `ecosystem/fret-plot/src/plot/decimate/points.rs` owns scatter/point-cloud decimation and
   closest-to-device-pixel-center bucket selection.
+- `ecosystem/fret-plot/src/plot/decimate/polyline.rs` owns polyline min/max bucket decimation,
+  sample continuity, missing-point segment breaks, and sampled/slice/getter traversal.
 - `ecosystem/fret-plot/src/plot/decimate/band.rs` owns shaded-band resampling, band min/max
   bucketing, fill/upper/lower path emission, and band sample projection.
 - The public crate-local `decimate_shaded_band(...)` path remains available through the root
   decimation module re-export.
 - Shaded-band behavior for sorted X resampling and missing-point segment breaks remains covered by
   existing unit tests.
-- Evidence anchor: `decimate.rs` re-exports the shaded-band owner and no longer contains
-  `BandPoint` / `BandDecimator`.
+- Polyline behavior for spike-preserving bucket selection and missing-point segment breaks remains
+  covered by existing unit tests.
+- Evidence anchor: `decimate.rs` re-exports the shaded-band owner, delegates point/polyline
+  decimation to sibling owners, and no longer contains `BandPoint` / `BandDecimator` /
+  `flush_polyline_segment(...)` / `push_poly_point(...)`.
 - Evidence anchor: `decimate/band.rs` carries `BandPoint`, `BandDecimator`, and
   `decimate_shaded_band(...)`.
+- Evidence anchor: `decimate/polyline.rs` carries `flush_polyline_segment(...)`,
+  `push_poly_point(...)`, and `decimate_polyline(...)`.
 - Evidence anchor: `tools/gate_imui_workstream_source.py` now freezes the split so shaded-band,
-  point-cloud, and shared helper logic cannot drift back into the polyline decimation root.
+  point-cloud, polyline, and shared helper logic cannot drift back into the decimation facade.
 
 Fresh gates:
 
 - `cargo fmt -p fret-plot` - passed.
-- `cargo check -p fret-plot --features imui` - passed.
-- `cargo nextest run -p fret-plot shaded_band --no-fail-fast` - passed, 2/2.
+- `cargo fmt --check -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed; only pre-existing
+  `plot/view.rs` dead-code warnings remain.
+- `cargo nextest run -p fret-plot decimate --no-fail-fast --status-level fail` - passed, 5/5.
 - `python tools/gate_imui_workstream_source.py` - passed.
+- `python tools/check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported LF/CRLF normalization warnings only.
+- `python tools/check_layering.py` - passed.
 
 ## IMUI DevTools native owner split refresh - 2026-06-07
 
