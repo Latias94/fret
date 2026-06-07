@@ -35694,6 +35694,45 @@ Fret Examples Collection Chrome Header Owner Split Evidence - 2026-06-07:
 - Passed: `git diff --check` with only a Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Asset Grid Inline Rename Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` was split so
+  inline rename field rendering now lives in the demo-local
+  `collection/asset_grid/inline_rename.rs` child owner without changing TextField options,
+  commit/cancel outcome handling, focus restore/sync behavior, inline test ID, explanatory prose,
+  public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `asset_grid.rs` declares `mod inline_rename;`, imports
+  `render_collection_inline_rename_field(...)`, and delegates only the inline rename field from the
+  tile body. `collection/asset_grid/inline_rename.rs` owns `TextField::new(...)`,
+  `TextFieldOptions`, `EditorTextSelectionBehavior::SelectAllOnFocus`,
+  `TextFieldBlurBehavior::Cancel`, `proof_collection_commit_rename(...)`,
+  `proof_collection_restore_focus_after_inline_rename(...)`,
+  `proof_collection_inline_rename_focus_state(...)`,
+  `proof_collection_sync_inline_rename_focus(...)`, the inline rename test ID, placeholder, and
+  explanatory prose. `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`,
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs`,
+  `apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs`,
+  `apps/fret-examples/tests/imui_editor_collection_rename_surface.rs`, and
+  `apps/fret-examples/tests/imui_editor_collection_text_roles_surface.rs` freeze the
+  asset-grid/inline-rename-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+  Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  4 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`;
+  validated 541 dedicated directories and 47 standalone markdown files.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Derived State Owner Split Evidence - 2026-06-07:
 
 - Claim verified: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so

@@ -2,6 +2,8 @@
 fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explicit() {
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let asset_grid_inline_rename_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
     let browser_input_runtime_source =
@@ -12,6 +14,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
         "\n",
@@ -96,14 +100,28 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionAssetGridModels",
         "pub(super) struct ProofCollectionAssetGridState",
         "pub(super) fn render_collection_asset_grid(",
+        "mod inline_rename;",
         "ui.grid_with_options(",
         "ui.multi_selectable_with_options(",
-        "TextField::new(",
+        "render_collection_inline_rename_field(",
         "drag_preview_ghost_with_options(",
     ] {
         assert!(
             asset_grid_source.contains(needle),
             "collection asset-grid owner should route tile-grid interaction through app-owned state transitions; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn render_collection_inline_rename_field(",
+        "TextField::new(",
+        "TextFieldOptions {",
+        "EditorTextSelectionBehavior::SelectAllOnFocus",
+        "TextFieldBlurBehavior::Cancel",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
+    ] {
+        assert!(
+            asset_grid_inline_rename_source.contains(needle),
+            "collection asset-grid inline-rename owner should keep TextField wiring explicit; missing `{needle}`"
         );
     }
     assert!(

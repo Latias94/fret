@@ -8527,3 +8527,12 @@ opening the slice.
       `render_collection_header(...)`, while `collection/chrome.rs` owns the section label and
       explanatory proof prose. The collection source gate, workstream source gate, and surface tests
       now include the chrome-header owner.
+- [x] Split collection asset-grid inline rename field out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the demo-local
+      `collection/asset_grid/inline_rename.rs` child owner without changing TextField options,
+      rename outcome handling, focus restore/sync behavior, inline test ID, explanatory prose, public
+      crate APIs, or the app-owned no-helper-widening boundary. Result: `asset_grid.rs` keeps grid,
+      tile, context-menu selection, drag preview, rendered-item tracking, and metadata/path readout
+      mounting while delegating inline rename field rendering through
+      `render_collection_inline_rename_field(...)`. The collection source gate, workstream source
+      gate, and surface tests now include the asset-grid inline-rename owner.

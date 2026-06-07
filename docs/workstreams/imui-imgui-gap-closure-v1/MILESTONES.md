@@ -8162,3 +8162,14 @@ title and explanatory proof prose mounting: the section label, title test ID, st
 and background-drag proof prose. Public crate APIs, text content, render order, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, and surface tests now freeze the chrome-header owner boundary.
+
+2026-06-07 collection asset-grid inline rename owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` now keeps grid/tile render
+assembly, context-menu selection routing, drag preview, rendered-item tracking, and metadata/path
+readout mounting while delegating inline rename field rendering through
+`render_collection_inline_rename_field(...)`. The demo-local
+`collection/asset_grid/inline_rename.rs` owns TextField construction, commit/cancel outcome
+handling, focus restore/sync, inline test ID, placeholder, selection/blur policy, and explanatory
+inline rename prose. Public crate APIs, text content, field behavior, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, and surface tests now freeze the asset-grid inline-rename owner boundary.

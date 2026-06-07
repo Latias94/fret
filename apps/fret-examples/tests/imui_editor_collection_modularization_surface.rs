@@ -6,6 +6,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let asset_grid_inline_rename_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
@@ -540,13 +542,30 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionAssetGridState",
         "pub(super) fn render_collection_asset_grid(",
         "ui.grid_with_options(",
-        "TextField::new(",
+        "mod inline_rename;",
+        "render_collection_inline_rename_field(",
         "drag_preview_ghost_with_options(",
         "ProofCollectionRenderedItem {",
     ] {
         assert!(
             asset_grid_source.contains(needle),
             "the demo-local collection asset-grid owner should keep tile-grid interaction explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn render_collection_inline_rename_field(",
+        "TextField::new(",
+        "TextFieldOptions {",
+        "EditorTextSelectionBehavior::SelectAllOnFocus",
+        "TextFieldBlurBehavior::Cancel",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
+        "proof_collection_inline_rename_focus_state(",
+        "proof_collection_sync_inline_rename_focus(",
+    ] {
+        assert!(
+            asset_grid_inline_rename_source.contains(needle),
+            "the demo-local collection asset-grid inline-rename owner should keep TextField workflow explicit; missing `{needle}`"
         );
     }
 

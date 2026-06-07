@@ -50,6 +50,9 @@ def main() -> None:
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
     )
+    collection_asset_grid_inline_rename = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"
+    )
     collection_assets = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/assets.rs"
     )
@@ -127,6 +130,7 @@ def main() -> None:
     )
     collection_children = (
         collection_asset_grid,
+        collection_asset_grid_inline_rename,
         collection_assets,
         collection_browser_scope,
         collection_browser_scope_input_runtime,
@@ -737,28 +741,60 @@ def main() -> None:
                 "pub(super) struct ProofCollectionAssetGridState<'a> {",
                 "pub(super) fn render_collection_asset_grid(",
                 "fn render_collection_asset_tile(",
-                "fn render_collection_inline_rename_field(",
+                "mod inline_rename;",
+                "use inline_rename::render_collection_inline_rename_field;",
+                "render_collection_inline_rename_field(",
                 "ui.grid_with_options(",
                 "ui.multi_selectable_with_options(",
                 "proof_collection_context_menu_selection(",
-                "TextField::new(",
-                "EditorTextSelectionBehavior::SelectAllOnFocus",
-                "TextFieldBlurBehavior::Cancel",
                 "drag_preview_ghost_with_options(",
                 "ProofCollectionRenderedItem {",
                 "\"imui-editor-proof.authoring.imui.collection.grid\"",
                 "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
-                "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
                 "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
             ],
             forbidden=[
                 "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "EditorTextSelectionBehavior::SelectAllOnFocus",
+                "TextFieldBlurBehavior::Cancel",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
                 "cx.pointer_region_on_wheel(",
                 "cx.pointer_region_on_pointer_down(",
                 "cx.pointer_region_on_pointer_move(",
                 "cx.pointer_region_on_pointer_up(",
                 "cx.pointer_region_on_pointer_cancel(",
                 "kit::ChildRegionOptions",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+            ],
+        ),
+        SourceCheck(
+            "collection asset grid inline rename owner",
+            collection_asset_grid_inline_rename,
+            required=[
+                "pub(super) fn render_collection_inline_rename_field(",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "EditorTextSelectionBehavior::SelectAllOnFocus",
+                "TextFieldBlurBehavior::Cancel",
+                "proof_collection_commit_rename(",
+                "proof_collection_restore_focus_after_inline_rename(",
+                "proof_collection_inline_rename_focus_state(",
+                "proof_collection_sync_inline_rename_focus(",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
+                "\"Rename active asset\"",
+                "Inline rename stays app-owned: Enter commits; Escape or blur cancels without widening shared IMUI helpers.",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "ui.grid_with_options(",
+                "ui.multi_selectable_with_options(",
+                "drag_preview_ghost_with_options(",
+                "ProofCollectionRenderedItem {",
+                "cx.pointer_region_on_wheel(",
                 "ui.button_with_options(",
                 "ui.begin_popup_menu(",
                 "drop_target::<",
