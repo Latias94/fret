@@ -242,7 +242,8 @@ Execution note on 2026-03-13:
 - the canonical compare/example helper lane is now closed outside intentional retained seams:
   `apps/fret-examples/src/todo_demo.rs::todo_page(...)`,
   `apps/fret-examples/src/simple_todo_demo.rs::todo_row(...)`,
-  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`,
+  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`,
+  `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs::render_shared_state`,
   and `apps/fretboard/src/scaffold/templates.rs::{todo_page(...),simple_todo::todo_page(...)}`
   now stay on `UiChild` / `IntoUiElement<...>`-based signatures, and the current non-`lib.rs`
   scan of `apps/fret-examples/src` plus `apps/fret-cookbook/examples` leaves only

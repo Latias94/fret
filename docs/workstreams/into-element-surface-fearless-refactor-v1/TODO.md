@@ -455,7 +455,8 @@ Implementation note on 2026-03-13:
   and no longer exposes parallel `*_ui(...)` overloads for `UiBuilder`.
 - the remaining advanced IMUI compare lane now also hides its non-raw helper returns behind typed
   signatures:
-  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
+  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
+  plus `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs::render_shared_state`
   now expose `IntoUiElement<...>`-based signatures while keeping the internal
   `PropertyGroup::into_element(...)` / `imui_build(...)` landing seams explicit.
 - after that cleanup, the current real non-`lib.rs` source scan now leaves only one intentional

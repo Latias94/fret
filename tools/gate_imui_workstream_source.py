@@ -51277,8 +51277,7 @@ def main() -> None:
                 'proof_empty_state_text(\n                                                            cx,\n                                                            "No matches",\n                                                            "imui-editor-proof.editor.material.no-matches",',
                 'proof_empty_state_text(\n                                                            cx,\n                                                            "No matches",\n                                                            "imui-editor-proof.editor.advanced.no-matches",',
                 'proof_empty_state_text(\n                                    cx,\n                                    "No matches",\n                                    "imui-editor-proof.editor.no-matches",',
-                "proof_compact_readout_element(\n                    cx,\n                    name_line_row,",
-                "proof_compact_readout_element(\n            cx,\n            gradient_line,",
+                "authoring_parity::render_shared_state(",
                 "proof_section_chrome_label(\n                        cx,\n                        \"Gradient editor\",",
             ],
             forbidden=[
@@ -51381,6 +51380,16 @@ def main() -> None:
             required=[
                 "use slotmap::Key as _;",
                 "let window_ffi = app_window.data().as_ffi();",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs"),
+            required=[
+                "pub(super) fn render_shared_state(",
+                "AuthoringParitySharedStateReadout {",
+                "proof_compact_readout_element(\n                    cx,\n                    name_line_row,",
+                "proof_compact_readout_element(\n            cx,\n            gradient_line,",
             ],
             forbidden=[],
         ),

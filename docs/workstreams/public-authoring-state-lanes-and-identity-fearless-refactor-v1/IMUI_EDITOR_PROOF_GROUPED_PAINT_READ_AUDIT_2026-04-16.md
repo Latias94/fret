@@ -67,7 +67,7 @@ Owner: grouped paint selector lane.
 
 Decision:
 
-- `render_authoring_parity_shared_state(...)`,
+- `authoring_parity::render_shared_state(...)`,
 - the gradient property-group preview read,
 - and `build_authoring_parity_gradient_editor(...)`
 

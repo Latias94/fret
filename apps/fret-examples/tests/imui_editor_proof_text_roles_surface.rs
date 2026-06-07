@@ -1,6 +1,8 @@
 #[test]
 fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
-    let source = include_str!("../src/imui_editor_proof_demo.rs");
+    let main_source = include_str!("../src/imui_editor_proof_demo.rs");
+    let helper_source = include_str!("../src/imui_editor_proof_demo/proof_helpers.rs");
+    let authoring_parity_source = include_str!("../src/imui_editor_proof_demo/authoring_parity.rs");
 
     for needle in [
         "fn proof_imui_section_text(",
@@ -9,6 +11,14 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "decl_text::text_section_chrome_label(cx, text)",
         "decl_text::text_control_readout(cx, text)",
         "decl_text::text_compact_paragraph(cx, text)",
+    ] {
+        assert!(
+            helper_source.contains(needle),
+            "imui_editor_proof_demo text helper owner should use shared role helpers; missing `{needle}`"
+        );
+    }
+
+    for needle in [
         "imui editor-grade proof (M7): docking + multi-window + viewport surfaces",
         "single-window mode enabled",
         "authoring parity proof: shared models",
@@ -16,11 +26,12 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         "fret-ui-editor (M2): PropertyGroup + PropertyGrid + search assist",
     ] {
         assert!(
-            source.contains(needle),
+            main_source.contains(needle),
             "imui_editor_proof_demo main text should use shared role helpers; missing `{needle}`"
         );
     }
 
+    let combined_source = format!("{main_source}\n{helper_source}\n{authoring_parity_source}");
     for needle in [
         "fret_ui_kit::ui::text(",
         "let headline =",
@@ -31,7 +42,7 @@ fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
         ".text_xs()",
     ] {
         assert!(
-            !source.contains(needle),
+            !combined_source.contains(needle),
             "imui_editor_proof_demo main text should not hand-roll local text styling; unexpected `{needle}`"
         );
     }

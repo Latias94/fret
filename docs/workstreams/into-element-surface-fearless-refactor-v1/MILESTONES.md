@@ -593,7 +593,8 @@ Exit criteria:
   `resizable`, the highest-value remaining app-facing UI Gallery queue is now the next
   top-level-family sweep rather than more relay-state cleanup on this page.
 - the advanced IMUI compare lane now also stops leaking raw helper signatures on non-raw helpers:
-  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_shared_state,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
+  `apps/fret-examples/src/imui_editor_proof_demo.rs::{render_editor_name_assist_surface,render_authoring_parity_surface,render_authoring_parity_declarative_group,render_authoring_parity_imui_group,render_authoring_parity_imui_host}`
+  plus `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs::render_shared_state`
   now expose `IntoUiElement<...>`-based signatures while still keeping the internal
   `PropertyGroup::into_element(...)` and `imui_build(...)` landing seams explicit; after this
   pass, the real examples/cookbook source scan now leaves `chart_interactions_basics.rs::chart_canvas(...)`

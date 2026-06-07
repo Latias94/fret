@@ -651,15 +651,7 @@ SELECTED_GROUPED_STATE_POLICIES = [
             "Cx: fret::app::ElementContextAccess<'a, KernelApp>",
             'let cx = cx.elements();',
             'render_view(cx)',
-            'struct EditorTextAssistReadout {',
-            'struct EditorTextFieldReadout {',
-            'struct AuthoringParitySharedStateReadout {',
-            'fn editor_text_assist_readout(',
-            'fn editor_text_field_readout(',
-            'fn editor_string_model_readout(',
             'cx.data().selector_model_paint(',
-            '(query_model, dismissed_query_model, active_item_id_model),',
-            '(committed_model, outcome_model),',
             'editor_string_model_readout(',
             'let name_assist_items = editor_demo_name_assist_items(cx);',
             'let name_assist_readout = editor_text_assist_readout(',
@@ -667,9 +659,6 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'let password_readout = editor_text_field_readout(',
             'let notes_readout = editor_text_field_readout(',
             '.selector_model_paint(&editor_gradient_stops_model,',
-            '.selector_model_paint(&m.target, |target| target)',
-            'let shared = cx.data().selector_model_paint(',
-            '(&name_model, &drag_value_model, &numeric_input_model, &slider_model, &enabled_model, &shading_model, &gradient_angle_model, &gradient_stops_model,)',
         ],
         [
             'let query = cx.watch_model(&editor_name_assist_model)',
@@ -684,7 +673,6 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'cx.watch_model(&editor_notes_model)',
             'cx.watch_model(&editor_notes_outcome_model)',
             'watch_model(&editor_gradient_stops_model)',
-            'watch_model(&m.target)',
             '.get_model_cloned(&editor_drag_value_outcome_model,',
             '.get_model_cloned(&editor_position_outcome_model,',
             '.get_model_cloned(&editor_transform_outcome_model,',
@@ -695,6 +683,44 @@ SELECTED_GROUPED_STATE_POLICIES = [
             '.get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)',
             '.get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)',
             'render_view(cx.elements())',
+        ],
+    ),
+    (
+        'imui_editor_proof_demo/workbench_shell.rs',
+        [
+            '.selector_model_paint(&m.target, |target| target)',
+        ],
+        [
+            'watch_model(&m.target)',
+        ],
+    ),
+    (
+        'imui_editor_proof_demo/proof_helpers.rs',
+        [
+            'struct EditorTextAssistReadout {',
+            'struct EditorTextFieldReadout {',
+            'struct AuthoringParitySharedStateReadout {',
+            'fn editor_text_assist_readout(',
+            'fn editor_text_field_readout(',
+            'fn editor_string_model_readout(',
+            'cx.data().selector_model_paint(',
+            '(query_model, dismissed_query_model, active_item_id_model),',
+            '(committed_model, outcome_model),',
+        ],
+        [
+            'let query = cx.watch_model(&editor_name_assist_model)',
+            'cx.watch_model(committed_model)',
+        ],
+    ),
+    (
+        'imui_editor_proof_demo/authoring_parity.rs',
+        [
+            'pub(super) fn render_shared_state(',
+            'let shared = cx.data().selector_model_paint(',
+            '(&name_model, &drag_value_model, &numeric_input_model, &slider_model, &enabled_model, &shading_model, &gradient_angle_model, &gradient_stops_model,)',
+        ],
+        [
+            'let shared = (',
         ],
     ),
     (

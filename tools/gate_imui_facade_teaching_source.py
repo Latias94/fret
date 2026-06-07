@@ -26,6 +26,7 @@ ACTIVE_FACADE_TEACHING_PATHS = [
     "apps/fret-cookbook/examples/imui_plot_basics.rs",
     "apps/fret-examples/src/imui_editor_workbench_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs",
     "apps/fret-examples-imui/src/imui_hello_demo.rs",
@@ -454,7 +455,7 @@ def main() -> None:
             required=[
                 "fn render_editor_name_assist_surface(",
                 "fn render_authoring_parity_surface(",
-                "fn render_authoring_parity_shared_state(",
+                "authoring_parity::render_shared_state(",
                 "fn render_authoring_parity_declarative_group(",
                 "fn render_authoring_parity_imui_group(",
                 "fn render_authoring_parity_imui_host<H, F>(",
@@ -468,6 +469,15 @@ def main() -> None:
                 "ui.cx_mut().app.models().read(&outliner_items_model, |items| items.clone())",
                 "ui.cx_mut().app.models().read(&outliner_items_model, |items| { proof_outliner_order_line(items) })",
             ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs"),
+            required=[
+                "pub(super) fn render_shared_state(",
+                ") -> impl IntoUiElement<super::KernelApp> + use<> {",
+                "proof_compact_readout_element(",
+            ],
+            forbidden=COMMON_DELETED_OR_NON_TEACHING,
         ),
         SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs"),

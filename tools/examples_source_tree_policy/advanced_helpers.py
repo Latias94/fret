@@ -52,15 +52,25 @@ ADVANCED_HELPER_CONTEXT_POLICIES = [
         'imui_editor_proof_demo.rs',
         [
             "fn render_authoring_parity_surface(cx: &mut AppComponentCx<'_>,",
-            "fn render_authoring_parity_shared_state(cx: &mut AppComponentCx<'_>,",
             "fn render_authoring_parity_declarative_group(cx: &mut AppComponentCx<'_>,",
             "fn render_authoring_parity_imui_group(cx: &mut AppComponentCx<'_>,",
         ],
         [
             "fn render_authoring_parity_surface(cx: &mut ElementContext<'_, KernelApp>,",
-            "fn render_authoring_parity_shared_state(cx: &mut ElementContext<'_, KernelApp>,",
             "fn render_authoring_parity_declarative_group(cx: &mut ElementContext<'_, KernelApp>,",
             "fn render_authoring_parity_imui_group(cx: &mut ElementContext<'_, KernelApp>,",
+        ],
+    ),
+    (
+        'app_component_cx',
+        'imui_editor_proof_demo/authoring_parity.rs',
+        [
+            "pub(super) fn render_shared_state(",
+            "cx: &mut AppComponentCx<'_>,",
+            ") -> impl IntoUiElement<super::KernelApp> + use<>",
+        ],
+        [
+            "cx: &mut ElementContext<'_, KernelApp>,",
         ],
     ),
     (
