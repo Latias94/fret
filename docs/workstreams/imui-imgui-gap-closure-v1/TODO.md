@@ -8674,3 +8674,15 @@ opening the slice.
       `proof_collection_zoom_request(...)`, zoom model writes, scroll offset updates, and notify.
       The collection source gate, workstream source gate, manifest, and surface tests now include
       the browser input zoom runtime child owner.
+- [x] Split collection browser input background context-menu anchor runtime out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs`
+      into the demo-local `collection/browser_scope/input_runtime/context_menu.rs` child owner
+      without changing right-click click filtering, pressable-origin suppression, window-position
+      anchor fallback, focus request, context-menu anchor model writes, pointer-up box-select
+      release ordering, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `input_runtime.rs` keeps pointer props, keyboard handler installation, Primary+Wheel zoom
+      installation, pointer-down/move/up/cancel box-select orchestration, pointer capture, and
+      cancel behavior while `input_runtime/context_menu.rs` owns right-click background anchor
+      derivation, focus request, context-menu anchor publication, notify, and focused unit tests.
+      The collection source gate, workstream source gate, manifest, and surface tests now include
+      the browser input context-menu runtime child owner.

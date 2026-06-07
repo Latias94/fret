@@ -12,6 +12,9 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs");
     let browser_input_runtime_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs");
+    let browser_input_context_menu_runtime_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
+    );
     let browser_input_zoom_runtime_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
     );
@@ -33,6 +36,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
+        "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
+        ),
         "\n",
         include_str!(
             "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
@@ -297,12 +304,15 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         );
     }
     for needle in [
+        "mod context_menu;",
         "mod zoom;",
+        "use context_menu::publish_collection_browser_scope_context_menu_anchor;",
         "use zoom::install_collection_browser_scope_zoom_runtime;",
         "pub(super) struct ProofCollectionBrowserScopeInputModels",
         "pub(super) struct ProofCollectionBrowserScopeInputState",
         "pub(super) fn proof_collection_browser_scope_pointer_props()",
         "pub(super) fn install_collection_browser_scope_input_runtime(",
+        "publish_collection_browser_scope_context_menu_anchor(",
         "install_collection_browser_scope_zoom_runtime(",
         "cx.pointer_region_on_pointer_down(",
         "cx.pointer_region_on_pointer_move(",
@@ -318,10 +328,49 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "cx.pointer_region_on_wheel(",
         "proof_collection_zoom_request(",
         "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+        "up.down_hit_pressable_target.is_some()",
+        "up.position_window.unwrap_or(up.position)",
+        "*state = Some(position);",
     ] {
         assert!(
             !browser_input_runtime_source.contains(needle),
             "collection browser input runtime owner should route wheel zoom through input_runtime/zoom.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_browser_scope_context_menu_anchor_from_up(",
+        "up.button != MouseButton::Right || !up.is_click",
+        "up.down_hit_pressable_target.is_some()",
+        "up.down_hit_pressable_target_in_descendant_subtree",
+        "Some(up.position_window.unwrap_or(up.position))",
+        "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
+        "host.request_focus(acx.target);",
+        "host.update_model(context_menu_anchor_model",
+        "*state = Some(position);",
+        "host.notify(acx);",
+        "context_menu_anchor_prefers_window_position",
+        "context_menu_anchor_ignores_direct_pressable_clicks",
+        "context_menu_anchor_ignores_pressable_descendant_clicks",
+    ] {
+        assert!(
+            browser_input_context_menu_runtime_source.contains(needle),
+            "collection browser input context-menu runtime owner should keep right-click anchor publishing explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "install_collection_keyboard_handler(",
+        "cx.pointer_region_on_pointer_down(",
+        "cx.pointer_region_on_pointer_move(",
+        "cx.pointer_region_on_pointer_up(",
+        "cx.pointer_region_on_pointer_cancel(",
+        "ProofCollectionBoxSelectSession",
+        "proof_collection_box_select_selection(",
+        "proof_collection_zoom_request(",
+        "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+    ] {
+        assert!(
+            !browser_input_context_menu_runtime_source.contains(needle),
+            "collection browser input context-menu runtime owner should not take keyboard/box-select/zoom runtime; unexpected `{needle}`"
         );
     }
     for needle in [

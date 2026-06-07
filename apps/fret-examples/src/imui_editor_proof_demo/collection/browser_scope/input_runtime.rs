@@ -22,8 +22,10 @@ use super::super::rename::ProofCollectionRenameSession;
 use super::super::selection::ProofCollectionKeyboardState;
 use super::super::{KernelApp, ProofCollectionAsset};
 
+mod context_menu;
 mod zoom;
 
+use context_menu::publish_collection_browser_scope_context_menu_anchor;
 use zoom::install_collection_browser_scope_zoom_runtime;
 
 pub(super) struct ProofCollectionBrowserScopeInputModels {
@@ -184,19 +186,12 @@ pub(super) fn install_collection_browser_scope_input_runtime(
     }));
 
     cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
-        if up.button == MouseButton::Right && up.is_click {
-            if up.down_hit_pressable_target.is_some()
-                || up.down_hit_pressable_target_in_descendant_subtree
-            {
-                return false;
-            }
-
-            host.request_focus(acx.target);
-            let position = up.position_window.unwrap_or(up.position);
-            let _ = host.update_model(&context_menu_anchor_model_for_up, |state| {
-                *state = Some(position);
-            });
-            host.notify(acx);
+        if publish_collection_browser_scope_context_menu_anchor(
+            host,
+            acx,
+            &context_menu_anchor_model_for_up,
+            &up,
+        ) {
             return true;
         }
 

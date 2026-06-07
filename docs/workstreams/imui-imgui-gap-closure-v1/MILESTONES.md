@@ -8301,3 +8301,15 @@ tile extent writes, scroll anchor updates, wheel modifier handling, browser inpu
 and the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the browser input zoom runtime
 owner boundary.
+
+2026-06-08 collection browser input context-menu runtime owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` now keeps
+pointer props, keyboard handler installation, Primary+Wheel zoom installation, pointer-down/move/up
+box-select orchestration, pointer capture/release, pointer cancel, and unified pointer-up ordering
+while routing background right-click context-menu anchor derivation and publication through the
+demo-local `collection/browser_scope/input_runtime/context_menu.rs` child owner. Right-click click
+filtering, direct/descendant pressable-origin suppression, window-position anchor fallback, focus
+request, context-menu anchor model writes, pointer-up box-select release ordering, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the browser input context-menu
+runtime owner boundary.

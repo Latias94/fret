@@ -12,6 +12,10 @@ fn imui_editor_proof_demo_keeps_collection_box_select_app_owned_and_explicit() {
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
         "\n",
         include_str!(
+            "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
+        ),
+        "\n",
+        include_str!(
             "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
         ),
         "\n",
