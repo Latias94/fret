@@ -126,6 +126,7 @@ DEMO_METRICS_DEBUG_ACTION_METADATA = {
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_TEST_SOURCE = "apps/fret-devtools/src/native/tests.rs"
 DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE = "apps/fret-devtools/src/native/command_catalog.rs"
+DEVTOOLS_GUI_COMMAND_HANDLERS_SOURCE = "apps/fret-devtools/src/native/command_handlers.rs"
 DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE = "apps/fret-devtools/src/native/ui_primitives.rs"
 DEVTOOLS_GUI_REGRESSION_PANEL_SOURCE = "apps/fret-devtools/src/native/regression_panel.rs"
 DEVTOOLS_GUI_SCRIPT_STUDIO_PANEL_SOURCE = "apps/fret-devtools/src/native/script_studio_panel.rs"
@@ -532,6 +533,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
     path = repo_root / DEVTOOLS_GUI_SOURCE
     tests_path = repo_root / DEVTOOLS_GUI_TEST_SOURCE
     command_catalog_path = repo_root / DEVTOOLS_GUI_COMMAND_CATALOG_SOURCE
+    command_handlers_path = repo_root / DEVTOOLS_GUI_COMMAND_HANDLERS_SOURCE
     ui_primitives_path = repo_root / DEVTOOLS_GUI_UI_PRIMITIVES_SOURCE
     regression_panel_path = repo_root / DEVTOOLS_GUI_REGRESSION_PANEL_SOURCE
     script_studio_panel_path = repo_root / DEVTOOLS_GUI_SCRIPT_STUDIO_PANEL_SOURCE
@@ -570,6 +572,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         source = path.read_text(encoding="utf-8")
         test_source = tests_path.read_text(encoding="utf-8")
         command_catalog_source = command_catalog_path.read_text(encoding="utf-8")
+        command_handlers_source = command_handlers_path.read_text(encoding="utf-8")
         ui_primitives_source = ui_primitives_path.read_text(encoding="utf-8")
         regression_panel_source = regression_panel_path.read_text(encoding="utf-8")
         script_studio_panel_source = script_studio_panel_path.read_text(encoding="utf-8")
@@ -618,6 +621,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
             source,
             test_source,
             command_catalog_source,
+            command_handlers_source,
             ui_primitives_source,
             regression_panel_source,
             script_studio_panel_source,
