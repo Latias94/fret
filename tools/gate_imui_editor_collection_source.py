@@ -50,6 +50,9 @@ def main() -> None:
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
     )
+    collection_asset_grid_chrome = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/chrome.rs"
+    )
     collection_asset_grid_inline_rename = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"
     )
@@ -133,6 +136,7 @@ def main() -> None:
     )
     collection_children = (
         collection_asset_grid,
+        collection_asset_grid_chrome,
         collection_asset_grid_inline_rename,
         collection_asset_grid_metadata,
         collection_assets,
@@ -745,8 +749,15 @@ def main() -> None:
                 "pub(super) struct ProofCollectionAssetGridState<'a> {",
                 "pub(super) fn render_collection_asset_grid(",
                 "fn render_collection_asset_tile(",
+                "mod chrome;",
                 "mod inline_rename;",
                 "mod metadata;",
+                "use chrome::{",
+                "collection_asset_grid_options(",
+                "collection_asset_tile_options(",
+                "collection_asset_selectable_options(",
+                "collection_asset_ghost_id(",
+                "collection_asset_ghost_options(",
                 "use inline_rename::render_collection_inline_rename_field;",
                 "use metadata::render_collection_asset_metadata_readouts;",
                 "render_collection_inline_rename_field(",
@@ -756,12 +767,17 @@ def main() -> None:
                 "proof_collection_context_menu_selection(",
                 "drag_preview_ghost_with_options(",
                 "ProofCollectionRenderedItem {",
-                "\"imui-editor-proof.authoring.imui.collection.grid\"",
-                "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
-                "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
             ],
             forbidden=[
                 "render_collection_first_asset_browser_proof",
+                "kit::GridOptions",
+                "kit::VerticalOptions",
+                "kit::SelectableOptions",
+                "DragPreviewGhostOptions",
+                "\"imui-editor-proof.authoring.imui.collection.grid\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
                 "TextField::new(",
                 "TextFieldOptions {",
                 "EditorTextSelectionBehavior::SelectAllOnFocus",
@@ -770,6 +786,46 @@ def main() -> None:
                 "proof_collection_readout_text(",
                 "imui-editor-proof.authoring.imui.collection.asset.metadata",
                 "imui-editor-proof.authoring.imui.collection.asset.path",
+                "cx.pointer_region_on_wheel(",
+                "cx.pointer_region_on_pointer_down(",
+                "cx.pointer_region_on_pointer_move(",
+                "cx.pointer_region_on_pointer_up(",
+                "cx.pointer_region_on_pointer_cancel(",
+                "kit::ChildRegionOptions",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+            ],
+        ),
+        SourceCheck(
+            "collection asset grid chrome owner",
+            collection_asset_grid_chrome,
+            required=[
+                "pub(super) fn collection_asset_grid_options(",
+                "pub(super) fn collection_asset_tile_options(",
+                "pub(super) fn collection_asset_selectable_options(",
+                "pub(super) fn collection_asset_ghost_id(",
+                "pub(super) fn collection_asset_ghost_options(",
+                "kit::GridOptions",
+                "kit::VerticalOptions",
+                "kit::SelectableOptions",
+                "DragPreviewGhostOptions",
+                "fret_ui_kit::LayoutRefinement::default()",
+                ".min_h(layout.tile_min_height)",
+                "\"imui-editor-proof.authoring.imui.collection.grid\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
+                "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "proof_collection_readout_text(",
+                "ui.grid_with_options(",
+                "ui.multi_selectable_with_options(",
+                "drag_preview_ghost_with_options(",
+                "ProofCollectionRenderedItem {",
+                "proof_collection_context_menu_selection(",
                 "cx.pointer_region_on_wheel(",
                 "cx.pointer_region_on_pointer_down(",
                 "cx.pointer_region_on_pointer_move(",

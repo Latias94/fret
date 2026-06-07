@@ -8545,3 +8545,14 @@ opening the slice.
       while delegating asset metadata/path readouts through
       `render_collection_asset_metadata_readouts(...)`. The collection source gate, workstream source
       gate, and surface tests now include the asset-grid metadata owner.
+- [x] Split collection asset-grid chrome/options construction out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the demo-local
+      `collection/asset_grid/chrome.rs` child owner without changing grid columns/gaps, tile
+      minimum height, selectable focus policy, drag-preview ghost IDs, test IDs, tile render order,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result: `asset_grid.rs`
+      keeps grid/tile interaction, selection/context-menu handling, inline rename delegation,
+      drag-source mounting, rendered-item tracking, and metadata delegation while
+      `collection/asset_grid/chrome.rs` owns grid/tile/selectable/ghost option and test-id
+      construction through helpers such as `collection_asset_grid_options(...)`. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the asset-grid
+      chrome owner.

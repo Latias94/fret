@@ -8183,3 +8183,14 @@ rendered-item tracking while delegating metadata/path readout mounting through
 calls, and metadata/path test IDs. Public crate APIs, text content, tile render order, and the
 app-owned no-helper-widening boundary remain unchanged, while the collection source gate, workstream
 source gate, and surface tests now freeze the asset-grid metadata owner boundary.
+
+2026-06-07 collection asset-grid chrome owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` now keeps grid/tile
+interaction, selection and context-menu handling, inline rename delegation, drag-source mounting,
+rendered-item tracking, and metadata delegation while routing grid/tile/selectable/ghost options
+through the demo-local `collection/asset_grid/chrome.rs` child owner.
+`collection/asset_grid/chrome.rs` owns grid columns/gaps, tile minimum-height layout refinement,
+selectable focus policy, drag-preview ghost IDs, and the grid/tile/selectable/ghost test IDs.
+Public crate APIs, tile render order, selection behavior, drag preview behavior, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the asset-grid chrome owner boundary.

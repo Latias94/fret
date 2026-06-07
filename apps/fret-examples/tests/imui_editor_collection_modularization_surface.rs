@@ -6,6 +6,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let asset_grid_chrome_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs");
     let asset_grid_inline_rename_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
     let asset_grid_metadata_source =
@@ -544,8 +546,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionAssetGridState",
         "pub(super) fn render_collection_asset_grid(",
         "ui.grid_with_options(",
+        "mod chrome;",
         "mod inline_rename;",
         "mod metadata;",
+        "collection_asset_grid_options(",
+        "collection_asset_tile_options(",
+        "collection_asset_selectable_options(",
+        "collection_asset_ghost_id(",
+        "collection_asset_ghost_options(",
         "render_collection_inline_rename_field(",
         "render_collection_asset_metadata_readouts(",
         "drag_preview_ghost_with_options(",
@@ -554,6 +562,43 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             asset_grid_source.contains(needle),
             "the demo-local collection asset-grid owner should keep tile-grid interaction explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "kit::GridOptions",
+        "kit::VerticalOptions",
+        "kit::SelectableOptions",
+        "DragPreviewGhostOptions",
+        "\"imui-editor-proof.authoring.imui.collection.grid\"",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}\"",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
+    ] {
+        assert!(
+            !asset_grid_source.contains(needle),
+            "the demo-local collection asset-grid owner should delegate option/test-id construction to asset_grid/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn collection_asset_grid_options(",
+        "pub(super) fn collection_asset_tile_options(",
+        "pub(super) fn collection_asset_selectable_options(",
+        "pub(super) fn collection_asset_ghost_id(",
+        "pub(super) fn collection_asset_ghost_options(",
+        "kit::GridOptions",
+        "kit::VerticalOptions",
+        "kit::SelectableOptions",
+        "DragPreviewGhostOptions",
+        "fret_ui_kit::LayoutRefinement::default()",
+        ".min_h(layout.tile_min_height)",
+        "\"imui-editor-proof.authoring.imui.collection.grid\"",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}\"",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
+        "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
+    ] {
+        assert!(
+            asset_grid_chrome_source.contains(needle),
+            "the demo-local collection asset-grid chrome owner should keep grid/tile/selectable/ghost options explicit; missing `{needle}`"
         );
     }
 
