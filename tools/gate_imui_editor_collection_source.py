@@ -86,6 +86,9 @@ def main() -> None:
     collection_models = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs"
     )
+    collection_order_toggle = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/order_toggle.rs"
+    )
     collection_readouts = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/readouts.rs"
     )
@@ -121,6 +124,7 @@ def main() -> None:
         collection_import_target,
         collection_keyboard,
         collection_models,
+        collection_order_toggle,
         collection_readouts,
         collection_status_readouts,
         collection_rename,
@@ -193,6 +197,7 @@ def main() -> None:
                 "mod keyboard;",
                 "mod import_target;",
                 "mod models;",
+                "mod order_toggle;",
                 "mod rename;",
                 "mod selection;",
                 "mod status_readouts;",
@@ -200,7 +205,9 @@ def main() -> None:
                 "pub(super) use chrome::proof_collection_readout_text;",
                 "use chrome::proof_collection_section_label;",
                 "use import_target::render_collection_import_target;",
+                "use order_toggle::render_collection_order_toggle;",
                 "render_collection_import_target(ui);",
+                "render_collection_order_toggle(",
                 "use status_readouts::{",
                 "render_collection_status_readouts(",
                 "#[cfg(test)]",
@@ -356,6 +363,51 @@ def main() -> None:
                 "drag_source_with_options",
                 "TextField::new(",
                 "PointerRegionProps",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection order toggle delegation",
+            collection,
+            required=[
+                "mod order_toggle;",
+                "use order_toggle::render_collection_order_toggle;",
+                "render_collection_order_toggle(",
+            ],
+            forbidden=[
+                '"Show folder order"',
+                '"Reverse visible order"',
+                '"imui-editor-proof.authoring.imui.collection.order-toggle"',
+                "ui.button_with_options(",
+                "kit::ButtonOptions {",
+                ".update(&collection_reverse_order_model, |value| *value = !*value)",
+            ],
+        ),
+        SourceCheck(
+            "collection order toggle owner",
+            collection_order_toggle,
+            required=[
+                "pub(super) fn render_collection_order_toggle(",
+                "reverse_order_model: &Model<bool>",
+                "if reverse_order {",
+                '"Show folder order"',
+                '"Reverse visible order"',
+                "ui.button_with_options(",
+                "kit::ButtonOptions {",
+                '"imui-editor-proof.authoring.imui.collection.order-toggle"',
+                "if !order_toggle.clicked()",
+                ".update(reverse_order_model, |value| *value = !*value)",
+                "!reverse_order",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "selector_model_paint",
+                "render_collection_asset_grid",
+                "render_collection_context_menu",
+                "ui.drop_target::<",
+                "TextField::new(",
                 "kit::ChildRegionOptions",
                 "kit::GridOptions",
                 "kit::MenuItemOptions",

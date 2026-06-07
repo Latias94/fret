@@ -35668,6 +35668,35 @@ Fret Examples Collection Status Readout Owner Split Evidence - 2026-06-07:
 - Passed: `git diff --check` with only a Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Order Toggle Owner Split Evidence - 2026-06-07:
+
+- Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection
+  proof reverse-order toggle UI now lives in the demo-local `collection/order_toggle.rs` child owner
+  without changing the `Show folder order` / `Reverse visible order` labels, order-toggle test ID,
+  reverse-order model update, returned visible-order state, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `collection.rs` declares `mod order_toggle;` and delegates through
+  `render_collection_order_toggle(...)`. `collection/order_toggle.rs` owns
+  `render_collection_order_toggle(...)`, the `imui-editor-proof.authoring.imui.collection.order-toggle`
+  test ID, both button labels, the `Model<bool>` update, and the returned toggled state.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and
+  `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` freeze the
+  root/order-toggle-owner boundary.
+- Passed: `cargo fmt -p fret-examples`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`;
+  1 test passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `git diff --check` with only a Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Chrome/Readout Owner Split Evidence - 2026-06-07:
 
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` was split so collection

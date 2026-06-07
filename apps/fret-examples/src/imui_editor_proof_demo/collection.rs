@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::advanced::view::AppRenderDataExt as _;
-use fret::imui::{kit, prelude::*};
+use fret::imui::prelude::*;
 
 use super::KernelApp;
 
@@ -17,6 +17,7 @@ mod geometry;
 mod import_target;
 mod keyboard;
 mod models;
+mod order_toggle;
 mod readouts;
 mod rename;
 mod selection;
@@ -52,6 +53,7 @@ use models::{
     authoring_parity_collection_reverse_order_model, authoring_parity_collection_scroll_handle,
     authoring_parity_collection_selection_model, authoring_parity_collection_zoom_model,
 };
+use order_toggle::render_collection_order_toggle;
 use rename::proof_collection_begin_rename_session;
 use selection::{proof_collection_active_id, proof_collection_assets_in_visible_order};
 use status_readouts::{ProofCollectionStatusReadoutState, render_collection_status_readouts};
@@ -110,7 +112,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         .cx_mut()
         .data()
         .selector_model_paint(&collection_zoom_model, |state| state);
-    let mut collection_reverse_order = ui
+    let collection_reverse_order = ui
         .cx_mut()
         .data()
         .selector_model_paint(&collection_reverse_order_model, |value| value);
@@ -135,27 +137,11 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         collection_tile_extent,
     );
 
-    let order_toggle = ui.button_with_options(
-        if collection_reverse_order {
-            "Show folder order"
-        } else {
-            "Reverse visible order"
-        },
-        kit::ButtonOptions {
-            test_id: Some(Arc::from(
-                "imui-editor-proof.authoring.imui.collection.order-toggle",
-            )),
-            ..Default::default()
-        },
+    let collection_reverse_order = render_collection_order_toggle(
+        ui,
+        &collection_reverse_order_model,
+        collection_reverse_order,
     );
-    if order_toggle.clicked() {
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&collection_reverse_order_model, |value| *value = !*value);
-        collection_reverse_order = !collection_reverse_order;
-    }
 
     let collection_assets = proof_collection_assets_in_visible_order(
         Arc::<[ProofCollectionAsset]>::from(stored_collection_assets.clone()),

@@ -23,6 +23,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/import_target.rs");
     let keyboard_source = include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs");
     let models_source = include_str!("../src/imui_editor_proof_demo/collection/models.rs");
+    let order_toggle_source =
+        include_str!("../src/imui_editor_proof_demo/collection/order_toggle.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
     let selection_commands_source =
@@ -100,6 +102,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod import_target;",
         "mod keyboard;",
         "mod models;",
+        "mod order_toggle;",
         "mod rename;",
         "mod selection;",
         "mod status_readouts;",
@@ -107,7 +110,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) use chrome::proof_collection_readout_text;",
         "use chrome::proof_collection_section_label;",
         "use import_target::render_collection_import_target;",
+        "use order_toggle::render_collection_order_toggle;",
         "render_collection_import_target(ui);",
+        "render_collection_order_toggle(",
         "use status_readouts::{",
         "render_collection_status_readouts(",
     ] {
@@ -138,6 +143,39 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !collection_source.contains(needle),
             "the collection root should route chrome/readout mounting through collection/chrome.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn render_collection_order_toggle(",
+        "reverse_order_model: &Model<bool>",
+        "if reverse_order {",
+        "\"Show folder order\"",
+        "\"Reverse visible order\"",
+        "ui.button_with_options(",
+        "kit::ButtonOptions {",
+        "\"imui-editor-proof.authoring.imui.collection.order-toggle\"",
+        "if !order_toggle.clicked()",
+        ".update(reverse_order_model, |value| *value = !*value)",
+        "!reverse_order",
+    ] {
+        assert!(
+            order_toggle_source.contains(needle),
+            "the demo-local collection order-toggle owner should keep reverse-order button logic explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "\"Show folder order\"",
+        "\"Reverse visible order\"",
+        "\"imui-editor-proof.authoring.imui.collection.order-toggle\"",
+        "ui.button_with_options(",
+        "kit::ButtonOptions {",
+        ".update(&collection_reverse_order_model, |value| *value = !*value)",
+    ] {
+        assert!(
+            !collection_source.contains(needle),
+            "the collection root should route reverse-order button UI through collection/order_toggle.rs; unexpected `{needle}`"
         );
     }
 

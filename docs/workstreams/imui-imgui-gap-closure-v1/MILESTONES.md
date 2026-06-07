@@ -8097,3 +8097,12 @@ selection, active tile, zoom, select-all, rename, context-menu, command package,
 command status readouts. Readout text, readout test IDs, projection functions, public crate APIs,
 and the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the status-readouts owner boundary.
+
+2026-06-07 collection proof reverse-order toggle owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
+delegates reverse-order button handling through `render_collection_order_toggle(...)`. The
+demo-local `collection/order_toggle.rs` owns the reverse-order toggle workflow: the `Show folder
+order` / `Reverse visible order` button labels, order-toggle test ID, model update, and returned
+visible-order state. Public crate APIs and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the order-toggle owner boundary.

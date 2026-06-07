@@ -8461,3 +8461,12 @@ opening the slice.
       `collection/status_readouts.rs` owns the status readout mounting workflow. The collection
       source gate, workstream source gate, manifest, and surface tests now include the
       status-readouts owner.
+- [x] Split collection proof reverse-order toggle UI out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
+      `collection/order_toggle.rs` child owner without changing the `Show folder order` /
+      `Reverse visible order` labels, order-toggle test ID, reverse-order model update, returned
+      visible-order state, or the app-owned no-helper-widening boundary. Result: `collection.rs`
+      keeps render assembly and delegates the reverse-order button through
+      `render_collection_order_toggle(...)`, while `collection/order_toggle.rs` owns the toggle
+      button workflow. The collection source gate, workstream source gate, manifest, and surface
+      tests now include the order-toggle owner.
