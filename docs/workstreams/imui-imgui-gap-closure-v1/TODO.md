@@ -8919,9 +8919,19 @@ opening the slice.
       changing arrow/Home/End movement, Shift-range extension, keyboard policy entry points,
       public crate APIs, or the app-owned no-helper-widening boundary. Result:
       `selection/keyboard/navigation.rs` keeps next-index math, range selection construction, and
-      `#[cfg(test)] mod tests;` while `selection/keyboard/navigation/tests.rs` owns focused
-      next-index/range construction coverage. The collection source gate, workstream source gate,
+      `#[cfg(test)] mod tests;` while `selection/keyboard/navigation/tests.rs` imports fixtures
+      and owns focused next-index/range construction coverage. The collection source gate, workstream source gate,
       manifest, and surface tests now include the keyboard navigation tests child owner.
+- [x] Split collection keyboard navigation test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation/tests.rs`
+      into the demo-local `collection/selection/keyboard/navigation/tests/fixtures.rs` fixture
+      owner without changing arrow/Home/End movement, Shift-range extension, keyboard policy entry
+      points, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `selection/keyboard/navigation/tests.rs` keeps the two behavior tests and imports helpers
+      through `mod fixtures;` while `selection/keyboard/navigation/tests/fixtures.rs` owns
+      `keys()`, `selection_state(...)`, `selected_ids(...)`, and `ImUiMultiSelectState::new(...)`.
+      The collection source gate, workstream source gate, manifest, and surface tests now include
+      the keyboard navigation fixture child owner.
 - [x] Split collection keyboard selection behavior tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
       demo-local `collection/selection/keyboard/tests.rs` test owner without changing arrow-key

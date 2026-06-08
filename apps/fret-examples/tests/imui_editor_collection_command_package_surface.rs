@@ -161,6 +161,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
             "../src/imui_editor_proof_demo/collection/selection/keyboard/navigation/tests.rs"
         ),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/keyboard/navigation/tests/fixtures.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/projection.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs"),

@@ -8549,6 +8549,17 @@ no-helper-widening boundary remain unchanged, while the collection source gate, 
 gate, manifest, and surface tests now freeze the keyboard navigation tests owner boundary. The
 keyboard navigation tests owner boundary is now tracked as its own source-gated proof slice.
 
+2026-06-09 collection keyboard navigation fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation/tests.rs`
+now keeps the keyboard navigation helper behavior tests and imports fixture helpers through
+`mod fixtures;` while routing key/selection fixture construction through the demo-local
+`collection/selection/keyboard/navigation/tests/fixtures.rs` fixture owner. Arrow/Home/End
+movement, Shift-range extension, keyboard policy entry points, public crate APIs, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the keyboard navigation fixture
+owner boundary. The keyboard navigation fixture owner boundary is now tracked as its own
+source-gated proof slice.
+
 2026-06-08 collection keyboard selection tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` now keeps the
 stable `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,

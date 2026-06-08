@@ -1,22 +1,8 @@
 use super::*;
 
-fn keys() -> Vec<Arc<str>> {
-    ["stone-albedo", "stone-normal", "stone-orm", "moss-overlay"]
-        .into_iter()
-        .map(Arc::from)
-        .collect()
-}
+mod fixtures;
 
-fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
-    ImUiMultiSelectState::new(
-        selected.iter().map(|id| Arc::from(*id)).collect(),
-        anchor.map(Arc::from),
-    )
-}
-
-fn selected_ids(selection: &ImUiMultiSelectState<Arc<str>>) -> Vec<&str> {
-    selection.selected().iter().map(|id| id.as_ref()).collect()
-}
+use fixtures::{keys, selected_ids, selection_state};
 
 #[test]
 fn proof_collection_keyboard_next_index_moves_with_columns_and_edges() {
