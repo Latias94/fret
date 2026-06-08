@@ -5,6 +5,8 @@ fn imui_editor_proof_demo_keeps_collection_delete_action_app_owned_and_explicit(
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/tile.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/actions.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),

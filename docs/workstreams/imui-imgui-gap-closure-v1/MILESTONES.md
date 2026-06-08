@@ -8453,3 +8453,18 @@ app-owned no-helper-widening boundary remain unchanged, while the collection sou
 workstream source gate, manifest, and surface tests now freeze the browser-scope asset-grid owner
 boundary. The browser-scope asset-grid owner boundary is now tracked as its own source-gated
 proof slice.
+
+2026-06-08 collection asset-grid tile owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` now keeps
+`ProofCollectionAssetGridModels`, `ProofCollectionAssetGridState`, child owner routing,
+`collection_asset_grid_options(...)`, `ui.grid_with_options(...)`, and per-asset dispatch while
+routing single-tile interaction/rendering through the demo-local `collection/asset_grid/tile.rs`
+child owner. The child owner now owns payload/title/subtitle preparation, selectable trigger
+handling, active-focus target publication calls, clicked active-id publication calls, context-menu
+selection/anchor publication calls, inline rename field routing, drag-source/ghost preview
+mounting, rendered-item bounds capture, and metadata readout delegation. Grid option routing,
+selectable behavior, inline rename behavior, drag preview behavior, rendered-item capture, public
+crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
+source gate, workstream source gate, manifest, and surface tests now freeze the asset-grid tile
+owner boundary. The asset-grid tile owner boundary is now tracked as its own source-gated proof
+slice.

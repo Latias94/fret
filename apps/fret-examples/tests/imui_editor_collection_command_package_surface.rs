@@ -2,6 +2,8 @@
 fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explicit() {
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let asset_grid_tile_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/tile.rs");
     let asset_grid_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs");
     let asset_grid_inline_rename_source =
@@ -39,6 +41,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/tile.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/actions.rs"),
         "\n",
@@ -271,19 +275,28 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionAssetGridModels",
         "pub(super) struct ProofCollectionAssetGridState",
         "pub(super) fn render_collection_asset_grid(",
+        "mod tile;",
+        "render_collection_asset_tile(",
         "mod chrome;",
         "mod inline_rename;",
         "collection_asset_grid_options(",
+        "ui.grid_with_options(",
+    ] {
+        assert!(
+            asset_grid_source.contains(needle),
+            "collection asset-grid owner should keep grid entry and route tile rendering through the tile owner; missing `{needle}`"
+        );
+    }
+    for needle in [
         "collection_asset_selectable_options(",
         "collection_asset_ghost_options(",
-        "ui.grid_with_options(",
         "ui.multi_selectable_with_options(",
         "render_collection_inline_rename_field(",
         "drag_preview_ghost_with_options(",
     ] {
         assert!(
-            asset_grid_source.contains(needle),
-            "collection asset-grid owner should route tile-grid interaction through app-owned state transitions; missing `{needle}`"
+            asset_grid_tile_source.contains(needle),
+            "collection asset-grid tile owner should keep tile-grid interaction through app-owned state transitions; missing `{needle}`"
         );
     }
     for needle in [
@@ -294,10 +307,13 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\"imui-editor-proof.authoring.imui.collection.grid\"",
         "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
         "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
+        "ui.multi_selectable_with_options(",
+        "drag_preview_ghost_with_options(",
+        "render_collection_inline_rename_field(",
     ] {
         assert!(
             !asset_grid_source.contains(needle),
-            "collection asset-grid owner should delegate option/test-id construction to the chrome owner; unexpected `{needle}`"
+            "collection asset-grid owner should delegate option/test-id construction to chrome and tile interaction to asset_grid/tile.rs; unexpected `{needle}`"
         );
     }
     for needle in [

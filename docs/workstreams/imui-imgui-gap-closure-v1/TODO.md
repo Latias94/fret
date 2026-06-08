@@ -8829,3 +8829,19 @@ opening the slice.
       `render_collection_asset_grid(...)` element mounting. The collection source gate,
       workstream source gate, manifest, and surface tests now include the browser-scope
       asset-grid child owner.
+- [x] Split collection asset-grid tile rendering out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the
+      demo-local `collection/asset_grid/tile.rs` child owner without changing grid option
+      routing, selectable trigger behavior, active-focus target publication, clicked active-id
+      publication, context-menu selection/anchor publication, inline rename routing, drag preview,
+      rendered-item capture, metadata readouts, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `asset_grid.rs` keeps
+      `ProofCollectionAssetGridModels`, `ProofCollectionAssetGridState`, `mod tile;`,
+      grid option routing, `ui.grid_with_options(...)`, and
+      `render_collection_asset_tile(...)` per-asset dispatch while
+      `asset_grid/tile.rs` owns payload/title/subtitle preparation, selectable trigger handling,
+      active-focus publication calls, clicked active-id publication calls, context-menu
+      selection/anchor publication calls, inline rename field routing, drag-source/ghost preview
+      mounting, rendered-item bounds capture, and metadata readout delegation. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the asset-grid
+      tile child owner.

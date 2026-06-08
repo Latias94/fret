@@ -6,6 +6,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let asset_grid_tile_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/tile.rs");
     let asset_grid_actions_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/actions.rs");
     let asset_grid_chrome_source =
@@ -966,10 +968,19 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod chrome;",
         "mod inline_rename;",
         "mod metadata;",
+        "mod tile;",
+        "render_collection_asset_tile(",
+        "collection_asset_grid_options(",
+    ] {
+        assert!(
+            asset_grid_source.contains(needle),
+            "the demo-local collection asset-grid owner should keep grid entry and route tile rendering explicitly; missing `{needle}`"
+        );
+    }
+    for needle in [
         "proof_collection_asset_grid_publish_active_focus_target(",
         "proof_collection_asset_grid_activate_clicked_asset(",
         "proof_collection_asset_grid_apply_context_menu(",
-        "collection_asset_grid_options(",
         "collection_asset_tile_options(",
         "collection_asset_selectable_options(",
         "collection_asset_ghost_id(",
@@ -980,8 +991,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "ProofCollectionRenderedItem {",
     ] {
         assert!(
-            asset_grid_source.contains(needle),
-            "the demo-local collection asset-grid owner should keep tile-grid interaction explicit; missing `{needle}`"
+            asset_grid_tile_source.contains(needle),
+            "the demo-local collection asset-grid tile owner should keep tile-grid interaction explicit; missing `{needle}`"
         );
     }
     for needle in [
@@ -994,10 +1005,15 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "\"imui-editor-proof.authoring.imui.collection.asset.{}\"",
         "\"imui-editor-proof.authoring.imui.collection.asset.{}.select\"",
         "\"imui-editor-proof.authoring.imui.collection.asset.{}.ghost\"",
+        "ui.multi_selectable_with_options(",
+        "drag_preview_ghost_with_options(",
+        "render_collection_inline_rename_field(",
+        "render_collection_asset_metadata_readouts(",
+        "ProofCollectionRenderedItem {",
     ] {
         assert!(
             !asset_grid_source.contains(needle),
-            "the demo-local collection asset-grid owner should delegate option/test-id construction to asset_grid/chrome.rs; unexpected `{needle}`"
+            "the demo-local collection asset-grid owner should delegate option/test-id construction to asset_grid/chrome.rs and tile behavior to asset_grid/tile.rs; unexpected `{needle}`"
         );
     }
     for needle in [
