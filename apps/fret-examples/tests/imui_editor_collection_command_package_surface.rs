@@ -25,6 +25,9 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
     let browser_input_box_select_session_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session.rs"
     );
+    let browser_input_box_select_session_tests_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session/tests.rs"
+    );
     let browser_input_context_menu_runtime_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
     );
@@ -68,6 +71,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\n",
         include_str!(
             "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session.rs"
+        ),
+        "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session/tests.rs"
         ),
         "\n",
         include_str!(
@@ -554,10 +561,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) fn proof_collection_browser_scope_box_select_cancel_pointer(",
         "proof_collection_drag_threshold_met(",
         "ProofCollectionBoxSelectSession {",
-        "box_select_down_arms_left_background_session",
-        "box_select_move_marks_threshold_for_matching_pointer",
-        "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
-        "box_select_cancel_clears_matching_pointer_only",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             browser_input_box_select_session_source.contains(needle),
@@ -573,10 +578,51 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "publish_collection_browser_scope_box_select_threshold_selection(",
         "proof_collection_box_select_selection(",
         "state.active_id = next_selection.first_selected().cloned();",
+        "fn pointer_down(",
+        "fn pointer_move(",
+        "fn pointer_up(",
+        "fn pointer_cancel(",
+        "box_select_down_arms_left_background_session",
+        "box_select_move_marks_threshold_for_matching_pointer",
+        "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
+        "box_select_cancel_clears_matching_pointer_only",
     ] {
         assert!(
             !browser_input_box_select_session_source.contains(needle),
             "collection browser input box-select session owner should not take runtime event/model publication; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "fn pointer_down(",
+        "fn pointer_move(",
+        "fn pointer_up(",
+        "fn pointer_cancel(",
+        "fn session(pointer_id: PointerId) -> ProofCollectionBoxSelectSession",
+        "box_select_down_arms_left_background_session",
+        "box_select_down_ignores_non_left_or_pressable_origin",
+        "box_select_move_marks_threshold_for_matching_pointer",
+        "box_select_move_ignores_released_left_button",
+        "box_select_up_restores_mismatched_pointer_and_takes_matching_session",
+        "box_select_cancel_clears_matching_pointer_only",
+    ] {
+        assert!(
+            browser_input_box_select_session_tests_source.contains(needle),
+            "collection browser input box-select session tests owner should keep pointer fixtures and behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeModels",
+        "pub(super) struct ProofCollectionBrowserScopeBoxSelectRuntimeState",
+        "pub(super) fn install_collection_browser_scope_box_select_runtime(",
+        "BeforeCollectionBrowserScopeBoxSelectPointerUp",
+        "cx.pointer_region_on_pointer_down(",
+        "publish_collection_browser_scope_box_select_threshold_selection(",
+        "proof_collection_box_select_selection(",
+        "state.active_id = next_selection.first_selected().cloned();",
+    ] {
+        assert!(
+            !browser_input_box_select_session_tests_source.contains(needle),
+            "collection browser input box-select session tests owner should not take runtime event/model publication; unexpected `{needle}`"
         );
     }
     for needle in [
