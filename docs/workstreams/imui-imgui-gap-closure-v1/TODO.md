@@ -8755,6 +8755,17 @@ opening the slice.
       `collection/box_select/tests.rs` owns the focused box-select behavior coverage. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       box-select tests child owner.
+- [x] Split collection drag/drop payload behavior tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs` into the demo-local
+      `collection/drag_drop/tests.rs` test owner without changing selected-set payload formation,
+      dragged-only fallback, preview title/subtitle projection, drop-status text, public crate
+      APIs, or the app-owned no-helper-widening boundary. Result: `drag_drop.rs` keeps
+      `ProofCollectionDragPayload`, `proof_collection_drag_payload_for_asset(...)`,
+      `proof_collection_drag_preview_title(...)`, `proof_collection_drag_preview_subtitle(...)`,
+      `proof_collection_drop_status(...)`, and `#[cfg(test)] mod tests;` while
+      `collection/drag_drop/tests.rs` owns the selected-payload and unselected-dragged-asset
+      behavior coverage. The collection source gate, workstream source gate, manifest, and surface
+      tests now include the drag/drop tests child owner.
 - [x] Split collection browser input box-select pointer session transitions out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
       into the demo-local `collection/browser_scope/input_runtime/box_select/session.rs` child

@@ -137,6 +137,9 @@ def main() -> None:
     collection_drag_drop = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs"
     )
+    collection_drag_drop_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop/tests.rs"
+    )
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
@@ -276,6 +279,7 @@ def main() -> None:
         collection_derived_state,
         collection_runtime_state,
         collection_drag_drop,
+        collection_drag_drop_tests,
         collection_geometry,
         collection_geometry_zoom,
         collection_geometry_zoom_tests,
@@ -1946,10 +1950,13 @@ def main() -> None:
                 "pub(super) fn proof_collection_drag_preview_subtitle(",
                 "pub(super) fn proof_collection_drop_status(",
                 "proof_collection_selected_assets(",
-                "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set()",
-                "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only()",
+                "#[cfg(test)]",
+                "mod tests;",
             ],
             forbidden=[
+                "fn selection_state(",
+                "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set()",
+                "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only()",
                 "render_collection_first_asset_browser_proof",
                 "drag_source_with_options",
                 "drop_target::<",
@@ -1961,6 +1968,26 @@ def main() -> None:
                 "kit::ChildRegionOptions",
                 "kit::GridOptions",
                 "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection drag drop tests owner",
+            collection_drag_drop_tests,
+            required=[
+                "fn selection_state(",
+                "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set() {",
+                "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only() {",
+                "proof_collection_drag_payload_for_asset(",
+                "proof_collection_drag_preview_title(",
+                "proof_collection_drag_preview_subtitle(",
+                "proof_collection_drop_status(",
+            ],
+            forbidden=[
+                "pub(super) struct ProofCollectionDragPayload",
+                "pub(super) fn proof_collection_drag_payload_for_asset(",
+                "pub(super) fn proof_collection_drag_preview_title(",
+                "pub(super) fn proof_collection_drag_preview_subtitle(",
+                "pub(super) fn proof_collection_drop_status(",
             ],
         ),
         SourceCheck(

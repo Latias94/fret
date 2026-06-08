@@ -64,6 +64,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let derived_state_source =
         include_str!("../src/imui_editor_proof_demo/collection/derived_state.rs");
     let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
+    let drag_drop_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/drag_drop/tests.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
     let geometry_zoom_source =
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom.rs");
@@ -1485,10 +1487,48 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn proof_collection_drag_preview_title(",
         "pub(super) fn proof_collection_drag_preview_subtitle(",
         "pub(super) fn proof_collection_drop_status(",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             drag_drop_source.contains(needle),
             "the demo-local collection drag/drop owner should keep payload and status projection explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set() {",
+        "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only() {",
+        "proof_collection_drag_payload_for_asset(",
+        "proof_collection_drag_preview_title(",
+        "proof_collection_drag_preview_subtitle(",
+        "proof_collection_drop_status(",
+    ] {
+        assert!(
+            drag_drop_tests_source.contains(needle),
+            "the demo-local collection drag/drop tests owner should keep drag payload behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set() {",
+        "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only() {",
+    ] {
+        assert!(
+            !drag_drop_source.contains(needle),
+            "the demo-local collection drag/drop owner should route behavior coverage through drag_drop/tests.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionDragPayload",
+        "pub(super) fn proof_collection_drag_payload_for_asset(",
+        "pub(super) fn proof_collection_drag_preview_title(",
+        "pub(super) fn proof_collection_drag_preview_subtitle(",
+        "pub(super) fn proof_collection_drop_status(",
+    ] {
+        assert!(
+            !drag_drop_tests_source.contains(needle),
+            "the demo-local collection drag/drop tests owner should not take implementation ownership; unexpected `{needle}`"
         );
     }
 

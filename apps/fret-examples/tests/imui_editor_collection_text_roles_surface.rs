@@ -61,6 +61,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/drag_drop/tests.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom.rs"),

@@ -8382,6 +8382,18 @@ no-helper-widening boundary remain unchanged, while the collection source gate, 
 gate, manifest, and surface tests now freeze the box-select tests owner boundary. The box-select
 tests owner boundary is now tracked as its own source-gated proof slice.
 
+2026-06-08 collection drag/drop tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs` now keeps
+`ProofCollectionDragPayload`, `proof_collection_drag_payload_for_asset(...)`,
+`proof_collection_drag_preview_title(...)`, `proof_collection_drag_preview_subtitle(...)`,
+`proof_collection_drop_status(...)`, selected-assets projection, and `#[cfg(test)] mod tests;`
+while routing drag/drop payload coverage through the demo-local
+`collection/drag_drop/tests.rs` test owner. Selected-set payload formation, dragged-only fallback,
+preview title/subtitle projection, drop-status text, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the drag/drop tests owner boundary. The drag/drop
+tests owner boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection browser input box-select session owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
 now keeps pointer event registration, context-menu pre-handler ordering, capture/release,
