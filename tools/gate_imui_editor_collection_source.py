@@ -149,6 +149,9 @@ def main() -> None:
     collection_rename = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs"
     )
+    collection_rename_commit = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit.rs"
+    )
     collection_rename_focus = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/focus.rs"
     )
@@ -220,6 +223,7 @@ def main() -> None:
         collection_render_states,
         collection_status_readouts,
         collection_rename,
+        collection_rename_commit,
         collection_rename_focus,
         collection_selection,
         collection_selection_context_menu,
@@ -1614,26 +1618,64 @@ def main() -> None:
             "collection inline rename hub",
             collection_rename,
             required=[
+                "mod commit;",
                 "mod focus;",
+                "pub(super) use commit::{",
+                "ProofCollectionRenameCommit",
+                "proof_collection_commit_rename",
                 "pub(super) use focus::{",
                 "proof_collection_inline_rename_focus_state",
                 "proof_collection_restore_focus_after_inline_rename",
                 "proof_collection_sync_inline_rename_focus",
                 "pub(super) struct ProofCollectionRenameSession {",
-                "pub(super) struct ProofCollectionRenameCommit {",
                 "pub(super) fn proof_collection_rename_shortcut_matches(",
                 "pub(super) fn proof_collection_begin_rename_session(",
                 "pub(super) fn proof_collection_begin_inline_rename_in_app(",
-                "pub(super) fn proof_collection_commit_rename(",
                 "proof_collection_rename_ready_status(",
                 "fn proof_collection_begin_rename_session_prefers_active_visible_asset()",
-                "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
             ],
             forbidden=[
+                "pub(in super::super) struct ProofCollectionRenameCommit",
+                "pub(in super::super) fn proof_collection_commit_rename(",
+                "draft.trim()",
+                "asset.label = next_label.clone();",
+                "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
+                "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
                 "struct ProofCollectionInlineRenameFocusState",
                 "fn proof_collection_inline_rename_focus_state<",
                 "fn proof_collection_sync_inline_rename_focus<",
                 "fn proof_collection_restore_focus_after_inline_rename(",
+                "timer_add_on_timer_for(",
+                "host.request_focus(input_id);",
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection inline rename commit owner",
+            collection_rename_commit,
+            required=[
+                "pub(in super::super) struct ProofCollectionRenameCommit",
+                "pub(in super::super) fn proof_collection_commit_rename(",
+                "draft.trim()",
+                "asset.label = next_label.clone();",
+                "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
+                "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
+            ],
+            forbidden=[
+                "proof_collection_rename_shortcut_matches(",
+                "proof_collection_begin_rename_session(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "proof_collection_rename_ready_status(",
+                "ImUiMultiSelectState",
+                "struct ProofCollectionInlineRenameFocusState",
                 "timer_add_on_timer_for(",
                 "host.request_focus(input_id);",
                 "render_collection_first_asset_browser_proof",
@@ -1664,6 +1706,7 @@ def main() -> None:
             forbidden=[
                 "pub(super) struct ProofCollectionRenameSession",
                 "pub(super) struct ProofCollectionRenameCommit",
+                "pub(in super::super) struct ProofCollectionRenameCommit",
                 "proof_collection_begin_rename_session(",
                 "proof_collection_begin_inline_rename_in_app(",
                 "proof_collection_commit_rename(",

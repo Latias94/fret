@@ -60,6 +60,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let readout_status_source =
         include_str!("../src/imui_editor_proof_demo/collection/readouts/status.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
+    let rename_commit_source =
+        include_str!("../src/imui_editor_proof_demo/collection/rename/commit.rs");
     let rename_focus_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/focus.rs");
     let render_states_source =
@@ -1230,23 +1232,68 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "mod commit;",
         "mod focus;",
+        "pub(super) use commit::{",
+        "ProofCollectionRenameCommit",
+        "proof_collection_commit_rename",
         "pub(super) use focus::{",
         "proof_collection_inline_rename_focus_state",
         "proof_collection_restore_focus_after_inline_rename",
         "proof_collection_sync_inline_rename_focus",
         "pub(super) struct ProofCollectionRenameSession",
-        "pub(super) struct ProofCollectionRenameCommit",
         "pub(super) fn proof_collection_begin_rename_session(",
         "pub(super) fn proof_collection_begin_inline_rename_in_app(",
-        "pub(super) fn proof_collection_commit_rename(",
         "proof_collection_rename_ready_status(",
         "fn proof_collection_begin_rename_session_prefers_active_visible_asset()",
-        "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
     ] {
         assert!(
             rename_source.contains(needle),
             "the demo-local collection rename hub should keep pure rename workflow state and focus re-exports explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) struct ProofCollectionRenameCommit",
+        "pub(in super::super) fn proof_collection_commit_rename(",
+        "draft.trim()",
+        "asset.label = next_label.clone();",
+        "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
+        "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
+    ] {
+        assert!(
+            rename_commit_source.contains(needle),
+            "the demo-local collection rename commit owner should keep commit mutation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super) struct ProofCollectionRenameCommit",
+        "pub(in super::super) fn proof_collection_commit_rename(",
+        "draft.trim()",
+        "asset.label = next_label.clone();",
+        "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
+        "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
+    ] {
+        assert!(
+            !rename_source.contains(needle),
+            "the demo-local collection rename hub should route commit mutation through rename/commit.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "proof_collection_rename_shortcut_matches(",
+        "proof_collection_begin_rename_session(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_rename_ready_status(",
+        "ImUiMultiSelectState",
+        "struct ProofCollectionInlineRenameFocusState",
+        "timer_add_on_timer_for(",
+        "host.request_focus(input_id);",
+    ] {
+        assert!(
+            !rename_commit_source.contains(needle),
+            "the demo-local collection rename commit owner should not take shortcut/session/app-model/focus policy; unexpected `{needle}`"
         );
     }
 
@@ -1284,6 +1331,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "pub(super) struct ProofCollectionRenameSession",
         "pub(super) struct ProofCollectionRenameCommit",
+        "pub(in super::super) struct ProofCollectionRenameCommit",
         "proof_collection_begin_rename_session(",
         "proof_collection_begin_inline_rename_in_app(",
         "proof_collection_commit_rename(",

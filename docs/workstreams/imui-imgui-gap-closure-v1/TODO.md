@@ -8748,3 +8748,15 @@ opening the slice.
       next-index math, range selection construction, and focused navigation helper tests. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       keyboard navigation child owner.
+- [x] Split collection inline rename commit mutation out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` into the demo-local
+      `collection/rename/commit.rs` child owner without changing F2 shortcut matching, active
+      visible rename target selection, context-menu/button rename entry points, inline draft
+      model writes, empty-label rejection, label trim semantics, asset order/id preservation,
+      focus handoff, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `rename.rs` keeps the stable session/app-model facade, `ProofCollectionRenameSession`,
+      shortcut matching, begin-session fallback, begin-inline-rename model writes, focus
+      re-exports, and commit facade re-export while `rename/commit.rs` owns
+      `ProofCollectionRenameCommit`, label trim/reject logic, asset label mutation, renamed
+      asset projection, and focused commit unit tests. The collection source gate, workstream
+      source gate, manifest, and surface tests now include the rename commit child owner.

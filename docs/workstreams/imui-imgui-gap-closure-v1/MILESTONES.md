@@ -8370,3 +8370,15 @@ Shift-range selection construction through the demo-local
 extension, Escape clear behavior, keyboard handler imports, public crate APIs, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the keyboard navigation owner boundary.
+
+2026-06-08 collection inline rename commit owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps the stable rename
+session/app-model facade, `ProofCollectionRenameSession`, F2 shortcut matching, begin-session
+fallback, begin-inline-rename model writes, focus helper re-exports, and commit facade re-export
+while routing label trim/reject logic, asset label mutation, renamed-asset projection, and
+`ProofCollectionRenameCommit` through the demo-local `collection/rename/commit.rs` child owner.
+F2 shortcut matching, active visible rename target selection, context-menu/button rename entry
+points, inline draft model writes, empty-label rejection, label trim semantics, asset order/id
+preservation, focus handoff, public crate APIs, and the app-owned no-helper-widening boundary
+remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
+tests now freeze the rename commit owner boundary.
