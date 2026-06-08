@@ -101,6 +101,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/projection.rs");
     let selection_select_all_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs");
+    let selection_select_all_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/select_all/tests.rs");
     let selection_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs");
     let selection_delete_commands_source =
@@ -1902,13 +1904,71 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(in super::super) fn proof_collection_select_all_selection(",
         "proof_collection_active_id(collection_keys, selection, keyboard)",
         "ImUiMultiSelectState::from_ordered_selection(",
+        "#[cfg(test)]",
+        "mod tests;",
+    ] {
+        assert!(
+            selection_select_all_source.contains(needle),
+            "the demo-local collection select-all owner should keep shortcut and full visible-order selection policy explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn anchor_id(",
+        "ProofCollectionKeyboardState",
+        "proof_collection_select_all_selection(",
+        "proof_collection_select_all_shortcut_matches(",
         "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
         "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
         "proof_collection_select_all_shortcut_matches_primary_a_only",
     ] {
         assert!(
-            selection_select_all_source.contains(needle),
-            "the demo-local collection select-all owner should keep shortcut and full visible-order selection policy explicit; missing `{needle}`"
+            selection_select_all_tests_source.contains(needle),
+            "the demo-local collection select-all tests owner should keep fixtures and behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn anchor_id(",
+        "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+        "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+        "proof_collection_select_all_shortcut_matches_primary_a_only",
+        "render_collection_first_asset_browser_proof",
+        "proof_collection_keyboard_selection(",
+        "proof_collection_context_menu_selection(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_select_all_source.contains(needle),
+            "the demo-local collection select-all owner should not take test fixtures, render, command, or UI policy; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "ImUiMultiSelectState::from_ordered_selection(",
+        "render_collection_first_asset_browser_proof",
+        "proof_collection_keyboard_selection(",
+        "proof_collection_context_menu_selection(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_select_all_tests_source.contains(needle),
+            "the demo-local collection select-all tests owner should not take selection construction, render, command, or UI policy; unexpected `{needle}`"
         );
     }
     for needle in [

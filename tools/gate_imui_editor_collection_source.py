@@ -203,6 +203,9 @@ def main() -> None:
     collection_selection_select_all = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs"
     )
+    collection_selection_select_all_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all/tests.rs"
+    )
     collection_selection_commands = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands.rs"
     )
@@ -277,6 +280,7 @@ def main() -> None:
         collection_selection_keyboard_navigation,
         collection_selection_projection,
         collection_selection_select_all,
+        collection_selection_select_all_tests,
         collection_selection_commands,
         collection_selection_command_delete,
         collection_selection_command_delete_tests,
@@ -2385,11 +2389,44 @@ def main() -> None:
                 "pub(in super::super) fn proof_collection_select_all_selection(",
                 "proof_collection_active_id(collection_keys, selection, keyboard)",
                 "ImUiMultiSelectState::from_ordered_selection(",
+                "#[cfg(test)]",
+                "mod tests;",
+            ],
+            forbidden=[
+                "fn selection_state(",
+                "fn anchor_id(",
+                "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
+                "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
+                "proof_collection_select_all_shortcut_matches_primary_a_only",
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_keyboard_selection(",
+                "proof_collection_context_menu_selection(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection select-all tests owner",
+            collection_selection_select_all_tests,
+            required=[
+                "fn selection_state(",
+                "fn anchor_id(",
+                "ProofCollectionKeyboardState",
+                "proof_collection_select_all_selection(",
+                "proof_collection_select_all_shortcut_matches(",
                 "proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile",
                 "proof_collection_select_all_selection_falls_back_to_first_visible_asset",
                 "proof_collection_select_all_shortcut_matches_primary_a_only",
             ],
             forbidden=[
+                "ImUiMultiSelectState::from_ordered_selection(",
                 "render_collection_first_asset_browser_proof",
                 "proof_collection_keyboard_selection(",
                 "proof_collection_context_menu_selection(",
