@@ -95,6 +95,9 @@ def main() -> None:
     collection_browser_scope_input_context_menu_runtime = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs"
     )
+    collection_browser_scope_input_context_menu_runtime_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests.rs"
+    )
     collection_browser_scope_input_zoom_runtime = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
     )
@@ -265,6 +268,7 @@ def main() -> None:
         collection_browser_scope_input_box_select_session,
         collection_browser_scope_input_box_select_session_tests,
         collection_browser_scope_input_context_menu_runtime,
+        collection_browser_scope_input_context_menu_runtime_tests,
         collection_browser_scope_input_zoom_runtime,
         collection_box_select,
         collection_box_select_tests,
@@ -1590,9 +1594,8 @@ def main() -> None:
                 "host.update_model(context_menu_anchor_model",
                 "*state = Some(position);",
                 "host.notify(acx);",
-                "context_menu_anchor_prefers_window_position",
-                "context_menu_anchor_ignores_direct_pressable_clicks",
-                "context_menu_anchor_ignores_pressable_descendant_clicks",
+                "#[cfg(test)]",
+                "mod tests;",
             ],
             forbidden=[
                 "pub(super) struct ProofCollectionBrowserScopeInputModels",
@@ -1606,6 +1609,33 @@ def main() -> None:
                 "proof_collection_box_select_selection(",
                 "proof_collection_zoom_request(",
                 "collection_scroll_handle.set_offset(update.next_scroll_offset);",
+                "fn pointer_up(",
+                "context_menu_anchor_prefers_window_position",
+                "context_menu_anchor_falls_back_to_pointer_position",
+                "context_menu_anchor_ignores_non_right_or_non_click_up",
+                "context_menu_anchor_ignores_direct_pressable_clicks",
+                "context_menu_anchor_ignores_pressable_descendant_clicks",
+            ],
+        ),
+        SourceCheck(
+            "collection browser input context-menu runtime tests owner",
+            collection_browser_scope_input_context_menu_runtime_tests,
+            required=[
+                "fn pointer_up(",
+                "context_menu_anchor_prefers_window_position",
+                "context_menu_anchor_falls_back_to_pointer_position",
+                "context_menu_anchor_ignores_non_right_or_non_click_up",
+                "context_menu_anchor_ignores_direct_pressable_clicks",
+                "context_menu_anchor_ignores_pressable_descendant_clicks",
+                "proof_collection_browser_scope_context_menu_anchor_from_up(",
+            ],
+            forbidden=[
+                "pub(super) fn proof_collection_browser_scope_context_menu_anchor_from_up(",
+                "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
+                "host.request_focus(acx.target);",
+                "host.update_model(context_menu_anchor_model",
+                "*state = Some(position);",
+                "host.notify(acx);",
             ],
         ),
         SourceCheck(

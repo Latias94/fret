@@ -36457,7 +36457,7 @@ Fret Examples Collection Browser Input Context-Menu Runtime Owner Split Evidence
   `proof_collection_browser_scope_context_menu_anchor_from_up(...)`,
   right-click click filtering, direct/descendant pressable-origin suppression,
   `position_window` anchor fallback, focus request, context-menu anchor model updates,
-  `host.notify(acx)`, and focused unit tests for the anchor cases. `WORKSTREAM.json`,
+  `host.notify(acx)`, and `#[cfg(test)] mod tests;`. `WORKSTREAM.json`,
   `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
   collection surface tests freeze the browser input context-menu runtime owner boundary.
 - Passed: `cargo fmt -p fret-examples --check`.
@@ -36471,6 +36471,53 @@ Fret Examples Collection Browser Input Context-Menu Runtime Owner Split Evidence
   standalone markdown files.
 - Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
   in `fret-chart` and `fret-plot`.
+- Not counted as evidence: initial
+  `cargo nextest run -p fret-examples context_menu_anchor --no-fail-fast` timed out while leaving a
+  Cargo/Rustc build chain running. The build chain ended naturally before the rerun.
+- Passed: `cargo nextest run -p fret-examples context_menu_anchor --no-fail-fast`; 5/5 tests
+  passed, covering window-position preference, pointer-position fallback, non-right/non-click
+  rejection, direct pressable-origin rejection, and descendant pressable-origin rejection. Existing
+  dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Browser Input Context-Menu Tests Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs`
+  was split again so context-menu anchor behavior coverage lives in the demo-local
+  `collection/browser_scope/input_runtime/context_menu/tests.rs` test owner without changing
+  right-click click filtering, pointer/window anchor fallback, non-click rejection,
+  direct/descendant pressable-origin suppression, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `browser_scope/input_runtime/context_menu.rs` keeps
+  `proof_collection_browser_scope_context_menu_anchor_from_up(...)`,
+  `publish_collection_browser_scope_context_menu_anchor(...)`, right-click click filtering,
+  pressable-origin suppression, `position_window` fallback, focus request, model updates,
+  `host.notify(acx)`, and `#[cfg(test)] mod tests;`.
+  `browser_scope/input_runtime/context_menu/tests.rs` test owner owns `pointer_up(...)`,
+  `context_menu_anchor_prefers_window_position`,
+  `context_menu_anchor_falls_back_to_pointer_position`,
+  `context_menu_anchor_ignores_non_right_or_non_click_up`,
+  `context_menu_anchor_ignores_direct_pressable_clicks`, and
+  `context_menu_anchor_ignores_pressable_descendant_clicks`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the browser input context-menu tests owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py` after adding the milestone marker expected
+  by the workstream source gate.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo`; existing dead-code warnings
+  remained in `fret-chart` and `fret-plot`.
 - Not counted as evidence: initial
   `cargo nextest run -p fret-examples context_menu_anchor --no-fail-fast` timed out while leaving a
   Cargo/Rustc build chain running. The build chain ended naturally before the rerun.

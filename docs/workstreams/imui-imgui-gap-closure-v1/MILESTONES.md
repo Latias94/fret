@@ -8337,6 +8337,17 @@ app-owned no-helper-widening boundary remain unchanged, while the collection sou
 workstream source gate, manifest, and surface tests now freeze the browser input context-menu
 runtime owner boundary.
 
+2026-06-08 collection browser input context-menu tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs`
+now keeps right-click background anchor derivation, focus request, context-menu anchor publication,
+notify, and `#[cfg(test)] mod tests;` while routing `PointerUpCx` fixtures and context-menu anchor
+behavior coverage through the demo-local context-menu anchor behavior coverage test owner
+`collection/browser_scope/input_runtime/context_menu/tests.rs` test owner. Right-click click
+filtering, pointer/window anchor fallback, non-click rejection, direct/descendant pressable-origin
+suppression, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged,
+while the collection source gate, workstream source gate, manifest, and surface tests now freeze the
+browser input context-menu tests owner boundary.
+
 2026-06-08 collection browser input box-select runtime owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` now keeps
 pointer props, keyboard handler installation, Primary+Wheel zoom installation, context-menu anchor

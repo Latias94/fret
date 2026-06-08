@@ -8705,9 +8705,21 @@ opening the slice.
       `input_runtime.rs` keeps pointer props, keyboard handler installation, Primary+Wheel zoom
       installation, pointer-down/move/up/cancel box-select orchestration, pointer capture, and
       cancel behavior while `input_runtime/context_menu.rs` owns right-click background anchor
-      derivation, focus request, context-menu anchor publication, notify, and focused unit tests.
+      derivation, focus request, context-menu anchor publication, notify, and `#[cfg(test)] mod tests;`.
       The collection source gate, workstream source gate, manifest, and surface tests now include
       the browser input context-menu runtime child owner.
+- [x] Split collection browser input context-menu anchor tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs`
+      into the demo-local `collection/browser_scope/input_runtime/context_menu/tests.rs` test owner
+      without changing right-click click filtering, pointer/window anchor fallback, non-click
+      rejection, direct/descendant pressable-origin suppression, public crate APIs, or the
+      app-owned no-helper-widening boundary. Result: `input_runtime/context_menu.rs` keeps
+      right-click background anchor derivation, focus request, context-menu anchor publication,
+      notify, and `#[cfg(test)] mod tests;` while
+      `collection/browser_scope/input_runtime/context_menu/tests.rs` owns the `PointerUpCx`
+      fixture plus the focused anchor behavior coverage. The collection source gate, workstream
+      source gate, manifest, and surface tests now include the browser input context-menu tests
+      child owner.
 - [x] Split collection browser input box-select pointer runtime out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs`
       into the demo-local `collection/browser_scope/input_runtime/box_select.rs` child owner
