@@ -140,6 +140,9 @@ def main() -> None:
     collection_geometry_zoom = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs"
     )
+    collection_geometry_zoom_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs"
+    )
     collection_import_target = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/import_target.rs"
     )
@@ -271,6 +274,7 @@ def main() -> None:
         collection_drag_drop,
         collection_geometry,
         collection_geometry_zoom,
+        collection_geometry_zoom_tests,
         collection_import_target,
         collection_keyboard,
         collection_keyboard_actions,
@@ -3148,8 +3152,8 @@ def main() -> None:
                 "pub(in super::super) fn proof_collection_zoom_request(",
                 "proof_collection_clamp_tile_extent(",
                 "proof_collection_layout_metrics(",
-                "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
-                "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+                "#[cfg(test)]",
+                "mod tests;",
             ],
             forbidden=[
                 "use fret::imui",
@@ -3162,6 +3166,30 @@ def main() -> None:
                 "const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX",
                 "fn proof_collection_drag_rect_normalizes_drag_direction() {",
                 "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
+                "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
+                "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+            ],
+        ),
+        SourceCheck(
+            "collection geometry zoom tests owner",
+            collection_geometry_zoom_tests,
+            required=[
+                "proof_collection_zoom_request(",
+                "proof_collection_layout_metrics(",
+                "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
+                "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+            ],
+            forbidden=[
+                "pub(in super::super) struct ProofCollectionZoomUpdate",
+                "pub(in super::super) fn proof_collection_zoom_line(",
+                "fn proof_collection_zoom_modifier_active(",
+                "fn proof_collection_hovered_index(",
+                "pub(in super::super) fn proof_collection_zoom_request(",
+                "proof_collection_clamp_tile_extent(",
+                "pub(super) fn proof_collection_localize_rect",
+                "pub(super) fn proof_collection_drag_rect",
+                "pub(super) fn proof_collection_rects_intersect",
+                "const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX",
             ],
         ),
         SourceCheck(

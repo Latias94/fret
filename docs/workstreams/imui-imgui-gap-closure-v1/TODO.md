@@ -8733,6 +8733,17 @@ opening the slice.
       resolution, modifier filtering, and the focused zoom request unit tests. The collection
       source gate, workstream source gate, manifest, and surface tests now include the geometry
       zoom child owner.
+- [x] Split collection geometry zoom tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs` into the
+      demo-local `collection/geometry/zoom/tests.rs` test owner without changing tile extent
+      clamping, hovered row anchoring, Primary+Wheel modifier handling, readout text, existing
+      `geometry::...` imports, public crate APIs, or the app-owned no-helper-widening boundary.
+      Result: `geometry/zoom.rs` keeps `ProofCollectionZoomUpdate`,
+      `proof_collection_zoom_line(...)`, `proof_collection_zoom_request(...)`, hovered-index
+      resolution, modifier filtering, clamping delegation, scroll-anchor repair, and
+      `#[cfg(test)] mod tests;` while `geometry/zoom/tests.rs` owns the zoom request behavior
+      coverage. The collection source gate, workstream source gate, manifest, and surface tests now
+      include the geometry zoom tests child owner.
 - [x] Split collection browser input box-select pointer session transitions out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
       into the demo-local `collection/browser_scope/input_runtime/box_select/session.rs` child

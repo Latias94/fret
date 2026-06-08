@@ -8359,6 +8359,16 @@ extent clamping, hovered row anchoring, Primary+Wheel modifier filtering, readou
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
 now freeze the geometry zoom owner boundary.
 
+2026-06-08 collection geometry zoom tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs` now keeps
+`ProofCollectionZoomUpdate`, `proof_collection_zoom_line(...)`,
+`proof_collection_zoom_request(...)`, hovered-index resolution, modifier filtering, clamping
+delegation, scroll-anchor repair, and `#[cfg(test)] mod tests;` while routing Primary+Wheel zoom behavior coverage through the demo-local `collection/geometry/zoom/tests.rs` test owner. Tile extent
+clamping, hovered row anchoring, Primary+Wheel modifier handling, readout text, existing
+`geometry::...` imports, public crate APIs, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the geometry zoom tests owner boundary.
+
 2026-06-08 collection browser input box-select session owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
 now keeps pointer event registration, context-menu pre-handler ordering, capture/release,

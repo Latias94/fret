@@ -57,6 +57,8 @@ fn imui_editor_proof_demo_keeps_collection_box_select_app_owned_and_explicit() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/keyboard/actions.rs"),
