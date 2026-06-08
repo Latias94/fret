@@ -1,23 +1,10 @@
 use std::sync::Arc;
 
-use fret::imui::kit::ImUiMultiSelectState;
-
 use super::proof_collection_context_menu_selection;
 
-fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
-    ImUiMultiSelectState::new(
-        selected.iter().map(|id| Arc::from(*id)).collect(),
-        anchor.map(Arc::from),
-    )
-}
+mod fixtures;
 
-fn selected_ids(selection: &ImUiMultiSelectState<Arc<str>>) -> Vec<&str> {
-    selection.selected().iter().map(|id| id.as_ref()).collect()
-}
-
-fn anchor_id(selection: &ImUiMultiSelectState<Arc<str>>) -> Option<&str> {
-    selection.anchor().map(|id| id.as_ref())
-}
+use fixtures::{anchor_id, selected_ids, selection_state};
 
 #[test]
 fn proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile() {

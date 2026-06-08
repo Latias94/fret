@@ -212,6 +212,9 @@ def main() -> None:
     collection_selection_context_menu_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu/tests.rs"
     )
+    collection_selection_context_menu_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu/tests/fixtures.rs"
+    )
     collection_selection_keyboard = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs"
     )
@@ -322,6 +325,7 @@ def main() -> None:
         collection_selection,
         collection_selection_context_menu,
         collection_selection_context_menu_tests,
+        collection_selection_context_menu_tests_fixtures,
         collection_selection_keyboard,
         collection_selection_keyboard_tests,
         collection_selection_keyboard_navigation,
@@ -2635,14 +2639,45 @@ def main() -> None:
             "collection selection context-menu tests owner",
             collection_selection_context_menu_tests,
             required=[
-                "fn selection_state(",
-                "fn selected_ids(",
-                "fn anchor_id(",
+                "mod fixtures;",
+                "use fixtures::{",
                 "proof_collection_context_menu_selection(",
                 "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
                 "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
             ],
             forbidden=[
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn anchor_id(",
+                "ImUiMultiSelectState::single(asset_id.clone())",
+                "ProofCollectionKeyboardState {",
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_keyboard_selection(",
+                "proof_collection_select_all_selection(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection context-menu tests fixtures owner",
+            collection_selection_context_menu_tests_fixtures,
+            required=[
+                "pub(super) fn selection_state(",
+                "pub(super) fn selected_ids(",
+                "pub(super) fn anchor_id(",
+                "ImUiMultiSelectState::new(",
+            ],
+            forbidden=[
+                "proof_collection_context_menu_selection(",
+                "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
+                "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
                 "ImUiMultiSelectState::single(asset_id.clone())",
                 "ProofCollectionKeyboardState {",
                 "render_collection_first_asset_browser_proof",

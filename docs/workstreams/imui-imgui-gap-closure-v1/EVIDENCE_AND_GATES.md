@@ -37338,15 +37338,15 @@ Fret Examples Collection Context-Menu Selection Tests Owner Split Evidence - 202
 
 - Claim:
   `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu.rs` was split
-  again so context-menu selection fixtures and behavior tests now live in the demo-local
+  again so context-menu selection behavior tests now live in the demo-local
   `collection/selection/context_menu/tests.rs` test owner without changing right-click selection
   replacement, selected-range preservation, active-tile updates, asset-grid call imports, public
   crate APIs, or the app-owned no-helper-widening boundary.
 - Evidence anchors: `selection/context_menu.rs` keeps the stable
   `proof_collection_context_menu_selection(...)` policy entry,
   `ImUiMultiSelectState::single(asset_id.clone())`, active-tile update projection, and
-  `#[cfg(test)] mod tests;`. `selection/context_menu/tests.rs` owns `selection_state(...)`,
-  `selected_ids(...)`, `anchor_id(...)`,
+  `#[cfg(test)] mod tests;`. `selection/context_menu/tests.rs` owns `mod fixtures;`, imports
+  helpers through `use fixtures::{...}`, and keeps
   `proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile`, and
   `proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile`.
   `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
@@ -37361,6 +37361,39 @@ Fret Examples Collection Context-Menu Selection Tests Owner Split Evidence - 202
   `python tools\gate_imui_workstream_source.py`;
   `python tools\check_workstream_catalog.py`;
   `cargo nextest run -p fret-examples proof_collection_context_menu --no-fail-fast` (2/2 passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  (10/10 passed);
+  `git diff --check` (passed with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`). Existing dead-code warnings remained in `fret-chart`
+  and `fret-plot` during Rust checks.
+
+Fret Examples Collection Context-Menu Selection Fixture Owner Split Evidence - 2026-06-09:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu/tests.rs` was
+  split again so selection fixture helpers live in the demo-local
+  `collection/selection/context_menu/tests/fixtures.rs` fixture owner without changing right-click
+  selection replacement, selected-range preservation, active-tile updates, asset-grid call imports,
+  public crate APIs, or app-owned no-helper-widening.
+- Evidence anchors: `selection/context_menu/tests.rs` owns `mod fixtures;`, imports helpers
+  through `use fixtures::{...}`, keeps
+  `proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile` and
+  `proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile`.
+  `selection/context_menu/tests/fixtures.rs` owns `selection_state(...)`, `selected_ids(...)`,
+  `anchor_id(...)`, and `ImUiMultiSelectState::new(...)`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the split fixture owner boundary.
+- Verified gates:
+  `cargo fmt -p fret-examples --check`;
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`;
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`;
+  `python tools\gate_imui_editor_collection_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `cargo nextest run -p fret-examples proof_collection_context_menu --no-fail-fast` (2/2 passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --no-fail-fast`
+  (2/2 passed);
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   (10/10 passed);
   `git diff --check` (passed with only the existing Git CRLF normalization warning for
