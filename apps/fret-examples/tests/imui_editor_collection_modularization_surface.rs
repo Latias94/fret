@@ -47,6 +47,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
     );
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
+    let box_select_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/box_select/tests.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let command_buttons_actions_source =
@@ -1224,10 +1226,48 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionRenderedItem",
         "pub(super) fn proof_collection_box_select_selection(",
         "pub(super) fn proof_collection_box_select_active_rect(",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             box_select_source.contains(needle),
             "the demo-local collection box-select owner should keep marquee selection state explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "proof_collection_box_select_state_for_hits(",
+        "proof_collection_box_select_selection(",
+        "fn selected_ids(",
+        "fn anchor_id(",
+        "fn proof_collection_box_select_replace_uses_visible_collection_order() {",
+        "fn proof_collection_box_select_append_preserves_baseline_and_adds_hits() {",
+    ] {
+        assert!(
+            box_select_tests_source.contains(needle),
+            "the demo-local collection box-select tests owner should keep behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selected_ids(",
+        "fn anchor_id(",
+        "fn proof_collection_box_select_replace_uses_visible_collection_order() {",
+        "fn proof_collection_box_select_append_preserves_baseline_and_adds_hits() {",
+    ] {
+        assert!(
+            !box_select_source.contains(needle),
+            "the demo-local collection box-select owner should route behavior coverage through box_select/tests.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionRenderedItem",
+        "pub(super) struct ProofCollectionBoxSelectSession",
+        "pub(super) struct ProofCollectionBoxSelectState",
+        "fn proof_collection_box_select_hits(",
+        "pub(super) fn proof_collection_box_select_active_rect(",
+    ] {
+        assert!(
+            !box_select_tests_source.contains(needle),
+            "the demo-local collection box-select tests owner should not take implementation ownership; unexpected `{needle}`"
         );
     }
 

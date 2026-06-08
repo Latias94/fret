@@ -8744,6 +8744,17 @@ opening the slice.
       `#[cfg(test)] mod tests;` while `geometry/zoom/tests.rs` owns the zoom request behavior
       coverage. The collection source gate, workstream source gate, manifest, and surface tests now
       include the geometry zoom tests child owner.
+- [x] Split collection box-select behavior tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs` into the
+      demo-local `collection/box_select/tests.rs` test owner without changing rendered-item
+      capture, visible-order hit projection, append-mode baseline merge, active rect threshold
+      behavior, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `box_select.rs` keeps `ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,
+      `ProofCollectionBoxSelectState`, hit-test projection, append/replace selection projection,
+      active marquee rect projection, and `#[cfg(test)] mod tests;` while
+      `collection/box_select/tests.rs` owns the focused box-select behavior coverage. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      box-select tests child owner.
 - [x] Split collection browser input box-select pointer session transitions out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
       into the demo-local `collection/browser_scope/input_runtime/box_select/session.rs` child

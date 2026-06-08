@@ -8369,6 +8369,19 @@ clamping, hovered row anchoring, Primary+Wheel modifier handling, readout text, 
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
 now freeze the geometry zoom tests owner boundary.
 
+2026-06-08 collection box-select tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs` now keeps
+`ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,
+`ProofCollectionBoxSelectState`, `proof_collection_box_select_hits(...)`,
+`proof_collection_box_select_state_for_hits(...)`,
+`proof_collection_box_select_selection(...)`, `proof_collection_box_select_active_rect(...)`, and
+`#[cfg(test)] mod tests;` while routing box-select behavior coverage through the demo-local
+`collection/box_select/tests.rs` test owner. Rendered-item capture, visible-order hit projection,
+append-mode baseline merge, active rect threshold behavior, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the box-select tests owner boundary. The box-select
+tests owner boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection browser input box-select session owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select.rs`
 now keeps pointer event registration, context-menu pre-handler ordering, capture/release,
