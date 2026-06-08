@@ -111,6 +111,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete/tests.rs");
     let selection_duplicate_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs");
+    let selection_duplicate_commands_tests_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/tests.rs"
+    );
     let selection_duplicate_naming_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs"
     );
@@ -2046,11 +2049,29 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(in super::super::super) fn proof_collection_duplicate_selection(",
         "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
         "proof_collection_duplicate_selection_result(",
-        "proof_collection_duplicate_shortcut_matches_primary_d_only",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             selection_duplicate_commands_source.contains(needle),
             "the demo-local collection duplicate command owner should keep the shortcut/facade and child-owner delegation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "proof_collection_duplicate_shortcut_matches(",
+        "proof_collection_duplicate_shortcut_matches_primary_d_only",
+    ] {
+        assert!(
+            selection_duplicate_commands_tests_source.contains(needle),
+            "the demo-local collection duplicate command tests owner should keep shortcut coverage explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in ["proof_collection_duplicate_shortcut_matches_primary_d_only"] {
+        assert!(
+            !selection_duplicate_commands_source.contains(needle),
+            "the demo-local collection duplicate command owner should not take shortcut tests; unexpected `{needle}`"
         );
     }
 

@@ -1718,6 +1718,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs",

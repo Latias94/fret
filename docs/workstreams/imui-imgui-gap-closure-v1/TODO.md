@@ -8782,6 +8782,16 @@ opening the slice.
       `#[cfg(test)] mod tests;` while `delete/tests.rs` owns selection fixtures and delete/refocus
       behavior tests. The collection source gate, workstream source gate, manifest, and surface
       tests now include the delete command tests child owner.
+- [x] Split collection duplicate command shortcut tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs`
+      into the demo-local `collection/selection/commands/duplicate/tests.rs` test owner without
+      changing duplicate shortcut matching, duplicate command DTO fields, selection repair
+      delegation, naming delegation, keyboard/button/context-menu command call sites, public crate
+      APIs, or the app-owned no-helper-widening boundary. Result: `duplicate.rs` keeps
+      `ProofCollectionDuplicateResult`, shortcut matching, duplicate command delegation, child
+      owner imports, and `#[cfg(test)] mod tests;` while `duplicate/tests.rs` owns duplicate
+      shortcut coverage. The collection source gate, workstream source gate, manifest, and surface
+      tests now include the duplicate command tests child owner.
 - [x] Split collection keyboard selection navigation helpers out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
       demo-local `collection/selection/keyboard/navigation.rs` child owner without changing

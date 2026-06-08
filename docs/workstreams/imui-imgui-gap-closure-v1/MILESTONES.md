@@ -8409,6 +8409,17 @@ the collection source gate, workstream source gate, manifest, and surface tests 
 delete command tests owner boundary. The delete command tests owner boundary is now tracked as its
 own source-gated proof slice.
 
+2026-06-08 collection duplicate command tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs` now
+keeps `ProofCollectionDuplicateResult`, duplicate shortcut matching, duplicate command delegation,
+child owner imports, and `#[cfg(test)] mod tests;` while routing duplicate shortcut coverage through
+the demo-local `collection/selection/commands/duplicate/tests.rs` test owner. Duplicate command
+DTO fields, selection repair delegation, naming delegation, keyboard/button/context-menu command
+call sites, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged,
+while the collection source gate, workstream source gate, manifest, and surface tests now freeze
+the duplicate command tests owner boundary. The duplicate command tests owner boundary is now
+tracked as its own source-gated proof slice.
+
 2026-06-08 collection keyboard navigation owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` now keeps the
 stable `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
