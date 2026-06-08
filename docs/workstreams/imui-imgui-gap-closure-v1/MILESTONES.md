@@ -8347,3 +8347,16 @@ semantics, drag-threshold handling, pointer-id mismatch restoration, pointer can
 selection/active-id updates, click-clear behavior, public crate APIs, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the box-select session owner boundary.
+
+2026-06-08 collection duplicate selection owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs` now
+keeps `Primary+D` matching, `ProofCollectionDuplicateResult`, the stable
+`proof_collection_duplicate_selection(...)` facade, and child-owner delegation while routing
+selected-visible filtering, duplicate insertion, visible-order duplicate projection, selection
+anchor repair, and active copied-tile repair through the demo-local
+`collection/selection/commands/duplicate/selection.rs` child owner. The existing
+`collection/selection/commands/duplicate/naming.rs` child owner remains responsible for copy
+id/label/path suffix uniqueness. Copy suffix text, duplicate insertion order, keyboard/button/
+context-menu command behavior, public crate APIs, and the app-owned no-helper-widening boundary
+remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
+tests now freeze the duplicate selection owner boundary.

@@ -84,6 +84,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_duplicate_naming_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs"
     );
+    let selection_duplicate_selection_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs"
+    );
     let status_readouts_source =
         include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs");
 
@@ -1416,19 +1419,37 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     for needle in [
         "mod naming;",
+        "mod selection;",
         "use naming::ProofCollectionDuplicateNameRegistry;",
+        "use selection::proof_collection_duplicate_selection_result;",
         "pub(in super::super::super) struct ProofCollectionDuplicateResult",
         "pub(in super::super::super) fn proof_collection_duplicate_selection(",
         "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
-        "ProofCollectionDuplicateNameRegistry::from_assets(stored_assets)",
-        "name_registry.duplicate_id(asset.id.as_ref())",
-        "name_registry.duplicate_label(asset.label.as_ref())",
-        "name_registry.duplicate_path(asset.path.as_ref())",
-        "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
+        "proof_collection_duplicate_selection_result(",
+        "proof_collection_duplicate_shortcut_matches_primary_d_only",
     ] {
         assert!(
             selection_duplicate_commands_source.contains(needle),
-            "the demo-local collection duplicate command owner should keep duplicate flow and naming-owner delegation explicit; missing `{needle}`"
+            "the demo-local collection duplicate command owner should keep the shortcut/facade and child-owner delegation explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn proof_collection_duplicate_selection_result(",
+        "ProofCollectionDuplicateNameRegistry::from_assets(stored_assets)",
+        "let mut duplicates_by_source = HashMap::<Arc<str>, ProofCollectionAsset>::new();",
+        "name_registry.duplicate_id(asset.id.as_ref())",
+        "name_registry.duplicate_label(asset.label.as_ref())",
+        "name_registry.duplicate_path(asset.path.as_ref())",
+        "proof_collection_active_id(",
+        "proof_collection_assets_in_visible_order(",
+        "ImUiMultiSelectState::new(duplicated_ids.clone(), Some(anchor))",
+        "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
+        "proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists",
+    ] {
+        assert!(
+            selection_duplicate_selection_source.contains(needle),
+            "the demo-local collection duplicate selection owner should keep duplicate insertion and reselect repair explicit; missing `{needle}`"
         );
     }
 
@@ -1456,10 +1477,18 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn proof_collection_duplicate_id_candidate(",
         "fn proof_collection_duplicate_path_candidate(",
         "HashSet",
+        "HashMap",
+        "ProofCollectionDuplicateNameRegistry::from_assets(stored_assets)",
+        "name_registry.duplicate_id(asset.id.as_ref())",
+        "name_registry.duplicate_label(asset.label.as_ref())",
+        "name_registry.duplicate_path(asset.path.as_ref())",
+        "proof_collection_active_id(",
+        "proof_collection_assets_in_visible_order(",
+        "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
     ] {
         assert!(
             !selection_duplicate_commands_source.contains(needle),
-            "the demo-local collection duplicate command owner should route naming through duplicate/naming.rs; unexpected `{needle}`"
+            "the demo-local collection duplicate command owner should route naming and selection repair through duplicate child owners; unexpected `{needle}`"
         );
     }
 
@@ -1474,6 +1503,31 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !selection_duplicate_naming_source.contains(needle),
             "the demo-local collection duplicate naming owner should not take duplicate command flow; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
+        "fn proof_collection_duplicate_shortcut_matches_primary_d_only",
+        "fn proof_collection_unique_copy_text(",
+        "fn proof_collection_duplicate_label_candidate(",
+        "fn proof_collection_duplicate_id_candidate(",
+        "fn proof_collection_duplicate_path_candidate(",
+        "pub(super) struct ProofCollectionDuplicateNameRegistry",
+        "ProofCollectionDeleteResult",
+        "proof_collection_delete_selection(",
+        "render_collection_first_asset_browser_proof",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_duplicate_selection_source.contains(needle),
+            "the demo-local collection duplicate selection owner should not take shortcut, naming internals, delete, render, or UI policy; unexpected `{needle}`"
         );
     }
 }

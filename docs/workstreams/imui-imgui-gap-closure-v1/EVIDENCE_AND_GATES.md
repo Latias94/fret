@@ -36611,3 +36611,45 @@ Fret Examples Collection Browser Input Box-Select Session Owner Split Evidence -
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Duplicate Selection Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs` was
+  split so duplicate selection/insertion repair now lives in the demo-local
+  `collection/selection/commands/duplicate/selection.rs` child owner without changing `Primary+D`
+  matching, duplicate result DTO fields, copy id/label/path suffix generation, duplicate insertion
+  order, visible-order copy reselect behavior, active copied-tile preservation, keyboard/button/
+  context-menu command call sites, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `selection/commands/duplicate.rs` declares `mod naming;` and
+  `mod selection;`, keeps `ProofCollectionDuplicateResult`,
+  `proof_collection_duplicate_shortcut_matches(...)`, the stable
+  `proof_collection_duplicate_selection(...)` facade, and delegates to
+  `proof_collection_duplicate_selection_result(...)`. `selection/commands/duplicate/naming.rs`
+  still owns `ProofCollectionDuplicateNameRegistry`, used id/label/path tracking, and copy-suffix
+  candidate helpers. `selection/commands/duplicate/selection.rs` owns selected-visible filtering,
+  `ProofCollectionDuplicateNameRegistry::from_assets(...)`, duplicate insertion,
+  `proof_collection_assets_in_visible_order(...)`, next selection/anchor repair, active copied-tile
+  repair, and the duplicate selection unit tests. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the duplicate selection owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `cargo nextest run -p fret-examples proof_collection_duplicate --no-fail-fast`; 4/4
+  tests passed, covering shortcut matching, naming uniqueness, duplicate insertion/reselect repair,
+  and unique copy suffix behavior. Existing dead-code warnings remained in `fret-chart` and
+  `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.

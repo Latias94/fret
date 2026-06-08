@@ -8724,3 +8724,16 @@ opening the slice.
       session construction, move/up/cancel transitions, threshold detection, and focused unit
       tests. The collection source gate, workstream source gate, manifest, and surface tests now
       include the box-select session child owner.
+- [x] Split collection duplicate command selection/insertion repair out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs`
+      into the demo-local `collection/selection/commands/duplicate/selection.rs` child owner
+      without changing `Primary+D` matching, duplicate result DTO fields, copy id/label/path
+      suffix generation, duplicate insertion order, visible-order copy reselect behavior, active
+      copied-tile preservation, keyboard/button/context-menu command call sites, public crate APIs,
+      or the app-owned no-helper-widening boundary. Result: `duplicate.rs` keeps the shortcut
+      predicate, result DTO, stable `proof_collection_duplicate_selection(...)` facade, and child
+      owner delegation; `duplicate/naming.rs` continues to own copy-suffix uniqueness; and
+      `duplicate/selection.rs` owns selected-visible filtering, duplicate insertion, visible-order
+      duplicate projection, next selection/anchor repair, active copied-tile repair, and focused
+      duplicate selection unit tests. The collection source gate, workstream source gate, manifest,
+      and surface tests now include the duplicate selection child owner.
