@@ -89,6 +89,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_source = include_str!("../src/imui_editor_proof_demo/collection/selection.rs");
     let selection_context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/context_menu.rs");
+    let selection_context_menu_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/context_menu/tests.rs");
     let selection_keyboard_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard.rs");
     let selection_keyboard_tests_source =
@@ -1829,12 +1831,70 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(in super::super) fn proof_collection_context_menu_selection(",
         "ImUiMultiSelectState::single(asset_id.clone())",
         "ProofCollectionKeyboardState {\n            active_id: Some(asset_id),",
-        "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
-        "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             selection_context_menu_source.contains(needle),
             "the demo-local collection context-menu selection owner should keep right-click selection policy explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn selected_ids(",
+        "fn anchor_id(",
+        "proof_collection_context_menu_selection(",
+        "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
+        "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
+    ] {
+        assert!(
+            selection_context_menu_tests_source.contains(needle),
+            "the demo-local collection context-menu selection tests owner should keep fixtures and behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn selected_ids(",
+        "fn anchor_id(",
+        "proof_collection_context_menu_selection_replaces_unselected_asset_and_sets_active_tile",
+        "proof_collection_context_menu_selection_preserves_selected_range_and_updates_active_tile",
+        "render_collection_first_asset_browser_proof",
+        "proof_collection_keyboard_selection(",
+        "proof_collection_select_all_selection(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_context_menu_source.contains(needle),
+            "the demo-local collection context-menu selection owner should not take test fixtures, render, command, or UI policy; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "ImUiMultiSelectState::single(asset_id.clone())",
+        "ProofCollectionKeyboardState {",
+        "render_collection_first_asset_browser_proof",
+        "proof_collection_keyboard_selection(",
+        "proof_collection_select_all_selection(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_context_menu_tests_source.contains(needle),
+            "the demo-local collection context-menu selection tests owner should not take policy construction, render, command, or UI policy; unexpected `{needle}`"
         );
     }
     for needle in [

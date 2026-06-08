@@ -8246,6 +8246,18 @@ app-owned no-helper-widening boundary remain unchanged, while the collection sou
 workstream source gate, manifest, and surface tests now freeze the context-menu selection owner
 boundary.
 
+2026-06-08 collection context-menu selection tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu.rs` now keeps the
+stable `proof_collection_context_menu_selection(...)` policy entry, single-selection replacement,
+active-tile update projection, and `#[cfg(test)] mod tests;` while routing context-menu fixtures
+and behavior coverage through the demo-local
+`collection/selection/context_menu/tests.rs` test owner. Right-click selection replacement,
+selected-range preservation, active-tile updates, context-menu fixtures and behavior coverage,
+asset-grid call imports, public crate APIs, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the context-menu selection tests owner boundary. The context-menu selection tests owner
+boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection keyboard selection policy owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` now keeps shared selection
 state, visible-order projection, selected-asset projection, active-id fallback, and

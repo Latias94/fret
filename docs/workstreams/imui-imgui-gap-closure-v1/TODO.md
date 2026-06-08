@@ -8616,6 +8616,17 @@ opening the slice.
       `selection/context_menu.rs` owns `proof_collection_context_menu_selection(...)` and the
       context-menu selection unit tests. The collection source gate, workstream source gate,
       manifest, and surface tests now include the context-menu selection child owner.
+- [x] Split collection context-menu selection behavior tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu.rs` into
+      the demo-local `collection/selection/context_menu/tests.rs` test owner without changing
+      right-click selection replacement, selected-range preservation, active-tile updates,
+      asset-grid call imports, public crate APIs, or the app-owned no-helper-widening boundary.
+      Result: `selection/context_menu.rs` keeps the stable
+      `proof_collection_context_menu_selection(...)` policy entry, single-selection replacement,
+      active-tile update projection, and `#[cfg(test)] mod tests;` while
+      `selection/context_menu/tests.rs` owns context-menu fixtures and behavior coverage. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      context-menu selection tests child owner.
 - [x] Split collection keyboard selection policy out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection.rs` into the demo-local
       `collection/selection/keyboard.rs` child owner without changing arrow-key movement,
