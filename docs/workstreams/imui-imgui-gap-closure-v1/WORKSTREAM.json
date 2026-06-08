@@ -1699,6 +1699,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu/chrome.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop/tests.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop/tests/fixtures.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs",

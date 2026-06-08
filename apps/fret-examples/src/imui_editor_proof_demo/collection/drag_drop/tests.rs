@@ -1,12 +1,9 @@
 use super::super::authoring_parity_collection_assets;
 use super::*;
 
-fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
-    ImUiMultiSelectState::new(
-        selected.iter().map(|id| Arc::from(*id)).collect(),
-        anchor.map(Arc::from),
-    )
-}
+mod fixtures;
+
+use fixtures::selection_state;
 
 #[test]
 fn proof_collection_drag_payload_for_selected_asset_carries_selected_set() {

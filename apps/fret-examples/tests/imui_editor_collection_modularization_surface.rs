@@ -74,6 +74,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let drag_drop_source = include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs");
     let drag_drop_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop/tests.rs");
+    let drag_drop_tests_fixtures_source =
+        include_str!("../src/imui_editor_proof_demo/collection/drag_drop/tests/fixtures.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
     let geometry_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/geometry/tests.rs");
@@ -1639,7 +1641,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
-        "fn selection_state(",
+        "mod fixtures;",
+        "use fixtures::selection_state;",
         "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set() {",
         "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only() {",
         "proof_collection_drag_payload_for_asset(",
@@ -1663,6 +1666,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
+        "fn selection_state(",
         "pub(super) struct ProofCollectionDragPayload",
         "pub(super) fn proof_collection_drag_payload_for_asset(",
         "pub(super) fn proof_collection_drag_preview_title(",
@@ -1672,6 +1676,44 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !drag_drop_tests_source.contains(needle),
             "the demo-local collection drag/drop tests owner should not take implementation ownership; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn selection_state(",
+        "ImUiMultiSelectState::new(",
+    ] {
+        assert!(
+            drag_drop_tests_fixtures_source.contains(needle),
+            "the demo-local collection drag/drop tests fixture owner should keep selection fixtures explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "proof_collection_drag_payload_for_selected_asset_carries_selected_set",
+        "proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only",
+        "proof_collection_drag_payload_for_asset(",
+        "proof_collection_drag_preview_title(",
+        "proof_collection_drag_preview_subtitle(",
+        "proof_collection_drop_status(",
+        "pub(super) struct ProofCollectionDragPayload",
+        "pub(super) fn proof_collection_drag_payload_for_asset(",
+        "pub(super) fn proof_collection_drag_preview_title(",
+        "pub(super) fn proof_collection_drag_preview_subtitle(",
+        "pub(super) fn proof_collection_drop_status(",
+        "render_collection_first_asset_browser_proof",
+        "drag_source_with_options",
+        "drop_target::<",
+        "drag_preview_ghost",
+        "proof_drag_preview_card",
+        "TextField",
+        "PointerRegionProps",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !drag_drop_tests_fixtures_source.contains(needle),
+            "the demo-local collection drag/drop tests fixture owner should not take behavior tests, drag/drop implementation, render, or UI policy; unexpected `{needle}`"
         );
     }
 

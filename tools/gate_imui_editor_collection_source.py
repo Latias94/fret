@@ -149,6 +149,9 @@ def main() -> None:
     collection_drag_drop_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop/tests.rs"
     )
+    collection_drag_drop_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop/tests/fixtures.rs"
+    )
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
@@ -316,6 +319,7 @@ def main() -> None:
         collection_runtime_state,
         collection_drag_drop,
         collection_drag_drop_tests,
+        collection_drag_drop_tests_fixtures,
         collection_geometry,
         collection_geometry_tests,
         collection_geometry_zoom,
@@ -2108,7 +2112,8 @@ def main() -> None:
             "collection drag drop tests owner",
             collection_drag_drop_tests,
             required=[
-                "fn selection_state(",
+                "mod fixtures;",
+                "use fixtures::selection_state;",
                 "fn proof_collection_drag_payload_for_selected_asset_carries_selected_set() {",
                 "fn proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only() {",
                 "proof_collection_drag_payload_for_asset(",
@@ -2117,11 +2122,44 @@ def main() -> None:
                 "proof_collection_drop_status(",
             ],
             forbidden=[
+                "fn selection_state(",
                 "pub(super) struct ProofCollectionDragPayload",
                 "pub(super) fn proof_collection_drag_payload_for_asset(",
                 "pub(super) fn proof_collection_drag_preview_title(",
                 "pub(super) fn proof_collection_drag_preview_subtitle(",
                 "pub(super) fn proof_collection_drop_status(",
+            ],
+        ),
+        SourceCheck(
+            "collection drag drop tests fixtures owner",
+            collection_drag_drop_tests_fixtures,
+            required=[
+                "pub(super) fn selection_state(",
+                "ImUiMultiSelectState::new(",
+            ],
+            forbidden=[
+                "proof_collection_drag_payload_for_selected_asset_carries_selected_set",
+                "proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only",
+                "proof_collection_drag_payload_for_asset(",
+                "proof_collection_drag_preview_title(",
+                "proof_collection_drag_preview_subtitle(",
+                "proof_collection_drop_status(",
+                "pub(super) struct ProofCollectionDragPayload",
+                "pub(super) fn proof_collection_drag_payload_for_asset(",
+                "pub(super) fn proof_collection_drag_preview_title(",
+                "pub(super) fn proof_collection_drag_preview_subtitle(",
+                "pub(super) fn proof_collection_drop_status(",
+                "render_collection_first_asset_browser_proof",
+                "drag_source_with_options",
+                "drop_target::<",
+                "drag_preview_ghost",
+                "proof_drag_preview_card",
+                "TextField",
+                "PointerRegionProps",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(

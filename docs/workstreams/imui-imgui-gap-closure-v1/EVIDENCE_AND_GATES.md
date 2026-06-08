@@ -36334,7 +36334,8 @@ Fret Examples Collection Drag/Drop Tests Owner Split Evidence - 2026-06-08:
   `proof_collection_drag_payload_for_asset(...)`, `proof_collection_drag_preview_title(...)`,
   `proof_collection_drag_preview_subtitle(...)`, `proof_collection_drop_status(...)`,
   `proof_collection_selected_assets(...)`, and `#[cfg(test)] mod tests;`.
-  `collection/drag_drop/tests.rs` test owner owns `selection_state(...)`,
+  `collection/drag_drop/tests.rs` test owner owns `mod fixtures;`, imports helpers through
+  `use fixtures::selection_state;`, keeps
   `proof_collection_drag_payload_for_selected_asset_carries_selected_set`, and
   `proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only`.
   `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
@@ -36356,6 +36357,48 @@ Fret Examples Collection Drag/Drop Tests Owner Split Evidence - 2026-06-08:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Drag/Drop Fixture Owner Split Evidence - 2026-06-09:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop/tests.rs` was split again so
+  selection fixture construction lives in the demo-local
+  `collection/drag_drop/tests/fixtures.rs` fixture owner without changing selected-set payload
+  formation, dragged-only fallback, preview title/subtitle projection, drop-status text, public
+  crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/drag_drop/tests.rs` owns `mod fixtures;`, imports helpers through
+  `use fixtures::selection_state;`, keeps
+  `proof_collection_drag_payload_for_selected_asset_carries_selected_set` and
+  `proof_collection_drag_payload_for_unselected_asset_carries_dragged_asset_only`.
+  `collection/drag_drop/tests/fixtures.rs` fixture owner owns
+  `pub(super) fn selection_state(...)` and `ImUiMultiSelectState::new(...)`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the split fixture owner boundary.
+- Verified gates:
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed:
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`. Existing dead-code warnings remained in
+  `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples proof_collection_drag_payload --no-fail-fast`; 2/2 tests
+  passed, covering selected-set payload formation and dragged-only fallback. Existing dead-code
+  warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_box_select_surface --no-fail-fast`;
+  2/2 passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
