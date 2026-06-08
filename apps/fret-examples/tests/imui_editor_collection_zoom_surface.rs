@@ -111,6 +111,10 @@ fn imui_editor_proof_demo_keeps_collection_zoom_app_owned_and_explicit() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete/tests.rs"),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/commands/delete/tests/fixtures.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs"),
         "\n",
         include_str!(

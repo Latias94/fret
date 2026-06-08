@@ -8497,6 +8497,17 @@ the collection source gate, workstream source gate, manifest, and surface tests 
 delete command tests owner boundary. The delete command tests owner boundary is now tracked as its
 own source-gated proof slice.
 
+2026-06-09 collection delete command fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete/tests.rs` now
+keeps the delete/refocus behavior tests and imports fixture helpers through `mod fixtures;` while
+routing selection fixture construction/projection through the demo-local
+`collection/selection/commands/delete/tests/fixtures.rs` fixture owner. Delete result fields,
+selection/anchor repair, next-active refocus behavior, keyboard/button/context-menu command
+behavior, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while
+the collection source gate, workstream source gate, manifest, and surface tests now freeze the
+delete command fixture owner boundary. The delete command fixture owner boundary is now tracked as
+its own source-gated proof slice.
+
 2026-06-08 collection duplicate command tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs` now
 keeps `ProofCollectionDuplicateResult`, duplicate shortcut matching, duplicate command delegation,

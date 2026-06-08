@@ -1,25 +1,12 @@
 use std::sync::Arc;
 
-use fret::imui::kit::ImUiMultiSelectState;
-
 use super::super::super::super::{ProofCollectionAsset, authoring_parity_collection_assets};
 use super::super::super::{ProofCollectionKeyboardState, proof_collection_assets_in_visible_order};
 use super::proof_collection_delete_selection;
 
-fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
-    ImUiMultiSelectState::new(
-        selected.iter().map(|id| Arc::from(*id)).collect(),
-        anchor.map(Arc::from),
-    )
-}
+mod fixtures;
 
-fn selected_ids(selection: &ImUiMultiSelectState<Arc<str>>) -> Vec<&str> {
-    selection.selected().iter().map(|id| id.as_ref()).collect()
-}
-
-fn anchor_id(selection: &ImUiMultiSelectState<Arc<str>>) -> Option<&str> {
-    selection.anchor().map(|id| id.as_ref())
-}
+use fixtures::{anchor_id, selected_ids, selection_state};
 
 #[test]
 fn proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item() {
