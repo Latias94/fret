@@ -8658,6 +8658,16 @@ context-menu/button rename entry points, inline draft model writes, focus handof
 APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection source
 gate, workstream source gate, manifest, and surface tests now freeze the inline rename tests owner boundary.
 
+2026-06-09 collection inline rename fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/rename/tests.rs` now keeps inline rename
+session and shortcut behavior coverage while importing selection fixtures through `mod fixtures;`.
+The demo-local `collection/rename/tests/fixtures.rs` fixture owner owns `selection_state(...)` and
+`ImUiMultiSelectState::new(...)` without taking rename behavior tests, rename implementation,
+render, or UI policy. F2 shortcut matching, active visible rename target selection, fallback target
+selection, begin-inline-rename model writes, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the inline rename fixture owner boundary.
+
 2026-06-08 collection context-menu actions owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` now keeps popup
 lifecycle, visible-order derivation, selection readout/menu item layout, duplicate/delete/rename

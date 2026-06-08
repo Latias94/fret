@@ -1709,6 +1709,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/tests.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/tests/fixtures.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/focus.rs",

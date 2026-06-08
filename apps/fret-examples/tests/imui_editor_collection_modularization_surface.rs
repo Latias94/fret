@@ -98,6 +98,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
     let rename_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/tests.rs");
+    let rename_tests_fixtures_source =
+        include_str!("../src/imui_editor_proof_demo/collection/rename/tests/fixtures.rs");
     let rename_commit_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit.rs");
     let rename_commit_tests_source =
@@ -1941,7 +1943,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "fn selection_state(selected: &[&str], anchor: Option<&str>)",
+        "mod fixtures;",
+        "use fixtures::selection_state;",
+        "authoring_parity_collection_assets()",
+        "proof_collection_begin_rename_session(",
         "proof_collection_begin_rename_session_prefers_active_visible_asset",
         "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
         "proof_collection_rename_shortcut_matches_plain_f2_only",
@@ -1953,7 +1958,6 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "fn selection_state(selected: &[&str], anchor: Option<&str>)",
         "proof_collection_begin_rename_session_prefers_active_visible_asset",
         "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
         "proof_collection_rename_shortcut_matches_plain_f2_only",
@@ -1961,6 +1965,60 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !rename_source.contains(needle),
             "the demo-local collection rename hub should not take root rename tests; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(selected: &[&str], anchor: Option<&str>)",
+        "pub(super) struct ProofCollectionRenameCommit",
+        "pub(in super::super) fn proof_collection_commit_rename(",
+        "struct ProofCollectionInlineRenameFocusState",
+        "render_collection_first_asset_browser_proof",
+        "TextField::new(",
+        "TextFieldOptions {",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !rename_tests_source.contains(needle),
+            "the demo-local collection rename tests owner should not take fixture helpers, commit/focus implementation, render, or UI policy; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn selection_state(",
+        "ImUiMultiSelectState::new(",
+    ] {
+        assert!(
+            rename_tests_fixtures_source.contains(needle),
+            "the demo-local collection rename tests fixture owner should keep selection fixtures explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "proof_collection_begin_rename_session_prefers_active_visible_asset",
+        "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
+        "proof_collection_rename_shortcut_matches_plain_f2_only",
+        "proof_collection_begin_rename_session(",
+        "proof_collection_rename_shortcut_matches(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_rename_ready_status(",
+        "pub(super) struct ProofCollectionRenameSession",
+        "pub(super) struct ProofCollectionRenameCommit",
+        "struct ProofCollectionInlineRenameFocusState",
+        "render_collection_first_asset_browser_proof",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !rename_tests_fixtures_source.contains(needle),
+            "the demo-local collection rename tests fixture owner should not take behavior tests, rename implementation, render, or UI policy; unexpected `{needle}`"
         );
     }
 

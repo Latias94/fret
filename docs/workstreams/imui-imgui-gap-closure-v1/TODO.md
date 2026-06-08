@@ -9028,10 +9028,21 @@ opening the slice.
       re-exports, commit facade re-export, public crate APIs, or the app-owned no-helper-widening
       boundary. Result: `rename.rs` keeps the stable rename session/app-model facade,
       `ProofCollectionRenameSession`, shortcut/session helpers, begin-inline-rename model writes,
-      commit/focus re-exports, and `#[cfg(test)] mod tests;` while `rename/tests.rs` owns rename
-      session fixtures, `proof_collection_begin_rename_session_prefers_active_visible_asset`, and
-      F2 shortcut coverage. The collection source gate, workstream source gate, manifest, and
+      commit/focus re-exports, and `#[cfg(test)] mod tests;` while `rename/tests.rs` imports
+      fixtures and owns `proof_collection_begin_rename_session_prefers_active_visible_asset`,
+      fallback target coverage, and F2 shortcut coverage. The collection source gate,
+      workstream source gate, manifest, and
       surface tests now include the rename tests child owner.
+- [x] Split collection inline rename test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/rename/tests.rs` into the
+      demo-local `collection/rename/tests/fixtures.rs` fixture owner without changing F2 shortcut
+      matching, active visible rename target selection, fallback target selection,
+      begin-inline-rename app model writes, focus helper re-exports, commit facade re-export,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result: `rename/tests.rs`
+      keeps behavior tests and imports fixture helpers through `mod fixtures;` while
+      `rename/tests/fixtures.rs` owns `selection_state(...)` and `ImUiMultiSelectState::new(...)`.
+      The collection source gate, workstream source gate, manifest, and surface tests now include
+      the rename tests fixture child owner.
 - [x] Split collection context-menu action application out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` into the
       demo-local `collection/context_menu/actions.rs` child owner without changing popup anchor

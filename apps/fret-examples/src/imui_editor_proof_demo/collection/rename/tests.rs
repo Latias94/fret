@@ -1,18 +1,14 @@
 use std::sync::Arc;
 
-use fret::imui::kit::ImUiMultiSelectState;
 use fret_core::{KeyCode, Modifiers};
 
 use super::super::authoring_parity_collection_assets;
 use super::super::selection::ProofCollectionKeyboardState;
 use super::{proof_collection_begin_rename_session, proof_collection_rename_shortcut_matches};
 
-fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
-    ImUiMultiSelectState::new(
-        selected.iter().map(|id| Arc::from(*id)).collect(),
-        anchor.map(Arc::from),
-    )
-}
+mod fixtures;
+
+use fixtures::selection_state;
 
 #[test]
 fn proof_collection_begin_rename_session_prefers_active_visible_asset() {
@@ -32,7 +28,7 @@ fn proof_collection_begin_rename_session_prefers_active_visible_asset() {
 #[test]
 fn proof_collection_begin_rename_session_falls_back_to_first_visible_asset() {
     let visible_assets = authoring_parity_collection_assets();
-    let selection = ImUiMultiSelectState::default();
+    let selection = selection_state(&[], None);
     let keyboard = ProofCollectionKeyboardState {
         active_id: Some(Arc::from("missing")),
     };

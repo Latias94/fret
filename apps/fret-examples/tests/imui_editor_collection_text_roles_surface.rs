@@ -175,6 +175,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/tests.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/rename/tests/fixtures.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit/tests.rs"),
