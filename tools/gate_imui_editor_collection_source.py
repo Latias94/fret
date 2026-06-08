@@ -167,6 +167,9 @@ def main() -> None:
     collection_geometry_zoom_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs"
     )
+    collection_geometry_zoom_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests/fixtures.rs"
+    )
     collection_import_target = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/import_target.rs"
     )
@@ -337,6 +340,7 @@ def main() -> None:
         collection_geometry_tests,
         collection_geometry_zoom,
         collection_geometry_zoom_tests,
+        collection_geometry_zoom_tests_fixtures,
         collection_import_target,
         collection_keyboard,
         collection_keyboard_actions,
@@ -3837,12 +3841,43 @@ def main() -> None:
             "collection geometry zoom tests owner",
             collection_geometry_zoom_tests,
             required=[
+                "mod fixtures;",
+                "use fixtures::{",
                 "proof_collection_zoom_request(",
-                "proof_collection_layout_metrics(",
                 "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
                 "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
             ],
             forbidden=[
+                "Point::new(Px(0.0), Px(88.0))",
+                "Point::new(Px(140.0), Px(140.0))",
+                "Point::new(Px(0.0), Px(18.0))",
+                "Modifiers {",
+                "pub(in super::super) struct ProofCollectionZoomUpdate",
+                "pub(in super::super) fn proof_collection_zoom_line(",
+                "fn proof_collection_zoom_modifier_active(",
+                "fn proof_collection_hovered_index(",
+                "pub(in super::super) fn proof_collection_zoom_request(",
+                "proof_collection_clamp_tile_extent(",
+                "pub(super) fn proof_collection_localize_rect",
+                "pub(super) fn proof_collection_drag_rect",
+                "pub(super) fn proof_collection_rects_intersect",
+                "const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX",
+            ],
+        ),
+        SourceCheck(
+            "collection geometry zoom tests fixtures owner",
+            collection_geometry_zoom_tests_fixtures,
+            required=[
+                "pub(super) fn zoom_layout() -> ProofCollectionLayoutMetrics",
+                "proof_collection_layout_metrics(Px(320.0), Px(96.0))",
+                "pub(super) fn primary_modifier() -> Modifiers",
+                "meta: true",
+                "pub(super) fn asset_count() -> usize",
+            ],
+            forbidden=[
+                "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
+                "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+                "proof_collection_zoom_request(",
                 "pub(in super::super) struct ProofCollectionZoomUpdate",
                 "pub(in super::super) fn proof_collection_zoom_line(",
                 "fn proof_collection_zoom_modifier_active(",

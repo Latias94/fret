@@ -36176,12 +36176,52 @@ Fret Examples Collection Geometry Zoom Tests Owner Split Evidence - 2026-06-08:
 - Evidence anchors: `collection/geometry/zoom.rs` keeps `ProofCollectionZoomUpdate`,
   `proof_collection_zoom_line(...)`, `proof_collection_zoom_request(...)`, hovered-index
   resolution, modifier filtering, tile extent clamping delegation, scroll-anchor repair, and
-  `#[cfg(test)] mod tests;`. `collection/geometry/zoom/tests.rs` owns
-  `proof_collection_zoom_request(...)`, `proof_collection_layout_metrics(...)`,
+  `#[cfg(test)] mod tests;`. `collection/geometry/zoom/tests.rs` owns `mod fixtures;`,
+  `use fixtures::{...};`, `proof_collection_zoom_request(...)`,
   `proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor`, and
-  `proof_collection_zoom_request_ignores_non_primary_wheel`. `WORKSTREAM.json`,
+  `proof_collection_zoom_request_ignores_non_primary_wheel` while no longer defining inline
+  layout/pointer/wheel/modifier setup. `WORKSTREAM.json`,
   `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
   collection surface tests freeze the geometry zoom tests owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `cargo nextest run -p fret-examples proof_collection_zoom --no-fail-fast`; 2/2 tests
+  passed, covering tile extent/scroll anchor updates and non-primary wheel rejection. Existing
+  dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Geometry Zoom Fixture Owner Split Evidence - 2026-06-09:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs` was split
+  again so zoom request setup now lives in the demo-local
+  `collection/geometry/zoom/tests/fixtures.rs` fixture owner without changing tile extent
+  clamping, scroll-anchor repair, Primary+Wheel modifier handling, ignored-wheel behavior, public
+  crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/geometry/zoom/tests.rs` keeps `mod fixtures;`,
+  `use fixtures::{...};`, `proof_collection_zoom_request(...)`,
+  `proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor`, and
+  `proof_collection_zoom_request_ignores_non_primary_wheel` while no longer defining inline setup
+  values. `collection/geometry/zoom/tests/fixtures.rs` owns
+  `pub(super) fn zoom_layout() -> ProofCollectionLayoutMetrics`,
+  `proof_collection_layout_metrics(Px(320.0), Px(96.0))`, pointer/wheel offset fixtures,
+  `pub(super) fn primary_modifier() -> Modifiers`, `meta: true`, and
+  `pub(super) fn asset_count() -> usize`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the geometry zoom fixture owner boundary.
 - Passed: `cargo fmt -p fret-examples --check`.
 - Passed:
   `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.

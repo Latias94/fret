@@ -8789,8 +8789,19 @@ opening the slice.
       `proof_collection_zoom_line(...)`, `proof_collection_zoom_request(...)`, hovered-index
       resolution, modifier filtering, clamping delegation, scroll-anchor repair, and
       `#[cfg(test)] mod tests;` while `geometry/zoom/tests.rs` owns the zoom request behavior
-      coverage. The collection source gate, workstream source gate, manifest, and surface tests now
-      include the geometry zoom tests child owner.
+      coverage and imports zoom setup through `mod fixtures;`. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the geometry zoom tests child
+      owner.
+- [x] Split collection geometry zoom test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs` into the
+      demo-local `collection/geometry/zoom/tests/fixtures.rs` fixture owner without changing tile
+      extent clamping, scroll-anchor repair, Primary+Wheel modifier handling, ignored-wheel
+      behavior, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `geometry/zoom/tests.rs` keeps the focused zoom behavior assertions and imports
+      `zoom_layout()`, pointer/wheel offsets, `primary_modifier()`, and `asset_count()` through
+      `mod fixtures;`, while `geometry/zoom/tests/fixtures.rs` owns the setup values. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      geometry zoom fixture owner.
 - [x] Split collection geometry base tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` into the demo-local
       `collection/geometry/tests.rs` test owner without changing drag rectangle normalization,

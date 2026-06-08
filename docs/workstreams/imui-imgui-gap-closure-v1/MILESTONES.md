@@ -8404,11 +8404,25 @@ now freeze the geometry zoom owner boundary.
 `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs` now keeps
 `ProofCollectionZoomUpdate`, `proof_collection_zoom_line(...)`,
 `proof_collection_zoom_request(...)`, hovered-index resolution, modifier filtering, clamping
-delegation, scroll-anchor repair, and `#[cfg(test)] mod tests;` while routing Primary+Wheel zoom behavior coverage through the demo-local `collection/geometry/zoom/tests.rs` test owner. Tile extent
-clamping, hovered row anchoring, Primary+Wheel modifier handling, readout text, existing
-`geometry::...` imports, public crate APIs, and the app-owned no-helper-widening boundary remain
-unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
-now freeze the geometry zoom tests owner boundary.
+delegation, scroll-anchor repair, and `#[cfg(test)] mod tests;` while routing Primary+Wheel zoom
+behavior coverage through the demo-local `collection/geometry/zoom/tests.rs` test owner, which now
+imports setup through `mod fixtures;`. Tile extent clamping, hovered row anchoring, Primary+Wheel
+modifier handling, readout text, existing `geometry::...` imports, public crate APIs, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the geometry zoom tests owner
+boundary.
+The zoom behavior coverage remains tracked as the geometry zoom tests owner boundary.
+
+2026-06-09 collection geometry zoom fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs` now keeps the
+focused zoom behavior assertions and routes layout, pointer/wheel offset, Primary+Wheel modifier,
+and asset-count setup through the demo-local `collection/geometry/zoom/tests/fixtures.rs` fixture
+owner. The fixture owner owns `zoom_layout()`, scroll offsets, pointer/wheel deltas,
+`primary_modifier()`, and `asset_count()` without taking zoom behavior, implementation, render, UI
+policy, public crate APIs, or the app-owned no-helper-widening boundary. The collection source gate,
+workstream source gate, manifest, and surface tests now freeze the geometry zoom fixture owner
+boundary.
+The `collection/geometry/zoom/tests/fixtures.rs` fixture owner remains tracked as the geometry zoom fixture owner boundary.
 
 2026-06-08 collection geometry tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` now keeps base layout

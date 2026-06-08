@@ -1705,6 +1705,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom/tests/fixtures.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard/actions.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",

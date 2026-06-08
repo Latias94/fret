@@ -86,6 +86,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom.rs");
     let geometry_zoom_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs");
+    let geometry_zoom_tests_fixtures_source =
+        include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom/tests/fixtures.rs");
     let import_target_source =
         include_str!("../src/imui_editor_proof_demo/collection/import_target.rs");
     let keyboard_source = include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs");
@@ -1846,8 +1848,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
+        "mod fixtures;",
+        "use fixtures::{",
         "proof_collection_zoom_request(",
-        "proof_collection_layout_metrics(",
         "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
         "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
     ] {
@@ -1873,6 +1876,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
+        "Point::new(Px(0.0), Px(88.0))",
+        "Point::new(Px(140.0), Px(140.0))",
+        "Point::new(Px(0.0), Px(18.0))",
+        "Modifiers {",
         "pub(in super::super) struct ProofCollectionZoomUpdate",
         "pub(in super::super) fn proof_collection_zoom_line(",
         "fn proof_collection_zoom_modifier_active(",
@@ -1887,6 +1894,45 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !geometry_zoom_tests_source.contains(needle),
             "the demo-local collection geometry zoom tests owner should not take zoom implementation or base geometry; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn zoom_layout() -> ProofCollectionLayoutMetrics",
+        "proof_collection_layout_metrics(Px(320.0), Px(96.0))",
+        "pub(super) fn primary_modifier() -> Modifiers",
+        "meta: true",
+        "pub(super) fn asset_count() -> usize",
+    ] {
+        assert!(
+            geometry_zoom_tests_fixtures_source.contains(needle),
+            "the demo-local collection geometry zoom tests fixture owner should keep zoom request setup explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
+        "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+        "proof_collection_zoom_request(",
+        "pub(in super::super) struct ProofCollectionZoomUpdate",
+        "pub(in super::super) fn proof_collection_zoom_line(",
+        "fn proof_collection_zoom_modifier_active(",
+        "fn proof_collection_hovered_index(",
+        "pub(in super::super) fn proof_collection_zoom_request(",
+        "proof_collection_clamp_tile_extent(",
+        "pub(super) fn proof_collection_localize_rect(",
+        "pub(super) fn proof_collection_drag_rect(",
+        "pub(super) fn proof_collection_rects_intersect(",
+        "const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX",
+        "render_collection_first_asset_browser_proof",
+        "TextField",
+        "PointerRegionProps",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !geometry_zoom_tests_fixtures_source.contains(needle),
+            "the demo-local collection geometry zoom tests fixture owner should not take behavior tests, zoom implementation, render, or UI policy; unexpected `{needle}`"
         );
     }
 
