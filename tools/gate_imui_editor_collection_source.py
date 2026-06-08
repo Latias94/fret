@@ -218,6 +218,9 @@ def main() -> None:
     collection_selection_keyboard_navigation = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs"
     )
+    collection_selection_keyboard_navigation_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation/tests.rs"
+    )
     collection_selection_projection = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/projection.rs"
     )
@@ -312,6 +315,7 @@ def main() -> None:
         collection_selection_keyboard,
         collection_selection_keyboard_tests,
         collection_selection_keyboard_navigation,
+        collection_selection_keyboard_navigation_tests,
         collection_selection_projection,
         collection_selection_select_all,
         collection_selection_select_all_tests,
@@ -2481,10 +2485,53 @@ def main() -> None:
                 "pub(super) fn proof_collection_keyboard_next_index(",
                 "pub(super) fn proof_collection_keyboard_move_selection(",
                 "ImUiMultiSelectState::from_ordered_selection(",
-                "proof_collection_keyboard_next_index_moves_with_columns_and_edges",
-                "proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order",
+                "#[cfg(test)]",
+                "mod tests;",
             ],
             forbidden=[
+                "pub(in super::super) fn proof_collection_keyboard_selection(",
+                "proof_collection_active_id(",
+                "KeyCode::Escape",
+                "modifiers.alt",
+                "fn keys() -> Vec<Arc<str>>",
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn proof_collection_keyboard_next_index_moves_with_columns_and_edges() {",
+                "fn proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order() {",
+                "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+                "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+                "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+                "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_select_all_selection(",
+                "proof_collection_context_menu_selection(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection keyboard navigation tests owner",
+            collection_selection_keyboard_navigation_tests,
+            required=[
+                "proof_collection_keyboard_next_index(",
+                "proof_collection_keyboard_move_selection(",
+                "fn keys() -> Vec<Arc<str>>",
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn proof_collection_keyboard_next_index_moves_with_columns_and_edges() {",
+                "fn proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order() {",
+            ],
+            forbidden=[
+                "pub(super) fn proof_collection_keyboard_next_index(",
+                "pub(super) fn proof_collection_keyboard_move_selection(",
+                "ImUiMultiSelectState::from_ordered_selection(",
                 "pub(in super::super) fn proof_collection_keyboard_selection(",
                 "proof_collection_active_id(",
                 "KeyCode::Escape",

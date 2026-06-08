@@ -8867,6 +8867,15 @@ opening the slice.
       next-index math, range selection construction, and focused navigation helper tests. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       keyboard navigation child owner.
+- [x] Split collection keyboard navigation helper tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs`
+      into the demo-local `collection/selection/keyboard/navigation/tests.rs` test owner without
+      changing arrow/Home/End movement, Shift-range extension, keyboard policy entry points,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `selection/keyboard/navigation.rs` keeps next-index math, range selection construction, and
+      `#[cfg(test)] mod tests;` while `selection/keyboard/navigation/tests.rs` owns focused
+      next-index/range construction coverage. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the keyboard navigation tests child owner.
 - [x] Split collection keyboard selection behavior tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
       demo-local `collection/selection/keyboard/tests.rs` test owner without changing arrow-key

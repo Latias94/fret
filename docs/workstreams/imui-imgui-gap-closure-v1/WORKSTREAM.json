@@ -1717,6 +1717,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/context_menu/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/projection.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs",

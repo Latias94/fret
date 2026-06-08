@@ -37122,7 +37122,7 @@ Fret Examples Collection Keyboard Navigation Owner Split Evidence - 2026-06-08:
   keyboard behavior unit tests. `selection/keyboard/navigation.rs` owns
   `proof_collection_keyboard_next_index(...)`,
   `proof_collection_keyboard_move_selection(...)`, `ImUiMultiSelectState::from_ordered_selection(...)`,
-  and the focused next-index/range-construction unit tests. `WORKSTREAM.json`,
+  and `#[cfg(test)] mod tests;`. `WORKSTREAM.json`,
   `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
   collection surface tests freeze the keyboard navigation owner boundary.
 - Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
@@ -37142,6 +37142,47 @@ Fret Examples Collection Keyboard Navigation Owner Split Evidence - 2026-06-08:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Keyboard Navigation Tests Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs`
+  was split again so focused navigation helper coverage now lives in the demo-local
+  `collection/selection/keyboard/navigation/tests.rs` test owner without changing arrow/Home/End
+  movement, Shift-range extension, keyboard policy entry points, public crate APIs, or the
+  app-owned no-helper-widening boundary.
+- Evidence anchors: `selection/keyboard/navigation.rs` keeps
+  `proof_collection_keyboard_next_index(...)`,
+  `proof_collection_keyboard_move_selection(...)`, `ImUiMultiSelectState::from_ordered_selection(...)`,
+  and `#[cfg(test)] mod tests;`. `selection/keyboard/navigation/tests.rs` owns `keys()`,
+  `selection_state(...)`, `selected_ids(...)`,
+  `proof_collection_keyboard_next_index_moves_with_columns_and_edges`, and
+  `proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order`.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the split test
+  owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples proof_collection_keyboard_next_index --no-fail-fast`; 1/1
+  passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples proof_collection_keyboard_move_selection --no-fail-fast`;
+  1/1 passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
