@@ -101,6 +101,9 @@ def main() -> None:
     collection_context_menu = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs"
     )
+    collection_context_menu_actions = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu/actions.rs"
+    )
     collection_context_menu_chrome = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu/chrome.rs"
     )
@@ -207,6 +210,7 @@ def main() -> None:
         collection_command_buttons,
         collection_command_buttons_chrome,
         collection_context_menu,
+        collection_context_menu_actions,
         collection_context_menu_chrome,
         collection_derived_state,
         collection_runtime_state,
@@ -1452,7 +1456,11 @@ def main() -> None:
             required=[
                 "pub(super) struct ProofCollectionContextMenuModels {",
                 "pub(super) fn render_collection_context_menu(",
+                "mod actions;",
                 "mod chrome;",
+                "proof_collection_context_menu_apply_duplicate(",
+                "proof_collection_context_menu_begin_rename(",
+                "proof_collection_context_menu_apply_delete(",
                 "collection_context_menu_popup_id()",
                 "collection_context_menu_selection_readout_id()",
                 "collection_context_menu_duplicate_selected_label()",
@@ -1466,7 +1474,6 @@ def main() -> None:
                 "ui.open_popup_at(",
                 "ui.begin_popup_menu(",
                 "proof_collection_begin_rename_session(",
-                "proof_collection_begin_inline_rename_in_app(",
                 "proof_collection_duplicate_selection(",
                 "proof_collection_delete_selection(",
             ],
@@ -1489,6 +1496,49 @@ def main() -> None:
                 "\"imui-editor-proof.authoring.imui.collection.context-menu.rename\"",
                 "\"imui-editor-proof.authoring.imui.collection.context-menu.delete-selected\"",
                 "\"imui-editor-proof.authoring.imui.collection.context-menu.dismiss\"",
+                "proof_collection_duplicate_status(",
+                "proof_collection_delete_status(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "app.models_mut().update(&models.assets",
+                "app.models_mut().update(&models.selection",
+                "app.models_mut().update(&models.keyboard",
+                "app.models_mut().update(&models.command_status",
+            ],
+        ),
+        SourceCheck(
+            "collection context menu actions owner",
+            collection_context_menu_actions,
+            required=[
+                "pub(super) fn proof_collection_context_menu_apply_duplicate(",
+                "pub(super) fn proof_collection_context_menu_begin_rename(",
+                "pub(super) fn proof_collection_context_menu_apply_delete(",
+                "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
+                "proof_collection_delete_status(&delete.deleted_assets)",
+                "proof_collection_begin_inline_rename_in_app(",
+                "app.models_mut().update(&models.assets",
+                "app.models_mut().update(&models.selection",
+                "app.models_mut().update(&models.keyboard",
+                "app.models_mut().update(&models.command_status",
+            ],
+            forbidden=[
+                "ui.open_popup_at(",
+                "ui.begin_popup_menu(",
+                "ui.menu_item_with_options(",
+                "collection_context_menu_duplicate_selected_options(",
+                "collection_context_menu_rename_active_options(",
+                "collection_context_menu_delete_selected_options(",
+                "collection_context_menu_dismiss_options(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "proof_collection_begin_rename_session(",
+                "kit::MenuItemOptions",
+                "drag_source_with_options",
+                "drop_target::<",
+                "drag_preview_ghost",
+                "TextField::new(",
+                "PointerRegionProps",
+                "proof_collection_box_select_selection(",
+                "proof_collection_drag_payload_for_asset(",
             ],
         ),
         SourceCheck(

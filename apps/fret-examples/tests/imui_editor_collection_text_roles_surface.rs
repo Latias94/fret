@@ -37,6 +37,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu/actions.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop.rs"),

@@ -2,6 +2,8 @@
 fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit() {
     let context_menu_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs");
+    let context_menu_actions_source =
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu/actions.rs");
     let context_menu_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs");
     let source = concat!(
@@ -34,6 +36,8 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/context_menu/actions.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/context_menu/chrome.rs"),
         "\n",
@@ -108,24 +112,16 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         "collection_context_menu_duplicate_selected_label()",
         "collection_context_menu_duplicate_selected_options(",
         "proof_collection_duplicate_selection(",
-        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
-        ".update(&models.assets, |state| {",
-        ".update(&models.selection, |state| {",
-        ".update(&models.keyboard, |state| {",
-        ".update(&models.command_status, |status| {",
+        "proof_collection_context_menu_apply_duplicate(",
         "let rename_from_menu = ui.menu_item_with_options(",
         "collection_context_menu_rename_active_label()",
         "collection_context_menu_rename_active_options(",
-        "proof_collection_begin_inline_rename_in_app(",
-        "&models.rename_session,",
-        "&models.rename_draft,",
-        "&models.rename_focus_pending,",
-        "&models.rename_status,",
+        "proof_collection_context_menu_begin_rename(",
         "let delete_from_menu = ui.menu_item_with_options(",
         "collection_context_menu_delete_selected_label()",
         "collection_context_menu_delete_selected_options(",
         "proof_collection_delete_selection(",
-        "proof_collection_delete_status(&delete.deleted_assets)",
+        "proof_collection_context_menu_apply_delete(",
         "collection_context_menu_dismiss_label()",
         "collection_context_menu_dismiss_options(",
     ] {
@@ -146,10 +142,52 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         "\"imui-editor-proof.authoring.imui.collection.context-menu.rename\"",
         "\"imui-editor-proof.authoring.imui.collection.context-menu.delete-selected\"",
         "\"imui-editor-proof.authoring.imui.collection.context-menu.dismiss\"",
+        "proof_collection_duplicate_status(",
+        "proof_collection_delete_status(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "app.models_mut().update(&models.assets",
+        "app.models_mut().update(&models.selection",
+        "app.models_mut().update(&models.keyboard",
+        "app.models_mut().update(&models.command_status",
     ] {
         assert!(
             !context_menu_source.contains(needle),
             "collection context-menu owner should delegate menu chrome/test IDs to context_menu/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_context_menu_apply_duplicate(",
+        "pub(super) fn proof_collection_context_menu_begin_rename(",
+        "pub(super) fn proof_collection_context_menu_apply_delete(",
+        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
+        "proof_collection_delete_status(&delete.deleted_assets)",
+        "proof_collection_begin_inline_rename_in_app(",
+        "app.models_mut().update(&models.assets",
+        "app.models_mut().update(&models.selection",
+        "app.models_mut().update(&models.keyboard",
+        "app.models_mut().update(&models.command_status",
+    ] {
+        assert!(
+            context_menu_actions_source.contains(needle),
+            "collection context-menu actions owner should keep app-owned state transitions explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ui.open_popup_at(",
+        "ui.begin_popup_menu(",
+        "ui.menu_item_with_options(",
+        "collection_context_menu_duplicate_selected_options(",
+        "collection_context_menu_rename_active_options(",
+        "collection_context_menu_delete_selected_options(",
+        "collection_context_menu_dismiss_options(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "proof_collection_begin_rename_session(",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !context_menu_actions_source.contains(needle),
+            "collection context-menu actions owner should not take popup layout, menu chrome, or selection derivation policy; unexpected `{needle}`"
         );
     }
     for needle in [

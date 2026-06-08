@@ -8760,3 +8760,14 @@ opening the slice.
       `ProofCollectionRenameCommit`, label trim/reject logic, asset label mutation, renamed
       asset projection, and focused commit unit tests. The collection source gate, workstream
       source gate, manifest, and surface tests now include the rename commit child owner.
+- [x] Split collection context-menu action application out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` into the
+      demo-local `collection/context_menu/actions.rs` child owner without changing popup anchor
+      handoff, visible-order snapshotting, menu item ordering, menu enable/close-popup options,
+      duplicate/delete/rename selection policy, command status text, inline rename model writes,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `context_menu.rs` keeps popup lifecycle, visible-order derivation, readout/menu item
+      layout, selection/command policy calls, and action delegation while
+      `context_menu/actions.rs` owns duplicate/delete app-state writes, command-status updates,
+      and context-menu inline-rename model handoff. The collection source gate, workstream source
+      gate, manifest, and surface tests now include the context-menu actions child owner.

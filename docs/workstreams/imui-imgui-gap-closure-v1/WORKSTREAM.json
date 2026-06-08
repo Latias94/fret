@@ -1685,6 +1685,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons/chrome.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu/actions.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu/chrome.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs",

@@ -36736,3 +36736,44 @@ Fret Examples Collection Inline Rename Commit Owner Split Evidence - 2026-06-08:
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Context-Menu Actions Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` was split so
+  clicked-menu app-state mutation now lives in the demo-local
+  `collection/context_menu/actions.rs` child owner without changing popup anchor handoff,
+  visible-order snapshotting, menu item ordering, menu enable/close-popup options,
+  duplicate/delete/rename selection policy, command status text, inline rename model writes,
+  public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `context_menu.rs` declares `mod actions;`, imports
+  `proof_collection_context_menu_apply_duplicate(...)`,
+  `proof_collection_context_menu_begin_rename(...)`, and
+  `proof_collection_context_menu_apply_delete(...)`, and keeps `render_collection_context_menu(...)`,
+  popup lifecycle, selector snapshots, visible-order derivation, selection readout/menu item
+  layout, `proof_collection_begin_rename_session(...)`,
+  `proof_collection_duplicate_selection(...)`, and `proof_collection_delete_selection(...)`.
+  `context_menu/actions.rs` owns duplicate/delete app-state writes, command-status updates, and
+  context-menu inline-rename model handoff through `proof_collection_begin_inline_rename_in_app(...)`.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the
+  context-menu actions owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_context_menu_surface --test imui_editor_collection_modularization_surface --no-fail-fast`;
+  2/2 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.

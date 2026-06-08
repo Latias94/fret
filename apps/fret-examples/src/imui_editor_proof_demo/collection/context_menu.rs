@@ -4,23 +4,23 @@ use fret::advanced::view::AppRenderDataExt as _;
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::action::UiActionHostExt as _;
 
 use super::super::KernelApp;
 use super::ProofCollectionAsset;
 use super::proof_collection_readout_text;
-use super::readouts::{proof_collection_delete_status, proof_collection_duplicate_status};
-use super::rename::{
-    ProofCollectionRenameSession, proof_collection_begin_inline_rename_in_app,
-    proof_collection_begin_rename_session,
-};
+use super::rename::{ProofCollectionRenameSession, proof_collection_begin_rename_session};
 use super::selection::{
     ProofCollectionKeyboardState, proof_collection_assets_in_visible_order,
     proof_collection_delete_selection, proof_collection_duplicate_selection,
 };
 
+mod actions;
 mod chrome;
 
+use actions::{
+    proof_collection_context_menu_apply_delete, proof_collection_context_menu_apply_duplicate,
+    proof_collection_context_menu_begin_rename,
+};
 use chrome::{
     collection_context_menu_delete_selected_label, collection_context_menu_delete_selected_options,
     collection_context_menu_dismiss_label, collection_context_menu_dismiss_options,
@@ -114,36 +114,7 @@ pub(super) fn render_collection_context_menu(
                 popup_reverse_order,
             )
         {
-            let command_status = proof_collection_duplicate_status(&duplicate.duplicated_assets);
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.assets, |state| {
-                    *state = duplicate.next_assets.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.selection, |state| {
-                    *state = duplicate.next_selection.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.keyboard, |state| {
-                    *state = duplicate.next_keyboard.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.command_status, |status| {
-                    status.clear();
-                    status.push_str(&command_status);
-                });
+            proof_collection_context_menu_apply_duplicate(ui.cx_mut().app, &models, duplicate);
         }
 
         let rename_from_menu = ui.menu_item_with_options(
@@ -156,14 +127,7 @@ pub(super) fn render_collection_context_menu(
         if rename_from_menu.clicked()
             && let Some(session) = rename_session
         {
-            proof_collection_begin_inline_rename_in_app(
-                ui.cx_mut().app,
-                &models.rename_session,
-                &models.rename_draft,
-                &models.rename_focus_pending,
-                &models.rename_status,
-                &session,
-            );
+            proof_collection_context_menu_begin_rename(ui.cx_mut().app, &models, &session);
         }
 
         let delete_from_menu = ui.menu_item_with_options(
@@ -181,36 +145,7 @@ pub(super) fn render_collection_context_menu(
                 &popup_keyboard,
             )
         {
-            let command_status = proof_collection_delete_status(&delete.deleted_assets);
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.assets, |state| {
-                    *state = delete.remaining_assets.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.selection, |state| {
-                    *state = delete.next_selection.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.keyboard, |state| {
-                    *state = delete.next_keyboard.clone();
-                });
-            let _ = ui
-                .cx_mut()
-                .app
-                .models_mut()
-                .update(&models.command_status, |status| {
-                    status.clear();
-                    status.push_str(&command_status);
-                });
+            proof_collection_context_menu_apply_delete(ui.cx_mut().app, &models, delete);
         }
 
         let _ = ui.menu_item_with_options(

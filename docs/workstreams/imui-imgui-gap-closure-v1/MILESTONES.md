@@ -8382,3 +8382,14 @@ points, inline draft model writes, empty-label rejection, label trim semantics, 
 preservation, focus handoff, public crate APIs, and the app-owned no-helper-widening boundary
 remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
 tests now freeze the rename commit owner boundary.
+
+2026-06-08 collection context-menu actions owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` now keeps popup
+lifecycle, visible-order derivation, selection readout/menu item layout, duplicate/delete/rename
+selection policy calls, and action delegation while routing clicked-menu app-state mutation through
+the demo-local `collection/context_menu/actions.rs` child owner. Popup anchor handoff,
+visible-order snapshotting, menu item ordering, menu enable/close-popup options,
+duplicate/delete/rename selection policy, command status text, inline rename model writes, public
+crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
+source gate, workstream source gate, manifest, and surface tests now freeze the context-menu
+actions owner boundary.
