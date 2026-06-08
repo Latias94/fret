@@ -8737,3 +8737,14 @@ opening the slice.
       duplicate projection, next selection/anchor repair, active copied-tile repair, and focused
       duplicate selection unit tests. The collection source gate, workstream source gate, manifest,
       and surface tests now include the duplicate selection child owner.
+- [x] Split collection keyboard selection navigation helpers out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
+      demo-local `collection/selection/keyboard/navigation.rs` child owner without changing
+      arrow/Home/End movement, Shift-range extension, Escape clear behavior, primary-modifier
+      shortcut bypass, keyboard handler imports, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `selection/keyboard.rs` keeps the stable
+      `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
+      modifier filtering, and behavior tests while `selection/keyboard/navigation.rs` owns
+      next-index math, range selection construction, and focused navigation helper tests. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      keyboard navigation child owner.

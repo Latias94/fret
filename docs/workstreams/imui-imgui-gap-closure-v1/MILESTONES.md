@@ -8360,3 +8360,13 @@ id/label/path suffix uniqueness. Copy suffix text, duplicate insertion order, ke
 context-menu command behavior, public crate APIs, and the app-owned no-helper-widening boundary
 remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
 tests now freeze the duplicate selection owner boundary.
+
+2026-06-08 collection keyboard navigation owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` now keeps the
+stable `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
+primary-modifier shortcut bypass, and behavior tests while routing next-index movement and
+Shift-range selection construction through the demo-local
+`collection/selection/keyboard/navigation.rs` child owner. Arrow/Home/End movement, Shift-range
+extension, Escape clear behavior, keyboard handler imports, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the keyboard navigation owner boundary.
