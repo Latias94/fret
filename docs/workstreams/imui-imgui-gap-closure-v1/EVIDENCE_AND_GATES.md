@@ -36202,6 +36202,48 @@ Fret Examples Collection Geometry Zoom Tests Owner Split Evidence - 2026-06-08:
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Geometry Tests Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` was split again so base
+  geometry behavior coverage now lives in the demo-local `collection/geometry/tests.rs` test owner
+  without changing drag rectangle normalization, layout fallback metrics, zoom re-exports, public
+  crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `collection/geometry.rs` keeps base layout metrics, drag/local rectangle
+  helpers, grid fallback constants, zoom re-exports, and `#[cfg(test)] mod tests;`.
+  `collection/geometry/tests.rs` owns `proof_collection_drag_rect(...)`,
+  `proof_collection_layout_metrics(...)`, `proof_collection_drag_rect_normalizes_drag_direction`,
+  and `proof_collection_layout_metrics_fall_back_before_viewport_binding_exists`.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the geometry
+  tests owner boundary.
+- Passed: `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Not counted as evidence: an initial
+  `cargo nextest run -p fret-examples proof_collection_drag_rect --no-fail-fast` command timed out
+  while the same Cargo/Rustc build chain continued running. The build chain ended naturally before
+  the sequential rerun.
+- Passed: `cargo nextest run -p fret-examples proof_collection_drag_rect --no-fail-fast`; 1/1 test
+  passed, covering drag rectangle normalization. Existing dead-code warnings remained in
+  `fret-chart` and `fret-plot`.
+- Passed: `cargo nextest run -p fret-examples proof_collection_layout_metrics --no-fail-fast`; 1/1
+  test passed, covering layout fallback metrics before viewport binding exists. Existing dead-code
+  warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`.
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Box-Select Tests Owner Split Evidence - 2026-06-08:
 
 - Claim:

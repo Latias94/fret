@@ -114,6 +114,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/geometry/tests.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom/tests.rs"),

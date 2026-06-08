@@ -8380,6 +8380,15 @@ clamping, hovered row anchoring, Primary+Wheel modifier handling, readout text, 
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
 now freeze the geometry zoom tests owner boundary.
 
+2026-06-08 collection geometry tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` now keeps base layout
+metrics, drag/local rectangle helpers, grid fallback constants, zoom re-exports, and
+`#[cfg(test)] mod tests;` while routing base geometry behavior coverage through the demo-local
+`collection/geometry/tests.rs` test owner. Drag rectangle normalization, layout fallback metrics,
+zoom imports, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged,
+while the collection source gate, workstream source gate, manifest, and surface tests now freeze
+the geometry tests owner boundary.
+
 2026-06-08 collection box-select tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs` now keeps
 `ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,

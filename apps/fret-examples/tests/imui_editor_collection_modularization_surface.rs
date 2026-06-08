@@ -70,6 +70,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let drag_drop_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/drag_drop/tests.rs");
     let geometry_source = include_str!("../src/imui_editor_proof_demo/collection/geometry.rs");
+    let geometry_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/geometry/tests.rs");
     let geometry_zoom_source =
         include_str!("../src/imui_editor_proof_demo/collection/geometry/zoom.rs");
     let geometry_zoom_tests_source =
@@ -1579,10 +1581,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) use zoom::{",
         "ProofCollectionZoomUpdate, proof_collection_zoom_line, proof_collection_zoom_request,",
         "#[cfg(test)]",
+        "mod tests;",
         "pub(super) struct ProofCollectionLayoutMetrics",
         "pub(super) fn proof_collection_localize_rect(",
-        "fn proof_collection_drag_rect_normalizes_drag_direction() {",
-        "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
     ] {
         assert!(
             geometry_source.contains(needle),
@@ -1597,10 +1598,39 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn proof_collection_zoom_request(",
         "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
         "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+        "fn proof_collection_drag_rect_normalizes_drag_direction() {",
+        "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
     ] {
         assert!(
             !geometry_source.contains(needle),
-            "the demo-local collection geometry owner should route zoom behavior through geometry/zoom.rs; unexpected `{needle}`"
+            "the demo-local collection geometry owner should route split behavior coverage through child test owners; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "proof_collection_drag_rect(",
+        "proof_collection_layout_metrics(",
+        "fn proof_collection_drag_rect_normalizes_drag_direction() {",
+        "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
+    ] {
+        assert!(
+            geometry_tests_source.contains(needle),
+            "the demo-local collection geometry tests owner should keep base geometry behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_localize_rect(",
+        "pub(super) fn proof_collection_drag_rect(",
+        "pub(super) fn proof_collection_rects_intersect(",
+        "pub(super) fn proof_collection_layout_metrics(",
+        "const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX",
+        "pub(in super::super) struct ProofCollectionZoomUpdate",
+        "pub(in super::super) fn proof_collection_zoom_line(",
+        "pub(in super::super) fn proof_collection_zoom_request(",
+    ] {
+        assert!(
+            !geometry_tests_source.contains(needle),
+            "the demo-local collection geometry tests owner should not take implementation ownership; unexpected `{needle}`"
         );
     }
 

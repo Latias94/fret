@@ -8756,6 +8756,15 @@ opening the slice.
       `#[cfg(test)] mod tests;` while `geometry/zoom/tests.rs` owns the zoom request behavior
       coverage. The collection source gate, workstream source gate, manifest, and surface tests now
       include the geometry zoom tests child owner.
+- [x] Split collection geometry base tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs` into the demo-local
+      `collection/geometry/tests.rs` test owner without changing drag rectangle normalization,
+      layout fallback metrics, zoom re-exports, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `geometry.rs` keeps base layout metrics, drag/local
+      rectangle helpers, grid fallback constants, zoom re-exports, and `#[cfg(test)] mod tests;`
+      while `geometry/tests.rs` owns the focused base geometry behavior coverage. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the geometry
+      tests child owner.
 - [x] Split collection box-select behavior tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs` into the
       demo-local `collection/box_select/tests.rs` test owner without changing rendered-item

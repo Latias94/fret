@@ -146,6 +146,9 @@ def main() -> None:
     collection_geometry = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs"
     )
+    collection_geometry_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/tests.rs"
+    )
     collection_geometry_zoom = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs"
     )
@@ -285,6 +288,7 @@ def main() -> None:
         collection_drag_drop,
         collection_drag_drop_tests,
         collection_geometry,
+        collection_geometry_tests,
         collection_geometry_zoom,
         collection_geometry_zoom_tests,
         collection_import_target,
@@ -3213,8 +3217,8 @@ def main() -> None:
                 "pub(super) fn proof_collection_drag_threshold_met",
                 "pub(super) fn proof_collection_rects_intersect",
                 "pub(super) fn proof_collection_layout_metrics",
-                "fn proof_collection_drag_rect_normalizes_drag_direction() {",
-                "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
+                "#[cfg(test)]",
+                "mod tests;",
             ],
             forbidden=[
                 "use fret::imui",
@@ -3223,8 +3227,30 @@ def main() -> None:
                 "struct ProofCollectionZoomUpdate {",
                 "fn proof_collection_zoom_modifier_active(",
                 "fn proof_collection_hovered_index(",
+                "fn proof_collection_drag_rect_normalizes_drag_direction() {",
+                "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
                 "fn proof_collection_zoom_request_updates_tile_extent_and_scroll_anchor() {",
                 "fn proof_collection_zoom_request_ignores_non_primary_wheel() {",
+            ],
+        ),
+        SourceCheck(
+            "collection geometry tests owner",
+            collection_geometry_tests,
+            required=[
+                "proof_collection_drag_rect(",
+                "proof_collection_layout_metrics(",
+                "fn proof_collection_drag_rect_normalizes_drag_direction() {",
+                "fn proof_collection_layout_metrics_fall_back_before_viewport_binding_exists() {",
+            ],
+            forbidden=[
+                "pub(super) fn proof_collection_localize_rect",
+                "pub(super) fn proof_collection_drag_rect",
+                "pub(super) fn proof_collection_rects_intersect",
+                "pub(super) fn proof_collection_layout_metrics",
+                "const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX",
+                "pub(in super::super) struct ProofCollectionZoomUpdate",
+                "pub(in super::super) fn proof_collection_zoom_line(",
+                "pub(in super::super) fn proof_collection_zoom_request(",
             ],
         ),
         SourceCheck(
