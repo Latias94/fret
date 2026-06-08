@@ -49,6 +49,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let browser_input_context_menu_runtime_tests_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests.rs"
     );
+    let browser_input_context_menu_runtime_tests_fixtures_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests/fixtures.rs"
+    );
     let browser_input_zoom_runtime_source = include_str!(
         "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
     );
@@ -1050,7 +1053,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
-        "fn pointer_up(",
+        "mod fixtures;",
+        "use fixtures::pointer_up;",
         "context_menu_anchor_prefers_window_position",
         "context_menu_anchor_falls_back_to_pointer_position",
         "context_menu_anchor_ignores_non_right_or_non_click_up",
@@ -1060,7 +1064,19 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     ] {
         assert!(
             browser_input_context_menu_runtime_tests_source.contains(needle),
-            "the demo-local collection browser input context-menu tests owner should keep anchor fixtures and behavior coverage explicit; missing `{needle}`"
+            "the demo-local collection browser input context-menu tests owner should keep fixture imports and behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn pointer_up(",
+        "PointerUpCx {",
+        "PointerId(0)",
+        "Modifiers::default()",
+        "PointerType::Mouse",
+    ] {
+        assert!(
+            browser_input_context_menu_runtime_tests_fixtures_source.contains(needle),
+            "the demo-local collection browser input context-menu tests fixture owner should keep PointerUpCx fixtures explicit; missing `{needle}`"
         );
     }
     for needle in [
@@ -1074,6 +1090,37 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !browser_input_context_menu_runtime_source.contains(needle),
             "the demo-local collection browser input context-menu runtime owner should route anchor behavior coverage through context_menu/tests.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "fn pointer_up(",
+        "PointerUpCx {",
+        "PointerId(0)",
+        "Modifiers::default()",
+        "PointerType::Mouse",
+    ] {
+        assert!(
+            !browser_input_context_menu_runtime_tests_source.contains(needle),
+            "the demo-local collection browser input context-menu tests owner should route PointerUpCx fixtures through context_menu/tests/fixtures.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "context_menu_anchor_prefers_window_position",
+        "context_menu_anchor_falls_back_to_pointer_position",
+        "context_menu_anchor_ignores_non_right_or_non_click_up",
+        "context_menu_anchor_ignores_direct_pressable_clicks",
+        "context_menu_anchor_ignores_pressable_descendant_clicks",
+        "proof_collection_browser_scope_context_menu_anchor_from_up(",
+        "pub(super) fn proof_collection_browser_scope_context_menu_anchor_from_up(",
+        "pub(super) fn publish_collection_browser_scope_context_menu_anchor(",
+        "host.request_focus(acx.target);",
+        "host.update_model(context_menu_anchor_model",
+        "*state = Some(position);",
+        "host.notify(acx);",
+    ] {
+        assert!(
+            !browser_input_context_menu_runtime_tests_fixtures_source.contains(needle),
+            "the demo-local collection browser input context-menu tests fixture owner should not take anchor behavior tests or runtime publication ownership; unexpected `{needle}`"
         );
     }
     for needle in [

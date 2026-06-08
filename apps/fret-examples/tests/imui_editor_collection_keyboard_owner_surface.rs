@@ -44,6 +44,10 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
         ),
         "\n",
         include_str!(
+            "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests/fixtures.rs"
+        ),
+        "\n",
+        include_str!(
             "../src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs"
         ),
         "\n",

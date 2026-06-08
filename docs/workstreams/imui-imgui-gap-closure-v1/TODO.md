@@ -8727,9 +8727,22 @@ opening the slice.
       app-owned no-helper-widening boundary. Result: `input_runtime/context_menu.rs` keeps
       right-click background anchor derivation, focus request, context-menu anchor publication,
       notify, and `#[cfg(test)] mod tests;` while
-      `collection/browser_scope/input_runtime/context_menu/tests.rs` owns the `PointerUpCx`
-      fixture plus the focused anchor behavior coverage. The collection source gate, workstream
-      source gate, manifest, and surface tests now include the browser input context-menu tests
+      `collection/browser_scope/input_runtime/context_menu/tests.rs` imports pointer-up fixtures
+      through `mod fixtures;` and owns the focused anchor behavior coverage. The collection source
+      gate, workstream source gate, manifest, and surface tests now include the browser input
+      context-menu tests child owner.
+- [x] Split collection browser input context-menu anchor test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests.rs`
+      into the demo-local
+      `collection/browser_scope/input_runtime/context_menu/tests/fixtures.rs` fixture owner without
+      changing right-click click filtering, pointer/window anchor fallback, non-click rejection,
+      direct/descendant pressable-origin suppression, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result:
+      `collection/browser_scope/input_runtime/context_menu/tests.rs` keeps behavior tests and
+      imports fixtures through `mod fixtures;` while
+      `collection/browser_scope/input_runtime/context_menu/tests/fixtures.rs` owns
+      `pointer_up(...)` and `PointerUpCx` construction. The collection source gate, workstream
+      source gate, manifest, and surface tests now include the browser input context-menu fixture
       child owner.
 - [x] Split collection browser input box-select pointer runtime out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs`

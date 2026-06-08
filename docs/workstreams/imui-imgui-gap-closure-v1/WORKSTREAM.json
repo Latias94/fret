@@ -1682,6 +1682,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session/tests/fixtures.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/context_menu/tests/fixtures.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/zoom.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/child_models.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/chrome.rs",
