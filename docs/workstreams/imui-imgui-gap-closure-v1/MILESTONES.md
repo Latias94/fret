@@ -8439,3 +8439,17 @@ behavior, Escape/blur cancel behavior, invalid empty-label handling, focus resto
 inline test ID, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged,
 while the collection source gate, workstream source gate, manifest, and surface tests now freeze the
 inline-rename actions owner boundary.
+
+2026-06-08 collection browser-scope asset-grid owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` now keeps child-region
+mounting, pointer region, input runtime installation, box-select marquee layering, and scope-level
+model/state cloning while routing asset-grid element mounting through the demo-local
+`collection/browser_scope/asset_grid.rs` child owner. The child owner now owns the
+`container_build(...)` / `imui_build(...)` bridge, `ProofCollectionAssetGridModels` construction,
+`ProofCollectionAssetGridState` construction, and final `render_collection_asset_grid(...)`
+element mounting. Child-region options, pointer-region runtime, box-select marquee layering,
+grid/tile rendering, inline rename, drag preview, rendered-item capture, public crate APIs, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the browser-scope asset-grid owner
+boundary. The browser-scope asset-grid owner boundary is now tracked as its own source-gated
+proof slice.

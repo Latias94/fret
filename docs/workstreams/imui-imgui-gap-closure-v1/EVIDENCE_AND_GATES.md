@@ -36164,6 +36164,40 @@ Fret Examples Collection Geometry Zoom Owner Split Evidence - 2026-06-08:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+
+Fret Examples Collection Browser-Scope Asset-Grid Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` was split so
+  asset-grid element mounting now lives in the demo-local
+  `collection/browser_scope/asset_grid.rs` child owner without changing child-region options,
+  pointer-region runtime, box-select marquee layering, grid/tile rendering, inline rename, drag
+  preview, rendered-item capture, public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `browser_scope.rs` declares `mod asset_grid;`, imports
+  `render_collection_browser_scope_asset_grid(...)`, and keeps `ui.child_region_with_options(...)`,
+  `cx.pointer_region(...)`, `install_collection_browser_scope_input_runtime(...)`,
+  `proof_collection_box_select_active_rect(...)`, and marquee layer assembly. The new
+  `browser_scope/asset_grid.rs` owns `ProofCollectionBrowserScopeAssetGridModels`,
+  `ProofCollectionBrowserScopeAssetGridState`, the `container_build(...)` / `imui_build(...)`
+  bridge, `ProofCollectionAssetGridModels` construction, `ProofCollectionAssetGridState`
+  construction, and final `render_collection_asset_grid(...)` mounting. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the browser-scope asset-grid owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_box_select_surface --no-fail-fast`;
+  3/3 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 

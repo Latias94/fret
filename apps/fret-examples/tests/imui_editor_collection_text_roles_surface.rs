@@ -17,6 +17,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/asset_grid.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
         "\n",
         include_str!(

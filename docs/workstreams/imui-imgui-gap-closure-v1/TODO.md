@@ -8815,3 +8815,17 @@ opening the slice.
       outcome model writes, invalid commit status/focus-pending redraw, and post-commit/cancel
       focus restore. The collection source gate, workstream source gate, manifest, and surface
       tests now include the inline-rename actions child owner.
+- [x] Split collection browser-scope asset-grid mounting out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs` into the
+      demo-local `collection/browser_scope/asset_grid.rs` child owner without changing
+      child-region options, pointer-region runtime, box-select marquee layering, grid/tile
+      rendering, inline rename, drag preview, rendered-item capture, public crate APIs, or the
+      app-owned no-helper-widening boundary. Result: `browser_scope.rs` keeps child-region
+      mounting, pointer region, input runtime installation, box-select marquee layering, and
+      scope-level model/state cloning while routing through
+      `render_collection_browser_scope_asset_grid(...)`. `browser_scope/asset_grid.rs` owns the
+      `container_build(...)` / `imui_build(...)` bridge, `ProofCollectionAssetGridModels`
+      construction, `ProofCollectionAssetGridState` construction, and final
+      `render_collection_asset_grid(...)` element mounting. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the browser-scope
+      asset-grid child owner.

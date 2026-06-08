@@ -20,6 +20,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let browser_scope_asset_grid_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/asset_grid.rs");
     let browser_scope_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs");
     let child_models_source =
@@ -652,13 +654,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionBrowserScopeState",
         "pub(super) fn render_collection_browser_scope(",
         "ui.child_region_with_options(",
+        "mod asset_grid;",
         "mod chrome;",
+        "render_collection_browser_scope_asset_grid(",
         "collection_browser_child_region_options(",
         "collection_browser_box_select_marquee(",
         "collection_browser_box_select_scope_id()",
         "proof_collection_browser_scope_pointer_props()",
         "install_collection_browser_scope_input_runtime(",
-        "render_collection_asset_grid(",
     ] {
         assert!(
             browser_scope_source.contains(needle),
@@ -698,10 +701,44 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
         "Color { a:",
         ".border_1()",
+        "render_collection_asset_grid(",
+        "ProofCollectionAssetGridModels {",
+        "ProofCollectionAssetGridState {",
     ] {
         assert!(
             !browser_scope_source.contains(needle),
-            "the demo-local collection browser-scope owner should delegate option/test-id and marquee chrome construction to browser_scope/chrome.rs; unexpected `{needle}`"
+            "the demo-local collection browser-scope owner should delegate chrome construction to browser_scope/chrome.rs and asset-grid mounting to browser_scope/asset_grid.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeAssetGridModels",
+        "pub(super) struct ProofCollectionBrowserScopeAssetGridState",
+        "pub(super) fn render_collection_browser_scope_asset_grid(",
+        "fret_ui_kit::ui::container_build(",
+        "imui_build(cx, out, |ui| {",
+        "render_collection_asset_grid(",
+        "ProofCollectionAssetGridModels {",
+        "ProofCollectionAssetGridState {",
+        ".w_full()",
+        ".into_element(cx)",
+    ] {
+        assert!(
+            browser_scope_asset_grid_source.contains(needle),
+            "the demo-local collection browser-scope asset-grid owner should keep grid element mounting explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ui.child_region_with_options(",
+        "proof_collection_browser_scope_pointer_props()",
+        "install_collection_browser_scope_input_runtime(",
+        "collection_browser_box_select_marquee(",
+        "proof_collection_box_select_active_rect(",
+        "kit::ChildRegionOptions",
+        "cx.pointer_region(",
+    ] {
+        assert!(
+            !browser_scope_asset_grid_source.contains(needle),
+            "the demo-local collection browser-scope asset-grid owner should not take child-region, pointer runtime, or marquee chrome responsibilities; unexpected `{needle}`"
         );
     }
 

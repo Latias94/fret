@@ -11,6 +11,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
     );
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
+    let browser_scope_asset_grid_source =
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/asset_grid.rs");
     let browser_scope_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs");
     let browser_input_runtime_source =
@@ -49,6 +51,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         ),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/browser_scope/asset_grid.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/chrome.rs"),
         "\n",
@@ -353,13 +357,14 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionBrowserScopeState",
         "pub(super) fn render_collection_browser_scope(",
         "ui.child_region_with_options(",
+        "mod asset_grid;",
         "mod chrome;",
+        "render_collection_browser_scope_asset_grid(",
         "collection_browser_child_region_options(",
         "collection_browser_box_select_marquee(",
         "collection_browser_box_select_scope_id()",
         "proof_collection_browser_scope_pointer_props()",
         "install_collection_browser_scope_input_runtime(",
-        "render_collection_asset_grid(",
     ] {
         assert!(
             browser_scope_source.contains(needle),
@@ -392,10 +397,42 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\"imui-editor-proof.authoring.imui.collection.box-select.scope\"",
         "\"imui-editor-proof.authoring.imui.collection.box-select.marquee\"",
         ".border_1()",
+        "render_collection_asset_grid(",
+        "ProofCollectionAssetGridModels {",
+        "ProofCollectionAssetGridState {",
     ] {
         assert!(
             !browser_scope_source.contains(needle),
-            "collection browser-scope owner should delegate option/test-id and marquee chrome construction to the chrome owner; unexpected `{needle}`"
+            "collection browser-scope owner should delegate chrome construction to browser_scope/chrome.rs and asset-grid mounting to browser_scope/asset_grid.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionBrowserScopeAssetGridModels",
+        "pub(super) struct ProofCollectionBrowserScopeAssetGridState",
+        "pub(super) fn render_collection_browser_scope_asset_grid(",
+        "render_collection_asset_grid(",
+        "ProofCollectionAssetGridModels {",
+        "ProofCollectionAssetGridState {",
+        ".w_full()",
+        ".into_element(cx)",
+    ] {
+        assert!(
+            browser_scope_asset_grid_source.contains(needle),
+            "collection browser-scope asset-grid owner should keep grid mounting explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ui.child_region_with_options(",
+        "proof_collection_browser_scope_pointer_props()",
+        "install_collection_browser_scope_input_runtime(",
+        "collection_browser_box_select_marquee(",
+        "proof_collection_box_select_active_rect(",
+        "kit::ChildRegionOptions",
+        "cx.pointer_region(",
+    ] {
+        assert!(
+            !browser_scope_asset_grid_source.contains(needle),
+            "collection browser-scope asset-grid owner should not take child-region, pointer runtime, or marquee chrome responsibilities; unexpected `{needle}`"
         );
     }
     for needle in [
