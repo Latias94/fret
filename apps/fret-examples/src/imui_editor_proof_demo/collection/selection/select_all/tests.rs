@@ -6,16 +6,9 @@ use fret_core::{KeyCode, Modifiers};
 use super::super::ProofCollectionKeyboardState;
 use super::{proof_collection_select_all_selection, proof_collection_select_all_shortcut_matches};
 
-fn selection_state(selected: &[&str], anchor: Option<&str>) -> ImUiMultiSelectState<Arc<str>> {
-    ImUiMultiSelectState::new(
-        selected.iter().map(|id| Arc::from(*id)).collect(),
-        anchor.map(Arc::from),
-    )
-}
+mod fixtures;
 
-fn anchor_id(selection: &ImUiMultiSelectState<Arc<str>>) -> Option<&str> {
-    selection.anchor().map(|id| id.as_ref())
-}
+use fixtures::{anchor_id, selection_state};
 
 #[test]
 fn proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile() {

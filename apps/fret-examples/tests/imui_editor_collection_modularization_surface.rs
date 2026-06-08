@@ -130,6 +130,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all.rs");
     let selection_select_all_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all/tests.rs");
+    let selection_select_all_tests_fixtures_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/select_all/tests/fixtures.rs"
+    );
     let selection_commands_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs");
     let selection_delete_commands_source =
@@ -2339,8 +2342,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
-        "fn selection_state(",
-        "fn anchor_id(",
+        "mod fixtures;",
+        "use fixtures::{",
         "ProofCollectionKeyboardState",
         "proof_collection_select_all_selection(",
         "proof_collection_select_all_shortcut_matches(",
@@ -2350,7 +2353,40 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     ] {
         assert!(
             selection_select_all_tests_source.contains(needle),
-            "the demo-local collection select-all tests owner should keep fixtures and behavior coverage explicit; missing `{needle}`"
+            "the demo-local collection select-all tests owner should keep fixture imports and behavior coverage explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn anchor_id(",
+        "ImUiMultiSelectState::new(",
+        "ImUiMultiSelectState::from_ordered_selection(",
+        "render_collection_first_asset_browser_proof",
+        "proof_collection_keyboard_selection(",
+        "proof_collection_context_menu_selection(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_select_all_tests_source.contains(needle),
+            "the demo-local collection select-all tests owner should not take selection fixture construction, render, command, or UI policy; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn selection_state(",
+        "pub(super) fn anchor_id(",
+        "ImUiMultiSelectState::new(",
+    ] {
+        assert!(
+            selection_select_all_tests_fixtures_source.contains(needle),
+            "the demo-local collection select-all tests fixture owner should keep selection fixtures explicit; missing `{needle}`"
         );
     }
     for needle in [
@@ -2393,8 +2429,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "kit::MenuItemOptions",
     ] {
         assert!(
-            !selection_select_all_tests_source.contains(needle),
-            "the demo-local collection select-all tests owner should not take selection construction, render, command, or UI policy; unexpected `{needle}`"
+            !selection_select_all_tests_fixtures_source.contains(needle),
+            "the demo-local collection select-all tests fixture owner should not take behavior tests, policy construction, render, command, or UI policy; unexpected `{needle}`"
         );
     }
     for needle in [

@@ -37441,7 +37441,7 @@ Fret Examples Collection Select-All Tests Owner Split Evidence - 2026-06-08:
 
 - Claim:
   `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs` was split
-  again so select-all fixtures and behavior tests now live in the demo-local
+  again so select-all behavior tests now live in the demo-local
   `collection/selection/select_all/tests.rs` test owner without changing `Primary+A` matching,
   visible-order full selection, anchor preservation/fallback, active-tile preservation/fallback,
   keyboard dispatch imports, public crate APIs, or the app-owned no-helper-widening boundary.
@@ -37449,8 +37449,9 @@ Fret Examples Collection Select-All Tests Owner Split Evidence - 2026-06-08:
   `proof_collection_select_all_shortcut_matches(...)`,
   `proof_collection_select_all_selection(...)`, `proof_collection_active_id(...)`, ordered
   selection construction through `ImUiMultiSelectState::from_ordered_selection(...)`, and
-  `#[cfg(test)] mod tests;`. `selection/select_all/tests.rs` owns `selection_state(...)`,
-  `anchor_id(...)`, `ProofCollectionKeyboardState`,
+  `#[cfg(test)] mod tests;`. `selection/select_all/tests.rs` owns `mod fixtures;`, imports helpers
+  through `use fixtures::{...}`, keeps `ProofCollectionKeyboardState`,
+  `ImUiMultiSelectState::default()`,
   `proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile`,
   `proof_collection_select_all_selection_falls_back_to_first_visible_asset`, and
   `proof_collection_select_all_shortcut_matches_primary_a_only`. `WORKSTREAM.json`,
@@ -37465,6 +37466,41 @@ Fret Examples Collection Select-All Tests Owner Split Evidence - 2026-06-08:
   `python tools\gate_imui_workstream_source.py`;
   `python tools\check_workstream_catalog.py`;
   `cargo nextest run -p fret-examples proof_collection_select_all --no-fail-fast` (3/3 passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  (10/10 passed);
+  `git diff --check` (passed with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`). Existing dead-code warnings remained in `fret-chart`
+  and `fret-plot` during Rust checks.
+
+Fret Examples Collection Select-All Fixture Owner Split Evidence - 2026-06-09:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all/tests.rs` was
+  split again so selection fixture helpers live in the demo-local
+  `collection/selection/select_all/tests/fixtures.rs` fixture owner without changing `Primary+A`
+  matching, visible-order full selection, anchor preservation/fallback, active-tile
+  preservation/fallback, keyboard dispatch imports, public crate APIs, or app-owned
+  no-helper-widening.
+- Evidence anchors: `selection/select_all/tests.rs` owns `mod fixtures;`, imports helpers through
+  `use fixtures::{...}`, keeps `ProofCollectionKeyboardState`, `ImUiMultiSelectState::default()`,
+  `proof_collection_select_all_selection_uses_visible_order_and_preserves_active_tile`,
+  `proof_collection_select_all_selection_falls_back_to_first_visible_asset`, and
+  `proof_collection_select_all_shortcut_matches_primary_a_only`.
+  `selection/select_all/tests/fixtures.rs` owns `selection_state(...)`, `anchor_id(...)`, and
+  `ImUiMultiSelectState::new(...)`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the split fixture owner boundary.
+- Verified gates:
+  `cargo fmt -p fret-examples --check`;
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`;
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`;
+  `python tools\gate_imui_editor_collection_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `cargo nextest run -p fret-examples proof_collection_select_all --no-fail-fast` (3/3 passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_select_all_surface --no-fail-fast`
+  (2/2 passed);
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   (10/10 passed);
   `git diff --check` (passed with only the existing Git CRLF normalization warning for

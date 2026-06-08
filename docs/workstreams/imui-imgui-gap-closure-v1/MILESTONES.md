@@ -8575,13 +8575,25 @@ tracked as its own source-gated proof slice.
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs` now keeps
 `proof_collection_select_all_shortcut_matches(...)`,
 `proof_collection_select_all_selection(...)`, ordered-selection construction, active-id fallback,
-and `#[cfg(test)] mod tests;` while routing select-all fixtures and behavior coverage through the
+and `#[cfg(test)] mod tests;` while routing select-all behavior coverage through the
 demo-local `collection/selection/select_all/tests.rs` test owner. `Primary+A` matching,
 visible-order full selection, anchor preservation/fallback, active-tile preservation/fallback,
 keyboard dispatch imports, public crate APIs, and the app-owned no-helper-widening boundary remain
 unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
 now freeze the select-all tests owner boundary. The select-all tests owner boundary is now tracked
 as its own source-gated proof slice.
+
+2026-06-09 collection select-all fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all/tests.rs` now keeps
+select-all behavior tests, `ProofCollectionKeyboardState`, and `ImUiMultiSelectState::default()`
+while importing fixture helpers through `mod fixtures;` and routing selection fixture
+construction/projection through the demo-local
+`collection/selection/select_all/tests/fixtures.rs` fixture owner. `Primary+A` matching,
+visible-order full selection, anchor preservation/fallback, active-tile preservation/fallback,
+keyboard dispatch imports, public crate APIs, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the select-all fixture owner boundary. The select-all fixture owner boundary is now
+tracked as its own source-gated proof slice.
 
 2026-06-08 collection inline rename commit owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps the stable rename

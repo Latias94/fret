@@ -113,6 +113,10 @@ fn imui_editor_proof_demo_keeps_collection_box_select_app_owned_and_explicit() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/select_all/tests.rs"),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/select_all/tests/fixtures.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs"),

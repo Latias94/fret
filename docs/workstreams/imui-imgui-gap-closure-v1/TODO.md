@@ -8954,8 +8954,20 @@ opening the slice.
       `proof_collection_select_all_shortcut_matches(...)`,
       `proof_collection_select_all_selection(...)`, ordered-selection construction, active-id
       fallback, and `#[cfg(test)] mod tests;` while `selection/select_all/tests.rs` owns
-      select-all fixtures and behavior coverage. The collection source gate, workstream source
+      select-all behavior coverage and imports selection fixtures. The collection source gate,
+      workstream source
       gate, manifest, and surface tests now include the select-all tests child owner.
+- [x] Split collection select-all test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all/tests.rs`
+      into the demo-local `collection/selection/select_all/tests/fixtures.rs` fixture owner without
+      changing `Primary+A` matching, visible-order full selection, anchor preservation/fallback,
+      active-tile preservation/fallback, keyboard dispatch imports, public crate APIs, or the
+      app-owned no-helper-widening boundary. Result: `selection/select_all/tests.rs` keeps
+      `ProofCollectionKeyboardState`, `ImUiMultiSelectState::default()`, and the three behavior
+      tests while importing helpers through `mod fixtures;`; `selection/select_all/tests/fixtures.rs`
+      owns `selection_state(...)`, `anchor_id(...)`, and `ImUiMultiSelectState::new(...)`. The
+      collection source gate, workstream source gate, manifest, and surface tests now include the
+      select-all fixture child owner.
 - [x] Split collection inline rename commit mutation out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` into the demo-local
       `collection/rename/commit.rs` child owner without changing F2 shortcut matching, active
