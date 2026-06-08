@@ -36932,9 +36932,8 @@ Fret Examples Collection Browser Input Box-Select Session Tests Owner Split Evid
   `proof_collection_browser_scope_box_select_cancel_pointer(...)`,
   `proof_collection_drag_threshold_met(...)`, `ProofCollectionBoxSelectSession` construction, and
   `#[cfg(test)] mod tests;`. `browser_scope/input_runtime/box_select/session/tests.rs` owns
-  `pointer_down(...)`, `pointer_move(...)`, `pointer_up(...)`, `pointer_cancel(...)`, the
-  `ProofCollectionBoxSelectSession` fixture, and the focused down/move/up/cancel behavior tests.
-  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  the focused down/move/up/cancel behavior tests and imports fixture helpers through
+  `mod fixtures;`. `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
   `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the split test
   owner boundary.
 - Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
@@ -36962,6 +36961,53 @@ Fret Examples Collection Browser Input Box-Select Session Tests Owner Split Evid
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
   standalone markdown files.
+- Passed: `git diff --check` with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
+Fret Examples Collection Browser Input Box-Select Session Fixture Owner Split Evidence - 2026-06-09:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session/tests.rs`
+  was split again so pointer/session fixture helpers now live in the demo-local
+  `collection/browser_scope/input_runtime/box_select/session/tests/fixtures.rs` fixture owner
+  without changing pure transition helpers, focused down/move/up/cancel behavior tests, runtime
+  event wiring, model publication, public crate APIs, or the app-owned no-helper-widening
+  boundary.
+- Evidence anchors: `browser_scope/input_runtime/box_select/session/tests.rs` keeps
+  `mod fixtures;`, imports `point`, `pointer_down`, `pointer_move`, `pointer_up`,
+  `pointer_cancel`, and `session`, and owns
+  `box_select_down_arms_left_background_session`,
+  `box_select_down_ignores_non_left_or_pressable_origin`,
+  `box_select_move_marks_threshold_for_matching_pointer`,
+  `box_select_move_ignores_released_left_button`,
+  `box_select_up_restores_mismatched_pointer_and_takes_matching_session`, and
+  `box_select_cancel_clears_matching_pointer_only`.
+  `browser_scope/input_runtime/box_select/session/tests/fixtures.rs` owns
+  `point(...)`, `pointer_down(...)`, `pointer_move(...)`, `pointer_up(...)`,
+  `pointer_cancel(...)`, `session(...)`, `PointerCancelReason::LeftWindow`, and
+  `ProofCollectionBoxSelectSession` fixture construction. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the split fixture owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `cargo nextest run -p fret-examples box_select --no-fail-fast`; 9/9 tests passed,
+  including the fixture-fed down/move/up/cancel session behavior tests. Existing dead-code
+  warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_box_select_surface --no-fail-fast`;
+  3/3 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 

@@ -8429,7 +8429,7 @@ gate, manifest, and surface tests now freeze the box-select session owner bounda
 2026-06-08 collection browser input box-select session tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session.rs`
 now keeps pure pointer session transition helpers plus `#[cfg(test)] mod tests;` while routing
-pointer fixtures and behavior coverage through the demo-local
+focused behavior coverage through the demo-local
 `collection/browser_scope/input_runtime/box_select/session/tests.rs` test owner. Left-button
 background arming, pressable-origin suppression, append-mode capture, threshold detection,
 pointer-id mismatch restoration, pointer cancel behavior, runtime event wiring, model publication,
@@ -8437,6 +8437,18 @@ public crate APIs, and the app-owned no-helper-widening boundary remain unchange
 collection source gate, workstream source gate, manifest, and surface tests now freeze the
 box-select session tests owner boundary. The box-select session tests owner boundary is now tracked
 as its own source-gated proof slice.
+
+2026-06-09 collection browser input box-select session fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session/tests.rs`
+now keeps the focused down/move/up/cancel behavior tests and imports fixture helpers through
+`mod fixtures;` while routing point, pointer down/move/up/cancel, and session construction through
+the demo-local `collection/browser_scope/input_runtime/box_select/session/tests/fixtures.rs`
+fixture owner. Left-button background arming, pressable-origin suppression, append-mode capture,
+threshold detection, pointer-id mismatch restoration, pointer cancel behavior, runtime event
+wiring, model publication, public crate APIs, and the app-owned no-helper-widening boundary remain
+unchanged, while the collection source gate, workstream source gate, manifest, and surface tests
+now freeze the box-select session fixture owner boundary. The box-select session fixture owner
+boundary is now tracked as its own source-gated proof slice.
 
 2026-06-08 collection duplicate selection owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs` now

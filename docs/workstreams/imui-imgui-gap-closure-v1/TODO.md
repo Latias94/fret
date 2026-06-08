@@ -8807,10 +8807,21 @@ opening the slice.
       append-mode capture, drag-threshold detection, pointer-id mismatch restoration, pointer
       cancel behavior, runtime event wiring, model publication, public crate APIs, or the
       app-owned no-helper-widening boundary. Result: `session.rs` keeps the pure transition
-      helpers plus `#[cfg(test)] mod tests;` while `session/tests.rs` owns pointer down/move/up/
-      cancel fixtures and the focused box-select session behavior tests. The collection source
+      helpers plus `#[cfg(test)] mod tests;` while `session/tests.rs` owns the focused
+      box-select session behavior tests and imports fixture helpers. The collection source
       gate, workstream source gate, manifest, and surface tests now include the box-select session
       tests child owner.
+- [x] Split collection browser input box-select pointer session test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime/box_select/session/tests.rs`
+      into the demo-local
+      `collection/browser_scope/input_runtime/box_select/session/tests/fixtures.rs` fixture owner
+      without changing left-button background arming, pressable-origin suppression, append-mode
+      capture, drag-threshold detection, pointer-id mismatch restoration, pointer cancel behavior,
+      runtime event wiring, model publication, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `session/tests.rs` keeps the focused down/move/up/
+      cancel behavior tests while `session/tests/fixtures.rs` owns pointer down/move/up/cancel,
+      point, and session construction helpers. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the box-select session fixture child owner.
 - [x] Split collection duplicate command selection/insertion repair out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs`
       into the demo-local `collection/selection/commands/duplicate/selection.rs` child owner
