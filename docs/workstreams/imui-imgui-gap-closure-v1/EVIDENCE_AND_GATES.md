@@ -36600,6 +36600,40 @@ Fret Examples Collection Duplicate Naming Owner Split Evidence - 2026-06-08:
 - Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
   standalone markdown files.
 
+Fret Examples Collection Duplicate Naming Tests Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs`
+  was split again so duplicate naming registry uniqueness coverage now lives in the demo-local
+  `collection/selection/commands/duplicate/naming/tests.rs` test owner without changing copy
+  id/label/path suffix generation, per-field uniqueness tracking, duplicate command flow,
+  selection repair, keyboard/button/context-menu command behavior, public crate APIs, or the
+  app-owned no-helper-widening boundary.
+- Evidence anchors: `selection/commands/duplicate/naming.rs` keeps
+  `ProofCollectionDuplicateNameRegistry`, `HashSet`-backed used id/label/path tracking,
+  `duplicate_id(...)`, `duplicate_label(...)`, `duplicate_path(...)`, copy-suffix candidate helpers,
+  and `#[cfg(test)] mod tests;`. `selection/commands/duplicate/naming/tests.rs` owns the test asset
+  fixture, `ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)`, and
+  `proof_collection_duplicate_name_registry_uses_unique_copy_suffixes`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the duplicate naming tests owner boundary.
+- Verified gates:
+  `cargo fmt -p fret-examples --check`;
+  `cargo check -p fret-demo --bin imui_editor_proof_demo` (passed with existing dead-code warnings
+  in `fret-chart` and `fret-plot`);
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`;
+  `python tools\gate_imui_editor_collection_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py` (validated 541 dedicated directories and 47 standalone
+  markdown files);
+  `cargo nextest run -p fret-examples proof_collection_duplicate_name_registry --no-fail-fast` (1/1
+  passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  (10/10 passed);
+  `git diff --check` (passed with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`).
+
 Fret Examples Collection Browser Input Zoom Runtime Owner Split Evidence - 2026-06-08:
 
 - Claim:

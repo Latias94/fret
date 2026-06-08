@@ -8675,6 +8675,16 @@ opening the slice.
       selection repair, and tests while `duplicate/naming.rs` owns copy id/label/path suffix
       generation and per-field uniqueness tracking. The collection source gate, workstream source
       gate, manifest, and surface tests now include the duplicate naming child owner.
+- [x] Split collection duplicate naming registry tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs`
+      into the demo-local `collection/selection/commands/duplicate/naming/tests.rs` test owner
+      without changing copy id/label/path suffix generation, per-field uniqueness tracking,
+      duplicate command flow, selection repair, keyboard/button/context-menu command behavior,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result: `naming.rs` keeps
+      `ProofCollectionDuplicateNameRegistry`, copy suffix helpers, and `#[cfg(test)] mod tests;`
+      while `naming/tests.rs` owns the duplicate naming registry uniqueness coverage. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the duplicate
+      naming tests child owner.
 - [x] Split collection browser input Primary+Wheel zoom runtime out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs`
       into the demo-local `collection/browser_scope/input_runtime/zoom.rs` child owner without

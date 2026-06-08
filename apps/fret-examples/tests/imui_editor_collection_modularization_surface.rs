@@ -117,6 +117,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_duplicate_naming_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs"
     );
+    let selection_duplicate_naming_tests_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests.rs"
+    );
     let selection_duplicate_selection_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs"
     );
@@ -2104,7 +2107,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn duplicate_id(&mut self, id: &str) -> Arc<str>",
         "pub(super) fn duplicate_label(&mut self, label: &str) -> Arc<str>",
         "pub(super) fn duplicate_path(&mut self, path: &str) -> Arc<str>",
-        "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             selection_duplicate_naming_source.contains(needle),
@@ -2131,6 +2135,27 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !selection_duplicate_commands_source.contains(needle),
             "the demo-local collection duplicate command owner should route naming and selection repair through duplicate child owners; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+        "ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)",
+        "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
+    ] {
+        assert!(
+            selection_duplicate_naming_tests_source.contains(needle),
+            "the demo-local collection duplicate naming tests owner should keep copy-suffix registry coverage explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+        "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
+    ] {
+        assert!(
+            !selection_duplicate_naming_source.contains(needle),
+            "the demo-local collection duplicate naming owner should not take naming tests; unexpected `{needle}`"
         );
     }
 
