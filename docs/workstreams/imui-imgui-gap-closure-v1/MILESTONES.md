@@ -8475,6 +8475,17 @@ preservation, focus handoff, public crate APIs, and the app-owned no-helper-wide
 remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
 tests now freeze the rename commit owner boundary.
 
+2026-06-08 collection inline rename commit tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit.rs` now keeps
+`ProofCollectionRenameCommit`, `proof_collection_commit_rename(...)`, label trim/reject logic,
+asset label mutation, renamed-asset projection, and `#[cfg(test)] mod tests;` while routing commit
+success and empty-trim rejection coverage through the demo-local
+`collection/rename/commit/tests.rs` test owner. The test owner now carries rename commit behavior coverage.
+Empty-label rejection, label trim semantics, asset order/id preservation, commit facade imports, public crate
+APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection source
+gate, workstream source gate, manifest, and surface tests now freeze the inline rename commit tests owner boundary.
+The rename commit tests owner boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection inline rename tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps the stable rename
 session/app-model facade, `ProofCollectionRenameSession`, F2 shortcut matching, active visible

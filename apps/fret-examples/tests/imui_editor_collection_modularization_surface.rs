@@ -82,6 +82,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/rename/tests.rs");
     let rename_commit_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit.rs");
+    let rename_commit_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/rename/commit/tests.rs");
     let rename_focus_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/focus.rs");
     let render_states_source =
@@ -1642,8 +1644,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(in super::super) fn proof_collection_commit_rename(",
         "draft.trim()",
         "asset.label = next_label.clone();",
-        "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
-        "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             rename_commit_source.contains(needle),
@@ -1652,16 +1654,38 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "authoring_parity_collection_assets()",
+        "proof_collection_commit_rename(",
+        "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+        "proof_collection_commit_rename_rejects_empty_trimmed_label",
+    ] {
+        assert!(
+            rename_commit_tests_source.contains(needle),
+            "the demo-local collection rename commit tests owner should keep commit behavior coverage explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
         "pub(in super::super) struct ProofCollectionRenameCommit",
         "pub(in super::super) fn proof_collection_commit_rename(",
         "draft.trim()",
         "asset.label = next_label.clone();",
-        "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
-        "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
+        "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+        "proof_collection_commit_rename_rejects_empty_trimmed_label",
     ] {
         assert!(
             !rename_source.contains(needle),
             "the demo-local collection rename hub should route commit mutation through rename/commit.rs; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+        "proof_collection_commit_rename_rejects_empty_trimmed_label",
+    ] {
+        assert!(
+            !rename_commit_source.contains(needle),
+            "the demo-local collection rename commit owner should not take commit tests; unexpected `{needle}`"
         );
     }
 
