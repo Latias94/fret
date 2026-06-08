@@ -2,6 +2,43 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI tooltip panel options owner split - 2026-06-09
+
+This maintenance slice keeps tooltip panel placement assembly focused without changing tooltip
+runtime behavior or public API:
+
+- IMUI tooltip panel options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` keeps tooltip anchor lookup, outer
+  bounds lookup, popper layout, and panel element mounting.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel/options.rs` owns the private
+  `TooltipPanelBuildOptions` carrier.
+- No public API or runtime behavior changed; the existing `panel::TooltipPanelBuildOptions` private
+  call surface remains re-exported through the panel module for `request.rs`.
+- The source gate now freezes `TooltipPanelBuildOptions` out of the panel root and rejects element,
+  layout, semantics, tooltip request, and pointer-open policy logic from drifting into the options
+  owner.
+- Evidence anchor: `panel.rs` declares `mod options;` and re-exports
+  `options::TooltipPanelBuildOptions` while keeping `tooltip_overlay_children(...)` as the assembly
+  entry.
+- Evidence anchor: `panel/options.rs` contains the trigger, rect, size, placement, margin,
+  panel-id model, and panel test-id fields only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the panel root, panel options
+  owner, and workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui tooltip --no-fail-fast` - passed, 33/33.
+- `cargo nextest run -p fret-imui tooltip --no-fail-fast` - passed, 1/1.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI combo trigger options owner split - 2026-06-09
 
 This maintenance slice keeps the combo trigger assembly focused without changing ComboBox behavior

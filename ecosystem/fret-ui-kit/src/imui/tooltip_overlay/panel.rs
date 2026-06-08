@@ -1,26 +1,16 @@
-use std::sync::Arc;
-
-use fret_core::{Px, Rect, Size};
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 use crate::imui::ImUiFacade;
 use crate::overlay;
-use crate::primitives::popper::{self, PopperContentPlacement};
+use crate::primitives::popper;
 use element::{TooltipPanelElementInput, tooltip_panel_element};
 
 mod element;
 mod layout;
+mod options;
 
-pub(super) struct TooltipPanelBuildOptions {
-    pub(super) trigger_id: GlobalElementId,
-    pub(super) trigger_rect: Option<Rect>,
-    pub(super) panel_size: Size,
-    pub(super) placement: PopperContentPlacement,
-    pub(super) window_margin: Px,
-    pub(super) panel_id_model: fret_runtime::Model<Option<GlobalElementId>>,
-    pub(super) panel_test_id: Option<Arc<str>>,
-}
+pub(super) use options::TooltipPanelBuildOptions;
 
 pub(super) fn tooltip_overlay_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
