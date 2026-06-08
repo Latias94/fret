@@ -6,6 +6,9 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs");
     let asset_grid_inline_rename_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
+    let asset_grid_inline_rename_actions_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/asset_grid/inline_rename/actions.rs"
+    );
     let browser_scope_source =
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs");
     let browser_scope_chrome_source =
@@ -40,6 +43,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"),
+        "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/asset_grid/inline_rename/actions.rs"
+        ),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
         "\n",
@@ -311,6 +318,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
     }
     for needle in [
         "pub(super) fn render_collection_inline_rename_field(",
+        "mod actions;",
+        "proof_collection_inline_rename_apply_outcome(",
         "TextField::new(",
         "TextFieldOptions {",
         "EditorTextSelectionBehavior::SelectAllOnFocus",
@@ -320,6 +329,18 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         assert!(
             asset_grid_inline_rename_source.contains(needle),
             "collection asset-grid inline-rename owner should keep TextField wiring explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionInlineRenameOutcomeModels",
+        "pub(super) fn proof_collection_inline_rename_apply_outcome(",
+        "proof_collection_commit_rename(",
+        "host.update_model(&models.rename_status",
+        "proof_collection_restore_focus_after_inline_rename(",
+    ] {
+        assert!(
+            asset_grid_inline_rename_actions_source.contains(needle),
+            "collection asset-grid inline-rename actions owner should keep outcome model writes explicit; missing `{needle}`"
         );
     }
     assert!(

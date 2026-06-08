@@ -8530,12 +8530,13 @@ opening the slice.
 - [x] Split collection asset-grid inline rename field out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the demo-local
       `collection/asset_grid/inline_rename.rs` child owner without changing TextField options,
-      rename outcome handling, focus restore/sync behavior, inline test ID, explanatory prose, public
-      crate APIs, or the app-owned no-helper-widening boundary. Result: `asset_grid.rs` keeps grid,
-      tile, context-menu selection, drag preview, rendered-item tracking, and metadata/path readout
-      mounting while delegating inline rename field rendering through
-      `render_collection_inline_rename_field(...)`. The collection source gate, workstream source
-      gate, and surface tests now include the asset-grid inline-rename owner.
+      inline outcome callback wiring, focus sync behavior, inline test ID, explanatory prose,
+      public crate APIs, or the app-owned no-helper-widening boundary. Result: `asset_grid.rs`
+      keeps grid, tile, context-menu selection, drag preview, rendered-item tracking, and
+      metadata/path readout mounting while delegating inline rename field rendering through
+      `render_collection_inline_rename_field(...)`; outcome application now has a follow-on
+      actions child owner. The collection source gate, workstream source gate, and surface tests
+      now include the asset-grid inline-rename owner.
 - [x] Split collection asset-grid metadata/path readout mounting out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the demo-local
       `collection/asset_grid/metadata.rs` child owner without changing metadata text formatting,
@@ -8803,3 +8804,14 @@ opening the slice.
       `asset_grid/actions.rs` owns active-focus target, clicked active-id, and context-menu
       selection/keyboard/anchor model writes. The collection source gate, workstream source gate,
       manifest, and surface tests now include the asset-grid actions child owner.
+- [x] Split collection asset-grid inline rename outcome application out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs` into
+      the demo-local `collection/asset_grid/inline_rename/actions.rs` child owner without changing
+      TextField options, Enter commit behavior, Escape/blur cancel behavior, invalid empty-label
+      handling, focus restore/sync behavior, inline test ID, explanatory prose, public crate APIs,
+      or the app-owned no-helper-widening boundary. Result: `inline_rename.rs` keeps TextField
+      construction, options, outcome callback wiring, input/test-id source construction, focus
+      timer sync, and explanatory prose while `inline_rename/actions.rs` owns commit/cancel
+      outcome model writes, invalid commit status/focus-pending redraw, and post-commit/cancel
+      focus restore. The collection source gate, workstream source gate, manifest, and surface
+      tests now include the inline-rename actions child owner.

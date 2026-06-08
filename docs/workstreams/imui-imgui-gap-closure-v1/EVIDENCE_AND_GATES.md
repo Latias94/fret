@@ -35737,14 +35737,14 @@ Fret Examples Collection Asset Grid Inline Rename Owner Split Evidence - 2026-06
 - Claim: `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` was split so
   inline rename field rendering now lives in the demo-local
   `collection/asset_grid/inline_rename.rs` child owner without changing TextField options,
-  commit/cancel outcome handling, focus restore/sync behavior, inline test ID, explanatory prose,
-  public crate APIs, or the app-owned no-helper-widening boundary.
+  outcome callback wiring, focus sync behavior, inline test ID, explanatory prose, public crate
+  APIs, or the app-owned no-helper-widening boundary. Outcome application now has a follow-on
+  actions child owner.
 - Evidence anchors: `asset_grid.rs` declares `mod inline_rename;`, imports
   `render_collection_inline_rename_field(...)`, and delegates only the inline rename field from the
   tile body. `collection/asset_grid/inline_rename.rs` owns `TextField::new(...)`,
   `TextFieldOptions`, `EditorTextSelectionBehavior::SelectAllOnFocus`,
-  `TextFieldBlurBehavior::Cancel`, `proof_collection_commit_rename(...)`,
-  `proof_collection_restore_focus_after_inline_rename(...)`,
+  `TextFieldBlurBehavior::Cancel`, `proof_collection_inline_rename_apply_outcome(...)`,
   `proof_collection_inline_rename_focus_state(...)`,
   `proof_collection_sync_inline_rename_focus(...)`, the inline rename test ID, placeholder, and
   explanatory prose. `tools/gate_imui_editor_collection_source.py`,
@@ -36885,6 +36885,43 @@ Fret Examples Collection Asset-Grid Actions Owner Split Evidence - 2026-06-08:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --no-fail-fast`;
   2/2 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+
+Fret Examples Collection Asset-Grid Inline Rename Actions Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs` was split
+  so inline rename commit/cancel outcome application now lives in the demo-local
+  `collection/asset_grid/inline_rename/actions.rs` child owner without changing TextField options,
+  Enter commit behavior, Escape/blur cancel behavior, invalid empty-label handling, focus
+  restore/sync behavior, inline test ID, explanatory prose, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `inline_rename.rs` declares `mod actions;`, builds
+  `ProofCollectionInlineRenameOutcomeModels`, keeps `TextField::new(...)`, `TextFieldOptions`,
+  `EditorTextSelectionBehavior::SelectAllOnFocus`, `TextFieldBlurBehavior::Cancel`, callback
+  wiring through `proof_collection_inline_rename_apply_outcome(...)`, inline test-id/source
+  construction, focus timer sync, and explanatory prose. `inline_rename/actions.rs` owns
+  `proof_collection_inline_rename_apply_outcome(...)`, committed asset/status/session/focus-pending
+  model writes, invalid commit status/focus-pending redraw, cancel status/session/focus-pending
+  model writes, and post-commit/cancel focus restore. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the inline-rename actions owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  4/4 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.

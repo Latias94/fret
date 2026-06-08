@@ -59,6 +59,9 @@ def main() -> None:
     collection_asset_grid_inline_rename = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"
     )
+    collection_asset_grid_inline_rename_actions = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename/actions.rs"
+    )
     collection_asset_grid_metadata = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/metadata.rs"
     )
@@ -205,6 +208,7 @@ def main() -> None:
         collection_asset_grid_actions,
         collection_asset_grid_chrome,
         collection_asset_grid_inline_rename,
+        collection_asset_grid_inline_rename_actions,
         collection_asset_grid_metadata,
         collection_assets,
         collection_browser_scope,
@@ -1053,12 +1057,15 @@ def main() -> None:
             collection_asset_grid_inline_rename,
             required=[
                 "pub(super) fn render_collection_inline_rename_field(",
+                "mod actions;",
+                "ProofCollectionInlineRenameOutcomeModels",
+                "proof_collection_inline_rename_apply_outcome",
                 "TextField::new(",
+                ".on_outcome(Some(Arc::new(",
+                "proof_collection_inline_rename_apply_outcome(",
                 "TextFieldOptions {",
                 "EditorTextSelectionBehavior::SelectAllOnFocus",
                 "TextFieldBlurBehavior::Cancel",
-                "proof_collection_commit_rename(",
-                "proof_collection_restore_focus_after_inline_rename(",
                 "proof_collection_inline_rename_focus_state(",
                 "proof_collection_sync_inline_rename_focus(",
                 "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
@@ -1067,6 +1074,50 @@ def main() -> None:
             ],
             forbidden=[
                 "render_collection_first_asset_browser_proof",
+                "ui.grid_with_options(",
+                "ui.multi_selectable_with_options(",
+                "drag_preview_ghost_with_options(",
+                "ProofCollectionRenderedItem {",
+                "cx.pointer_region_on_wheel(",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+                "host.update_model(",
+                "proof_collection_commit_rename(",
+                "proof_collection_rename_commit_status(",
+                "proof_collection_rename_invalid_status(",
+                "proof_collection_rename_cancel_status(",
+                "proof_collection_restore_focus_after_inline_rename(",
+            ],
+        ),
+        SourceCheck(
+            "collection asset grid inline rename actions owner",
+            collection_asset_grid_inline_rename_actions,
+            required=[
+                "pub(super) struct ProofCollectionInlineRenameOutcomeModels",
+                "pub(super) fn proof_collection_inline_rename_apply_outcome(",
+                "fn proof_collection_inline_rename_apply_commit(",
+                "fn proof_collection_inline_rename_apply_cancel(",
+                "proof_collection_commit_rename(",
+                "proof_collection_rename_commit_status(",
+                "proof_collection_rename_invalid_status(",
+                "proof_collection_rename_cancel_status(",
+                "host.update_model(&models.assets",
+                "host.update_model(&models.rename_status",
+                "host.update_model(&models.rename_session",
+                "host.update_model(&models.rename_focus_pending",
+                "proof_collection_restore_focus_after_inline_rename(",
+                "host.request_redraw(action_cx.window);",
+            ],
+            forbidden=[
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "EditorTextSelectionBehavior::SelectAllOnFocus",
+                "TextFieldBlurBehavior::Cancel",
+                "ui.text_wrapped(",
+                "proof_collection_inline_rename_focus_state(",
+                "proof_collection_sync_inline_rename_focus(",
                 "ui.grid_with_options(",
                 "ui.multi_selectable_with_options(",
                 "drag_preview_ghost_with_options(",

@@ -12,6 +12,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs");
     let asset_grid_inline_rename_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs");
+    let asset_grid_inline_rename_actions_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/asset_grid/inline_rename/actions.rs"
+    );
     let asset_grid_metadata_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/metadata.rs");
     let assets_source = include_str!("../src/imui_editor_proof_demo/collection/assets.rs");
@@ -1016,7 +1019,12 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     for needle in [
         "pub(super) fn render_collection_inline_rename_field(",
+        "mod actions;",
+        "ProofCollectionInlineRenameOutcomeModels",
+        "proof_collection_inline_rename_apply_outcome",
         "TextField::new(",
+        ".on_outcome(Some(Arc::new(",
+        "proof_collection_inline_rename_apply_outcome(",
         "TextFieldOptions {",
         "EditorTextSelectionBehavior::SelectAllOnFocus",
         "TextFieldBlurBehavior::Cancel",
@@ -1027,6 +1035,54 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             asset_grid_inline_rename_source.contains(needle),
             "the demo-local collection asset-grid inline-rename owner should keep TextField workflow explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "host.update_model(",
+        "proof_collection_commit_rename(",
+        "proof_collection_rename_commit_status(",
+        "proof_collection_rename_invalid_status(",
+        "proof_collection_rename_cancel_status(",
+        "proof_collection_restore_focus_after_inline_rename(",
+    ] {
+        assert!(
+            !asset_grid_inline_rename_source.contains(needle),
+            "the demo-local collection asset-grid inline-rename owner should route outcome model writes through inline_rename/actions.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) struct ProofCollectionInlineRenameOutcomeModels",
+        "pub(super) fn proof_collection_inline_rename_apply_outcome(",
+        "fn proof_collection_inline_rename_apply_commit(",
+        "fn proof_collection_inline_rename_apply_cancel(",
+        "proof_collection_commit_rename(",
+        "proof_collection_rename_commit_status(",
+        "proof_collection_rename_invalid_status(",
+        "proof_collection_rename_cancel_status(",
+        "host.update_model(&models.assets",
+        "host.update_model(&models.rename_status",
+        "host.update_model(&models.rename_session",
+        "host.update_model(&models.rename_focus_pending",
+        "proof_collection_restore_focus_after_inline_rename(",
+        "host.request_redraw(action_cx.window);",
+    ] {
+        assert!(
+            asset_grid_inline_rename_actions_source.contains(needle),
+            "the demo-local collection asset-grid inline-rename actions owner should keep outcome model writes explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "TextField::new(",
+        "TextFieldOptions {",
+        "EditorTextSelectionBehavior::SelectAllOnFocus",
+        "TextFieldBlurBehavior::Cancel",
+        "ui.text_wrapped(",
+        "proof_collection_inline_rename_focus_state(",
+        "proof_collection_sync_inline_rename_focus(",
+    ] {
+        assert!(
+            !asset_grid_inline_rename_actions_source.contains(needle),
+            "the demo-local collection asset-grid inline-rename actions owner should not take TextField rendering or focus timer sync; unexpected `{needle}`"
         );
     }
 

@@ -8168,11 +8168,12 @@ gate, and surface tests now freeze the chrome-header owner boundary.
 assembly, context-menu selection routing, drag preview, rendered-item tracking, and metadata/path
 readout mounting while delegating inline rename field rendering through
 `render_collection_inline_rename_field(...)`. The demo-local
-`collection/asset_grid/inline_rename.rs` owns TextField construction, commit/cancel outcome
-handling, focus restore/sync, inline test ID, placeholder, selection/blur policy, and explanatory
-inline rename prose. Public crate APIs, text content, field behavior, and the app-owned
-no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
-gate, and surface tests now freeze the asset-grid inline-rename owner boundary.
+`collection/asset_grid/inline_rename.rs` owns TextField construction, outcome callback wiring,
+focus sync, inline test ID, placeholder, selection/blur policy, and explanatory inline rename
+prose. Outcome application now has a follow-on actions child owner. Public crate APIs, text
+content, field behavior, and the app-owned no-helper-widening boundary remain unchanged, while the
+collection source gate, workstream source gate, and surface tests now freeze the asset-grid
+inline-rename owner boundary.
 
 2026-06-07 collection asset-grid metadata owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` now keeps grid/tile
@@ -8426,3 +8427,15 @@ model writes now live in the actions owner. Grid/tile rendering, drag preview be
 rename behavior, metadata readouts, public crate APIs, and the app-owned no-helper-widening
 boundary remain unchanged, while the collection source gate, workstream source gate, manifest, and
 surface tests now freeze the asset-grid actions owner boundary.
+
+2026-06-08 collection asset-grid inline rename actions owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs` now keeps
+TextField construction, options, outcome callback wiring, input/test-id source construction, focus
+timer sync, and explanatory prose while routing commit/cancel outcome application through the
+demo-local `collection/asset_grid/inline_rename/actions.rs` child owner. Commit success model
+writes, invalid commit status/focus-pending redraw, cancel status/session/focus-pending writes,
+and post-commit/cancel focus restore now live in the actions owner. TextField options, Enter commit
+behavior, Escape/blur cancel behavior, invalid empty-label handling, focus restore/sync behavior,
+inline test ID, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged,
+while the collection source gate, workstream source gate, manifest, and surface tests now freeze the
+inline-rename actions owner boundary.

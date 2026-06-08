@@ -9,6 +9,10 @@ fn imui_editor_proof_demo_keeps_collection_inline_rename_app_owned_and_explicit(
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/asset_grid/inline_rename/actions.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs"),
@@ -100,6 +104,7 @@ fn imui_editor_proof_demo_keeps_collection_inline_rename_app_owned_and_explicit(
         "fn proof_collection_begin_rename_session(",
         "fn proof_collection_begin_inline_rename_in_app(",
         "fn proof_collection_commit_rename(",
+        "fn proof_collection_inline_rename_apply_outcome(",
         "fn proof_collection_inline_rename_focus_state<",
         "fn proof_collection_sync_inline_rename_focus<",
         "fn proof_collection_restore_focus_after_inline_rename(",
@@ -111,6 +116,7 @@ fn imui_editor_proof_demo_keeps_collection_inline_rename_app_owned_and_explicit(
         "\"imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline\"",
         "\"Rename active asset\"",
         "TextField::new(",
+        "proof_collection_inline_rename_apply_outcome(",
         "TextFieldOptions {",
         "EditorTextSelectionBehavior::SelectAllOnFocus",
         "TextFieldBlurBehavior::Cancel",

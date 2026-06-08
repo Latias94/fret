@@ -3,24 +3,24 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret::imui::{ImUiFacade, UiWriterImUiFacadeExt};
-use fret_ui::action::UiActionHostExt as _;
 use fret_ui::{GlobalElementId, UiHost};
 use fret_ui_editor::controls::{
     TextField, TextFieldBlurBehavior, TextFieldOptions, TextFieldOutcome,
 };
-use fret_ui_editor::primitives::{EditSessionOutcome, EditorTextSelectionBehavior};
+use fret_ui_editor::primitives::EditorTextSelectionBehavior;
 
 use super::super::super::KernelApp;
 use super::super::ProofCollectionAsset;
-use super::super::readouts::{
-    proof_collection_rename_cancel_status, proof_collection_rename_commit_status,
-    proof_collection_rename_invalid_status,
-};
 use super::super::rename::{
-    proof_collection_commit_rename, proof_collection_inline_rename_focus_state,
-    proof_collection_restore_focus_after_inline_rename, proof_collection_sync_inline_rename_focus,
+    proof_collection_inline_rename_focus_state, proof_collection_sync_inline_rename_focus,
 };
 use super::ProofCollectionAssetGridModels;
+
+mod actions;
+
+use actions::{
+    ProofCollectionInlineRenameOutcomeModels, proof_collection_inline_rename_apply_outcome,
+};
 
 pub(super) fn render_collection_inline_rename_field(
     ui: &mut ImUiFacade<'_, '_, KernelApp>,
@@ -29,12 +29,14 @@ pub(super) fn render_collection_inline_rename_field(
     rename_focus_pending: bool,
 ) {
     let rename_input_id = Rc::new(Cell::new(None::<GlobalElementId>));
-    let rename_session_model_for_outcome = models.rename_session.clone();
-    let rename_draft_model_for_outcome = models.rename_draft.clone();
-    let rename_assets_model_for_outcome = models.assets.clone();
-    let rename_status_model_for_outcome = models.rename_status.clone();
-    let rename_focus_pending_model_for_outcome = models.rename_focus_pending.clone();
-    let rename_restore_focus_target_model = models.active_focus_target.clone();
+    let outcome_models = ProofCollectionInlineRenameOutcomeModels {
+        assets: models.assets.clone(),
+        rename_session: models.rename_session.clone(),
+        rename_draft: models.rename_draft.clone(),
+        rename_focus_pending: models.rename_focus_pending.clone(),
+        rename_status: models.rename_status.clone(),
+        active_focus_target: models.active_focus_target.clone(),
+    };
     let inline_test_id: Arc<str> = Arc::from(format!(
         "imui-editor-proof.authoring.imui.collection.asset.{}.rename.inline",
         asset.id
@@ -46,89 +48,12 @@ pub(super) fn render_collection_inline_rename_field(
     let field = TextField::new(models.rename_draft.clone())
         .on_outcome(Some(Arc::new(
             move |host, action_cx, outcome: TextFieldOutcome| {
-                let session = host
-                    .models_mut()
-                    .read(&rename_session_model_for_outcome, |state| state.clone())
-                    .ok()
-                    .flatten();
-                let Some(session) = session else {
-                    return;
-                };
-
-                match outcome {
-                    EditSessionOutcome::Committed => {
-                        let draft = host
-                            .models_mut()
-                            .read(&rename_draft_model_for_outcome, |state| state.clone())
-                            .unwrap_or_default();
-                        let stored_assets = host
-                            .models_mut()
-                            .read(&rename_assets_model_for_outcome, |state| state.clone())
-                            .unwrap_or_default();
-                        if let Some(commit) =
-                            proof_collection_commit_rename(&stored_assets, &session, &draft)
-                        {
-                            let _ = host.update_model(&rename_assets_model_for_outcome, |assets| {
-                                *assets = commit.renamed_assets.clone();
-                            });
-                            let _ = host.update_model(&rename_status_model_for_outcome, |status| {
-                                status.clear();
-                                status.push_str(&proof_collection_rename_commit_status(
-                                    commit.previous_label.as_ref(),
-                                    commit.next_label.as_ref(),
-                                ));
-                            });
-                            let _ = host.update_model(&rename_session_model_for_outcome, |state| {
-                                *state = None;
-                            });
-                            let _ = host.update_model(
-                                &rename_focus_pending_model_for_outcome,
-                                |state| {
-                                    *state = false;
-                                },
-                            );
-                            proof_collection_restore_focus_after_inline_rename(
-                                host,
-                                action_cx,
-                                &rename_restore_focus_target_model,
-                            );
-                        } else {
-                            let _ = host.update_model(&rename_status_model_for_outcome, |status| {
-                                status.clear();
-                                status.push_str(&proof_collection_rename_invalid_status(
-                                    session.original_label.as_ref(),
-                                ));
-                            });
-                            let _ = host.update_model(
-                                &rename_focus_pending_model_for_outcome,
-                                |state| {
-                                    *state = true;
-                                },
-                            );
-                            host.request_redraw(action_cx.window);
-                        }
-                    }
-                    EditSessionOutcome::Canceled => {
-                        let _ = host.update_model(&rename_status_model_for_outcome, |status| {
-                            status.clear();
-                            status.push_str(&proof_collection_rename_cancel_status(
-                                session.original_label.as_ref(),
-                            ));
-                        });
-                        let _ = host.update_model(&rename_session_model_for_outcome, |state| {
-                            *state = None;
-                        });
-                        let _ =
-                            host.update_model(&rename_focus_pending_model_for_outcome, |state| {
-                                *state = false;
-                            });
-                        proof_collection_restore_focus_after_inline_rename(
-                            host,
-                            action_cx,
-                            &rename_restore_focus_target_model,
-                        );
-                    }
-                }
+                proof_collection_inline_rename_apply_outcome(
+                    host,
+                    action_cx,
+                    &outcome_models,
+                    outcome,
+                );
             },
         )))
         .options(TextFieldOptions {
