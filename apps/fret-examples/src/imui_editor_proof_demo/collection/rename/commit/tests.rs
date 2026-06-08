@@ -1,19 +1,15 @@
 use std::sync::Arc;
 
-use super::super::super::authoring_parity_collection_assets;
-use super::super::ProofCollectionRenameSession;
 use super::proof_collection_commit_rename;
+
+mod fixtures;
+
+use fixtures::{rename_session, stored_assets};
 
 #[test]
 fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids() {
-    let stored_assets = authoring_parity_collection_assets()
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
-    let session = ProofCollectionRenameSession {
-        target_id: Arc::from("stone-normal"),
-        original_label: Arc::from("Stone Normal"),
-    };
+    let stored_assets = stored_assets();
+    let session = rename_session();
 
     let commit = proof_collection_commit_rename(&stored_assets, &session, "Stone Detail Normal")
         .expect("non-empty rename should commit");
@@ -44,14 +40,8 @@ fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids() 
 
 #[test]
 fn proof_collection_commit_rename_rejects_empty_trimmed_label() {
-    let stored_assets = authoring_parity_collection_assets()
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
-    let session = ProofCollectionRenameSession {
-        target_id: Arc::from("stone-normal"),
-        original_label: Arc::from("Stone Normal"),
-    };
+    let stored_assets = stored_assets();
+    let session = rename_session();
 
     assert!(
         proof_collection_commit_rename(&stored_assets, &session, "   ").is_none(),

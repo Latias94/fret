@@ -181,6 +181,8 @@ fn imui_editor_proof_demo_keeps_collection_context_menu_app_owned_and_explicit()
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit/tests.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/rename/commit/tests/fixtures.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/focus.rs"),
     );
 

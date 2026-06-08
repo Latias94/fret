@@ -107,6 +107,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit.rs");
     let rename_commit_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit/tests.rs");
+    let rename_commit_tests_fixtures_source =
+        include_str!("../src/imui_editor_proof_demo/collection/rename/commit/tests/fixtures.rs");
     let rename_focus_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/focus.rs");
     let render_states_source =
@@ -2087,7 +2089,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "authoring_parity_collection_assets()",
+        "mod fixtures;",
+        "use fixtures::{rename_session, stored_assets};",
         "proof_collection_commit_rename(",
         "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
         "proof_collection_commit_rename_rejects_empty_trimmed_label",
@@ -2095,6 +2098,44 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             rename_commit_tests_source.contains(needle),
             "the demo-local collection rename commit tests owner should keep commit behavior coverage explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn stored_assets() -> Vec<ProofCollectionAsset>",
+        "authoring_parity_collection_assets()",
+        "pub(super) fn rename_session() -> ProofCollectionRenameSession",
+        "ProofCollectionRenameSession {",
+        "target_id: Arc::from(\"stone-normal\")",
+        "original_label: Arc::from(\"Stone Normal\")",
+    ] {
+        assert!(
+            rename_commit_tests_fixtures_source.contains(needle),
+            "the demo-local collection rename commit tests fixture owner should keep commit setup explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "authoring_parity_collection_assets()",
+        "ProofCollectionRenameSession {",
+    ] {
+        assert!(
+            !rename_commit_tests_source.contains(needle),
+            "the demo-local collection rename commit tests owner should import fixtures instead of defining setup; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "proof_collection_commit_rename(",
+        "proof_collection_commit_rename_updates_label_without_touching_order_or_ids",
+        "proof_collection_commit_rename_rejects_empty_trimmed_label",
+        "pub(in super::super) struct ProofCollectionRenameCommit",
+        "draft.trim()",
+        "asset.label = next_label.clone();",
+    ] {
+        assert!(
+            !rename_commit_tests_fixtures_source.contains(needle),
+            "the demo-local collection rename commit tests fixture owner should not take commit behavior or mutation; unexpected `{needle}`"
         );
     }
 

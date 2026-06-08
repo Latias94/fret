@@ -212,6 +212,9 @@ def main() -> None:
     collection_rename_commit_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit/tests.rs"
     )
+    collection_rename_commit_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit/tests/fixtures.rs"
+    )
     collection_rename_focus = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/focus.rs"
     )
@@ -349,6 +352,7 @@ def main() -> None:
         collection_rename_tests_fixtures,
         collection_rename_commit,
         collection_rename_commit_tests,
+        collection_rename_commit_tests_fixtures,
         collection_rename_focus,
         collection_selection,
         collection_selection_context_menu,
@@ -2467,12 +2471,52 @@ def main() -> None:
             "collection inline rename commit tests owner",
             collection_rename_commit_tests,
             required=[
-                "authoring_parity_collection_assets()",
+                "mod fixtures;",
+                "use fixtures::{rename_session, stored_assets};",
                 "proof_collection_commit_rename(",
                 "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
                 "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
             ],
             forbidden=[
+                "authoring_parity_collection_assets()",
+                "ProofCollectionRenameSession {",
+                "pub(in super::super) struct ProofCollectionRenameCommit",
+                "pub(in super::super) fn proof_collection_commit_rename(",
+                "draft.trim()",
+                "asset.label = next_label.clone();",
+                "proof_collection_rename_shortcut_matches(",
+                "proof_collection_begin_rename_session(",
+                "proof_collection_begin_inline_rename_in_app(",
+                "proof_collection_rename_ready_status(",
+                "struct ProofCollectionInlineRenameFocusState",
+                "timer_add_on_timer_for(",
+                "host.request_focus(input_id);",
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "TextFieldOptions {",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection inline rename commit tests fixtures owner",
+            collection_rename_commit_tests_fixtures,
+            required=[
+                "pub(super) fn stored_assets() -> Vec<ProofCollectionAsset>",
+                "authoring_parity_collection_assets()",
+                "pub(super) fn rename_session() -> ProofCollectionRenameSession",
+                "ProofCollectionRenameSession {",
+                'target_id: Arc::from("stone-normal")',
+                'original_label: Arc::from("Stone Normal")',
+            ],
+            forbidden=[
+                "proof_collection_commit_rename(",
+                "fn proof_collection_commit_rename_updates_label_without_touching_order_or_ids()",
+                "fn proof_collection_commit_rename_rejects_empty_trimmed_label()",
                 "pub(in super::super) struct ProofCollectionRenameCommit",
                 "pub(in super::super) fn proof_collection_commit_rename(",
                 "draft.trim()",

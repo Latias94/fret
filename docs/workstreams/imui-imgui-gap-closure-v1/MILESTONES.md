@@ -8662,11 +8662,23 @@ tests now freeze the rename commit owner boundary.
 `ProofCollectionRenameCommit`, `proof_collection_commit_rename(...)`, label trim/reject logic,
 asset label mutation, renamed-asset projection, and `#[cfg(test)] mod tests;` while routing commit
 success and empty-trim rejection coverage through the demo-local
-`collection/rename/commit/tests.rs` test owner. The test owner now carries rename commit behavior coverage.
-Empty-label rejection, label trim semantics, asset order/id preservation, commit facade imports, public crate
-APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection source
-gate, workstream source gate, manifest, and surface tests now freeze the inline rename commit tests owner boundary.
-The rename commit tests owner boundary is now tracked as its own source-gated proof slice.
+`collection/rename/commit/tests.rs` test owner, which now imports stored asset and rename-session
+setup through `mod fixtures;`. The test owner now carries rename commit behavior coverage.
+Empty-label rejection, label trim semantics, asset order/id preservation, commit facade imports,
+public crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the
+collection source gate, workstream source gate, manifest, and surface tests now freeze the inline
+rename commit tests owner boundary.
+The inline rename commit tests owner boundary is now tracked as its own source-gated proof slice.
+
+2026-06-09 collection inline rename commit fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit/tests.rs` now keeps
+inline rename commit behavior assertions and routes stored asset/session setup through the
+demo-local `collection/rename/commit/tests/fixtures.rs` fixture owner. The fixture owner owns
+`pub(super) fn stored_assets()`, `authoring_parity_collection_assets()`,
+`pub(super) fn rename_session()`, and the canonical `stone-normal` / `Stone Normal` rename-session
+fixture without taking commit behavior, mutation logic, public crate APIs, or the app-owned
+no-helper-widening boundary. The collection source gate, workstream source gate, manifest, and
+surface tests now freeze the inline rename commit fixture owner boundary.
 
 2026-06-08 collection inline rename tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps the stable rename

@@ -9042,9 +9042,19 @@ opening the slice.
       Result: `rename/commit.rs` keeps `ProofCollectionRenameCommit`,
       `proof_collection_commit_rename(...)`, label trim/reject logic, asset label mutation,
       renamed-asset projection, and `#[cfg(test)] mod tests;` while `rename/commit/tests.rs`
-      owns fixture setup plus commit success and empty-trim rejection coverage. The collection
-      source gate, workstream source gate, manifest, and surface tests now include the rename
-      commit tests child owner.
+      owns commit success and empty-trim rejection coverage and imports setup through
+      `mod fixtures;`. The collection source gate, workstream source gate, manifest, and surface
+      tests now include the rename commit tests child owner.
+- [x] Split collection inline rename commit test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit/tests.rs` into the
+      demo-local `collection/rename/commit/tests/fixtures.rs` fixture owner without changing
+      empty-label rejection, label trim semantics, asset order/id preservation, renamed-asset
+      projection, commit facade imports, public crate APIs, or the app-owned no-helper-widening
+      boundary. Result: `rename/commit/tests.rs` keeps commit behavior assertions and imports
+      `stored_assets()` and `rename_session()` through `mod fixtures;`, while
+      `rename/commit/tests/fixtures.rs` owns stored asset setup and the canonical
+      `ProofCollectionRenameSession` fixture. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the rename commit fixture owner.
 - [x] Split collection inline rename session tests and shortcut tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` into the demo-local
       `collection/rename/tests.rs` test owner without changing F2 shortcut matching, active
