@@ -8847,6 +8847,17 @@ opening the slice.
       `ProofCollectionRenameCommit`, label trim/reject logic, asset label mutation, renamed
       asset projection, and focused commit unit tests. The collection source gate, workstream
       source gate, manifest, and surface tests now include the rename commit child owner.
+- [x] Split collection inline rename session tests and shortcut tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` into the demo-local
+      `collection/rename/tests.rs` test owner without changing F2 shortcut matching, active
+      visible rename target selection, begin-inline-rename app model writes, focus helper
+      re-exports, commit facade re-export, public crate APIs, or the app-owned no-helper-widening
+      boundary. Result: `rename.rs` keeps the stable rename session/app-model facade,
+      `ProofCollectionRenameSession`, shortcut/session helpers, begin-inline-rename model writes,
+      commit/focus re-exports, and `#[cfg(test)] mod tests;` while `rename/tests.rs` owns rename
+      session fixtures, `proof_collection_begin_rename_session_prefers_active_visible_asset`, and
+      F2 shortcut coverage. The collection source gate, workstream source gate, manifest, and
+      surface tests now include the rename tests child owner.
 - [x] Split collection context-menu action application out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` into the
       demo-local `collection/context_menu/actions.rs` child owner without changing popup anchor

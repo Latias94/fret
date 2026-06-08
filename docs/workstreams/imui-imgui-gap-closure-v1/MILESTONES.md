@@ -8475,6 +8475,16 @@ preservation, focus handoff, public crate APIs, and the app-owned no-helper-wide
 remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
 tests now freeze the rename commit owner boundary.
 
+2026-06-08 collection inline rename tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps the stable rename
+session/app-model facade, `ProofCollectionRenameSession`, F2 shortcut matching, active visible
+rename target selection, begin-inline-rename model writes, commit/focus re-exports, and
+`#[cfg(test)] mod tests;` while routing rename session and shortcut coverage through the demo-local
+`collection/rename/tests.rs` test owner. Begin-session fallback, F2 shortcut matching,
+context-menu/button rename entry points, inline draft model writes, focus handoff, public crate
+APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection source
+gate, workstream source gate, manifest, and surface tests now freeze the inline rename tests owner boundary.
+
 2026-06-08 collection context-menu actions owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/context_menu.rs` now keeps popup
 lifecycle, visible-order derivation, selection readout/menu item layout, duplicate/delete/rename

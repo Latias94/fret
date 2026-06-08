@@ -37092,6 +37092,40 @@ Fret Examples Collection Inline Rename Commit Owner Split Evidence - 2026-06-08:
 - Passed: `git diff --check` with only the existing Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+Fret Examples Collection Inline Rename Tests Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` was split again so inline
+  rename session and F2 shortcut coverage now lives in the demo-local `collection/rename/tests.rs`
+  test owner without changing F2 shortcut matching, active visible rename target selection,
+  begin-inline-rename app model writes, focus helper re-exports, commit facade re-export, public
+  crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `rename.rs` keeps `ProofCollectionRenameSession`,
+  `proof_collection_rename_shortcut_matches(...)`, `proof_collection_begin_rename_session(...)`,
+  `proof_collection_begin_inline_rename_in_app(...)`, rename-ready status writes, commit/focus
+  re-exports, and `#[cfg(test)] mod tests;`. `collection/rename/tests.rs` test owner owns `selection_state(...)`,
+  `authoring_parity_collection_assets()`, active/fallback begin-session coverage, and
+  `proof_collection_begin_rename_session_prefers_active_visible_asset` plus
+  `proof_collection_rename_shortcut_matches_plain_f2_only`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the inline rename tests owner boundary.
+- Verified gates:
+  `cargo fmt -p fret-examples --check`;
+  `cargo check -p fret-demo --bin imui_editor_proof_demo` (passed with existing dead-code warnings
+  in `fret-chart` and `fret-plot`);
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`;
+  `python tools\gate_imui_editor_collection_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py` (validated 541 dedicated directories and 47 standalone
+  markdown files);
+  `cargo nextest run -p fret-examples proof_collection_begin_rename proof_collection_rename_shortcut --no-fail-fast`;
+  (3/3 passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  (10/10 passed);
+  `git diff --check` (passed with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`).
+
 Fret Examples Collection Context-Menu Actions Owner Split Evidence - 2026-06-08:
 
 - Claim:

@@ -78,6 +78,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let readout_status_source =
         include_str!("../src/imui_editor_proof_demo/collection/readouts/status.rs");
     let rename_source = include_str!("../src/imui_editor_proof_demo/collection/rename.rs");
+    let rename_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/rename/tests.rs");
     let rename_commit_source =
         include_str!("../src/imui_editor_proof_demo/collection/rename/commit.rs");
     let rename_focus_source =
@@ -1602,11 +1604,36 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) fn proof_collection_begin_rename_session(",
         "pub(super) fn proof_collection_begin_inline_rename_in_app(",
         "proof_collection_rename_ready_status(",
-        "fn proof_collection_begin_rename_session_prefers_active_visible_asset()",
+        "#[cfg(test)]",
+        "mod tests;",
     ] {
         assert!(
             rename_source.contains(needle),
             "the demo-local collection rename hub should keep pure rename workflow state and focus re-exports explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn selection_state(selected: &[&str], anchor: Option<&str>)",
+        "proof_collection_begin_rename_session_prefers_active_visible_asset",
+        "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
+        "proof_collection_rename_shortcut_matches_plain_f2_only",
+    ] {
+        assert!(
+            rename_tests_source.contains(needle),
+            "the demo-local collection rename tests owner should keep session and shortcut coverage explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fn selection_state(selected: &[&str], anchor: Option<&str>)",
+        "proof_collection_begin_rename_session_prefers_active_visible_asset",
+        "proof_collection_begin_rename_session_falls_back_to_first_visible_asset",
+        "proof_collection_rename_shortcut_matches_plain_f2_only",
+    ] {
+        assert!(
+            !rename_source.contains(needle),
+            "the demo-local collection rename hub should not take root rename tests; unexpected `{needle}`"
         );
     }
 
