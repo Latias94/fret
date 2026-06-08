@@ -8782,3 +8782,13 @@ opening the slice.
       duplicate/navigation app-state writes, inline-rename start writes, command/rename status
       updates, and notify. The collection source gate, workstream source gate, manifest, and
       surface tests now include the keyboard actions child owner.
+- [x] Split collection explicit command-button action application out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` into the
+      demo-local `collection/command_buttons/actions.rs` child owner without changing button
+      labels/options, duplicate/delete selection policy, rename-ready gating, command status text,
+      model writes, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `command_buttons.rs` keeps button rendering, enablement, click detection, duplicate/delete
+      selection derivation, rename-ready routing, and action delegation while
+      `command_buttons/actions.rs` owns duplicate/delete model writes, command-status updates, and
+      inline-rename model handoff. The collection source gate, workstream source gate, manifest,
+      and surface tests now include the command-buttons actions child owner.

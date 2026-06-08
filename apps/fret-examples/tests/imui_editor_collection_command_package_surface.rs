@@ -26,6 +26,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
     );
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
+    let command_buttons_actions_source =
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons/actions.rs");
     let command_buttons_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs");
     let source = concat!(
@@ -62,6 +64,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         include_str!("../src/imui_editor_proof_demo/collection/box_select.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs"),
+        "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/command_buttons/actions.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons/chrome.rs"),
         "\n",
@@ -152,19 +156,21 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "pub(super) struct ProofCollectionCommandButtonModels",
         "pub(super) struct ProofCollectionCommandButtonState",
         "pub(super) fn render_collection_command_buttons(",
+        "mod actions;",
         "mod chrome;",
         "let duplicate_selected = ui.button_with_options(",
         "collection_duplicate_selected_label()",
         "collection_duplicate_selected_button_options(!state.selection.is_empty())",
         "proof_collection_duplicate_selection(",
+        "proof_collection_command_button_apply_duplicate(",
         "collection_rename_active_label()",
         "collection_rename_active_button_options(state.rename_ready_session.is_some())",
-        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_command_button_begin_rename(",
         "let delete_selected = ui.button_with_options(",
         "collection_delete_selected_label()",
         "collection_delete_selected_button_options(!state.selection.is_empty())",
         "proof_collection_delete_selection(",
-        "proof_collection_set_command_status(",
+        "proof_collection_command_button_apply_delete(",
     ] {
         assert!(
             command_buttons_source.contains(needle),
@@ -172,6 +178,11 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         );
     }
     for needle in [
+        "proof_collection_duplicate_status(",
+        "proof_collection_delete_status(",
+        "proof_collection_begin_inline_rename_in_app(",
+        "proof_collection_set_command_status(",
+        "models_mut().update",
         "kit::ButtonOptions",
         "\"Duplicate selected assets\"",
         "\"Rename active asset\"",
@@ -183,6 +194,39 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         assert!(
             !command_buttons_source.contains(needle),
             "collection command-buttons owner should delegate button chrome construction to command_buttons/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_command_button_apply_duplicate(",
+        "pub(super) fn proof_collection_command_button_begin_rename(",
+        "pub(super) fn proof_collection_command_button_apply_delete(",
+        "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
+        "proof_collection_delete_status(&delete.deleted_assets)",
+        "proof_collection_begin_inline_rename_in_app(",
+        "app.models_mut().update(&models.assets",
+        "app.models_mut().update(&models.selection",
+        "app.models_mut().update(&models.keyboard",
+        "proof_collection_set_command_status(",
+    ] {
+        assert!(
+            command_buttons_actions_source.contains(needle),
+            "collection command-buttons actions owner should keep button-triggered state writes explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ui.button_with_options(",
+        "collection_duplicate_selected_label()",
+        "collection_duplicate_selected_button_options(",
+        "collection_rename_active_label()",
+        "collection_rename_active_button_options(",
+        "collection_delete_selected_label()",
+        "collection_delete_selected_button_options(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+    ] {
+        assert!(
+            !command_buttons_actions_source.contains(needle),
+            "collection command-buttons actions owner should not take button rendering or selection policy; unexpected `{needle}`"
         );
     }
     for needle in [

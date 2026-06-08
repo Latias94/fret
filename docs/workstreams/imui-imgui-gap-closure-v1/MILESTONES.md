@@ -8404,3 +8404,14 @@ inline-rename start writes, command/rename status updates, and notify now live i
 owner. Shortcut matching, selection derivation, public crate APIs, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the keyboard actions owner boundary.
+
+2026-06-08 collection command-buttons actions owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` now keeps explicit
+button rendering, enablement, click detection, duplicate/delete selection derivation, rename-ready
+routing, and action delegation while routing app-state mutation through the demo-local
+`collection/command_buttons/actions.rs` child owner. Duplicate/delete model writes,
+command-status updates, and inline-rename model handoff now live in the actions owner. Button
+labels/options, duplicate/delete selection policy, rename-ready gating, public crate APIs, and the
+app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
+workstream source gate, manifest, and surface tests now freeze the command-buttons actions owner
+boundary.

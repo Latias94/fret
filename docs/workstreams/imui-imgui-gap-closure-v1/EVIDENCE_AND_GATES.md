@@ -36815,3 +36815,39 @@ Fret Examples Collection Keyboard Actions Owner Split Evidence - 2026-06-08:
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+
+Fret Examples Collection Command-Buttons Actions Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/command_buttons.rs` was split so
+  explicit command-button action application now lives in the demo-local
+  `collection/command_buttons/actions.rs` child owner without changing button labels/options,
+  duplicate/delete selection policy, rename-ready gating, command status text, model writes,
+  public crate APIs, or the app-owned no-helper-widening boundary.
+- Evidence anchors: `command_buttons.rs` declares `mod actions;`, imports
+  `proof_collection_command_button_apply_duplicate(...)`,
+  `proof_collection_command_button_begin_rename(...)`, and
+  `proof_collection_command_button_apply_delete(...)`, and keeps button rendering, enablement,
+  click detection, duplicate/delete selection derivation, rename-ready routing, and action
+  delegation. `command_buttons/actions.rs` owns duplicate/delete model writes, command-status
+  updates, and inline-rename model handoff through
+  `proof_collection_begin_inline_rename_in_app(...)`. `WORKSTREAM.json`,
+  `tools/gate_imui_editor_collection_source.py`, `tools/gate_imui_workstream_source.py`, and the
+  collection surface tests freeze the command-buttons actions owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_command_package_surface --test imui_editor_collection_modularization_surface --no-fail-fast`;
+  2/2 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.

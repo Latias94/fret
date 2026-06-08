@@ -3,8 +3,13 @@ use std::sync::Arc;
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret_runtime::Model;
 
+mod actions;
 mod chrome;
 
+use actions::{
+    proof_collection_command_button_apply_delete, proof_collection_command_button_apply_duplicate,
+    proof_collection_command_button_begin_rename,
+};
 use chrome::{
     collection_delete_selected_button_options, collection_delete_selected_label,
     collection_duplicate_selected_button_options, collection_duplicate_selected_label,
@@ -13,8 +18,7 @@ use chrome::{
 
 use super::super::KernelApp;
 use super::ProofCollectionAsset;
-use super::readouts::{proof_collection_delete_status, proof_collection_duplicate_status};
-use super::rename::{ProofCollectionRenameSession, proof_collection_begin_inline_rename_in_app};
+use super::rename::ProofCollectionRenameSession;
 use super::selection::{
     ProofCollectionKeyboardState, proof_collection_delete_selection,
     proof_collection_duplicate_selection,
@@ -58,33 +62,7 @@ pub(super) fn render_collection_command_buttons(
             state.reverse_order,
         )
     {
-        let command_status = proof_collection_duplicate_status(&duplicate.duplicated_assets);
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.assets, |assets| {
-                *assets = duplicate.next_assets.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.selection, |selection| {
-                *selection = duplicate.next_selection.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.keyboard, |keyboard| {
-                *keyboard = duplicate.next_keyboard.clone();
-            });
-        proof_collection_set_command_status(
-            ui.cx_mut().app,
-            &models.command_status,
-            command_status,
-        );
+        proof_collection_command_button_apply_duplicate(ui.cx_mut().app, &models, duplicate);
     }
 
     let rename_active = ui.button_with_options(
@@ -94,14 +72,7 @@ pub(super) fn render_collection_command_buttons(
     if rename_active.clicked()
         && let Some(session) = state.rename_ready_session
     {
-        proof_collection_begin_inline_rename_in_app(
-            ui.cx_mut().app,
-            &models.rename_session,
-            &models.rename_draft,
-            &models.rename_focus_pending,
-            &models.rename_status,
-            session,
-        );
+        proof_collection_command_button_begin_rename(ui.cx_mut().app, &models, session);
     }
 
     let delete_selected = ui.button_with_options(
@@ -116,43 +87,6 @@ pub(super) fn render_collection_command_buttons(
             state.keyboard,
         )
     {
-        let command_status = proof_collection_delete_status(&delete.deleted_assets);
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.assets, |assets| {
-                *assets = delete.remaining_assets.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.selection, |selection| {
-                *selection = delete.next_selection.clone();
-            });
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(&models.keyboard, |keyboard| {
-                *keyboard = delete.next_keyboard.clone();
-            });
-        proof_collection_set_command_status(
-            ui.cx_mut().app,
-            &models.command_status,
-            command_status,
-        );
+        proof_collection_command_button_apply_delete(ui.cx_mut().app, &models, delete);
     }
-}
-
-fn proof_collection_set_command_status(
-    app: &mut KernelApp,
-    command_status_model: &Model<String>,
-    next_status: String,
-) {
-    let _ = app.models_mut().update(command_status_model, |status| {
-        status.clear();
-        status.push_str(&next_status);
-    });
 }
