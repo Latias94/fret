@@ -8406,11 +8406,21 @@ the geometry tests owner boundary.
 `proof_collection_box_select_state_for_hits(...)`,
 `proof_collection_box_select_selection(...)`, `proof_collection_box_select_active_rect(...)`, and
 `#[cfg(test)] mod tests;` while routing box-select behavior coverage through the demo-local
-`collection/box_select/tests.rs` test owner. Rendered-item capture, visible-order hit projection,
-append-mode baseline merge, active rect threshold behavior, public crate APIs, and the app-owned
-no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
-gate, manifest, and surface tests now freeze the box-select tests owner boundary. The box-select
-tests owner boundary is now tracked as its own source-gated proof slice.
+`collection/box_select/tests.rs` test owner. `collection/box_select/tests.rs` imports fixture
+helpers through `mod fixtures;` and keeps the focused behavior tests. Rendered-item capture,
+visible-order hit projection, append-mode baseline merge, active rect threshold behavior, public
+crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
+source gate, workstream source gate, manifest, and surface tests now freeze the box-select tests
+owner boundary. The box-select tests owner boundary is now tracked as its own source-gated proof
+slice.
+
+2026-06-09 collection box-select fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/box_select/tests.rs` now keeps focused
+visible-order replacement and append-mode baseline coverage while importing helper projection
+through `mod fixtures;`. The demo-local `collection/box_select/tests/fixtures.rs` fixture owner
+owns `selected_ids(...)` and `anchor_id(...)` without taking box-select implementation, render, UI
+policy, or behavior-test ownership. The collection source gate, workstream source gate, manifest,
+and surface tests now freeze the box-select fixture owner boundary.
 
 2026-06-08 collection drag/drop tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs` now keeps

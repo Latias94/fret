@@ -1671,6 +1671,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/tile.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select/tests.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select/tests/fixtures.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/asset_grid.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/chrome.rs",

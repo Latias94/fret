@@ -110,6 +110,9 @@ def main() -> None:
     collection_box_select_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select/tests.rs"
     )
+    collection_box_select_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/box_select/tests/fixtures.rs"
+    )
     collection_child_models = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/child_models.rs"
     )
@@ -300,6 +303,7 @@ def main() -> None:
         collection_browser_scope_input_zoom_runtime,
         collection_box_select,
         collection_box_select_tests,
+        collection_box_select_tests_fixtures,
         collection_child_models,
         collection_chrome,
         collection_command_buttons,
@@ -1776,12 +1780,14 @@ def main() -> None:
             required=[
                 "proof_collection_box_select_state_for_hits(",
                 "proof_collection_box_select_selection(",
-                "fn selected_ids(",
-                "fn anchor_id(",
+                "mod fixtures;",
+                "use fixtures::{",
                 "fn proof_collection_box_select_replace_uses_visible_collection_order() {",
                 "fn proof_collection_box_select_append_preserves_baseline_and_adds_hits() {",
             ],
             forbidden=[
+                "fn selected_ids(",
+                "fn anchor_id(",
                 "pub(super) struct ProofCollectionRenderedItem",
                 "pub(super) struct ProofCollectionBoxSelectSession",
                 "pub(super) struct ProofCollectionBoxSelectState",
@@ -1789,6 +1795,34 @@ def main() -> None:
                 "fn proof_collection_box_select_state_for_hits(",
                 "pub(super) fn proof_collection_box_select_selection(",
                 "pub(super) fn proof_collection_box_select_active_rect(",
+            ],
+        ),
+        SourceCheck(
+            "collection box select tests fixtures owner",
+            collection_box_select_tests_fixtures,
+            required=[
+                "pub(super) fn selected_ids(",
+                "pub(super) fn anchor_id(",
+                "ImUiMultiSelectState",
+            ],
+            forbidden=[
+                "proof_collection_box_select_replace_uses_visible_collection_order",
+                "proof_collection_box_select_append_preserves_baseline_and_adds_hits",
+                "proof_collection_box_select_state_for_hits(",
+                "proof_collection_box_select_selection(",
+                "pub(super) struct ProofCollectionRenderedItem",
+                "pub(super) struct ProofCollectionBoxSelectSession",
+                "pub(super) struct ProofCollectionBoxSelectState",
+                "fn proof_collection_box_select_hits(",
+                "pub(super) fn proof_collection_box_select_active_rect(",
+                "render_collection_first_asset_browser_proof",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
             ],
         ),
         SourceCheck(

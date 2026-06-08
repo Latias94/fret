@@ -1,13 +1,9 @@
 use super::super::authoring_parity_collection_assets;
 use super::*;
 
-fn selected_ids(selection: &ImUiMultiSelectState<Arc<str>>) -> Vec<&str> {
-    selection.selected().iter().map(|id| id.as_ref()).collect()
-}
+mod fixtures;
 
-fn anchor_id(selection: &ImUiMultiSelectState<Arc<str>>) -> Option<&str> {
-    selection.anchor().map(|id| id.as_ref())
-}
+use fixtures::{anchor_id, selected_ids};
 
 #[test]
 fn proof_collection_box_select_replace_uses_visible_collection_order() {

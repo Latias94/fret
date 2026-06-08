@@ -55,6 +55,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let box_select_source = include_str!("../src/imui_editor_proof_demo/collection/box_select.rs");
     let box_select_tests_source =
         include_str!("../src/imui_editor_proof_demo/collection/box_select/tests.rs");
+    let box_select_tests_fixtures_source =
+        include_str!("../src/imui_editor_proof_demo/collection/box_select/tests/fixtures.rs");
     let command_buttons_source =
         include_str!("../src/imui_editor_proof_demo/collection/command_buttons.rs");
     let command_buttons_actions_source =
@@ -1344,8 +1346,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "proof_collection_box_select_state_for_hits(",
         "proof_collection_box_select_selection(",
-        "fn selected_ids(",
-        "fn anchor_id(",
+        "mod fixtures;",
+        "use fixtures::{",
         "fn proof_collection_box_select_replace_uses_visible_collection_order() {",
         "fn proof_collection_box_select_append_preserves_baseline_and_adds_hits() {",
     ] {
@@ -1366,6 +1368,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
+        "fn selected_ids(",
+        "fn anchor_id(",
         "pub(super) struct ProofCollectionRenderedItem",
         "pub(super) struct ProofCollectionBoxSelectSession",
         "pub(super) struct ProofCollectionBoxSelectState",
@@ -1375,6 +1379,40 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !box_select_tests_source.contains(needle),
             "the demo-local collection box-select tests owner should not take implementation ownership; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn selected_ids(",
+        "pub(super) fn anchor_id(",
+        "ImUiMultiSelectState",
+    ] {
+        assert!(
+            box_select_tests_fixtures_source.contains(needle),
+            "the demo-local collection box-select tests fixture owner should keep selection fixtures explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "proof_collection_box_select_replace_uses_visible_collection_order",
+        "proof_collection_box_select_append_preserves_baseline_and_adds_hits",
+        "proof_collection_box_select_state_for_hits(",
+        "proof_collection_box_select_selection(",
+        "pub(super) struct ProofCollectionRenderedItem",
+        "pub(super) struct ProofCollectionBoxSelectSession",
+        "pub(super) struct ProofCollectionBoxSelectState",
+        "fn proof_collection_box_select_hits(",
+        "pub(super) fn proof_collection_box_select_active_rect(",
+        "render_collection_first_asset_browser_proof",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !box_select_tests_fixtures_source.contains(needle),
+            "the demo-local collection box-select tests fixture owner should not take behavior tests, box-select implementation, render, or UI policy; unexpected `{needle}`"
         );
     }
 

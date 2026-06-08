@@ -8784,9 +8784,19 @@ opening the slice.
       `box_select.rs` keeps `ProofCollectionRenderedItem`, `ProofCollectionBoxSelectSession`,
       `ProofCollectionBoxSelectState`, hit-test projection, append/replace selection projection,
       active marquee rect projection, and `#[cfg(test)] mod tests;` while
-      `collection/box_select/tests.rs` owns the focused box-select behavior coverage. The
+      `collection/box_select/tests.rs` imports fixtures and owns the focused box-select behavior
+      coverage. The collection source gate, workstream source gate, manifest, and surface tests now
+      include the box-select tests child owner.
+- [x] Split collection box-select test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/box_select/tests.rs` into the
+      demo-local `collection/box_select/tests/fixtures.rs` fixture owner without changing
+      rendered-item capture, visible-order hit projection, append-mode baseline merge, active rect
+      threshold behavior, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `collection/box_select/tests.rs` owns `mod fixtures;`, imports helpers through
+      `use fixtures::{...}`, and keeps the focused box-select behavior tests while
+      `collection/box_select/tests/fixtures.rs` owns `selected_ids(...)` and `anchor_id(...)`. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
-      box-select tests child owner.
+      box-select fixture child owner.
 - [x] Split collection drag/drop payload behavior tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/drag_drop.rs` into the demo-local
       `collection/drag_drop/tests.rs` test owner without changing selected-set payload formation,
