@@ -35,6 +35,8 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/actions.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/inline_rename.rs"),

@@ -23,10 +23,16 @@ use super::geometry::{ProofCollectionLayoutMetrics, proof_collection_localize_re
 use super::rename::ProofCollectionRenameSession;
 use super::selection::{ProofCollectionKeyboardState, proof_collection_context_menu_selection};
 
+mod actions;
 mod chrome;
 mod inline_rename;
 mod metadata;
 
+use actions::{
+    proof_collection_asset_grid_activate_clicked_asset,
+    proof_collection_asset_grid_apply_context_menu,
+    proof_collection_asset_grid_publish_active_focus_target,
+};
 use chrome::{
     collection_asset_ghost_id, collection_asset_ghost_options, collection_asset_grid_options,
     collection_asset_selectable_options, collection_asset_tile_options,
@@ -95,22 +101,18 @@ fn render_collection_asset_tile(
                 .is_some_and(|active_id| active_id == &asset.id)
                 && let Some(focus_target) = trigger.id()
             {
-                let _ =
-                    ui.cx_mut()
-                        .app
-                        .models_mut()
-                        .update(&models.active_focus_target, |target| {
-                            *target = Some(focus_target);
-                        });
+                proof_collection_asset_grid_publish_active_focus_target(
+                    ui.cx_mut().app,
+                    &models.active_focus_target,
+                    focus_target,
+                );
             }
             if trigger.clicked() {
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&models.keyboard, |keyboard| {
-                        keyboard.active_id = Some(asset.id.clone());
-                    });
+                proof_collection_asset_grid_activate_clicked_asset(
+                    ui.cx_mut().app,
+                    &models.keyboard,
+                    asset.id.clone(),
+                );
             }
             if trigger.context_menu_requested() {
                 let (next_selection, next_keyboard) =
@@ -118,25 +120,12 @@ fn render_collection_asset_tile(
                 let anchor = trigger
                     .context_menu_anchor()
                     .or(trigger.rect().map(|rect| rect.origin));
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&models.selection, |selection| {
-                        *selection = next_selection.clone();
-                    });
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&models.keyboard, |keyboard| {
-                        *keyboard = next_keyboard.clone();
-                    });
-                let _ = ui.cx_mut().app.models_mut().update(
-                    &models.context_menu_anchor,
-                    |anchor_model| {
-                        *anchor_model = anchor;
-                    },
+                proof_collection_asset_grid_apply_context_menu(
+                    ui.cx_mut().app,
+                    models,
+                    next_selection,
+                    next_keyboard,
+                    anchor,
                 );
             }
             if state

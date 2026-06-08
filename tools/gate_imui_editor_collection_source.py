@@ -50,6 +50,9 @@ def main() -> None:
     collection_asset_grid = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs"
     )
+    collection_asset_grid_actions = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/actions.rs"
+    )
     collection_asset_grid_chrome = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid/chrome.rs"
     )
@@ -199,6 +202,7 @@ def main() -> None:
     )
     collection_children = (
         collection_asset_grid,
+        collection_asset_grid_actions,
         collection_asset_grid_chrome,
         collection_asset_grid_inline_rename,
         collection_asset_grid_metadata,
@@ -919,9 +923,14 @@ def main() -> None:
                 "pub(super) struct ProofCollectionAssetGridState<'a> {",
                 "pub(super) fn render_collection_asset_grid(",
                 "fn render_collection_asset_tile(",
+                "mod actions;",
                 "mod chrome;",
                 "mod inline_rename;",
                 "mod metadata;",
+                "use actions::{",
+                "proof_collection_asset_grid_publish_active_focus_target(",
+                "proof_collection_asset_grid_activate_clicked_asset(",
+                "proof_collection_asset_grid_apply_context_menu(",
                 "use chrome::{",
                 "collection_asset_grid_options(",
                 "collection_asset_tile_options(",
@@ -939,6 +948,7 @@ def main() -> None:
                 "ProofCollectionRenderedItem {",
             ],
             forbidden=[
+                "models_mut().update",
                 "render_collection_first_asset_browser_proof",
                 "kit::GridOptions",
                 "kit::VerticalOptions",
@@ -962,6 +972,37 @@ def main() -> None:
                 "cx.pointer_region_on_pointer_up(",
                 "cx.pointer_region_on_pointer_cancel(",
                 "kit::ChildRegionOptions",
+                "ui.button_with_options(",
+                "ui.begin_popup_menu(",
+                "drop_target::<",
+            ],
+        ),
+        SourceCheck(
+            "collection asset grid actions owner",
+            collection_asset_grid_actions,
+            required=[
+                "pub(super) fn proof_collection_asset_grid_publish_active_focus_target(",
+                "pub(super) fn proof_collection_asset_grid_activate_clicked_asset(",
+                "pub(super) fn proof_collection_asset_grid_apply_context_menu(",
+                "app.models_mut().update(active_focus_target",
+                "keyboard.active_id = Some(asset_id);",
+                "app.models_mut().update(&models.selection",
+                "app.models_mut().update(&models.keyboard",
+                "app.models_mut()",
+                ".update(&models.context_menu_anchor",
+            ],
+            forbidden=[
+                "ui.grid_with_options(",
+                "ui.multi_selectable_with_options(",
+                "drag_preview_ghost_with_options(",
+                "render_collection_inline_rename_field(",
+                "render_collection_asset_metadata_readouts(",
+                "proof_collection_drag_payload_for_asset(",
+                "proof_collection_context_menu_selection(",
+                "ProofCollectionRenderedItem {",
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "cx.pointer_region_on_wheel(",
                 "ui.button_with_options(",
                 "ui.begin_popup_menu(",
                 "drop_target::<",

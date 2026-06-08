@@ -6,6 +6,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
+    let asset_grid_actions_source =
+        include_str!("../src/imui_editor_proof_demo/collection/asset_grid/actions.rs");
     let asset_grid_chrome_source =
         include_str!("../src/imui_editor_proof_demo/collection/asset_grid/chrome.rs");
     let asset_grid_inline_rename_source =
@@ -920,9 +922,13 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "pub(super) struct ProofCollectionAssetGridState",
         "pub(super) fn render_collection_asset_grid(",
         "ui.grid_with_options(",
+        "mod actions;",
         "mod chrome;",
         "mod inline_rename;",
         "mod metadata;",
+        "proof_collection_asset_grid_publish_active_focus_target(",
+        "proof_collection_asset_grid_activate_clicked_asset(",
+        "proof_collection_asset_grid_apply_context_menu(",
         "collection_asset_grid_options(",
         "collection_asset_tile_options(",
         "collection_asset_selectable_options(",
@@ -939,6 +945,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
+        "models_mut().update",
         "kit::GridOptions",
         "kit::VerticalOptions",
         "kit::SelectableOptions",
@@ -951,6 +958,37 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !asset_grid_source.contains(needle),
             "the demo-local collection asset-grid owner should delegate option/test-id construction to asset_grid/chrome.rs; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_asset_grid_publish_active_focus_target(",
+        "pub(super) fn proof_collection_asset_grid_activate_clicked_asset(",
+        "pub(super) fn proof_collection_asset_grid_apply_context_menu(",
+        "app.models_mut().update(active_focus_target",
+        "keyboard.active_id = Some(asset_id);",
+        "app.models_mut().update(&models.selection",
+        "app.models_mut().update(&models.keyboard",
+        "app.models_mut()",
+        ".update(&models.context_menu_anchor",
+    ] {
+        assert!(
+            asset_grid_actions_source.contains(needle),
+            "the demo-local collection asset-grid actions owner should keep tile-triggered model writes explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "ui.grid_with_options(",
+        "ui.multi_selectable_with_options(",
+        "drag_preview_ghost_with_options(",
+        "render_collection_inline_rename_field(",
+        "render_collection_asset_metadata_readouts(",
+        "proof_collection_drag_payload_for_asset(",
+        "proof_collection_context_menu_selection(",
+        "ProofCollectionRenderedItem {",
+    ] {
+        assert!(
+            !asset_grid_actions_source.contains(needle),
+            "the demo-local collection asset-grid actions owner should not take tile rendering, drag preview, metadata, or selection policy; unexpected `{needle}`"
         );
     }
     for needle in [

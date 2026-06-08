@@ -8415,3 +8415,14 @@ labels/options, duplicate/delete selection policy, rename-ready gating, public c
 app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
 workstream source gate, manifest, and surface tests now freeze the command-buttons actions owner
 boundary.
+
+2026-06-08 collection asset-grid actions owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` now keeps grid/tile
+rendering, selectable trigger reads, drag preview, rendered-item recording, inline rename,
+metadata readouts, and context-menu selection derivation while routing tile-triggered model
+publication through the demo-local `collection/asset_grid/actions.rs` child owner. Active-focus
+target publication, clicked active-id publication, and context-menu selection/keyboard/anchor
+model writes now live in the actions owner. Grid/tile rendering, drag preview behavior, inline
+rename behavior, metadata readouts, public crate APIs, and the app-owned no-helper-widening
+boundary remain unchanged, while the collection source gate, workstream source gate, manifest, and
+surface tests now freeze the asset-grid actions owner boundary.

@@ -8792,3 +8792,14 @@ opening the slice.
       `command_buttons/actions.rs` owns duplicate/delete model writes, command-status updates, and
       inline-rename model handoff. The collection source gate, workstream source gate, manifest,
       and surface tests now include the command-buttons actions child owner.
+- [x] Split collection asset-grid tile action publication out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` into the
+      demo-local `collection/asset_grid/actions.rs` child owner without changing grid/tile
+      rendering, selectable trigger behavior, active-focus target publication, clicked active-id
+      publication, context-menu selection/anchor publication, drag preview, inline rename,
+      metadata readouts, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `asset_grid.rs` keeps grid/tile rendering, trigger reads, drag preview, rendered-item
+      recording, inline rename, metadata readouts, and context-menu selection derivation while
+      `asset_grid/actions.rs` owns active-focus target, clicked active-id, and context-menu
+      selection/keyboard/anchor model writes. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the asset-grid actions child owner.

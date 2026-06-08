@@ -36851,3 +36851,40 @@ Fret Examples Collection Command-Buttons Actions Owner Split Evidence - 2026-06-
 - Passed:
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+
+Fret Examples Collection Asset-Grid Actions Owner Split Evidence - 2026-06-08:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/asset_grid.rs` was split so
+  tile-triggered action publication now lives in the demo-local `collection/asset_grid/actions.rs`
+  child owner without changing grid/tile rendering, selectable trigger behavior, active-focus
+  target publication, clicked active-id publication, context-menu selection/anchor publication,
+  drag preview, inline rename, metadata readouts, public crate APIs, or the app-owned
+  no-helper-widening boundary.
+- Evidence anchors: `asset_grid.rs` declares `mod actions;`, imports
+  `proof_collection_asset_grid_publish_active_focus_target(...)`,
+  `proof_collection_asset_grid_activate_clicked_asset(...)`, and
+  `proof_collection_asset_grid_apply_context_menu(...)`, and keeps grid/tile rendering, selectable
+  trigger reads, drag preview, rendered-item recording, inline rename, metadata readouts, and
+  `proof_collection_context_menu_selection(...)` derivation. `asset_grid/actions.rs` owns
+  active-focus target, clicked active-id, and context-menu selection/keyboard/anchor model writes.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the asset-grid
+  actions owner boundary.
+- Passed: `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples --check`.
+- Passed:
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`.
+- Passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`.
+- Passed: `python tools\gate_imui_editor_collection_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `cargo check -p fret-demo --bin imui_editor_proof_demo` with existing dead-code warnings
+  in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --no-fail-fast`;
+  2/2 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
+- Passed:
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
+  10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
