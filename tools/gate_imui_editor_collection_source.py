@@ -203,6 +203,9 @@ def main() -> None:
     collection_selection_command_delete = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete.rs"
     )
+    collection_selection_command_delete_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete/tests.rs"
+    )
     collection_selection_command_duplicate = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs"
     )
@@ -268,6 +271,7 @@ def main() -> None:
         collection_selection_select_all,
         collection_selection_commands,
         collection_selection_command_delete,
+        collection_selection_command_delete_tests,
         collection_selection_command_duplicate,
         collection_selection_command_duplicate_naming,
         collection_selection_command_duplicate_selection,
@@ -2351,13 +2355,50 @@ def main() -> None:
                 "pub(in super::super::super) struct ProofCollectionDeleteResult {",
                 "pub(in super::super::super) fn proof_collection_delete_key_matches(",
                 "pub(in super::super::super) fn proof_collection_delete_selection(",
-                "fn proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item()",
-                "fn proof_collection_delete_selection_picks_previous_visible_item_at_end()",
+                "#[cfg(test)]",
+                "mod tests;",
             ],
             forbidden=[
                 "ProofCollectionDuplicateResult",
                 "proof_collection_duplicate_selection(",
                 "proof_collection_unique_copy_text(",
+                "render_collection_first_asset_browser_proof",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn anchor_id(",
+                "proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item",
+                "proof_collection_delete_selection_picks_previous_visible_item_at_end",
+            ],
+        ),
+        SourceCheck(
+            "collection delete command tests owner",
+            collection_selection_command_delete_tests,
+            required=[
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn anchor_id(",
+                "authoring_parity_collection_assets()",
+                "proof_collection_assets_in_visible_order(",
+                "proof_collection_delete_selection(",
+                "proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item",
+                "proof_collection_delete_selection_picks_previous_visible_item_at_end",
+            ],
+            forbidden=[
+                "ProofCollectionDuplicateResult",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_duplicate_shortcut_matches(",
+                "fn proof_collection_unique_copy_text(",
+                "fn proof_collection_duplicate_label_candidate(",
+                "fn proof_collection_duplicate_id_candidate(",
+                "fn proof_collection_duplicate_path_candidate(",
+                "ProofCollectionDuplicateNameRegistry",
                 "render_collection_first_asset_browser_proof",
                 "TextField",
                 "DragPreviewGhostOptions",

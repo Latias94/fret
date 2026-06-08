@@ -8761,6 +8761,16 @@ opening the slice.
       `duplicate/selection/tests.rs` owns selection fixtures and the duplicate selection behavior
       tests. The collection source gate, workstream source gate, manifest, and surface tests now
       include the duplicate selection tests child owner.
+- [x] Split collection delete command behavior tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete.rs`
+      into the demo-local `collection/selection/commands/delete/tests.rs` test owner without
+      changing Delete/Backspace matching, delete result DTO fields, deletion/refocus behavior,
+      selection/anchor repair, keyboard/button/context-menu command call sites, public crate APIs,
+      or the app-owned no-helper-widening boundary. Result: `delete.rs` keeps
+      `ProofCollectionDeleteResult`, key matching, delete/refocus transition logic, and
+      `#[cfg(test)] mod tests;` while `delete/tests.rs` owns selection fixtures and delete/refocus
+      behavior tests. The collection source gate, workstream source gate, manifest, and surface
+      tests now include the delete command tests child owner.
 - [x] Split collection keyboard selection navigation helpers out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
       demo-local `collection/selection/keyboard/navigation.rs` child owner without changing

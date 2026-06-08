@@ -81,6 +81,8 @@ fn imui_editor_proof_demo_keeps_collection_delete_action_app_owned_and_explicit(
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection/commands/delete/tests.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs"),
         "\n",
         include_str!(
@@ -107,6 +109,8 @@ fn imui_editor_proof_demo_keeps_collection_delete_action_app_owned_and_explicit(
         "fn proof_collection_assets_line(",
         "fn proof_collection_delete_key_matches(",
         "fn proof_collection_delete_selection(",
+        "proof_collection_delete_selection_removes_selected_assets_and_refocuses_next_visible_item",
+        "proof_collection_delete_selection_picks_previous_visible_item_at_end",
         "fn authoring_parity_collection_assets_model<H: UiHost>(",
         "imui_editor_proof_demo.model.authoring_parity.collection_assets",
         "\"Delete selected assets\"",
