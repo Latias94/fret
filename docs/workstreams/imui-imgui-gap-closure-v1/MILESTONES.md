@@ -8393,3 +8393,14 @@ duplicate/delete/rename selection policy, command status text, inline rename mod
 crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while the collection
 source gate, workstream source gate, manifest, and surface tests now freeze the context-menu
 actions owner boundary.
+
+2026-06-08 collection keyboard actions owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs` now keeps scope key handler
+installation, model snapshot reads, IME composing bypass, active rename-session bypass,
+visible-order/key derivation, Delete/F2/Primary+A/Primary+D shortcut ordering, and
+arrow/Home/End navigation policy calls while routing app-state mutation through the demo-local
+`collection/keyboard/actions.rs` child owner. Delete/select-all/duplicate/navigation model writes,
+inline-rename start writes, command/rename status updates, and notify now live in the actions
+owner. Shortcut matching, selection derivation, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the keyboard actions owner boundary.

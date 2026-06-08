@@ -8,10 +8,6 @@ use fret_ui::{ElementContext, GlobalElementId};
 
 use super::super::KernelApp;
 use super::ProofCollectionAsset;
-use super::readouts::{
-    proof_collection_delete_status, proof_collection_duplicate_status,
-    proof_collection_rename_ready_status, proof_collection_select_all_status,
-};
 use super::rename::{
     ProofCollectionRenameSession, proof_collection_begin_rename_session,
     proof_collection_rename_shortcut_matches,
@@ -22,6 +18,14 @@ use super::selection::{
     proof_collection_duplicate_selection, proof_collection_duplicate_shortcut_matches,
     proof_collection_keyboard_selection, proof_collection_select_all_selection,
     proof_collection_select_all_shortcut_matches,
+};
+
+mod actions;
+
+use actions::{
+    proof_collection_keyboard_apply_delete, proof_collection_keyboard_apply_duplicate,
+    proof_collection_keyboard_apply_navigation, proof_collection_keyboard_apply_select_all,
+    proof_collection_keyboard_begin_rename,
 };
 
 pub(super) struct ProofCollectionKeyboardHandlerModels {
@@ -90,21 +94,7 @@ pub(super) fn install_collection_keyboard_handler(
                     &keyboard,
                 )
             {
-                let next_status = proof_collection_delete_status(&delete.deleted_assets);
-                let _ = host.update_model(&models.assets, |state| {
-                    *state = delete.remaining_assets.clone();
-                });
-                let _ = host.update_model(&models.selection, |state| {
-                    *state = delete.next_selection.clone();
-                });
-                let _ = host.update_model(&models.keyboard, |state| {
-                    *state = delete.next_keyboard.clone();
-                });
-                let _ = host.update_model(&models.command_status, |status| {
-                    status.clear();
-                    status.push_str(&next_status);
-                });
-                host.notify(acx);
+                proof_collection_keyboard_apply_delete(host, acx, &models, delete);
                 return true;
             }
 
@@ -112,23 +102,7 @@ pub(super) fn install_collection_keyboard_handler(
                 && let Some(session) =
                     proof_collection_begin_rename_session(&visible_assets, &selection, &keyboard)
             {
-                let _ = host.update_model(&models.rename_session, |state| {
-                    *state = Some(session.clone());
-                });
-                let _ = host.update_model(&models.rename_draft, |draft| {
-                    draft.clear();
-                    draft.push_str(session.original_label.as_ref());
-                });
-                let _ = host.update_model(&models.rename_focus_pending, |state| {
-                    *state = true;
-                });
-                let _ = host.update_model(&models.rename_status, |status| {
-                    status.clear();
-                    status.push_str(&proof_collection_rename_ready_status(
-                        session.original_label.as_ref(),
-                    ));
-                });
-                host.notify(acx);
+                proof_collection_keyboard_begin_rename(host, acx, &models, session);
                 return true;
             }
 
@@ -136,19 +110,13 @@ pub(super) fn install_collection_keyboard_handler(
                 && let Some((next_selection, next_keyboard)) =
                     proof_collection_select_all_selection(&collection_keys, &selection, &keyboard)
             {
-                let next_status =
-                    proof_collection_select_all_status(next_selection.selected_count());
-                let _ = host.update_model(&models.selection, |state| {
-                    *state = next_selection.clone();
-                });
-                let _ = host.update_model(&models.keyboard, |state| {
-                    *state = next_keyboard.clone();
-                });
-                let _ = host.update_model(&models.command_status, |status| {
-                    status.clear();
-                    status.push_str(&next_status);
-                });
-                host.notify(acx);
+                proof_collection_keyboard_apply_select_all(
+                    host,
+                    acx,
+                    &models,
+                    next_selection,
+                    next_keyboard,
+                );
                 return true;
             }
 
@@ -161,21 +129,7 @@ pub(super) fn install_collection_keyboard_handler(
                     reverse_order,
                 )
             {
-                let next_status = proof_collection_duplicate_status(&duplicate.duplicated_assets);
-                let _ = host.update_model(&models.assets, |state| {
-                    *state = duplicate.next_assets.clone();
-                });
-                let _ = host.update_model(&models.selection, |state| {
-                    *state = duplicate.next_selection.clone();
-                });
-                let _ = host.update_model(&models.keyboard, |state| {
-                    *state = duplicate.next_keyboard.clone();
-                });
-                let _ = host.update_model(&models.command_status, |status| {
-                    status.clear();
-                    status.push_str(&next_status);
-                });
-                host.notify(acx);
+                proof_collection_keyboard_apply_duplicate(host, acx, &models, duplicate);
                 return true;
             }
 
@@ -190,13 +144,13 @@ pub(super) fn install_collection_keyboard_handler(
                 return false;
             };
 
-            let _ = host.update_model(&models.selection, |state| {
-                *state = next_selection.clone();
-            });
-            let _ = host.update_model(&models.keyboard, |state| {
-                *state = next_keyboard.clone();
-            });
-            host.notify(acx);
+            proof_collection_keyboard_apply_navigation(
+                host,
+                acx,
+                &models,
+                next_selection,
+                next_keyboard,
+            );
             true
         }),
     );

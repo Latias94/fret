@@ -1691,6 +1691,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/geometry/zoom.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard/actions.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/models.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/rename/commit.rs",

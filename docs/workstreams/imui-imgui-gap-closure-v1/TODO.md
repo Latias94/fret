@@ -8771,3 +8771,14 @@ opening the slice.
       `context_menu/actions.rs` owns duplicate/delete app-state writes, command-status updates,
       and context-menu inline-rename model handoff. The collection source gate, workstream source
       gate, manifest, and surface tests now include the context-menu actions child owner.
+- [x] Split collection keyboard action application out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs` into the demo-local
+      `collection/keyboard/actions.rs` child owner without changing IME suppression, active rename
+      bypass, visible-order snapshotting, Delete/F2/Primary+A/Primary+D shortcut matching,
+      arrow/Home/End navigation policy, command status text, model writes, public crate APIs, or
+      the app-owned no-helper-widening boundary. Result: `keyboard.rs` keeps key handler
+      installation, model snapshot reads, rename-session guard, shortcut ordering, selection
+      policy calls, and action delegation while `keyboard/actions.rs` owns delete/select-all/
+      duplicate/navigation app-state writes, inline-rename start writes, command/rename status
+      updates, and notify. The collection source gate, workstream source gate, manifest, and
+      surface tests now include the keyboard actions child owner.

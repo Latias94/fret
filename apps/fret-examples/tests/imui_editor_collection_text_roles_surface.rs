@@ -51,6 +51,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/keyboard.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/keyboard/actions.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/models.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/readouts.rs"),

@@ -128,6 +128,9 @@ def main() -> None:
     collection_keyboard = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard.rs"
     )
+    collection_keyboard_actions = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/keyboard/actions.rs"
+    )
     collection_lifecycle = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/lifecycle.rs"
     )
@@ -219,6 +222,7 @@ def main() -> None:
         collection_geometry_zoom,
         collection_import_target,
         collection_keyboard,
+        collection_keyboard_actions,
         collection_lifecycle,
         collection_models,
         collection_order_toggle,
@@ -1614,6 +1618,7 @@ def main() -> None:
             required=[
                 "pub(super) struct ProofCollectionKeyboardHandlerModels {",
                 "pub(super) fn install_collection_keyboard_handler(",
+                "mod actions;",
                 "cx.key_on_key_down_for(",
                 "down.ime_composing",
                 "proof_collection_delete_key_matches(down.key)",
@@ -1621,9 +1626,62 @@ def main() -> None:
                 "proof_collection_select_all_shortcut_matches(down.key, down.modifiers)",
                 "proof_collection_duplicate_shortcut_matches(down.key, down.modifiers)",
                 "proof_collection_keyboard_selection(",
+                "proof_collection_keyboard_apply_delete(",
+                "proof_collection_keyboard_begin_rename(",
+                "proof_collection_keyboard_apply_select_all(",
+                "proof_collection_keyboard_apply_duplicate(",
+                "proof_collection_keyboard_apply_navigation(",
+            ],
+            forbidden=[
+                "proof_collection_delete_status(",
+                "proof_collection_duplicate_status(",
+                "proof_collection_select_all_status(",
+                "proof_collection_rename_ready_status(",
+                "host.update_model(&models.assets",
+                "host.update_model(&models.selection",
+                "host.update_model(&models.keyboard",
+                "host.update_model(&models.command_status",
+                "host.notify(acx);",
+                "render_collection_first_asset_browser_proof",
+                "TextField::new(",
+                "drag_source_with_options",
+                "drop_target::<",
+                "drag_preview_ghost",
+                "PointerRegionProps",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection keyboard actions owner",
+            collection_keyboard_actions,
+            required=[
+                "pub(super) fn proof_collection_keyboard_apply_delete(",
+                "pub(super) fn proof_collection_keyboard_begin_rename(",
+                "pub(super) fn proof_collection_keyboard_apply_select_all(",
+                "pub(super) fn proof_collection_keyboard_apply_duplicate(",
+                "pub(super) fn proof_collection_keyboard_apply_navigation(",
+                "proof_collection_delete_status(&delete.deleted_assets)",
+                "proof_collection_duplicate_status(&duplicate.duplicated_assets)",
+                "proof_collection_select_all_status(next_selection.selected_count())",
+                "proof_collection_rename_ready_status(",
+                "host.update_model(&models.assets",
+                "host.update_model(&models.selection",
+                "host.update_model(&models.keyboard",
+                "host.update_model(&models.command_status",
                 "host.notify(acx);",
             ],
             forbidden=[
+                "cx.key_on_key_down_for(",
+                "proof_collection_delete_key_matches(",
+                "proof_collection_rename_shortcut_matches(",
+                "proof_collection_select_all_shortcut_matches(",
+                "proof_collection_duplicate_shortcut_matches(",
+                "proof_collection_keyboard_selection(",
+                "proof_collection_assets_in_visible_order(",
+                "host.models_mut().read(",
                 "render_collection_first_asset_browser_proof",
                 "TextField::new(",
                 "drag_source_with_options",
