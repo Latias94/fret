@@ -2,6 +2,40 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI combo trigger options owner split - 2026-06-09
+
+This maintenance slice keeps the combo trigger assembly focused without changing ComboBox behavior
+or public API:
+
+- IMUI combo trigger options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` keeps combo trigger assembly,
+  pressable chrome wiring, behavior delegation, and visual delegation.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/options.rs` owns the private
+  `ComboTriggerOptions` carrier.
+- No public API or runtime behavior changed; the existing `trigger::ComboTriggerOptions` private
+  call surface remains re-exported through the trigger module for `entry.rs`.
+- The source gate now freezes `ComboTriggerOptions` out of the trigger root and rejects behavior,
+  visual, popup, response, and pressable chrome logic from drifting into the options owner.
+- Evidence anchor: `trigger.rs` declares `mod options;` and re-exports
+  `options::ComboTriggerOptions` while keeping `combo_trigger(...)` as the assembly entry.
+- Evidence anchor: `trigger/options.rs` contains the enabled/focusable/a11y/test-id/shortcut/open
+  option fields only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks both the trigger root and the
+  options owner boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui combo --no-fail-fast` - passed, 11/11 after rerunning
+  without the earlier concurrent package-cache lock wait.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI plot decimation owner split - 2026-06-07
 
 This maintenance slice keeps the plot adapter decimation path readable without changing the
