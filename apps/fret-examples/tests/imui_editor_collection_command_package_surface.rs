@@ -151,6 +151,10 @@ fn imui_editor_proof_demo_keeps_collection_command_package_app_owned_and_explici
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs"),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/keyboard/tests/fixtures.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs"),
         "\n",
         include_str!(

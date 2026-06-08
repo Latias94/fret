@@ -8553,12 +8553,23 @@ keyboard navigation tests owner boundary is now tracked as its own source-gated 
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` now keeps the
 stable `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
 primary-modifier shortcut bypass, navigation helper imports, and `#[cfg(test)] mod tests;` while
-routing keyboard fixtures and behavior coverage through the demo-local
+routing keyboard behavior coverage through the demo-local
 `collection/selection/keyboard/tests.rs` test owner. Arrow-key selection replacement, Shift-range
 extension, Escape clear behavior, keyboard handler imports, public crate APIs, and the app-owned
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the keyboard selection tests owner boundary. The
 keyboard selection tests owner boundary is now tracked as its own source-gated proof slice.
+
+2026-06-09 collection keyboard selection fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs` now keeps
+the keyboard selection behavior tests and imports fixture helpers through `mod fixtures;` while
+routing selection fixture construction/projection through the demo-local
+`collection/selection/keyboard/tests/fixtures.rs` fixture owner. Arrow-key selection replacement,
+Shift-range extension, Escape clear behavior, primary-modifier shortcut bypass, keyboard handler
+imports, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged, while
+the collection source gate, workstream source gate, manifest, and surface tests now freeze the
+keyboard selection fixture owner boundary. The keyboard selection fixture owner boundary is now
+tracked as its own source-gated proof slice.
 
 2026-06-08 collection select-all tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs` now keeps

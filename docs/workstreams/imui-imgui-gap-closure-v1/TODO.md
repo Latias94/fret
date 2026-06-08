@@ -8930,9 +8930,21 @@ opening the slice.
       no-helper-widening boundary. Result: `selection/keyboard.rs` keeps the stable
       `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
       modifier filtering, navigation helper imports, and `#[cfg(test)] mod tests;` while
-      `selection/keyboard/tests.rs` owns keyboard fixtures and behavior coverage. The collection
+      `selection/keyboard/tests.rs` imports selection fixtures and owns keyboard behavior coverage.
+      The collection
       source gate, workstream source gate, manifest, and surface tests now include the keyboard
       selection tests child owner.
+- [x] Split collection keyboard selection test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs` into
+      the demo-local `collection/selection/keyboard/tests/fixtures.rs` fixture owner without
+      changing arrow-key selection replacement, Shift-range extension, Escape clear behavior,
+      primary-modifier shortcut bypass, keyboard handler imports, public crate APIs, or the
+      app-owned no-helper-widening boundary. Result: `selection/keyboard/tests.rs` keeps the four
+      behavior tests and imports helpers through `mod fixtures;` while
+      `selection/keyboard/tests/fixtures.rs` owns `selection_state(...)`, `selected_ids(...)`,
+      `anchor_id(...)`, and `ImUiMultiSelectState::new(...)`. The collection source gate,
+      workstream source gate, manifest, and surface tests now include the keyboard selection
+      fixture child owner.
 - [x] Split collection select-all behavior tests out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/select_all.rs` into the
       demo-local `collection/selection/select_all/tests.rs` test owner without changing
