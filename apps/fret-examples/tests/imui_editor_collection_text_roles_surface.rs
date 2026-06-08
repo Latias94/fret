@@ -83,6 +83,8 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard.rs"),
         "\n",
+        include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs"),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/selection/projection.rs"),

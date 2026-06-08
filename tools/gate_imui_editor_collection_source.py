@@ -188,6 +188,9 @@ def main() -> None:
     collection_selection_keyboard = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs"
     )
+    collection_selection_keyboard_tests = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs"
+    )
     collection_selection_keyboard_navigation = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs"
     )
@@ -266,6 +269,7 @@ def main() -> None:
         collection_selection,
         collection_selection_context_menu,
         collection_selection_keyboard,
+        collection_selection_keyboard_tests,
         collection_selection_keyboard_navigation,
         collection_selection_projection,
         collection_selection_select_all,
@@ -2211,6 +2215,47 @@ def main() -> None:
                 "proof_collection_active_id(collection_keys, selection, keyboard)",
                 "proof_collection_keyboard_next_index(",
                 "proof_collection_keyboard_move_selection(",
+                "#[cfg(test)]",
+                "mod tests;",
+            ],
+            forbidden=[
+                "pub(super) fn proof_collection_keyboard_next_index(",
+                "pub(super) fn proof_collection_keyboard_move_selection(",
+                "ImUiMultiSelectState::from_ordered_selection(",
+                "proof_collection_keyboard_next_index_moves_with_columns_and_edges",
+                "proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order",
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn anchor_id(",
+                "authoring_parity_collection_assets()",
+                "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+                "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+                "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+                "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
+                "render_collection_first_asset_browser_proof",
+                "proof_collection_select_all_selection(",
+                "proof_collection_context_menu_selection(",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_delete_selection(",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection selection keyboard tests owner",
+            collection_selection_keyboard_tests,
+            required=[
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn anchor_id(",
+                "authoring_parity_collection_assets()",
+                "PROOF_COLLECTION_GRID_FALLBACK_COLUMNS",
+                "proof_collection_keyboard_selection(",
                 "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
                 "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
                 "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",

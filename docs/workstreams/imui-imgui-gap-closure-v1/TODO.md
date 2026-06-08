@@ -8782,6 +8782,17 @@ opening the slice.
       next-index math, range selection construction, and focused navigation helper tests. The
       collection source gate, workstream source gate, manifest, and surface tests now include the
       keyboard navigation child owner.
+- [x] Split collection keyboard selection behavior tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
+      demo-local `collection/selection/keyboard/tests.rs` test owner without changing arrow-key
+      selection replacement, Shift-range extension, Escape clear behavior, primary-modifier
+      shortcut bypass, keyboard handler imports, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `selection/keyboard.rs` keeps the stable
+      `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
+      modifier filtering, navigation helper imports, and `#[cfg(test)] mod tests;` while
+      `selection/keyboard/tests.rs` owns keyboard fixtures and behavior coverage. The collection
+      source gate, workstream source gate, manifest, and surface tests now include the keyboard
+      selection tests child owner.
 - [x] Split collection inline rename commit mutation out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` into the demo-local
       `collection/rename/commit.rs` child owner without changing F2 shortcut matching, active

@@ -8407,6 +8407,17 @@ extension, Escape clear behavior, keyboard handler imports, public crate APIs, a
 no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
 gate, manifest, and surface tests now freeze the keyboard navigation owner boundary.
 
+2026-06-08 collection keyboard selection tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` now keeps the
+stable `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,
+primary-modifier shortcut bypass, navigation helper imports, and `#[cfg(test)] mod tests;` while
+routing keyboard fixtures and behavior coverage through the demo-local
+`collection/selection/keyboard/tests.rs` test owner. Arrow-key selection replacement, Shift-range
+extension, Escape clear behavior, keyboard handler imports, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the keyboard selection tests owner boundary. The
+keyboard selection tests owner boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection inline rename commit owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/rename.rs` now keeps the stable rename
 session/app-model facade, `ProofCollectionRenameSession`, F2 shortcut matching, begin-session

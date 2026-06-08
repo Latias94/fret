@@ -91,6 +91,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/collection/selection/context_menu.rs");
     let selection_keyboard_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard.rs");
+    let selection_keyboard_tests_source =
+        include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard/tests.rs");
     let selection_keyboard_navigation_source =
         include_str!("../src/imui_editor_proof_demo/collection/selection/keyboard/navigation.rs");
     let selection_projection_source =
@@ -1727,14 +1729,29 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "proof_collection_active_id(collection_keys, selection, keyboard)",
         "proof_collection_keyboard_next_index(",
         "proof_collection_keyboard_move_selection(",
+        "#[cfg(test)]",
+        "mod tests;",
+    ] {
+        assert!(
+            selection_keyboard_source.contains(needle),
+            "the demo-local collection keyboard selection owner should keep arrow/range/Escape policy explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn selection_state(",
+        "fn selected_ids(",
+        "fn anchor_id(",
+        "authoring_parity_collection_assets()",
+        "PROOF_COLLECTION_GRID_FALLBACK_COLUMNS",
+        "proof_collection_keyboard_selection(",
         "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
         "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
         "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
         "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
     ] {
         assert!(
-            selection_keyboard_source.contains(needle),
-            "the demo-local collection keyboard selection owner should keep arrow/range/Escape policy explicit; missing `{needle}`"
+            selection_keyboard_tests_source.contains(needle),
+            "the demo-local collection keyboard selection tests owner should keep keyboard fixtures and behavior coverage explicit; missing `{needle}`"
         );
     }
     for needle in [
@@ -1755,6 +1772,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "ImUiMultiSelectState::from_ordered_selection(",
         "proof_collection_keyboard_next_index_moves_with_columns_and_edges",
         "proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order",
+        "fn selection_state(",
+        "fn selected_ids(",
+        "fn anchor_id(",
+        "authoring_parity_collection_assets()",
+        "proof_collection_keyboard_arrow_replaces_selection_and_moves_active_tile",
+        "proof_collection_keyboard_shift_navigation_extends_range_from_anchor",
+        "proof_collection_keyboard_escape_clears_selection_but_keeps_active_tile",
+        "proof_collection_keyboard_ignores_primary_modifier_shortcuts",
     ] {
         assert!(
             !selection_keyboard_source.contains(needle),
@@ -1774,6 +1799,30 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !selection_keyboard_navigation_source.contains(needle),
             "the demo-local collection keyboard navigation owner should not take keyboard policy entry, active-id fallback, or modifier filtering; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn proof_collection_keyboard_next_index(",
+        "pub(super) fn proof_collection_keyboard_move_selection(",
+        "ImUiMultiSelectState::from_ordered_selection(",
+        "proof_collection_keyboard_next_index_moves_with_columns_and_edges",
+        "proof_collection_keyboard_move_selection_extends_from_anchor_in_collection_order",
+        "render_collection_first_asset_browser_proof",
+        "proof_collection_select_all_selection(",
+        "proof_collection_context_menu_selection(",
+        "proof_collection_duplicate_selection(",
+        "proof_collection_delete_selection(",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_keyboard_tests_source.contains(needle),
+            "the demo-local collection keyboard selection tests owner should not take navigation helpers, render, command, or UI policy; unexpected `{needle}`"
         );
     }
     for needle in [
