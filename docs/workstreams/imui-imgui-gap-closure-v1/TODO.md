@@ -8693,9 +8693,20 @@ opening the slice.
       duplicate command flow, selection repair, keyboard/button/context-menu command behavior,
       public crate APIs, or the app-owned no-helper-widening boundary. Result: `naming.rs` keeps
       `ProofCollectionDuplicateNameRegistry`, copy suffix helpers, and `#[cfg(test)] mod tests;`
-      while `naming/tests.rs` owns the duplicate naming registry uniqueness coverage. The collection
+      while `naming/tests.rs` owns the duplicate naming registry uniqueness coverage and imports its
+      asset setup through `mod fixtures;`. The collection source gate, workstream source gate,
+      manifest, and surface tests now include the duplicate naming tests child owner.
+- [x] Split collection duplicate naming registry test fixtures out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests.rs`
+      into the demo-local
+      `collection/selection/commands/duplicate/naming/tests/fixtures.rs` fixture owner without
+      changing copy id/label/path suffix generation, duplicate naming registry behavior, duplicate
+      command flow, selection repair, keyboard/button/context-menu command behavior, public crate
+      APIs, or the app-owned no-helper-widening boundary. Result: `naming/tests.rs` keeps the
+      registry behavior assertions and imports `asset(...)` through `mod fixtures;`, while
+      `naming/tests/fixtures.rs` owns the `ProofCollectionAsset` construction helper. The collection
       source gate, workstream source gate, manifest, and surface tests now include the duplicate
-      naming tests child owner.
+      naming fixture owner.
 - [x] Split collection browser input Primary+Wheel zoom runtime out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs`
       into the demo-local `collection/browser_scope/input_runtime/zoom.rs` child owner without

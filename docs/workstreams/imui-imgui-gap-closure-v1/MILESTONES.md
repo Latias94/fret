@@ -8319,10 +8319,21 @@ workstream source gate, manifest, and surface tests now freeze the duplicate nam
 now keeps `ProofCollectionDuplicateNameRegistry`, copy id/label/path suffix helpers, per-field
 uniqueness tracking, and `#[cfg(test)] mod tests;` while routing duplicate naming registry
 copy-suffix registry coverage through the demo-local
-`collection/selection/commands/duplicate/naming/tests.rs` test owner. Copy suffix text, duplicate
-command flow, selection repair, keyboard/button/context-menu command behavior, public crate APIs,
-and the app-owned no-helper-widening boundary remain unchanged, while the collection source gate,
-workstream source gate, manifest, and surface tests now freeze the duplicate naming tests owner boundary.
+`collection/selection/commands/duplicate/naming/tests.rs` test owner, which now imports asset setup
+through `mod fixtures;`. Copy suffix text, duplicate command flow, selection repair,
+keyboard/button/context-menu command behavior, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the duplicate naming tests owner boundary.
+
+2026-06-09 collection duplicate naming fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests.rs`
+now keeps duplicate naming registry behavior assertions and routes asset construction through the
+demo-local `collection/selection/commands/duplicate/naming/tests/fixtures.rs` fixture owner.
+`naming/tests/fixtures.rs` owns `pub(super) fn asset(...)`, `ProofCollectionAsset` construction,
+the default `"Texture"` kind, and `size_kib: 256` without taking registry behavior coverage,
+duplicate command flow, keyboard/button/context-menu command behavior, public crate APIs, or the
+app-owned no-helper-widening boundary. The collection source gate, workstream source gate, manifest,
+and surface tests now freeze the duplicate naming fixture owner boundary.
 
 2026-06-08 collection browser input zoom runtime owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/browser_scope/input_runtime.rs` now keeps

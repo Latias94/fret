@@ -281,6 +281,9 @@ def main() -> None:
     collection_selection_command_duplicate_naming_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests.rs"
     )
+    collection_selection_command_duplicate_naming_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests/fixtures.rs"
+    )
     collection_selection_command_duplicate_selection = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs"
     )
@@ -369,6 +372,7 @@ def main() -> None:
         collection_selection_command_duplicate_tests,
         collection_selection_command_duplicate_naming,
         collection_selection_command_duplicate_naming_tests,
+        collection_selection_command_duplicate_naming_tests_fixtures,
         collection_selection_command_duplicate_selection,
         collection_selection_command_duplicate_selection_tests,
         collection_selection_command_duplicate_selection_tests_fixtures,
@@ -3381,11 +3385,46 @@ def main() -> None:
             "collection duplicate naming tests owner",
             collection_selection_command_duplicate_naming_tests,
             required=[
-                "fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+                "mod fixtures;",
+                "use fixtures::asset;",
                 "ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)",
                 "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
             ],
             forbidden=[
+                "fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+                "ProofCollectionDuplicateResult",
+                "proof_collection_duplicate_selection(",
+                "proof_collection_duplicate_selection_result(",
+                "proof_collection_duplicate_shortcut_matches(",
+                "HashMap",
+                "ImUiMultiSelectState",
+                "ProofCollectionKeyboardState",
+                "proof_collection_active_id",
+                "proof_collection_assets_in_visible_order",
+                "ProofCollectionDeleteResult",
+                "proof_collection_delete_selection(",
+                "render_collection_first_asset_browser_proof",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection duplicate naming tests fixtures owner",
+            collection_selection_command_duplicate_naming_tests_fixtures,
+            required=[
+                "pub(super) fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+                "ProofCollectionAsset {",
+                'kind: Arc::from("Texture")',
+                "size_kib: 256",
+            ],
+            forbidden=[
+                "ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)",
+                "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
                 "ProofCollectionDuplicateResult",
                 "proof_collection_duplicate_selection(",
                 "proof_collection_duplicate_selection_result(",

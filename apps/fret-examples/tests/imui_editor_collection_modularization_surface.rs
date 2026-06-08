@@ -165,6 +165,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_duplicate_naming_tests_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests.rs"
     );
+    let selection_duplicate_naming_tests_fixtures_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests/fixtures.rs"
+    );
     let selection_duplicate_selection_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs"
     );
@@ -2894,7 +2897,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+        "mod fixtures;",
+        "use fixtures::asset;",
         "ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)",
         "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
     ] {
@@ -2905,12 +2909,45 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
-        "fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+        "pub(super) fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset",
+        "ProofCollectionAsset {",
+        "kind: Arc::from(\"Texture\")",
+        "size_kib: 256",
+    ] {
+        assert!(
+            selection_duplicate_naming_tests_fixtures_source.contains(needle),
+            "the demo-local collection duplicate naming tests fixture owner should keep asset construction explicit; missing `{needle}`"
+        );
+    }
+
+    for needle in ["fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset"] {
+        assert!(
+            !selection_duplicate_naming_tests_source.contains(needle),
+            "the demo-local collection duplicate naming tests owner should import fixtures instead of defining them; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)",
         "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
     ] {
         assert!(
             !selection_duplicate_naming_source.contains(needle),
             "the demo-local collection duplicate naming owner should not take naming tests; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "ProofCollectionDuplicateNameRegistry::from_assets(&stored_assets)",
+        "proof_collection_duplicate_name_registry_uses_unique_copy_suffixes",
+        "fn proof_collection_duplicate_selection(",
+        "fn proof_collection_duplicate_shortcut_matches(",
+        "ImUiMultiSelectState",
+        "ProofCollectionKeyboardState",
+    ] {
+        assert!(
+            !selection_duplicate_naming_tests_fixtures_source.contains(needle),
+            "the demo-local collection duplicate naming tests fixture owner should not take registry behavior or duplicate command flow; unexpected `{needle}`"
         );
     }
 

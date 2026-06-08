@@ -152,6 +152,10 @@ fn imui_editor_proof_demo_keeps_collection_delete_action_app_owned_and_explicit(
         ),
         "\n",
         include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming/tests/fixtures.rs"
+        ),
+        "\n",
+        include_str!(
             "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs"
         ),
         "\n",

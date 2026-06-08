@@ -1,17 +1,10 @@
 use std::sync::Arc;
 
-use super::super::super::super::super::ProofCollectionAsset;
 use super::ProofCollectionDuplicateNameRegistry;
 
-fn asset(id: &str, label: &str, path: &str) -> ProofCollectionAsset {
-    ProofCollectionAsset {
-        id: Arc::from(id),
-        label: Arc::from(label),
-        path: Arc::from(path),
-        kind: Arc::from("Texture"),
-        size_kib: 256,
-    }
-}
+mod fixtures;
+
+use fixtures::asset;
 
 #[test]
 fn proof_collection_duplicate_name_registry_uses_unique_copy_suffixes() {
