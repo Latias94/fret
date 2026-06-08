@@ -8374,6 +8374,18 @@ context-menu command behavior, public crate APIs, and the app-owned no-helper-wi
 remain unchanged, while the collection source gate, workstream source gate, manifest, and surface
 tests now freeze the duplicate selection owner boundary.
 
+2026-06-08 collection duplicate selection tests owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs`
+now keeps selected-visible filtering, duplicate insertion, visible-order duplicate projection,
+selection/anchor repair, active copied-tile repair, and `#[cfg(test)] mod tests;` while routing
+selection fixtures and duplicate selection behavior coverage through the demo-local
+`collection/selection/commands/duplicate/selection/tests.rs` test owner. Copy suffix text,
+duplicate insertion order, visible-order copy reselect behavior, active copied-tile preservation,
+keyboard/button/context-menu command behavior, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the duplicate selection tests owner boundary. The
+duplicate selection tests owner boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection keyboard navigation owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` now keeps the
 stable `proof_collection_keyboard_selection(...)` policy entry, active-id fallback, Escape clear,

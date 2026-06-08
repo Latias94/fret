@@ -8749,6 +8749,18 @@ opening the slice.
       duplicate projection, next selection/anchor repair, active copied-tile repair, and focused
       duplicate selection unit tests. The collection source gate, workstream source gate, manifest,
       and surface tests now include the duplicate selection child owner.
+- [x] Split collection duplicate selection behavior tests out of
+      `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs`
+      into the demo-local `collection/selection/commands/duplicate/selection/tests.rs` test owner
+      without changing `Primary+D` matching, duplicate result DTO fields, copy id/label/path
+      suffix generation, duplicate insertion order, visible-order copy reselect behavior, active
+      copied-tile preservation, keyboard/button/context-menu command call sites, public crate APIs,
+      or the app-owned no-helper-widening boundary. Result: `duplicate/selection.rs` keeps
+      selected-visible filtering, duplicate insertion, visible-order duplicate projection,
+      selection/anchor repair, active copied-tile repair, and `#[cfg(test)] mod tests;` while
+      `duplicate/selection/tests.rs` owns selection fixtures and the duplicate selection behavior
+      tests. The collection source gate, workstream source gate, manifest, and surface tests now
+      include the duplicate selection tests child owner.
 - [x] Split collection keyboard selection navigation helpers out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/keyboard.rs` into the
       demo-local `collection/selection/keyboard/navigation.rs` child owner without changing

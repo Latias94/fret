@@ -1716,6 +1716,7 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/naming.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/proof_helpers.rs",
     "apps/fret-examples/src/imui_editor_proof_demo/workbench_shell.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
