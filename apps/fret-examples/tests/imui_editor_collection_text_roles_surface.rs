@@ -143,6 +143,10 @@ fn imui_editor_proof_collection_fixed_text_uses_shared_roles() {
             "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs"
         ),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests/fixtures.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/tests.rs"),

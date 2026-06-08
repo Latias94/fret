@@ -260,6 +260,9 @@ def main() -> None:
     collection_selection_command_duplicate_selection_tests = Path(
         "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs"
     )
+    collection_selection_command_duplicate_selection_tests_fixtures = Path(
+        "apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests/fixtures.rs"
+    )
     collection_children = (
         collection_asset_grid,
         collection_asset_grid_actions,
@@ -332,6 +335,7 @@ def main() -> None:
         collection_selection_command_duplicate_naming_tests,
         collection_selection_command_duplicate_selection,
         collection_selection_command_duplicate_selection_tests,
+        collection_selection_command_duplicate_selection_tests_fixtures,
     )
 
     checks = [
@@ -2920,15 +2924,53 @@ def main() -> None:
             "collection duplicate selection tests owner",
             collection_selection_command_duplicate_selection_tests,
             required=[
-                "fn selection_state(",
-                "fn selected_ids(",
-                "fn anchor_id(",
+                "mod fixtures;",
+                "use fixtures::{",
                 "authoring_parity_collection_assets()",
                 "proof_collection_duplicate_selection_result(",
                 "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
                 "proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists",
             ],
             forbidden=[
+                "fn selection_state(",
+                "fn selected_ids(",
+                "fn anchor_id(",
+                "pub(super) fn proof_collection_duplicate_selection_result(",
+                "let mut duplicates_by_source = HashMap::<Arc<str>, ProofCollectionAsset>::new();",
+                "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
+                "fn proof_collection_duplicate_shortcut_matches_primary_d_only",
+                "fn proof_collection_unique_copy_text(",
+                "fn proof_collection_duplicate_label_candidate(",
+                "fn proof_collection_duplicate_id_candidate(",
+                "fn proof_collection_duplicate_path_candidate(",
+                "pub(super) struct ProofCollectionDuplicateNameRegistry",
+                "ProofCollectionDeleteResult",
+                "proof_collection_delete_selection(",
+                "proof_collection_delete_key_matches(",
+                "render_collection_first_asset_browser_proof",
+                "TextField",
+                "DragPreviewGhostOptions",
+                "drag_preview_ghost",
+                "kit::ButtonOptions",
+                "kit::ChildRegionOptions",
+                "kit::GridOptions",
+                "kit::MenuItemOptions",
+            ],
+        ),
+        SourceCheck(
+            "collection duplicate selection tests fixtures owner",
+            collection_selection_command_duplicate_selection_tests_fixtures,
+            required=[
+                "pub(super) fn selection_state(",
+                "pub(super) fn selected_ids(",
+                "pub(super) fn anchor_id(",
+                "ImUiMultiSelectState::new(",
+            ],
+            forbidden=[
+                "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
+                "proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists",
+                "authoring_parity_collection_assets()",
+                "proof_collection_duplicate_selection_result(",
                 "pub(super) fn proof_collection_duplicate_selection_result(",
                 "let mut duplicates_by_source = HashMap::<Arc<str>, ProofCollectionAsset>::new();",
                 "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",

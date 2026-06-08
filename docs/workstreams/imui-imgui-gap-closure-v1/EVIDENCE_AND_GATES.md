@@ -37066,8 +37066,8 @@ Fret Examples Collection Duplicate Selection Tests Owner Split Evidence - 2026-0
   `ProofCollectionDuplicateNameRegistry::from_assets(...)`, duplicate insertion,
   `proof_collection_assets_in_visible_order(...)`, next selection/anchor repair, active copied-tile
   repair, `ImUiMultiSelectState::new(...)`, and `#[cfg(test)] mod tests;`.
-  `selection/commands/duplicate/selection/tests.rs` owns `selection_state(...)`,
-  `selected_ids(...)`, `anchor_id(...)`, `authoring_parity_collection_assets()`,
+  `selection/commands/duplicate/selection/tests.rs` owns `mod fixtures;`, imports selection
+  fixtures, `authoring_parity_collection_assets()`,
   `proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy`, and
   `proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists`.
   `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
@@ -37082,6 +37082,41 @@ Fret Examples Collection Duplicate Selection Tests Owner Split Evidence - 2026-0
   `python tools\gate_imui_workstream_source.py`;
   `python tools\check_workstream_catalog.py`;
   `cargo nextest run -p fret-examples proof_collection_duplicate --no-fail-fast` (4/4 passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`
+  (10/10 passed);
+  `git diff --check` (passed with only the existing Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`).
+
+Fret Examples Collection Duplicate Selection Fixture Owner Split Evidence - 2026-06-09:
+
+- Claim:
+  `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs`
+  was split again so selection fixture helpers live in the demo-local
+  `collection/selection/commands/duplicate/selection/tests/fixtures.rs` fixture owner without
+  changing duplicate behavior, naming, selection repair, keyboard/button/context-menu flow, public
+  APIs, or app-owned no-helper-widening.
+- Evidence anchors: `selection/commands/duplicate/selection/tests.rs` owns `mod fixtures;`,
+  imports helpers through `use fixtures::{...}`, keeps `authoring_parity_collection_assets()`,
+  `proof_collection_duplicate_selection_result(...)`,
+  `proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy`, and
+  `proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists`.
+  `selection/commands/duplicate/selection/tests/fixtures.rs` owns `selection_state(...)`,
+  `selected_ids(...)`, `anchor_id(...)`, and `ImUiMultiSelectState::new(...)`.
+  `WORKSTREAM.json`, `tools/gate_imui_editor_collection_source.py`,
+  `tools/gate_imui_workstream_source.py`, and the collection surface tests freeze the split fixture
+  owner boundary.
+- Verified gates:
+  `cargo fmt -p fret-examples --check`;
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`;
+  `python -m py_compile tools\gate_imui_editor_collection_source.py tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`;
+  `python tools\gate_imui_editor_collection_source.py`;
+  `python tools\gate_imui_workstream_source.py`;
+  `python tools\check_workstream_catalog.py`;
+  `cargo nextest run -p fret-examples proof_collection_duplicate_selection --no-fail-fast` (2/2
+  passed);
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_command_package_surface --no-fail-fast`
+  (2/2 passed);
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`
   (10/10 passed);
   `git diff --check` (passed with only the existing Git CRLF normalization warning for

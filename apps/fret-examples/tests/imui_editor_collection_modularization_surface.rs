@@ -147,6 +147,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let selection_duplicate_selection_tests_source = include_str!(
         "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs"
     );
+    let selection_duplicate_selection_tests_fixtures_source = include_str!(
+        "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests/fixtures.rs"
+    );
     let status_readouts_source =
         include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs");
 
@@ -2532,9 +2535,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
     for needle in [
-        "fn selection_state(",
-        "fn selected_ids(",
-        "fn anchor_id(",
+        "mod fixtures;",
+        "use fixtures::{",
         "authoring_parity_collection_assets()",
         "proof_collection_duplicate_selection_result(",
         "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
@@ -2542,10 +2544,13 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     ] {
         assert!(
             selection_duplicate_selection_tests_source.contains(needle),
-            "the demo-local collection duplicate selection tests owner should keep duplicate selection fixtures and behavior coverage explicit; missing `{needle}`"
+            "the demo-local collection duplicate selection tests owner should keep fixture imports and behavior coverage explicit; missing `{needle}`"
         );
     }
     for needle in [
+        "fn selection_state(",
+        "fn selected_ids(",
+        "fn anchor_id(",
         "pub(super) fn proof_collection_duplicate_selection_result(",
         "let mut duplicates_by_source = HashMap::<Arc<str>, ProofCollectionAsset>::new();",
         "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
@@ -2571,6 +2576,47 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !selection_duplicate_selection_tests_source.contains(needle),
             "the demo-local collection duplicate selection tests owner should not take duplicate command flow, naming internals, delete, render, or UI policy; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "pub(super) fn selection_state(",
+        "pub(super) fn selected_ids(",
+        "pub(super) fn anchor_id(",
+        "ImUiMultiSelectState::new(",
+    ] {
+        assert!(
+            selection_duplicate_selection_tests_fixtures_source.contains(needle),
+            "the demo-local collection duplicate selection tests fixture owner should keep selection fixtures explicit; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "proof_collection_duplicate_selection_reselects_visible_copies_and_preserves_active_copy",
+        "proof_collection_duplicate_selection_uses_unique_copy_suffixes_when_copy_exists",
+        "authoring_parity_collection_assets()",
+        "proof_collection_duplicate_selection_result(",
+        "pub(super) fn proof_collection_duplicate_selection_result(",
+        "pub(in super::super::super) fn proof_collection_duplicate_shortcut_matches(",
+        "fn proof_collection_duplicate_shortcut_matches_primary_d_only",
+        "fn proof_collection_unique_copy_text(",
+        "fn proof_collection_duplicate_label_candidate(",
+        "fn proof_collection_duplicate_id_candidate(",
+        "fn proof_collection_duplicate_path_candidate(",
+        "pub(super) struct ProofCollectionDuplicateNameRegistry",
+        "ProofCollectionDeleteResult",
+        "proof_collection_delete_selection(",
+        "proof_collection_delete_key_matches(",
+        "render_collection_first_asset_browser_proof",
+        "TextField",
+        "DragPreviewGhostOptions",
+        "drag_preview_ghost",
+        "kit::ButtonOptions",
+        "kit::ChildRegionOptions",
+        "kit::GridOptions",
+        "kit::MenuItemOptions",
+    ] {
+        assert!(
+            !selection_duplicate_selection_tests_fixtures_source.contains(needle),
+            "the demo-local collection duplicate selection tests fixture owner should not take behavior tests, duplicate command flow, naming internals, delete, render, or UI policy; unexpected `{needle}`"
         );
     }
     for needle in [

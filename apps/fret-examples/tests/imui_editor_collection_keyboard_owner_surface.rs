@@ -133,6 +133,10 @@ fn imui_editor_proof_demo_keeps_collection_keyboard_owner_app_owned_and_explicit
             "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs"
         ),
         "\n",
+        include_str!(
+            "../src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests/fixtures.rs"
+        ),
+        "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename.rs"),
         "\n",
         include_str!("../src/imui_editor_proof_demo/collection/rename/tests.rs"),

@@ -8475,6 +8475,17 @@ no-helper-widening boundary remain unchanged, while the collection source gate, 
 gate, manifest, and surface tests now freeze the duplicate selection tests owner boundary. The
 duplicate selection tests owner boundary is now tracked as its own source-gated proof slice.
 
+2026-06-09 collection duplicate selection fixture owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/duplicate/selection/tests.rs`
+now keeps the duplicate selection behavior tests and imports fixture helpers through
+`mod fixtures;` while routing selection fixture construction/projection through the demo-local
+`collection/selection/commands/duplicate/selection/tests/fixtures.rs` fixture owner. Copy suffix
+text, duplicate insertion order, visible-order copy reselect behavior, active copied-tile
+preservation, keyboard/button/context-menu command behavior, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged, while the collection source gate, workstream source
+gate, manifest, and surface tests now freeze the duplicate selection fixture owner boundary. The
+duplicate selection fixture owner boundary is now tracked as its own source-gated proof slice.
+
 2026-06-08 collection delete command tests owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection/selection/commands/delete.rs` now keeps
 `ProofCollectionDeleteResult`, Delete/Backspace matching, deletion/refocus transition logic, and
