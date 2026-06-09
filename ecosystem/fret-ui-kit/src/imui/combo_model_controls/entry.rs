@@ -2,8 +2,11 @@ use std::sync::Arc;
 
 use fret_ui::UiHost;
 
-use super::super::{ComboModelOptions, ComboOptions, ResponseExt, UiWriterImUiFacadeExt};
+use super::super::{ComboModelOptions, ResponseExt, UiWriterImUiFacadeExt};
 use super::{popup_items, response};
+
+mod options;
+mod state;
 
 pub(in crate::imui) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -14,36 +17,17 @@ pub(in crate::imui) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacade
     options: ComboModelOptions,
 ) -> ResponseExt {
     let model = model.clone();
-    let enabled = options.enabled && ui.with_cx_mut(|cx| !super::super::imui_is_disabled(cx));
-
-    let selected = ui.with_cx_mut(|cx| {
-        cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
-            .unwrap_or(None)
-    });
-
-    let preview: Arc<str> = selected
-        .clone()
-        .or_else(|| options.placeholder.clone())
-        .unwrap_or_else(|| Arc::from("Select..."));
-    let popup_open = ui.popup_open_model(id);
+    let state = state::read_combo_model_entry_state(ui, id, &model, &options);
 
     let combo = ui.combo_with_options(
         id,
         label.clone(),
-        preview,
-        ComboOptions {
-            enabled,
-            focusable: options.focusable,
-            a11y_label: options.a11y_label.clone(),
-            test_id: options.test_id.clone(),
-            popup: options.popup,
-            activate_shortcut: options.activate_shortcut,
-            shortcut_repeat: options.shortcut_repeat,
-        },
+        state.preview,
+        options::combo_model_trigger_options(&options, state.enabled),
         {
             let model = model.clone();
-            let selected_before = selected.clone();
-            let popup_open = popup_open.clone();
+            let selected_before = state.selected.clone();
+            let popup_open = state.popup_open.clone();
             let trigger_test_id = options.test_id.clone();
             move |ui| {
                 popup_items::render_combo_model_items(
@@ -60,5 +44,5 @@ pub(in crate::imui) fn combo_model_with_options<H: UiHost, W: UiWriterImUiFacade
         },
     );
 
-    response::finish_combo_model_response(ui, &model, enabled, combo)
+    response::finish_combo_model_response(ui, &model, state.enabled, combo)
 }

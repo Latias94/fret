@@ -2,6 +2,48 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI combo-model entry state owner split - 2026-06-09
+
+This maintenance slice keeps combo-model entry assembly focused without changing ComboBox,
+combo-model selection, placeholder preview, popup open state, response lifecycle, popup item
+rendering, trigger keyboard, visual, or public facade behavior:
+
+- IMUI combo-model entry state owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/entry.rs` keeps combo-model entry assembly
+  and popup item closure wiring only.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/entry/state.rs` owns enabled-state
+  resolution, selected-model readback, preview fallback selection, and popup-open model lookup.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/entry/options.rs` owns mapping
+  `ComboModelOptions` into trigger `ComboOptions`.
+- No public API or runtime behavior changed; the existing
+  `entry::combo_model_with_options(...)` private call surface remains the combo-model entry.
+- The source gate now freezes combo-model state readback and trigger option mapping out of the entry
+  assembly hub and rejects popup item, response, and selection mutation logic from drifting across
+  entry boundaries.
+- Evidence anchor: `combo_model_controls/entry.rs` declares `mod options;` and `mod state;`,
+  reads `state::read_combo_model_entry_state(...)`, maps trigger options through
+  `options::combo_model_trigger_options(...)`, and forwards `state.enabled` to response finish.
+- Evidence anchor: `entry/state.rs` contains only enabled/read-model/preview/popup-open state
+  projection.
+- Evidence anchor: `entry/options.rs` contains only `ComboModelOptions` to `ComboOptions` mapping.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the combo-model entry hub, state
+  owner, options owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast` - passed, 11/11.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI combo-model popup item owner split - 2026-06-09
 
 This maintenance slice keeps combo-model popup item rendering focused without changing ComboBox,
