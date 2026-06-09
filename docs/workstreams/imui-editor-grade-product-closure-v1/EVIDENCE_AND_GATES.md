@@ -1049,6 +1049,9 @@ This maintenance slice keeps the product-closure read aligned with the closed
 - IMUI Demo/Metrics/Debug P0 gap matrix refresh - 2026-06-03.
 - The Demo/Metrics/Debug route/product action surface is closed for CLI/DevTools GUI/MCP
   first-open discovery and copyable product actions.
+- The canonical workbench now keeps the Demo/Metrics/Debug resident chrome in the private
+  `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` owner, leaving the route root
+  focused on product shell and editor workflow composition.
 - Broader DevTools GUI maturity, command-palette integration, and evidence-browser polish remain
   diagnostics-consumer follow-ons rather than `fret-imui` or runtime API widening.
 - Evidence anchor: D/M/D product route closed for CLI/GUI/MCP first-open discovery.

@@ -1899,6 +1899,31 @@ Evidence:
 - `TODO.md` and `MILESTONES.md` now record the copy slice as a thin productization step on the
   canonical workbench route without reopening the closed editor-notes inspector command lane.
 
+## Canonical Workbench Quick-Action Owner Split Evidence - 2026-06-09
+
+Claim verified: the canonical workbench route root no longer owns Demo/Metrics/Debug quick-action
+policy, command mapping, clipboard effects, or action-strip rendering directly. The route root keeps
+the product-facing app shell and editor-notes workflow composition, while
+`apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` owns the resident
+Demo/Metrics/Debug chrome.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_workbench_demo.rs` declares `mod quick_actions;`, mounts
+  `quick_actions::render_workbench_quick_action_strip(cx)`, keeps `ImUiEditorWorkbenchView`,
+  delegates editor workflow rendering through `self.notes.render(cx)`, and keeps the workflow under
+  `imui-editor-workbench.workflow`.
+- `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` owns
+  `WORKBENCH_QUICK_ACTIONS`, quick-action command mapping, `Copy command`, `Copy commands`,
+  `Effect::ClipboardWriteText`, action-strip test IDs, and the Demo/Metrics/Debug title/status
+  rendering.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` now reads both the route
+  root and quick-action owner, requires the owner to carry Demo/Metrics/Debug action-strip behavior,
+  and asserts the route root does not carry those details.
+- `tools/gate_imui_workstream_source.py` now source-checks the route root and quick-action owner
+  separately: root must route to the child owner, and the child owner must not own the editor-notes
+  workflow host.
+
 Focused gates:
 
 - `cargo fmt --package fret-examples`: pass.

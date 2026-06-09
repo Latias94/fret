@@ -1,12 +1,14 @@
 #[test]
 fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     let route_source = include_str!("../src/imui_editor_workbench_demo.rs");
+    let quick_actions_source = include_str!("../src/imui_editor_workbench_demo/quick_actions.rs");
     let shared_first_open_source = include_str!("../../fret-first-open/src/lib.rs");
     let editor_notes_source = include_str!("../src/editor_notes_demo.rs");
     let lib_source = include_str!("../src/lib.rs");
     let bin_source = include_str!("../../fret-demo/src/bin/imui_editor_workbench_demo.rs");
     let demo_main_source = include_str!("../../fret-demo/src/main.rs");
-    let workbench_contract_source = format!("{route_source}\n{shared_first_open_source}");
+    let workbench_contract_source =
+        format!("{route_source}\n{quick_actions_source}\n{shared_first_open_source}");
 
     for needle in [
         "Canonical IMUI editor workbench route.",
@@ -21,6 +23,8 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
         "notes: crate::editor_notes_demo::EditorNotesDemoView",
         "crate::editor_notes_demo::EditorNotesDemoView::init(app, window)",
         "self.notes.render(cx)",
+        "mod quick_actions;",
+        "quick_actions::render_workbench_quick_action_strip(cx)",
     ] {
         assert!(
             route_source.contains(needle),
@@ -81,6 +85,23 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
             "canonical workbench route should keep Demo/Metrics/Debug quick actions resident in first-open chrome; missing `{needle}`"
         );
     }
+    for needle in [
+        "const WORKBENCH_QUICK_ACTIONS: &[WorkbenchQuickActionSpec]",
+        "fn workbench_copy_text_on_activate(",
+        "fn workbench_quick_action_command_bundle_text() -> String {",
+        "Effect::ClipboardWriteText",
+        "shadcn::Button::new(\"Copy command\")",
+        "shadcn::Button::new(\"Copy commands\")",
+    ] {
+        assert!(
+            quick_actions_source.contains(needle),
+            "canonical workbench quick-action owner should carry Demo/Metrics/Debug action-strip behavior; missing `{needle}`"
+        );
+        assert!(
+            !route_source.contains(needle),
+            "canonical workbench route root should delegate Demo/Metrics/Debug action-strip behavior to quick_actions; unexpected `{needle}`"
+        );
+    }
     assert!(
         lib_source.contains("pub mod imui_editor_workbench_demo;"),
         "fret-examples should export the canonical IMUI workbench route"
@@ -125,6 +146,8 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
     let shared_first_open_source = include_str!("../../fret-first-open/src/lib.rs");
     let fretboard_demos = include_str!("../../fretboard/src/demos.rs");
     let devtools_native = include_str!("../../fret-devtools/src/native.rs");
+    let devtools_command_catalog =
+        include_str!("../../fret-devtools/src/native/command_catalog.rs");
     let devtools_demo_metrics_debug = include_str!("../../fret-devtools/src/demo_metrics_debug.rs");
     let product_chain_gate = include_str!("../../../tools/diag_gate_imui_product_chain.py");
     let shared_discovery_contract = format!("{fretboard_demos}\n{shared_first_open_source}");
@@ -195,10 +218,11 @@ fn imui_editor_workbench_demo_is_promoted_in_docs_and_discovery() {
     );
 
     assert!(
-        devtools_native.contains("const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND")
+        devtools_native.contains("use command_catalog::*;")
+            && devtools_command_catalog.contains("const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND")
             && shared_first_open_source.contains("pub const DEMO_EDITOR_WORKBENCH_COMMAND: &str =")
             && shared_first_open_source
                 .contains("cargo run -p fret-demo --bin imui_editor_workbench_demo"),
-        "apps/fret-devtools/src/native.rs should keep the shared canonical workbench command alias and shared contract owner"
+        "apps/fret-devtools/src/native/command_catalog.rs should keep the shared canonical workbench command alias and native.rs should import the catalog"
     );
 }

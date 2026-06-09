@@ -537,6 +537,14 @@ selected Demo/Metrics/Debug command or the full command bundle through the exist
 `Effect::ClipboardWriteText` boundary while keeping execution with DevTools and fretboard. The
 editor workflow remains mounted under `imui-editor-workbench.workflow`.
 
+2026-06-09 canonical workbench quick-action owner-split result:
+`apps/fret-examples/src/imui_editor_workbench_demo.rs` now keeps the product-facing route host,
+editor-notes workflow composition, action-strip region, and workflow slot only. The private
+`apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` owner contains the
+Demo/Metrics/Debug action table, command mapping, clipboard copy behavior, action-strip buttons,
+status readouts, and stable `imui-editor-workbench.action-*` test IDs. Route behavior, discovery,
+copy affordances, and DevTools/fretboard execution ownership remain unchanged.
+
 2026-06-03 Demo/Metrics/Debug first-open shared contract result:
 `apps/fret-first-open/src/lib.rs` now owns the static `demo_metrics_debug` first-open route
 contract, including route docs/owner metadata plus the shared demo, metrics, debug, handoff, and

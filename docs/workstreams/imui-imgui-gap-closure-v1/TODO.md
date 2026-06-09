@@ -64,6 +64,13 @@ Last updated: 2026-06-09
       currently selected Demo/Metrics/Debug command or the full command bundle through the existing
       runtime `Effect::ClipboardWriteText` boundary while keeping execution in DevTools and
       fretboard.
+- [x] Split the canonical workbench quick-action strip into a private child owner without changing
+      the product route, editor-notes workflow mount, command strings, copy affordances, or
+      DevTools/fretboard execution ownership.
+      Result: `apps/fret-examples/src/imui_editor_workbench_demo.rs` keeps the route host and
+      workflow composition only; `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs`
+      owns the Demo/Metrics/Debug action table, command mapping, clipboard copy behavior, action
+      buttons, status readouts, and stable action-strip test IDs.
 - [x] Factor the static Demo/Metrics/Debug first-open route contract into an app-level shared owner
       so fretboard, DevTools GUI, MCP, and the canonical workbench stop duplicating route/action
       command strings and route metadata.
