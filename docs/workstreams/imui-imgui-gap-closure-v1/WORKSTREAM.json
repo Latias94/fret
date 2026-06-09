@@ -1696,6 +1696,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/box_select.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/command_buttons.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/context_menu.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/drag_drop.rs",
     "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_context_menu_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs",
