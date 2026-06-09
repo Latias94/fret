@@ -5,13 +5,13 @@ use fret_ui::element::AnyElement;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::super::containers::build_imui_children_with_focus;
 use super::super::{ImUiFacade, VirtualListOptions, VirtualListResponse};
 use super::range::VirtualListRenderedRangeTracker;
-use super::row::{pack_row_children, row_height_for_index, row_test_id, wrap_row};
 use super::runtime::{list_layout, resolved_measure_mode, runtime_options};
+use row_item::{VirtualListRowItemInput, build_virtual_list_row_item};
 
 mod output;
+mod row_item;
 
 pub(in crate::imui) fn virtual_list_element<H: UiHost, K, R>(
     cx: &mut ElementContext<'_, H>,
@@ -44,24 +44,18 @@ where
             &handle,
             &mut key_at,
             move |cx, index| {
-                rendered_range.record(index);
-
-                let mut out = Vec::new();
-                build_imui_children_with_focus(cx, &mut out, build_focus.clone(), |ui| {
-                    row(ui, index);
-                });
-                let content = pack_row_children(cx, out);
-                wrap_row(
+                build_virtual_list_row_item(
                     cx,
-                    index,
-                    content,
-                    row_test_id(root_test_id.as_ref(), index),
-                    row_height_for_index(
+                    VirtualListRowItemInput {
                         index,
-                        resolved_measure_mode,
-                        options.estimate_row_height,
-                        row_height_fn.as_ref(),
-                    ),
+                        build_focus: build_focus.clone(),
+                        rendered_range: &rendered_range,
+                        root_test_id: root_test_id.as_ref(),
+                        measure_mode: resolved_measure_mode,
+                        estimate_row_height: options.estimate_row_height,
+                        row_height_fn: row_height_fn.as_ref(),
+                    },
+                    &mut row,
                 )
             },
         );

@@ -1245,6 +1245,32 @@ Fresh gates:
 - `git diff --check` - passed with the known CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+## IMUI virtual list row-item owner split - 2026-06-09
+
+This maintenance slice keeps the immediate virtual-list element owner focused on runtime list
+mounting while moving per-row IMUI child construction and row wrapping into a private row-item owner:
+
+- IMUI virtual list row-item owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element/row_item.rs` owns rendered-range recording,
+  including IMUI child building, row test-id projection, row-height resolution, and wrap_row.
+- Evidence anchor: `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/element.rs` keeps
+  virtual_list_keyed_with_layout mounting, scroll handle setup, output decoration, and response
+  projection.
+- Public VirtualListOptions, VirtualListResponse, row semantics, test IDs, known/measured row-height
+  behavior, keep-alive, overscan, key cache, and focus forwarding remain unchanged.
+- `tools/gate_imui_workstream_source.py` now checks the row-item owner separately from element,
+  output, range, row, and runtime owners.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui virtual_list --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+
 ## IMUI text picker input-root type owner split - 2026-06-03
 
 This maintenance slice keeps the text picker input-root render owner focused on composition while
