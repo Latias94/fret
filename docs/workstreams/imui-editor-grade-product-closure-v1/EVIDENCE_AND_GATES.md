@@ -1214,6 +1214,37 @@ Fresh gates:
 - `python tools\check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
 
+## IMUI text picker input-root element/root owner split - 2026-06-09
+
+This maintenance slice keeps the text picker input-root hub focused on request orchestration while
+moving the text element assembly and fill-width root container construction into private owners:
+
+- IMUI text picker input-root element/root owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/element.rs` owns ResponseExt capture
+  and input_text_model_element_with_options_and_semantics mounting.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input/root.rs` owns ContainerProps defaults,
+  Length::Fill width, Length::Auto height, and the root container element.
+- Evidence anchor: input.rs keeps request unpacking, assistive semantics lookup, element/root owner
+  calls, and keyboard handler install.
+- Public input-text picker options, responses, active-descendant semantics, root fill sizing,
+  input-focused keyboard navigation, popup-open forwarding, and completion/history picker behavior
+  remain unchanged.
+- `tools/gate_imui_workstream_source.py` now checks input element and root owners separately from
+  hub orchestration, types, semantics, keyboard, and options owners.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui text_picker --no-fail-fast` - passed.
+- `cargo nextest run -p fret-imui text_picker --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed with the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI text picker input-root type owner split - 2026-06-03
 
 This maintenance slice keeps the text picker input-root render owner focused on composition while

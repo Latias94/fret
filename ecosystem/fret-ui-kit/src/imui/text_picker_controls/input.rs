@@ -1,12 +1,14 @@
-use fret_ui::element::{ContainerProps, Length};
 use fret_ui::{ElementContext, UiHost};
 
-use super::super::ResponseExt;
+use element::build_text_picker_input_element;
 use keyboard::{InputRootKeyboardHandlerRequest, install_input_root_keyboard_handler};
+use root::build_text_picker_input_root_container;
 use semantics::input_root_assistive_semantics;
 
+mod element;
 mod keyboard;
 mod options;
+mod root;
 mod semantics;
 mod types;
 
@@ -35,20 +37,9 @@ pub(super) fn render_text_picker_input_root<H: UiHost>(
     let assistive_semantics =
         input_root_assistive_semantics(picker_expanded, active_element, popup_panel_id);
 
-    let mut response = ResponseExt::default();
-    let input_element =
-        super::super::text_controls::input_text_model_element_with_options_and_semantics(
-            cx,
-            model.clone(),
-            input_options,
-            assistive_semantics,
-            &mut response,
-        );
-
-    let mut props = ContainerProps::default();
-    props.layout.size.width = Length::Fill;
-    props.layout.size.height = Length::Auto;
-    let root = cx.container(props, |_cx| vec![input_element]);
+    let (input_element, response) =
+        build_text_picker_input_element(cx, model.clone(), input_options, assistive_semantics);
+    let root = build_text_picker_input_root_container(cx, input_element);
 
     install_input_root_keyboard_handler(
         cx,
