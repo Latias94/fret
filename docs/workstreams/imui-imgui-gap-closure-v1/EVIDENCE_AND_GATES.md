@@ -1976,7 +1976,7 @@ Evidence:
   existing model slot helpers.
 - `apps/fret-examples/src/imui_editor_proof_demo.rs` now calls
   `authoring_parity::shared_models(cx)` once and passes the bundle to
-  `render_authoring_parity_surface(...)` and `authoring_parity::render_shared_state(...)`.
+  the authoring parity surface and `authoring_parity::render_shared_state(...)`.
 - `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/shared_state.rs` now consumes
   `AuthoringParityModels` instead of accepting the individual model handles.
 - `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
@@ -1993,6 +1993,43 @@ Focused gates:
   pass, 1 test.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
+
+## Authoring Parity Render Surface Owner Split Evidence - 2026-06-10
+
+Claim verified: the editor proof route root no longer owns authoring parity render composition.
+The demo-local authoring parity surface owner now owns the declarative/imui paired-control proof,
+gradient editor construction, drag/drop proof, collection browser mount, and reorderable outliner
+proof; the route root keeps proof composition and mounts the child owner.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` mounts
+  `authoring_parity::render_surface(cx, parity_models_for_surface.clone())` and no longer defines
+  `render_authoring_parity_surface(...)`, `render_authoring_parity_declarative_group(...)`,
+  `render_authoring_parity_imui_group(...)`, `build_authoring_parity_gradient_editor(...)`, or
+  `render_authoring_parity_imui_host(...)`.
+- `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity.rs` now declares `mod surface;`
+  and re-exports `render_surface(...)` through the demo-local authoring parity hub.
+- `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/surface.rs` owns the paired
+  declarative/imui control groups, theme diagnostics readouts, gradient editor builder, typed
+  drag/drop chips, collection browser mount, and reorderable outliner proof.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` now freeze the surface owner and reject route-root drift
+  back to authoring parity render composition.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples` and `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` dead-code warning.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass; 1/1 test passed with the existing `fret-chart::visual_map_track_at` dead-code warning.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 541 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass; reported only the expected Git CRLF normalization warnings for
+  `apps/fret-examples/src/imui_editor_proof_demo.rs` and `tools/gate_imui_workstream_source.py`.
 
 ## Canonical Workbench Persistent Action Strip Evidence - 2026-06-03
 

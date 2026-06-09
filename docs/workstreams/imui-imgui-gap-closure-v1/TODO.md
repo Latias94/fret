@@ -8465,6 +8465,13 @@ opening the slice.
       `shared_models(...)`, while `imui_editor_proof_demo.rs` gathers one bundle and passes it to
       the parity surface/shared-state owners instead of initializing nine individual
       `authoring_parity::*_model(...)` handles in the route root.
+- [x] Split the authoring parity render surface out of the proof route root without changing the
+      shared model keys, declarative/imui paired controls, drag/drop proof, outliner reorder proof,
+      collection proof routing, readout text, test IDs, or app-owned no-helper-widening boundary.
+      Result: `authoring_parity/surface.rs` owns `render_surface(...)`, declarative and imui group
+      rendering, gradient editor construction, authoring drag/drop chips, collection browser mount,
+      and reorderable outliner proof; `imui_editor_proof_demo.rs` now only mounts
+      `authoring_parity::render_surface(...)` from the route composition.
 - [x] Split collection proof asset fixture record/defaults out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
       `collection/assets.rs` child owner without changing stored asset defaults, asset ids,

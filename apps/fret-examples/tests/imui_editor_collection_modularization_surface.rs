@@ -4,6 +4,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let authoring_parity_source = include_str!("../src/imui_editor_proof_demo/authoring_parity.rs");
     let authoring_parity_models_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
+    let authoring_parity_surface_source =
+        include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let asset_grid_tile_source =
@@ -184,12 +186,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let status_readouts_source =
         include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs");
 
-    for needle in [
-        "mod authoring_parity;",
-        "mod collection;",
-        "collection::render_collection_first_asset_browser_proof(ui);",
-        "authoring_parity::drag_assets()",
-    ] {
+    for needle in ["mod authoring_parity;", "mod collection;"] {
         assert!(
             demo_source.contains(needle),
             "imui_editor_proof_demo should keep the collection proof routed through demo-local owners; missing `{needle}`"
@@ -212,12 +209,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "mod models;",
         "mod shared_state;",
+        "mod surface;",
         "pub(super) use models::{",
         "AuthoringParityModels",
         "shared_models",
         "drag_assets",
         "outliner_items_model",
         "pub(super) use shared_state::render_shared_state;",
+        "pub(super) use surface::render_surface;",
     ] {
         assert!(
             authoring_parity_source.contains(needle),
@@ -240,6 +239,34 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
             "the demo-local authoring parity model owner should own shared proof fixtures; missing `{needle}`"
         );
     }
+
+    for needle in [
+        "pub(in super::super) fn render_surface(",
+        "fn render_authoring_parity_declarative_group(",
+        "fn render_authoring_parity_imui_group(",
+        "fn build_authoring_parity_gradient_editor(",
+        "fn render_authoring_parity_imui_host",
+        "fn authoring_parity_shading_items() -> Arc<[EnumSelectItem]>",
+        "let asset_chips = drag_assets();",
+        "collection::render_collection_first_asset_browser_proof(ui);",
+        "sortable_row(ui, row.response(), payload)",
+        "publish_cross_window_drag_preview_ghost_with_options(",
+    ] {
+        assert!(
+            authoring_parity_surface_source.contains(needle),
+            "the demo-local authoring parity surface owner should own render composition; missing `{needle}`"
+        );
+        assert!(
+            !demo_source.contains(needle),
+            "imui_editor_proof_demo should delegate authoring parity render composition to the surface owner; unexpected `{needle}`"
+        );
+    }
+
+    assert!(
+        demo_source
+            .contains("authoring_parity::render_surface(cx, parity_models_for_surface.clone())"),
+        "imui_editor_proof_demo should mount the authoring parity surface through the child owner"
+    );
 
     for needle in [
         "authoring_parity::name_model(cx)",

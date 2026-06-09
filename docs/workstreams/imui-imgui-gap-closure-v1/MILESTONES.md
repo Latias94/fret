@@ -8112,10 +8112,19 @@ hub/child-owner boundary.
 `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/models.rs` now owns
 `AuthoringParityModels` and `shared_models(...)` as the single shared-control model bundle for the
 authoring parity surface. `imui_editor_proof_demo.rs` now gathers one `parity_models` bundle and
-passes clones to `render_authoring_parity_surface(...)` and
+passes clones to the authoring parity surface and
 `authoring_parity::render_shared_state(...)` instead of initializing the nine shared control model
 handles directly in the proof route root. Shared model keys, render behavior, readout text, test
 IDs, and the app-owned no-helper-widening boundary remain unchanged.
+
+2026-06-10 authoring parity render surface owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/surface.rs` now owns the
+authoring parity render composition: `render_surface(...)`, declarative and imui paired control
+groups, gradient editor construction, authoring drag/drop chips, collection browser mount, and
+reorderable outliner proof. `imui_editor_proof_demo.rs` now only mounts
+`authoring_parity::render_surface(...)` from the route composition and keeps the route/workbench
+shell plus main editor proof. Shared model keys, paired-control behavior, collection proof routing,
+readout text, test IDs, and the app-owned no-helper-widening boundary remain unchanged.
 
 2026-06-07 collection proof assets owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
