@@ -3991,6 +3991,14 @@ Last updated: 2026-06-10
       Result: `text_picker_controls/core/keyboard_state.rs` owns keyboard model creation and
       snapshot reconciliation. `text_picker_controls/core.rs` keeps model/candidate/input/open/
       popup/response orchestration.
+- [x] Split the `fret-imui` completion keyboard proof file into active-candidate commit and
+      active-descendant semantics child owners without changing text-picker runtime behavior,
+      public APIs, or the `fret-ui-kit::imui` text-picker implementation.
+      Result: `models_text_picker/completion_keyboard.rs` now keeps only shared imports and module
+      routing. `completion_keyboard/commit_candidate.rs` owns ArrowDown/Enter active candidate
+      commit proof, while `completion_keyboard/active_descendant.rs` owns ComboBox
+      active-descendant, expanded, and controlled popup semantics proof. The IMUI source gate and
+      workstream source bundle freeze the child-owner split.
 - [x] Split IMUI child-region resize pointer-handle behavior into a private owner without changing
       X/Y resize response setup, min/max forwarding, handle layout/axis constants, pointer-region
       drag start/move/up behavior, cursor selection, drag response population, started/stopped edge

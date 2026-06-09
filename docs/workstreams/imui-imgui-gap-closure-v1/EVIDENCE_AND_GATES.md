@@ -6365,6 +6365,34 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Completion Keyboard Proof Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` completion keyboard proof surface is split by active-candidate
+commit and active-descendant semantics owners without changing text-picker runtime code, public
+APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_text_picker/completion_keyboard.rs` now keeps only shared
+  imports and child-owner routing for `active_descendant` and `commit_candidate`.
+- `completion_keyboard/commit_candidate.rs` owns ArrowDown/Enter active candidate commit proof.
+- `completion_keyboard/active_descendant.rs` owns ComboBox active-descendant, expanded, and
+  controlled popup semantics proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui models_text_picker::completion_keyboard --no-fail-fast`: pass,
+  2 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor NumericInput Affix Segment Owner-Split Evidence - 2026-06-01
 
 Claim verified: editor `NumericInput` prefix/suffix affix segment rendering moved out of

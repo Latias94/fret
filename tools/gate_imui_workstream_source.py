@@ -46745,6 +46745,78 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_text_picker/mod.rs"),
+            required=[
+                "fn picker_option_active(",
+                "mod completion_keyboard;",
+                "mod completion_popup;",
+                "mod empty_keyboard;",
+                "mod history_keyboard;",
+                "mod history_popup;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn input_text_completion_picker_keyboard_navigation_commits_active_candidate()",
+                "fn input_text_completion_picker_keyboard_navigation_exposes_active_descendant_semantics()",
+                "input_text_completion_model_with_options(",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_text_picker/completion_keyboard.rs"),
+            required=[
+                "use super::*;",
+                "mod active_descendant;",
+                "mod commit_candidate;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn input_text_completion_picker_keyboard_navigation_commits_active_candidate()",
+                "fn input_text_completion_picker_keyboard_navigation_exposes_active_descendant_semantics()",
+                "input_text_completion_model_with_options(",
+                "SemanticsRole::ComboBox",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/models_text_picker/completion_keyboard/commit_candidate.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn input_text_completion_picker_keyboard_navigation_commits_active_candidate()",
+                "\"imui-input-text-completion-picker-keyboard.input\"",
+                "picker_option_active(",
+                "KeyCode::Enter",
+                "picked_index.get(), Some(1)",
+                "Some(\"Beta\")",
+            ],
+            forbidden=[
+                "fn input_text_completion_picker_keyboard_navigation_exposes_active_descendant_semantics()",
+                "SemanticsRole::ComboBox",
+                "active_descendant",
+                "\"imui-input-text-completion-picker-a11y",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/models_text_picker/completion_keyboard/active_descendant.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn input_text_completion_picker_keyboard_navigation_exposes_active_descendant_semantics()",
+                "\"imui-input-text-completion-picker-a11y.input\"",
+                "\"imui-input-text-completion-picker-a11y.option.0\"",
+                "SemanticsRole::ComboBox",
+                "input_node.active_descendant",
+                "input_node.controls.contains(&popup_panel.id)",
+            ],
+            forbidden=[
+                "fn input_text_completion_picker_keyboard_navigation_commits_active_candidate()",
+                "picked_index",
+                "KeyCode::Enter",
+                "\"imui-input-text-completion-picker-keyboard",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-imui/src/tests/composition/control_geometry.rs"),
             required=[
                 "fn center_of_rect(rect: Rect) -> Point",

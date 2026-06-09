@@ -5083,6 +5083,14 @@ highlight movement through the cmdk active-index helper. `keyboard/handler/pick.
 Enter/NumpadEnter highlighted candidate commit, input model writes, popup close, pending pick
 storage, and redraw.
 
+2026-06-10 Fret-ImUi completion keyboard proof owner-split result:
+`ecosystem/fret-imui/src/tests/models_text_picker/completion_keyboard.rs` now keeps only shared
+imports and child-owner routing for completion keyboard proofs. `completion_keyboard/commit_candidate.rs`
+owns ArrowDown/Enter active candidate commit proof, while `completion_keyboard/active_descendant.rs`
+owns ComboBox active-descendant, expanded, and controlled popup semantics proof. No
+`fret-ui-kit::imui` text-picker runtime implementation, `fret-imui` public facade, or text-picker
+option API changed.
+
 2026-05-28 menu routing dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` now owns
 public-in-IMUI menu-item entry wrappers plus semantics/action selection.
