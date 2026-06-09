@@ -286,6 +286,15 @@ Last updated: 2026-06-10
       right-click and keyboard context-menu request proof including context-menu anchor checks. The
       IMUI source gate freezes the child-owner split.
 
+- [x] Split the `fret-imui` sortable table-header proof file into right-click and keyboard
+      context-menu request child owners without changing table runtime behavior, public APIs, or
+      the `fret-ui-kit::imui` table/header implementation.
+      Result: `table/header/sortable.rs` now keeps only shared imports and module routing.
+      `table/header/sortable/right_click.rs` owns right-click context-menu request plus anchor
+      proof, while `table/header/sortable/keyboard.rs` owns ContextMenu and Shift+F10
+      focused-header request proof. The IMUI source gate and workstream source bundle freeze the
+      child-owner split.
+
 ## Fret-ImUi Region Containers Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` region-containers proof file into scrolling, menu/popup, chrome,

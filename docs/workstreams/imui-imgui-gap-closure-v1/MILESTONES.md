@@ -164,6 +164,13 @@ owns plain header left-click non-activation plus keyboard context-menu request p
 proof including context-menu anchor checks. No `fret-ui-kit::imui` table runtime implementation,
 `fret-imui` public facade, or table/header option API changed.
 
+2026-06-10 Fret-ImUi sortable table-header proof owner-split result:
+`table/header/sortable.rs` now keeps only shared imports and child-owner routing.
+`table/header/sortable/right_click.rs` owns right-click context-menu request plus anchor proof,
+while `table/header/sortable/keyboard.rs` owns ContextMenu and Shift+F10 focused-header request
+proof. No `fret-ui-kit::imui` table runtime implementation, `fret-imui` public facade, or
+table/header option API changed.
+
 2026-06-05 Fret-ImUi region-containers proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers.rs` now keeps only
 shared imports and child-owner routing for the region-container proof surface.

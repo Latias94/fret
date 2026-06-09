@@ -14980,6 +14980,11 @@ def main() -> None:
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable.rs"),
             required=[
                 "use super::*;",
+                "mod keyboard;",
+                "mod right_click;",
+            ],
+            forbidden=[
+                "#[test]",
                 "fn table_sortable_header_reports_context_menu_request_on_right_click()",
                 "fn table_sortable_header_reports_context_menu_request_from_keyboard()",
                 "TableColumn::fill(\"Name###name\").sortable()",
@@ -14987,11 +14992,51 @@ def main() -> None:
                 "context_menu_anchor()",
                 "KeyCode::ContextMenu",
                 "KeyCode::F10",
-            ],
-            forbidden=[
                 "fn table_plain_header_left_click_does_not_activate_or_click()",
                 "fn table_plain_header_reports_context_menu_request_from_keyboard_without_clicking()",
                 "\"imui-table-plain-header-left-click\"",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable/right_click.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn table_sortable_header_reports_context_menu_request_on_right_click()",
+                "TableColumn::fill(\"Name###name\").sortable()",
+                "right_click_at(",
+                "context_menu_anchor() == Some(at)",
+                "\"imui-table-header-context-menu.header.cell.name\"",
+            ],
+            forbidden=[
+                "fn table_sortable_header_reports_context_menu_request_from_keyboard()",
+                "fn table_plain_header_left_click_does_not_activate_or_click()",
+                "fn table_plain_header_reports_context_menu_request_from_keyboard_without_clicking()",
+                "\"imui-table-plain-header-left-click\"",
+                "KeyCode::ContextMenu",
+                "KeyCode::F10",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable/keyboard.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn table_sortable_header_reports_context_menu_request_from_keyboard()",
+                "TableColumn::fill(\"Name###name\").sortable()",
+                "ui.request_focus_element(&mut app, header_id)",
+                "KeyCode::ContextMenu",
+                "KeyCode::F10",
+                "context_menu_requested()",
+            ],
+            forbidden=[
+                "fn table_sortable_header_reports_context_menu_request_on_right_click()",
+                "right_click_at(",
+                "context_menu_anchor()",
+                "fn table_plain_header_left_click_does_not_activate_or_click()",
+                "fn table_plain_header_reports_context_menu_request_from_keyboard_without_clicking()",
             ],
         ),
         SourceCheck(

@@ -474,6 +474,33 @@ Focused gates:
 - `git diff --check`: pass with a Git line-ending warning for
   `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs`.
 
+## Fret-ImUi Sortable Table Header Proof Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` sortable table-header proof surface is split by right-click and
+keyboard context-menu request owners without changing table runtime code, public APIs, option
+names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable.rs` now
+  keeps only shared imports and child-owner routing for `keyboard` and `right_click`.
+- `table/header/sortable/right_click.rs` owns right-click context-menu request and anchor proof.
+- `table/header/sortable/keyboard.rs` owns ContextMenu and Shift+F10 focused-header request proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui table_sortable_header_reports_context_menu_request --no-fail-fast`:
+  pass, 2 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Region Containers Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` region-containers proof surface is split by scrolling,

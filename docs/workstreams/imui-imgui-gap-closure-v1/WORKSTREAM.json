@@ -2301,6 +2301,8 @@
     "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/plain.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable.rs",
+    "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable/keyboard.rs",
+    "ecosystem/fret-imui/src/tests/composition/layout_collections/table/header/sortable/right_click.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/header_context_menu.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections/table/visibility/menu_items.rs",
