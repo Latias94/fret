@@ -2,6 +2,44 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI item behavior options owner split - 2026-06-09
+
+This maintenance slice keeps the shared pressable item behavior root focused without changing
+pressable install, pointer-click modifier capture, response population, or public facade behavior:
+
+- IMUI item behavior options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` keeps shared behavior state shapes,
+  install/response re-exports, and `PressableItemResponseInput`.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/options.rs` owns the private
+  `PressableItemBehaviorOptions` carrier.
+- No public API or runtime behavior changed; the existing
+  `item_behavior::PressableItemBehaviorOptions` private call surface remains re-exported through
+  the item behavior module for selectable, image-item, and debug-draw callers.
+- The source gate now freezes `PressableItemBehaviorOptions` out of the item behavior root and
+  rejects install, pointer-hook, model, response, and facade logic from drifting into the options
+  owner.
+- Evidence anchor: `item_behavior.rs` declares `mod options;` and re-exports
+  `options::PressableItemBehaviorOptions` while keeping install/response owner re-exports.
+- Evidence anchor: `item_behavior/options.rs` contains only the `report_pointer_click` flag.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the item behavior root, options
+  owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui selectable --no-fail-fast` - passed, 7/7.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast` - passed, 42/42.
+- `cargo nextest run -p fret-imui selectable --no-fail-fast` - passed, 6/6.
+- `cargo nextest run -p fret-imui image_item --no-fail-fast` - passed, 2/2.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI boolean behavior options owner split - 2026-06-09
 
 This maintenance slice keeps boolean behavior roots focused without changing checkbox, radio, or

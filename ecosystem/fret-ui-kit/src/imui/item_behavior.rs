@@ -8,11 +8,13 @@ use super::interaction_runtime::{
 };
 
 mod install;
+mod options;
 mod response;
 
 pub(super) use install::{
     install_pressable_item_behavior, install_pressable_item_behavior_with_options,
 };
+pub(super) use options::PressableItemBehaviorOptions;
 pub(super) use response::populate_pressable_item_response;
 
 pub(super) struct PressableItemBehavior {
@@ -21,11 +23,6 @@ pub(super) struct PressableItemBehavior {
     pub(super) long_press_signal_model: Model<LongPressSignalState>,
     pub(super) lifecycle_model: Model<ImUiLifecycleSessionState>,
     pointer_click_modifiers_model: Option<Model<Modifiers>>,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub(super) struct PressableItemBehaviorOptions {
-    pub(super) report_pointer_click: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
