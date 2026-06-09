@@ -2,6 +2,48 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI boolean behavior options owner split - 2026-06-09
+
+This maintenance slice keeps boolean behavior roots focused without changing checkbox, radio, or
+switch activation, shortcut, response, visual, or public facade behavior:
+
+- IMUI boolean behavior options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs`,
+  `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio/behavior.rs`, and
+  `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs` keep behavior installation,
+  lifecycle behavior routing, keyboard delegation, and response population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/*/behavior/options.rs` owns the private
+  `CheckboxBehaviorOptions`, `RadioBehaviorOptions`, and `SwitchBehaviorOptions` carriers.
+- No public API or runtime behavior changed; the existing `behavior::*BehaviorOptions` private call
+  surfaces remain re-exported through the behavior modules for entry/render call sites.
+- The source gate now freezes the three boolean behavior option carriers out of their behavior roots
+  and rejects activation, keyboard, response, chrome, visual, and facade logic from drifting into
+  the options owners.
+- Evidence anchor: each behavior root declares `mod options;` and re-exports
+  `options::*BehaviorOptions` while keeping its `install_*_behavior(...)` entry.
+- Evidence anchor: each `behavior/options.rs` contains only enabled/focusable where applicable,
+  activate-shortcut, and shortcut-repeat fields.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the three behavior roots, the three
+  options owners, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui checkbox --no-fail-fast` - passed, 2/2.
+- `cargo nextest run -p fret-ui-kit --features imui radio --no-fail-fast` - passed, 2/2.
+- `cargo nextest run -p fret-ui-kit --features imui switch --no-fail-fast` - passed, 10/10.
+- `cargo nextest run -p fret-imui checkbox --no-fail-fast` - passed, 5/5.
+- `cargo nextest run -p fret-imui radio --no-fail-fast` - passed, 4/4.
+- `cargo nextest run -p fret-imui switch --no-fail-fast` - passed, 8/8.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI selectable keyboard options owner split - 2026-06-09
 
 This maintenance slice keeps selectable keyboard handling focused without changing selectable

@@ -1,4 +1,4 @@
-use fret_runtime::{KeyChord, Model};
+use fret_runtime::Model;
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -6,13 +6,10 @@ use super::super::super::{ResponseExt, item_behavior};
 
 mod activation;
 mod keyboard;
+mod options;
 mod response;
 
-pub(super) struct CheckboxBehaviorOptions {
-    pub(super) enabled: bool,
-    pub(super) activate_shortcut: Option<KeyChord>,
-    pub(super) shortcut_repeat: bool,
-}
+pub(super) use options::CheckboxBehaviorOptions;
 
 pub(super) fn install_checkbox_behavior<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
