@@ -2,6 +2,56 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI active trigger pointer owner split - 2026-06-09
+
+This maintenance slice keeps active-trigger pointer wiring focused without changing switch, menu,
+tab, table-header trigger, context-menu, pointer response, keyboard, or public facade behavior:
+
+- IMUI active trigger pointer owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer.rs` keeps the pointer handler
+  installation hub only.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer/down.rs` owns primary pointer
+  activation and focus request wiring.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer/up.rs` owns primary pointer
+  deactivation, active-item clearing, and right-click context-menu event recording.
+- No public API or runtime behavior changed; the existing
+  `pointer::install_active_trigger_pointer_handlers(...)` private call surface remains the install
+  entry for active-trigger callers.
+- The source gate now freezes pointer down/up behavior out of the hub and rejects keyboard,
+  response, hover-query, and facade logic from drifting into either pointer owner.
+- Evidence anchor: `active_trigger_behavior/pointer.rs` declares `mod down;` and `mod up;`, then
+  delegates to `down::install_active_trigger_pointer_down(...)` and
+  `up::install_active_trigger_pointer_up(...)`.
+- Evidence anchor: `active_trigger_behavior/pointer/down.rs` contains left-pointer activation,
+  active-item marking, and focus-on-press request plumbing only.
+- Evidence anchor: `active_trigger_behavior/pointer/up.rs` contains left-pointer deactivation,
+  active-item clearing, right-click context anchor projection, and secondary/context-menu transient
+  event recording only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the active trigger pointer hub,
+  down owner, up owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui switch --no-fail-fast` - passed, 10/10
+  after rerunning serially; initial concurrent nextest attempt timed out while waiting on cargo
+  locks.
+- `cargo nextest run -p fret-ui-kit --features imui menu --no-fail-fast` - passed, 65/65
+  after rerunning serially; initial concurrent nextest attempt timed out while waiting on cargo
+  locks.
+- `cargo nextest run -p fret-ui-kit --features imui tab --no-fail-fast` - passed, 83/83.
+- `cargo nextest run -p fret-imui switch --no-fail-fast` - passed, 8/8.
+- `cargo nextest run -p fret-imui menu --no-fail-fast` - passed, 52/52.
+- `cargo nextest run -p fret-imui tab --no-fail-fast` - passed, 52/52.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI active trigger options owner split - 2026-06-09
 
 This maintenance slice keeps active-trigger state types focused without changing switch, menu,
