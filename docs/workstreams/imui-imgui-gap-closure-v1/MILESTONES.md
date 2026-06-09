@@ -148,6 +148,14 @@ preservation proof, and `tree_layout.rs` owns open-parent tree-node child vertic
 No `fret-ui-kit::imui` disclosure/tree runtime implementation, `fret-imui` public facade, or
 disclosure/tree option API changed.
 
+2026-06-10 Fret-ImUi selectable-shortcuts proof owner-split result:
+`ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts.rs` now keeps only shared
+imports and child-owner routing for selectable shortcut proofs. `selectable_shortcuts/focused_item.rs`
+owns focused selectable `activate_shortcut` scoping, while `selectable_shortcuts/popup_arrow_nav.rs`
+owns popup arrow navigation preservation when a selectable also has an activate shortcut. No
+`fret-ui-kit::imui` selectable runtime implementation, `fret-imui` public facade, or selectable
+option API changed.
+
 2026-06-06 Fret-ImUi table header proof owner-split result:
 `ecosystem/fret-imui/src/tests/composition/layout_collections/table/header.rs` now keeps only
 shared imports and child-owner routing for the table header proof surface. `table/header/plain.rs`

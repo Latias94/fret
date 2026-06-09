@@ -1188,6 +1188,9 @@ def main() -> None:
                 "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/collapsing_header.rs",
                 "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_context_menu.rs",
                 "ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree/tree_layout.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts/focused_item.rs",
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts/popup_arrow_nav.rs",
                 "ecosystem/fret-imui/src/tests/label_identity/table_headers.rs",
                 "ecosystem/fret-imui/src/tests/label_identity/table_headers/resizable.rs",
                 "ecosystem/fret-imui/src/tests/label_identity/table_headers/sortable.rs",
@@ -1380,6 +1383,61 @@ def main() -> None:
                 "fn tree_node_activate_shortcut_preserves_shift_f10_context_menu_request()",
                 "activate_shortcut: Some(shortcut)",
                 "context_menu_requested()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts.rs"),
+            required=[
+                "use super::*;",
+                "mod focused_item;",
+                "mod popup_arrow_nav;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn selectable_activate_shortcut_is_scoped_to_focused_item()",
+                "fn selectable_activate_shortcut_preserves_popup_arrow_nav()",
+                "ui.selectable_with_options(",
+                "ui.begin_popup_menu_with_options(",
+                "point_for_test_id(",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts/focused_item.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn selectable_activate_shortcut_is_scoped_to_focused_item()",
+                "ctrl_shortcut(KeyCode::KeyK)",
+                "\"imui-selectable-shortcut.target\"",
+                "\"imui-selectable-shortcut.other\"",
+                "ui.selectable_with_options(",
+                "key_down(",
+            ],
+            forbidden=[
+                "fn selectable_activate_shortcut_preserves_popup_arrow_nav()",
+                "ui.begin_popup_menu_with_options(",
+                "KeyCode::ArrowDown",
+                "\"imui-selectable-shortcut-popup.alpha\"",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts/popup_arrow_nav.rs"
+            ),
+            required=[
+                "use super::*;",
+                "fn selectable_activate_shortcut_preserves_popup_arrow_nav()",
+                "KeyChord::new(",
+                "ui.begin_popup_menu_with_options(",
+                "\"imui-selectable-shortcut-popup.alpha\"",
+                "\"imui-selectable-shortcut-popup.beta\"",
+                "KeyCode::ArrowDown",
+            ],
+            forbidden=[
+                "fn selectable_activate_shortcut_is_scoped_to_focused_item()",
+                "ctrl_shortcut(KeyCode::KeyK)",
+                "\"imui-selectable-shortcut.target\"",
             ],
         ),
         SourceCheck(

@@ -416,6 +416,34 @@ Focused gates:
 - `git diff --check`: pass with a Git line-ending warning for
   `ecosystem/fret-imui/src/tests/interaction_shortcuts/disclosure_tree.rs`.
 
+## Fret-ImUi Selectable Shortcuts Proof Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` selectable shortcut proof surface is split by focused-item
+shortcut scoping and popup arrow-navigation preservation owners without changing selectable
+runtime code, public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/interaction_shortcuts/selectable_shortcuts.rs` now keeps only
+  shared imports and child-owner routing for `focused_item` and `popup_arrow_nav`.
+- `selectable_shortcuts/focused_item.rs` owns focused selectable `activate_shortcut` scoping.
+- `selectable_shortcuts/popup_arrow_nav.rs` owns popup arrow navigation preservation when a
+  selectable also has an activate shortcut.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui interaction_shortcuts::selectable_shortcuts --no-fail-fast`:
+  pass, 2 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Table Header Proof Owner Split Evidence - 2026-06-06
 
 Claim verified: the `fret-imui` table header proof surface is split by plain-header and

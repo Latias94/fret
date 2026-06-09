@@ -255,6 +255,15 @@ Last updated: 2026-06-10
       `disclosure_tree/tree_layout.rs` owns open-parent tree-node child vertical-stacking proof.
       The IMUI source gate freezes the child-owner split.
 
+- [x] Split the `fret-imui` selectable-shortcuts proof file into focused-item and popup arrow-nav
+      child owners without changing selectable runtime behavior, public APIs, or the
+      `fret-ui-kit::imui` selectable implementation.
+      Result: `interaction_shortcuts/selectable_shortcuts.rs` now keeps only shared imports and
+      module routing. `selectable_shortcuts/focused_item.rs` owns focused selectable
+      `activate_shortcut` scoping, while `selectable_shortcuts/popup_arrow_nav.rs` owns popup
+      arrow navigation preservation when a selectable also has an activate shortcut. The IMUI
+      source gate and workstream source bundle freeze the child-owner split.
+
 ## Fret-ImUi Submenu Shortcuts Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` submenu-shortcuts proof file into focused-trigger scoping,
