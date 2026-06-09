@@ -38040,6 +38040,38 @@ Fret Examples Collection Command-Buttons Actions Owner Split Evidence - 2026-06-
   `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --test imui_editor_collection_context_menu_surface --test imui_editor_collection_command_package_surface --test imui_editor_collection_delete_action_surface --test imui_editor_collection_rename_surface --test imui_editor_collection_keyboard_owner_surface --test imui_editor_collection_box_select_surface --test imui_editor_collection_zoom_surface --test imui_editor_collection_select_all_surface --test imui_editor_collection_text_roles_surface --no-fail-fast`;
   10/10 tests passed. Existing dead-code warnings remained in `fret-chart` and `fret-plot`.
 
+Fret Plot IMUI adapter layout builder proof - 2026-06-09:
+
+- Claim:
+  the optional `fret-plot/imui` cookbook teaching surface now uses the first-party
+  `LinePlotPanelProps` layout builder for fixed-height editor plot panels, and the declarative
+  renderer preserves that caller-owned canvas height instead of forcing Fill/Fill during render.
+- Evidence anchors: `ecosystem/fret-plot/src/declarative/props/line.rs` owns
+  `canvas(...)`, `layout(...)`, `width(...)`, `height(...)`, `size(...)`, `width_px(...)`,
+  `height_px(...)`, and `size_px(...)`; `ecosystem/fret-plot/src/declarative.rs` no longer
+  rewrites `props.canvas.layout.size`; `apps/fret-cookbook/examples/imui_plot_basics.rs` uses
+  `.height_px(Px(280.0))`; `ecosystem/fret-plot/src/declarative/tests.rs` proves both builder
+  field projection and fixed-height layout; `tools/gate_imui_workstream_source.py` freezes the
+  new markers and rejects the old `props.canvas = canvas` cookbook stitching.
+- Passed: `cargo fmt -p fret-plot -p fret-cookbook` and
+  `cargo fmt -p fret-plot -p fret-cookbook -- --check`.
+- Passed: `cargo check -p fret-plot --features imui` with existing dead-code warnings in
+  `fret-plot/src/plot/view.rs`.
+- Passed:
+  `cargo nextest run -p fret-plot line_plot_panel_props_builder_projects_canvas_layout_and_size_fields line_plot_panel_respects_explicit_canvas_height_on_declarative_path --no-fail-fast`;
+  2/2 tests passed.
+- Passed: `cargo check -p fret-cookbook --features cookbook-imui-plot --example imui_plot_basics`
+  with the same existing `fret-plot` dead-code warnings.
+- Passed:
+  `cargo nextest run -p fret-cookbook --lib --features cookbook-imui-plot cookbook_imui_plot_example_keeps_optional_plot_adapter_teaching_surface --no-fail-fast`;
+  1/1 tests passed.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\gate_imui_workstream_source.py`.
+- Passed: `python tools\check_workstream_catalog.py`; validated 541 dedicated directories and 47
+  standalone markdown files.
+- Passed: `git diff --check`; reported only the expected line-ending warning for
+  `tools/gate_imui_workstream_source.py`.
+
 Fret Examples Collection Asset-Grid Actions Owner Split Evidence - 2026-06-08:
 
 - Claim:

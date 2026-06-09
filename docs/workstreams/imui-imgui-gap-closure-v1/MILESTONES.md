@@ -8798,3 +8798,11 @@ crate APIs, and the app-owned no-helper-widening boundary remain unchanged, whil
 source gate, workstream source gate, manifest, and surface tests now freeze the asset-grid tile
 owner boundary. The asset-grid tile owner boundary is now tracked as its own source-gated proof
 slice.
+
+2026-06-09 plot IMUI adapter layout builder proof result:
+`ecosystem/fret-plot/src/declarative/props/line.rs` now owns the first-party line plot panel
+canvas/layout builder path, including `height_px(...)` for fixed-height editor plot panels.
+`ecosystem/fret-plot/src/declarative.rs` preserves caller-owned canvas sizing instead of rewriting
+width/height to Fill/Fill during panel construction. The cookbook `imui_plot_basics` teaching
+route now uses the builder path, and the `fret-plot` regression tests plus workstream source gate
+freeze both the builder surface and the layout behavior.

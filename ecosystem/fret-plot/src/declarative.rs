@@ -2,7 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, CanvasProps, Length, ManagedSurfaceProps};
+use fret_ui::element::{AnyElement, CanvasProps, ManagedSurfaceProps};
 use fret_ui::{ElementContext, UiHost};
 
 use crate::cartesian::{AxisScale, DataRect};
@@ -81,10 +81,8 @@ struct PlotPanelProps {
 #[track_caller]
 fn plot_panel<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
-    mut props: PlotPanelProps,
+    props: PlotPanelProps,
 ) -> AnyElement {
-    props.canvas.layout.size.width = Length::Fill;
-    props.canvas.layout.size.height = Length::Fill;
     if let Some(state) = &props.state {
         cx.observe_model(state, fret_ui::Invalidation::Paint);
     }

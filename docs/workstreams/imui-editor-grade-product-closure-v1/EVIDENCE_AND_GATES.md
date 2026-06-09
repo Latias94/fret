@@ -7395,6 +7395,47 @@ for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead co
 `git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
 `apps/fret-examples/src/lib.rs`.
 
+## Fret Plot line panel canvas layout builder and fixed-height proof - 2026-06-09
+
+Scope: advance the editor/IMUI plot-adapter ergonomics slice by making the first-party line plot
+panel props carry explicit canvas layout through a builder path and by proving the declarative
+panel respects that caller-owned height instead of overwriting it during render.
+
+- `ecosystem/fret-plot/src/declarative/props/line.rs` now owns chainable
+  `LinePlotPanelProps` canvas/layout/width/height/size builder methods plus px sugar for common
+  editor panel sizing.
+- `ecosystem/fret-plot/src/declarative.rs` no longer rewrites `props.canvas.layout.size` to
+  Fill/Fill inside `plot_panel`; `CanvasProps::default()` remains the default fill behavior while
+  explicit caller sizing survives.
+- `apps/fret-cookbook/examples/imui_plot_basics.rs` now teaches the optional IMUI plot adapter
+  with `.height_px(Px(280.0))` instead of manual `CanvasProps` field construction.
+- `ecosystem/fret-plot/src/declarative/tests.rs` now locks both the props projection surface and
+  the post-layout fixed-height behavior.
+- `tools/gate_imui_workstream_source.py` freezes the new builder markers and rejects the previous
+  render-time Fill/Fill override plus cookbook `props.canvas = canvas` field stitching.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-plot -p fret-cookbook
+cargo check -p fret-plot --features imui
+cargo nextest run -p fret-plot line_plot_panel_props_builder_projects_canvas_layout_and_size_fields line_plot_panel_respects_explicit_canvas_height_on_declarative_path --no-fail-fast
+cargo check -p fret-cookbook --features cookbook-imui-plot --example imui_plot_basics
+cargo nextest run -p fret-cookbook --lib --features cookbook-imui-plot cookbook_imui_plot_example_keeps_optional_plot_adapter_teaching_surface --no-fail-fast
+cargo fmt -p fret-plot -p fret-cookbook -- --check
+python -m py_compile tools\gate_imui_workstream_source.py
+python tools\gate_imui_workstream_source.py
+python tools\check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-plot` nextest gate reported
+`2 tests run: 2 passed, 89 skipped`; the focused `fret-cookbook --lib` gate reported
+`1 test run: 1 passed, 33 skipped`. `cargo check` reported only the existing
+`fret-plot/src/plot/view.rs` dead-code warnings for axis-lock helpers. `git diff --check`
+reported no whitespace errors and only the expected line-ending warning for
+`tools/gate_imui_workstream_source.py`.
+
 ## IMUI multi-select test owner split - 2026-05-25
 
 Scope: keep `multi_select.rs` focused on the immediate multi-select state model, controllable model

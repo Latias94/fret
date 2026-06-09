@@ -28,6 +28,7 @@ use fret_runtime::{
 };
 use fret_ui::UiTree;
 use fret_ui::declarative::render_root;
+use fret_ui::element::{CanvasProps, LayoutStyle, Length};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -358,6 +359,88 @@ mod right_axis;
 mod series_paint;
 mod view_pan;
 mod wheel_zoom;
+
+#[test]
+fn line_plot_panel_props_builder_projects_canvas_layout_and_size_fields() {
+    let mut app = TestHost::default();
+    let model = app
+        .models_mut()
+        .insert(LinePlotModel::from_series(Vec::new()));
+
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fraction(0.5);
+    layout.size.height = Length::Px(Px(160.0));
+    layout.size.min_height = Some(Length::Px(Px(80.0)));
+
+    let props = LinePlotPanelProps::new(model.clone()).layout(layout);
+    assert_eq!(props.canvas.layout, layout);
+
+    let props = LinePlotPanelProps::new(model.clone())
+        .width(Length::Fraction(0.75))
+        .height_px(Px(240.0));
+    assert_eq!(props.canvas.layout.size.width, Length::Fraction(0.75));
+    assert_eq!(props.canvas.layout.size.height, Length::Px(Px(240.0)));
+
+    let props = LinePlotPanelProps::new(model.clone())
+        .size(Length::Fill, Length::Px(Px(180.0)))
+        .size_px(Px(320.0), Px(120.0));
+    assert_eq!(props.canvas.layout.size.width, Length::Px(Px(320.0)));
+    assert_eq!(props.canvas.layout.size.height, Length::Px(Px(120.0)));
+
+    let mut canvas = CanvasProps::default();
+    canvas.layout.size.width = Length::Px(Px(220.0));
+    let props = LinePlotPanelProps::new(model).canvas(canvas);
+    assert_eq!(props.canvas.layout.size.width, Length::Px(Px(220.0)));
+}
+
+#[test]
+fn line_plot_panel_respects_explicit_canvas_height_on_declarative_path() {
+    let mut app = TestHost::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(280.0)),
+    );
+    let mut services = FakeServices::default();
+    let model = app
+        .models_mut()
+        .insert(LinePlotModel::from_series(vec![LineSeries::new(
+            "Series",
+            Series::from_points_sorted(
+                vec![DataPoint { x: 0.0, y: 0.0 }, DataPoint { x: 1.0, y: 1.0 }],
+                true,
+            ),
+        )]));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "plot-declarative-fixed-height",
+        |cx| {
+            vec![line_plot_panel(
+                cx,
+                LinePlotPanelProps::new(model.clone()).height_px(Px(160.0)),
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let root_children = ui.debug_node_children(root);
+    assert_eq!(root_children.len(), 1);
+    let panel_bounds = ui
+        .debug_node_bounds(root_children[0])
+        .expect("line plot panel should have layout bounds");
+    assert_eq!(panel_bounds.size.width, Px(320.0));
+    assert_eq!(panel_bounds.size.height, Px(160.0));
+}
 
 #[test]
 fn line_plot_panel_paints_axes_and_grid_on_declarative_path() {

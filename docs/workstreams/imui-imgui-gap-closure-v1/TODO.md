@@ -9172,3 +9172,9 @@ opening the slice.
       mounting, rendered-item bounds capture, and metadata readout delegation. The collection
       source gate, workstream source gate, manifest, and surface tests now include the asset-grid
       tile child owner.
+- [x] Replace the cookbook IMUI plot adapter's manual `CanvasProps` field stitching with
+      `LinePlotPanelProps::height_px(...)` while proving that the declarative plot panel preserves
+      explicit caller-owned canvas height. Result: `props/line.rs` owns the line panel canvas and
+      layout builder sugar, `declarative.rs` no longer overwrites `props.canvas.layout.size` to
+      Fill/Fill, `imui_plot_basics.rs` teaches the builder path, and the source gate plus
+      `fret-plot` tests freeze the behavior.

@@ -9,7 +9,6 @@ use fret_plot::series::Series;
 use fret_plot::state::{PlotOutput, PlotState};
 use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::Model;
-use fret_ui::element::{CanvasProps, Length};
 
 const TEST_ID_ROOT: &str = "cookbook.imui_plot_basics.root";
 const TEST_ID_PANEL: &str = "cookbook.imui_plot_basics.panel";
@@ -76,11 +75,8 @@ impl View for ImUiPlotBasicsView {
                     imui_raw(cx, |ui| {
                         ui.text("Plot adapter");
 
-                        let mut canvas = CanvasProps::default();
-                        canvas.layout.size.width = Length::Fill;
-                        canvas.layout.size.height = Length::Px(Px(280.0));
-
-                        let mut props = LinePlotPanelProps::new(self.plot.clone())
+                        let props = LinePlotPanelProps::new(self.plot.clone())
+                            .height_px(Px(280.0))
                             .style(LinePlotStyle {
                                 padding: Px(18.0),
                                 stroke_width: Px(2.0),
@@ -91,7 +87,6 @@ impl View for ImUiPlotBasicsView {
                             .y_scale(AxisScale::Linear)
                             .state(self.plot_state.clone())
                             .output(self.plot_output.clone());
-                        props.canvas = canvas;
 
                         fret_plot::imui::line_plot_panel(ui, props);
                     })
