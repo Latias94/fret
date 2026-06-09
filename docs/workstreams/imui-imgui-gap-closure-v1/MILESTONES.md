@@ -8126,6 +8126,14 @@ reorderable outliner proof. `imui_editor_proof_demo.rs` now only mounts
 shell plus main editor proof. Shared model keys, paired-control behavior, collection proof routing,
 readout text, test IDs, and the app-owned no-helper-widening boundary remain unchanged.
 
+2026-06-10 main editor proof state owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/editor_state.rs` now owns the main editor proof state
+fixtures: `named_demo_state(...)`, `GradientDemoStop`, material shading item fixtures, and the main
+`editor_demo_*_model(...)` helpers. `imui_editor_proof_demo.rs` now only declares/imports the
+state owner while keeping route/workbench/render composition. Model keys, initial values, material
+shading options, gradient stop defaults, text-assist state, transform outcome state, public crate
+APIs, and the app-owned no-helper-widening boundary remain unchanged.
+
 2026-06-07 collection proof assets owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
 re-exports the existing `collection::authoring_parity_collection_assets()` call surface through the

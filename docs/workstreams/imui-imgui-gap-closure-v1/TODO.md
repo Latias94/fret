@@ -8472,6 +8472,12 @@ opening the slice.
       rendering, gradient editor construction, authoring drag/drop chips, collection browser mount,
       and reorderable outliner proof; `imui_editor_proof_demo.rs` now only mounts
       `authoring_parity::render_surface(...)` from the route composition.
+- [x] Split the main editor proof state fixtures out of the proof route root without changing model
+      keys, initial values, material shading items, gradient stops, text-assist state, transform
+      outcome state, public crate APIs, or the app-owned no-helper-widening boundary. Result:
+      `editor_state.rs` owns `named_demo_state(...)`, `GradientDemoStop`, material shading fixture
+      items, and the main `editor_demo_*_model(...)` helpers; `imui_editor_proof_demo.rs` now keeps
+      route/workbench/render composition and imports the state owner.
 - [x] Split collection proof asset fixture record/defaults out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
       `collection/assets.rs` child owner without changing stored asset defaults, asset ids,

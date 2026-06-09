@@ -6,6 +6,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let authoring_parity_surface_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
+    let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let asset_grid_tile_source =
@@ -186,7 +187,12 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let status_readouts_source =
         include_str!("../src/imui_editor_proof_demo/collection/status_readouts.rs");
 
-    for needle in ["mod authoring_parity;", "mod collection;"] {
+    for needle in [
+        "mod authoring_parity;",
+        "mod collection;",
+        "mod editor_state;",
+        "use editor_state::*;",
+    ] {
         assert!(
             demo_source.contains(needle),
             "imui_editor_proof_demo should keep the collection proof routed through demo-local owners; missing `{needle}`"
@@ -194,6 +200,11 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "fn editor_material_shading_items() -> Arc<[EnumSelectItem]> {",
+        "fn named_demo_state<H: UiHost, S: Clone + 'static>(",
+        "fn editor_demo_value_model<H: UiHost>(",
+        "fn editor_demo_transform_outcome_model<H: UiHost>(",
+        "struct GradientDemoStop",
         "fn proof_collection_assets_in_visible_order(",
         "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "struct ProofCollectionAsset {",
@@ -203,6 +214,26 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !demo_source.contains(needle),
             "imui_editor_proof_demo should not keep the collection implementation inline after modularization; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn editor_material_shading_items() -> Arc<[EnumSelectItem]> {",
+        "pub(super) fn named_demo_state<H: UiHost, S: Clone + 'static>(",
+        "pub(super) struct GradientDemoStop",
+        "pub(super) id: fret_ui::ItemKey",
+        "pub(super) position: Model<f64>",
+        "pub(super) color: Model<Color>",
+        "pub(super) fn editor_demo_value_model<H: UiHost>(",
+        "pub(super) fn editor_demo_roughness_model<H: UiHost>(",
+        "pub(super) fn editor_demo_gradient_stops_model<H: UiHost>(",
+        "pub(super) fn editor_demo_name_assist_accepted_model<H: UiHost>(",
+        "pub(super) fn editor_demo_transform_outcome_model<H: UiHost>(",
+        "\"imui_editor_proof_demo.model.transform_outcome\"",
+    ] {
+        assert!(
+            editor_state_source.contains(needle),
+            "the demo-local editor state owner should own main proof state fixtures; missing `{needle}`"
         );
     }
 
