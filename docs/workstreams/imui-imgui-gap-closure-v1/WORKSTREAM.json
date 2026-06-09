@@ -959,6 +959,8 @@
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer/down.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer/up.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response.rs",
+    "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response/context_menu.rs",
+    "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response/pressable.rs",
     "ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs",
     "ecosystem/fret-ui-kit/src/imui/item_behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/item_behavior/options.rs",

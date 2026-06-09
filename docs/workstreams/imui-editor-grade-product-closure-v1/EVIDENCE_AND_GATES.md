@@ -2,6 +2,52 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI active trigger response owner split - 2026-06-09
+
+This maintenance slice keeps active-trigger response assembly focused without changing switch,
+menu, tab, table-header trigger, context-menu, hover response, pointer response, keyboard, or public
+facade behavior:
+
+- IMUI active trigger response owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response.rs` keeps the response assembly
+  hub only.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response/context_menu.rs` owns
+  secondary-click/context-menu transient projection and context anchor readback.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response/pressable.rs` owns hover-query
+  installation and shared pressable response population.
+- No public API or runtime behavior changed; the existing
+  `response::populate_active_trigger_response(...)` private call surface remains the response
+  entry for active-trigger callers.
+- The source gate now freezes context-menu projection and pressable aggregation out of the hub and
+  rejects pointer, keyboard, hover-query, context-menu, and facade logic from drifting across owner
+  boundaries.
+- Evidence anchor: `active_trigger_behavior/response.rs` declares `mod context_menu;` and
+  `mod pressable;`, then delegates to each owner.
+- Evidence anchor: `active_trigger_behavior/response/context_menu.rs` contains secondary-click,
+  context-menu-requested, and context-anchor response projection only.
+- Evidence anchor: `active_trigger_behavior/response/pressable.rs` contains hover delay hook
+  installation and `populate_pressable_response(...)` forwarding only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the active trigger response hub,
+  context-menu owner, pressable owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui switch --no-fail-fast` - passed, 10/10.
+- `cargo nextest run -p fret-ui-kit --features imui menu --no-fail-fast` - passed, 65/65.
+- `cargo nextest run -p fret-ui-kit --features imui tab --no-fail-fast` - passed, 83/83.
+- `cargo nextest run -p fret-imui switch --no-fail-fast` - passed, 8/8.
+- `cargo nextest run -p fret-imui menu --no-fail-fast` - passed, 52/52.
+- `cargo nextest run -p fret-imui tab --no-fail-fast` - passed, 52/52.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI active trigger pointer owner split - 2026-06-09
 
 This maintenance slice keeps active-trigger pointer wiring focused without changing switch, menu,
