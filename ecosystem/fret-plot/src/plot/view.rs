@@ -350,23 +350,6 @@ pub(crate) fn apply_axis_locks(
     next
 }
 
-pub(crate) fn all_visible_axes_zoom_locked(
-    show_y2_axis: bool,
-    show_y3_axis: bool,
-    show_y4_axis: bool,
-    lock_x_zoom: bool,
-    lock_y1_zoom: bool,
-    lock_y2_zoom: bool,
-    lock_y3_zoom: bool,
-    lock_y4_zoom: bool,
-) -> bool {
-    lock_x_zoom
-        && lock_y1_zoom
-        && (!show_y2_axis || lock_y2_zoom)
-        && (!show_y3_axis || lock_y3_zoom)
-        && (!show_y4_axis || lock_y4_zoom)
-}
-
 pub fn pan_view_by_px(view: DataRect, viewport: Size, dx_px: f32, dy_px: f32) -> Option<DataRect> {
     let view = sanitize_data_rect(view);
 
@@ -761,19 +744,5 @@ mod tests {
                 y_max: before.y_max,
             }
         );
-    }
-
-    #[test]
-    fn all_visible_axes_zoom_locked_ignores_hidden_axes() {
-        assert!(all_visible_axes_zoom_locked(
-            false, false, false, true, true, false, false, false,
-        ));
-    }
-
-    #[test]
-    fn all_visible_axes_zoom_locked_requires_visible_axes_locked() {
-        assert!(!all_visible_axes_zoom_locked(
-            true, false, false, true, true, false, true, true,
-        ));
     }
 }

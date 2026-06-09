@@ -10,8 +10,8 @@ use fret_ui::UiHost;
 use crate::cartesian::AxisScale;
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
 use crate::plot::view::{
-    clamp_view_to_data_scaled, data_rect_from_plot_points_scaled, local_from_absolute,
-    sanitize_data_rect_scaled,
+    apply_axis_locks, clamp_view_to_data_scaled, data_rect_from_plot_points_scaled,
+    local_from_absolute, sanitize_data_rect_scaled,
 };
 use crate::state::PlotState;
 use crate::style::LinePlotStyle;
@@ -172,14 +172,7 @@ pub(in crate::declarative) fn handle_line_plot_box_zoom_event<H: UiHost>(
                     y_scale,
                 );
             }
-            if axis_locks.x.zoom {
-                next.x_min = current_view.x_min;
-                next.x_max = current_view.x_max;
-            }
-            if axis_locks.y.zoom {
-                next.y_min = current_view.y_min;
-                next.y_max = current_view.y_max;
-            }
+            next = apply_axis_locks(current_view, next, axis_locks.x.zoom, axis_locks.y.zoom);
             next = sanitize_data_rect_scaled(next, x_scale, y_scale);
             if next == current_view {
                 return true;

@@ -8,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui::UiHost;
 
 use crate::cartesian::{AxisScale, DataRect};
-use crate::plot::view::sanitize_data_rect_scaled;
+use crate::plot::view::{apply_axis_locks, sanitize_data_rect_scaled};
 use crate::state::PlotState;
 use crate::style::LinePlotStyle;
 
@@ -78,14 +78,7 @@ pub(in crate::declarative) fn handle_line_plot_pan_event<H: UiHost>(
             let axis_locks = state
                 .read_ref(app, |state| state.axis_locks)
                 .unwrap_or_default();
-            if axis_locks.x.pan {
-                next.x_min = current_view.x_min;
-                next.x_max = current_view.x_max;
-            }
-            if axis_locks.y.pan {
-                next.y_min = current_view.y_min;
-                next.y_max = current_view.y_max;
-            }
+            next = apply_axis_locks(current_view, next, axis_locks.x.pan, axis_locks.y.pan);
             let _ = state.update(app, |state, _cx| {
                 state.view_is_auto = false;
                 state.view_bounds = Some(next);

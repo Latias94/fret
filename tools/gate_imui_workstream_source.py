@@ -16433,6 +16433,7 @@ def main() -> None:
                 "data_rect_from_plot_points_scaled(",
                 "clamp_view_to_data_scaled(",
                 "sanitize_data_rect_scaled(",
+                "apply_axis_locks(",
                 "axis_locks.x.zoom",
                 "axis_locks.y.zoom",
                 "state.view_bounds = Some",
@@ -16454,6 +16455,8 @@ def main() -> None:
                 "line_plot_wheel_region_at",
                 "zoom_view_at_px_scaled",
                 "line_plot_drag_output",
+                "next.x_min = current_view.x_min",
+                "next.y_min = current_view.y_min",
             ],
         ),
         SourceCheck(
@@ -16551,6 +16554,7 @@ def main() -> None:
                 "line_plot_current_view_bounds_for_event(",
                 "axis_locks.x.pan",
                 "axis_locks.y.pan",
+                "apply_axis_locks(",
                 "sanitize_data_rect_scaled(",
                 "state.update(app",
             ],
@@ -16570,6 +16574,8 @@ def main() -> None:
                 "clamp_view_to_data_scaled",
                 "zoom_view_at_px_scaled",
                 "line_plot_drag_output",
+                "next.x_min = current_view.x_min",
+                "next.y_min = current_view.y_min",
             ],
         ),
         SourceCheck(

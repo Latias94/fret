@@ -2,6 +2,35 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI plot axis-lock helper wiring - 2026-06-09
+
+This maintenance slice closes the stale plot view dead-code warning while keeping declarative
+pan, wheel zoom, and box zoom behavior unchanged:
+
+- `ecosystem/fret-plot/src/declarative/interaction/pan.rs` now applies pan-axis locks through
+  `apply_axis_locks(...)` instead of hand-copying locked axis ranges.
+- `ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs` now applies zoom-axis locks through
+  the same helper before sanitizing the next view bounds.
+- `ecosystem/fret-plot/src/plot/view.rs` keeps the production-used `apply_axis_locks(...)` helper
+  and removes the unused `all_visible_axes_zoom_locked(...)` helper plus tests that described a
+  future multi-visible-axis lock path not wired into current right-axis view behavior.
+- `tools/gate_imui_workstream_source.py` now requires `apply_axis_locks(...)` in the pan and
+  box-zoom owners and rejects drift back to manual locked-axis range copying.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed without the previous
+  `ecosystem/fret-plot/src/plot/view.rs` dead-code warnings.
+- `cargo nextest run -p fret-plot apply_axis_locks line_plot_panel_pan_respects_x_pan_lock_on_declarative_path line_plot_panel_pan_respects_y_pan_lock_on_declarative_path line_plot_panel_pan_noops_when_both_axes_locked_on_declarative_path line_plot_panel_wheel_zoom_respects_x_zoom_lock_on_declarative_path line_plot_panel_wheel_zoom_respects_y_zoom_lock_on_declarative_path line_plot_panel_wheel_zoom_noops_when_both_axes_locked_on_declarative_path line_plot_panel_paints_box_zoom_selection_on_declarative_path --no-fail-fast` -
+  passed, 8/8.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI plot panel layout builder parity - 2026-06-09
 
 This proof-pressure slice extends the first-party plot panel layout builder surface from the line

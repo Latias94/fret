@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-06-09
 
+## Fret Plot Axis-Lock Helper Wiring Evidence - 2026-06-09
+
+Claim verified: the declarative plot pan and box-zoom paths now use the shared axis-lock helper,
+and the stale visible-axis zoom-lock helper that produced `fret-plot` dead-code warnings has been
+removed instead of kept as a future-path abstraction.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/interaction/pan.rs` calls `apply_axis_locks(...)` after
+  computing the next pan view bounds.
+- `ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs` calls `apply_axis_locks(...)`
+  after clamp-to-data and before sanitizing the next box-zoom view bounds.
+- `ecosystem/fret-plot/src/plot/view.rs` keeps `apply_axis_locks(...)` and removes
+  `all_visible_axes_zoom_locked(...)`, whose y2/y3/y4 visible-axis contract was not part of the
+  current production zoom path.
+- `tools/gate_imui_workstream_source.py` freezes the helper call in both interaction owners and
+  rejects manual `next.x_min = current_view.x_min` / `next.y_min = current_view.y_min` drift.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass without the prior `plot/view.rs` dead-code
+  warnings.
+- `cargo nextest run -p fret-plot apply_axis_locks line_plot_panel_pan_respects_x_pan_lock_on_declarative_path line_plot_panel_pan_respects_y_pan_lock_on_declarative_path line_plot_panel_pan_noops_when_both_axes_locked_on_declarative_path line_plot_panel_wheel_zoom_respects_x_zoom_lock_on_declarative_path line_plot_panel_wheel_zoom_respects_y_zoom_lock_on_declarative_path line_plot_panel_wheel_zoom_noops_when_both_axes_locked_on_declarative_path line_plot_panel_paints_box_zoom_selection_on_declarative_path --no-fail-fast`:
+  pass, 8 passed.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## Fret Plot IMUI Adapter Layout Builder Parity Evidence - 2026-06-09
 
 Claim verified: the optional `fret-plot/imui` teaching adapter now has a consistent canvas/layout

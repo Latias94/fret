@@ -100,6 +100,12 @@ Last updated: 2026-06-09
       stems panel props now expose the shared `canvas/layout/width/height/size/*_px` builder
       surface, `all_plot_panel_props_builder_project_fixed_height_fields` covers the parity, and
       the IMUI source gate freezes the method set across all 10 plot panel prop owners.
+- [x] Route declarative plot pan and box-zoom axis-lock handling through the shared
+      `apply_axis_locks(...)` helper and remove the unused visible-axis zoom-lock helper that kept
+      `fret-plot` checks noisy.
+      Result: pan and box-zoom owners share the same locked-axis projection, the source gate
+      rejects manual locked-range copying, and `cargo check -p fret-plot --features imui` no
+      longer reports the prior `plot/view.rs` dead-code warnings.
 
 ## Fret-ImUi Checkbox Proof Split - 2026-06-06
 

@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-09
 
+2026-06-09 Fret Plot axis-lock helper wiring result:
+`ecosystem/fret-plot/src/declarative/interaction/pan.rs` and
+`ecosystem/fret-plot/src/declarative/interaction/box_zoom.rs` now apply locked axes through the
+shared `apply_axis_locks(...)` helper. The unused `all_visible_axes_zoom_locked(...)` helper was
+removed from `ecosystem/fret-plot/src/plot/view.rs` because its y2/y3/y4 visible-axis contract was
+not wired into the current production zoom path. The source gate freezes the helper call and
+prevents drift back to manual locked-range copying. No public plot API, `fret-imui` facade, or
+`fret-ui-kit::imui` policy changed.
+
 2026-06-09 Fret Plot IMUI adapter layout builder parity result:
 `ecosystem/fret-plot/src/declarative/props/{area,bars,candlestick,error_bars,heatmap,histogram,histogram2d,shaded,stems}.rs`
 now expose the same `canvas`, `layout`, `width`, `height`, `size`, `width_px`, `height_px`, and
