@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Browser-Scope Owner Split - 2026-06-10
+
+- [x] Split the browser-scope assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod browser_scope;` and delegates to
+      `browser_scope::assert_browser_scope_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/browser_scope.rs` owns browser-scope root,
+      chrome/options, marquee chrome, asset-grid mount, and negative drift checks. The IMUI
+      workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Asset-Grid Owner Split - 2026-06-10
 
 - [x] Split the asset-grid assertion bundle out of

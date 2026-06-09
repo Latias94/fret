@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface browser-scope owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/browser_scope.rs` owns the browser-scope assertion
+bundle for child-region runtime routing, chrome/options, marquee chrome, asset-grid mounting, and
+negative drift checks. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`,
+docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface asset-grid owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
