@@ -3,9 +3,11 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::UiHost;
 
-use crate::imui::{ImUiFacade, SelectableOptions};
+mod row;
+mod selection;
 
 use super::super::keyboard::{InputTextPickerKeyboardPick, InputTextPickerKeyboardState};
+use crate::imui::ImUiFacade;
 
 pub(super) struct InputTextPickerPopupItemInput<'a> {
     pub(super) source_index: usize,
@@ -23,54 +25,22 @@ pub(super) fn render_text_picker_popup_item<H: UiHost>(
     ui: &mut ImUiFacade<'_, '_, H>,
     input: InputTextPickerPopupItemInput<'_>,
 ) -> Option<InputTextPickerKeyboardPick> {
-    let checked = input.selected_value == input.candidate.as_ref();
-    let active = input.active_source_index == Some(input.source_index);
-    let item_test_id = input
-        .item_test_id_base
-        .as_ref()
-        .map(|base| Arc::from(format!("{base}.option.{}", input.visible_index)));
-    let response = ui.selectable_with_options(
-        input.candidate.clone(),
-        SelectableOptions {
-            selected: checked,
-            highlighted: active,
-            test_id: item_test_id,
-            ..Default::default()
+    let row = row::render_text_picker_popup_item_row(
+        ui,
+        row::TextPickerPopupItemRowInput {
+            source_index: input.source_index,
+            visible_index: input.visible_index,
+            candidate: input.candidate.clone(),
+            selected_value: input.selected_value,
+            active_source_index: input.active_source_index,
+            item_test_id_base: input.item_test_id_base.clone(),
+            keyboard_state: input.keyboard_state.clone(),
         },
     );
 
-    if active && let (Some(state), Some(element)) = (input.keyboard_state.as_ref(), response.id()) {
-        let _ = ui
-            .cx_mut()
-            .app
-            .models_mut()
-            .update(state, |state| state.active_element = Some(element));
-    }
-
-    if !response.clicked() {
+    if !row.clicked {
         return None;
     }
 
-    let next_value = input.candidate.to_string();
-    let _ = ui
-        .cx_mut()
-        .app
-        .models_mut()
-        .update(&input.model, |value| *value = next_value.clone());
-    let _ = ui
-        .cx_mut()
-        .app
-        .models_mut()
-        .update(&input.popup_open, |open| *open = false);
-    if let Some(state) = input.keyboard_state.as_ref() {
-        let _ = ui.cx_mut().app.models_mut().update(state, |state| {
-            state.active_source_index = Some(input.source_index);
-            state.active_element = response.id();
-        });
-    }
-
-    Some(InputTextPickerKeyboardPick {
-        source_index: input.source_index,
-        value: input.candidate,
-    })
+    selection::commit_text_picker_popup_item_selection(ui, input, row.element)
 }

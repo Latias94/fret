@@ -2,6 +2,51 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI text-picker popup item owner split - 2026-06-09
+
+This maintenance slice keeps text-picker popup item rendering focused without changing
+input-text-picker, completion/history wrappers, selectable row semantics, active-descendant
+semantics, clicked candidate commits, popup close-after-pick behavior, keyboard pick reporting, or
+public facade behavior:
+
+- IMUI text-picker popup item owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs` keeps the popup item input
+  carrier and clicked-row dispatch only.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item/row.rs` owns selected/highlighted
+  row projection, option test-id derivation, selectable row rendering, and active-element readback.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item/selection.rs` owns clicked
+  candidate model update, popup-close mutation, keyboard-state selection projection, and keyboard
+  pick return construction.
+- No public API or runtime behavior changed; the existing
+  `item::render_text_picker_popup_item(...)` private call surface remains the popup item rendering
+  entry.
+- The source gate now freezes text-picker popup item row rendering and selection mutation across
+  separate owners and rejects popup hub, popup keyboard, candidate filtering, response, and facade
+  logic from drifting across popup item boundaries.
+- Evidence anchor: `text_picker_controls/popup/item.rs` declares `mod row;` and `mod selection;`,
+  delegates row rendering, and only commits when the row reports a click.
+- Evidence anchor: `popup/item/row.rs` contains only checked/active row projection, item test-id
+  derivation, selectable row rendering, and active-element readback.
+- Evidence anchor: `popup/item/selection.rs` contains only clicked candidate model update,
+  popup-close mutation, keyboard-state selection projection, and pick return construction.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the popup item hub, row owner,
+  selection owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui text_picker --no-fail-fast` - passed, 2/2.
+- `cargo nextest run -p fret-imui text_picker --no-fail-fast` - passed, 6/6.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI text-picker session owner split - 2026-06-09
 
 This maintenance slice keeps text-picker session preparation focused without changing

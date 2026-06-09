@@ -897,6 +897,8 @@
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/open_policy.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item/row.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/item/selection.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/types.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs",
