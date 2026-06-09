@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Box-Select Owner Split - 2026-06-10
+
+- [x] Split the box-select assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod box_select;` and delegates to
+      `box_select::assert_box_select_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/box_select.rs` owns implementation,
+      behavior-test, fixture, and negative drift boundary checks. The IMUI workstream source gate
+      freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Browser Input Runtime Owner Split - 2026-06-10
 
 - [x] Split the browser input runtime assertion bundle out of

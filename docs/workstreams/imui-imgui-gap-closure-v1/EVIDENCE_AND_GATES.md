@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Box-Select Owner Split Evidence - 2026-06-10
+
+Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer
+keeps the box-select assertion bundle inline in the test root. The root still owns the single test
+entry point and source includes, while `imui_editor_collection_modularization_surface/box_select.rs`
+owns box-select implementation, behavior-test, and fixture boundary assertions.
+
+Evidence:
+
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` declares
+  `mod box_select;` through a path-qualified test owner module and routes the existing box-select
+  source assertions through `box_select::assert_box_select_owner_split(...)`.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface/box_select.rs` owns the
+  box-select implementation/test/fixture owner-split assertions and the negative drift checks that
+  keep behavior tests and fixture helpers out of the implementation owner.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the source-surface test owner split without changing app runtime code, public APIs,
+  `fret-imui`, `fret-ui-kit::imui`, docking, or runner contracts.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Examples Collection Modularization Surface Browser Input Runtime Owner Split Evidence - 2026-06-10
 
 Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer
