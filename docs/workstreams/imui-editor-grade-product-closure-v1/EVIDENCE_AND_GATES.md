@@ -2,6 +2,48 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI combo-model response owner split - 2026-06-09
+
+This maintenance slice keeps combo-model response finishing focused without changing ComboBox,
+combo-model selection, changed/edited lifecycle semantics, popup close-after-edit behavior, popup
+item rendering, trigger keyboard, visual, or public facade behavior:
+
+- IMUI combo-model response owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/response.rs` keeps the response finishing hub
+  only.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/response/selected.rs` owns selected-model
+  readback for response comparison.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/response/lifecycle.rs` owns changed
+  detection plus changed/edited/deactivated-after-edit response projection.
+- No public API or runtime behavior changed; the existing
+  `response::finish_combo_model_response(...)` private call surface remains the combo-model
+  response finishing entry.
+- The source gate now freezes combo-model response selected readback and lifecycle projection out of
+  the response hub and rejects popup item, entry state, and mutation logic from drifting across
+  response boundaries.
+- Evidence anchor: `combo_model_controls/response.rs` declares `mod lifecycle;` and
+  `mod selected;`, then delegates selected readback and lifecycle projection to their owners.
+- Evidence anchor: `response/selected.rs` contains only selected-model readback.
+- Evidence anchor: `response/lifecycle.rs` contains only changed detection and response lifecycle
+  projection.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the combo-model response hub,
+  selected owner, lifecycle owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast` - passed, 11/11.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI combo-model entry state owner split - 2026-06-09
 
 This maintenance slice keeps combo-model entry assembly focused without changing ComboBox,
