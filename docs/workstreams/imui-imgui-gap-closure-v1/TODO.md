@@ -8459,6 +8459,12 @@ opening the slice.
       `authoring_parity/shared_state.rs` owns shared-state readout projection. The collection
       source gate, facade teaching gate, workstream source gate, manifest, and surface tests now
       include both child owners.
+- [x] Bundle the authoring parity shared control models behind the demo-local model owner before
+      moving more authoring parity surface code out of the proof route root.
+      Result: `authoring_parity/models.rs` now owns `AuthoringParityModels` and
+      `shared_models(...)`, while `imui_editor_proof_demo.rs` gathers one bundle and passes it to
+      the parity surface/shared-state owners instead of initializing nine individual
+      `authoring_parity::*_model(...)` handles in the route root.
 - [x] Split collection proof asset fixture record/defaults out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
       `collection/assets.rs` child owner without changing stored asset defaults, asset ids,

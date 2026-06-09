@@ -6,6 +6,35 @@ use fret_ui::{ElementContext, UiHost};
 
 use super::super::proof_helpers::{ProofDragAsset, ProofOutlinerItem};
 
+#[derive(Clone)]
+pub(in super::super) struct AuthoringParityModels {
+    pub(in super::super) name: Model<String>,
+    pub(in super::super) drag_value: Model<f64>,
+    pub(in super::super) numeric_input: Model<f64>,
+    pub(in super::super) slider: Model<f64>,
+    pub(in super::super) enabled: Model<bool>,
+    pub(in super::super) shading: Model<Option<Arc<str>>>,
+    pub(in super::super) gradient_angle: Model<f64>,
+    pub(in super::super) gradient_stops: Model<Vec<super::super::GradientDemoStop>>,
+    pub(in super::super) gradient_next_id: Model<u64>,
+}
+
+pub(in super::super) fn shared_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> AuthoringParityModels {
+    AuthoringParityModels {
+        name: name_model(cx),
+        drag_value: drag_value_model(cx),
+        numeric_input: numeric_input_model(cx),
+        slider: slider_model(cx),
+        enabled: enabled_model(cx),
+        shading: shading_model(cx),
+        gradient_angle: gradient_angle_model(cx),
+        gradient_stops: gradient_stops_model(cx),
+        gradient_next_id: gradient_next_id_model(cx),
+    }
+}
+
 pub(in super::super) fn name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     super::super::named_demo_state(
         cx,

@@ -213,6 +213,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod models;",
         "mod shared_state;",
         "pub(super) use models::{",
+        "AuthoringParityModels",
+        "shared_models",
         "drag_assets",
         "outliner_items_model",
         "pub(super) use shared_state::render_shared_state;",
@@ -224,6 +226,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     for needle in [
+        "pub(in super::super) struct AuthoringParityModels {",
+        "pub(in super::super) fn shared_models<H: UiHost>(",
+        "name: name_model(cx),",
+        "gradient_next_id: gradient_next_id_model(cx),",
         "pub(in super::super) fn drag_assets() -> Arc<[ProofDragAsset]> {",
         "super::super::collection::authoring_parity_collection_assets()",
         "pub(in super::super) fn outliner_items() -> Arc<[ProofOutlinerItem]> {",
@@ -232,6 +238,23 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             authoring_parity_models_source.contains(needle),
             "the demo-local authoring parity model owner should own shared proof fixtures; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "authoring_parity::name_model(cx)",
+        "authoring_parity::drag_value_model(cx)",
+        "authoring_parity::numeric_input_model(cx)",
+        "authoring_parity::slider_model(cx)",
+        "authoring_parity::enabled_model(cx)",
+        "authoring_parity::shading_model(cx)",
+        "authoring_parity::gradient_angle_model(cx)",
+        "authoring_parity::gradient_stops_model(cx)",
+        "authoring_parity::gradient_next_id_model(cx)",
+    ] {
+        assert!(
+            !demo_source.contains(needle),
+            "imui_editor_proof_demo should gather shared authoring parity models through the child owner bundle; unexpected `{needle}`"
         );
     }
 

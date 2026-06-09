@@ -1,35 +1,26 @@
-use std::sync::Arc;
-
 use fret::AppComponentCx;
 use fret::advanced::view::AppRenderDataExt as _;
 use fret::component::prelude::*;
-use fret_runtime::Model;
 
 use super::super::proof_helpers::{
     AuthoringParitySharedStateReadout, proof_compact_readout_element,
 };
+use super::AuthoringParityModels;
 
 pub(in super::super) fn render_shared_state(
     cx: &mut AppComponentCx<'_>,
-    name_model: Model<String>,
-    drag_value_model: Model<f64>,
-    numeric_input_model: Model<f64>,
-    slider_model: Model<f64>,
-    enabled_model: Model<bool>,
-    shading_model: Model<Option<Arc<str>>>,
-    gradient_angle_model: Model<f64>,
-    gradient_stops_model: Model<Vec<super::super::GradientDemoStop>>,
+    models: AuthoringParityModels,
 ) -> impl IntoUiElement<super::super::KernelApp> + use<> {
     let shared = cx.data().selector_model_paint(
         (
-            &name_model,
-            &drag_value_model,
-            &numeric_input_model,
-            &slider_model,
-            &enabled_model,
-            &shading_model,
-            &gradient_angle_model,
-            &gradient_stops_model,
+            &models.name,
+            &models.drag_value,
+            &models.numeric_input,
+            &models.slider,
+            &models.enabled,
+            &models.shading,
+            &models.gradient_angle,
+            &models.gradient_stops,
         ),
         |(name, value, numeric, blend, enabled, shading, gradient_angle, gradient_stops)| {
             AuthoringParitySharedStateReadout {

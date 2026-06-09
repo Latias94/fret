@@ -8108,6 +8108,15 @@ the app-owned no-helper-widening boundary remain unchanged, while the collection
 facade teaching gate, workstream source gate, manifest, and surface tests now freeze the
 hub/child-owner boundary.
 
+2026-06-10 authoring parity shared model bundle result:
+`apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/models.rs` now owns
+`AuthoringParityModels` and `shared_models(...)` as the single shared-control model bundle for the
+authoring parity surface. `imui_editor_proof_demo.rs` now gathers one `parity_models` bundle and
+passes clones to `render_authoring_parity_surface(...)` and
+`authoring_parity::render_shared_state(...)` instead of initializing the nine shared control model
+handles directly in the proof route root. Shared model keys, render behavior, readout text, test
+IDs, and the app-owned no-helper-widening boundary remain unchanged.
+
 2026-06-07 collection proof assets owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
 re-exports the existing `collection::authoring_parity_collection_assets()` call surface through the

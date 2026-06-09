@@ -358,15 +358,7 @@ where
     let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
     let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
     let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
-    let parity_name_model = authoring_parity::name_model(cx);
-    let parity_drag_value_model = authoring_parity::drag_value_model(cx);
-    let parity_numeric_input_model = authoring_parity::numeric_input_model(cx);
-    let parity_slider_model = authoring_parity::slider_model(cx);
-    let parity_enabled_model = authoring_parity::enabled_model(cx);
-    let parity_shading_model = authoring_parity::shading_model(cx);
-    let parity_gradient_angle_model = authoring_parity::gradient_angle_model(cx);
-    let parity_gradient_stops_model = authoring_parity::gradient_stops_model(cx);
-    let parity_gradient_next_id_model = authoring_parity::gradient_next_id_model(cx);
+    let parity_models = authoring_parity::shared_models(cx);
 
     #[cfg(debug_assertions)]
     {
@@ -446,31 +438,11 @@ where
                         "authoring parity proof: shared models, left declarative, right imui adapters; compare drag scrub, typed numeric entry, and bounded slider surfaces, then verify each paired row stays in sync under the same preset",
                     );
 
-                    let parity_name_model_for_surface = parity_name_model.clone();
-                    let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
-                    let parity_numeric_input_model_for_surface =
-                        parity_numeric_input_model.clone();
-                    let parity_slider_model_for_surface = parity_slider_model.clone();
-                    let parity_enabled_model_for_surface = parity_enabled_model.clone();
-                    let parity_shading_model_for_surface = parity_shading_model.clone();
-                    let parity_gradient_angle_model_for_surface =
-                        parity_gradient_angle_model.clone();
-                    let parity_gradient_stops_model_for_surface =
-                        parity_gradient_stops_model.clone();
-                    let parity_gradient_next_id_model_for_surface =
-                        parity_gradient_next_id_model.clone();
+                    let parity_models_for_surface = parity_models.clone();
                     ui.mount(move |cx| {
                         vec![render_authoring_parity_surface(
                             cx,
-                            parity_name_model_for_surface.clone(),
-                            parity_drag_value_model_for_surface.clone(),
-                            parity_numeric_input_model_for_surface.clone(),
-                            parity_slider_model_for_surface.clone(),
-                            parity_enabled_model_for_surface.clone(),
-                            parity_shading_model_for_surface.clone(),
-                            parity_gradient_angle_model_for_surface.clone(),
-                            parity_gradient_stops_model_for_surface.clone(),
-                            parity_gradient_next_id_model_for_surface.clone(),
+                            parity_models_for_surface.clone(),
                         )
                         .into_element(cx)]
                     });
@@ -480,26 +452,11 @@ where
                             "shared state readout: each declarative/imui pair should mutate the same model, while drag, typed numeric, and slider stay intentionally distinct",
                     );
 
-                    let parity_name_model_for_state = parity_name_model.clone();
-                    let parity_drag_value_model_for_state = parity_drag_value_model.clone();
-                    let parity_numeric_input_model_for_state =
-                        parity_numeric_input_model.clone();
-                    let parity_slider_model_for_state = parity_slider_model.clone();
-                    let parity_enabled_model_for_state = parity_enabled_model.clone();
-                    let parity_shading_model_for_state = parity_shading_model.clone();
-                    let parity_gradient_angle_model_for_state = parity_gradient_angle_model.clone();
-                    let parity_gradient_stops_model_for_state = parity_gradient_stops_model.clone();
+                    let parity_models_for_state = parity_models.clone();
                     ui.mount(move |cx| {
                         vec![authoring_parity::render_shared_state(
                             cx,
-                            parity_name_model_for_state.clone(),
-                            parity_drag_value_model_for_state.clone(),
-                            parity_numeric_input_model_for_state.clone(),
-                            parity_slider_model_for_state.clone(),
-                            parity_enabled_model_for_state.clone(),
-                            parity_shading_model_for_state.clone(),
-                            parity_gradient_angle_model_for_state.clone(),
-                            parity_gradient_stops_model_for_state.clone(),
+                            parity_models_for_state.clone(),
                         )
                         .into_element(cx)]
                     });
@@ -1992,15 +1949,7 @@ where
 
 fn render_authoring_parity_surface(
     cx: &mut AppComponentCx<'_>,
-    name_model: Model<String>,
-    drag_value_model: Model<f64>,
-    numeric_input_model: Model<f64>,
-    slider_model: Model<f64>,
-    enabled_model: Model<bool>,
-    shading_model: Model<Option<Arc<str>>>,
-    gradient_angle_model: Model<f64>,
-    gradient_stops_model: Model<Vec<GradientDemoStop>>,
-    gradient_next_id_model: Model<u64>,
+    models: authoring_parity::AuthoringParityModels,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let shading_items = authoring_parity_shading_items();
 
@@ -2024,28 +1973,12 @@ fn render_authoring_parity_surface(
                 out.push(
                     fret_ui_kit::ui::container_build({
                         let shading_items = shading_items.clone();
-                        let name_model = name_model.clone();
-                        let drag_value_model = drag_value_model.clone();
-                        let numeric_input_model = numeric_input_model.clone();
-                        let slider_model = slider_model.clone();
-                        let enabled_model = enabled_model.clone();
-                        let shading_model = shading_model.clone();
-                        let gradient_angle_model = gradient_angle_model.clone();
-                        let gradient_stops_model = gradient_stops_model.clone();
-                        let gradient_next_id_model = gradient_next_id_model.clone();
+                        let models = models.clone();
                         move |cx, out| {
                             out.push(
                                 render_authoring_parity_declarative_group(
                                     cx,
-                                    name_model,
-                                    drag_value_model,
-                                    numeric_input_model,
-                                    slider_model,
-                                    enabled_model,
-                                    shading_model,
-                                    gradient_angle_model,
-                                    gradient_stops_model,
-                                    gradient_next_id_model,
+                                    models,
                                     shading_items,
                                 )
                                 .into_element(cx),
@@ -2060,20 +1993,8 @@ fn render_authoring_parity_surface(
                 out.push(
                     fret_ui_kit::ui::container_build(move |cx, out| {
                         out.push(
-                            render_authoring_parity_imui_group(
-                                cx,
-                                name_model,
-                                drag_value_model,
-                                numeric_input_model,
-                                slider_model,
-                                enabled_model,
-                                shading_model,
-                                gradient_angle_model,
-                                gradient_stops_model,
-                                gradient_next_id_model,
-                                shading_items,
-                            )
-                            .into_element(cx),
+                            render_authoring_parity_imui_group(cx, models, shading_items)
+                                .into_element(cx),
                         );
                     })
                     .basis_0()
@@ -2091,15 +2012,7 @@ fn render_authoring_parity_surface(
 
 fn render_authoring_parity_declarative_group(
     cx: &mut AppComponentCx<'_>,
-    name_model: Model<String>,
-    drag_value_model: Model<f64>,
-    numeric_input_model: Model<f64>,
-    slider_model: Model<f64>,
-    enabled_model: Model<bool>,
-    shading_model: Model<Option<Arc<str>>>,
-    gradient_angle_model: Model<f64>,
-    gradient_stops_model: Model<Vec<GradientDemoStop>>,
-    gradient_next_id_model: Model<u64>,
+    models: authoring_parity::AuthoringParityModels,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let value_presentation = authoring_parity_value_presentation();
@@ -2129,7 +2042,7 @@ fn render_authoring_parity_declarative_group(
                             PropertyRow::new(),
                             |cx| row_cx.label_text(cx, "Name"),
                             |cx| {
-                                TextField::new(name_model.clone())
+                                TextField::new(models.name.clone())
                                     .options(TextFieldOptions {
                                         clear_button: true,
                                         selection_behavior:
@@ -2153,7 +2066,7 @@ fn render_authoring_parity_declarative_group(
                             |cx| row_cx.label_text(cx, "Drag value"),
                             |cx| {
                                 DragValue::from_presentation(
-                                    drag_value_model.clone(),
+                                    models.drag_value.clone(),
                                     value_presentation.clone(),
                                 )
                                 .options(authoring_parity_drag_value_options(
@@ -2172,7 +2085,7 @@ fn render_authoring_parity_declarative_group(
                             |cx| row_cx.label_text(cx, "Typed numeric"),
                             |cx| {
                                 NumericInput::from_presentation(
-                                    numeric_input_model.clone(),
+                                    models.numeric_input.clone(),
                                     value_presentation.clone(),
                                 )
                                 .options(authoring_parity_numeric_input_options(
@@ -2191,7 +2104,7 @@ fn render_authoring_parity_declarative_group(
                             |cx| row_cx.label_text(cx, "Blend slider"),
                             |cx| {
                                 Slider::from_presentation(
-                                    slider_model.clone(),
+                                    models.slider.clone(),
                                     0.0,
                                     1.0,
                                     blend_presentation.clone(),
@@ -2218,7 +2131,7 @@ fn render_authoring_parity_declarative_group(
                             PropertyRow::new(),
                             |cx| row_cx.label_text(cx, "Enabled"),
                             |cx| {
-                                Checkbox::new(enabled_model.clone())
+                                Checkbox::new(models.enabled.clone())
                                     .options(fret_ui_editor::controls::CheckboxOptions {
                                         test_id: Some(Arc::from(
                                             "imui-editor-proof.authoring.declarative.enabled",
@@ -2235,7 +2148,7 @@ fn render_authoring_parity_declarative_group(
                             PropertyRow::new(),
                             |cx| row_cx.label_text(cx, "Mode"),
                             |cx| {
-                                EnumSelect::new(shading_model.clone(), shading_items.clone())
+                                EnumSelect::new(models.shading.clone(), shading_items.clone())
                                     .options(EnumSelectOptions {
                                         id_source: Some(Arc::from(
                                             "authoring-parity.declarative.mode",
@@ -2265,9 +2178,9 @@ fn render_authoring_parity_declarative_group(
                     ),
                     build_authoring_parity_gradient_editor(
                         cx,
-                        gradient_angle_model.clone(),
-                        gradient_stops_model.clone(),
-                        gradient_next_id_model.clone(),
+                        models.gradient_angle.clone(),
+                        models.gradient_stops.clone(),
+                        models.gradient_next_id.clone(),
                         "authoring-parity.declarative.gradient",
                         "imui-editor-proof.authoring.declarative.gradient",
                     )
@@ -2279,15 +2192,7 @@ fn render_authoring_parity_declarative_group(
 
 fn render_authoring_parity_imui_group(
     cx: &mut AppComponentCx<'_>,
-    name_model: Model<String>,
-    drag_value_model: Model<f64>,
-    numeric_input_model: Model<f64>,
-    slider_model: Model<f64>,
-    enabled_model: Model<bool>,
-    shading_model: Model<Option<Arc<str>>>,
-    gradient_angle_model: Model<f64>,
-    gradient_stops_model: Model<Vec<GradientDemoStop>>,
-    gradient_next_id_model: Model<u64>,
+    models: authoring_parity::AuthoringParityModels,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let value_presentation = authoring_parity_value_presentation();
@@ -2322,7 +2227,7 @@ fn render_authoring_parity_imui_group(
                                 render_authoring_parity_imui_host(cx, move |ui| {
                                     editor_imui::text_field(
                                         ui,
-                                        TextField::new(name_model.clone()).options(
+                                        TextField::new(models.name.clone()).options(
                                             TextFieldOptions {
                                                 clear_button: true,
                                                 selection_behavior:
@@ -2356,7 +2261,7 @@ fn render_authoring_parity_imui_group(
                                     editor_imui::drag_value(
                                         ui,
                                         DragValue::from_presentation(
-                                            drag_value_model.clone(),
+                                            models.drag_value.clone(),
                                             value_presentation.clone(),
                                         )
                                         .options(options),
@@ -2381,7 +2286,7 @@ fn render_authoring_parity_imui_group(
                                     editor_imui::numeric_input(
                                         ui,
                                         NumericInput::from_presentation(
-                                            numeric_input_model.clone(),
+                                            models.numeric_input.clone(),
                                             value_presentation.clone(),
                                         )
                                         .options(options),
@@ -2402,7 +2307,7 @@ fn render_authoring_parity_imui_group(
                                     editor_imui::slider(
                                         ui,
                                         Slider::from_presentation(
-                                            slider_model.clone(),
+                                            models.slider.clone(),
                                             0.0,
                                             1.0,
                                             blend_presentation.clone(),
@@ -2438,7 +2343,7 @@ fn render_authoring_parity_imui_group(
                                 render_authoring_parity_imui_host(cx, move |ui| {
                                     editor_imui::checkbox(
                                         ui,
-                                        Checkbox::new(enabled_model.clone()).options(
+                                        Checkbox::new(models.enabled.clone()).options(
                                             fret_ui_editor::controls::CheckboxOptions {
                                                 test_id: Some(Arc::from(
                                                     "imui-editor-proof.authoring.imui.enabled",
@@ -2460,7 +2365,7 @@ fn render_authoring_parity_imui_group(
                                     editor_imui::enum_select(
                                         ui,
                                         EnumSelect::new(
-                                            shading_model.clone(),
+                                            models.shading.clone(),
                                             shading_items.clone(),
                                         )
                                         .options(
@@ -2492,9 +2397,9 @@ fn render_authoring_parity_imui_group(
                     ui.text("Gradient editor");
                     let gradient_editor = build_authoring_parity_gradient_editor(
                         ui.cx_mut(),
-                        gradient_angle_model.clone(),
-                        gradient_stops_model.clone(),
-                        gradient_next_id_model.clone(),
+                        models.gradient_angle.clone(),
+                        models.gradient_stops.clone(),
+                        models.gradient_next_id.clone(),
                         "authoring-parity.imui.gradient",
                         "imui-editor-proof.authoring.imui.gradient",
                     );

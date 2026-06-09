@@ -1961,6 +1961,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Authoring Parity Shared Model Bundle Evidence - 2026-06-10
+
+Claim verified: the editor proof route root no longer initializes the authoring parity shared
+control models one-by-one. The demo-local authoring parity model owner now owns the shared-control
+model bundle, keeping the root route closer to proof composition and reducing the coupling needed
+for a later render-surface owner split.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/models.rs` owns
+  `AuthoringParityModels` and `shared_models(...)`, which gather name, drag value, typed numeric,
+  slider, enabled, shading, gradient angle, gradient stops, and gradient next-id models using the
+  existing model slot helpers.
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now calls
+  `authoring_parity::shared_models(cx)` once and passes the bundle to
+  `render_authoring_parity_surface(...)` and `authoring_parity::render_shared_state(...)`.
+- `apps/fret-examples/src/imui_editor_proof_demo/authoring_parity/shared_state.rs` now consumes
+  `AuthoringParityModels` instead of accepting the individual model handles.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` now freeze the bundle owner and reject route-root drift
+  back to individual `authoring_parity::*_model(...)` initialization.
+
+Focused gates:
+
+- `cargo fmt --package fret-examples`: pass.
+- `cargo fmt --package fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` warning.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Canonical Workbench Persistent Action Strip Evidence - 2026-06-03
 
 Claim verified: the canonical IMUI editor workbench route now owns a persistent
