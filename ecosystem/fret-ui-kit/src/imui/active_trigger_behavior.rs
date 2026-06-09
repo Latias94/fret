@@ -5,13 +5,13 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 mod install;
 mod keyboard;
+mod options;
 mod pointer;
 mod response;
 mod types;
 
-pub(super) use types::{
-    ActiveTriggerBehavior, ActiveTriggerBehaviorOptions, ActiveTriggerResponseInput,
-};
+pub(super) use options::ActiveTriggerBehaviorOptions;
+pub(super) use types::{ActiveTriggerBehavior, ActiveTriggerResponseInput};
 
 pub(super) fn install_active_trigger_behavior<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

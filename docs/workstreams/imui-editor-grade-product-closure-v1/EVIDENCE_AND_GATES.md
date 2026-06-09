@@ -2,6 +2,48 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI active trigger options owner split - 2026-06-09
+
+This maintenance slice keeps active-trigger state types focused without changing switch, menu,
+tab, table-header trigger, context-menu, pointer, response, or public facade behavior:
+
+- IMUI active trigger options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/types.rs` keeps active trigger runtime
+  state and response input shapes.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/options.rs` owns the private
+  `ActiveTriggerBehaviorOptions` carrier and default policy.
+- No public API or runtime behavior changed; the existing
+  `active_trigger_behavior::ActiveTriggerBehaviorOptions` private call surface remains re-exported
+  through the active trigger behavior module for switch/menu/tab/table trigger callers.
+- The source gate now freezes `ActiveTriggerBehaviorOptions` out of the state types owner and
+  rejects install, keyboard, pointer, response, model, and facade logic from drifting into the
+  options owner.
+- Evidence anchor: `active_trigger_behavior.rs` declares `mod options;` and re-exports
+  `options::ActiveTriggerBehaviorOptions` while keeping state/response types re-exported from
+  `types.rs`.
+- Evidence anchor: `active_trigger_behavior/options.rs` contains primary-active, focus-on-press,
+  clear-pointer-move fields plus the default policy only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the active trigger root, options
+  owner, types owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui switch --no-fail-fast` - passed, 10/10.
+- `cargo nextest run -p fret-ui-kit --features imui menu --no-fail-fast` - passed, 65/65.
+- `cargo nextest run -p fret-ui-kit --features imui tab --no-fail-fast` - passed, 83/83.
+- `cargo nextest run -p fret-imui switch --no-fail-fast` - passed, 8/8.
+- `cargo nextest run -p fret-imui menu --no-fail-fast` - passed, 52/52.
+- `cargo nextest run -p fret-imui tab --no-fail-fast` - passed, 52/52.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI selectable behavior options owner split - 2026-06-09
 
 This maintenance slice keeps selectable behavior assembly focused without changing selectable
