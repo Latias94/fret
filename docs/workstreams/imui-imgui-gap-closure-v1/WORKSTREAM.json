@@ -2284,6 +2284,8 @@
     "ecosystem/fret-imui/src/tests/composition/control_geometry/base_controls.rs",
     "ecosystem/fret-imui/src/tests/composition/control_geometry/disabled.rs",
     "ecosystem/fret-imui/src/tests/composition/control_geometry/menu_tabs.rs",
+    "ecosystem/fret-imui/src/tests/composition/control_geometry/menu_tabs/harness.rs",
+    "ecosystem/fret-imui/src/tests/composition/control_geometry/menu_tabs/state_bounds.rs",
     "ecosystem/fret-imui/src/tests/composition/control_geometry/variants.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
     "ecosystem/fret-imui/src/tests/composition/layout_collections/containers.rs",

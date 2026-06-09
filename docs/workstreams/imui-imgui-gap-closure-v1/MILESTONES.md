@@ -268,6 +268,14 @@ enabled-to-disabled bounds stability proof across text, button, selection, menu,
 controls. No `fret-ui-kit::imui` control runtime implementation, `fret-imui` public facade, or
 control option API changed.
 
+2026-06-10 Fret-ImUi control-geometry menu/tab harness split result:
+`control_geometry/menu_tabs.rs` now keeps only shared imports and child-owner routing.
+`control_geometry/menu_tabs/harness.rs` owns menu/tab surface rendering, test host/window setup,
+pointer/focus driving helpers, and geometry assertions, while
+`control_geometry/menu_tabs/state_bounds.rs` owns the menu and tab trigger
+hover/focus/press/open/selection bounds stability proof. The surrounding control-geometry helper
+owner remains unchanged.
+
 2026-06-05 Fret-ImUi combo-model proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` now keeps only child-owner routing for
 the combo-model proof surface. `combo_model/selection.rs` routes combo-model selection proof

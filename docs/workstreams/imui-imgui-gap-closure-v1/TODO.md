@@ -558,6 +558,16 @@ Last updated: 2026-06-10
       button, selection, menu, submenu, and tab controls. The IMUI source gate freezes the
       child-owner split.
 
+- [x] Split the `fret-imui` control-geometry menu/tab proof file into a scenario harness and a
+      state-bounds behavior owner without changing menu/tab runtime behavior, public APIs, or the
+      `fret-ui-kit::imui` menu/tab implementations.
+      Result: `control_geometry/menu_tabs.rs` now keeps only shared imports and module routing.
+      `control_geometry/menu_tabs/harness.rs` owns the rendered menu/tab surface, test
+      host/window setup, pointer/focus driving helpers, and geometry assertions, while
+      `control_geometry/menu_tabs/state_bounds.rs` owns the hover/focus/press/open/selection
+      bounds stability proof. The IMUI source gate and workstream source bundle freeze the
+      child-owner split.
+
 ## Porting Sugar Proof - 2026-05-31
 
 - [x] Promote existing closure-scoped SameLine porting sugar into a first-party cookbook teaching

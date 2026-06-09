@@ -808,6 +808,35 @@ Focused gates:
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Control Geometry Menu/Tab Harness Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` control-geometry menu/tab proof surface is split into a reusable
+scenario harness and a focused state-bounds proof owner without changing menu/tab runtime code,
+public APIs, option names, or test semantics.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/composition/control_geometry/menu_tabs.rs` now keeps only shared
+  imports and child-owner routing for `harness` and `state_bounds`.
+- `control_geometry/menu_tabs/harness.rs` owns the menu/tab surface rendering, test host/window
+  setup, pointer/focus driving helpers, and geometry assertions.
+- `control_geometry/menu_tabs/state_bounds.rs` owns the menu and tab trigger
+  hover/focus/press/open/selection bounds stability proof.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the proof split.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui menu_and_tab_trigger_state_changes_keep_outer_bounds_stable --no-fail-fast`:
+  pass, 1 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Combo Model Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` combo-model proof surface is split by model-combo behavior owner
