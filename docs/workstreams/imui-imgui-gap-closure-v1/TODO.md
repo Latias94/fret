@@ -418,6 +418,16 @@ Last updated: 2026-06-10
       `interaction_drag/mod.rs` parent now keeps only shared drag payload support and child routing. The IMUI
       source gate and workstream source bundle freeze the child-owner split.
 
+- [x] Split the `fret-imui` collection-drag scenario proof file into a harness owner and an
+      order-flip behavior owner without changing selected-set payload formation, visible-order
+      reversal behavior, preview/delivered payload assertions, public APIs, or the
+      `fret-ui-kit::imui` drag/drop and multi-select implementations.
+      Result: `collection_drag/scenario.rs` is now a thin module hub.
+      `collection_drag/scenario/harness.rs` owns the repeated test host/window/frame setup,
+      render helpers, and pointer actions, while `collection_drag/scenario/order_flip.rs` owns the
+      selected payload carry-over proof across a visible-order flip. The IMUI source gate and
+      workstream source bundle now freeze the three-way owner split.
+
 ## Fret-ImUi Sortable Proof Split - 2026-06-06
 
 - [x] Split the `fret-imui` sortable proof file into sortable fixture/runner and scenario child

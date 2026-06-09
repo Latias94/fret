@@ -35933,6 +35933,13 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-10 Fret-ImUi collection-drag scenario harness split:
+`ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario.rs` is now a thin module
+hub that routes to `scenario/harness.rs` and `scenario/order_flip.rs`. The harness owner keeps the
+repeated test host/window/frame setup plus pointer-driving helpers, while `order_flip.rs` owns the
+selected payload carry-over proof across a visible-order flip. No collection-drag payload
+semantics changed.
+
 2026-06-06 fret-imui sortable proof owner split:
 
 - Claim: `ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs` was split into a thin hub

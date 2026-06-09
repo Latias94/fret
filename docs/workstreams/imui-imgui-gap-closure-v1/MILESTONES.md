@@ -96,6 +96,12 @@ drag/drop behavior proof. The parent `interaction_drag/mod.rs` no longer carries
 fixtures and keeps shared drag payload support plus child routing. No `fret-ui-kit::imui` drag/drop or
 multi-select runtime implementation, `fret-imui` public facade, or option API changed.
 
+2026-06-10 Fret-ImUi collection-drag scenario harness split:
+`collection_drag/scenario.rs` is now a hub only. `collection_drag/scenario/harness.rs` owns the
+test-host/window/frame plumbing, frame render helper, and pointer-driving helpers, while
+`collection_drag/scenario/order_flip.rs` owns the selected payload carry-over proof across the
+visible-order flip. The payload formation fixture owner remains unchanged.
+
 2026-06-06 Fret-ImUi drag-preview proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_drag/drag_preview.rs` now keeps only shared imports and
 child-owner routing for the drag-preview proof surface. `drag_preview/local_ghost.rs` owns local

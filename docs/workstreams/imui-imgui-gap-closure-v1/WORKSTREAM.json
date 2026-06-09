@@ -2336,6 +2336,8 @@
     "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/fixtures.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario/harness.rs",
+    "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario/order_flip.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/sortable/fixtures.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/sortable/scenario.rs"
