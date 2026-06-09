@@ -2,6 +2,51 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI text-picker popup owner split - 2026-06-09
+
+This maintenance slice keeps text-picker popup rendering focused without changing input-text-picker,
+completion/history wrappers, popup keyboard handling, candidate row rendering, keyboard pending-pick
+reporting, clicked candidate commits, popup opened reporting, or public facade behavior:
+
+- IMUI text-picker popup owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs` keeps the popup render hub, popup
+  begin call, popup keyboard handler install, and item rendering delegation only.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/result.rs` owns pending keyboard pick
+  initialization, clicked item pick merging, and final `InputTextPickerPopupResult` packing.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup/items.rs` owns visible-candidate
+  iteration and per-item input assembly.
+- No public API or runtime behavior changed; the existing `render_text_picker_popup(...)` private
+  call surface remains the popup rendering entry.
+- The source gate now freezes popup result packing and candidate iteration out of the popup hub
+  while rejecting popup keyboard, selectable row, model commit, response, and facade logic from
+  drifting across popup boundaries.
+- Evidence anchor: `text_picker_controls/popup.rs` declares `mod items;` and `mod result;`,
+  prepares a popup result owner, begins the popup menu, installs popup keyboard handling, delegates
+  item rendering, and finishes the result.
+- Evidence anchor: `popup/result.rs` contains only pending keyboard pick initialization, item pick
+  merging, and popup result packing.
+- Evidence anchor: `popup/items.rs` contains only visible-candidate iteration and
+  `InputTextPickerPopupItemInput` assembly.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the popup hub, items owner,
+  result owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit` - passed.
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui text_picker --no-fail-fast` - passed, 2/2
+  after rerunning separately with a longer timeout; an initial parallel attempt timed out while
+  waiting on Cargo locks with no failure output.
+- `cargo nextest run -p fret-imui text_picker --no-fail-fast` - passed, 6/6.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI text-picker open-policy owner split - 2026-06-09
 
 This maintenance slice keeps text-picker open policy focused without changing input-text-picker,
