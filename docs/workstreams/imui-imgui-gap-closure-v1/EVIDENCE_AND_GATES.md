@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Editor Proof Inspector Owner Split Evidence - 2026-06-10
+
+Claim verified: the supporting `imui_editor_proof_demo` route root no longer owns the editor
+InspectorPanel shell, editor model collection, child-owner routing, search-assist options, or
+inspector no-match aggregation. The demo-local `editor_inspector` owner now owns that composition
+boundary while keeping Object, Material, Gradient, and Advanced behavior in their narrower owners.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now declares `mod editor_inspector;`, imports
+  `editor_inspector::*`, builds `editor_inspector_models(cx)`, and mounts
+  `render_editor_inspector_surface(...)` instead of constructing `InspectorPanel::new(...)` inline.
+- `apps/fret-examples/src/imui_editor_proof_demo/editor_inspector.rs` owns
+  `EditorInspectorModels`, `editor_inspector_models(...)`, `render_editor_inspector_surface(...)`,
+  `InspectorPanelOptions`, `InspectorPanelSearchAssistOptions`, child-owner routing for Object,
+  Material, Gradient, and Advanced, and the Material/Advanced no-match aggregation.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` freeze the split so the route root cannot regain
+  InspectorPanel composition or child-owner dispatch policy.
+- Existing compatibility anchor preserved: `imui_editor_proof_demo.rs` still imports
+  `editor_state::*` because sibling modules currently address `named_demo_state(...)` and
+  `GradientDemoStop` through the parent module namespace.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` dead-code warning.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed. A prior timed-out `cargo-nextest` run left cargo/rustc processes holding the build
+  lock; after terminating those stale processes, the rerun completed successfully.
+- `python tools\check_workstream_catalog.py`: pass (541 dedicated directories, 47 standalone
+  markdown files).
+- `git diff --check`: pass; reported only the expected Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## Fret Examples Editor Proof Object Owner Split Evidence - 2026-06-10
 
 Claim verified: the supporting `imui_editor_proof_demo` Object inspector surface now has a

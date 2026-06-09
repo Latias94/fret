@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples editor proof Inspector owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo.rs` now routes the editor InspectorPanel through
+`imui_editor_proof_demo/editor_inspector.rs` instead of carrying editor model collection,
+InspectorPanel options, search-assist options, child-owner dispatch, and no-match aggregation
+inline. The new owner coordinates Object, Material, Gradient, and Advanced while those narrower
+owners continue to own their row policy. No `fret-ui-editor` control API, `fret-imui` facade,
+docking, or runner contract changed.
+
 2026-06-10 Fret Examples editor proof Object owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo.rs` now routes the Object inspector property group
 through `imui_editor_proof_demo/editor_object.rs` instead of carrying TextField construction,
@@ -8166,6 +8174,15 @@ name-assist mounting, and TextField outcome writeback. `imui_editor_proof_demo.r
 declares/imports the object owner and passes `EditorObjectModels` while keeping
 route/workbench/render composition. Object model wiring, readout text, name-assist behavior, test
 IDs, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged.
+
+2026-06-10 main editor proof inspector owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/editor_inspector.rs` now owns the main editor
+InspectorPanel shell: editor model collection, InspectorPanel/search-assist options, Object,
+Material, Gradient, and Advanced child-owner routing, and Material/Advanced no-match aggregation.
+`imui_editor_proof_demo.rs` now only declares/imports the inspector owner and mounts
+`render_editor_inspector_surface(...)` while keeping route/workbench/render composition. Search
+assist test IDs, editor model keys, child group behavior, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged.
 
 2026-06-10 main editor proof material owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/editor_material.rs` now owns the main editor Material

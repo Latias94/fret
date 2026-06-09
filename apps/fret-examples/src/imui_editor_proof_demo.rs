@@ -15,11 +15,7 @@ use fret_runtime::{
 };
 use fret_ui::GlobalElementId;
 use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui::scroll::ScrollHandle;
-use fret_ui_editor::composites::{
-    InspectorPanel, InspectorPanelOptions, InspectorPanelSearchAssistOptions,
-};
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::recipes::imui_drag_preview::{
@@ -35,6 +31,7 @@ mod authoring_parity;
 mod collection;
 mod editor_advanced;
 mod editor_gradient;
+mod editor_inspector;
 mod editor_material;
 mod editor_object;
 mod editor_state;
@@ -42,11 +39,17 @@ mod editor_text_assist;
 mod proof_helpers;
 mod workbench_shell;
 
+#[cfg(test)]
 use editor_advanced::*;
+#[cfg(test)]
 use editor_gradient::*;
+use editor_inspector::*;
+#[cfg(test)]
 use editor_material::*;
+#[cfg(test)]
 use editor_object::*;
 use editor_state::*;
+#[cfg(test)]
 use editor_text_assist::*;
 use proof_helpers::*;
 
@@ -212,53 +215,8 @@ where
     let proof_layout = selected_proof_layout();
     let editor_review_layout = proof_layout == ImUiEditorProofLayout::EditorReview;
     let dock_test_id = workbench_shell::dock_test_id_for_window(cx.app, window);
-    let editor_value_model = editor_demo_value_model(cx);
-    let editor_drag_value_outcome_model = editor_demo_drag_value_outcome_model(cx);
-    let editor_roughness_model = editor_demo_roughness_model(cx);
-    let editor_metallic_model = editor_demo_metallic_model(cx);
-    let editor_alpha_clip_model = editor_demo_alpha_clip_model(cx);
-    let editor_cast_shadows_model = editor_demo_cast_shadows_model(cx);
-    let editor_shading_model = editor_demo_shading_model(cx);
-    let editor_base_color_model = editor_demo_base_color_model(cx);
-    let editor_asset_slot_model = asset_ref::asset_slot_model(cx);
-    let editor_asset_action_model = asset_ref::asset_action_model(cx);
-    let editor_name_model = editor_demo_name_model(cx);
-    let editor_buffered_name_model = editor_demo_buffered_name_model(cx);
-    let editor_inline_rename_model = editor_demo_inline_rename_model(cx);
-    let editor_inline_rename_outcome_model = editor_demo_inline_rename_outcome_model(cx);
-    let editor_name_assist_model = editor_demo_name_assist_model(cx);
-    let editor_name_assist_dismissed_query_model =
-        editor_demo_name_assist_dismissed_query_model(cx);
-    let editor_name_assist_active_item_model = editor_demo_name_assist_active_item_model(cx);
-    let editor_name_assist_accepted_model = editor_demo_name_assist_accepted_model(cx);
-    let editor_password_model = editor_demo_password_model(cx);
-    let editor_password_outcome_model = editor_demo_password_outcome_model(cx);
-    let editor_notes_model = editor_demo_notes_model(cx);
-    let editor_notes_outcome_model = editor_demo_notes_outcome_model(cx);
-    let (editor_pos_x, editor_pos_y, editor_pos_z) = editor_demo_position_models(cx);
-    let editor_position_outcome_model = editor_demo_position_outcome_model(cx);
-    let (editor_rot_x, editor_rot_y, editor_rot_z) = editor_demo_rotation_models(cx);
-    let (editor_scl_x, editor_scl_y, editor_scl_z) = editor_demo_scale_models(cx);
-    let editor_transform_outcome_model = editor_demo_transform_outcome_model(cx);
-    let editor_iterations_model = editor_demo_iterations_model(cx);
-    let editor_exposure_model = editor_demo_exposure_model(cx);
-    let editor_search_model = editor_demo_search_model(cx);
-    let editor_search_assist_dismissed_query_model =
-        editor_demo_search_assist_dismissed_query_model(cx);
-    let editor_search_assist_active_item_model = editor_demo_search_assist_active_item_model(cx);
-    let editor_gradient_angle_model = editor_demo_gradient_angle_model(cx);
-    let editor_gradient_stops_model = editor_demo_gradient_stops_model(cx);
-    let editor_gradient_next_id_model = editor_demo_gradient_next_id_model(cx);
+    let editor_models = editor_inspector_models(cx);
     let parity_models = authoring_parity::shared_models(cx);
-
-    #[cfg(debug_assertions)]
-    {
-        debug_assert_ne!(
-            editor_roughness_model.id(),
-            editor_metallic_model.id(),
-            "Roughness/Metallic models must be distinct; otherwise sliders will sync unintentionally."
-        );
-    }
 
     imui(cx, |ui| {
         let root_content = fret_ui_kit::ui::v_flex_build(move |cx, out| {
@@ -357,148 +315,13 @@ where
                         "fret-ui-editor (M2): PropertyGroup + PropertyGrid + search assist",
                     );
                 }
-                ui.mount(|cx| {
-                    vec![InspectorPanel::new(Some(editor_search_model.clone()))
-                        .options(InspectorPanelOptions {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: if editor_review_layout {
-                                        Length::Fill
-                                    } else {
-                                        Length::Auto
-                                    },
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            test_id: Some(Arc::from("imui-editor-proof.editor.inspector")),
-                            header_test_id: Some(Arc::from(
-                                "imui-editor-proof.editor.inspector.header",
-                            )),
-                            search_test_id: Some(Arc::from("imui-editor-proof.editor.search")),
-                            search_clear_test_id: Some(Arc::from(
-                                "imui-editor-proof.editor.search.clear",
-                            )),
-                            search_assist: Some(InspectorPanelSearchAssistOptions {
-                                dismissed_query_model: editor_search_assist_dismissed_query_model
-                                    .clone(),
-                                active_item_id_model: editor_search_assist_active_item_model
-                                    .clone(),
-                                items: editor_demo_search_assist_items(cx),
-                                list_label: Arc::from("Inspector search history"),
-                                empty_label: Arc::from("No search history matches"),
-                                key_options: Default::default(),
-                                list_test_id: Some(Arc::from(
-                                    "imui-editor-proof.editor.search.list",
-                                )),
-                                item_test_id_prefix: Some(Arc::from(
-                                    "imui-editor-proof.editor.search.list.item",
-                                )),
-                                empty_test_id: Some(Arc::from(
-                                    "imui-editor-proof.editor.search.no-matches",
-                                )),
-                                max_list_height: None,
-                            }),
-                            content_test_id: Some(Arc::from(
-                                "imui-editor-proof.editor.inspector.content",
-                            )),
-                            ..Default::default()
-                        })
-                        .into_element(
-                            cx,
-                            |_cx, _panel_cx| Vec::new(),
-                            move |cx, panel_cx| {
-                                let mut out = Vec::new();
-
-                            out.push(render_editor_object_surface(
-                                cx,
-                                EditorObjectModels {
-                                    name: editor_name_model.clone(),
-                                    buffered_name: editor_buffered_name_model.clone(),
-                                    inline_rename: editor_inline_rename_model.clone(),
-                                    inline_rename_outcome: editor_inline_rename_outcome_model
-                                        .clone(),
-                                    name_assist: editor_name_assist_model.clone(),
-                                    name_assist_dismissed_query:
-                                        editor_name_assist_dismissed_query_model.clone(),
-                                    name_assist_active_item: editor_name_assist_active_item_model
-                                        .clone(),
-                                    name_assist_accepted: editor_name_assist_accepted_model
-                                        .clone(),
-                                    password: editor_password_model.clone(),
-                                    password_outcome: editor_password_outcome_model.clone(),
-                                    notes: editor_notes_model.clone(),
-                                    notes_outcome: editor_notes_outcome_model.clone(),
-                                },
-                            ));
-
-                            let material_surface = render_editor_material_surface(
-                                cx,
-                                panel_cx,
-                                EditorMaterialModels {
-                                    opacity: editor_value_model.clone(),
-                                    opacity_outcome: editor_drag_value_outcome_model.clone(),
-                                    roughness: editor_roughness_model.clone(),
-                                    metallic: editor_metallic_model.clone(),
-                                    base_color: editor_base_color_model.clone(),
-                                    asset_slot: editor_asset_slot_model.clone(),
-                                    asset_action: editor_asset_action_model.clone(),
-                                    shading: editor_shading_model.clone(),
-                                    alpha_clip: editor_alpha_clip_model.clone(),
-                                    cast_shadows: editor_cast_shadows_model.clone(),
-                                },
-                            );
-                            let material_any_match = material_surface.any_match;
-                            out.push(material_surface.element);
-
-                            out.push(
-                                render_editor_gradient_surface(
-                                    cx,
-                                    EditorGradientModels {
-                                        angle_degrees: editor_gradient_angle_model.clone(),
-                                        stops: editor_gradient_stops_model.clone(),
-                                        next_id: editor_gradient_next_id_model.clone(),
-                                    },
-                                )
-                                .into_element(cx),
-                            );
-
-                            let advanced_surface = render_editor_advanced_surface(
-                                cx,
-                                panel_cx,
-                                EditorAdvancedModels {
-                                    pos_x: editor_pos_x.clone(),
-                                    pos_y: editor_pos_y.clone(),
-                                    pos_z: editor_pos_z.clone(),
-                                    position_outcome: editor_position_outcome_model.clone(),
-                                    rot_x: editor_rot_x.clone(),
-                                    rot_y: editor_rot_y.clone(),
-                                    rot_z: editor_rot_z.clone(),
-                                    scl_x: editor_scl_x.clone(),
-                                    scl_y: editor_scl_y.clone(),
-                                    scl_z: editor_scl_z.clone(),
-                                    transform_outcome: editor_transform_outcome_model.clone(),
-                                    iterations: editor_iterations_model.clone(),
-                                    exposure: editor_exposure_model.clone(),
-                                },
-                            );
-                            let advanced_any_match = advanced_surface.any_match;
-                            out.push(advanced_surface.element);
-
-                            let any_match = material_any_match || advanced_any_match;
-
-                            if !panel_cx.is_query_empty() && !any_match {
-                                out.push(proof_empty_state_text(
-                                    cx,
-                                    "No matches",
-                                    "imui-editor-proof.editor.no-matches",
-                                ));
-                            }
-
-                            out
-                            },
-                        )]
+                let editor_models_for_inspector = editor_models.clone();
+                ui.mount(move |cx| {
+                    vec![render_editor_inspector_surface(
+                        cx,
+                        editor_models_for_inspector.clone(),
+                        editor_review_layout,
+                    )]
                 });
                 if !editor_review_layout {
                     ui.separator();

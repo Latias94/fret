@@ -9,6 +9,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
     let editor_advanced_source = include_str!("../src/imui_editor_proof_demo/editor_advanced.rs");
     let editor_gradient_source = include_str!("../src/imui_editor_proof_demo/editor_gradient.rs");
+    let editor_inspector_source = include_str!("../src/imui_editor_proof_demo/editor_inspector.rs");
     let editor_material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let editor_object_source = include_str!("../src/imui_editor_proof_demo/editor_object.rs");
     let editor_text_assist_source =
@@ -198,12 +199,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod collection;",
         "mod editor_advanced;",
         "mod editor_gradient;",
+        "mod editor_inspector;",
         "mod editor_material;",
         "mod editor_object;",
         "mod editor_state;",
         "mod editor_text_assist;",
         "use editor_advanced::*;",
         "use editor_gradient::*;",
+        "use editor_inspector::*;",
         "use editor_material::*;",
         "use editor_object::*;",
         "use editor_state::*;",
@@ -223,6 +226,19 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "struct GradientDemoStop",
         "fn editor_demo_name_assist_items(",
         "fn editor_demo_search_assist_items(",
+        "InspectorPanel::new(",
+        "InspectorPanelOptions",
+        "InspectorPanelSearchAssistOptions",
+        "render_editor_object_surface(",
+        "EditorObjectModels {",
+        "render_editor_material_surface(",
+        "EditorMaterialModels {",
+        "render_editor_gradient_surface(",
+        "EditorGradientModels {",
+        "render_editor_advanced_surface(",
+        "EditorAdvancedModels {",
+        "proof_empty_state_text(",
+        "let any_match = material_any_match || advanced_any_match;",
         "fn record_text_field_outcome(",
         "fn render_editor_name_assist_surface(",
         "PropertyGroup::new(\"Object\")",
@@ -270,9 +286,44 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     assert!(
-        demo_source.contains("render_editor_object_surface(")
-            && demo_source.contains("EditorObjectModels {"),
-        "imui_editor_proof_demo should route Object through the demo-local editor object owner"
+        demo_source.contains("let editor_models = editor_inspector_models(cx);")
+            && demo_source.contains("render_editor_inspector_surface("),
+        "imui_editor_proof_demo should route the inspector through the demo-local editor inspector owner"
+    );
+
+    for needle in [
+        "pub(super) struct EditorInspectorModels",
+        "pub(super) fn editor_inspector_models(",
+        "pub(super) fn render_editor_inspector_surface(",
+        "fn render_editor_inspector_content(",
+        "InspectorPanel::new(Some(models.search.clone()))",
+        "InspectorPanelOptions",
+        "InspectorPanelSearchAssistOptions",
+        "editor_demo_search_assist_items(cx)",
+        "\"imui-editor-proof.editor.inspector\"",
+        "\"imui-editor-proof.editor.search.list\"",
+        "render_editor_object_surface(",
+        "EditorObjectModels {",
+        "render_editor_material_surface(",
+        "EditorMaterialModels {",
+        "render_editor_gradient_surface(",
+        "EditorGradientModels {",
+        "render_editor_advanced_surface(",
+        "EditorAdvancedModels {",
+        "let any_match = material_any_match || advanced_any_match;",
+        "proof_empty_state_text(",
+        "\"imui-editor-proof.editor.no-matches\"",
+    ] {
+        assert!(
+            editor_inspector_source.contains(needle),
+            "the demo-local editor inspector owner should own inspector composition and child-owner routing; missing `{needle}`"
+        );
+    }
+
+    assert!(
+        editor_inspector_source.contains("render_editor_object_surface(")
+            && editor_inspector_source.contains("EditorObjectModels {"),
+        "the demo-local editor inspector owner should route Object through the editor object owner"
     );
 
     for needle in [
@@ -313,9 +364,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     }
 
     assert!(
-        demo_source.contains("render_editor_advanced_surface(")
-            && demo_source.contains("EditorAdvancedModels {"),
-        "imui_editor_proof_demo should route Advanced through the demo-local editor advanced owner"
+        editor_inspector_source.contains("render_editor_advanced_surface(")
+            && editor_inspector_source.contains("EditorAdvancedModels {"),
+        "the demo-local editor inspector owner should route Advanced through the editor advanced owner"
     );
 
     for needle in [

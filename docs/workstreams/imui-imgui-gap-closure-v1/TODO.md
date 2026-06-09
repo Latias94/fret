@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Editor Proof Inspector Owner Split - 2026-06-10
+
+- [x] Split the supporting `imui_editor_proof_demo` InspectorPanel shell into a demo-local owner
+      without changing search-assist test IDs, editor model keys, Object/Material/Gradient/Advanced
+      child group behavior, no-match aggregation, public crate APIs, or the app-owned
+      no-helper-widening boundary.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo/editor_inspector.rs` owns
+      `EditorInspectorModels`, model collection, InspectorPanel/search-assist options, child-owner
+      routing, and no-match aggregation, while the root proof file routes through
+      `render_editor_inspector_surface(...)`. The modularization source test and IMUI workstream
+      source gate freeze the split.
+
 ## Fret Examples Editor Proof Object Owner Split - 2026-06-10
 
 - [x] Split the supporting `imui_editor_proof_demo` Object inspector group into a demo-local owner
@@ -8510,6 +8522,13 @@ opening the slice.
       crate APIs, or the app-owned no-helper-widening boundary. Result: `editor_object.rs` owns
       Object TextField row composition, readouts, name-assist mounting, and outcome writeback;
       `imui_editor_proof_demo.rs` now passes `EditorObjectModels` to the owner while keeping
+      route/workbench/render composition.
+- [x] Split the main editor proof InspectorPanel shell out of the proof route root without changing
+      search-assist options, editor model keys, child group behavior, no-match aggregation, public
+      crate APIs, or the app-owned no-helper-widening boundary. Result: `editor_inspector.rs` owns
+      `EditorInspectorModels`, model collection, InspectorPanel/search-assist options,
+      Object/Material/Gradient/Advanced child-owner routing, and no-match aggregation;
+      `imui_editor_proof_demo.rs` now passes the inspector model bundle to the owner while keeping
       route/workbench/render composition.
 - [x] Split the main editor proof Material property group out of the proof route root without
       changing Material search behavior, opacity outcome text, reset defaults, asset ref rows,
