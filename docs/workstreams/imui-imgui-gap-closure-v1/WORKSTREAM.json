@@ -1314,6 +1314,7 @@
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs",
+    "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/visual.rs",
     "ecosystem/fret-ui-editor/src/controls/asset_ref_field.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",

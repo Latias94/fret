@@ -34973,6 +34973,22 @@ Focused gates:
 - Passed: `python tools\check_workstream_catalog.py`.
 - Passed: `git diff --check`.
 
+2026-06-09 editor theme-preset picker row visual owner split:
+
+- Claim: selected, hover, pressed, disabled, border, and status-color projection moved from
+  `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` into
+  `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/visual.rs`
+  without changing ListBoxOption semantics, focusability, activation behavior, status label
+  rendering, row text props, theme preset replay behavior, or public editor/IMUI APIs.
+- Evidence anchors: `render/row.rs` declares `mod visual;`, keeps `PressableProps`,
+  `SemanticsRole::ListBoxOption`, focus ring, activation hook installation, status-label lookup,
+  text prop routing, and row test IDs, and delegates color state through
+  `visual::theme_preset_row_visual(...)`; `render/row/visual.rs` owns
+  `ThemePresetRowVisualInput`, `ThemePresetRowVisual`, selected/hover/pressed/disabled background
+  projection, border/status color projection, and `mix_color(...)`; the source gate rejects visual
+  color math drifting back into `render/row.rs` and rejects Pressable, semantics, activation,
+  container, flex, and text-prop ownership drifting into `render/row/visual.rs`.
+
 2026-06-03 editor widget visuals owner split:
 
 - Claim: editor widget visuals color math, invalid fallback chrome, input-frame state projection,

@@ -3833,6 +3833,15 @@ pressable activation, row chrome, row test IDs, density status label rendering, 
 Listbox semantics, selected-state behavior, click activation, and public picker APIs remain
 unchanged.
 
+2026-06-09 editor theme preset picker row visual owner-split result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` now keeps
+ListBoxOption semantics, pressable/focus ring setup, activation hook routing, status label lookup,
+text prop routing, and row test IDs. The private
+`controls/editor_theme_preset_picker/render/row/visual.rs` owner contains selected, hover, pressed,
+disabled, border, and status-color projection plus `mix_color(...)`. Row semantics, activation,
+status label rendering, density text slots, theme preset replay, and public picker APIs remain
+unchanged.
+
 2026-05-31 editor numeric-input tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
 orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and

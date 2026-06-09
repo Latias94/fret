@@ -1733,9 +1733,11 @@ ListBox render shell from row chrome and activation behavior:
 - `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render.rs` keeps
   `EditorThemePresetPickerRenderInput` plus the build entry that delegates to the ListBox owner.
 - `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` remains the
-  ListBoxOption row chrome owner.
+  ListBoxOption row chrome owner and routes visual state projection.
 - `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs`
   remains the selected-preset activation owner.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/visual.rs`
+  owns selected, hover, pressed, disabled, border, and status-color projection.
 - Evidence anchor: Editor theme preset picker ListBox render owner split - 2026-06-03.
 - Evidence anchor: ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs.
 - Evidence anchor: ListBox semantics, header text, preset iteration, and container chrome.
@@ -1743,7 +1745,7 @@ ListBox render shell from row chrome and activation behavior:
 - Render input shape, selected-row semantics, row activation behavior, density status labels, theme
   preset replay behavior, and public IMUI/editor facade APIs remain unchanged.
 - `tools/gate_imui_workstream_source.py` now source-checks the split so the ListBox shell cannot
-  drift back into `render.rs`.
+  drift back into `render.rs`, and row visual projection cannot drift back into the row render hub.
 
 Fresh gates:
 

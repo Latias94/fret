@@ -7738,9 +7738,17 @@ opening the slice.
       private behavior owner without changing ListBoxOption semantics, row focusability,
       selected/hover/pressed chrome, status label rendering, model update, redraw request, or the
       reversible preset replay tests.
-      Result: `editor_theme_preset_picker/render/row.rs` keeps row layout, visual state, labels,
-      status text, test IDs, and `mix_color(...)`; `render/row/behavior.rs` owns the activate
-      handler that writes the selected `EditorThemePresetV1` model and requests redraw.
+      Result: `editor_theme_preset_picker/render/row.rs` keeps row layout, labels, status text,
+      test IDs, and activation routing; `render/row/behavior.rs` owns the activate handler that
+      writes the selected `EditorThemePresetV1` model and requests redraw.
+- [x] Split editor theme-preset picker row visual projection out of
+      `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row.rs` into a
+      private visual owner without changing ListBoxOption semantics, focusability, row activation,
+      status labels, text props, selected/hover/pressed/disabled chrome, or replay tests.
+      Result: `editor_theme_preset_picker/render/row.rs` routes
+      `visual::theme_preset_row_visual(...)`; `render/row/visual.rs` owns
+      `ThemePresetRowVisualInput`, `ThemePresetRowVisual`, background/text/border/status color
+      projection, and `mix_color(...)`.
 - [x] Split editor theme preset picker ListBox render assembly into a private child owner without
       changing render input shape, selected-row semantics, row activation behavior, density status
       labels, theme preset replay behavior, or public IMUI/editor facade APIs.
