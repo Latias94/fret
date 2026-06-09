@@ -1245,6 +1245,31 @@ Fresh gates:
 - `git diff --check` - passed with the known CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+## Editor theme preset picker options builder sugar - 2026-06-09
+
+This proof-pressure slice improves the style/theme picker configuration path while keeping
+`fret-ui-editor` as the editor-control owner and avoiding direct `fret_ui_kit::imui` coupling:
+
+- Editor theme preset picker options builder sugar - 2026-06-09.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/options.rs` now owns chainable
+  `EditorThemePresetPickerOptions` helpers for layout, enabled/disabled, focusable, label/no-label,
+  root test ID, and item test-id prefix.
+- Evidence anchor: editor_theme_preset_picker_options_builder_projects_fields.
+- Evidence anchor: EditorThemePresetPickerOptions::new() adapter smoke usage.
+- Public theme preset install/reapply behavior, ListBox semantics, row selected state,
+  density-status labels, and reversible dense/default preset switching remain unchanged.
+- `tools/gate_imui_workstream_source.py` source-checks the builder helpers, picker test, and IMUI
+  adapter smoke usage.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-editor -- --check` - passed.
+- `cargo check -p fret-ui-editor --features imui` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui editor_theme_preset_picker --no-fail-fast` - passed.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+
 ## IMUI ListBox options builder sugar - 2026-06-09
 
 This proof-pressure slice improves editor-facing ListBox ergonomics without moving selection,

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use fret_app::App;
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, Point, PointerEvent, PointerId, PointerType, Px,
@@ -158,15 +156,38 @@ fn render_picker_frame(
         move |cx| {
             vec![
                 EditorThemePresetPicker::new(model.clone())
-                    .options(EditorThemePresetPickerOptions {
-                        test_id: Some(Arc::from("tests.theme_preset")),
-                        ..Default::default()
-                    })
+                    .options(EditorThemePresetPickerOptions::new().test_id("tests.theme_preset"))
                     .into_element(cx),
             ]
         },
     );
     ui.set_root(root);
+}
+
+#[test]
+fn editor_theme_preset_picker_options_builder_projects_fields() {
+    let layout = fret_ui::element::LayoutStyle::default();
+
+    let options = EditorThemePresetPickerOptions::new()
+        .layout(layout)
+        .disabled()
+        .focusable(false)
+        .label("Theme")
+        .test_id("tests.theme_preset")
+        .item_test_id_prefix("tests.theme_preset.item");
+
+    assert!(!options.enabled);
+    assert!(!options.focusable);
+    assert_eq!(options.label.as_deref(), Some("Theme"));
+    assert_eq!(options.test_id.as_deref(), Some("tests.theme_preset"));
+    assert_eq!(
+        options.item_test_id_prefix.as_deref(),
+        Some("tests.theme_preset.item")
+    );
+
+    let options = options.enabled(true).without_label();
+    assert!(options.enabled);
+    assert!(options.label.is_none());
 }
 
 fn pump_semantics(

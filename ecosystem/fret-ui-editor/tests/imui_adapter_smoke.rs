@@ -341,10 +341,9 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
     imui::editor_theme_preset_picker(
         ui,
         EditorThemePresetPicker::new(theme_preset_model.clone()).options(
-            EditorThemePresetPickerOptions {
-                test_id: Some(Arc::from("tests.editor_theme_preset_picker")),
-                ..Default::default()
-            },
+            EditorThemePresetPickerOptions::new()
+                .test_id("tests.editor_theme_preset_picker")
+                .item_test_id_prefix("tests.editor_theme_preset_picker.item"),
         ),
     );
 
@@ -472,6 +471,25 @@ fn editor_imui_adapter_option_defaults_compile() {
     );
     assert!(theme_picker_options.test_id.is_none());
     assert!(theme_picker_options.item_test_id_prefix.is_none());
+    let theme_picker_options = EditorThemePresetPickerOptions::new()
+        .disabled()
+        .focusable(false)
+        .label("Theme")
+        .test_id("tests.editor_theme_preset_picker")
+        .item_test_id_prefix("tests.editor_theme_preset_picker.item")
+        .enabled(true)
+        .without_label();
+    assert!(theme_picker_options.enabled);
+    assert!(!theme_picker_options.focusable);
+    assert!(theme_picker_options.label.is_none());
+    assert_eq!(
+        theme_picker_options.test_id.as_deref(),
+        Some("tests.editor_theme_preset_picker")
+    );
+    assert_eq!(
+        theme_picker_options.item_test_id_prefix.as_deref(),
+        Some("tests.editor_theme_preset_picker.item")
+    );
     let _ = VecEditOptions::default();
     let _ = TransformEditOptions::default();
     let _ = PropertyGroupOptions::default();
