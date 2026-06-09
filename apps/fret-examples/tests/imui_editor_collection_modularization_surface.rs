@@ -7,6 +7,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let authoring_parity_surface_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
+    let editor_gradient_source = include_str!("../src/imui_editor_proof_demo/editor_gradient.rs");
     let editor_material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let editor_text_assist_source =
         include_str!("../src/imui_editor_proof_demo/editor_text_assist.rs");
@@ -193,9 +194,11 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "mod authoring_parity;",
         "mod collection;",
+        "mod editor_gradient;",
         "mod editor_material;",
         "mod editor_state;",
         "mod editor_text_assist;",
+        "use editor_gradient::*;",
         "use editor_material::*;",
         "use editor_state::*;",
         "use editor_text_assist::*;",
@@ -220,6 +223,12 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn render_editor_material_rows(",
         "fn material_unit_interval_validate(",
         "fn record_drag_value_outcome(",
+        "PropertyGroup::new(\"Gradient\")",
+        "GradientEditor::new(",
+        "fn render_gradient_editor(",
+        "fn remove_gradient_stop_action(",
+        "fn add_gradient_stop_action(",
+        "fn gradient_stop_bindings(",
         "fn proof_collection_assets_in_visible_order(",
         "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "struct ProofCollectionAsset {",
@@ -229,6 +238,26 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !demo_source.contains(needle),
             "imui_editor_proof_demo should not keep the collection implementation inline after modularization; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct EditorGradientModels",
+        "pub(super) fn render_editor_gradient_surface(",
+        "PropertyGroup::new(\"Gradient\")",
+        "fn render_gradient_editor(",
+        "GradientEditor::new(bindings)",
+        "fn remove_gradient_stop_action(",
+        "fn add_gradient_stop_action(",
+        "v.saturating_add(1)",
+        "GradientDemoStop {",
+        "fn gradient_stop_bindings(",
+        "GradientStopBinding {",
+        "\"imui-editor-proof.editor.gradient.add-stop\"",
+    ] {
+        assert!(
+            editor_gradient_source.contains(needle),
+            "the demo-local editor gradient owner should own gradient group actions and bindings; missing `{needle}`"
         );
     }
 

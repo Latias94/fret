@@ -2100,6 +2100,40 @@ Focused gates:
 - `git diff --check`: pass; reported only the expected Git CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+## Main Editor Proof Gradient Owner Split Evidence - 2026-06-10
+
+Claim verified: the editor proof route root no longer owns the main editor Gradient property group,
+GradientEditor construction, stop add/remove actions, or stop binding projection. The demo-local
+`editor_gradient` owner now owns the Gradient group surface while the route root keeps render
+composition and passes the gradient model bundle to the owner.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now declares `mod editor_gradient;`, imports
+  `use editor_gradient::*;`, constructs `EditorGradientModels`, and mounts
+  `render_editor_gradient_surface(...)` instead of defining `PropertyGroup::new("Gradient")`
+  inline.
+- `apps/fret-examples/src/imui_editor_proof_demo/editor_gradient.rs` owns `GradientEditor`
+  construction, gradient stop binding projection, stop remove action, add-stop action, next-id
+  increment, inserted stop defaults, and Gradient group test IDs.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` now freeze the Gradient owner and reject route-root drift
+  back to inline Gradient property rows/actions.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` dead-code warning.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass (1/1).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass (541 dedicated directories, 47 standalone
+  markdown files).
+- `git diff --check`: pass; reported only the expected Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## Main Editor Proof Material Owner Split Evidence - 2026-06-10
 
 Claim verified: the editor proof route root no longer owns the main editor Material property group

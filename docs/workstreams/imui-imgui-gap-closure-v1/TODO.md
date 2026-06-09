@@ -8492,6 +8492,12 @@ opening the slice.
       Material row construction, reset/writeback handlers, and the Material no-matches row;
       `imui_editor_proof_demo.rs` now passes `EditorMaterialModels` to the owner while keeping
       route/workbench/render composition.
+- [x] Split the main editor proof Gradient property group out of the proof route root without
+      changing gradient model keys, initial stops, inserted stop defaults, add/remove behavior,
+      GradientEditor test IDs, public crate APIs, or the app-owned no-helper-widening boundary.
+      Result: `editor_gradient.rs` owns GradientEditor construction, stop binding projection,
+      remove/add actions, next-id increment, and group test IDs; `imui_editor_proof_demo.rs` now
+      passes `EditorGradientModels` to the owner while keeping route/workbench/render composition.
 - [x] Split collection proof asset fixture record/defaults out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
       `collection/assets.rs` child owner without changing stored asset defaults, asset ids,

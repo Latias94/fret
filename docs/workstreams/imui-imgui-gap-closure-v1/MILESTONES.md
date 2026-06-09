@@ -8151,6 +8151,15 @@ the material owner and passes `EditorMaterialModels` while keeping route/workben
 composition. Material search behavior, reset defaults, outcome text, test IDs, public crate APIs,
 and the app-owned no-helper-widening boundary remain unchanged.
 
+2026-06-10 main editor proof gradient owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/editor_gradient.rs` now owns the main editor Gradient
+property group: `GradientEditor` construction, stop binding projection, stop remove action,
+add-stop action, next-id increment, inserted stop defaults, and Gradient group test IDs.
+`imui_editor_proof_demo.rs` now only declares/imports the gradient owner and passes
+`EditorGradientModels` while keeping route/workbench/render composition. Gradient model keys,
+initial stops, inserted stop defaults, add/remove behavior, test IDs, public crate APIs, and the
+app-owned no-helper-widening boundary remain unchanged.
+
 2026-06-07 collection proof assets owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
 re-exports the existing `collection::authoring_parity_collection_assets()` call surface through the
