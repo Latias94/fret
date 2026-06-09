@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Browser Input Runtime Owner Split - 2026-06-10
+
+- [x] Split the browser input runtime assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod browser_input_runtime;` and delegates to
+      `browser_input_runtime::assert_browser_input_runtime_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/browser_input_runtime.rs` owns parent input
+      routing, box-select runtime/session/test/fixture, context-menu runtime/test/fixture, and zoom
+      runtime boundary checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Browser-Scope Owner Split - 2026-06-10
 
 - [x] Split the browser-scope assertion bundle out of

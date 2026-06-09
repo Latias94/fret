@@ -1692,6 +1692,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/asset_grid.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/browser_scope.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/browser_input_runtime.rs",
     "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_context_menu_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs",
