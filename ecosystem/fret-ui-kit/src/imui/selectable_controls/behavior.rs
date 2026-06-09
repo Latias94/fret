@@ -1,4 +1,3 @@
-use fret_runtime::{KeyChord, Model};
 use fret_ui::action::{ActivateReason, UiActionHostExt as _};
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
@@ -6,13 +5,9 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 use super::super::{KEY_CLICKED, ResponseExt, item_behavior, mark_lifecycle_instant_if_inactive};
 use super::keyboard::{SelectableKeyboardOptions, install_selectable_keyboard};
 
-pub(super) struct SelectableBehaviorOptions {
-    pub(super) enabled: bool,
-    pub(super) focusable: bool,
-    pub(super) close_popup: Option<Model<bool>>,
-    pub(super) activate_shortcut: Option<KeyChord>,
-    pub(super) shortcut_repeat: bool,
-}
+mod options;
+
+pub(super) use options::SelectableBehaviorOptions;
 
 pub(super) fn install_selectable_behavior<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

@@ -2,6 +2,44 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI selectable behavior options owner split - 2026-06-09
+
+This maintenance slice keeps selectable behavior assembly focused without changing selectable
+activation, pointer-click reporting, popup closing, keyboard delegation, response, or public facade
+behavior:
+
+- IMUI selectable behavior options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` keeps pressable item behavior
+  installation, activation, keyboard delegation, and response population.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior/options.rs` owns the private
+  `SelectableBehaviorOptions` carrier.
+- No public API or runtime behavior changed; the existing `behavior::SelectableBehaviorOptions`
+  private call surface remains re-exported through the behavior module for `entry.rs`.
+- The source gate now freezes `SelectableBehaviorOptions` out of the behavior root and rejects
+  activation, shared pressable behavior, keyboard, response, visual, and facade logic from drifting
+  into the options owner.
+- Evidence anchor: `behavior.rs` declares `mod options;` and re-exports
+  `options::SelectableBehaviorOptions` while keeping `install_selectable_behavior(...)` as the
+  behavior entry.
+- Evidence anchor: `behavior/options.rs` contains enabled/focusable, popup close model, activate
+  shortcut, and shortcut-repeat fields only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the behavior root, options owner,
+  source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui selectable --no-fail-fast` - passed, 7/7.
+- `cargo nextest run -p fret-imui selectable --no-fail-fast` - passed, 6/6.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI item behavior options owner split - 2026-06-09
 
 This maintenance slice keeps the shared pressable item behavior root focused without changing

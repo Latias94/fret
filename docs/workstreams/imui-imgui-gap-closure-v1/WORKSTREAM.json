@@ -827,6 +827,7 @@
     "ecosystem/fret-ui-kit/src/imui/multi_select/tests/ordered_selection.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior/options.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/entry.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/options.rs",
