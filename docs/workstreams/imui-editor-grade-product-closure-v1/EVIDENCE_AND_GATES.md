@@ -1737,7 +1737,8 @@ ListBox render shell from row chrome and activation behavior:
 - `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/behavior.rs`
   remains the selected-preset activation owner.
 - `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/row/visual.rs`
-  owns selected, hover, pressed, disabled, border, and status-color projection.
+  owns selected, hover, pressed, disabled, border, and status-color projection, with local unit
+  coverage for visual state priority and disabled text projection.
 - Evidence anchor: Editor theme preset picker ListBox render owner split - 2026-06-03.
 - Evidence anchor: ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/render/listbox.rs.
 - Evidence anchor: ListBox semantics, header text, preset iteration, and container chrome.

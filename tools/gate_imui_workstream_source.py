@@ -63635,6 +63635,10 @@ def main() -> None:
                 "let border_color = if input.selected",
                 "let status_color = if input.selected",
                 "fn mix_color(",
+                "theme_preset_row_visual_uses_selected_state_as_top_priority",
+                "theme_preset_row_visual_projects_pressed_before_hover",
+                "theme_preset_row_visual_projects_hover_and_raw_hover_equally",
+                "theme_preset_row_visual_dims_disabled_text_without_changing_status",
             ],
             forbidden=[
                 "pub(super) fn preset_row",

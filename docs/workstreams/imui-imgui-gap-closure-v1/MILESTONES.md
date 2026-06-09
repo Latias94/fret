@@ -3842,6 +3842,12 @@ disabled, border, and status-color projection plus `mix_color(...)`. Row semanti
 status label rendering, density text slots, theme preset replay, and public picker APIs remain
 unchanged.
 
+2026-06-09 editor theme preset picker row visual test result:
+`controls/editor_theme_preset_picker/render/row/visual.rs` now has local unit coverage for selected
+priority over pressed/hover, pressed priority over hover/raw-hover, hover/raw-hover parity, and
+disabled text dimming. This keeps the style/theme picker row chrome proof local to the visual owner
+instead of depending only on rendered ListBox behavior tests.
+
 2026-05-31 editor numeric-input tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
 orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and

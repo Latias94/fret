@@ -34989,6 +34989,18 @@ Focused gates:
   color math drifting back into `render/row.rs` and rejects Pressable, semantics, activation,
   container, flex, and text-prop ownership drifting into `render/row/visual.rs`.
 
+2026-06-09 editor theme-preset picker row visual state priority tests:
+
+- Claim: the new row visual owner now has direct projection coverage for selected-state priority,
+  pressed-before-hover priority, raw hover parity, and disabled text dimming without relying only on
+  indirect rendered ListBox tests.
+- Evidence anchors: `render/row/visual.rs` contains
+  `theme_preset_row_visual_uses_selected_state_as_top_priority`,
+  `theme_preset_row_visual_projects_pressed_before_hover`,
+  `theme_preset_row_visual_projects_hover_and_raw_hover_equally`, and
+  `theme_preset_row_visual_dims_disabled_text_without_changing_status`; the source gate requires
+  these tests alongside the visual owner markers.
+
 2026-06-03 editor widget visuals owner split:
 
 - Claim: editor widget visuals color math, invalid fallback chrome, input-frame state projection,
