@@ -2,13 +2,16 @@
 fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     let route_source = include_str!("../src/imui_editor_workbench_demo.rs");
     let quick_actions_source = include_str!("../src/imui_editor_workbench_demo/quick_actions.rs");
+    let quick_action_catalog_source =
+        include_str!("../src/imui_editor_workbench_demo/quick_actions/catalog.rs");
     let shared_first_open_source = include_str!("../../fret-first-open/src/lib.rs");
     let editor_notes_source = include_str!("../src/editor_notes_demo.rs");
     let lib_source = include_str!("../src/lib.rs");
     let bin_source = include_str!("../../fret-demo/src/bin/imui_editor_workbench_demo.rs");
     let demo_main_source = include_str!("../../fret-demo/src/main.rs");
-    let workbench_contract_source =
-        format!("{route_source}\n{quick_actions_source}\n{shared_first_open_source}");
+    let workbench_contract_source = format!(
+        "{route_source}\n{quick_actions_source}\n{quick_action_catalog_source}\n{shared_first_open_source}"
+    );
 
     for needle in [
         "Canonical IMUI editor workbench route.",
@@ -87,19 +90,35 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     }
     for needle in [
         "const WORKBENCH_QUICK_ACTIONS: &[WorkbenchQuickActionSpec]",
-        "fn workbench_copy_text_on_activate(",
+        "pub(super) fn install_workbench_quick_action_commands(",
+        "pub(super) fn workbench_quick_action_command(",
         "fn workbench_quick_action_command_bundle_text() -> String {",
+        "SelectWorkbench = \"imui_editor_workbench_demo.action.open_workbench.v1\"",
+    ] {
+        assert!(
+            quick_action_catalog_source.contains(needle),
+            "canonical workbench quick-action catalog should carry Demo/Metrics/Debug command metadata; missing `{needle}`"
+        );
+        assert!(
+            !route_source.contains(needle),
+            "canonical workbench route root should delegate Demo/Metrics/Debug command metadata to quick_actions/catalog; unexpected `{needle}`"
+        );
+        assert!(
+            !quick_actions_source.contains(needle),
+            "canonical workbench quick-action render owner should delegate Demo/Metrics/Debug command metadata to catalog; unexpected `{needle}`"
+        );
+    }
+    for needle in [
+        "mod catalog;",
+        "install_workbench_quick_action_commands(cx, &active_action);",
+        "workbench_copy_text_on_activate(",
         "Effect::ClipboardWriteText",
         "shadcn::Button::new(\"Copy command\")",
         "shadcn::Button::new(\"Copy commands\")",
     ] {
         assert!(
             quick_actions_source.contains(needle),
-            "canonical workbench quick-action owner should carry Demo/Metrics/Debug action-strip behavior; missing `{needle}`"
-        );
-        assert!(
-            !route_source.contains(needle),
-            "canonical workbench route root should delegate Demo/Metrics/Debug action-strip behavior to quick_actions; unexpected `{needle}`"
+            "canonical workbench quick-action render owner should carry resident chrome and copy behavior; missing `{needle}`"
         );
     }
     assert!(

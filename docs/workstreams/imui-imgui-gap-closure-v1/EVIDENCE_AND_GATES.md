@@ -1924,6 +1924,30 @@ Evidence:
   separately: root must route to the child owner, and the child owner must not own the editor-notes
   workflow host.
 
+## Canonical Workbench Quick-Action Catalog Owner Split Evidence - 2026-06-10
+
+Claim verified: the resident workbench quick-action owner no longer mixes Demo/Metrics/Debug command
+catalog data with chrome rendering and copy effects. The quick-action render owner keeps state
+wiring, resident action-strip UI, and clipboard effect behavior; the private catalog owner keeps the
+action enum, specs, command ids, command strings, action registration, and bundle formatter.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` declares `mod catalog;`,
+  imports `WORKBENCH_QUICK_ACTIONS`, `WorkbenchQuickAction`,
+  `workbench_quick_action_command(...)`, `workbench_quick_action_spec(...)`, and
+  `workbench_quick_action_command_bundle_text(...)`, and keeps
+  `workbench_copy_text_on_activate(...)`, `Effect::ClipboardWriteText`, button construction, and
+  status rendering.
+- `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions/catalog.rs` owns
+  `WorkbenchQuickAction`, `WorkbenchQuickActionSpec`, `WORKBENCH_QUICK_ACTIONS`, shared first-open
+  command aliases, action registration, command mapping, and bundle text construction.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` now reads the catalog
+  owner separately and asserts command metadata does not drift back into either the route root or
+  quick-action render owner.
+- `tools/gate_imui_workstream_source.py` now source-checks route root, quick-action render owner,
+  and quick-action catalog owner as three separate boundaries.
+
 Focused gates:
 
 - `cargo fmt --package fret-examples`: pass.

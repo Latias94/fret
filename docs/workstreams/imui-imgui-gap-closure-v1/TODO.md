@@ -71,6 +71,13 @@ Last updated: 2026-06-09
       workflow composition only; `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs`
       owns the Demo/Metrics/Debug action table, command mapping, clipboard copy behavior, action
       buttons, status readouts, and stable action-strip test IDs.
+- [x] Split the canonical workbench quick-action command catalog into a private child owner without
+      changing command strings, action IDs, copy affordances, action-strip rendering, or route
+      discovery.
+      Result: `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` keeps resident
+      action-strip state wiring, copy effects, buttons, and status rendering; `quick_actions/catalog.rs`
+      owns the action enum, specs, command aliases, action registration, command mapping, and command
+      bundle text.
 - [x] Factor the static Demo/Metrics/Debug first-open route contract into an app-level shared owner
       so fretboard, DevTools GUI, MCP, and the canonical workbench stop duplicating route/action
       command strings and route metadata.

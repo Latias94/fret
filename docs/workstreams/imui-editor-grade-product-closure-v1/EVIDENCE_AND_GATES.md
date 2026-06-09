@@ -1052,6 +1052,9 @@ This maintenance slice keeps the product-closure read aligned with the closed
 - The canonical workbench now keeps the Demo/Metrics/Debug resident chrome in the private
   `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` owner, leaving the route root
   focused on product shell and editor workflow composition.
+- The resident quick-action chrome now delegates command catalog data to
+  `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions/catalog.rs`, keeping action
+  specs, command ids, and action registration separate from copy-effect and UI rendering code.
 - Broader DevTools GUI maturity, command-palette integration, and evidence-browser polish remain
   diagnostics-consumer follow-ons rather than `fret-imui` or runtime API widening.
 - Evidence anchor: D/M/D product route closed for CLI/GUI/MCP first-open discovery.

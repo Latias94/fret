@@ -545,6 +545,14 @@ Demo/Metrics/Debug action table, command mapping, clipboard copy behavior, actio
 status readouts, and stable `imui-editor-workbench.action-*` test IDs. Route behavior, discovery,
 copy affordances, and DevTools/fretboard execution ownership remain unchanged.
 
+2026-06-10 canonical workbench quick-action catalog owner-split result:
+`apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` now keeps resident
+Demo/Metrics/Debug action-strip state wiring, copy effects, buttons, and status rendering. The
+private `quick_actions/catalog.rs` owner contains `WorkbenchQuickAction`,
+`WorkbenchQuickActionSpec`, the action table, shared first-open command aliases, action
+registration, command mapping, and command bundle text. Product route behavior, copy affordances,
+discovery strings, and DevTools/fretboard execution ownership remain unchanged.
+
 2026-06-03 Demo/Metrics/Debug first-open shared contract result:
 `apps/fret-first-open/src/lib.rs` now owns the static `demo_metrics_debug` first-open route
 contract, including route docs/owner metadata plus the shared demo, metrics, debug, handoff, and
