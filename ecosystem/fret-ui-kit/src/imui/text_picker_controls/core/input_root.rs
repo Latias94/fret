@@ -3,11 +3,10 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::UiHost;
 
+mod options;
+mod render;
+
 use super::super::super::{InputTextPickerOptions, ResponseExt, UiWriterImUiFacadeExt};
-use super::super::input::{
-    BuiltInputTextPickerInputRoot, InputTextPickerInputRootRequest,
-    prepare_text_picker_input_options, render_text_picker_input_root,
-};
 use super::super::keyboard::InputTextPickerKeyboardState;
 
 pub(super) struct TextPickerInputRootInput<'a> {
@@ -49,30 +48,23 @@ pub(super) fn build_text_picker_input_root<H: UiHost, W: UiWriterImUiFacadeExt<H
         popup_panel_id,
     } = input;
 
-    let prepared_input = prepare_text_picker_input_options(options);
-    let item_test_id_base = prepared_input.test_id;
-    let input_root: BuiltInputTextPickerInputRoot = ui.with_cx_mut(|cx| {
-        render_text_picker_input_root(
-            cx,
-            InputTextPickerInputRootRequest {
-                model,
-                input_options: prepared_input.options,
-                popup_open,
-                keyboard_state,
-                visible_candidates,
-                keyboard_navigation,
-                keyboard_repeat,
-                picker_candidate_visible,
-                hide_for_exact_match,
-                picker_expanded,
-                active_element,
-                popup_panel_id,
-            },
-        )
-    });
-    ui.add(input_root.root);
-    TextPickerInputRootResult {
-        input: input_root.response,
-        item_test_id_base,
-    }
+    let prepared_input = options::prepare_core_text_picker_input_options(options);
+    render::render_core_text_picker_input_root(
+        ui,
+        render::CoreTextPickerInputRootRenderInput {
+            model,
+            input_options: prepared_input.options,
+            popup_open,
+            keyboard_state,
+            visible_candidates,
+            keyboard_navigation,
+            keyboard_repeat,
+            picker_candidate_visible,
+            hide_for_exact_match,
+            picker_expanded,
+            active_element,
+            popup_panel_id,
+            item_test_id_base: prepared_input.item_test_id_base,
+        },
+    )
 }
