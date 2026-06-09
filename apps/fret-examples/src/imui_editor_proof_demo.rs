@@ -19,13 +19,11 @@ use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, InspectorPanelSearchAssistOptions, PropertyGrid,
-    PropertyGroup, PropertyRow, PropertyRowReset,
+    PropertyGroup, PropertyRow,
 };
 use fret_ui_editor::controls::{
-    DragValue, EditorTextSelectionBehavior, FieldStatus, FieldStatusBadge, NumericInput,
-    NumericInputOptions, NumericValidateFn, TextField, TextFieldBlurBehavior, TextFieldMode,
-    TextFieldOptions, TextFieldOutcome, TransformEdit, TransformEditAxisOutcome,
-    TransformEditOptions, Vec3Edit, VecEditAxisOutcome, VecEditOptions,
+    EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
+    TextFieldOutcome,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::theme::EditorThemePresetV1;
@@ -40,6 +38,7 @@ use fret_ui_kit::recipes::imui_sortable::{
 mod asset_ref;
 mod authoring_parity;
 mod collection;
+mod editor_advanced;
 mod editor_gradient;
 mod editor_material;
 mod editor_state;
@@ -47,6 +46,7 @@ mod editor_text_assist;
 mod proof_helpers;
 mod workbench_shell;
 
+use editor_advanced::*;
 use editor_gradient::*;
 use editor_material::*;
 use editor_state::*;
@@ -361,14 +361,6 @@ where
                     );
                 }
                 ui.mount(|cx| {
-                    let validate: NumericValidateFn<f64> = Arc::new(|v| {
-                        if (0.0..=1.0).contains(&v) {
-                            None
-                        } else {
-                            Some(Arc::from("Expected 0.0..=1.0"))
-                        }
-                    });
-
                     vec![InspectorPanel::new(Some(editor_search_model.clone()))
                         .options(InspectorPanelOptions {
                             layout: LayoutStyle {
@@ -420,21 +412,6 @@ where
                             cx,
                             |_cx, _panel_cx| Vec::new(),
                             move |cx, panel_cx| {
-                                let matches = |s: &str| panel_cx.matches(s);
-
-                                let advanced_show_all = matches("advanced");
-                                let show_exposure =
-                                    advanced_show_all || matches("exposure") || matches("validate");
-                                let show_iterations = advanced_show_all || matches("iterations");
-                                let show_position =
-                                    advanced_show_all || matches("position") || matches("pos");
-                                let show_transform = advanced_show_all
-                                    || matches("transform")
-                                    || matches("xform")
-                                    || matches("rotation")
-                                    || matches("rot")
-                                    || matches("scale");
-
                                 let mut out = Vec::new();
 
                             out.push(
@@ -942,11 +919,6 @@ where
                             );
                             let material_any_match = material_surface.any_match;
                             out.push(material_surface.element);
-                            let any_match = material_any_match
-                                || show_exposure
-                                || show_iterations
-                                || show_position
-                                || show_transform;
 
                             out.push(
                                 render_editor_gradient_surface(
@@ -960,361 +932,29 @@ where
                                 .into_element(cx),
                             );
 
-                            let advanced_validate = validate.clone();
-                            out.push(
-                                PropertyGroup::new("Advanced")
-                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
-                                        test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.group.advanced",
-                                        )),
-                                        header_test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.group.advanced.header",
-                                        )),
-                                        content_test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.group.advanced.content",
-                                        )),
-                                        ..Default::default()
-                                    })
-                                    .into_element(
-                                        cx,
-                                        |_cx| None,
-                                        move |cx| {
-                                            let validate = advanced_validate.clone();
-                                            let fixed_presentation =
-                                                editor_fixed_decimals_presentation();
-                                            let position_presentation =
-                                                editor_position_presentation();
-                                            let transform_presentations =
-                                                editor_transform_presentations();
-                                            let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
-                                                Arc::new(|v| Arc::from(format!("{v}")));
-                                            let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
-                                                Arc::new(|s| s.trim().parse::<i32>().ok());
-
-                                            vec![PropertyGrid::new().into_element(
-                                                cx,
-                                                move |cx, row_cx| {
-                                                    let mut rows = Vec::new();
-
-                                                    if show_position {
-                                                        let x_for_reset = editor_pos_x.clone();
-                                                        let y_for_reset = editor_pos_y.clone();
-                                                        let z_for_reset = editor_pos_z.clone();
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&x_for_reset, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&y_for_reset, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&z_for_reset, |v| *v = 0.0);
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new()
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(
-                                                                        on_reset,
-                                                                    )
-                                                                    .options(
-                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.advanced.position.reset")),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                )),
-                                                            |cx| row_cx.label_text(cx, "Position"),
-                                                            |cx| {
-                                                                let outcome_model =
-                                                                    editor_position_outcome_model
-                                                                        .clone();
-                                                                Vec3Edit::from_presentation(
-                                                                    editor_pos_x.clone(),
-                                                                    editor_pos_y.clone(),
-                                                                    editor_pos_z.clone(),
-                                                                    position_presentation.clone(),
-                                                                )
-                                                                .on_axis_outcome(Some(Arc::new(
-                                                                    move |host, action_cx, outcome: VecEditAxisOutcome| {
-                                                                        let next =
-                                                                            vec_edit_axis_outcome_label(
-                                                                                outcome,
-                                                                            );
-                                                                        let _ = host.models_mut().update(
-                                                                            &outcome_model,
-                                                                            |value| {
-                                                                                value.clear();
-                                                                                value.push_str(&next);
-                                                                            },
-                                                                        );
-                                                                        host.request_redraw(
-                                                                            action_cx.window,
-                                                                        );
-                                                                    },
-                                                                )))
-                                                                .options(VecEditOptions {
-                                                                    test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.advanced.position",
-                                                                    )),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                            |cx| {
-                                                                let outcome = editor_string_model_readout(
-                                                                    cx,
-                                                                    &editor_position_outcome_model,
-                                                                );
-                                                                proof_optional_outcome_readout(
-                                                                    cx,
-                                                                    outcome,
-                                                                    Arc::from(
-                                                                        "imui-editor-proof.editor.advanced.position.outcome",
-                                                                    ),
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_transform {
-                                                        let pos_x = editor_pos_x.clone();
-                                                        let pos_y = editor_pos_y.clone();
-                                                        let pos_z = editor_pos_z.clone();
-                                                        let rot_x = editor_rot_x.clone();
-                                                        let rot_y = editor_rot_y.clone();
-                                                        let rot_z = editor_rot_z.clone();
-                                                        let scl_x = editor_scl_x.clone();
-                                                        let scl_y = editor_scl_y.clone();
-                                                        let scl_z = editor_scl_z.clone();
-
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&pos_x, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&pos_y, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&pos_z, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&rot_x, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&rot_y, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&rot_z, |v| *v = 0.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&scl_x, |v| *v = 1.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&scl_y, |v| *v = 1.0);
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&scl_z, |v| *v = 1.0);
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new()
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(on_reset)
-                                                                        .options(
-                                                                            fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                                test_id: Some(Arc::from("imui-editor-proof.editor.advanced.transform.reset")),
-                                                                                ..Default::default()
-                                                                            },
-                                                                        ),
-                                                                )),
-                                                            |cx| row_cx.label_text(cx, "Transform"),
-                                                            |cx| {
-                                                                let outcome_model =
-                                                                    editor_transform_outcome_model
-                                                                        .clone();
-                                                                TransformEdit::from_presentations(
-                                                                    (
-                                                                        editor_pos_x.clone(),
-                                                                        editor_pos_y.clone(),
-                                                                        editor_pos_z.clone(),
-                                                                    ),
-                                                                    (
-                                                                        editor_rot_x.clone(),
-                                                                        editor_rot_y.clone(),
-                                                                        editor_rot_z.clone(),
-                                                                    ),
-                                                                    (
-                                                                        editor_scl_x.clone(),
-                                                                        editor_scl_y.clone(),
-                                                                        editor_scl_z.clone(),
-                                                                    ),
-                                                                    transform_presentations.clone(),
-                                                                )
-                                                                .on_axis_outcome(Some(Arc::new(
-                                                                    move |host,
-                                                                          action_cx,
-                                                                          outcome: TransformEditAxisOutcome| {
-                                                                        let next =
-                                                                            transform_edit_axis_outcome_label(
-                                                                                outcome,
-                                                                            );
-                                                                        let _ = host.models_mut().update(
-                                                                            &outcome_model,
-                                                                            |value| {
-                                                                                value.clear();
-                                                                                value.push_str(&next);
-                                                                            },
-                                                                        );
-                                                                        host.request_redraw(
-                                                                            action_cx.window,
-                                                                        );
-                                                                    },
-                                                                )))
-                                                                .options(TransformEditOptions {
-                                                                    test_id: Some(Arc::from("imui-editor-proof.editor.advanced.transform")),
-                                                                    link_test_id: Some(Arc::from("imui-editor-proof.editor.advanced.transform.link-scale")),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                            |cx| {
-                                                                let outcome = editor_string_model_readout(
-                                                                    cx,
-                                                                    &editor_transform_outcome_model,
-                                                                );
-                                                                proof_optional_outcome_readout(
-                                                                    cx,
-                                                                    outcome,
-                                                                    Arc::from(
-                                                                        "imui-editor-proof.editor.advanced.transform.outcome",
-                                                                    ),
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_iterations {
-                                                        let model_for_reset =
-                                                            editor_iterations_model.clone();
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host.models_mut().update(
-                                                                    &model_for_reset,
-                                                                    |v| *v = 8,
-                                                                );
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset).options(
-                                                                    fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                        test_id: Some(Arc::from("imui-editor-proof.editor.advanced.iterations.reset")),
-                                                                        ..Default::default()
-                                                                    },
-                                                                ),
-                                                            )),
-                                                            |cx| row_cx.label_text(cx, "Iterations"),
-                                                            |cx| {
-                                                                DragValue::new(
-                                                                    editor_iterations_model.clone(),
-                                                                    fmt_i32.clone(),
-                                                                    parse_i32.clone(),
-                                                                )
-                                                                .options(
-                                                                    fret_ui_editor::controls::DragValueOptions {
-                                                                        test_id: Some(Arc::from(
-                                                                            "imui-editor-proof.editor.advanced.iterations",
-                                                                        )),
-                                                                        ..Default::default()
-                                                                    },
-                                                                )
-                                                                .into_element(cx)
-                                                            },
-                                                            |cx| {
-                                                                Some(
-                                                                    FieldStatusBadge::new(FieldStatus::Error(
-                                                                        Arc::from("stub"),
-                                                                    ))
-                                                                    .into_element(cx),
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_exposure {
-                                                        let model_for_reset =
-                                                            editor_exposure_model.clone();
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host.models_mut().update(
-                                                                    &model_for_reset,
-                                                                    |v| *v = 0.75,
-                                                                );
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset).options(
-                                                                    fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                        test_id: Some(Arc::from("imui-editor-proof.editor.advanced.exposure.reset")),
-                                                                        ..Default::default()
-                                                                    },
-                                                                ),
-                                                            )),
-                                                            |cx| row_cx.label_text(cx, "Exposure"),
-                                                            |cx| {
-                                                                NumericInput::from_presentation(
-                                                                    editor_exposure_model.clone(),
-                                                                    fixed_presentation.clone(),
-                                                                )
-                                                                .validate(Some(validate.clone()))
-                                                                .options(NumericInputOptions {
-                                                                    test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.advanced.exposure",
-                                                                    )),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                            |_cx| None,
-                                                        ));
-                                                    }
-
-                                                    if rows.is_empty() {
-                                                        rows.push(proof_empty_state_text(
-                                                            cx,
-                                                            "No matches",
-                                                            "imui-editor-proof.editor.advanced.no-matches",
-                                                        ));
-                                                    }
-
-                                                    rows
-                                                },
-                                            )]
-                                        },
-                                    ),
+                            let advanced_surface = render_editor_advanced_surface(
+                                cx,
+                                panel_cx,
+                                EditorAdvancedModels {
+                                    pos_x: editor_pos_x.clone(),
+                                    pos_y: editor_pos_y.clone(),
+                                    pos_z: editor_pos_z.clone(),
+                                    position_outcome: editor_position_outcome_model.clone(),
+                                    rot_x: editor_rot_x.clone(),
+                                    rot_y: editor_rot_y.clone(),
+                                    rot_z: editor_rot_z.clone(),
+                                    scl_x: editor_scl_x.clone(),
+                                    scl_y: editor_scl_y.clone(),
+                                    scl_z: editor_scl_z.clone(),
+                                    transform_outcome: editor_transform_outcome_model.clone(),
+                                    iterations: editor_iterations_model.clone(),
+                                    exposure: editor_exposure_model.clone(),
+                                },
                             );
+                            let advanced_any_match = advanced_surface.any_match;
+                            out.push(advanced_surface.element);
+
+                            let any_match = material_any_match || advanced_any_match;
 
                             if !panel_cx.is_query_empty() && !any_match {
                                 out.push(proof_empty_state_text(

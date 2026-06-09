@@ -7,6 +7,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let authoring_parity_surface_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
+    let editor_advanced_source = include_str!("../src/imui_editor_proof_demo/editor_advanced.rs");
     let editor_gradient_source = include_str!("../src/imui_editor_proof_demo/editor_gradient.rs");
     let editor_material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let editor_text_assist_source =
@@ -194,10 +195,12 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "mod authoring_parity;",
         "mod collection;",
+        "mod editor_advanced;",
         "mod editor_gradient;",
         "mod editor_material;",
         "mod editor_state;",
         "mod editor_text_assist;",
+        "use editor_advanced::*;",
         "use editor_gradient::*;",
         "use editor_material::*;",
         "use editor_state::*;",
@@ -223,6 +226,14 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn render_editor_material_rows(",
         "fn material_unit_interval_validate(",
         "fn record_drag_value_outcome(",
+        "PropertyGroup::new(\"Advanced\")",
+        "Vec3Edit::from_presentation(",
+        "TransformEdit::from_presentations(",
+        "DragValue::new(",
+        "NumericInput::from_presentation(",
+        "fn advanced_unit_interval_validate(",
+        "fn record_vec_axis_outcome(",
+        "fn record_transform_axis_outcome(",
         "PropertyGroup::new(\"Gradient\")",
         "GradientEditor::new(",
         "fn render_gradient_editor(",
@@ -238,6 +249,36 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !demo_source.contains(needle),
             "imui_editor_proof_demo should not keep the collection implementation inline after modularization; unexpected `{needle}`"
+        );
+    }
+
+    assert!(
+        demo_source.contains("render_editor_advanced_surface(")
+            && demo_source.contains("EditorAdvancedModels {"),
+        "imui_editor_proof_demo should route Advanced through the demo-local editor advanced owner"
+    );
+
+    for needle in [
+        "pub(super) struct EditorAdvancedModels",
+        "pub(super) struct EditorAdvancedSurface",
+        "pub(super) fn render_editor_advanced_surface(",
+        "struct EditorAdvancedVisibility",
+        "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
+        "PropertyGroup::new(\"Advanced\")",
+        "Vec3Edit::from_presentation(",
+        "TransformEdit::from_presentations(",
+        "DragValue::new(",
+        "NumericInput::from_presentation(",
+        "vec_edit_axis_outcome_label(outcome)",
+        "transform_edit_axis_outcome_label(outcome)",
+        "\"imui-editor-proof.editor.advanced.no-matches\"",
+        "fn advanced_unit_interval_validate(",
+        "fn record_vec_axis_outcome(",
+        "fn record_transform_axis_outcome(",
+    ] {
+        assert!(
+            editor_advanced_source.contains(needle),
+            "the demo-local editor advanced owner should own advanced search gating and rows; missing `{needle}`"
         );
     }
 

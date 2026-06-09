@@ -1,7 +1,16 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-09
+Last updated: 2026-06-10
+
+2026-06-10 Fret Examples editor proof Advanced owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo.rs` now routes the Advanced inspector property
+group through `imui_editor_proof_demo/editor_advanced.rs` instead of carrying Vec3Edit,
+TransformEdit, DragValue, NumericInput, validation, reset, and outcome-writeback policy inline.
+The new owner returns `EditorAdvancedSurface { element, any_match }`, keeping global search
+no-match behavior unchanged while moving Advanced search gating and rows behind the same owner
+shape as the Material surface. No `fret-ui-editor` control API, `fret-imui` facade, docking, or
+runner contract changed.
 
 2026-06-09 Fret Plot axis-lock helper wiring result:
 `ecosystem/fret-plot/src/declarative/interaction/pan.rs` and

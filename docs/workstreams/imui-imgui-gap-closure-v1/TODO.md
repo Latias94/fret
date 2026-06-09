@@ -1,7 +1,17 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-09
+Last updated: 2026-06-10
+
+## Fret Examples Editor Proof Advanced Owner Split - 2026-06-10
+
+- [x] Split the supporting `imui_editor_proof_demo` Advanced inspector group into a demo-local
+      owner without changing Advanced test IDs, Vec3/Transform/Numeric control behavior,
+      validation text, reset defaults, or global inspector search no-match behavior.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo/editor_advanced.rs` owns Advanced
+      search gating, row composition, reset actions, validation, and outcome writebacks, while the
+      root proof file routes through `render_editor_advanced_surface(...)`. The modularization
+      source test and IMUI workstream source gate freeze the split.
 
 ## Worktree Convergence - 2026-05-26
 

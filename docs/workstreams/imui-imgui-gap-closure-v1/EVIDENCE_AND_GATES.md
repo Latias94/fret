@@ -1,7 +1,44 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-09
+Last updated: 2026-06-10
+
+## Fret Examples Editor Proof Advanced Owner Split Evidence - 2026-06-10
+
+Claim verified: the supporting `imui_editor_proof_demo` Advanced inspector surface now has a
+demo-local owner for Advanced search gating, rows, reset actions, validation, and outcome writeback
+without changing the editor control APIs or the global inspector no-match behavior.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now declares `mod editor_advanced;`, imports
+  `editor_advanced::*`, and routes the Advanced group through `render_editor_advanced_surface(...)`
+  with an `EditorAdvancedModels` bundle.
+- `apps/fret-examples/src/imui_editor_proof_demo/editor_advanced.rs` owns
+  `EditorAdvancedVisibility`, `PropertyGroup::new("Advanced")`, `Vec3Edit::from_presentation(...)`,
+  `TransformEdit::from_presentations(...)`, `DragValue::new(...)`,
+  `NumericInput::from_presentation(...)`, `advanced_unit_interval_validate(...)`, reset actions,
+  and the Advanced no-match row.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` freeze the owner split so the root proof file cannot regain
+  Advanced row-policy markers.
+- The boundary stays intact: `fret-ui-editor` controls continue to own reusable control behavior;
+  the example owner only owns proof-surface composition and model wiring.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` dead-code warning.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed. The first run timed out while waiting on the build directory lock; the rerun
+  completed successfully.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
 
 ## Fret Plot Axis-Lock Helper Wiring Evidence - 2026-06-09
 
