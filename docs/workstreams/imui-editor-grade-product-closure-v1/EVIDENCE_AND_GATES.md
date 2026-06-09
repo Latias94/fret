@@ -2,6 +2,53 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI disclosure trigger pointer owner split - 2026-06-09
+
+This maintenance slice keeps disclosure/tree trigger pointer wiring focused without changing
+collapsing-header, tree-node, context-menu, double-click, keyboard, response, visual, or public
+facade behavior:
+
+- IMUI disclosure trigger pointer owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/pointer.rs` keeps the
+  pointer installation and up-event routing hub only.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/pointer/down.rs` owns the
+  no-op pointer-down registration that preserves the pressable pointer lifecycle.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/pointer/context.rs` owns
+  right-click context-anchor projection plus secondary/context-menu transient event recording.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/pointer/double_click.rs`
+  owns left-button double-click transient event recording.
+- No public API or runtime behavior changed; the existing
+  `pointer::install_disclosure_trigger_pointer(...)` private call surface remains the trigger
+  pointer install entry.
+- The source gate now freezes disclosure pointer down, context-menu, and double-click behavior out
+  of the hub and rejects keyboard, response, visual, and facade logic from drifting across owner
+  boundaries.
+- Evidence anchor: `disclosure_controls/trigger/behavior/pointer.rs` declares `mod context;`,
+  `mod double_click;`, and `mod down;`, delegates pointer-down install to `down`, and delegates
+  right-click and double-click recording to their owners.
+- Evidence anchor: `pointer/down.rs` contains only no-op pointer-down registration.
+- Evidence anchor: `pointer/context.rs` contains only context anchor update plus
+  secondary/context-menu transient event recording.
+- Evidence anchor: `pointer/double_click.rs` contains only double-click transient event recording.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the disclosure pointer hub, down
+  owner, context owner, double-click owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui disclosure --no-fail-fast` - passed, 7/7
+  after rerunning with a longer timeout; an initial 180s attempt timed out with no failure output.
+- `cargo nextest run -p fret-imui disclosure --no-fail-fast` - passed, 4/4.
+- `cargo nextest run -p fret-imui tree --no-fail-fast` - passed, 4/4.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI disclosure trigger response owner split - 2026-06-09
 
 This maintenance slice keeps disclosure/tree trigger response assembly focused without changing
