@@ -8134,6 +8134,14 @@ state owner while keeping route/workbench/render composition. Model keys, initia
 shading options, gradient stop defaults, text-assist state, transform outcome state, public crate
 APIs, and the app-owned no-helper-widening boundary remain unchanged.
 
+2026-06-10 main editor proof text-assist owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/editor_text_assist.rs` now owns name/search assist
+fixtures, accepted-label writeback, shared TextField outcome recording, and the name-assist
+TextAssistField overlay surface. `imui_editor_proof_demo.rs` now only declares/imports the
+text-assist owner while keeping route/workbench/render composition. Candidate lists, outcome text,
+accepted-label writes, overlay options, test IDs, public crate APIs, and the app-owned
+no-helper-widening boundary remain unchanged.
+
 2026-06-07 collection proof assets owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` now keeps render assembly and
 re-exports the existing `collection::authoring_parity_collection_assets()` call surface through the

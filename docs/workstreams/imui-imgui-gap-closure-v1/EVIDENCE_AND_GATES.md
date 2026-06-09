@@ -2065,6 +2065,41 @@ Focused gates:
 - `git diff --check`: pass; reported only the expected Git CRLF normalization warnings for
   `apps/fret-examples/src/imui_editor_proof_demo.rs` and `tools/gate_imui_workstream_source.py`.
 
+## Main Editor Proof Text Assist Owner Split Evidence - 2026-06-10
+
+Claim verified: the editor proof route root no longer owns main editor text-assist fixtures or
+text-field outcome writeback helpers. The demo-local `editor_text_assist` owner now owns name/search
+assist item fixtures, name assist surface construction, text-assist accept writeback, and shared
+TextField outcome recording while the route root keeps render composition and imports the owner.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now declares `mod editor_text_assist;` and
+  imports `use editor_text_assist::*;` instead of defining the name/search assist fixtures,
+  `record_text_field_outcome(...)`, or `render_editor_name_assist_surface(...)` inline.
+- `apps/fret-examples/src/imui_editor_proof_demo/editor_text_assist.rs` owns
+  `editor_demo_name_assist_items(...)`, `editor_demo_search_assist_items(...)`,
+  `record_text_field_outcome(...)`, `render_editor_name_assist_surface(...)`, the anchored overlay
+  TextAssistField options, and accepted-label writeback.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` now freeze the text-assist owner and reject route-root
+  drift back to inline assist fixtures/outcome writes.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` dead-code warning.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass (1/1).
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass (541 dedicated directories, 47 standalone
+  markdown files).
+- `git diff --check`: pass; reported only the expected Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## Canonical Workbench Persistent Action Strip Evidence - 2026-06-03
 
 Claim verified: the canonical IMUI editor workbench route now owns a persistent

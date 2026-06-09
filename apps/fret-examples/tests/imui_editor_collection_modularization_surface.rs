@@ -7,6 +7,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let authoring_parity_surface_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
+    let editor_text_assist_source =
+        include_str!("../src/imui_editor_proof_demo/editor_text_assist.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
     let asset_grid_source = include_str!("../src/imui_editor_proof_demo/collection/asset_grid.rs");
     let asset_grid_tile_source =
@@ -191,7 +193,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod authoring_parity;",
         "mod collection;",
         "mod editor_state;",
+        "mod editor_text_assist;",
         "use editor_state::*;",
+        "use editor_text_assist::*;",
     ] {
         assert!(
             demo_source.contains(needle),
@@ -205,6 +209,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn editor_demo_value_model<H: UiHost>(",
         "fn editor_demo_transform_outcome_model<H: UiHost>(",
         "struct GradientDemoStop",
+        "fn editor_demo_name_assist_items(",
+        "fn editor_demo_search_assist_items(",
+        "fn record_text_field_outcome(",
+        "fn render_editor_name_assist_surface(",
         "fn proof_collection_assets_in_visible_order(",
         "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "struct ProofCollectionAsset {",
@@ -234,6 +242,25 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             editor_state_source.contains(needle),
             "the demo-local editor state owner should own main proof state fixtures; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) fn editor_demo_name_assist_items(",
+        "pub(super) fn editor_demo_search_assist_items(",
+        "fn record_editor_text_assist_accept(",
+        "pub(super) fn record_text_field_outcome(",
+        "pub(super) fn render_editor_name_assist_surface(",
+        "TextAssistItem::new(\"cube\", \"Cube\")",
+        "TextAssistItem::new(\"validation\", \"Validation\")",
+        "TextAssistField::new(",
+        "TextAssistFieldSurface::AnchoredOverlay",
+        "record_editor_text_assist_accept(host, &accepted_label_model, active)",
+        "let next = edit_session_outcome_label(outcome);",
+    ] {
+        assert!(
+            editor_text_assist_source.contains(needle),
+            "the demo-local editor text-assist owner should own assist fixtures and text-field outcome writes; missing `{needle}`"
         );
     }
 

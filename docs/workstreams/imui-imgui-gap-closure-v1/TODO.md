@@ -8478,6 +8478,13 @@ opening the slice.
       `editor_state.rs` owns `named_demo_state(...)`, `GradientDemoStop`, material shading fixture
       items, and the main `editor_demo_*_model(...)` helpers; `imui_editor_proof_demo.rs` now keeps
       route/workbench/render composition and imports the state owner.
+- [x] Split main editor proof text-assist fixtures and outcome writeback out of the proof route
+      root without changing candidate lists, accepted-label writeback, TextField outcome text,
+      name-assist overlay options, test IDs, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `editor_text_assist.rs` owns name/search assist items,
+      `record_text_field_outcome(...)`, accepted-label writeback, and
+      `render_editor_name_assist_surface(...)`; `imui_editor_proof_demo.rs` now imports the owner
+      while keeping route/workbench/render composition.
 - [x] Split collection proof asset fixture record/defaults out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
       `collection/assets.rs` child owner without changing stored asset defaults, asset ids,
