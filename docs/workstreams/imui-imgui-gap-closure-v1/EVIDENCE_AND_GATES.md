@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Asset-Grid Owner Split Evidence - 2026-06-10
+
+Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer
+keeps the asset-grid assertion bundle inline in the test root. The root still owns the single test
+entry point and source includes, while `imui_editor_collection_modularization_surface/asset_grid.rs`
+owns asset-grid, tile, actions, chrome, inline-rename, inline-rename actions, and metadata boundary
+assertions.
+
+Evidence:
+
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` declares
+  `mod asset_grid;` and routes the existing asset-grid source assertions through
+  `asset_grid::assert_asset_grid_owner_split(...)`.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface/asset_grid.rs` owns the
+  asset-grid owner-split assertions, including root delegation, tile interaction, action writeback,
+  option/test-id chrome, inline rename rendering, inline rename outcome actions, and metadata
+  readout boundaries.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the source-surface test owner split without changing app runtime code, public APIs,
+  `fret-imui`, `fret-ui-kit::imui`, docking, or runner contracts.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Examples Editor Proof Inspector Owner Split Evidence - 2026-06-10
 
 Claim verified: the supporting `imui_editor_proof_demo` route root no longer owns the editor

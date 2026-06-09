@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface asset-grid owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/asset_grid.rs` owns the asset-grid assertion bundle
+for grid entry, tile interaction, actions, chrome/options, inline rename, inline rename actions,
+and metadata readouts. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`,
+docking, or runner contract changed.
+
 2026-06-10 Fret Examples editor proof Inspector owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo.rs` now routes the editor InspectorPanel through
 `imui_editor_proof_demo/editor_inspector.rs` instead of carrying editor model collection,

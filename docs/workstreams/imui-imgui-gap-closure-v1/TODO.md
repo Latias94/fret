@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Asset-Grid Owner Split - 2026-06-10
+
+- [x] Split the asset-grid assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares `mod asset_grid;` and delegates to
+      `asset_grid::assert_asset_grid_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/asset_grid.rs` owns asset-grid, tile, actions,
+      chrome/options, inline rename, inline rename actions, and metadata readout boundary checks.
+      The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Editor Proof Inspector Owner Split - 2026-06-10
 
 - [x] Split the supporting `imui_editor_proof_demo` InspectorPanel shell into a demo-local owner
