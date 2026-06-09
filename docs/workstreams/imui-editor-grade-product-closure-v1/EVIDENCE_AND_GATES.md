@@ -2,6 +2,49 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI combo trigger keyboard owner split - 2026-06-09
+
+This maintenance slice keeps combo trigger keyboard wiring focused without changing ComboBox,
+combo-model, context-menu, activation, response, visual, or public facade behavior:
+
+- IMUI combo trigger keyboard owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior/keyboard.rs` keeps the keydown
+  handler installation and keyboard-event routing hub only.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior/keyboard/shortcut.rs` owns
+  activate-shortcut matching, repeat/IME filtering, lifecycle instant marking, and clicked event
+  recording.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior/keyboard/context.rs` owns
+  ContextMenu/Shift+F10 matching plus context-menu-request transient event recording.
+- No public API or runtime behavior changed; the existing
+  `keyboard::install_combo_trigger_keyboard(...)` private call surface remains the trigger keyboard
+  install entry.
+- The source gate now freezes combo trigger activate shortcut and context-menu key handling out of
+  the hub and rejects activation, response, visual, popup, and facade logic from drifting across
+  keyboard owner boundaries.
+- Evidence anchor: `combo_controls/trigger/behavior/keyboard.rs` declares `mod context;` and
+  `mod shortcut;`, then routes activate-shortcut handling before context-menu key handling.
+- Evidence anchor: `keyboard/shortcut.rs` contains only activate-shortcut matching, repeat/IME
+  filtering, lifecycle instant marking, clicked event recording, and notification.
+- Evidence anchor: `keyboard/context.rs` contains only ContextMenu/Shift+F10 handling,
+  context-menu-request event recording, and notification.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the combo trigger keyboard hub,
+  shortcut owner, context owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast` - passed, 11/11.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI disclosure trigger pointer owner split - 2026-06-09
 
 This maintenance slice keeps disclosure/tree trigger pointer wiring focused without changing
