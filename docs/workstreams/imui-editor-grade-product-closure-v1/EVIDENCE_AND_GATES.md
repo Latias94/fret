@@ -2,6 +2,49 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI combo-model popup item owner split - 2026-06-09
+
+This maintenance slice keeps combo-model popup item rendering focused without changing ComboBox,
+combo-model selection, popup close behavior, response lifecycle, trigger keyboard, visual, or public
+facade behavior:
+
+- IMUI combo-model popup item owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items.rs` keeps the popup item input
+  carrier and per-item iteration hub only.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items/item.rs` owns selected-state
+  projection, option test-id derivation, selectable row rendering, and clicked-row dispatch.
+- `ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items/selection.rs` owns model value
+  updates and popup-close mutation after a clicked option.
+- No public API or runtime behavior changed; the existing
+  `popup_items::render_combo_model_items(...)` private call surface remains the combo-model popup
+  item rendering entry.
+- The source gate now freezes combo-model popup item rendering, item projection, and selection
+  mutation across separate owners and rejects combo trigger, response, and facade logic from
+  drifting across popup item boundaries.
+- Evidence anchor: `combo_model_controls/popup_items.rs` declares `mod item;` and
+  `mod selection;`, then delegates each enumerated item to `item::render_combo_model_item(...)`.
+- Evidence anchor: `popup_items/item.rs` contains only checked-state derivation, option test-id
+  derivation, selectable row rendering, and clicked-item dispatch.
+- Evidence anchor: `popup_items/selection.rs` contains only clicked option model update and popup
+  close mutation.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the combo-model popup items hub,
+  item owner, selection owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui combo --no-fail-fast` - passed, 11/11.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast` - passed, 11/11.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI combo trigger keyboard owner split - 2026-06-09
 
 This maintenance slice keeps combo trigger keyboard wiring focused without changing ComboBox,

@@ -668,6 +668,8 @@
     "ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_model_controls/entry.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items/item.rs",
+    "ecosystem/fret-ui-kit/src/imui/combo_model_controls/popup_items/selection.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_model_controls/response.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/entry.rs",
