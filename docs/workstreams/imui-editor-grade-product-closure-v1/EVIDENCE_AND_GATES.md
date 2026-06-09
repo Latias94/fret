@@ -1245,6 +1245,35 @@ Fresh gates:
 - `git diff --check` - passed with the known CRLF normalization warning for
   `tools/gate_imui_workstream_source.py`.
 
+## IMUI ListBox options builder sugar - 2026-06-09
+
+This proof-pressure slice improves editor-facing ListBox ergonomics without moving selection,
+filtering, or active-descendant policy into the container:
+
+- IMUI ListBox options builder sugar - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` now owns chainable
+  ListBoxOptions helpers for height, label, multiselectable, root/content/viewport test IDs, scroll
+  options, and scroll handle wiring.
+- Evidence anchor: `ecosystem/fret-imui/src/tests/composition/layout_collections/region_containers/list_box.rs` uses `ListBoxOptions::new()` builder chaining in the semantics/scroll/selectable proof.
+- Evidence anchor: ListBoxOptions::new() builder chaining.
+- Evidence anchor: `list_box_options_builder_projects_scroll_and_semantics_fields` locks builder
+  field projection without adding selection/filter/active-descendant ownership.
+- Public ListBox container behavior, semantics role, multiselectable flag, scroll viewport/content
+  stamping, selectable row semantics, and row stacking remain unchanged.
+- `tools/gate_imui_workstream_source.py` source-checks the builder helpers and proof test so
+  ListBox ergonomics cannot regress back to manual struct literals only.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -p fret-imui -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo check -p fret-imui` - passed.
+- `cargo nextest run -p fret-imui list_box --no-fail-fast` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+
 ## IMUI virtual list row-item owner split - 2026-06-09
 
 This maintenance slice keeps the immediate virtual-list element owner focused on runtime list
