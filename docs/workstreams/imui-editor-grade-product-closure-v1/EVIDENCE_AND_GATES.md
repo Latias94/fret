@@ -2,6 +2,53 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI disclosure trigger response owner split - 2026-06-09
+
+This maintenance slice keeps disclosure/tree trigger response assembly focused without changing
+collapsing-header, tree-node, context-menu, double-click, hover response, keyboard, pointer, visual,
+or public facade behavior:
+
+- IMUI disclosure trigger response owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response.rs` keeps the
+  response assembly hub and final disabled sanitization only.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response/core.rs` owns
+  hovered/pressed/focused/nav-highlight/id/clicked/rect response fields.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response/context.rs` owns
+  secondary-click, double-click, context-menu request, and context-anchor projection.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior/response/hover.rs` owns
+  hover-query hook installation, raw hover flags, delay flags, and active-item blocking projection.
+- No public API or runtime behavior changed; the existing
+  `response::populate_disclosure_trigger_response(...)` private call surface remains the trigger
+  response entry.
+- The source gate now freezes disclosure response core, context, and hover fields out of the hub and
+  rejects pointer, keyboard, visual, active-trigger, and facade logic from drifting across owner
+  boundaries.
+- Evidence anchor: `disclosure_controls/trigger/behavior/response.rs` declares `mod core;`,
+  `mod context;`, and `mod hover;`, delegates to each owner, and calls
+  `sanitize_response_for_enabled(...)` last.
+- Evidence anchor: `response/core.rs` contains only core state/id/click/rect response projection.
+- Evidence anchor: `response/context.rs` contains only secondary/double/context-menu/context-anchor
+  response projection.
+- Evidence anchor: `response/hover.rs` contains only hover delay/raw-hover/active-item-blocking
+  response projection.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the disclosure response hub, core
+  owner, context owner, hover owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui disclosure --no-fail-fast` - passed, 7/7.
+- `cargo nextest run -p fret-imui disclosure --no-fail-fast` - passed, 4/4.
+- `cargo nextest run -p fret-imui tree --no-fail-fast` - passed, 4/4.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI active trigger response owner split - 2026-06-09
 
 This maintenance slice keeps active-trigger response assembly focused without changing switch,
