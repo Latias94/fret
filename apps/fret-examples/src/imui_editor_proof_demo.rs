@@ -23,11 +23,9 @@ use fret_ui_editor::composites::{
     PropertyRow, PropertyRowReset,
 };
 use fret_ui_editor::controls::{
-    Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOutcome,
-    EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, NumericInput, NumericInputOptions, NumericValidateFn,
-    NumericValueConstraints, Slider, SliderOptions, TextField, TextFieldBlurBehavior,
-    TextFieldMode, TextFieldOptions, TextFieldOutcome, TransformEdit, TransformEditAxisOutcome,
+    DragValue, EditorTextSelectionBehavior, FieldStatus, FieldStatusBadge, NumericInput,
+    NumericInputOptions, NumericValidateFn, TextField, TextFieldBlurBehavior, TextFieldMode,
+    TextFieldOptions, TextFieldOutcome, TransformEdit, TransformEditAxisOutcome,
     TransformEditOptions, Vec3Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
@@ -43,11 +41,13 @@ use fret_ui_kit::recipes::imui_sortable::{
 mod asset_ref;
 mod authoring_parity;
 mod collection;
+mod editor_material;
 mod editor_state;
 mod editor_text_assist;
 mod proof_helpers;
 mod workbench_shell;
 
+use editor_material::*;
 use editor_state::*;
 use editor_text_assist::*;
 use proof_helpers::*;
@@ -360,7 +360,6 @@ where
                     );
                 }
                 ui.mount(|cx| {
-                    let fixed_presentation = editor_fixed_decimals_presentation();
                     let validate: NumericValidateFn<f64> = Arc::new(|v| {
                         if (0.0..=1.0).contains(&v) {
                             None
@@ -422,24 +421,6 @@ where
                             move |cx, panel_cx| {
                                 let matches = |s: &str| panel_cx.matches(s);
 
-                                let material_show_all = matches("material");
-                                let show_opacity = material_show_all || matches("opacity");
-                                let show_roughness = material_show_all || matches("roughness");
-                                let show_metallic = material_show_all || matches("metallic");
-                                let show_base_color =
-                                    material_show_all || matches("base") || matches("color");
-                                let show_asset_ref = material_show_all
-                                    || matches("asset")
-                                    || matches("texture")
-                                    || matches("map")
-                                    || matches("base");
-                                let show_shading_model =
-                                    material_show_all || matches("shading") || matches("model");
-                                let show_alpha_clip =
-                                    material_show_all || matches("alpha") || matches("clip");
-                                let show_cast_shadows =
-                                    material_show_all || matches("shadow") || matches("shadows");
-
                                 let advanced_show_all = matches("advanced");
                                 let show_exposure =
                                     advanced_show_all || matches("exposure") || matches("validate");
@@ -452,19 +433,6 @@ where
                                     || matches("rotation")
                                     || matches("rot")
                                     || matches("scale");
-
-                                let any_match = show_opacity
-                                    || show_roughness
-                                    || show_metallic
-                                    || show_base_color
-                                    || show_asset_ref
-                                    || show_shading_model
-                                    || show_alpha_clip
-                                    || show_cast_shadows
-                                    || show_exposure
-                                    || show_iterations
-                                    || show_position
-                                    || show_transform;
 
                                 let mut out = Vec::new();
 
@@ -955,377 +923,29 @@ where
                                     ),
                             );
 
-                            let material_validate = validate.clone();
-                            out.push(
-                                PropertyGroup::new("Material")
-                                    .options(fret_ui_editor::composites::PropertyGroupOptions {
-                                        test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.group.material",
-                                        )),
-                                        header_test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.group.material.header",
-                                        )),
-                                        content_test_id: Some(Arc::from(
-                                            "imui-editor-proof.editor.group.material.content",
-                                        )),
-                                        ..Default::default()
-                                    })
-                                    .into_element(
-                                        cx,
-                                        |_cx| None,
-                                        move |cx| {
-                                            let validate = material_validate.clone();
-                                            vec![PropertyGrid::new().into_element(
-                                                cx,
-                                                move |cx, row_cx| {
-                                                    let mut rows = Vec::new();
-
-                                                    if show_opacity {
-                                                        let model_for_reset =
-                                                            editor_value_model.clone();
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host.models_mut().update(
-                                                                    &model_for_reset,
-                                                                    |v| *v = 1.0,
-                                                                );
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new()
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(
-                                                                        on_reset,
-                                                                    )
-                                                                    .options(
-                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.drag-value-reset")),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                )),
-                                                            |cx| row_cx.label_text(cx, "Opacity"),
-                                                            |cx| {
-                                                                let outcome_model =
-                                                                    editor_drag_value_outcome_model
-                                                                        .clone();
-                                                                DragValue::from_presentation(
-                                                                    editor_value_model.clone(),
-                                                                    fixed_presentation.clone(),
-                                                                )
-                                                                .validate(Some(validate.clone()))
-                                                                .on_outcome(Some(Arc::new(
-                                                                    move |host,
-                                                                          action_cx,
-                                                                          outcome: DragValueOutcome| {
-                                                                        let next =
-                                                                            compact_edit_session_outcome_label(
-                                                                                outcome,
-                                                                            );
-                                                                        let _ = host
-                                                                            .models_mut()
-                                                                            .update(
-                                                                                &outcome_model,
-                                                                                |value| {
-                                                                                    value.clear();
-                                                                                    value.push_str(
-                                                                                        next,
-                                                                                    );
-                                                                                },
-                                                                            );
-                                                                        host.request_redraw(
-                                                                            action_cx.window,
-                                                                        );
-                                                                    },
-                                                                )))
-                                                                .options(
-                                                                    fret_ui_editor::controls::DragValueOptions {
-                                                                        constraints:
-                                                                            NumericValueConstraints {
-                                                                                min: Some(0.0),
-                                                                                max: Some(1.0),
-                                                                                clamp: true,
-                                                                                step: Some(0.025),
-                                                                            },
-                                                                        test_id: Some(Arc::from(
-                                                                            "imui-editor-proof.editor.drag-value-demo",
-                                                                        )),
-                                                                        ..Default::default()
-                                                                    },
-                                                                )
-                                                                .into_element(cx)
-                                                            },
-                                                            |cx| {
-                                                                let outcome = editor_string_model_readout(
-                                                                    cx,
-                                                                    &editor_drag_value_outcome_model,
-                                                                );
-                                                                proof_optional_outcome_readout(
-                                                                    cx,
-                                                                    outcome,
-                                                                    Arc::from(
-                                                                        "imui-editor-proof.editor.drag-value-demo.outcome",
-                                                                    ),
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_roughness {
-                                                        let model_for_reset =
-                                                            editor_roughness_model.clone();
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host.models_mut().update(
-                                                                    &model_for_reset,
-                                                                    |v| *v = 0.5,
-                                                                );
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new()
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(
-                                                                        on_reset,
-                                                                    )
-                                                                    .options(
-                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.material.roughness.reset")),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                )),
-                                                            |cx| row_cx.label_text(cx, "Roughness"),
-                                                            |cx| {
-                                                                Slider::from_presentation(
-                                                                    editor_roughness_model.clone(),
-                                                                    0.0,
-                                                                    1.0,
-                                                                    editor_percent_presentation(),
-                                                                )
-                                                                .options(SliderOptions {
-                                                                    a11y_label: Some(Arc::from(
-                                                                        "Roughness",
-                                                                    )),
-                                                                    step: Some(0.01),
-                                                                    test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.material.roughness",
-                                                                    )),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                            |cx| {
-                                                                Some(
-                                                                    FieldStatusBadge::new(
-                                                                        FieldStatus::Mixed,
-                                                                    )
-                                                                    .into_element(cx),
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_metallic {
-                                                        let model_for_reset =
-                                                            editor_metallic_model.clone();
-                                                        let on_reset = Arc::new(
-                                                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                                                  action_cx: fret_ui::action::ActionCx| {
-                                                                let _ = host.models_mut().update(
-                                                                    &model_for_reset,
-                                                                    |v| *v = 0.0,
-                                                                );
-                                                                host.request_redraw(action_cx.window);
-                                                            },
-                                                        );
-
-                                                        rows.push(row_cx.row_with(
-                                                            cx,
-                                                            PropertyRow::new()
-                                                                .reset(Some(
-                                                                    PropertyRowReset::new(
-                                                                        on_reset,
-                                                                    )
-                                                                    .options(
-                                                                        fret_ui_editor::composites::PropertyRowResetOptions {
-                                                                            test_id: Some(Arc::from("imui-editor-proof.editor.material.metallic.reset")),
-                                                                            ..Default::default()
-                                                                        },
-                                                                    ),
-                                                                )),
-                                                            |cx| row_cx.label_text(cx, "Metallic"),
-                                                            |cx| {
-                                                                Slider::from_presentation(
-                                                                    editor_metallic_model.clone(),
-                                                                    0.0,
-                                                                    1.0,
-                                                                    editor_percent_presentation(),
-                                                                )
-                                                                .options(SliderOptions {
-                                                                    a11y_label: Some(Arc::from(
-                                                                        "Metallic",
-                                                                    )),
-                                                                    step: Some(0.01),
-                                                                    test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.material.metallic",
-                                                                    )),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                            |cx| {
-                                                                Some(
-                                                                    FieldStatusBadge::new(
-                                                                        FieldStatus::Loading,
-                                                                    )
-                                                                    .into_element(cx),
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_base_color {
-                                                        rows.push(row_cx.row(
-                                                            cx,
-                                                            |cx| row_cx.label_text(cx, "Base color"),
-                                                            |cx| {
-                                                                ColorEdit::new(
-                                                                    editor_base_color_model
-                                                                        .clone(),
-                                                                )
-                                                                .options(ColorEditOptions {
-                                                                    test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.material.base-color",
-                                                                    )),
-                                                                    swatch_test_id: Some(
-                                                                        Arc::from("imui-editor-proof.editor.material.base-color.swatch"),
-                                                                    ),
-                                                                    input_test_id: Some(
-                                                                        Arc::from("imui-editor-proof.editor.material.base-color.hex"),
-                                                                    ),
-                                                                    popup_test_id: Some(
-                                                                        Arc::from("imui-editor-proof.editor.material.base-color.popup"),
-                                                                    ),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_asset_ref {
-                                                        asset_ref::push_material_rows(
-                                                            &mut rows,
-                                                            cx,
-                                                            &row_cx,
-                                                            editor_asset_slot_model.clone(),
-                                                            editor_asset_action_model.clone(),
-                                                        );
-                                                    }
-
-                                                    if show_shading_model {
-                                                        let items = editor_material_shading_items();
-
-                                                        rows.push(row_cx.row(
-                                                            cx,
-                                                            |cx| row_cx.label_text(cx, "Shading model"),
-                                                            |cx| {
-                                                                EnumSelect::new(
-                                                                    editor_shading_model.clone(),
-                                                                    items,
-                                                                )
-                                                                .options(EnumSelectOptions {
-                                                                    a11y_label: Some(Arc::from(
-                                                                        "Shading model",
-                                                                    )),
-                                                                    test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.material.shading-model",
-                                                                    )),
-                                                                    list_test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.material.shading-model.list",
-                                                                    )),
-                                                                    search_test_id: Some(Arc::from(
-                                                                        "imui-editor-proof.editor.material.shading-model.search",
-                                                                    )),
-                                                                    max_list_height: Some(Px(144.0)),
-                                                                    ..Default::default()
-                                                                })
-                                                                .into_element(cx)
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_alpha_clip {
-                                                        rows.push(row_cx.row(
-                                                            cx,
-                                                            |cx| row_cx.label_text(cx, "Alpha clip"),
-                                                            |cx| {
-                                                                Checkbox::new(
-                                                                    editor_alpha_clip_model.clone(),
-                                                                )
-                                                                .options(
-                                                                    fret_ui_editor::controls::CheckboxOptions {
-                                                                        a11y_label: Some(
-                                                                            Arc::from("Alpha clip"),
-                                                                        ),
-                                                                        ..Default::default()
-                                                                    },
-                                                                )
-                                                                .into_element(cx)
-                                                                .test_id(
-                                                                    "imui-editor-proof.editor.material.alpha-clip",
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if show_cast_shadows {
-                                                        rows.push(row_cx.row(
-                                                            cx,
-                                                            |cx| row_cx.label_text(cx, "Cast shadows"),
-                                                            |cx| {
-                                                                Checkbox::new_optional(
-                                                                    editor_cast_shadows_model.clone(),
-                                                                )
-                                                                .options(
-                                                                    fret_ui_editor::controls::CheckboxOptions {
-                                                                        a11y_label: Some(Arc::from(
-                                                                            "Cast shadows",
-                                                                        )),
-                                                                        ..Default::default()
-                                                                    },
-                                                                )
-                                                                .into_element(cx)
-                                                                .test_id(
-                                                                    "imui-editor-proof.editor.material.cast-shadows",
-                                                                )
-                                                            },
-                                                        ));
-                                                    }
-
-                                                    if rows.is_empty() {
-                                                        rows.push(proof_empty_state_text(
-                                                            cx,
-                                                            "No matches",
-                                                            "imui-editor-proof.editor.material.no-matches",
-                                                        ));
-                                                    }
-
-                                                    rows
-                                                },
-                                            )]
-                                        },
-                                    ),
+                            let material_surface = render_editor_material_surface(
+                                cx,
+                                panel_cx,
+                                EditorMaterialModels {
+                                    opacity: editor_value_model.clone(),
+                                    opacity_outcome: editor_drag_value_outcome_model.clone(),
+                                    roughness: editor_roughness_model.clone(),
+                                    metallic: editor_metallic_model.clone(),
+                                    base_color: editor_base_color_model.clone(),
+                                    asset_slot: editor_asset_slot_model.clone(),
+                                    asset_action: editor_asset_action_model.clone(),
+                                    shading: editor_shading_model.clone(),
+                                    alpha_clip: editor_alpha_clip_model.clone(),
+                                    cast_shadows: editor_cast_shadows_model.clone(),
+                                },
                             );
+                            let material_any_match = material_surface.any_match;
+                            out.push(material_surface.element);
+                            let any_match = material_any_match
+                                || show_exposure
+                                || show_iterations
+                                || show_position
+                                || show_transform;
 
                             out.push(
                                 PropertyGroup::new("Gradient")

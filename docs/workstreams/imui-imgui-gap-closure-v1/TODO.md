@@ -8485,6 +8485,13 @@ opening the slice.
       `record_text_field_outcome(...)`, accepted-label writeback, and
       `render_editor_name_assist_surface(...)`; `imui_editor_proof_demo.rs` now imports the owner
       while keeping route/workbench/render composition.
+- [x] Split the main editor proof Material property group out of the proof route root without
+      changing Material search behavior, opacity outcome text, reset defaults, asset ref rows,
+      ColorEdit/EnumSelect/checkbox/slider test IDs, public crate APIs, or the app-owned
+      no-helper-widening boundary. Result: `editor_material.rs` owns Material visibility matching,
+      Material row construction, reset/writeback handlers, and the Material no-matches row;
+      `imui_editor_proof_demo.rs` now passes `EditorMaterialModels` to the owner while keeping
+      route/workbench/render composition.
 - [x] Split collection proof asset fixture record/defaults out of
       `apps/fret-examples/src/imui_editor_proof_demo/collection.rs` into the demo-local
       `collection/assets.rs` child owner without changing stored asset defaults, asset ids,

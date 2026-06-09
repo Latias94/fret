@@ -7,6 +7,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let authoring_parity_surface_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
+    let editor_material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let editor_text_assist_source =
         include_str!("../src/imui_editor_proof_demo/editor_text_assist.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
@@ -192,8 +193,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     for needle in [
         "mod authoring_parity;",
         "mod collection;",
+        "mod editor_material;",
         "mod editor_state;",
         "mod editor_text_assist;",
+        "use editor_material::*;",
         "use editor_state::*;",
         "use editor_text_assist::*;",
     ] {
@@ -213,6 +216,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn editor_demo_search_assist_items(",
         "fn record_text_field_outcome(",
         "fn render_editor_name_assist_surface(",
+        "PropertyGroup::new(\"Material\")",
+        "fn render_editor_material_rows(",
+        "fn material_unit_interval_validate(",
+        "fn record_drag_value_outcome(",
         "fn proof_collection_assets_in_visible_order(",
         "fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
         "struct ProofCollectionAsset {",
@@ -222,6 +229,29 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !demo_source.contains(needle),
             "imui_editor_proof_demo should not keep the collection implementation inline after modularization; unexpected `{needle}`"
+        );
+    }
+
+    for needle in [
+        "pub(super) struct EditorMaterialModels",
+        "pub(super) struct EditorMaterialSurface",
+        "pub(super) fn render_editor_material_surface(",
+        "struct EditorMaterialVisibility",
+        "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
+        "PropertyGroup::new(\"Material\")",
+        "DragValue::from_presentation(",
+        "record_drag_value_outcome(host, action_cx, &outcome_model, outcome);",
+        "Slider::from_presentation(",
+        "ColorEdit::new(models.base_color.clone())",
+        "asset_ref::push_material_rows(",
+        "EnumSelect::new(models.shading.clone(), editor_material_shading_items())",
+        "Checkbox::new(models.alpha_clip.clone())",
+        "Checkbox::new_optional(models.cast_shadows.clone())",
+        "\"imui-editor-proof.editor.material.no-matches\"",
+    ] {
+        assert!(
+            editor_material_source.contains(needle),
+            "the demo-local editor material owner should own material search gating and rows; missing `{needle}`"
         );
     }
 
