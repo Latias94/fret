@@ -2,7 +2,7 @@
 
 use super::geometry::line_plot_inner_rect;
 use super::*;
-use crate::cartesian::DataPoint;
+use crate::cartesian::{DataPoint, DataRect};
 use crate::models::{
     AreaPlotModel, AreaSeries, BarSeries, BarsPlotModel, CandlestickPlotModel, CandlestickSeries,
     ErrorBar, ErrorBarsPlotModel, ErrorBarsSeries, HeatmapPlotModel, Histogram2DPlotModel,
@@ -391,6 +391,135 @@ fn line_plot_panel_props_builder_projects_canvas_layout_and_size_fields() {
     canvas.layout.size.width = Length::Px(Px(220.0));
     let props = LinePlotPanelProps::new(model).canvas(canvas);
     assert_eq!(props.canvas.layout.size.width, Length::Px(Px(220.0)));
+}
+
+#[test]
+fn all_plot_panel_props_builder_project_fixed_height_fields() {
+    let mut app = TestHost::default();
+    let expected = Length::Px(Px(144.0));
+
+    let area = app
+        .models_mut()
+        .insert(AreaPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        AreaPlotPanelProps::new(area)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let bars = app
+        .models_mut()
+        .insert(BarsPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        BarsPlotPanelProps::new(bars)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let candlestick = app
+        .models_mut()
+        .insert(CandlestickPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        CandlestickPlotPanelProps::new(candlestick)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let error_bars = app
+        .models_mut()
+        .insert(ErrorBarsPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        ErrorBarsPlotPanelProps::new(error_bars)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let heatmap_bounds = DataRect {
+        x_min: 0.0,
+        x_max: 1.0,
+        y_min: 0.0,
+        y_max: 1.0,
+    };
+    let heatmap = app
+        .models_mut()
+        .insert(HeatmapPlotModel::new(heatmap_bounds, 1, 1, vec![0.0]));
+    assert_eq!(
+        HeatmapPlotPanelProps::new(heatmap)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let histogram = app
+        .models_mut()
+        .insert(HistogramPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        HistogramPlotPanelProps::new(histogram)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let histogram2d =
+        app.models_mut()
+            .insert(Histogram2DPlotModel::new(heatmap_bounds, 1, 1, vec![0.0]));
+    assert_eq!(
+        Histogram2DPlotPanelProps::new(histogram2d)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let shaded = app
+        .models_mut()
+        .insert(ShadedPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        ShadedPlotPanelProps::new(shaded)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
+
+    let stems = app
+        .models_mut()
+        .insert(StemsPlotModel::from_series(Vec::new()));
+    assert_eq!(
+        StemsPlotPanelProps::new(stems)
+            .height_px(Px(144.0))
+            .canvas
+            .layout
+            .size
+            .height,
+        expected
+    );
 }
 
 #[test]

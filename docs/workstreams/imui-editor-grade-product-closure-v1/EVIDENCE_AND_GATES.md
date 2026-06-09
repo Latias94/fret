@@ -2,6 +2,36 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI plot panel layout builder parity - 2026-06-09
+
+This proof-pressure slice extends the first-party plot panel layout builder surface from the line
+panel to every declarative plot panel prop owner without moving plot policy into `fret-imui` or
+`fret-ui-kit::imui`:
+
+- `ecosystem/fret-plot/src/declarative/props/{area,bars,candlestick,error_bars,heatmap,histogram,histogram2d,shaded,stems}.rs`
+  now expose the same `canvas(...)`, `layout(...)`, `width(...)`, `height(...)`, `size(...)`,
+  `width_px(...)`, `height_px(...)`, and `size_px(...)` builder surface as `LinePlotPanelProps`.
+- `ecosystem/fret-plot/src/declarative/tests.rs` proves all plot panel props can project a fixed
+  height through their canvas layout while preserving the line-panel full builder projection test.
+- `tools/gate_imui_workstream_source.py` now freezes the shared plot panel canvas/layout builder
+  method set across all 10 declarative plot panel prop owners.
+- No plot rendering behavior, output publication, model projection, or IMUI adapter crate boundary
+  changed.
+
+Fresh gates:
+
+- `cargo fmt -p fret-plot` - passed.
+- `cargo check -p fret-plot --features imui` - passed with existing dead-code warnings in
+  `ecosystem/fret-plot/src/plot/view.rs`.
+- `cargo nextest run -p fret-plot all_plot_panel_props_builder_project_fixed_height_fields line_plot_panel_props_builder_projects_canvas_layout_and_size_fields --no-fail-fast` -
+  passed, 2/2.
+- `cargo fmt -p fret-plot -- --check` - passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI text-picker popup owner split - 2026-06-09
 
 This maintenance slice keeps text-picker popup rendering focused without changing input-text-picker,

@@ -1,7 +1,8 @@
 //! Area plot panel prop builder owner.
 
+use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::element::CanvasProps;
+use fret_ui::element::{CanvasProps, LayoutStyle, Length};
 
 use crate::cartesian::AxisScale;
 use crate::models::{AreaPlotModel, StepMode};
@@ -33,6 +34,44 @@ impl AreaPlotPanelProps {
     pub fn output(mut self, output: Model<PlotOutput>) -> Self {
         self.output = Some(output);
         self
+    }
+
+    pub fn canvas(mut self, canvas: CanvasProps) -> Self {
+        self.canvas = canvas;
+        self
+    }
+
+    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+        self.canvas.layout = layout;
+        self
+    }
+
+    pub fn width(mut self, width: Length) -> Self {
+        self.canvas.layout.size.width = width;
+        self
+    }
+
+    pub fn height(mut self, height: Length) -> Self {
+        self.canvas.layout.size.height = height;
+        self
+    }
+
+    pub fn size(mut self, width: Length, height: Length) -> Self {
+        self.canvas.layout.size.width = width;
+        self.canvas.layout.size.height = height;
+        self
+    }
+
+    pub fn width_px(self, width: Px) -> Self {
+        self.width(Length::Px(width))
+    }
+
+    pub fn height_px(self, height: Px) -> Self {
+        self.height(Length::Px(height))
+    }
+
+    pub fn size_px(self, width: Px, height: Px) -> Self {
+        self.size(Length::Px(width), Length::Px(height))
     }
 
     pub fn state(mut self, state: Model<PlotState>) -> Self {

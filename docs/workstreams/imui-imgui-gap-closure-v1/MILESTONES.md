@@ -1,7 +1,16 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-08
+Last updated: 2026-06-09
+
+2026-06-09 Fret Plot IMUI adapter layout builder parity result:
+`ecosystem/fret-plot/src/declarative/props/{area,bars,candlestick,error_bars,heatmap,histogram,histogram2d,shaded,stems}.rs`
+now expose the same `canvas`, `layout`, `width`, `height`, `size`, `width_px`, `height_px`, and
+`size_px` builder methods as the line plot panel prop owner. The new
+`all_plot_panel_props_builder_project_fixed_height_fields` proof locks the fixed-height path across
+all non-line plot panel props, and the source gate freezes the method set across all 10
+declarative plot panel prop owners. No plot rendering behavior, `fret-imui` facade, or
+`fret-ui-kit::imui` policy changed.
 
 2026-06-06 Fret-ImUi radio proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_controls/radio.rs` now keeps only shared imports and

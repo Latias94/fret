@@ -1,7 +1,42 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-08
+Last updated: 2026-06-09
+
+## Fret Plot IMUI Adapter Layout Builder Parity Evidence - 2026-06-09
+
+Claim verified: the optional `fret-plot/imui` teaching adapter now has a consistent canvas/layout
+builder surface across all declarative plot panel prop owners, so fixed-size editor plot panels do
+not require caller-side canvas mutation or special line-only API knowledge.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative/props/area.rs`, `bars.rs`, `candlestick.rs`,
+  `error_bars.rs`, `heatmap.rs`, `histogram.rs`, `histogram2d.rs`, `shaded.rs`, and `stems.rs`
+  now expose the same `canvas(...)`, `layout(...)`, `width(...)`, `height(...)`, `size(...)`,
+  `width_px(...)`, `height_px(...)`, and `size_px(...)` methods as the existing line panel prop
+  owner.
+- `ecosystem/fret-plot/src/declarative/tests.rs` adds
+  `all_plot_panel_props_builder_project_fixed_height_fields`, covering the fixed-height builder
+  path for every non-line plot panel prop while keeping the existing line builder projection test.
+- `tools/gate_imui_workstream_source.py` freezes the shared plot panel canvas/layout builder method
+  set across all 10 declarative prop owners.
+- The boundary stays intact: `fret-plot` owns plot adapter policy; `fret-imui` and
+  `fret-ui-kit::imui` remain uninvolved.
+
+Focused gates:
+
+- `cargo fmt -p fret-plot`: pass.
+- `cargo check -p fret-plot --features imui`: pass with existing dead-code warnings in
+  `ecosystem/fret-plot/src/plot/view.rs`.
+- `cargo nextest run -p fret-plot all_plot_panel_props_builder_project_fixed_height_fields line_plot_panel_props_builder_projects_canvas_layout_and_size_fields --no-fail-fast`:
+  pass, 2 passed.
+- `cargo fmt -p fret-plot -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass with the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
 
 ## Fret-ImUi Radio Proof Owner Split Evidence - 2026-06-06
 

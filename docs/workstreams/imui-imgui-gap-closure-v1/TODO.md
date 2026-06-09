@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-08
+Last updated: 2026-06-09
 
 ## Worktree Convergence - 2026-05-26
 
@@ -93,6 +93,13 @@ Last updated: 2026-06-08
       readouts. `apps/fret-cookbook/Cargo.toml` owns the opt-in `cookbook-imui-plot` feature,
       `apps/fretboard/src/demos.rs` auto-enables it for `fretboard-dev dev native --example
       imui_plot_basics`, and the IMUI source gates freeze the adapter teaching path.
+- [x] Extend the first-party plot panel layout builder surface beyond the line panel so every
+      declarative plot panel prop owner supports fixed-size editor panels without caller-side
+      canvas mutation.
+      Result: area, bars, candlestick, error-bars, heatmap, histogram, histogram2d, shaded, and
+      stems panel props now expose the shared `canvas/layout/width/height/size/*_px` builder
+      surface, `all_plot_panel_props_builder_project_fixed_height_fields` covers the parity, and
+      the IMUI source gate freezes the method set across all 10 plot panel prop owners.
 
 ## Fret-ImUi Checkbox Proof Split - 2026-06-06
 
