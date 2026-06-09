@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface command-buttons owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/command_buttons.rs` owns the command-buttons
+assertion bundle for root routing, action writeback, button chrome/options/test IDs, and negative
+drift boundaries. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or
+runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface box-select owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
