@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Editor Proof Object Owner Split - 2026-06-10
+
+- [x] Split the supporting `imui_editor_proof_demo` Object inspector group into a demo-local owner
+      without changing Object test IDs, TextField options, readout text, name-assist behavior,
+      outcome writeback, or global inspector search no-match behavior.
+      Result: `apps/fret-examples/src/imui_editor_proof_demo/editor_object.rs` owns Object
+      TextField rows, committed/outcome readouts, name-assist mounting, and Object property-grid
+      composition, while the root proof file routes through `render_editor_object_surface(...)`.
+      The modularization source test and IMUI workstream source gate freeze the split.
+
 ## Fret Examples Editor Proof Advanced Owner Split - 2026-06-10
 
 - [x] Split the supporting `imui_editor_proof_demo` Advanced inspector group into a demo-local
@@ -8495,6 +8505,12 @@ opening the slice.
       `record_text_field_outcome(...)`, accepted-label writeback, and
       `render_editor_name_assist_surface(...)`; `imui_editor_proof_demo.rs` now imports the owner
       while keeping route/workbench/render composition.
+- [x] Split the main editor proof Object property group out of the proof route root without changing
+      Object TextField options, committed/outcome readouts, name-assist behavior, test IDs, public
+      crate APIs, or the app-owned no-helper-widening boundary. Result: `editor_object.rs` owns
+      Object TextField row composition, readouts, name-assist mounting, and outcome writeback;
+      `imui_editor_proof_demo.rs` now passes `EditorObjectModels` to the owner while keeping
+      route/workbench/render composition.
 - [x] Split the main editor proof Material property group out of the proof route root without
       changing Material search behavior, opacity outcome text, reset defaults, asset ref rows,
       ColorEdit/EnumSelect/checkbox/slider test IDs, public crate APIs, or the app-owned

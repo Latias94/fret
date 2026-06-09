@@ -10,6 +10,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let editor_advanced_source = include_str!("../src/imui_editor_proof_demo/editor_advanced.rs");
     let editor_gradient_source = include_str!("../src/imui_editor_proof_demo/editor_gradient.rs");
     let editor_material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
+    let editor_object_source = include_str!("../src/imui_editor_proof_demo/editor_object.rs");
     let editor_text_assist_source =
         include_str!("../src/imui_editor_proof_demo/editor_text_assist.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
@@ -198,11 +199,13 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "mod editor_advanced;",
         "mod editor_gradient;",
         "mod editor_material;",
+        "mod editor_object;",
         "mod editor_state;",
         "mod editor_text_assist;",
         "use editor_advanced::*;",
         "use editor_gradient::*;",
         "use editor_material::*;",
+        "use editor_object::*;",
         "use editor_state::*;",
         "use editor_text_assist::*;",
     ] {
@@ -222,6 +225,20 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         "fn editor_demo_search_assist_items(",
         "fn record_text_field_outcome(",
         "fn render_editor_name_assist_surface(",
+        "PropertyGroup::new(\"Object\")",
+        "TextField::new(",
+        "TextFieldOptions",
+        "TextFieldOutcome",
+        "TextFieldBlurBehavior",
+        "TextFieldMode",
+        "EditorTextSelectionBehavior::SelectAllOnFocus",
+        "PropertyGrid::new()",
+        "PropertyRow::new()",
+        "row_cx.label_text(cx, \"Name\")",
+        "editor_text_field_readout(",
+        "editor_text_assist_readout(",
+        "record_text_field_outcome(",
+        "render_editor_name_assist_surface(",
         "PropertyGroup::new(\"Material\")",
         "fn render_editor_material_rows(",
         "fn material_unit_interval_validate(",
@@ -249,6 +266,49 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         assert!(
             !demo_source.contains(needle),
             "imui_editor_proof_demo should not keep the collection implementation inline after modularization; unexpected `{needle}`"
+        );
+    }
+
+    assert!(
+        demo_source.contains("render_editor_object_surface(")
+            && demo_source.contains("EditorObjectModels {"),
+        "imui_editor_proof_demo should route Object through the demo-local editor object owner"
+    );
+
+    for needle in [
+        "pub(super) struct EditorObjectModels",
+        "pub(super) fn render_editor_object_surface(",
+        "fn render_editor_object_grid(",
+        "PropertyGroup::new(\"Object\")",
+        "PropertyGrid::new().into_element",
+        "PropertyRow::new()",
+        "TextField::new(models.name.clone())",
+        "TextFieldOptions",
+        "TextFieldOutcome",
+        "EditorTextSelectionBehavior::SelectAllOnFocus",
+        "TextFieldBlurBehavior::Cancel",
+        "TextFieldBlurBehavior::PreserveDraft",
+        "TextFieldMode::Password",
+        "record_text_field_outcome(host, action_cx, &outcome_model, outcome);",
+        "render_editor_name_assist_surface(",
+        "editor_text_field_readout(",
+        "editor_text_assist_readout(",
+        "committed_char_count_label(",
+        "committed_line_count_label(",
+        "\"imui-editor-proof.editor.group.object\"",
+        "\"imui-editor-proof.editor.object.name\"",
+        "\"imui-editor-proof.editor.object.inline-rename\"",
+        "\"imui-editor-proof.editor.object.buffered-name\"",
+        "\"imui-editor-proof.editor.object.password\"",
+        "\"imui-editor-proof.editor.object.name-assist.state\"",
+        "\"imui-editor-proof.editor.object.name-assist.active\"",
+        "\"imui-editor-proof.editor.object.name-assist.accepted\"",
+        "\"imui-editor-proof.editor.object.notes\"",
+        "\"imui-editor-proof.editor.object.notes.committed-lines\"",
+    ] {
+        assert!(
+            editor_object_source.contains(needle),
+            "the demo-local editor object owner should own object text fields, readouts, and assist rows; missing `{needle}`"
         );
     }
 

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Editor Proof Object Owner Split Evidence - 2026-06-10
+
+Claim verified: the supporting `imui_editor_proof_demo` Object inspector surface now has a
+demo-local owner for TextField composition, readouts, name-assist mounting, and outcome writeback
+without changing Object test IDs, model wiring, or global inspector no-match behavior.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_proof_demo.rs` now declares `mod editor_object;`, imports
+  `editor_object::*`, and routes the Object group through `render_editor_object_surface(...)` with
+  an `EditorObjectModels` bundle.
+- `apps/fret-examples/src/imui_editor_proof_demo/editor_object.rs` owns
+  `PropertyGroup::new("Object")`, `PropertyGrid::new()`, `PropertyRow::new()`, `TextField::new(...)`,
+  Object TextField options, TextField outcome writeback, name-assist mounting, and Object readout
+  rows.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` and
+  `tools/gate_imui_workstream_source.py` freeze the owner split so the route root cannot regain
+  Object row-policy markers.
+- The boundary stays intact: reusable TextField/TextAssist behavior remains in `fret-ui-editor`;
+  the example owner only owns proof-surface composition and model wiring.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`: pass with the existing
+  `fret-chart::visual_map_track_at` dead-code warning.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed. The first run timed out without failure output; the rerun waited on the build
+  directory lock and completed successfully.
+- `python tools\check_workstream_catalog.py`: pass (541 dedicated directories, 47 standalone
+  markdown files).
+- `git diff --check`: pass; reported only the expected Git CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## Fret Examples Editor Proof Advanced Owner Split Evidence - 2026-06-10
 
 Claim verified: the supporting `imui_editor_proof_demo` Advanced inspector surface now has a

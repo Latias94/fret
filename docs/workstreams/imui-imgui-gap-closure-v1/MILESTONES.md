@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples editor proof Object owner-split result:
+`apps/fret-examples/src/imui_editor_proof_demo.rs` now routes the Object inspector property group
+through `imui_editor_proof_demo/editor_object.rs` instead of carrying TextField construction,
+Object readout rows, name-assist mounting, and text-field outcome-writeback policy inline. The new
+owner keeps Object behavior out of the route root while preserving all existing Object test IDs,
+model keys, TextField options, and the global inspector no-match behavior. No `fret-ui-editor`
+control API, `fret-imui` facade, docking, or runner contract changed.
+
 2026-06-10 Fret Examples editor proof Advanced owner-split result:
 `apps/fret-examples/src/imui_editor_proof_demo.rs` now routes the Advanced inspector property
 group through `imui_editor_proof_demo/editor_advanced.rs` instead of carrying Vec3Edit,
@@ -8150,6 +8158,14 @@ TextAssistField overlay surface. `imui_editor_proof_demo.rs` now only declares/i
 text-assist owner while keeping route/workbench/render composition. Candidate lists, outcome text,
 accepted-label writes, overlay options, test IDs, public crate APIs, and the app-owned
 no-helper-widening boundary remain unchanged.
+
+2026-06-10 main editor proof object owner split result:
+`apps/fret-examples/src/imui_editor_proof_demo/editor_object.rs` now owns the main editor Object
+property group: TextField row construction, TextField options, committed/outcome readouts,
+name-assist mounting, and TextField outcome writeback. `imui_editor_proof_demo.rs` now only
+declares/imports the object owner and passes `EditorObjectModels` while keeping
+route/workbench/render composition. Object model wiring, readout text, name-assist behavior, test
+IDs, public crate APIs, and the app-owned no-helper-widening boundary remain unchanged.
 
 2026-06-10 main editor proof material owner split result:
 `apps/fret-examples/src/imui_editor_proof_demo/editor_material.rs` now owns the main editor Material
