@@ -2,6 +2,49 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI text-picker keyboard owner split - 2026-06-09
+
+This maintenance slice keeps text-picker keyboard state focused without changing input-text-picker,
+completion/history wrappers, keyboard navigation, enter-to-pick behavior, active-descendant
+semantics, popup close-after-keyboard-pick behavior, or public facade behavior:
+
+- IMUI text-picker keyboard owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` keeps the keyboard module hub
+  and re-export surface only.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/types.rs` owns keyboard pick,
+  state, and snapshot data carriers at the text-picker-only visibility boundary.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/reconcile.rs` owns keyboard state
+  cleanup, stale active-source pruning, pending-pick extraction, and snapshot projection.
+- No public API or runtime behavior changed; callers still use the existing
+  `keyboard::InputTextPickerKeyboard*` and `keyboard::reconcile_picker_keyboard_state(...)`
+  private module surface.
+- The source gate now freezes text-picker keyboard data carriers and reconciliation out of the
+  keyboard hub while rejecting keydown routing, popup rendering, selectable rows, model commits, and
+  facade logic from drifting across keyboard owner boundaries.
+- Evidence anchor: `text_picker_controls/keyboard.rs` declares `mod reconcile;` and `mod types;`,
+  then re-exports the private keyboard handler, reconcile function, and data carriers.
+- Evidence anchor: `keyboard/types.rs` contains only keyboard pick/state/snapshot data carriers.
+- Evidence anchor: `keyboard/reconcile.rs` contains only keyboard state reconciliation and snapshot
+  projection.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the keyboard hub, types owner,
+  reconcile owner, source inventory, and this workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui text_picker --no-fail-fast` - passed, 2/2.
+- `cargo nextest run -p fret-imui text_picker --no-fail-fast` - passed, 6/6 after rerunning
+  separately with a longer timeout; an initial parallel attempt timed out while waiting on Cargo
+  locks with no failure output.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI text-picker popup item owner split - 2026-06-09
 
 This maintenance slice keeps text-picker popup item rendering focused without changing
