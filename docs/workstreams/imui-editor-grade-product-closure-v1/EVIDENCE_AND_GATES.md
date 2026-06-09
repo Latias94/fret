@@ -2,6 +2,56 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI text-picker session owner split - 2026-06-09
+
+This maintenance slice keeps text-picker session preparation focused without changing
+input-text-picker, completion/history wrappers, candidate filtering, keyboard navigation,
+open-on-focus, popup expansion, response merging, or public facade behavior:
+
+- IMUI text-picker session owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session.rs` keeps the session
+  preparation hub and output carrier only.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session/state.rs` owns current-model
+  readback, popup-open model lookup, and disabled-scope enabled-state projection.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session/candidates.rs` owns candidate
+  visibility projection from current text and picker options.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core/session/popup.rs` owns popup snapshot
+  readback and picker-expanded projection.
+- No public API or runtime behavior changed; the existing
+  `session::prepare_text_picker_session(...)` private call surface remains the text-picker session
+  preparation entry.
+- The source gate now freezes text-picker state readback, candidate projection, and popup-expanded
+  projection out of the session hub and rejects input-root, popup render, response, selectable, and
+  facade logic from drifting across session boundaries.
+- Evidence anchor: `text_picker_controls/core/session.rs` declares `mod candidates;`, `mod popup;`,
+  and `mod state;`, then delegates state readback, candidate projection, keyboard preparation, and
+  popup expansion to focused owners.
+- Evidence anchor: `session/state.rs` contains only current-model readback, popup-open model lookup,
+  and enabled-state projection.
+- Evidence anchor: `session/candidates.rs` contains only `resolve_text_picker_candidates(...)`
+  projection into the session carrier.
+- Evidence anchor: `session/popup.rs` contains only popup snapshot readback and
+  `text_picker_expanded(...)` projection.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the text-picker session hub,
+  state owner, candidates owner, popup owner, source inventory, and this workstream evidence
+  boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui text_picker --no-fail-fast` - passed, 2/2
+  after rerunning with a longer timeout; an initial parallel attempt timed out while waiting on
+  Cargo locks with no failure output.
+- `cargo nextest run -p fret-imui text_picker --no-fail-fast` - passed, 6/6.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; reported only the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI combo-model response owner split - 2026-06-09
 
 This maintenance slice keeps combo-model response finishing focused without changing ComboBox,
