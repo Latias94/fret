@@ -1,20 +1,17 @@
 use std::sync::Arc;
 
 use fret_core::KeyCode;
-use fret_runtime::{KeyChord, Model};
+use fret_runtime::Model;
 use fret_ui::GlobalElementId;
 use fret_ui::action::{KeyDownCx, UiActionHostExt as _};
 use fret_ui::{ElementContext, UiHost};
 
 use super::super::interaction_runtime::ImUiLifecycleSessionState;
 
+mod options;
 mod popup_nav;
 
-pub(super) struct SelectableKeyboardOptions {
-    pub(super) close_popup: Option<Model<bool>>,
-    pub(super) activate_shortcut: Option<KeyChord>,
-    pub(super) shortcut_repeat: bool,
-}
+pub(super) use options::SelectableKeyboardOptions;
 
 pub(super) fn install_selectable_keyboard<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

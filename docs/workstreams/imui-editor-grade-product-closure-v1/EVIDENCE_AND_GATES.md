@@ -2,6 +2,43 @@
 
 Goal: keep the editor-grade maturity plan tied to real proof surfaces, not just strategy prose.
 
+## IMUI selectable keyboard options owner split - 2026-06-09
+
+This maintenance slice keeps selectable keyboard handling focused without changing selectable
+activation, popup closing, context-menu request, or popup-navigation behavior:
+
+- IMUI selectable keyboard options owner split - 2026-06-09.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` keeps shortcut handling,
+  lifecycle marking, popup close writeback, context-menu request handling, and popup-nav delegation.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard/options.rs` owns the private
+  `SelectableKeyboardOptions` carrier.
+- No public API or runtime behavior changed; the existing `keyboard::SelectableKeyboardOptions`
+  private call surface remains re-exported through the keyboard module for `behavior.rs`.
+- The source gate now freezes `SelectableKeyboardOptions` out of the keyboard root and rejects
+  keyboard event handling, lifecycle mutation, context-menu request, popup-nav, visual, and response
+  logic from drifting into the options owner.
+- Evidence anchor: `keyboard.rs` declares `mod options;` and re-exports
+  `options::SelectableKeyboardOptions` while keeping `install_selectable_keyboard(...)` as the
+  keyboard behavior entry.
+- Evidence anchor: `keyboard/options.rs` contains the popup close model, activate shortcut, and
+  shortcut-repeat fields only.
+- Evidence anchor: `tools/gate_imui_workstream_source.py` checks the keyboard root, keyboard
+  options owner, and workstream evidence boundary.
+
+Fresh gates:
+
+- `cargo fmt -p fret-ui-kit -- --check` - passed.
+- `cargo check -p fret-ui-kit --features imui` - passed.
+- `cargo nextest run -p fret-ui-kit --features imui selectable --no-fail-fast` - passed, 7/7.
+- `cargo nextest run -p fret-imui selectable --no-fail-fast` - passed, 6/6.
+- `python -m py_compile tools\gate_imui_workstream_source.py` - passed.
+- `python tools\gate_imui_workstream_source.py` - passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null` -
+  passed.
+- `python tools\check_workstream_catalog.py` - passed.
+- `git diff --check` - passed; Git reported the known CRLF normalization warning for
+  `tools/gate_imui_workstream_source.py`.
+
 ## IMUI tooltip panel options owner split - 2026-06-09
 
 This maintenance slice keeps tooltip panel placement assembly focused without changing tooltip
