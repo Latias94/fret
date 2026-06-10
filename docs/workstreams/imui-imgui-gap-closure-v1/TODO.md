@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Selection Context-Menu Owner Split - 2026-06-10
+
+- [x] Split the selection context-menu assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod selection_context_menu;` and delegates to
+      `selection_context_menu::assert_selection_context_menu_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/selection_context_menu.rs` owns right-click
+      selection replacement/preservation policy, behavior tests, fixtures, and negative drift
+      boundary checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Selection Keyboard Owner Split - 2026-06-10
 
 - [x] Split the selection keyboard assertion bundle out of

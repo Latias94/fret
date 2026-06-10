@@ -1701,6 +1701,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/keyboard.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/rename.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_context_menu.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_keyboard.rs",
     "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_context_menu_surface.rs",
