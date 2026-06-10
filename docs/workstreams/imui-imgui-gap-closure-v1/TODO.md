@@ -996,6 +996,19 @@ Last updated: 2026-06-10
       dispatch helpers, paint capture, and model snapshot helpers. The IMUI source gate freezes the
       deeper text-mode owner boundary.
 
+## Fret-ImUi Text Lifecycle Proof Split - 2026-06-10
+
+- [x] Split the `fret-imui` text-lifecycle proof owner into stable-bounds, session-edge, and
+      reusable scenario harness child owners without changing text runtime behavior, public APIs,
+      option names, or test semantics.
+      Result: `models_text_lifecycle.rs` is now a thin route hub with `mod bounds;`,
+      `mod harness;`, and `mod session_edges;`. `models_text_lifecycle/bounds.rs` owns stable
+      bounds proof, `models_text_lifecycle/session_edges.rs` owns focus/edit/blur edge proof, and
+      `models_text_lifecycle/harness.rs` owns the shared scenario, repeated
+      `input_text_model_with_options(...)` rendering, sibling blur-target setup, bounds lookup,
+      pointer/text helpers, and model snapshot helpers. The IMUI source gate freezes the deeper
+      text-lifecycle owner boundary.
+
 ## Fret-ImUi Text Command Proof Split - 2026-06-10
 
 - [x] Split the `fret-imui` text-command proof owner into completion, history, undo/redo, repeat,

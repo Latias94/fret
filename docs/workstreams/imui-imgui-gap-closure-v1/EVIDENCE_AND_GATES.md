@@ -2157,6 +2157,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Text Lifecycle Proof Child-Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` text-lifecycle proof owner no longer mixes stable-bounds and
+focus/edit/blur edge behavior with shared scenario setup in one large file. The text-lifecycle root
+is now a thin route hub, and lifecycle-specific behavior plus reusable scenario setup live in
+separate child owners.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle.rs` declares `mod bounds;`,
+  `mod harness;`, and `mod session_edges;` only.
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle/bounds.rs` owns
+  `input_text_focus_keeps_control_bounds_stable`, including stable bounds assertions.
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle/session_edges.rs` owns
+  `input_text_lifecycle_tracks_focus_edit_and_blur_edges`, including focus activation, edit, and
+  blur edge assertions.
+- `ecosystem/fret-imui/src/tests/models_text_lifecycle/harness.rs` owns
+  `InputTextLifecycleScenario`, repeated `input_text_model_with_options(...)` rendering, sibling
+  blur-target setup, bounds lookup, pointer/text helpers, and model snapshot helpers.
+- `tools/gate_imui_workstream_source.py`, `TODO.md`, and `MILESTONES.md` freeze the deeper
+  text-lifecycle owner boundary without changing text runtime behavior, public APIs, option names,
+  or test semantics.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui models_text_lifecycle --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Text Command Proof Child-Owner Split Evidence - 2026-06-10
 
 Claim verified: the `fret-imui` text-command proof owner no longer mixes completion, history,

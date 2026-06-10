@@ -564,6 +564,15 @@ helper, effect clearing, command projection, and model snapshot helpers. No text
 implementation, `fret-ui-kit::imui` text policy, `fret-imui` public facade, text option API, or
 test semantics changed.
 
+2026-06-10 Fret-ImUi text-lifecycle proof child-owner split result:
+`ecosystem/fret-imui/src/tests/models_text_lifecycle.rs` now keeps only child-owner routing for
+text lifecycle proofs. `models_text_lifecycle/bounds.rs` owns stable-bounds proof,
+`models_text_lifecycle/session_edges.rs` owns focus/edit/blur edge proof, and
+`models_text_lifecycle/harness.rs` owns the shared scenario, repeated input-text rendering,
+sibling blur-target setup, bounds lookup, pointer/text helpers, and model snapshot helpers. No
+text runtime implementation, `fret-ui-kit::imui` text policy, `fret-imui` public facade, text
+option API, or test semantics changed.
+
 2026-06-05 Fret-ImUi combo-model proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` now keeps only child-owner routing for
 the combo-model proof surface. `combo_model/selection.rs` routes combo-model selection proof

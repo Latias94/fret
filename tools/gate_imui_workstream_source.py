@@ -48301,6 +48301,76 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_text_lifecycle.rs"),
+            required=[
+                "use super::*;",
+                "mod bounds;",
+                "mod harness;",
+                "mod session_edges;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn input_text_focus_keeps_control_bounds_stable()",
+                "fn input_text_lifecycle_tracks_focus_edit_and_blur_edges()",
+                "InputTextLifecycleScenario::new(320.0, 140.0)",
+                "InputTextLifecycleScenario::new(360.0, 220.0)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_text_lifecycle/harness.rs"),
+            required=[
+                "pub(super) struct InputTextLifecycleScenario",
+                "pub(super) fn new(width: f32, height: f32) -> Self",
+                "pub(super) fn insert_text_model(",
+                "pub(super) fn render_stable_bounds_frame(",
+                "pub(super) fn render_lifecycle_frame(",
+                "pub(super) fn bounds_for_test_id(",
+                "pub(super) fn point_for_test_id(",
+                "pub(super) fn click_at(&mut self, at: Point)",
+                "pub(super) fn text_input(&mut self, text: &str)",
+                "pub(super) fn advance_frame(&mut self)",
+                "pub(super) fn model_text(&self, model: &fret_runtime::Model<String>) -> Option<String>",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn input_text_focus_keeps_control_bounds_stable()",
+                "fn input_text_lifecycle_tracks_focus_edit_and_blur_edges()",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_text_lifecycle/bounds.rs"),
+            required=[
+                "fn input_text_focus_keeps_control_bounds_stable()",
+                "InputTextLifecycleScenario::new(320.0, 140.0)",
+                "STABLE_BOUNDS_TEST_ID",
+                "bounds_for_test_id(STABLE_BOUNDS_TEST_ID)",
+                "assert_eq!(after.origin, before.origin);",
+                "assert_eq!(after.size, before.size);",
+            ],
+            forbidden=[
+                "fn input_text_lifecycle_tracks_focus_edit_and_blur_edges()",
+                "LIFECYCLE_TEST_ID",
+                "LIFECYCLE_BLUR_TARGET_TEST_ID",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/models_text_lifecycle/session_edges.rs"),
+            required=[
+                "fn input_text_lifecycle_tracks_focus_edit_and_blur_edges()",
+                "InputTextLifecycleScenario::new(360.0, 220.0)",
+                "LIFECYCLE_TEST_ID",
+                "LIFECYCLE_BLUR_TARGET_TEST_ID",
+                "scenario.text_input(\"hello\")",
+                "assert!(after_edit.get())",
+                "assert_eq!(text.borrow().as_str(), \"hello\");",
+            ],
+            forbidden=[
+                "fn input_text_focus_keeps_control_bounds_stable()",
+                "STABLE_BOUNDS_TEST_ID",
+                "bounds_for_test_id(STABLE_BOUNDS_TEST_ID)",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-imui/src/tests/models_text_commands.rs"),
             required=[
                 "use super::*;",
