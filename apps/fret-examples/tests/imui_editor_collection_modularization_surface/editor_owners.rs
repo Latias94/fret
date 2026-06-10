@@ -2,7 +2,8 @@ pub(super) fn assert_editor_owner_split(
     editor_inspector_source: &str,
     editor_object_router_source: &str,
     editor_object_surface_source: &str,
-    editor_advanced_source: &str,
+    editor_advanced_router_source: &str,
+    editor_advanced_surface_source: &str,
     editor_gradient_source: &str,
     editor_material_router_source: &str,
     editor_material_surface_source: &str,
@@ -98,9 +99,9 @@ pub(super) fn assert_editor_owner_split(
     );
 
     for needle in [
-        "pub(super) struct EditorAdvancedModels",
-        "pub(super) struct EditorAdvancedSurface",
-        "pub(super) fn render_editor_advanced_surface(",
+        "pub struct EditorAdvancedModels",
+        "pub struct EditorAdvancedSurface",
+        "pub fn render_editor_advanced_surface(",
         "struct EditorAdvancedVisibility",
         "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
         "PropertyGroup::new(\"Advanced\")",
@@ -116,8 +117,18 @@ pub(super) fn assert_editor_owner_split(
         "fn record_transform_axis_outcome(",
     ] {
         assert!(
-            editor_advanced_source.contains(needle),
-            "the demo-local editor advanced owner should own advanced search gating and rows; missing `{needle}`"
+            editor_advanced_surface_source.contains(needle),
+            "the demo-local editor advanced surface owner should own advanced search gating and rows; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "mod surface;",
+        "pub use surface::{EditorAdvancedModels, EditorAdvancedSurface, render_editor_advanced_surface};",
+    ] {
+        assert!(
+            editor_advanced_router_source.contains(needle),
+            "the demo-local editor advanced router should only re-export the surface owner; missing `{needle}`"
         );
     }
 

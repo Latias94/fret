@@ -82,7 +82,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     let authoring_parity_imui_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/imui.rs");
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
-    let editor_advanced_source = include_str!("../src/imui_editor_proof_demo/editor_advanced.rs");
+    let editor_advanced_router_source =
+        include_str!("../src/imui_editor_proof_demo/editor_advanced.rs");
+    let editor_advanced_surface_source =
+        include_str!("../src/imui_editor_proof_demo/editor_advanced/surface.rs");
     let editor_gradient_source = include_str!("../src/imui_editor_proof_demo/editor_gradient.rs");
     let editor_inspector_source = include_str!("../src/imui_editor_proof_demo/editor_inspector.rs");
     let editor_material_router_source =
@@ -281,7 +284,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         editor_inspector_source,
         editor_object_router_source,
         editor_object_surface_source,
-        editor_advanced_source,
+        editor_advanced_router_source,
+        editor_advanced_surface_source,
         editor_gradient_source,
         editor_material_router_source,
         editor_material_surface_source,
