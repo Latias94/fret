@@ -1690,6 +1690,7 @@
     "crates/fret-launch/src/runner/desktop/runner/window_redraw_diag_screenshots.rs",
     "tools/gate_imui_editor_collection_source.py",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/assets.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/asset_grid.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/browser_scope.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/browser_input_runtime.rs",

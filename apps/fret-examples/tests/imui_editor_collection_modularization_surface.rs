@@ -1,5 +1,7 @@
 #[path = "imui_editor_collection_modularization_surface/asset_grid.rs"]
 mod asset_grid;
+#[path = "imui_editor_collection_modularization_surface/assets.rs"]
+mod assets;
 #[path = "imui_editor_collection_modularization_surface/box_select.rs"]
 mod box_select;
 #[path = "imui_editor_collection_modularization_surface/browser_input_runtime.rs"]
@@ -1073,18 +1075,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
 
-    for needle in [
-        "pub(in super::super) struct ProofCollectionAsset {",
-        "pub(in super::super) fn authoring_parity_collection_assets() -> Arc<[ProofCollectionAsset]> {",
-        "ProofCollectionAsset {",
-        "id: Arc::from(\"stone-albedo\")",
-        "path: Arc::from(\"textures/stone/albedo.ktx2\")",
-    ] {
-        assert!(
-            assets_source.contains(needle),
-            "the demo-local collection assets owner should keep asset fixtures explicit; missing `{needle}`"
-        );
-    }
+    assets::assert_assets_owner_split(assets_source);
 
     browser_scope::assert_browser_scope_owner_split(
         browser_scope_source,
