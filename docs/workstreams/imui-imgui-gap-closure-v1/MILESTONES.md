@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface demo module routing owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/demo_module.rs` owns the main proof-demo
+module-routing assertion bundle for module declarations/imports, negative inline implementation
+drift checks, inspector owner mounting, authoring parity surface mounting, and shared authoring
+model delegation. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or
+runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface collection module routing owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
