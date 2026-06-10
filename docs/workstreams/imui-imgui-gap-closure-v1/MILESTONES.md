@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface selection duplicate selection owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/selection_duplicate_selection.rs` owns the selection
+duplicate insertion/reselect-repair assertion bundle for duplicate insertion, reselect repair,
+behavior tests, selection fixtures, and policy drift checks. No app runtime code, public APIs,
+`fret-imui`, `fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface selection duplicate naming owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
