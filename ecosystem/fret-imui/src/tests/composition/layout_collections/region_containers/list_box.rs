@@ -155,4 +155,10 @@ fn list_box_options_builder_projects_scroll_and_semantics_fields() {
     let width_only = ListBoxOptions::new().width(Px(180.0));
     let width_size = width_only.layout.size.expect("listbox width refinement");
     assert_px_length(width_size.width, Px(180.0));
+    assert_px_length(width_size.height, Px(160.0));
+
+    let height_only = ListBoxOptions::new().height(Px(72.0));
+    let height_size = height_only.layout.size.expect("listbox height refinement");
+    assert!(height_size.width.is_none());
+    assert_px_length(height_size.height, Px(72.0));
 }
