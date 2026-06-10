@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Selection Keyboard Owner Split - 2026-06-10
+
+- [x] Split the selection keyboard assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod selection_keyboard;` and delegates to
+      `selection_keyboard::assert_selection_keyboard_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/selection_keyboard.rs` owns keyboard selection,
+      keyboard selection tests/fixtures, navigation helpers, navigation tests/fixtures, and negative
+      drift boundary checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Selection Owner Split - 2026-06-10
 
 - [x] Split the selection hub/projection assertion bundle out of

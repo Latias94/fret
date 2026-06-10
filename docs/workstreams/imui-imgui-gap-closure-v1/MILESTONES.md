@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface selection-keyboard owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/selection_keyboard.rs` owns the selection keyboard
+assertion bundle for arrow/range/Escape policy, keyboard selection tests/fixtures, navigation
+helpers, navigation tests/fixtures, and negative drift boundaries. No app runtime code, public APIs,
+`fret-imui`, `fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface selection owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
