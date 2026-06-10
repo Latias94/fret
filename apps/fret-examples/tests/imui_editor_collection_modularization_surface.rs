@@ -16,6 +16,8 @@ mod drag_drop;
 mod geometry;
 #[path = "imui_editor_collection_modularization_surface/keyboard.rs"]
 mod keyboard;
+#[path = "imui_editor_collection_modularization_surface/models.rs"]
+mod models;
 #[path = "imui_editor_collection_modularization_surface/rename.rs"]
 mod rename;
 #[path = "imui_editor_collection_modularization_surface/selection.rs"]
@@ -1144,16 +1146,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     keyboard::assert_keyboard_owner_split(keyboard_source, keyboard_actions_source);
 
-    for needle in [
-        "pub(super) fn authoring_parity_collection_selection_model<H: UiHost>(",
-        "pub(super) fn authoring_parity_collection_assets_model<H: UiHost>(",
-        "pub(super) fn authoring_parity_collection_scroll_handle<H: UiHost>(",
-    ] {
-        assert!(
-            models_source.contains(needle),
-            "the demo-local collection models owner should keep state slot registration explicit; missing `{needle}`"
-        );
-    }
+    models::assert_models_owner_split(models_source);
 
     rename::assert_rename_owner_split(
         rename_source,

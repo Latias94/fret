@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Models Owner Split - 2026-06-10
+
+- [x] Split the collection model state-slot registration assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod models;` and delegates to
+      `models::assert_models_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/models.rs` owns state slot registration
+      checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Selection Duplicate Selection Owner Split - 2026-06-10
 
 - [x] Split the selection duplicate insertion/reselect-repair assertion bundle out of
