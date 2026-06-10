@@ -2,7 +2,8 @@
 fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
     let main_source = include_str!("../src/imui_editor_proof_demo.rs");
     let inspector_source = include_str!("../src/imui_editor_proof_demo/editor_inspector.rs");
-    let material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
+    let material_router_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
+    let material_source = include_str!("../src/imui_editor_proof_demo/editor_material/surface.rs");
     let owner_source = include_str!("../src/imui_editor_proof_demo/asset_ref.rs");
 
     for needle in ["mod asset_ref;", "render_editor_inspector_surface("] {
@@ -26,7 +27,17 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
     }
 
     for needle in [
-        "use super::asset_ref;",
+        "mod surface;",
+        "pub use surface::{EditorMaterialModels, EditorMaterialSurface, render_editor_material_surface};",
+    ] {
+        assert!(
+            material_router_source.contains(needle),
+            "editor material router should only re-export the surface owner; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "use super::super::asset_ref;",
         "let material_show_all = panel_cx.matches(\"material\");",
         "asset_ref: material_show_all",
         "asset_ref::push_material_rows(",
@@ -65,6 +76,7 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
         assert!(
             !main_source.contains(unexpected)
                 && !inspector_source.contains(unexpected)
+                && !material_router_source.contains(unexpected)
                 && !material_source.contains(unexpected)
                 && !owner_source.contains(unexpected),
             "AssetRefField proof must stay caller-owned and avoid asset-system coupling; unexpected `{unexpected}`"

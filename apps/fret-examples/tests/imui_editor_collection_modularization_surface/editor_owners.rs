@@ -3,7 +3,8 @@ pub(super) fn assert_editor_owner_split(
     editor_object_source: &str,
     editor_advanced_source: &str,
     editor_gradient_source: &str,
-    editor_material_source: &str,
+    editor_material_router_source: &str,
+    editor_material_surface_source: &str,
     editor_state_source: &str,
     editor_text_assist_source: &str,
 ) {
@@ -130,9 +131,9 @@ pub(super) fn assert_editor_owner_split(
     }
 
     for needle in [
-        "pub(super) struct EditorMaterialModels",
-        "pub(super) struct EditorMaterialSurface",
-        "pub(super) fn render_editor_material_surface(",
+        "pub struct EditorMaterialModels",
+        "pub struct EditorMaterialSurface",
+        "pub fn render_editor_material_surface(",
         "struct EditorMaterialVisibility",
         "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
         "PropertyGroup::new(\"Material\")",
@@ -147,8 +148,18 @@ pub(super) fn assert_editor_owner_split(
         "\"imui-editor-proof.editor.material.no-matches\"",
     ] {
         assert!(
-            editor_material_source.contains(needle),
-            "the demo-local editor material owner should own material search gating and rows; missing `{needle}`"
+            editor_material_surface_source.contains(needle),
+            "the demo-local editor material surface owner should own material search gating and rows; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "mod surface;",
+        "pub use surface::{EditorMaterialModels, EditorMaterialSurface, render_editor_material_surface};",
+    ] {
+        assert!(
+            editor_material_router_source.contains(needle),
+            "the demo-local editor material router should only re-export the surface owner; missing `{needle}`"
         );
     }
 
