@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface collection module routing owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/collection_module.rs` owns the collection module
+routing assertion bundle for the collection entrypoint, module declarations, re-exports/imports,
+child-owner orchestration calls, status readout mounting, and header mounting. No app runtime code,
+public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface chrome owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while

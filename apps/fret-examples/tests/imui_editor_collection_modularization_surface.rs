@@ -12,6 +12,8 @@ mod browser_scope;
 mod child_models;
 #[path = "imui_editor_collection_modularization_surface/chrome.rs"]
 mod chrome;
+#[path = "imui_editor_collection_modularization_surface/collection_module.rs"]
+mod collection_module;
 #[path = "imui_editor_collection_modularization_surface/command_buttons.rs"]
 mod command_buttons;
 #[path = "imui_editor_collection_modularization_surface/context_menu.rs"]
@@ -615,56 +617,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
 
-    for needle in [
-        "pub(super) fn render_collection_first_asset_browser_proof(",
-        "ui: &mut ImUi<'_, '_, KernelApp>",
-        "mod asset_grid;",
-        "mod assets;",
-        "mod browser_scope;",
-        "mod box_select;",
-        "mod child_models;",
-        "mod chrome;",
-        "mod command_buttons;",
-        "mod context_menu;",
-        "mod derived_state;",
-        "mod drag_drop;",
-        "mod geometry;",
-        "mod import_target;",
-        "mod keyboard;",
-        "mod lifecycle;",
-        "mod models;",
-        "mod order_toggle;",
-        "mod rename;",
-        "mod render_states;",
-        "mod runtime_state;",
-        "mod selection;",
-        "mod status_readouts;",
-        "pub(super) use assets::{ProofCollectionAsset, authoring_parity_collection_assets};",
-        "pub(super) use chrome::proof_collection_readout_text;",
-        "use child_models::{ProofCollectionChildModels, proof_collection_child_models};",
-        "use chrome::render_collection_header;",
-        "use derived_state::proof_collection_derived_state;",
-        "use import_target::render_collection_import_target;",
-        "use lifecycle::clear_stale_collection_rename_session;",
-        "use order_toggle::render_collection_order_toggle;",
-        "use render_states::proof_collection_render_states;",
-        "use runtime_state::proof_collection_runtime_state;",
-        "render_collection_import_target(ui);",
-        "render_collection_order_toggle(",
-        "proof_collection_derived_state(",
-        "proof_collection_runtime_state(",
-        "proof_collection_child_models(&collection_runtime.models)",
-        "proof_collection_render_states(",
-        "clear_stale_collection_rename_session(",
-        "use status_readouts::render_collection_status_readouts;",
-        "render_collection_status_readouts(",
-        "render_collection_header(ui);",
-    ] {
-        assert!(
-            collection_source.contains(needle),
-            "the demo-local collection module should keep the modularized implementation explicit; missing `{needle}`"
-        );
-    }
+    collection_module::assert_collection_module_routing(collection_source);
 
     chrome::assert_chrome_owner_split(collection_source, chrome_source);
 

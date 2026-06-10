@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Collection Module Routing Owner Split - 2026-06-10
+
+- [x] Split the collection module-routing assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod collection_module;` and delegates to
+      `collection_module::assert_collection_module_routing(...)`, while
+      `imui_editor_collection_modularization_surface/collection_module.rs` owns collection
+      entrypoint, module declaration, re-export/import, child-owner call, status readout, and header
+      mounting checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Chrome Owner Split - 2026-06-10
 
 - [x] Split the collection chrome/readout assertion bundle out of
