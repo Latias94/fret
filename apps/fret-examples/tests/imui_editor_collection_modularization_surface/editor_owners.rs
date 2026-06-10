@@ -1,6 +1,7 @@
 pub(super) fn assert_editor_owner_split(
     editor_inspector_source: &str,
-    editor_object_source: &str,
+    editor_object_router_source: &str,
+    editor_object_surface_source: &str,
     editor_advanced_source: &str,
     editor_gradient_source: &str,
     editor_material_router_source: &str,
@@ -44,8 +45,8 @@ pub(super) fn assert_editor_owner_split(
     );
 
     for needle in [
-        "pub(super) struct EditorObjectModels",
-        "pub(super) fn render_editor_object_surface(",
+        "pub struct EditorObjectModels",
+        "pub fn render_editor_object_surface(",
         "fn render_editor_object_grid(",
         "PropertyGroup::new(\"Object\")",
         "PropertyGrid::new().into_element",
@@ -75,8 +76,18 @@ pub(super) fn assert_editor_owner_split(
         "\"imui-editor-proof.editor.object.notes.committed-lines\"",
     ] {
         assert!(
-            editor_object_source.contains(needle),
-            "the demo-local editor object owner should own object text fields, readouts, and assist rows; missing `{needle}`"
+            editor_object_surface_source.contains(needle),
+            "the demo-local editor object surface owner should own object text fields, readouts, and assist rows; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "mod surface;",
+        "pub use surface::{EditorObjectModels, render_editor_object_surface};",
+    ] {
+        assert!(
+            editor_object_router_source.contains(needle),
+            "the demo-local editor object router should only re-export the surface owner; missing `{needle}`"
         );
     }
 

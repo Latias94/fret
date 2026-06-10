@@ -89,7 +89,10 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let editor_material_surface_source =
         include_str!("../src/imui_editor_proof_demo/editor_material/surface.rs");
-    let editor_object_source = include_str!("../src/imui_editor_proof_demo/editor_object.rs");
+    let editor_object_router_source =
+        include_str!("../src/imui_editor_proof_demo/editor_object.rs");
+    let editor_object_surface_source =
+        include_str!("../src/imui_editor_proof_demo/editor_object/surface.rs");
     let editor_text_assist_source =
         include_str!("../src/imui_editor_proof_demo/editor_text_assist.rs");
     let collection_source = include_str!("../src/imui_editor_proof_demo/collection.rs");
@@ -276,7 +279,8 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     editor_owners::assert_editor_owner_split(
         editor_inspector_source,
-        editor_object_source,
+        editor_object_router_source,
+        editor_object_surface_source,
         editor_advanced_source,
         editor_gradient_source,
         editor_material_router_source,
