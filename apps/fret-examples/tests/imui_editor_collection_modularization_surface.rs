@@ -28,6 +28,8 @@ mod models;
 mod order_toggle;
 #[path = "imui_editor_collection_modularization_surface/rename.rs"]
 mod rename;
+#[path = "imui_editor_collection_modularization_surface/render_states.rs"]
+mod render_states;
 #[path = "imui_editor_collection_modularization_surface/selection.rs"]
 mod selection;
 #[path = "imui_editor_collection_modularization_surface/selection_commands.rs"]
@@ -811,38 +813,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
 
     lifecycle::assert_lifecycle_owner_split(collection_source, lifecycle_source);
 
-    for needle in [
-        "pub(super) struct ProofCollectionRenderStates",
-        "pub(super) fn proof_collection_render_states<'a>(",
-        "runtime: &'a ProofCollectionRuntimeState",
-        "state: &'a ProofCollectionDerivedState",
-        "status_readouts: ProofCollectionStatusReadoutState {",
-        "command_buttons: ProofCollectionCommandButtonState {",
-        "browser_scope: ProofCollectionBrowserScopeState {",
-        "rename_ready_session: state.rename_ready_session.as_ref()",
-        "rename_session: runtime.snapshot.rename_session()",
-        "rename_focus_pending: runtime.snapshot.rename_focus_pending",
-    ] {
-        assert!(
-            render_states_source.contains(needle),
-            "the demo-local collection render-state owner should keep child render-state projection explicit; missing `{needle}`"
-        );
-    }
-
-    for needle in [
-        "ProofCollectionStatusReadoutState {",
-        "ProofCollectionCommandButtonState {",
-        "ProofCollectionBrowserScopeState {",
-        "collection_runtime.snapshot.rename_status.as_str()",
-        "collection_runtime.snapshot.command_status.as_str()",
-        "collection_runtime.snapshot.rename_session()",
-        "collection_state.rename_ready_session.as_ref()",
-    ] {
-        assert!(
-            !collection_source.contains(needle),
-            "the collection root should route child render-state projection through collection/render_states.rs; unexpected `{needle}`"
-        );
-    }
+    render_states::assert_render_states_owner_split(collection_source, render_states_source);
 
     order_toggle::assert_order_toggle_owner_split(collection_source, order_toggle_source);
 

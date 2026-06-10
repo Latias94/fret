@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface render states owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/render_states.rs` owns the collection child
+render-state projection assertion bundle for `ProofCollectionRenderStates`,
+`proof_collection_render_states(...)`, child DTO assembly, rename/session/focus projection, and
+root negative routing checks. No app runtime code, public APIs, `fret-imui`,
+`fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface lifecycle owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
