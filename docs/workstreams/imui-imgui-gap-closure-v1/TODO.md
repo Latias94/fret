@@ -996,6 +996,22 @@ Last updated: 2026-06-10
       dispatch helpers, paint capture, and model snapshot helpers. The IMUI source gate freezes the
       deeper text-mode owner boundary.
 
+## Fret-ImUi Text Command Proof Split - 2026-06-10
+
+- [x] Split the `fret-imui` text-command proof owner into completion, history, undo/redo, repeat,
+      and reusable scenario harness child owners without changing text runtime behavior, public
+      APIs, option names, or test semantics.
+      Result: `models_text_commands.rs` is now a thin route hub with `mod completion;`,
+      `mod harness;`, `mod history;`, `mod repeat;`, and `mod undo_redo;`.
+      `models_text_commands/completion.rs` owns the Tab completion-command dispatch proof,
+      `models_text_commands/history.rs` owns the ArrowUp/ArrowDown history-command dispatch proof,
+      `models_text_commands/undo_redo.rs` owns Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z undo/redo dispatch
+      proof, `models_text_commands/repeat.rs` owns repeat-opt-in command proof, and
+      `models_text_commands/harness.rs` owns the shared scenario, repeated
+      `input_text_model_with_options(...)` rendering, click helper, effect clearing, command
+      projection, and model snapshot helpers. The IMUI source gate freezes the deeper text-command
+      owner boundary.
+
 ## Fret-ImUi Combo Model Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` combo-model proof file into selection, popup, and shortcut activation

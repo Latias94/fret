@@ -553,6 +553,17 @@ pointer/focus driving helpers, and geometry assertions, while
 hover/focus/press/open/selection bounds stability proof. The surrounding control-geometry helper
 owner remains unchanged.
 
+2026-06-10 Fret-ImUi text-command proof child-owner split result:
+`ecosystem/fret-imui/src/tests/models_text_commands.rs` now keeps only child-owner routing for text
+command proofs. `models_text_commands/completion.rs` owns Tab completion-command dispatch proof,
+`models_text_commands/history.rs` owns ArrowUp/ArrowDown history-command dispatch proof,
+`models_text_commands/undo_redo.rs` owns Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z undo/redo dispatch proof,
+`models_text_commands/repeat.rs` owns repeat-opt-in command proof, and
+`models_text_commands/harness.rs` owns the shared scenario, repeated input-text rendering, click
+helper, effect clearing, command projection, and model snapshot helpers. No text runtime
+implementation, `fret-ui-kit::imui` text policy, `fret-imui` public facade, text option API, or
+test semantics changed.
+
 2026-06-05 Fret-ImUi combo-model proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_combo/combo_model.rs` now keeps only child-owner routing for
 the combo-model proof surface. `combo_model/selection.rs` routes combo-model selection proof

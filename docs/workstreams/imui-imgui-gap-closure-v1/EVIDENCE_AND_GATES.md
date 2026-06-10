@@ -2157,6 +2157,46 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Text Command Proof Child-Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` text-command proof owner no longer mixes completion, history,
+undo/redo, repeat policy, and shared scenario setup in one large file. The text-command root is
+now a thin route hub, and command-specific behavior plus reusable scenario setup live in separate
+child owners.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_text_commands.rs` declares `mod completion;`,
+  `mod harness;`, `mod history;`, `mod repeat;`, and `mod undo_redo;` only.
+- `ecosystem/fret-imui/src/tests/models_text_commands/completion.rs` owns
+  `input_text_completion_command_dispatches_on_unmodified_tab`, including Tab dispatch and model
+  preservation assertions.
+- `ecosystem/fret-imui/src/tests/models_text_commands/history.rs` owns
+  `input_text_history_commands_dispatch_on_unmodified_arrows_without_default_repeat`, including
+  ArrowUp/ArrowDown dispatch and default-repeat suppression assertions.
+- `ecosystem/fret-imui/src/tests/models_text_commands/undo_redo.rs` owns
+  `input_text_undo_redo_commands_dispatch_on_focused_shortcuts_without_default_repeat`, including
+  Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z dispatch and default-repeat suppression assertions.
+- `ecosystem/fret-imui/src/tests/models_text_commands/repeat.rs` owns
+  `input_text_policy_commands_can_opt_into_repeat`, including repeat-opt-in dispatch assertions.
+- `ecosystem/fret-imui/src/tests/models_text_commands/harness.rs` owns
+  `InputTextCommandScenario`, repeated `input_text_model_with_options(...)` rendering, click
+  helper, effect clearing, command projection, and model snapshot helpers.
+- `tools/gate_imui_workstream_source.py`, `TODO.md`, and `MILESTONES.md` freeze the deeper
+  text-command owner boundary without changing text runtime behavior, public APIs, option names,
+  or test semantics.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui models_text_commands --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Menu Activation Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` menu-activation proof surface is split by activation behavior owner
