@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Status Readouts Owner Split - 2026-06-10
+
+- [x] Split the collection status/readouts assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod status_readouts;` and delegates to
+      `status_readouts::assert_status_readouts_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/status_readouts.rs` owns status mounting,
+      readouts hub/re-export checks, readout status formatter checks, and collection-root negative
+      routing checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Import Target Owner Split - 2026-06-10
 
 - [x] Split the collection import target/drop-status UI assertion bundle out of

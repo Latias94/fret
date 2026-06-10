@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface status readouts owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/status_readouts.rs` owns the collection
+status/readouts assertion bundle for status mounting, readouts hub/re-exports, status formatting,
+and root negative routing checks. No app runtime code, public APIs, `fret-imui`,
+`fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface import target owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while

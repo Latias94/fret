@@ -1712,6 +1712,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_duplicate_selection.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_keyboard.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_select_all.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/status_readouts.rs",
     "apps/fret-examples/tests/imui_editor_collection_command_package_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_context_menu_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_keyboard_owner_surface.rs",
