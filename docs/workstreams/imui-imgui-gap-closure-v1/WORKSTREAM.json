@@ -1702,6 +1702,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/models.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/rename.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_commands.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_context_menu.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_delete.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/selection_duplicate.rs",

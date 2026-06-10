@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface selection commands owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/selection_commands.rs` owns the selection command
+hub re-export assertion bundle. No app runtime code, public APIs, `fret-imui`,
+`fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface models owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while

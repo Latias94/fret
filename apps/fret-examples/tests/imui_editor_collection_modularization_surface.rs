@@ -22,6 +22,8 @@ mod models;
 mod rename;
 #[path = "imui_editor_collection_modularization_surface/selection.rs"]
 mod selection;
+#[path = "imui_editor_collection_modularization_surface/selection_commands.rs"]
+mod selection_commands;
 #[path = "imui_editor_collection_modularization_surface/selection_context_menu.rs"]
 mod selection_context_menu;
 #[path = "imui_editor_collection_modularization_surface/selection_delete.rs"]
@@ -1159,6 +1161,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
     );
 
     selection::assert_selection_owner_split(selection_source, selection_projection_source);
+    selection_commands::assert_selection_commands_owner_split(selection_commands_source);
     selection_keyboard::assert_selection_keyboard_owner_split(
         selection_keyboard_source,
         selection_keyboard_tests_source,
@@ -1178,17 +1181,6 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         selection_select_all_tests_source,
         selection_select_all_tests_fixtures_source,
     );
-
-    for needle in [
-        "mod delete;",
-        "mod duplicate;",
-        "pub(in super::super) use delete::{",
-    ] {
-        assert!(
-            selection_commands_source.contains(needle),
-            "the demo-local collection selection command hub should keep sub-owner re-exports explicit; missing `{needle}`"
-        );
-    }
 
     selection_delete::assert_selection_delete_owner_split(
         selection_delete_commands_source,
