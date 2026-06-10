@@ -9,7 +9,7 @@ use fret_ui::{ElementContext, UiHost};
 use crate::IntoUiElement;
 use crate::imui::{DragSourceResponse, UiWriterImUiFacadeExt};
 
-use super::{DragPreviewGhostOptions, sync_drag_preview_ghost_overlay};
+use super::same_window::{DragPreviewGhostOptions, sync_drag_preview_ghost_overlay};
 
 type CrossWindowDragPreviewRenderer<H> =
     Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>) -> AnyElement + 'static>;
