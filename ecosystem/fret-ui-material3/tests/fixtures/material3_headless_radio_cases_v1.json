@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-radio-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 Radio and RadioGroup standalone, selected, unselected, disabled, hover, and focus-visible presentation.",
+  "cases": [
+    {
+      "id": "idle_matrix",
+      "kind": "idle"
+    },
+    {
+      "id": "selected_hover",
+      "kind": "hover",
+      "target_test_id": "radio-selected"
+    },
+    {
+      "id": "group_focus_visible",
+      "kind": "focus_visible",
+      "target_test_id": "radio-group-horizontal-alpha"
+    }
+  ]
+}

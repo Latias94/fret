@@ -2507,7 +2507,7 @@ fn select_list_item<H: UiHost>(
                 }
                 .into();
 
-                let mut chrome = cx.container(chrome, move |cx| {
+                let chrome = cx.container(chrome, move |cx| {
                     vec![
                         cx.flex(row, move |cx| {
                             let body_slot = if has_secondary_text {
@@ -2658,10 +2658,6 @@ fn select_list_item<H: UiHost>(
                         .with_layout_direction(layout_direction),
                     ]
                 });
-                if let Some(test_id) = chrome_test_id.clone() {
-                    chrome = chrome.test_id(test_id);
-                }
-
                 let mut inset = FlexProps::default();
                 inset.direction = Axis::Horizontal;
                 inset.justify = MainAlign::Start;
@@ -2676,7 +2672,12 @@ fn select_list_item<H: UiHost>(
                     bottom: selectable_outer_vertical_padding,
                 }
                 .into();
-                vec![cx.flex(inset, move |_cx| vec![chrome])]
+
+                let mut chrome_shell = cx.flex(inset, move |_cx| vec![chrome]);
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome_shell = chrome_shell.test_id(test_id);
+                }
+                vec![chrome_shell]
             })
         });
 

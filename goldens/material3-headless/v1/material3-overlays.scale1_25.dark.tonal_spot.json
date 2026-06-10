@@ -46,6 +46,9 @@
           "kind": "push_transform"
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "shadow_r_rect",
           "order": 0
         },
@@ -98,6 +101,9 @@
         {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -210,8 +216,8 @@
           "rect": [
             7720,
             680,
-            1280,
-            1440
+            1120,
+            1600
           ],
           "background": [
             15,
@@ -236,8 +242,8 @@
           "order": 0,
           "rect": [
             7720,
-            680,
-            480,
+            760,
+            1120,
             480
           ],
           "background": [
@@ -263,8 +269,8 @@
           "order": 0,
           "rect": [
             7720,
-            1160,
-            480,
+            1240,
+            1120,
             480
           ],
           "background": [
@@ -290,8 +296,8 @@
           "order": 0,
           "rect": [
             7720,
-            1640,
-            480,
+            1720,
+            1120,
             480
           ],
           "background": [
@@ -388,6 +394,9 @@
           "kind": "push_transform"
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "shadow_r_rect",
           "order": 0
         },
@@ -440,6 +449,9 @@
         {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -564,8 +576,8 @@
           "rect": [
             7720,
             680,
-            1280,
-            1440
+            1120,
+            1600
           ],
           "background": [
             15,
@@ -590,8 +602,8 @@
           "order": 0,
           "rect": [
             7720,
-            680,
-            480,
+            760,
+            1120,
             480
           ],
           "background": [
@@ -617,8 +629,8 @@
           "order": 0,
           "rect": [
             7720,
-            1160,
-            480,
+            1240,
+            1120,
             480
           ],
           "background": [
@@ -644,8 +656,8 @@
           "order": 0,
           "rect": [
             7720,
-            1640,
-            480,
+            1720,
+            1120,
             480
           ],
           "background": [

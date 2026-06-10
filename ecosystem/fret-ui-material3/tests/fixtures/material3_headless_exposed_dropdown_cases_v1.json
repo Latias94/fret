@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-exposed-dropdown-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 ExposedDropdown committed selection, editable query, trailing icon surface, keyboard open, and listbox presentation.",
+  "items": [
+    { "value": "alpha", "label": "Alpha", "test_id": "material3-exposed-option-alpha" },
+    { "value": "beta", "label": "Beta", "test_id": "material3-exposed-option-beta" },
+    { "value": "gamma", "label": "Gamma", "test_id": "material3-exposed-option-gamma" },
+    { "value": "delta", "label": "Delta", "test_id": "material3-exposed-option-delta" },
+    { "value": "epsilon", "label": "Epsilon", "test_id": "material3-exposed-option-epsilon" }
+  ],
+  "cases": [
+    {
+      "id": "closed_variants",
+      "kind": "closed"
+    },
+    {
+      "id": "outlined_open_selected",
+      "kind": "open",
+      "target_test_id": "material3-exposed-outlined",
+      "trailing_icon_test_id": "material3-exposed-outlined.trailing-icon"
+    },
+    {
+      "id": "filled_open_empty",
+      "kind": "open",
+      "target_test_id": "material3-exposed-filled",
+      "trailing_icon_test_id": "material3-exposed-filled.trailing-icon"
+    }
+  ]
+}

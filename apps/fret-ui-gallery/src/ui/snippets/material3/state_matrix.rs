@@ -601,6 +601,151 @@ fn render_menu(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> Vec
     vec![dropdown]
 }
 
+fn render_carousel_items(
+    cx: &mut AppComponentCx<'_>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host.models_mut().update(&last_action, |v| {
+            *v = Arc::<str>::from("material3.carousel_item.activated");
+        });
+    });
+
+    let item_content = |cx: &mut AppComponentCx<'_>, label: &'static str| {
+        let mut props = ContainerProps::default();
+        props.layout.size.width = Length::Fill;
+        props.layout.size.height = Length::Fill;
+        props.padding = Edges::all(Px(12.0)).into();
+        cx.container(props, move |cx| vec![cx.text(label)])
+    };
+
+    vec![
+        cx.text("Material 3 CarouselItem: token-driven item surface, outline, and state layer."),
+        ui::h_row(move |cx| {
+            vec![
+                material3::CarouselItem::new()
+                    .width(Px(180.0))
+                    .height(Px(92.0))
+                    .on_activate(activate.clone())
+                    .a11y_label("Standard carousel item")
+                    .test_id("ui-gallery-material3-carousel-item-standard")
+                    .into_element(cx, |cx| vec![item_content(cx, "Standard")]),
+                material3::CarouselItem::new()
+                    .variant(material3::CarouselItemVariant::WithOutline)
+                    .width(Px(180.0))
+                    .height(Px(92.0))
+                    .on_activate(activate.clone())
+                    .a11y_label("Outlined carousel item")
+                    .test_id("ui-gallery-material3-carousel-item-outlined")
+                    .into_element(cx, |cx| vec![item_content(cx, "Outlined")]),
+                material3::CarouselItem::new()
+                    .variant(material3::CarouselItemVariant::WithOutline)
+                    .width(Px(180.0))
+                    .height(Px(92.0))
+                    .disabled(true)
+                    .a11y_label("Disabled carousel item")
+                    .test_id("ui-gallery-material3-carousel-item-disabled")
+                    .into_element(cx, |cx| vec![item_content(cx, "Disabled")]),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx),
+    ]
+}
+
+fn render_dividers(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
+    vec![
+        cx.text("Material 3 Divider: horizontal and vertical separators use component tokens."),
+        material3::Divider::horizontal()
+            .test_id("ui-gallery-material3-divider-horizontal")
+            .into_element(cx),
+        ui::h_row(|cx| {
+            vec![
+                cx.text("Leading"),
+                material3::Divider::vertical()
+                    .test_id("ui-gallery-material3-divider-vertical")
+                    .into_element(cx),
+                cx.text("Trailing"),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx),
+    ]
+}
+
+fn render_progress_indicators(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
+    let progress = cx.local_model_keyed("progress_indicator_value", || 0.42_f32);
+    let linear_progress = progress.clone();
+    let circular_progress = progress;
+
+    let linear = ui::v_stack(move |cx| {
+        vec![
+            material3::LinearProgressIndicator::new(linear_progress.clone())
+                .a11y_label("Upload progress")
+                .test_id("ui-gallery-material3-linear-progress")
+                .into_element(cx),
+            material3::LinearProgressIndicator::indeterminate()
+                .a11y_label("Loading")
+                .test_id("ui-gallery-material3-linear-progress-indeterminate")
+                .into_element(cx),
+            material3::LinearProgressIndicator::indeterminate()
+                .four_color(true)
+                .a11y_label("Four color loading")
+                .test_id("ui-gallery-material3-linear-progress-four-color")
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .into_element(cx);
+
+    let circular = ui::h_row(move |cx| {
+        vec![
+            material3::CircularProgressIndicator::new(circular_progress.clone())
+                .a11y_label("Circular progress")
+                .test_id("ui-gallery-material3-circular-progress")
+                .into_element(cx),
+            material3::CircularProgressIndicator::indeterminate()
+                .a11y_label("Circular loading")
+                .test_id("ui-gallery-material3-circular-progress-indeterminate")
+                .into_element(cx),
+            material3::CircularProgressIndicator::indeterminate()
+                .four_color(true)
+                .a11y_label("Four color circular loading")
+                .test_id("ui-gallery-material3-circular-progress-four-color")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N3)
+    .items_center()
+    .into_element(cx);
+
+    vec![
+        cx.text("Material 3 ProgressIndicator: determinate, indeterminate, and four-color paths."),
+        linear,
+        circular,
+    ]
+}
+
+fn render_search_bar(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
+    let query = cx.local_model_keyed("search_bar_query", String::new);
+    let expanded = cx.local_model_keyed("search_bar_expanded", || false);
+
+    vec![
+        cx.text("Material 3 SearchBar: standalone query surface with leading and trailing icons."),
+        material3::SearchBar::new(query)
+            .leading_icon(ids::ui::SEARCH)
+            .trailing_icon(ids::ui::CLOSE)
+            .placeholder("Search")
+            .a11y_label("Search")
+            .expanded_model(expanded)
+            .test_id("ui-gallery-material3-search-bar")
+            .into_element(cx),
+    ]
+}
+
 pub fn render(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
     let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
     let material3_checkbox = checkbox_root.checked_model();
@@ -755,11 +900,20 @@ pub fn render(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> impl
     out.push(cx.text("— Cards —"));
     out.extend(render_cards(cx, last_action.clone()));
 
+    out.push(cx.text("— Carousel Items —"));
+    out.extend(render_carousel_items(cx, last_action.clone()));
+
+    out.push(cx.text("— Dividers —"));
+    out.extend(render_dividers(cx));
+
     out.push(cx.text("— Icon Buttons —"));
     out.push(icon_buttons);
 
     out.push(cx.text("— FAB —"));
     out.extend(render_fab(cx, last_action.clone()));
+
+    out.push(cx.text("— Progress Indicators —"));
+    out.extend(render_progress_indicators(cx));
 
     out.push(cx.text("— Checkbox —"));
     out.push(checkbox_root.a11y_label("Checkbox").into_element(cx));
@@ -775,6 +929,9 @@ pub fn render(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> impl
 
     out.push(cx.text("— Search View —"));
     out.extend(render_search_view(cx));
+
+    out.push(cx.text("— Search Bar —"));
+    out.extend(render_search_bar(cx));
 
     out.push(cx.text("— Tabs —"));
     out.push(

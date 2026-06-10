@@ -1,7 +1,7 @@
 # Material 3 shadcn-level completeness matrix v1
 
 Status: Active
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 This matrix tracks `ecosystem/fret-ui-material3` against the completeness bar we use for mature
 `fret-ui-shadcn` recipes. It is not a visual-copying exercise: Material 3 remains spec/token-driven,
@@ -252,12 +252,84 @@ Legend: `Complete`, `Strong`, `Partial`, `MVP`, `Gap`.
   - Gates:
     `material3_navigation_interactions::modal_navigation_drawer_drives_routed_content_and_closes_on_destination_activation`
     plus `ui-gallery-material3-modal-navigation-drawer-routed-content.json`.
+- 2026-06-02 Recipe proof closure:
+  - The public recipe proof manifest now rejects `behavior_only` and `token_only`, allows only
+    `motion` as `supporting_api`, and verifies each referenced headless suite has a runner, a test
+    marker, and the full 3-scale by 4-scheme golden matrix.
+  - Tabs and ChipSet now have dedicated fixture-driven headless suites, clearing the last rendered
+    recipe proof gaps in the current manifest.
+  - ChipSet deliberately keeps disabled state on child chips rather than exposing a container-level
+    disabled API, because the set is a grouping and roving-focus policy surface.
+  - Evidence: `docs/workstreams/material3/material3-recipe-proof-closure-v1.md`,
+    `ecosystem/fret-ui-material3/tests/material3_recipe_proof_manifest.rs`,
+    `ecosystem/fret-ui-material3/tests/material3_headless_goldens.rs`,
+    `ecosystem/fret-ui-material3/tests/fixtures/material3_recipe_proof_manifest_v1.json`,
+    `ecosystem/fret-ui-material3/tests/support/headless_golden_runners/mod.rs`.
+- 2026-06-02 Gallery teaching-surface closure:
+  - `apps/fret-ui-gallery/tests/fixtures/material3_teaching_surface_manifest_v1.json` now maps all
+    rendered public recipe proof entries to Material3 gallery teaching surfaces. The only excluded
+    proof entry is the `motion` supporting API.
+  - The app-side gate verifies each mapping has a snippet module, copyable `SOURCE`, `pub fn render`,
+    source evidence terms, a registered Material3 `PageSpec`, and a content render dispatch.
+  - The Material3 State Matrix now teaches compact examples for `CarouselItem`, `Divider`,
+    `LinearProgressIndicator` / `CircularProgressIndicator`, and standalone `SearchBar`, closing
+    concrete gallery gaps found during the manifest audit.
+  - Gates:
+    `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- --nocapture`.
+- 2026-06-02 Rustdoc/API authoring-surface closure:
+  - The crate-level rustdoc and README now teach the same Material3 authoring model: controlled and
+    copyable state, action-first pressables, style overrides, stable automation IDs, explicit icon
+    provider ownership, component families, and proof surfaces.
+  - `material3_api_doc_surface_manifest_v1.json` maps every recipe proof entry into an API
+    documentation family or an explicit supporting API source, so public docs cannot silently drift
+    from the proof manifest.
+  - The new gate verifies crate docs, README, public re-exports, module-level rustdoc, stable
+    `.test_id(...)` APIs for rendered recipes, public `*Style` + `.style(...)` surfaces, and
+    copyable `new_controllable` / `uncontrolled` / `*_model()` paths.
+  - Gates:
+    `cargo test -p fret-ui-material3 --test material3_api_doc_surface_manifest -- --nocapture`.
+- 2026-06-02 State Matrix compact visual evidence:
+  - `ui-gallery-material3-state-matrix-compact-visuals.json` now captures layout sidecars and
+    screenshots for the compact Material3 State Matrix teaching surfaces that do not yet have
+    dedicated pages: `CarouselItem`, `Divider`, `LinearProgressIndicator`,
+    `CircularProgressIndicator`, and standalone `SearchBar`.
+  - The app-side teaching-surface gate now verifies this script keeps the `gallery-material3`
+    launch feature, starts on `material3_state_matrix`, and covers the expected stable `test_id`
+    anchors plus layout/screenshot/bundle capture steps.
+  - Gates:
+    `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_teaching_surface_manifest -- material3_state_matrix_compact_visuals_diag_covers_text_gated_surfaces --nocapture`.
+  - Evidence run:
+    `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\material3\ui-gallery-material3-state-matrix-compact-visuals.json --dir target\fret-diag-material3-state-matrix-compact-visuals-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run -p fret-ui-gallery --features gallery-material3 --bin fret-ui-gallery`.
+    The run reached `stage: passed` and produced four screenshots plus layout sidecars for carousel,
+    divider, progress, and search-bar sections.
+- 2026-06-02 Runtime evidence suite promotion:
+  - Added `ui-gallery-material3-runtime-evidence` as the broad Material3 diagnostics suite, covering
+    all 52 current Material3 gallery JSON script-v2 artifacts across visual chrome, State Matrix
+    behavior, nested overlay arbitration, routed navigation, expressive screenshots, and switch
+    motion/timeline evidence, including the nested `button/` and `forms/` scripts.
+  - Added the `ui-gallery-material3-runtime-evidence` campaign manifest so maintainers can run the
+    Material3 evidence pass through `fretboard-dev diag campaign` instead of discovering individual
+    scripts manually.
+  - The app-side suite gate verifies that every suite member is a Material3 UI Gallery script, stays
+    on script v2, publishes `meta.name`, carries `ui_gallery` and `material3` tags, declares
+    `gallery-material3`, declares `diag.script_v2`, captures a diagnostics bundle, declares
+    `diag.screenshot_png` whenever it captures screenshots, and is promoted in the generated
+    registry with the suite membership.
+  - Fixed the `ui-gallery-material3-exposed-dropdown-filtering` script metadata so its screenshot
+    capture now advertises `diag.screenshot_png`.
+  - The previous legacy no-capability scripts now have explicit `name`, `required_capabilities`, and
+    tags. The frame-time-sensitive indicator scripts also declare
+    `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`.
+  - Gates:
+    `cargo test -p fret-ui-gallery --features gallery-material3 --test material3_runtime_evidence_suite -- --nocapture`,
+    `python tools/check_diag_scripts_registry.py`, and
+    `cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/ui-gallery-material3-runtime-evidence.json --json`.
+  - Fresh validation also covered JSON parsing for the new suite/campaign and
+    `cargo check -p fret-ui-gallery --features gallery-material3 --all-targets`.
 
 ## Next Recommended Focus
 
-1. Add Tabs presence motion or richer scroll affordances only after a concrete product gate proves
-   the current force-mounted presence contract or scrollable metric coverage is insufficient.
-2. Add a pointer-corridor diagnostics replay for Material submenus only if a product flow depends
-   on high-speed hover travel between root menu rows and submenu panels.
-3. Extend real-device/mobile IME and inset proof for overlay-heavy Material flows if mobile search
-   and bottom-sheet surfaces become product priorities.
+1. Split ChipSet `Toolbar` semantics into a separate mechanism/a11y follow-up if the core semantics
+   vocabulary is expanded.
+2. Add Tabs presence motion, submenu pointer-corridor diagnostics, or mobile IME/inset proof only
+   after concrete product gates prove those conditional risks matter.

@@ -248,8 +248,19 @@ pub(crate) fn settle_material3_overlay_scene_snapshot_v1(
     settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
 }
 
+const MATERIAL3_HEADLESS_GOLDENS_TEST: &str = "material3_headless_goldens";
+
 pub(crate) fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3HeadlessSuiteV1) {
+    write_or_assert_material3_suite_for_test_v1(name, "material3_headless", suite);
+}
+
+pub(crate) fn write_or_assert_material3_suite_for_test_v1(
+    name: &str,
+    test_filter: &str,
+    suite: &Material3HeadlessSuiteV1,
+) {
     let path = material3_goldens_dir().join(format!("{name}.json"));
+    let update_command = material3_update_goldens_command(test_filter);
 
     if std::env::var_os("FRET_UPDATE_GOLDENS").is_some() {
         std::fs::create_dir_all(material3_goldens_dir()).expect("create material3 goldens dir");
@@ -260,7 +271,7 @@ pub(crate) fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3He
 
     let golden_json = std::fs::read_to_string(&path).unwrap_or_else(|err| {
         panic!(
-            "missing material3 suite golden: {}\nerror: {err}\n\nTo (re)generate:\n  $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment -- material3_headless\n",
+            "missing material3 suite golden: {}\nerror: {err}\n\nTo (re)generate:\n  {update_command}\n",
             path.display()
         )
     });
@@ -270,9 +281,15 @@ pub(crate) fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3He
     assert_eq!(
         *suite,
         golden,
-        "material3 suite golden mismatch: {}\n\nTo update:\n  $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment -- material3_headless",
+        "material3 suite golden mismatch: {}\n\nTo update:\n  {update_command}",
         path.display()
     );
+}
+
+fn material3_update_goldens_command(test_filter: &str) -> String {
+    format!(
+        "$env:FRET_UPDATE_GOLDENS='1'; cargo test -p fret-ui-material3 --test {MATERIAL3_HEADLESS_GOLDENS_TEST} {test_filter} -- --nocapture"
+    )
 }
 
 pub(crate) fn run_overlay_frame(

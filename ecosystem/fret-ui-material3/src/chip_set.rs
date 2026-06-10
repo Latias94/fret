@@ -3,6 +3,8 @@
 //! This is modeled after Material Web's `md-chip-set` keyboard behavior:
 //! - ArrowLeft/ArrowRight roving focus across chips (RTL-aware).
 //! - Home/End jump to first/last enabled chip.
+//! - Disabled state belongs to individual chips; the set itself is only the grouping/roving
+//!   surface.
 //!
 //! Note: Fret's `SemanticsRole` does not currently include a dedicated "toolbar" role, so we
 //! expose the set as `Group`.
@@ -81,7 +83,6 @@ impl ChipSetItem {
 #[derive(Debug, Clone)]
 pub struct ChipSet {
     items: Vec<ChipSetItem>,
-    disabled: bool,
     gap: Px,
     wrap_layout: bool,
     loop_navigation: bool,
@@ -93,7 +94,6 @@ impl Default for ChipSet {
     fn default() -> Self {
         Self {
             items: Vec::new(),
-            disabled: false,
             gap: Px(8.0),
             wrap_layout: false,
             loop_navigation: true,
@@ -113,11 +113,6 @@ impl ChipSet {
 
     pub fn items(mut self, items: Vec<ChipSetItem>) -> Self {
         self.items = items;
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
         self
     }
 
@@ -150,7 +145,6 @@ impl ChipSet {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let ChipSet {
             items,
-            disabled,
             gap,
             wrap_layout,
             loop_navigation,
@@ -163,19 +157,16 @@ impl ChipSet {
         let disabled_items: Arc<[bool]> = Arc::from(
             items
                 .iter()
-                .map(|it| disabled || it.disabled_for_roving())
+                .map(ChipSetItem::disabled_for_roving)
                 .collect::<Vec<_>>(),
         );
 
-        let tab_stop = items
-            .iter()
-            .position(|it| !disabled && !it.disabled_for_roving());
+        let tab_stop = items.iter().position(|it| !it.disabled_for_roving());
 
         let sem = SemanticsProps {
             role: SemanticsRole::Group,
             label: a11y_label.clone(),
             test_id: test_id.clone(),
-            disabled,
             ..Default::default()
         };
 
@@ -183,7 +174,6 @@ impl ChipSet {
         props.flex.direction = Axis::Horizontal;
         props.flex.gap = gap.into();
         props.flex.wrap = wrap_layout;
-        props.roving.enabled = !disabled;
         props.roving.wrap = loop_navigation;
         props.roving.disabled = disabled_items.clone();
 

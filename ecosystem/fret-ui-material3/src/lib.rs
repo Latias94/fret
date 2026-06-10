@@ -2,6 +2,71 @@
 //!
 //! This crate targets **visual + interaction outcome alignment** with the Material 3 design
 //! system, while keeping `crates/fret-ui` focused on mechanisms (not Material-specific policy).
+//!
+//! # Design-system boundary
+//!
+//! `fret-ui-material3` is a recipe and foundation layer. Material-specific policy such as token
+//! fallback chains, state layers, ripple, floating labels, overlay motion, touch-target sizing, and
+//! RTL slot mirroring lives here or in reusable ecosystem policy crates. Core Fret crates stay
+//! focused on portable mechanisms.
+//!
+//! # Authoring model
+//!
+//! - Controlled and copyable state: controlled roots keep explicit `new(model)` constructors.
+//!   Teaching and sample surfaces can use `new_controllable(cx, ...)`, `uncontrolled(cx)`, and
+//!   `*_model()` accessors where the component owns copyable local state.
+//! - Action-first pressables: app-facing pressables expose `action(...)` when dispatching a stable
+//!   unit action is the normal authoring path.
+//! - Style overrides: components with public `*Style` types expose `.style(...)`. Overrides are
+//!   shallow, right-biased, and component-local; page/container width and grid placement remain
+//!   caller-owned.
+//! - Automation IDs: rendered recipes expose `.test_id(...)` and derive stable part IDs for
+//!   important trigger, panel, listbox, item, chrome, and indicator slots.
+//! - Icons: recipes consume semantic `IconId` values such as `ui.*`; apps or bundles install the
+//!   actual icon provider.
+//!
+//! ```rust,ignore
+//! use fret_ui_material3 as material3;
+//!
+//! let title = material3::TextField::uncontrolled(cx)
+//!     .label("Title")
+//!     .test_id("settings.title");
+//!
+//! let section = material3::Select::uncontrolled(cx)
+//!     .label("Section")
+//!     .test_id("settings.section");
+//!
+//! let save = material3::Button::new("Save")
+//!     .style(material3::ButtonStyle::default())
+//!     .action("settings.save")
+//!     .test_id("settings.save");
+//! ```
+//!
+//! # Component families
+//!
+//! - Actions and surfaces: `Button`, `Fab`, `IconButton`, `IconToggleButton`, `Card`, and
+//!   `CarouselItem`.
+//! - Selection controls: `Checkbox`, `Radio`, `RadioGroup`, `Switch`, `Slider`, `RangeSlider`,
+//!   `SegmentedButtonSet`, `AssistChip`, `FilterChip`, `InputChip`, `SuggestionChip`, and
+//!   `ChipSet`.
+//! - Fields and search: `TextField`, `Select`, `ExposedDropdown`, `Autocomplete`, `SearchBar`,
+//!   `SearchView`, `DatePickerDialog`, `DockedDatePicker`, `TimePickerDialog`, and
+//!   `DockedTimePicker`.
+//! - Navigation: `Tabs`, `NavigationBar`, `NavigationRail`, `NavigationDrawer`,
+//!   `ModalNavigationDrawer`, `TopAppBar`, and `List`.
+//! - Overlays and feedback: `Menu`, `DropdownMenu`, `Dialog`, `ModalBottomSheet`,
+//!   `DockedBottomSheet`, `Snackbar`, `SnackbarHost`, `PlainTooltip`, and `RichTooltip`.
+//! - Display feedback: `Badge`, `Divider`, `LinearProgressIndicator`, and
+//!   `CircularProgressIndicator`.
+//! - Foundation APIs: `tokens`, `motion`, and `context` expose the Material theme, motion, and
+//!   tree-local override surfaces used by recipes.
+//!
+//! # Proof surface
+//!
+//! Public recipes are tracked by `material3_recipe_proof_manifest_v1.json`, headless golden suites,
+//! focused behavior tests, and gallery teaching-surface gates. The API documentation surface is
+//! also gated so rustdoc, README guidance, public re-exports, recipe proof entries, style builders,
+//! copyable state helpers, and stable `test_id` APIs do not drift independently.
 
 #![forbid(unsafe_code)]
 

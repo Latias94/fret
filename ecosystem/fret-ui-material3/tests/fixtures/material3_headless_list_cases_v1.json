@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-list-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 list item structure and selected-item interaction states.",
+  "list": {
+    "test_id": "list",
+    "selected_value": "beta",
+    "items": [
+      {
+        "value": "alpha",
+        "label": "Alpha",
+        "leading_icon": "search",
+        "supporting_text": "Supporting text",
+        "test_id": "list-alpha"
+      },
+      {
+        "value": "beta",
+        "label": "Beta (selected)",
+        "leading_icon": "settings",
+        "supporting_text": "Selected supporting text",
+        "trailing_supporting_text": "Meta",
+        "trailing_icon": "chevron_right",
+        "test_id": "list-beta"
+      },
+      {
+        "value": "charlie",
+        "label": "Charlie (disabled)",
+        "overline_text": "Overline",
+        "supporting_text": "Disabled supporting text",
+        "leading_icon": "slash",
+        "disabled": true,
+        "test_id": "list-charlie"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "idle",
+      "settle_from_frame": 28,
+      "total_frames": 64
+    },
+    {
+      "id": "hover_selected",
+      "hover_test_id": "list-beta",
+      "settle_from_frame": 28,
+      "total_frames": 64
+    },
+    {
+      "id": "focus_visible_selected",
+      "focus_test_id": "list-beta",
+      "settle_from_frame": 28,
+      "total_frames": 64
+    }
+  ]
+}

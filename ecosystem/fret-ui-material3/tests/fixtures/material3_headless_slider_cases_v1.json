@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-slider-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 slider, range slider, RTL, tick marks, pointer, and keyboard states.",
+  "settings": {
+    "min": 0.0,
+    "max": 1.0,
+    "default_step": 0.01
+  },
+  "single_value_models": [
+    {
+      "id": "value_0",
+      "value": 0.0
+    },
+    {
+      "id": "value_30",
+      "value": 0.3
+    },
+    {
+      "id": "value_100",
+      "value": 1.0
+    }
+  ],
+  "range_value_models": [
+    {
+      "id": "range_30_70",
+      "values": [0.3, 0.7]
+    },
+    {
+      "id": "range_10_90",
+      "values": [0.1, 0.9]
+    }
+  ],
+  "sliders": [
+    {
+      "test_id": "slider-0",
+      "model_id": "value_0"
+    },
+    {
+      "test_id": "slider-30",
+      "model_id": "value_30"
+    },
+    {
+      "test_id": "slider-100",
+      "model_id": "value_100"
+    },
+    {
+      "test_id": "slider-30-disabled",
+      "model_id": "value_30",
+      "disabled": true
+    }
+  ],
+  "range_sliders": [
+    {
+      "test_id": "range-slider-30-70",
+      "model_id": "range_30_70"
+    },
+    {
+      "test_id": "range-slider-10-90-disabled",
+      "model_id": "range_10_90",
+      "disabled": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "idle",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "hover",
+      "hover_test_id": "slider-30",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "focus_visible",
+      "focus_test_id": "slider-30",
+      "keyboard_interaction": "single_arrow_cycle",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "keyboard_page",
+      "focus_test_id": "slider-30",
+      "keyboard_interaction": "single_page_home_end",
+      "assert_model_id": "value_30",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "rtl_idle",
+      "rtl": true,
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "rtl_keyboard_arrows",
+      "rtl": true,
+      "focus_test_id": "slider-30",
+      "keyboard_interaction": "single_rtl_arrow_cycle",
+      "assert_model_id": "value_30",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "pressed",
+      "hover_test_id": "slider-30",
+      "pointer_interaction": "pressed",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "dragging",
+      "hover_test_id": "slider-30",
+      "pointer_interaction": "dragging",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "with_tick_marks",
+      "step": 0.1,
+      "with_tick_marks": true,
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "tick_count",
+      "with_tick_marks": true,
+      "tick_marks_count": 6,
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "range_dragging",
+      "hover_test_id": "range-slider-30-70",
+      "pointer_interaction": "range_dragging",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "range_focus_thumb_switch",
+      "focus_test_id": "range-slider-30-70.start",
+      "keyboard_interaction": "range_thumb_switch",
+      "secondary_focus_test_id": "range-slider-30-70.end",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "range_keyboard_page",
+      "focus_test_id": "range-slider-30-70.start",
+      "keyboard_interaction": "range_page_home_end",
+      "assert_model_id": "range_30_70",
+      "secondary_focus_test_id": "range-slider-30-70.end",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    },
+    {
+      "id": "rtl_range_keyboard_arrows",
+      "rtl": true,
+      "focus_test_id": "range-slider-30-70.start",
+      "keyboard_interaction": "range_rtl_arrow_cycle",
+      "assert_model_id": "range_30_70",
+      "settle_from_frame": 7,
+      "total_frames": 9
+    }
+  ]
+}

@@ -193,6 +193,12 @@ impl List {
 
         cx.scope(|cx| {
             let sem = SemanticsProps {
+                layout: {
+                    let mut l = fret_ui::element::LayoutStyle::default();
+                    l.size.width = Length::Fill;
+                    l.size.min_width = Some(Length::Px(Px(0.0)));
+                    l
+                },
                 role: SemanticsRole::List,
                 label: a11y_label,
                 test_id,
@@ -238,6 +244,8 @@ impl List {
             let items_for_roving = items.clone();
 
             let mut roving = RovingFlexProps::default();
+            roving.flex.layout.size.width = Length::Fill;
+            roving.flex.layout.size.min_width = Some(Length::Px(Px(0.0)));
             roving.flex.direction = Axis::Vertical;
             roving.flex.gap = Px(0.0).into();
             roving.flex.align = CrossAlign::Stretch;

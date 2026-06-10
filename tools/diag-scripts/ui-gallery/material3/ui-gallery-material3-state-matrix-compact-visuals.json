@@ -1,0 +1,209 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-state-matrix-compact-visuals",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["gallery-material3"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_state_matrix"
+    },
+    "tags": [
+      "ui_gallery",
+      "material3",
+      "state_matrix",
+      "carousel_item",
+      "divider",
+      "progress_indicator",
+      "search_bar",
+      "layout",
+      "screenshots"
+    ],
+    "target_hints": [
+      "Starts directly on the Material 3 State Matrix page.",
+      "Captures compact teaching surfaces that are intentionally covered by the State Matrix rather than a dedicated page.",
+      "Pairs layout sidecars with screenshots so clipping, overlap, and visual chrome drift are reviewable."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-state-matrix" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "material3_state_matrix"
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-carousel-item-standard" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-carousel-item-standard" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-carousel-item-outlined" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-carousel-item-disabled" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-material3-state-matrix-carousel-items.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-material3-state-matrix-carousel-items"
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-divider-horizontal" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-divider-horizontal" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-divider-vertical" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-material3-state-matrix-dividers.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-material3-state-matrix-dividers"
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-linear-progress" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-linear-progress" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-linear-progress-indeterminate" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-circular-progress-four-color" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-material3-state-matrix-progress-indicators.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-material3-state-matrix-progress-indicators"
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-search-bar" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-search-bar" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-material3-state-matrix-search-bar.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-material3-state-matrix-search-bar"
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-material3-state-matrix-compact-visuals",
+      "max_snapshots": 4
+    }
+  ]
+}

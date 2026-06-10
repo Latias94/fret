@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-navigation-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 navigation bar, rail, drawer, and modal drawer visuals.",
+  "cases": [
+    {
+      "id": "bar.selected",
+      "kind": "navigation_bar",
+      "bounds": [520.0, 220.0],
+      "selected_value": "settings",
+      "a11y_label": "Material 3 Navigation Bar",
+      "test_id": "headless-material3-navigation-bar",
+      "settle_from_frame": 96,
+      "total_frames": 160,
+      "items": [
+        {
+          "value": "search",
+          "label": "Search",
+          "icon": "search",
+          "badge": { "kind": "dot" },
+          "a11y_label": "Destination Search",
+          "test_id": "nav-bar-search"
+        },
+        {
+          "value": "settings",
+          "label": "Settings",
+          "icon": "settings",
+          "a11y_label": "Destination Settings",
+          "test_id": "nav-bar-settings"
+        },
+        {
+          "value": "more",
+          "label": "More",
+          "icon": "more_horizontal",
+          "badge": { "kind": "text", "text": "9" },
+          "a11y_label": "Destination More",
+          "test_id": "nav-bar-more"
+        }
+      ]
+    },
+    {
+      "id": "rail.selected",
+      "kind": "navigation_rail",
+      "bounds": [300.0, 520.0],
+      "selected_value": "play",
+      "a11y_label": "Material 3 Navigation Rail",
+      "test_id": "headless-material3-navigation-rail",
+      "settle_from_frame": 96,
+      "total_frames": 160,
+      "items": [
+        {
+          "value": "search",
+          "label": "Search",
+          "icon": "search",
+          "badge": { "kind": "dot" },
+          "a11y_label": "Destination Search",
+          "test_id": "nav-rail-search"
+        },
+        {
+          "value": "settings",
+          "label": "Settings",
+          "icon": "settings",
+          "a11y_label": "Destination Settings",
+          "test_id": "nav-rail-settings"
+        },
+        {
+          "value": "play",
+          "label": "Play",
+          "icon": "play",
+          "badge": { "kind": "text", "text": "99+" },
+          "a11y_label": "Destination Play",
+          "test_id": "nav-rail-play"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled",
+          "icon": "slash",
+          "disabled": true,
+          "a11y_label": "Destination Disabled",
+          "test_id": "nav-rail-disabled"
+        }
+      ]
+    },
+    {
+      "id": "drawer.selected",
+      "kind": "navigation_drawer",
+      "bounds": [360.0, 520.0],
+      "selected_value": "settings",
+      "a11y_label": "Material 3 Navigation Drawer",
+      "test_id": "headless-material3-navigation-drawer",
+      "settle_from_frame": 96,
+      "total_frames": 160,
+      "items": [
+        {
+          "value": "search",
+          "label": "Search",
+          "icon": "search",
+          "a11y_label": "Destination Search",
+          "test_id": "nav-drawer-search"
+        },
+        {
+          "value": "settings",
+          "label": "Settings",
+          "icon": "settings",
+          "badge": { "kind": "label", "text": "2" },
+          "a11y_label": "Destination Settings",
+          "test_id": "nav-drawer-settings"
+        },
+        {
+          "value": "play",
+          "label": "Play",
+          "icon": "play",
+          "badge": { "kind": "label", "text": "99+" },
+          "a11y_label": "Destination Play",
+          "test_id": "nav-drawer-play"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled",
+          "icon": "slash",
+          "disabled": true,
+          "a11y_label": "Destination Disabled",
+          "test_id": "nav-drawer-disabled"
+        }
+      ]
+    },
+    {
+      "id": "modal_drawer.open",
+      "kind": "modal_navigation_drawer",
+      "bounds": [860.0, 520.0],
+      "selected_value": "search",
+      "a11y_label": "Material 3 Modal Navigation Drawer",
+      "test_id": "headless-material3-modal-navigation-drawer-panel",
+      "modal_test_id": "headless-material3-modal-navigation-drawer",
+      "underlay_label": "Underlay probe",
+      "underlay_test_id": "nav-modal-drawer-underlay-probe",
+      "settle_from_frame": 96,
+      "total_frames": 160,
+      "items": [
+        {
+          "value": "search",
+          "label": "Search",
+          "icon": "search",
+          "a11y_label": "Destination Search",
+          "test_id": "nav-modal-drawer-search"
+        },
+        {
+          "value": "settings",
+          "label": "Settings",
+          "icon": "settings",
+          "badge": { "kind": "label", "text": "2" },
+          "a11y_label": "Destination Settings",
+          "test_id": "nav-modal-drawer-settings"
+        },
+        {
+          "value": "play",
+          "label": "Play",
+          "icon": "play",
+          "badge": { "kind": "label", "text": "99+" },
+          "a11y_label": "Destination Play",
+          "test_id": "nav-modal-drawer-play"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled",
+          "icon": "slash",
+          "disabled": true,
+          "a11y_label": "Destination Disabled",
+          "test_id": "nav-modal-drawer-disabled"
+        }
+      ]
+    }
+  ]
+}

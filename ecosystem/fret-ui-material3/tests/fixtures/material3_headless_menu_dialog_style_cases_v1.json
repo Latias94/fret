@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-menu-dialog-style-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 menu and dialog style override presentation.",
+  "menu_entries": [
+    { "kind": "item", "label": "A", "test_id": "menu-item-a" },
+    { "kind": "item", "label": "B", "test_id": "menu-item-b" },
+    { "kind": "item", "label": "C (disabled)", "disabled": true },
+    { "kind": "separator" },
+    { "kind": "item", "label": "D", "test_id": "menu-item-d" }
+  ],
+  "cases": [
+    {
+      "id": "menu_default_vs_override",
+      "kind": "menu_default_vs_override",
+      "settle_from_frame": 7,
+      "total_frames": 9,
+      "style": {
+        "container_background": { "r": 0.9, "g": 0.1, "b": 0.2, "a": 1.0 },
+        "container_corner_radius": 0.0,
+        "container_elevation": 12.0,
+        "item_label_color": { "r": 0.1, "g": 0.8, "b": 0.3, "a": 1.0 }
+      }
+    },
+    {
+      "id": "dialog_default",
+      "kind": "dialog_default",
+      "settle_from_frame": 44,
+      "total_frames": 80,
+      "headline": "Dialog",
+      "supporting_text": "Body",
+      "actions": ["OK"]
+    },
+    {
+      "id": "dialog_override",
+      "kind": "dialog_override",
+      "settle_from_frame": 44,
+      "total_frames": 80,
+      "headline": "Dialog",
+      "supporting_text": "Body",
+      "actions": ["OK"],
+      "style": {
+        "container_background": { "r": 0.2, "g": 0.2, "b": 0.9, "a": 1.0 },
+        "container_corner_radius": 0.0,
+        "container_elevation": 12.0,
+        "headline_color": { "r": 0.9, "g": 0.9, "b": 0.2, "a": 1.0 },
+        "supporting_text_color": { "r": 0.8, "g": 0.2, "b": 0.8, "a": 1.0 }
+      }
+    }
+  ]
+}

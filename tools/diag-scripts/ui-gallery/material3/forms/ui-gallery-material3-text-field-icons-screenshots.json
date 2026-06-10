@@ -1,14 +1,22 @@
 {
   "meta": {
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_text_field"
+    },
     "required_launch_features": ["gallery-material3"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "ui-gallery-material3-text-field-icons-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "text_field", "icons", "screenshots"]
   },
   "schema_version": 2,
   "steps": [
     {
       "type": "wait_until",
       "timeout_frames": 600,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } }
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-text-field" }
+      }
     },
     {
       "type": "click",
@@ -30,26 +38,21 @@
     },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "click", "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     {
-      "type": "press_key",
-      "key": "a",
-      "repeat": false,
-      "modifiers": { "ctrl": true, "shift": false, "alt": false, "meta": false }
-    },
-    {
-      "type": "press_key",
-      "key": "backspace",
-      "repeat": false,
-      "modifiers": { "ctrl": false, "shift": false, "alt": false, "meta": false }
-    },
-    { "type": "type_text", "text": "material3 text field" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-text-field" } },
-    {
-      "type": "wait_until",
-      "timeout_frames": 600,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-material3-text-field" } }
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-text-field-icons" },
+      "delta_y": -160.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "padding_insets_px": {
+        "left_px": 16.0,
+        "top_px": 16.0,
+        "right_px": 16.0,
+        "bottom_px": 40.0
+      },
+      "timeout_frames": 1800
     },
     {
       "type": "wait_until",

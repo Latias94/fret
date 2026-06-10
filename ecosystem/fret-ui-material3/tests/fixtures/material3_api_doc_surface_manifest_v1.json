@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "suite": "material3-api-doc-surface-v1",
+  "notes": "Structured documentation surface for public Material3 recipe APIs. Families map proof-manifest entries to crate-level and README guidance; style_surfaces and copyable_state_sources keep the shadcn-level authoring model visible and testable.",
+  "required_crate_doc_terms": [
+    "Design-system boundary",
+    "Authoring model",
+    "Controlled and copyable state",
+    "Action-first pressables",
+    "Style overrides",
+    "Automation IDs",
+    "Icons",
+    "Component families",
+    "Proof surface",
+    "material3_recipe_proof_manifest_v1.json",
+    "new_controllable(cx, ...)",
+    "uncontrolled(cx)",
+    "*_model()",
+    ".test_id(...)"
+  ],
+  "required_readme_terms": [
+    "Public authoring model",
+    "Controlled and copyable state",
+    "Action-first pressables",
+    "Style overrides",
+    "Automation IDs",
+    "Component families",
+    "Proof surface",
+    "material3_recipe_proof_manifest_v1.json",
+    "new_controllable(cx, ...)",
+    "uncontrolled(cx)",
+    "*_model()",
+    ".test_id(...)"
+  ],
+  "component_families": [
+    {
+      "id": "actions_and_surfaces",
+      "heading": "Actions and surfaces",
+      "source_ids": ["button", "card", "carousel_item", "fab", "icon_button"],
+      "exports": [
+        "Button",
+        "ButtonStyle",
+        "Card",
+        "CarouselItem",
+        "Fab",
+        "IconButton",
+        "IconToggleButton"
+      ],
+      "doc_terms": ["Button", "Fab", "IconButton", "IconToggleButton", "Card", "CarouselItem"]
+    },
+    {
+      "id": "display_feedback",
+      "heading": "Display feedback",
+      "source_ids": ["badge", "divider", "progress_indicator"],
+      "exports": ["Badge", "Divider", "LinearProgressIndicator", "CircularProgressIndicator"],
+      "doc_terms": ["Badge", "Divider", "LinearProgressIndicator", "CircularProgressIndicator"]
+    },
+    {
+      "id": "fields_and_search",
+      "heading": "Fields and search",
+      "source_ids": [
+        "autocomplete",
+        "date_picker",
+        "exposed_dropdown",
+        "search_bar",
+        "search_view",
+        "select",
+        "text_field",
+        "time_picker"
+      ],
+      "exports": [
+        "Autocomplete",
+        "DatePickerDialog",
+        "DockedDatePicker",
+        "DockedTimePicker",
+        "ExposedDropdown",
+        "SearchBar",
+        "SearchView",
+        "Select",
+        "TextField",
+        "TimePickerDialog"
+      ],
+      "doc_terms": [
+        "TextField",
+        "Select",
+        "ExposedDropdown",
+        "Autocomplete",
+        "SearchBar",
+        "SearchView",
+        "DatePickerDialog",
+        "DockedDatePicker",
+        "TimePickerDialog",
+        "DockedTimePicker"
+      ]
+    },
+    {
+      "id": "navigation",
+      "heading": "Navigation",
+      "source_ids": [
+        "list",
+        "modal_navigation_drawer",
+        "navigation_bar",
+        "navigation_drawer",
+        "navigation_rail",
+        "tabs",
+        "top_app_bar"
+      ],
+      "exports": [
+        "List",
+        "ModalNavigationDrawer",
+        "NavigationBar",
+        "NavigationDrawer",
+        "NavigationRail",
+        "Tabs",
+        "TopAppBar"
+      ],
+      "doc_terms": [
+        "Tabs",
+        "NavigationBar",
+        "NavigationRail",
+        "NavigationDrawer",
+        "ModalNavigationDrawer",
+        "TopAppBar",
+        "List"
+      ]
+    },
+    {
+      "id": "overlays_and_feedback",
+      "heading": "Overlays and feedback",
+      "source_ids": ["bottom_sheet", "dialog", "dropdown_menu", "menu", "snackbar", "tooltip"],
+      "exports": [
+        "Dialog",
+        "DockedBottomSheet",
+        "DropdownMenu",
+        "Menu",
+        "ModalBottomSheet",
+        "PlainTooltip",
+        "RichTooltip",
+        "Snackbar",
+        "SnackbarHost"
+      ],
+      "doc_terms": [
+        "Menu",
+        "DropdownMenu",
+        "Dialog",
+        "ModalBottomSheet",
+        "DockedBottomSheet",
+        "Snackbar",
+        "SnackbarHost",
+        "PlainTooltip",
+        "RichTooltip"
+      ]
+    },
+    {
+      "id": "selection_controls",
+      "heading": "Selection controls",
+      "source_ids": [
+        "checkbox",
+        "chip",
+        "chip_set",
+        "filter_chip",
+        "input_chip",
+        "radio",
+        "segmented_button",
+        "slider",
+        "suggestion_chip",
+        "switch"
+      ],
+      "exports": [
+        "AssistChip",
+        "Checkbox",
+        "ChipSet",
+        "FilterChip",
+        "InputChip",
+        "Radio",
+        "RadioGroup",
+        "RangeSlider",
+        "SegmentedButtonSet",
+        "Slider",
+        "SuggestionChip",
+        "Switch"
+      ],
+      "doc_terms": [
+        "Checkbox",
+        "Radio",
+        "RadioGroup",
+        "Switch",
+        "Slider",
+        "RangeSlider",
+        "SegmentedButtonSet",
+        "AssistChip",
+        "FilterChip",
+        "InputChip",
+        "SuggestionChip",
+        "ChipSet"
+      ]
+    }
+  ],
+  "supporting_api_sources": ["motion"],
+  "style_surfaces": [
+    { "source_id": "button", "style_export": "ButtonStyle" },
+    { "source_id": "card", "style_export": "CardStyle" },
+    { "source_id": "carousel_item", "style_export": "CarouselItemStyle" },
+    { "source_id": "checkbox", "style_export": "CheckboxStyle" },
+    { "source_id": "chip", "style_export": "AssistChipStyle" },
+    { "source_id": "dialog", "style_export": "DialogStyle" },
+    { "source_id": "fab", "style_export": "FabStyle" },
+    { "source_id": "filter_chip", "style_export": "FilterChipStyle" },
+    { "source_id": "icon_button", "style_export": "IconButtonStyle" },
+    { "source_id": "input_chip", "style_export": "InputChipStyle" },
+    { "source_id": "menu", "style_export": "MenuStyle" },
+    { "source_id": "radio", "style_export": "RadioStyle" },
+    { "source_id": "search_bar", "style_export": "SearchBarStyle" },
+    { "source_id": "search_view", "style_export": "SearchViewStyle" },
+    { "source_id": "select", "style_export": "SelectStyle" },
+    { "source_id": "slider", "style_export": "SliderStyle" },
+    { "source_id": "snackbar", "style_export": "SnackbarStyle" },
+    { "source_id": "suggestion_chip", "style_export": "SuggestionChipStyle" },
+    { "source_id": "switch", "style_export": "SwitchStyle" },
+    { "source_id": "tabs", "style_export": "TabsStyle" },
+    { "source_id": "text_field", "style_export": "TextFieldStyle" },
+    { "source_id": "tooltip", "style_export": "TooltipStyle" }
+  ],
+  "copyable_state_sources": [
+    "autocomplete",
+    "bottom_sheet",
+    "checkbox",
+    "date_picker",
+    "dialog",
+    "dropdown_menu",
+    "exposed_dropdown",
+    "list",
+    "modal_navigation_drawer",
+    "navigation_bar",
+    "navigation_drawer",
+    "navigation_rail",
+    "radio",
+    "search_view",
+    "select",
+    "slider",
+    "switch",
+    "tabs",
+    "text_field",
+    "time_picker"
+  ]
+}

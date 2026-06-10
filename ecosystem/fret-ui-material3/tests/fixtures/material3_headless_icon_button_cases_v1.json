@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-icon-button-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 IconButton and IconToggleButton variant, toggle, disabled, hover, and focus-visible presentation.",
+  "cases": [
+    {
+      "id": "idle_matrix",
+      "kind": "idle"
+    },
+    {
+      "id": "filled_toggle_selected_hover",
+      "kind": "hover",
+      "target_test_id": "icon-filled-toggle-selected"
+    },
+    {
+      "id": "outlined_model_toggle_focus_visible",
+      "kind": "focus_visible",
+      "target_test_id": "icon-outlined-model-toggle"
+    }
+  ]
+}

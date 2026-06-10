@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-snackbar-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 snackbar overlay presentation.",
+  "cases": [
+    {
+      "id": "short.single_line",
+      "message": "Saved",
+      "action": {
+        "label": "Undo",
+        "command": "material3_snackbar_action"
+      },
+      "duration": "short"
+    },
+    {
+      "id": "long.two_line",
+      "message": "Update available",
+      "supporting_text": "Restart the app to apply the latest changes.",
+      "action": {
+        "label": "Restart",
+        "command": "material3_snackbar_action"
+      },
+      "duration": "long"
+    },
+    {
+      "id": "indefinite.two_line",
+      "message": "Connection lost",
+      "supporting_text": "Trying to reconnect...",
+      "duration": "indefinite"
+    }
+  ]
+}

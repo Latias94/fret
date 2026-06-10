@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-autocomplete-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 autocomplete field and popover presentation.",
+  "items": [
+    { "value": "alpha", "label": "Alpha" },
+    { "value": "beta", "label": "Beta" },
+    { "value": "gamma", "label": "Gamma" },
+    { "value": "delta", "label": "Delta" },
+    { "value": "epsilon", "label": "Epsilon" }
+  ],
+  "cases": [
+    {
+      "id": "both_closed",
+      "kind": "closed"
+    },
+    {
+      "id": "outlined_open",
+      "kind": "open",
+      "focus_test_id": "material3-ac-outlined"
+    },
+    {
+      "id": "filled_open",
+      "kind": "open",
+      "focus_test_id": "material3-ac-filled"
+    }
+  ]
+}

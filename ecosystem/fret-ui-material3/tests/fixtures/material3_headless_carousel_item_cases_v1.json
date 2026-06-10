@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "suite": "material3-headless-carousel-item-cases-v1",
+  "notes": "Fixture-driven headless golden cases for Material 3 carousel item variants and interaction states.",
+  "items": [
+    {
+      "test_id": "carousel-standard",
+      "variant": "standard",
+      "label": "Standard",
+      "width": 420.0,
+      "height": 92.0
+    },
+    {
+      "test_id": "carousel-outline",
+      "variant": "with_outline",
+      "label": "With outline",
+      "width": 420.0,
+      "height": 92.0
+    },
+    {
+      "test_id": "carousel-disabled",
+      "variant": "with_outline",
+      "label": "Disabled",
+      "width": 420.0,
+      "height": 92.0,
+      "disabled": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "idle",
+      "settle_from_frame": 28,
+      "total_frames": 64
+    },
+    {
+      "id": "hover_standard",
+      "hover_test_id": "carousel-standard",
+      "settle_from_frame": 28,
+      "total_frames": 64
+    },
+    {
+      "id": "focus_visible_outline",
+      "focus_test_id": "carousel-outline",
+      "settle_from_frame": 28,
+      "total_frames": 64
+    }
+  ]
+}
