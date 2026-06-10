@@ -3,6 +3,19 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Selection Duplicate Naming Owner Split - 2026-06-10
+
+- [x] Split the selection duplicate naming assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod selection_duplicate_naming;` and
+      delegates to `selection_duplicate_naming::assert_selection_duplicate_naming_owner_split(...)`,
+      while `imui_editor_collection_modularization_surface/selection_duplicate_naming.rs` owns
+      copy-suffix generation checks, duplicate naming registry behavior coverage, naming fixtures,
+      and duplicate-flow negative drift checks. The IMUI workstream source gate freezes the
+      test-owner split.
+
 ## Fret Examples Collection Modularization Surface Selection Duplicate Owner Split - 2026-06-10
 
 - [x] Split the selection duplicate command facade assertion bundle out of
