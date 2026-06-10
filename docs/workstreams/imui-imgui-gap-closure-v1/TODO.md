@@ -3,6 +3,19 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Authoring Parity Owner Split - 2026-06-10
+
+- [x] Split the authoring parity assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod authoring_parity;` and delegates to
+      `authoring_parity::assert_authoring_parity_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/authoring_parity.rs` owns hub re-exports,
+      shared proof models, surface composition, collection proof mounting, sortable rows,
+      cross-window drag preview routing, and demo negative delegation checks. The IMUI workstream
+      source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Editor Owners Split - 2026-06-10
 
 - [x] Split the editor owner assertion bundle out of

@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface authoring parity owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/authoring_parity.rs` owns the authoring parity
+assertion bundle for hub re-exports, shared proof models, drag/outliner fixtures, surface
+composition, collection proof mounting, sortable rows, cross-window drag preview routing, and
+`demo_source` negative delegation checks. No app runtime code, public APIs, `fret-imui`,
+`fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface editor owners split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
