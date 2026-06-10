@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Order Toggle Owner Split Evidence - 2026-06-10
+
+Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer
+keeps the collection reverse-order button assertion bundle inline in the test root. The root still
+owns the single test entry point and source includes, while
+`imui_editor_collection_modularization_surface/order_toggle.rs` owns reverse-order button routing
+checks.
+
+Evidence:
+
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` declares
+  `mod order_toggle;` through a path-qualified test owner module and routes the existing collection
+  reverse-order button source assertions through
+  `order_toggle::assert_order_toggle_owner_split(...)`.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface/order_toggle.rs` owns
+  the `Show folder order` / `Reverse visible order` button label checks, the order-toggle test ID,
+  reverse-order model update checks, returned state checks, and collection-root negative routing
+  checks.
+  Evidence anchor: reverse-order button routing checks.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the source-surface test owner split without changing app runtime code, public APIs,
+  `fret-imui`, `fret-ui-kit::imui`, docking, or runner contracts.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Examples Collection Modularization Surface Status Readouts Owner Split Evidence - 2026-06-10
 
 Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer

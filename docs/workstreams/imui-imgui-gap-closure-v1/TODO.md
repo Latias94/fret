@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Order Toggle Owner Split - 2026-06-10
+
+- [x] Split the collection reverse-order button assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod order_toggle;` and delegates to
+      `order_toggle::assert_order_toggle_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/order_toggle.rs` owns reverse-order button
+      labels, order-toggle test ID, model update, returned state, and collection-root negative
+      routing checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Status Readouts Owner Split - 2026-06-10
 
 - [x] Split the collection status/readouts assertion bundle out of
