@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface selection owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/selection.rs` owns the selection assertion bundle
+for selection hub exports, visible-order projection, selected-assets projection, and active-id
+fallback boundaries. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`, docking,
+or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface rename owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
