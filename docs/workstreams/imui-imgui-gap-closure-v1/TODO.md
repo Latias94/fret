@@ -970,6 +970,16 @@ Last updated: 2026-06-10
       `combo_direct/lifecycle/session_edges.rs` owns response activated/deactivated/edited/
       after-edit/open edge reporting proof. The IMUI source gate freezes the deeper lifecycle
       owner boundary.
+- [x] Split the `fret-imui` direct combo selection proof owner into commit-flow and reusable
+      selection-render harness child owners without changing selectable-row commit behavior,
+      selected preview/model projection, close-after-pick behavior, public APIs, option names, or
+      combo runtime code.
+      Result: `combo_direct/selection.rs` is now a thin route hub with `mod commit;` and
+      `mod harness;`. `combo_direct/selection/commit.rs` owns the scenario-level trigger/open/pick/
+      close assertions, while `combo_direct/selection/harness.rs` owns selected-model fixture setup,
+      repeated `combo_with_options(...)` rendering, selectable row test IDs, model writeback, popup
+      close, and selected snapshot publication. The IMUI source gate freezes the deeper selection
+      owner boundary.
 
 ## Fret-ImUi Combo Model Proof Split - 2026-06-05
 

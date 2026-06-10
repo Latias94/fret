@@ -2040,8 +2040,8 @@ Evidence:
 - `combo_direct/shortcuts.rs` routes direct-combo shortcut proof owners.
 - `combo_direct/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof.
 - `combo_direct/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof.
-- `combo_direct/selection.rs` owns selectable-row commit, selected preview/model projection, and
-  close-after-pick proof.
+- `combo_direct/selection.rs` routes selectable-row commit, selected preview/model projection, and
+  close-after-pick child owners.
 - `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
   freeze the proof split.
 
@@ -2073,6 +2073,38 @@ Evidence:
   `deactivated_after_edit`, and `open` response edge assertions.
 - `tools/gate_imui_workstream_source.py`, `TODO.md`, and `MILESTONES.md` freeze the deeper
   lifecycle owner boundary without changing combo runtime behavior, public APIs, option names, or
+  test semantics.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui models_combo::combo_direct --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Fret-ImUi Combo Direct Selection Proof Child-Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` direct combo selection proof owner no longer mixes scenario-level
+commit assertions with repeated selectable-combo render fixture code. The selection root is now a
+thin route hub, and commit flow plus render harness live in separate child owners.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_combo/combo_direct/selection.rs` declares `mod commit;`
+  and `mod harness;` only.
+- `ecosystem/fret-imui/src/tests/models_combo/combo_direct/selection/commit.rs` owns
+  `combo_can_commit_selection_with_selectable_rows` and the scenario-level trigger, first-option
+  visibility, click, selected-value, and close-after-pick assertions.
+- `ecosystem/fret-imui/src/tests/models_combo/combo_direct/selection/harness.rs` owns
+  `ComboDirectSelectionScenario`, selected-model fixture setup, repeated `combo_with_options(...)`
+  rendering, selectable row test IDs, selected model writeback, popup close, and selected snapshot
+  publication.
+- `tools/gate_imui_workstream_source.py`, `TODO.md`, and `MILESTONES.md` freeze the deeper
+  selection owner boundary without changing combo runtime behavior, public APIs, option names, or
   test semantics.
 
 Focused gates:
