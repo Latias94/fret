@@ -1,5 +1,14 @@
 use super::*;
 
+use fret_ui_kit::{LengthRefinement, MetricRef};
+
+fn assert_px_length(actual: Option<LengthRefinement>, expected: Px) {
+    match actual {
+        Some(LengthRefinement::Px(MetricRef::Px(px))) => assert_eq!(px, expected),
+        other => panic!("expected px length {expected:?}, got {other:?}"),
+    }
+}
+
 #[test]
 fn list_box_container_stamps_semantics_scroll_and_hosts_selectables() {
     let window = AppWindowId::default();
@@ -118,7 +127,7 @@ fn list_box_options_builder_projects_scroll_and_semantics_fields() {
     let handle = ScrollHandle::default();
 
     let options = ListBoxOptions::new()
-        .height(Px(88.0))
+        .size(Px(220.0), Px(88.0))
         .label("Assets")
         .with_multiselectable(true)
         .test_id("imui-list-box")
@@ -138,4 +147,12 @@ fn list_box_options_builder_projects_scroll_and_semantics_fields() {
         Some("imui-list-box.viewport")
     );
     assert!(options.scroll.handle.is_some());
+
+    let size = options.layout.size.expect("listbox size refinement");
+    assert_px_length(size.width, Px(220.0));
+    assert_px_length(size.height, Px(88.0));
+
+    let width_only = ListBoxOptions::new().width(Px(180.0));
+    let width_size = width_only.layout.size.expect("listbox width refinement");
+    assert_px_length(width_size.width, Px(180.0));
 }
