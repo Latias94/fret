@@ -3,6 +3,19 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Selection Duplicate Owner Split - 2026-06-10
+
+- [x] Split the selection duplicate command facade assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod selection_duplicate;` and delegates to
+      `selection_duplicate::assert_selection_duplicate_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/selection_duplicate.rs` owns duplicate
+      shortcut/facade exports, shortcut coverage, shortcut-test exclusion, and naming/selection
+      repair child-owner delegation checks. The IMUI workstream source gate freezes the test-owner
+      split.
+
 ## Fret Examples Collection Modularization Surface Selection Delete Owner Split - 2026-06-10
 
 - [x] Split the selection delete command assertion bundle out of
