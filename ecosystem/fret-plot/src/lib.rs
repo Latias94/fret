@@ -52,6 +52,27 @@ mod surface_policy_tests {
         assert!(!cargo_toml.contains("default = [\"imui\"]"));
         assert!(imui_rs.contains("use fret_authoring::UiWriter;"));
         assert!(imui_rs.contains("crate::declarative::line_plot_panel(cx, props)"));
+        for panel in [
+            "line_plot_panel",
+            "error_bars_plot_panel",
+            "histogram_plot_panel",
+            "bars_plot_panel",
+            "candlestick_plot_panel",
+            "heatmap_plot_panel",
+            "histogram2d_plot_panel",
+            "area_plot_panel",
+            "shaded_plot_panel",
+            "stems_plot_panel",
+        ] {
+            assert!(
+                imui_rs.contains(&format!("pub fn {panel}<")),
+                "missing imui wrapper for {panel}"
+            );
+            assert!(
+                imui_rs.contains(&format!("crate::declarative::{panel}(cx, props)")),
+                "imui wrapper must delegate {panel} to the declarative panel"
+            );
+        }
         assert!(!imui_rs.contains("LinePlotCanvas"));
         assert!(!imui_rs.contains("retained"));
     }
