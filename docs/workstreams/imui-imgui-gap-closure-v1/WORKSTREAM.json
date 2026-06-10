@@ -1699,6 +1699,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/context_menu.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/drag_drop.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/geometry.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/import_target.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/keyboard.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/models.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/rename.rs",

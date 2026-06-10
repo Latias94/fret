@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface import target owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/import_target.rs` owns the collection import
+target/drop-status UI assertion bundle for import target routing and root negative drift checks. No
+app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or runner contract
+changed.
+
 2026-06-10 Fret Examples collection modularization surface assets owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while

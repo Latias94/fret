@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Import Target Owner Split - 2026-06-10
+
+- [x] Split the collection import target/drop-status UI assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod import_target;` and delegates to
+      `import_target::assert_import_target_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/import_target.rs` owns import target routing
+      and root negative drift checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Assets Owner Split - 2026-06-10
 
 - [x] Split the collection asset fixture assertion bundle out of
