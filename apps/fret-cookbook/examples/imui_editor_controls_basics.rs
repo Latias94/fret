@@ -4,6 +4,7 @@ use fret::app::prelude::*;
 use fret::imui::{
     editor::{
         self,
+        composites::{PropertyRow, PropertyRowOptions},
         controls::{
             ColorEdit, ColorEditOptions, DragValue, DragValueOptions, MiniSearchBox,
             MiniSearchBoxOptions, NumericInput, NumericInputOptions, NumericPresentation,
@@ -24,6 +25,7 @@ const TEST_ID_TINT: &str = "cookbook.imui_editor_controls.tint";
 const TEST_ID_SEARCH: &str = "cookbook.imui_editor_controls.search";
 const TEST_ID_ASSIST: &str = "cookbook.imui_editor_controls.assist";
 const TEST_ID_ASSIST_LIST: &str = "cookbook.imui_editor_controls.assist.list";
+const TEST_ID_PROPERTY_ROW: &str = "cookbook.imui_editor_controls.property_row";
 
 struct ImUiEditorControlsBasicsView {
     exposure: Model<f64>,
@@ -61,7 +63,18 @@ impl View for ImUiEditorControlsBasicsView {
         ui::v_flex(|cx| {
             let controls = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 imui_raw(cx, |ui| {
-                    ui.text("Editor controls");
+                    ui.text("Editor controls and composites");
+
+                    editor::property_row(
+                        ui,
+                        PropertyRow::new().options(PropertyRowOptions {
+                            test_id: Some(Arc::from(TEST_ID_PROPERTY_ROW)),
+                            ..Default::default()
+                        }),
+                        |cx| cx.text("Surface"),
+                        |cx| cx.text("Property row composite"),
+                        |_cx| None,
+                    );
 
                     let exposure_presentation =
                         NumericPresentation::<f64>::fixed_decimals(2).with_chrome_suffix(" EV");

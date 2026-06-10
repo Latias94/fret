@@ -862,8 +862,11 @@ mod authoring_surface_policy_tests {
             &[
                 "use fret::imui::{",
                 "editor::{",
+                "composites::{PropertyRow, PropertyRowOptions},",
                 "prelude::*,",
                 "TextAssistItem,",
+                "editor::property_row(",
+                "PropertyRow::new().options(PropertyRowOptions",
                 "editor::numeric_input(",
                 "editor::drag_value(",
                 "editor::color_edit(",
@@ -871,6 +874,7 @@ mod authoring_surface_policy_tests {
                 "editor::text_assist_field(",
                 "TextAssistFieldSurface::AnchoredOverlay",
                 "install_editor_theme_preset_v1(app, EditorThemePresetV1::ImguiLikeDense);",
+                "cookbook.imui_editor_controls.property_row",
                 "cookbook.imui_editor_controls.assist.list",
             ],
             &[
