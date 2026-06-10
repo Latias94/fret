@@ -75,6 +75,12 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         include_str!("../src/imui_editor_proof_demo/authoring_parity/models.rs");
     let authoring_parity_surface_source =
         include_str!("../src/imui_editor_proof_demo/authoring_parity/surface.rs");
+    let authoring_parity_common_source =
+        include_str!("../src/imui_editor_proof_demo/authoring_parity/common.rs");
+    let authoring_parity_declarative_source =
+        include_str!("../src/imui_editor_proof_demo/authoring_parity/declarative.rs");
+    let authoring_parity_imui_source =
+        include_str!("../src/imui_editor_proof_demo/authoring_parity/imui.rs");
     let editor_state_source = include_str!("../src/imui_editor_proof_demo/editor_state.rs");
     let editor_advanced_source = include_str!("../src/imui_editor_proof_demo/editor_advanced.rs");
     let editor_gradient_source = include_str!("../src/imui_editor_proof_demo/editor_gradient.rs");
@@ -280,6 +286,9 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         authoring_parity_source,
         authoring_parity_models_source,
         authoring_parity_surface_source,
+        authoring_parity_common_source,
+        authoring_parity_declarative_source,
+        authoring_parity_imui_source,
     );
 
     collection_module::assert_collection_module_routing(collection_source);
