@@ -1308,6 +1308,7 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         "pub fn vec4_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec4Edit<T>)",
         "pub fn transform_edit<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TransformEdit) {",
         "pub fn property_group<H: UiHost + 'static>(",
+        "pub fn property_row<H: UiHost + 'static>(",
         "pub fn property_grid<H: UiHost + 'static>(",
         "pub fn gradient_editor<H: UiHost + 'static>(",
         "pub fn property_grid_virtualized<H: UiHost + 'static>(",
@@ -1361,6 +1362,19 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         ),
         1,
         "property_group should stay a one-hop `into_element` forwarder",
+    );
+
+    assert_eq!(
+        count_occurrences(
+            &normalized,
+            &normalize_ws(
+                "add_editor_element(ui, move |cx| {
+                    composite.into_element(cx, label, value, actions)
+                });",
+            ),
+        ),
+        1,
+        "property_row should stay a one-hop `into_element` forwarder",
     );
 
     assert_eq!(

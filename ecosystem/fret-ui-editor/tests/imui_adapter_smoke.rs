@@ -12,7 +12,8 @@ use fret_ui_kit::headless::text_assist::TextAssistItem;
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
     InspectorPanelOptions, PropertyGrid, PropertyGridOptions, PropertyGridVirtualized,
-    PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions,
+    PropertyGridVirtualizedOptions, PropertyGroup, PropertyGroupOptions, PropertyRow,
+    PropertyRowOptions,
 };
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
@@ -357,6 +358,17 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         move |cx| vec![cx.text("Property group body")],
     );
 
+    imui::property_row(
+        ui,
+        PropertyRow::new().options(PropertyRowOptions {
+            test_id: Some(Arc::from("tests.property_row")),
+            ..Default::default()
+        }),
+        |cx| cx.text("Name"),
+        |cx| cx.text("Cube"),
+        |_cx| None,
+    );
+
     imui::property_grid(
         ui,
         PropertyGrid::new().options(PropertyGridOptions {
@@ -493,6 +505,7 @@ fn editor_imui_adapter_option_defaults_compile() {
     let _ = VecEditOptions::default();
     let _ = TransformEditOptions::default();
     let _ = PropertyGroupOptions::default();
+    let _ = PropertyRowOptions::default();
     let _ = PropertyGridOptions::default();
     let _ = GradientEditorOptions::default();
     let _ = PropertyGridVirtualizedOptions::default();

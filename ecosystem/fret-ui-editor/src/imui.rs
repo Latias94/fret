@@ -10,7 +10,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::composites::{
     GradientEditor, InspectorPanel, InspectorPanelCx, PropertyGrid, PropertyGridRowCx,
-    PropertyGridVirtualized, PropertyGridVirtualizedRowCx, PropertyGroup,
+    PropertyGridVirtualized, PropertyGridVirtualizedRowCx, PropertyGroup, PropertyRow,
 };
 use crate::controls::{
     AssetRefField, AxisDragValue, Checkbox, ColorEdit, DragValue, EditorThemePresetPicker,
@@ -180,6 +180,20 @@ pub fn property_group<H: UiHost + 'static>(
 ) {
     add_editor_element(ui, move |cx| {
         composite.into_element(cx, header_actions, contents)
+    });
+}
+
+/// Adds a `PropertyRow` composite to an immediate-style authoring surface.
+#[track_caller]
+pub fn property_row<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    composite: PropertyRow,
+    label: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
+) {
+    add_editor_element(ui, move |cx| {
+        composite.into_element(cx, label, value, actions)
     });
 }
 
