@@ -4,13 +4,15 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     let quick_actions_source = include_str!("../src/imui_editor_workbench_demo/quick_actions.rs");
     let quick_action_catalog_source =
         include_str!("../src/imui_editor_workbench_demo/quick_actions/catalog.rs");
+    let quick_action_copy_source =
+        include_str!("../src/imui_editor_workbench_demo/quick_actions/copy.rs");
     let shared_first_open_source = include_str!("../../fret-first-open/src/lib.rs");
     let editor_notes_source = include_str!("../src/editor_notes_demo.rs");
     let lib_source = include_str!("../src/lib.rs");
     let bin_source = include_str!("../../fret-demo/src/bin/imui_editor_workbench_demo.rs");
     let demo_main_source = include_str!("../../fret-demo/src/main.rs");
     let workbench_contract_source = format!(
-        "{route_source}\n{quick_actions_source}\n{quick_action_catalog_source}\n{shared_first_open_source}"
+        "{route_source}\n{quick_actions_source}\n{quick_action_catalog_source}\n{quick_action_copy_source}\n{shared_first_open_source}"
     );
 
     for needle in [
@@ -110,15 +112,39 @@ fn imui_editor_workbench_demo_is_the_canonical_editor_workbench_route() {
     }
     for needle in [
         "mod catalog;",
+        "mod copy;",
         "install_workbench_quick_action_commands(cx, &active_action);",
-        "workbench_copy_text_on_activate(",
-        "Effect::ClipboardWriteText",
-        "shadcn::Button::new(\"Copy command\")",
-        "shadcn::Button::new(\"Copy commands\")",
+        "copy::initial_workbench_copy_status",
+        "copy::render_workbench_quick_action_copy_buttons(",
+        "copy::render_workbench_quick_action_copy_status(cx, copy_status)",
     ] {
         assert!(
             quick_actions_source.contains(needle),
-            "canonical workbench quick-action render owner should carry resident chrome and copy behavior; missing `{needle}`"
+            "canonical workbench quick-action render owner should carry resident chrome and delegate copy behavior; missing `{needle}`"
+        );
+    }
+    for needle in [
+        "fn workbench_copy_text_on_activate(",
+        "Effect::ClipboardWriteText",
+        "shadcn::Button::new(\"Copy command\")",
+        "shadcn::Button::new(\"Copy commands\")",
+        ".on_activate(workbench_copy_text_on_activate(",
+        "active_spec.command.to_string(),",
+        "workbench_quick_action_command_bundle_text(),",
+        "Copied Demo/Metrics/Debug command bundle.",
+        ".test_id(TEST_ID_ACTION_COPY_STATUS)",
+    ] {
+        assert!(
+            quick_action_copy_source.contains(needle),
+            "canonical workbench quick-action copy owner should carry clipboard affordance behavior; missing `{needle}`"
+        );
+        assert!(
+            !quick_actions_source.contains(needle),
+            "canonical workbench quick-action render owner should delegate clipboard affordance behavior to copy.rs; unexpected `{needle}`"
+        );
+        assert!(
+            !quick_action_catalog_source.contains(needle),
+            "canonical workbench quick-action catalog should not own clipboard affordance behavior; unexpected `{needle}`"
         );
     }
     assert!(

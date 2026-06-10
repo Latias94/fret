@@ -3256,8 +3256,8 @@ Evidence:
 ## Canonical Workbench Quick-Action Catalog Owner Split Evidence - 2026-06-10
 
 Claim verified: the resident workbench quick-action owner no longer mixes Demo/Metrics/Debug command
-catalog data with chrome rendering and copy effects. The quick-action render owner keeps state
-wiring, resident action-strip UI, and clipboard effect behavior; the private catalog owner keeps the
+catalog data with chrome rendering or copy owner calls. The quick-action render owner keeps state
+wiring, resident action-strip UI, and delegated copy mounting; the private catalog owner keeps the
 action enum, specs, command ids, command strings, action registration, and bundle formatter.
 
 Evidence:
@@ -3265,9 +3265,8 @@ Evidence:
 - `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` declares `mod catalog;`,
   imports `WORKBENCH_QUICK_ACTIONS`, `WorkbenchQuickAction`,
   `workbench_quick_action_command(...)`, `workbench_quick_action_spec(...)`, and
-  `workbench_quick_action_command_bundle_text(...)`, and keeps
-  `workbench_copy_text_on_activate(...)`, `Effect::ClipboardWriteText`, button construction, and
-  status rendering.
+  keeps resident state wiring, selection button construction, status rendering, and copy owner
+  calls without owning command metadata.
 - `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions/catalog.rs` owns
   `WorkbenchQuickAction`, `WorkbenchQuickActionSpec`, `WORKBENCH_QUICK_ACTIONS`, shared first-open
   command aliases, action registration, command mapping, and bundle text construction.
@@ -3286,6 +3285,43 @@ Focused gates:
 - `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
   pass, 2 tests.
 - `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Canonical Workbench Quick-Action Copy Owner Split Evidence - 2026-06-10
+
+Claim verified: the resident workbench quick-action render owner no longer owns clipboard effect
+construction or copy-status test IDs. The render owner keeps action-strip state wiring, selected
+action buttons, and status chrome, while `quick_actions/copy.rs` owns the selected-command and
+command-bundle copy affordances.
+
+Evidence:
+
+- `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` declares `mod copy;`, calls
+  `copy::initial_workbench_copy_status`, mounts
+  `copy::render_workbench_quick_action_copy_buttons(...)`, and delegates the copy-status readout to
+  `copy::render_workbench_quick_action_copy_status(...)`.
+- `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions/copy.rs` owns the stable copy
+  test IDs, initial copy-status text, `Copy command` / `Copy commands` buttons,
+  `workbench_copy_text_on_activate(...)`, `Effect::ClipboardWriteText`, and command-bundle copy
+  text usage.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` now reads the route root,
+  render owner, catalog owner, and copy owner separately, requiring copy behavior in `copy.rs` and
+  rejecting clipboard effect behavior in both the render and catalog owners.
+- `tools/gate_imui_workstream_source.py` now source-checks route root, quick-action render owner,
+  quick-action catalog owner, and quick-action copy owner as four separate boundaries.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass with existing warnings from
+  `fret-chart` and `fret-plot`.
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
+  pass, 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.

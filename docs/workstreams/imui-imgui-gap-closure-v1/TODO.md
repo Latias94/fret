@@ -515,15 +515,25 @@ Last updated: 2026-06-10
       DevTools/fretboard execution ownership.
       Result: `apps/fret-examples/src/imui_editor_workbench_demo.rs` keeps the route host and
       workflow composition only; `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs`
-      owns the Demo/Metrics/Debug action table, command mapping, clipboard copy behavior, action
-      buttons, status readouts, and stable action-strip test IDs.
+      owns the resident Demo/Metrics/Debug action-strip routing, action buttons, status readouts,
+      and stable action-strip test IDs while delegating command catalog and clipboard copy behavior
+      to private child owners.
 - [x] Split the canonical workbench quick-action command catalog into a private child owner without
       changing command strings, action IDs, copy affordances, action-strip rendering, or route
       discovery.
       Result: `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` keeps resident
-      action-strip state wiring, copy effects, buttons, and status rendering; `quick_actions/catalog.rs`
+      action-strip state wiring, copy owner calls, buttons, and status rendering; `quick_actions/catalog.rs`
       owns the action enum, specs, command aliases, action registration, command mapping, and command
       bundle text.
+- [x] Split the canonical workbench quick-action copy affordance into a private child owner without
+      changing the selected-command copy payload, command-bundle copy payload, copy-status readout,
+      action-strip rendering, or DevTools/fretboard execution ownership.
+      Result: `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` now keeps
+      resident action-strip state wiring, action selection buttons, title/status chrome, and copy
+      owner calls; `quick_actions/copy.rs` owns the initial copy-status text, copy buttons,
+      clipboard `Effect::ClipboardWriteText` activation helper, stable copy test IDs, and copy-status
+      readout. The golden-path surface test and IMUI workstream source gate freeze the four-owner
+      route/render/catalog/copy boundary.
 - [x] Factor the static Demo/Metrics/Debug first-open route contract into an app-level shared owner
       so fretboard, DevTools GUI, MCP, and the canonical workbench stop duplicating route/action
       command strings and route metadata.

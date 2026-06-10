@@ -865,17 +865,27 @@ editor workflow remains mounted under `imui-editor-workbench.workflow`.
 `apps/fret-examples/src/imui_editor_workbench_demo.rs` now keeps the product-facing route host,
 editor-notes workflow composition, action-strip region, and workflow slot only. The private
 `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` owner contains the
-Demo/Metrics/Debug action table, command mapping, clipboard copy behavior, action-strip buttons,
-status readouts, and stable `imui-editor-workbench.action-*` test IDs. Route behavior, discovery,
-copy affordances, and DevTools/fretboard execution ownership remain unchanged.
+resident Demo/Metrics/Debug action-strip routing, action buttons, status readouts, and stable
+`imui-editor-workbench.action-*` test IDs while delegating command catalog and clipboard copy
+behavior to private child owners. Route behavior, discovery, copy affordances, and
+DevTools/fretboard execution ownership remain unchanged.
 
 2026-06-10 canonical workbench quick-action catalog owner-split result:
 `apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` now keeps resident
-Demo/Metrics/Debug action-strip state wiring, copy effects, buttons, and status rendering. The
+Demo/Metrics/Debug action-strip state wiring, copy owner calls, buttons, and status rendering. The
 private `quick_actions/catalog.rs` owner contains `WorkbenchQuickAction`,
 `WorkbenchQuickActionSpec`, the action table, shared first-open command aliases, action
 registration, command mapping, and command bundle text. Product route behavior, copy affordances,
 discovery strings, and DevTools/fretboard execution ownership remain unchanged.
+
+2026-06-10 canonical workbench quick-action copy owner-split result:
+`apps/fret-examples/src/imui_editor_workbench_demo/quick_actions.rs` keeps the resident
+Demo/Metrics/Debug action-strip state wiring, selection buttons, title/status chrome, and copy
+owner calls. The private `quick_actions/copy.rs` owner contains initial copy-status text, stable
+copy action test IDs, selected-command and command-bundle copy buttons, the
+`workbench_copy_text_on_activate(...)` clipboard effect helper, and copy-status readout rendering.
+Product route behavior, command strings, action IDs, copy payloads, and DevTools/fretboard
+execution ownership remain unchanged.
 
 2026-06-03 Demo/Metrics/Debug first-open shared contract result:
 `apps/fret-first-open/src/lib.rs` now owns the static `demo_metrics_debug` first-open route
