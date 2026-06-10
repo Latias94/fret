@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Editor Owners Split - 2026-06-10
+
+- [x] Split the editor owner assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod editor_owners;` and delegates to
+      `editor_owners::assert_editor_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/editor_owners.rs` owns editor inspector,
+      object, advanced, gradient, material, state, and text-assist checks. The IMUI workstream
+      source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Demo Module Routing Owner Split - 2026-06-10
 
 - [x] Split the main proof-demo module-routing and inline-implementation drift assertion bundle out

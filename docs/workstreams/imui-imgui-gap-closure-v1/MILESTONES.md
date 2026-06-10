@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface editor owners split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/editor_owners.rs` owns the editor owner assertion
+bundle for inspector composition/routing, object rows, advanced rows, gradient actions/bindings,
+material rows, proof state fixtures, and text-assist fixture/outcome checks. No app runtime code,
+public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface demo module routing owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
