@@ -10,6 +10,8 @@ mod browser_input_runtime;
 mod browser_scope;
 #[path = "imui_editor_collection_modularization_surface/child_models.rs"]
 mod child_models;
+#[path = "imui_editor_collection_modularization_surface/chrome.rs"]
+mod chrome;
 #[path = "imui_editor_collection_modularization_surface/command_buttons.rs"]
 mod command_buttons;
 #[path = "imui_editor_collection_modularization_surface/context_menu.rs"]
@@ -664,37 +666,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
 
-    for needle in [
-        "pub(in super::super) fn proof_collection_readout_text(",
-        "pub(super) fn render_collection_header(",
-        "pub(super) fn proof_collection_section_label(",
-        "Collection-first asset browser proof",
-        "Stable keys keep browser selection pinned while visible order flips",
-        "Background drag now draws a marquee and updates grid selection app-locally",
-        "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
-        "proof_section_chrome_label(cx, text, test_id)",
-    ] {
-        assert!(
-            chrome_source.contains(needle),
-            "the demo-local collection chrome owner should keep readout/title mounting explicit; missing `{needle}`"
-        );
-    }
-
-    for needle in [
-        "fn proof_collection_readout_text(",
-        "fn render_collection_header(",
-        "fn proof_collection_section_label(",
-        "Collection-first asset browser proof",
-        "Stable keys keep browser selection pinned while visible order flips",
-        "Background drag now draws a marquee and updates grid selection app-locally",
-        "proof_compact_readout_element(cx, text, Arc::<str>::from(test_id))",
-        "proof_section_chrome_label(cx, text, test_id)",
-    ] {
-        assert!(
-            !collection_source.contains(needle),
-            "the collection root should route chrome/readout mounting through collection/chrome.rs; unexpected `{needle}`"
-        );
-    }
+    chrome::assert_chrome_owner_split(collection_source, chrome_source);
 
     derived_state::assert_derived_state_owner_split(collection_source, derived_state_source);
 

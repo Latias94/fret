@@ -1696,6 +1696,7 @@
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/browser_input_runtime.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/box_select.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/child_models.rs",
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface/chrome.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/command_buttons.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/context_menu.rs",
     "apps/fret-examples/tests/imui_editor_collection_modularization_surface/derived_state.rs",

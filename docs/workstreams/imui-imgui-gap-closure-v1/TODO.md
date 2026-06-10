@@ -3,6 +3,19 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Chrome Owner Split - 2026-06-10
+
+- [x] Split the collection chrome/readout assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod chrome;` and delegates to
+      `chrome::assert_chrome_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/chrome.rs` owns readout/header helper
+      signatures, header/prose copy, compact readout mounting, section label mounting, and
+      collection-root negative routing checks. The IMUI workstream source gate freezes the
+      test-owner split.
+
 ## Fret Examples Collection Modularization Surface Derived State Owner Split - 2026-06-10
 
 - [x] Split the collection derived visible-state assertion bundle out of
