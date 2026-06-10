@@ -3,6 +3,14 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface geometry owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/geometry.rs` owns the geometry/zoom assertion bundle
+for base geometry, geometry tests, zoom owner, zoom tests, zoom fixtures, and negative drift
+boundaries. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or runner
+contract changed.
+
 2026-06-10 Fret Examples collection modularization surface drag/drop owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while

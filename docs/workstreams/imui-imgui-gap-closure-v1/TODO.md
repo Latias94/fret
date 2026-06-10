@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Geometry Owner Split - 2026-06-10
+
+- [x] Split the geometry/zoom assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod geometry;` and delegates to
+      `geometry::assert_geometry_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/geometry.rs` owns base geometry, geometry tests,
+      zoom owner, zoom tests, zoom fixtures, and negative drift boundary checks. The IMUI workstream
+      source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Drag-Drop Owner Split - 2026-06-10
 
 - [x] Split the drag/drop assertion bundle out of
