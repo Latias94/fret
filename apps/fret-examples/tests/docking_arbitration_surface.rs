@@ -12,7 +12,7 @@ fn docking_arbitration_demo_keeps_body_and_state_text_on_roles() {
         "fndocking_arbitration_paragraph_text<H:fret_ui::UiHost>(",
         "fret_ui_kit::declarative::text::text_control_readout(cx,text)",
         "fret_ui_kit::declarative::text::text_paragraph(cx,text)",
-        "docking_arbitration_paragraph_text(cx,\"Non-modaloverlay(Popover).\",)",
+        "docking_arbitration_paragraph_text(cx,\"Non-modaloverlay(Popover).\")",
         ".map(|v|docking_arbitration_readout_text(cx,v))",
         "docking_arbitration_readout_text(cx,ifpopover_is_open{\"Popover:open\"}else{\"Popover:closed\"},)",
         "docking_arbitration_readout_text(cx,ifdialog_is_open{\"Dialog:open\"}else{\"Dialog:closed\"},)",

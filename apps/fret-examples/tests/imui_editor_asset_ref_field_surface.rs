@@ -1,18 +1,39 @@
 #[test]
 fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
     let main_source = include_str!("../src/imui_editor_proof_demo.rs");
+    let inspector_source = include_str!("../src/imui_editor_proof_demo/editor_inspector.rs");
+    let material_source = include_str!("../src/imui_editor_proof_demo/editor_material.rs");
     let owner_source = include_str!("../src/imui_editor_proof_demo/asset_ref.rs");
 
+    for needle in ["mod asset_ref;", "render_editor_inspector_surface("] {
+        assert!(
+            main_source.contains(needle),
+            "imui_editor_proof_demo should keep the AssetRefField proof reachable through the editor shell; missing `{needle}`"
+        );
+    }
+
     for needle in [
-        "mod asset_ref;",
-        "let editor_asset_slot_model = asset_ref::asset_slot_model(cx);",
-        "let editor_asset_action_model = asset_ref::asset_action_model(cx);",
-        "let show_asset_ref = material_show_all",
+        "use super::asset_ref;",
+        "asset_slot: asset_ref::asset_slot_model(cx),",
+        "asset_action: asset_ref::asset_action_model(cx),",
+        "asset_slot: models.asset_slot.clone(),",
+        "asset_action: models.asset_action.clone(),",
+    ] {
+        assert!(
+            inspector_source.contains(needle),
+            "editor inspector should own the AssetRefField model wiring; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "use super::asset_ref;",
+        "let material_show_all = panel_cx.matches(\"material\");",
+        "asset_ref: material_show_all",
         "asset_ref::push_material_rows(",
     ] {
         assert!(
-            main_source.contains(needle),
-            "imui_editor_proof_demo should keep the AssetRefField proof wired through its owner module; missing `{needle}`"
+            material_source.contains(needle),
+            "editor material owner should route AssetRefField rows through asset_ref; missing `{needle}`"
         );
     }
 
@@ -42,7 +63,10 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
         "QueryState",
     ] {
         assert!(
-            !main_source.contains(unexpected) && !owner_source.contains(unexpected),
+            !main_source.contains(unexpected)
+                && !inspector_source.contains(unexpected)
+                && !material_source.contains(unexpected)
+                && !owner_source.contains(unexpected),
             "AssetRefField proof must stay caller-owned and avoid asset-system coupling; unexpected `{unexpected}`"
         );
     }
