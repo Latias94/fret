@@ -3,6 +3,18 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Child Models Owner Split - 2026-06-10
+
+- [x] Split the collection child model bundle assertion bundle out of
+      `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` without changing
+      the source-surface test entry point, coverage intent, runtime code, public APIs, or layer
+      boundaries.
+      Result: the root test declares a path-qualified `mod child_models;` and delegates to
+      `child_models::assert_child_models_owner_split(...)`, while
+      `imui_editor_collection_modularization_surface/child_models.rs` owns
+      `ProofCollectionChildModels`, child DTO assembly, cloned model handles, and collection-root
+      negative routing checks. The IMUI workstream source gate freezes the test-owner split.
+
 ## Fret Examples Collection Modularization Surface Render States Owner Split - 2026-06-10
 
 - [x] Split the collection child render-state projection assertion bundle out of

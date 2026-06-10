@@ -8,6 +8,8 @@ mod box_select;
 mod browser_input_runtime;
 #[path = "imui_editor_collection_modularization_surface/browser_scope.rs"]
 mod browser_scope;
+#[path = "imui_editor_collection_modularization_surface/child_models.rs"]
+mod child_models;
 #[path = "imui_editor_collection_modularization_surface/command_buttons.rs"]
 mod command_buttons;
 #[path = "imui_editor_collection_modularization_surface/context_menu.rs"]
@@ -781,35 +783,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
 
-    for needle in [
-        "pub(super) struct ProofCollectionChildModels",
-        "pub(super) fn proof_collection_child_models(",
-        "models: &ProofCollectionRuntimeModels",
-        "command_buttons: ProofCollectionCommandButtonModels {",
-        "browser_scope: ProofCollectionBrowserScopeModels {",
-        "context_menu: ProofCollectionContextMenuModels {",
-        "assets: models.assets.clone()",
-        "selection: models.selection.clone()",
-        "keyboard: models.keyboard.clone()",
-        "rename_session: models.rename_session.clone()",
-        "scroll: models.scroll.clone()",
-    ] {
-        assert!(
-            child_models_source.contains(needle),
-            "the demo-local collection child-model owner should keep child model bundle projection explicit; missing `{needle}`"
-        );
-    }
-
-    for needle in [
-        "ProofCollectionCommandButtonModels {",
-        "ProofCollectionBrowserScopeModels {",
-        "ProofCollectionContextMenuModels {",
-    ] {
-        assert!(
-            !collection_source.contains(needle),
-            "the collection root should route child model bundle projection through collection/child_models.rs; unexpected `{needle}`"
-        );
-    }
+    child_models::assert_child_models_owner_split(collection_source, child_models_source);
 
     lifecycle::assert_lifecycle_owner_split(collection_source, lifecycle_source);
 

@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-10
 
+2026-06-10 Fret Examples collection modularization surface child models owner-split result:
+`apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
+source-surface test entry point and include bundle, while
+`imui_editor_collection_modularization_surface/child_models.rs` owns the collection child model
+bundle assertion bundle for `ProofCollectionChildModels`, `proof_collection_child_models(...)`,
+command-buttons/browser-scope/context-menu DTO assembly, cloned model handles, and root negative
+routing checks. No app runtime code, public APIs, `fret-imui`, `fret-ui-kit::imui`, docking, or
+runner contract changed.
+
 2026-06-10 Fret Examples collection modularization surface render states owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single
 source-surface test entry point and include bundle, while
