@@ -955,12 +955,21 @@ Last updated: 2026-06-10
       selection-commit child owners without changing combo runtime behavior, public APIs, or the
       `fret-ui-kit::imui` combo policy implementation.
       Result: `models_combo/combo_direct.rs` is now a thin module hub. `combo_direct/lifecycle.rs`
-      owns popup Escape close/focus-restore and open-session edge reporting proof,
+      routes popup Escape/focus-restore and open-session edge reporting child owners,
       `combo_direct/shortcuts.rs` routes direct-combo shortcut proof owners,
       `combo_direct/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof,
       `combo_direct/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof, and
       `combo_direct/selection.rs` owns selectable-row commit, selected preview/model projection, and
       close-after-pick proof. The IMUI source gate freezes the child-owner split.
+- [x] Split the `fret-imui` direct combo lifecycle proof owner into popup Escape/focus-restore and
+      open-session edge child owners without changing combo runtime behavior, public APIs, option
+      names, or test semantics.
+      Result: `combo_direct/lifecycle.rs` is now a thin route hub with `mod escape_focus;` and
+      `mod session_edges;`. `combo_direct/lifecycle/escape_focus.rs` owns popup Escape close,
+      option disappearance, and trigger focus restore proof, while
+      `combo_direct/lifecycle/session_edges.rs` owns response activated/deactivated/edited/
+      after-edit/open edge reporting proof. The IMUI source gate freezes the deeper lifecycle
+      owner boundary.
 
 ## Fret-ImUi Combo Model Proof Split - 2026-06-05
 

@@ -565,12 +565,21 @@ combo-model runtime implementation, `fret-imui` public facade, or combo-model op
 
 2026-06-05 Fret-ImUi combo-direct proof owner-split result:
 `ecosystem/fret-imui/src/tests/models_combo/combo_direct.rs` now keeps only child-owner routing for
-the direct combo proof surface. `combo_direct/lifecycle.rs` owns popup Escape close/focus restore
-and open-session edge reporting proof, `shortcuts.rs` routes direct-combo shortcut proof owners,
+the direct combo proof surface. `combo_direct/lifecycle.rs` routes popup Escape/focus restore and
+open-session edge reporting child owners, `shortcuts.rs` routes direct-combo shortcut proof owners,
 `shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof, `shortcuts/repeat.rs` owns
 `shortcut_repeat` opt-in proof, and `selection.rs` owns selectable-row commit, selected preview/model
 projection, and close-after-pick proof. No `fret-ui-kit::imui` combo runtime implementation,
 `fret-imui` public facade, or combo option API changed.
+
+2026-06-10 Fret-ImUi combo-direct lifecycle proof child-owner split result:
+`ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle.rs` now keeps only child-owner
+routing for direct combo lifecycle proofs. `lifecycle/escape_focus.rs` owns popup Escape close,
+option disappearance, and trigger focus restore proof, while `lifecycle/session_edges.rs` owns
+open-session edge reporting through `activated`, `deactivated`, `edited`,
+`deactivated_after_edit`, and `open` response reads. No combo runtime implementation,
+`fret-ui-kit::imui` combo policy, `fret-imui` public facade, combo option API, or test semantics
+changed.
 
 2026-06-05 Fret-ImUi menu-activation proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs` now keeps only child-owner

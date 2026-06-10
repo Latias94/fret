@@ -2035,8 +2035,8 @@ Evidence:
 
 - `ecosystem/fret-imui/src/tests/models_combo/combo_direct.rs` is now a thin module hub for
   `lifecycle`, `selection`, and `shortcuts` proof owners.
-- `combo_direct/lifecycle.rs` owns popup Escape close/focus-restore proof and open-session edge
-  reporting proof.
+- `combo_direct/lifecycle.rs` routes popup Escape/focus-restore proof and open-session edge
+  reporting child owners.
 - `combo_direct/shortcuts.rs` routes direct-combo shortcut proof owners.
 - `combo_direct/shortcuts/focus_scope.rs` owns focused-trigger shortcut scoping proof.
 - `combo_direct/shortcuts/repeat.rs` owns `shortcut_repeat` opt-in proof.
@@ -2053,6 +2053,37 @@ Focused gates:
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `python tools\check_workstream_catalog.py`: pass.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `git diff --check`: pass.
+
+## Fret-ImUi Combo Direct Lifecycle Proof Child-Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` direct combo lifecycle proof owner no longer mixes popup
+Escape/focus-restore behavior with open-session edge reporting. The lifecycle root is now a thin
+route hub, and the two lifecycle proof behaviors live in separate child owners.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle.rs` declares
+  `mod escape_focus;` and `mod session_edges;` only.
+- `ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle/escape_focus.rs` owns
+  `combo_popup_escape_closes_and_restores_trigger_focus`, including popup option visibility,
+  Escape close, `resp.opened()`, `resp.closed()`, and trigger focus restore assertions.
+- `ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle/session_edges.rs` owns
+  `combo_lifecycle_tracks_open_session_edges`, including `activated`, `deactivated`, `edited`,
+  `deactivated_after_edit`, and `open` response edge assertions.
+- `tools/gate_imui_workstream_source.py`, `TODO.md`, and `MILESTONES.md` freeze the deeper
+  lifecycle owner boundary without changing combo runtime behavior, public APIs, option names, or
+  test semantics.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui models_combo::combo_direct --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
 ## Fret-ImUi Menu Activation Proof Owner Split Evidence - 2026-06-05

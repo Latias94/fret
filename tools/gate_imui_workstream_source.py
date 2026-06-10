@@ -47855,13 +47855,61 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle.rs"),
             required=[
-                "fn combo_popup_escape_closes_and_restores_trigger_focus()",
-                "fn combo_lifecycle_tracks_open_session_edges()",
+                "use super::*;",
+                "mod escape_focus;",
+                "mod session_edges;",
+            ],
+            forbidden=[
+                "#[test]",
+                "fn combo_",
+                "ComboOptions {",
+                "SelectableOptions {",
                 "resp.opened()",
                 "resp.closed()",
                 "KeyCode::Escape",
+                "fn combo_activate_shortcut",
+                "fn combo_can_commit_selection",
+                "shortcut_repeat: true",
+                "ui.close_popup(\"imui-combo-selectable-popup\")",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle/escape_focus.rs"
+            ),
+            required=[
+                "fn combo_popup_escape_closes_and_restores_trigger_focus()",
+                "resp.opened()",
+                "resp.closed()",
+                "focus_before_open",
+                "KeyCode::Escape",
+                '"imui-combo-generic.option.0"',
             ],
             forbidden=[
+                "fn combo_lifecycle_tracks_open_session_edges()",
+                "resp.response().activated()",
+                "fn combo_activate_shortcut",
+                "fn combo_can_commit_selection",
+                "shortcut_repeat: true",
+                "ui.close_popup(\"imui-combo-selectable-popup\")",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-imui/src/tests/models_combo/combo_direct/lifecycle/session_edges.rs"
+            ),
+            required=[
+                "fn combo_lifecycle_tracks_open_session_edges()",
+                "resp.response().activated()",
+                "resp.response().deactivated()",
+                "resp.response().edited()",
+                "resp.response().deactivated_after_edit()",
+                "resp.open()",
+                "KeyCode::Escape",
+            ],
+            forbidden=[
+                "fn combo_popup_escape_closes_and_restores_trigger_focus()",
+                "focus_before_open",
                 "fn combo_activate_shortcut",
                 "fn combo_can_commit_selection",
                 "shortcut_repeat: true",
