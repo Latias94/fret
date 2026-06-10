@@ -14,6 +14,8 @@ mod child_models;
 mod command_buttons;
 #[path = "imui_editor_collection_modularization_surface/context_menu.rs"]
 mod context_menu;
+#[path = "imui_editor_collection_modularization_surface/derived_state.rs"]
+mod derived_state;
 #[path = "imui_editor_collection_modularization_surface/drag_drop.rs"]
 mod drag_drop;
 #[path = "imui_editor_collection_modularization_surface/geometry.rs"]
@@ -694,39 +696,7 @@ fn imui_editor_proof_demo_routes_collection_proof_through_demo_local_module() {
         );
     }
 
-    for needle in [
-        "pub(super) struct ProofCollectionDerivedState",
-        "pub(super) fn proof_collection_derived_state(",
-        "stored_assets: &[ProofCollectionAsset]",
-        "reverse_order: bool",
-        "proof_collection_assets_in_visible_order(",
-        "Arc::<[ProofCollectionAsset]>::from(stored_assets.to_vec())",
-        "let keys = assets",
-        ".map(|asset| asset.id.clone())",
-        ".collect::<Vec<_>>();",
-        "proof_collection_active_id(&keys, selection, keyboard)",
-        "proof_collection_begin_rename_session(&assets, selection, keyboard)",
-        "rename_ready_session",
-    ] {
-        assert!(
-            derived_state_source.contains(needle),
-            "the demo-local collection derived-state owner should keep visible asset/key/active/rename-ready projection explicit; missing `{needle}`"
-        );
-    }
-
-    for needle in [
-        "proof_collection_assets_in_visible_order(",
-        "proof_collection_active_id(",
-        "proof_collection_begin_rename_session(",
-        "let collection_keys =",
-        "let collection_active_id =",
-        "let collection_rename_ready_session =",
-    ] {
-        assert!(
-            !collection_source.contains(needle),
-            "the collection root should route derived visible state through collection/derived_state.rs; unexpected `{needle}`"
-        );
-    }
+    derived_state::assert_derived_state_owner_split(collection_source, derived_state_source);
 
     runtime_state::assert_runtime_state_owner_split(collection_source, runtime_state_source);
 

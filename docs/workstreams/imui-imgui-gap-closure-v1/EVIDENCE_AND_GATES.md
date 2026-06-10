@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-10
 
+## Fret Examples Collection Modularization Surface Derived State Owner Split Evidence - 2026-06-10
+
+Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer
+keeps the collection derived visible-state assertion bundle inline in the test root. The root still
+owns the single test entry point and source includes, while
+`imui_editor_collection_modularization_surface/derived_state.rs` owns derived visible-state routing
+checks.
+
+Evidence:
+
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` declares
+  `mod derived_state;` through a path-qualified test owner module and routes the existing collection
+  derived-state source assertions through `derived_state::assert_derived_state_owner_split(...)`.
+- `apps/fret-examples/tests/imui_editor_collection_modularization_surface/derived_state.rs` owns
+  `ProofCollectionDerivedState`, `proof_collection_derived_state(...)`, visible-order asset
+  projection, key projection, active-id projection, rename-ready projection, and collection-root
+  negative routing checks.
+  Evidence anchor: derived visible-state routing checks.
+- `tools/gate_imui_workstream_source.py`, `WORKSTREAM.json`, `TODO.md`, and `MILESTONES.md`
+  freeze the source-surface test owner split without changing app runtime code, public APIs,
+  `fret-imui`, `fret-ui-kit::imui`, docking, or runner contracts.
+
+Focused gates:
+
+- `cargo fmt -p fret-examples`: pass.
+- `cargo fmt -p fret-examples -- --check`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`:
+  pass, 1 passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret Examples Collection Modularization Surface Runtime State Owner Split Evidence - 2026-06-10
 
 Claim verified: the `imui_editor_collection_modularization_surface` source-surface test no longer
