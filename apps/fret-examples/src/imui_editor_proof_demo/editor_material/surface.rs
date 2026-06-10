@@ -27,21 +27,21 @@ use super::super::proof_helpers::{
 
 #[derive(Clone)]
 pub struct EditorMaterialModels {
-    pub(crate) opacity: Model<f64>,
-    pub(crate) opacity_outcome: Model<String>,
-    pub(crate) roughness: Model<f64>,
-    pub(crate) metallic: Model<f64>,
-    pub(crate) base_color: Model<fret_core::Color>,
-    pub(crate) asset_slot: Model<String>,
-    pub(crate) asset_action: Model<String>,
-    pub(crate) shading: Model<Option<Arc<str>>>,
-    pub(crate) alpha_clip: Model<bool>,
-    pub(crate) cast_shadows: Model<Option<bool>>,
+    pub opacity: Model<f64>,
+    pub opacity_outcome: Model<String>,
+    pub roughness: Model<f64>,
+    pub metallic: Model<f64>,
+    pub base_color: Model<fret_core::Color>,
+    pub asset_slot: Model<String>,
+    pub asset_action: Model<String>,
+    pub shading: Model<Option<Arc<str>>>,
+    pub alpha_clip: Model<bool>,
+    pub cast_shadows: Model<Option<bool>>,
 }
 
 pub struct EditorMaterialSurface {
-    pub(crate) element: AnyElement,
-    pub(crate) any_match: bool,
+    pub element: AnyElement,
+    pub any_match: bool,
 }
 
 pub fn render_editor_material_surface(
