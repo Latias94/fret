@@ -589,6 +589,16 @@ repeated selectable combo rendering, selectable row test IDs, selected model wri
 and selected snapshot publication. No combo runtime implementation, `fret-ui-kit::imui` combo
 policy, `fret-imui` public facade, combo option API, or test semantics changed.
 
+2026-06-10 Fret-ImUi text-mode proof child-owner split result:
+`ecosystem/fret-imui/src/tests/models_text_modes.rs` now keeps only child-owner routing for text
+mode proofs. `models_text_modes/read_only.rs` owns read-only changed-signal and blocked text-input
+proof, `models_text_modes/select_all.rs` owns focus-time select-all copy enablement and stale-timer
+drop proof, `models_text_modes/password.rs` owns password-mode paint obfuscation and model
+preservation proof, and `models_text_modes/harness.rs` owns the shared scenario, repeated
+input-text rendering, two-field select-all fixture, timer/command helpers, paint capture, and model
+snapshot helpers. No text runtime implementation, `fret-ui-kit::imui` text policy, `fret-imui`
+public facade, text option API, or test semantics changed.
+
 2026-06-05 Fret-ImUi menu-activation proof owner-split result:
 `ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs` now keeps only child-owner
 routing for the menu-activation proof surface. `menu_activation/command_activation.rs` owns command

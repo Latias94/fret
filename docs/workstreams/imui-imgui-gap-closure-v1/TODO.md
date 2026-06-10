@@ -981,6 +981,21 @@ Last updated: 2026-06-10
       close, and selected snapshot publication. The IMUI source gate freezes the deeper selection
       owner boundary.
 
+## Fret-ImUi Text Mode Proof Split - 2026-06-10
+
+- [x] Split the `fret-imui` text-mode proof owner into read-only, select-all-on-focus, password,
+      and reusable scenario harness child owners without changing text runtime behavior, public
+      APIs, option names, or test semantics.
+      Result: `models_text_modes.rs` is now a thin route hub with `mod harness;`, `mod read_only;`,
+      `mod select_all;`, and `mod password;`. `models_text_modes/read_only.rs` owns read-only
+      changed-signal and blocked text-input proof, `models_text_modes/select_all.rs` owns
+      focus-time select-all copy enablement plus stale-timer drop proof,
+      `models_text_modes/password.rs` owns password-mode paint obfuscation/model-preservation
+      proof, and `models_text_modes/harness.rs` owns the shared input-mode scenario, repeated
+      `input_text_model_with_options(...)` rendering, two-field select-all fixture, timer/command
+      dispatch helpers, paint capture, and model snapshot helpers. The IMUI source gate freezes the
+      deeper text-mode owner boundary.
+
 ## Fret-ImUi Combo Model Proof Split - 2026-06-05
 
 - [x] Split the `fret-imui` combo-model proof file into selection, popup, and shortcut activation

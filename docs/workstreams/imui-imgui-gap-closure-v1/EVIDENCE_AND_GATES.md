@@ -2118,6 +2118,45 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Fret-ImUi Text Mode Proof Child-Owner Split Evidence - 2026-06-10
+
+Claim verified: the `fret-imui` text-mode proof owner no longer mixes read-only behavior,
+select-all focus/timer behavior, password paint behavior, and repeated scenario setup in one large
+file. The text-mode root is now a thin route hub, and mode-specific behavior plus reusable scenario
+setup live in separate child owners.
+
+Evidence:
+
+- `ecosystem/fret-imui/src/tests/models_text_modes.rs` declares `mod harness;`, `mod read_only;`,
+  `mod select_all;`, and `mod password;` only.
+- `ecosystem/fret-imui/src/tests/models_text_modes/read_only.rs` owns
+  `input_text_read_only_blocks_text_input_and_keeps_changed_false` and the read-only changed-signal,
+  blocked text-input, and preserved model-value assertions.
+- `ecosystem/fret-imui/src/tests/models_text_modes/select_all.rs` owns
+  `input_text_select_all_on_focus_enables_copy` and
+  `input_text_select_all_on_focus_drops_if_focus_moves_before_timer`, including timer dispatch,
+  `edit.select_all` command dispatch, copy availability, and stale-timer suppression assertions.
+- `ecosystem/fret-imui/src/tests/models_text_modes/password.rs` owns
+  `input_text_password_mode_obscures_paint_text_without_mutating_model`, including password paint
+  obfuscation and model-preservation assertions.
+- `ecosystem/fret-imui/src/tests/models_text_modes/harness.rs` owns `InputTextModeScenario`,
+  repeated `input_text_model_with_options(...)` rendering, the two-field select-all fixture,
+  timer/command helpers, paint capture, prepared-text reads, and model snapshot helpers.
+- `tools/gate_imui_workstream_source.py`, `TODO.md`, and `MILESTONES.md` freeze the deeper
+  text-mode owner boundary without changing text runtime behavior, public APIs, option names, or
+  test semantics.
+
+Focused gates:
+
+- `cargo fmt -p fret-imui`: pass.
+- `cargo fmt -p fret-imui -- --check`: pass.
+- `cargo nextest run -p fret-imui models_text_modes --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret-ImUi Menu Activation Proof Owner Split Evidence - 2026-06-05
 
 Claim verified: the `fret-imui` menu-activation proof surface is split by activation behavior owner
