@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit IMUI Export Surface Owner Split - 2026-06-11
+
+- [x] Split the `ecosystem/fret-ui-kit/src/imui/exports.rs` public re-export surface into private
+      owner modules without changing exported names, `fret::imui` facade behavior, kit adapter
+      seams, response contracts, or layer boundaries.
+      Result: `exports.rs` is now a small hub, while `exports/debug_draw.rs`,
+      `exports/facade.rs`, `exports/options.rs`, `exports/responses.rs`, and
+      `exports/tables.rs` own their focused export groups. The IMUI workstream source gate now
+      rejects the direct grouped re-exports from drifting back into the hub.
+
 ## Fret UI Kit Drag Response Core Owner Split - 2026-06-11
 
 - [x] Split the `DragResponse` core record out of

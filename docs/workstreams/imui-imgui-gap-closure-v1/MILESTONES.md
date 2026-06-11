@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Kit IMUI export surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/exports.rs` now keeps only private export-owner declarations and
+star re-exports, while `exports/debug_draw.rs`, `exports/facade.rs`, `exports/options.rs`,
+`exports/responses.rs`, and `exports/tables.rs` own the focused public re-export groups. Public
+IMUI names, `fret::imui` facade behavior, adapter seams, response contracts, docking, runner, and
+runtime contracts remain unchanged.
+
 2026-06-11 Fret UI Kit drag response core owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/drag.rs` now keeps only the drag response module
 declarations and public re-exports, while `response/drag/core.rs` owns the `DragResponse` core

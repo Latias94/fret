@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit IMUI Export Surface Owner Split Evidence - 2026-06-11
+
+Claim verified: `exports.rs` no longer owns every IMUI public re-export group inline. The root
+export hub now delegates to focused private owners while preserving the external `pub use
+exports::*` surface from `imui.rs`.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/exports.rs` declares `debug_draw`, `facade`, `options`,
+  `responses`, and `tables` export owners and re-exports them through `pub use ...::*`.
+- `ecosystem/fret-ui-kit/src/imui/exports/debug_draw.rs` owns the debug draw re-export group.
+- `ecosystem/fret-ui-kit/src/imui/exports/facade.rs` owns facade traits, floating options,
+  multi-select, tab bar, and virtual-list runtime handle re-exports.
+- `ecosystem/fret-ui-kit/src/imui/exports/options.rs` owns IMUI option re-exports.
+- `ecosystem/fret-ui-kit/src/imui/exports/responses.rs` owns IMUI response re-exports.
+- `ecosystem/fret-ui-kit/src/imui/exports/tables.rs` owns table and table-column-visibility
+  re-exports.
+- `tools/gate_imui_workstream_source.py` freezes the hub/owner split and rejects the grouped
+  direct re-exports from drifting back into `exports.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`:
+  pass, 5 passed.
+- `cargo nextest run -p fret root_surface_exposes_explicit_imui_module --no-fail-fast`: pass, 1
+  passed.
+
 ## Fret UI Kit Drag Response Core Owner Split Evidence - 2026-06-11
 
 Claim verified: `DragResponse` no longer lives in the `response/drag.rs` hub. The hub still exports
