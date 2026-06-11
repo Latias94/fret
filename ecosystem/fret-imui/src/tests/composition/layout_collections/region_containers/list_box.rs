@@ -10,6 +10,29 @@ fn assert_px_length(actual: Option<LengthRefinement>, expected: Px) {
 }
 
 #[test]
+fn list_box_options_default_projects_layout_and_scroll_fields() {
+    let options = ListBoxOptions::default();
+
+    let size = options
+        .layout
+        .size
+        .expect("listbox default size refinement");
+    assert!(size.width.is_none());
+    assert_px_length(size.height, Px(160.0));
+
+    assert!(options.label.is_none());
+    assert!(!options.multiselectable);
+    assert!(options.test_id.is_none());
+    assert!(options.content_test_id.is_none());
+    assert_eq!(options.scroll.axis, fret_ui::element::ScrollAxis::Y);
+    assert!(!options.scroll.show_scrollbar_x);
+    assert!(options.scroll.show_scrollbar_y);
+    assert!(options.scroll.handle.is_none());
+    assert!(options.scroll.test_id.is_none());
+    assert!(options.scroll.viewport_test_id.is_none());
+}
+
+#[test]
 fn list_box_container_stamps_semantics_scroll_and_hosts_selectables() {
     let window = AppWindowId::default();
     let bounds = Rect::new(

@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Kit List Box options owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` now keeps only the hub
+declarations and `pub use options::ListBoxOptions;`, while `list_box/options.rs` owns the public
+field contract and builder chain, `list_box/defaults.rs` owns the `Default` implementation, and
+`list_box/dimensions.rs` owns the width/height/size helpers. Public option names, default layout
+height, scroll defaults, `fret-imui`, docking, runner, and runtime contracts remain unchanged.
+
 2026-06-11 Fret UI Kit virtual-list options owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs` now keeps only the hub
 declarations and `pub use options::VirtualListOptions;`, while `virtual_list/options.rs` owns the

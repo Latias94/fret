@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit List Box Options Owner Split - 2026-06-11
+
+- [x] Split `ListBoxOptions` field, builder, and default ownership out of
+      `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` without changing the public
+      option type, builder surface, default layout height, scroll defaults, `fret-imui` list-box
+      behavior, or crate boundaries.
+      Result: `list_box.rs` is now the public hub, `list_box/options.rs` owns the field contract
+      and builder chain, `list_box/defaults.rs` owns `Default`, `list_box/dimensions.rs` owns the
+      width/height/size helpers, and the IMUI workstream source gate now freezes that
+      hub/options/default split.
+
 ## Fret UI Kit Virtual List Options Owner Split - 2026-06-11
 
 - [x] Split `VirtualListOptions` field/default/debug ownership out of

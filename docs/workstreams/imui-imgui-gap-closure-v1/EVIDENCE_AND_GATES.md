@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit List Box Options Owner Split Evidence - 2026-06-11
+
+Claim verified: `ListBoxOptions` field ownership, builder behavior, and default policy are now
+separate owners. The public option type, builder surface, default layout height, scroll defaults,
+and list-box behavior remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` declares `defaults`,
+  `dimensions`, and `options`, then re-exports `ListBoxOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/list_box/options.rs` owns the public
+  `ListBoxOptions` field contract and builder chain.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/list_box/defaults.rs` owns
+  `impl Default for ListBoxOptions`, including the 160px default height and default `ScrollOptions`
+  policy.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/list_box/dimensions.rs` owns the width,
+  height, and combined size helpers.
+- `tools/gate_imui_workstream_source.py` freezes the hub/options/default/dimensions split and
+  rejects the owner bodies from drifting back into `list_box.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo nextest run -p fret-imui list_box_options_default_projects_layout_and_scroll_fields list_box_container_stamps_semantics_scroll_and_hosts_selectables list_box_options_builder_projects_scroll_and_semantics_fields --no-fail-fast`:
+  pass, 3 passed.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\check_layering.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret UI Kit Virtual List Options Owner Split Evidence - 2026-06-11
 
 Claim verified: `VirtualListOptions` field ownership, debug formatting, and default-value policy
