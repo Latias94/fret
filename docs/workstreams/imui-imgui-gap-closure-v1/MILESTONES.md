@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Kit input text picker defaults owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/picker/options.rs` now keeps the public
+`InputTextPickerOptions` field contract, while `picker/defaults.rs` owns the `Default`
+implementation. Default input options, non-modal popup sizing, filter policy, completion/history
+keyboard navigation defaults, `fret-imui` picker behavior, public APIs, docking, runner, and
+runtime contracts remain unchanged.
+
 2026-06-11 Fret UI Kit textarea defaults owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/options.rs` now keeps the public
 `TextAreaOptions` field contract, while `textarea/defaults.rs` owns the `Default` implementation.

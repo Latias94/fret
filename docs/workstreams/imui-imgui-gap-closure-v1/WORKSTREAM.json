@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-06-10",
+  "updated": "2026-06-11",
   "scope_kind": "execution",
   "lane_slug": "imui-docking",
   "follow_on_of": "imui-editor-grade-product-closure-v1",

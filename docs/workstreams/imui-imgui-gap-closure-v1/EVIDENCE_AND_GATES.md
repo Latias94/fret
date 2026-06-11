@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Input Text Picker Defaults Owner Split Evidence - 2026-06-11
+
+Claim verified: `InputTextPickerOptions` field ownership and default-value policy are now separate
+owners. The public type, popup defaults, filter defaults, and picker behavior remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs` declares `defaults`, `filter`,
+  and `options`, then re-exports `InputTextPickerFilter` and `InputTextPickerOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker/options.rs` owns the public
+  `InputTextPickerOptions` field contract.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker/defaults.rs` owns
+  `impl Default for InputTextPickerOptions`, including input defaults, non-modal popup defaults,
+  estimated popup size, filter policy, max item count, open/empty/exact-match policy, and keyboard
+  navigation defaults.
+- `tools/gate_imui_workstream_source.py` freezes the hub/field/default split and rejects default
+  policy from drifting back into `options.rs`.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_picker_options_smoke --no-fail-fast`:
+  pass, 2 passed.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass, 6 passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\check_layering.py`: pass.
+- `python tools\report_largest_files.py --top 30 --min-lines 800`: pass after rerun with a
+  longer timeout.
+- `git diff --check`: pass.
+
 ## Fret UI Kit Textarea Defaults Owner Split Evidence - 2026-06-11
 
 Claim verified: `TextAreaOptions` field ownership and default-value policy are now separate

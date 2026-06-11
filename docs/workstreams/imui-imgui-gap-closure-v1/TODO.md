@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Input Text Picker Defaults Owner Split - 2026-06-11
+
+- [x] Split `InputTextPickerOptions` default policy out of
+      `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker/options.rs` without changing the
+      public option type, public fields, completion/history picker defaults, popup sizing, filter
+      defaults, keyboard navigation behavior, `fret-imui` facade shape, or crate boundaries.
+      Result: `picker.rs` is the public hub, `picker/options.rs` owns the
+      `InputTextPickerOptions` field contract, and `picker/defaults.rs` owns the `Default`
+      implementation. The IMUI workstream source gate now freezes that field/default split.
+
 ## Fret UI Kit Textarea Defaults Owner Split - 2026-06-11
 
 - [x] Split `TextAreaOptions` default policy out of
