@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Editor theme owner-split result:
+`ecosystem/fret-ui-editor/src/theme.rs` now keeps only the thin hub and public re-exports,
+`theme/presets.rs` owns the preset enum and stable metadata, `theme/install.rs` owns install /
+replay state helpers, `theme/sync.rs` owns the WindowMetrics-driven replay helpers, and
+`theme/patches.rs` keeps the patch bodies. Public editor theme behavior and boundaries remain
+unchanged.
+
 2026-06-11 Fret UI Editor IMUI adapter owner-split result:
 `ecosystem/fret-ui-editor/src/imui/mod.rs` now keeps only the thin hub and shared helper,
 `imui/controls.rs` owns the control adapter forwards, and `imui/composites.rs` owns the composite

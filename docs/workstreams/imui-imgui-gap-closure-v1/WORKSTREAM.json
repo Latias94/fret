@@ -289,7 +289,7 @@
     },
     {
       "name": "imui design surface editor anchors",
-      "command": "rg -n \"EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1\" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
+      "command": "rg -n \"EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1\" ecosystem/fret-ui-editor/src/theme.rs ecosystem/fret-ui-editor/src/theme/presets.rs ecosystem/fret-ui-editor/src/theme/install.rs ecosystem/fret-ui-editor/src/theme/sync.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
     },
     {
       "name": "imui design surface kit anchors",
@@ -1211,6 +1211,9 @@
     "ecosystem/fret-ui-editor/src/imui/controls.rs",
     "ecosystem/fret-ui-editor/src/imui/composites.rs",
     "ecosystem/fret-ui-editor/src/theme.rs",
+    "ecosystem/fret-ui-editor/src/theme/presets.rs",
+    "ecosystem/fret-ui-editor/src/theme/install.rs",
+    "ecosystem/fret-ui-editor/src/theme/sync.rs",
     "ecosystem/fret-ui-editor/src/theme/patches.rs",
     "ecosystem/fret-ui-editor/src/theme/patches/dense.rs",
     "ecosystem/fret-ui-editor/src/theme/tests.rs",

@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Editor Theme Owner Split - 2026-06-11
+
+- [x] Split `ecosystem/fret-ui-editor/src/theme.rs` into dedicated preset, install, sync, and
+      patch owners without changing the public editor theme preset surface, install/replay
+      helpers, or theme patch behavior.
+      Result: `theme.rs` is now a thin hub, `theme/presets.rs` owns the preset enum and metadata,
+      `theme/install.rs` owns install/replay state and helpers, `theme/sync.rs` owns the
+      WindowMetrics-driven replay helpers, and `theme/patches.rs` keeps the patch bodies.
+
 ## Fret UI Editor IMUI Adapter Owner Split - 2026-06-11
 
 - [x] Split the `fret-ui-editor::imui` adapter hub into directory owners without changing the

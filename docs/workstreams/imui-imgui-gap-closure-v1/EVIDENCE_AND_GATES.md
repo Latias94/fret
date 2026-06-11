@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Editor Theme Owner Split Evidence - 2026-06-11
+
+Claim verified: `fret-ui-editor::theme` is now split into a thin hub plus dedicated preset,
+install, sync, and patch owners. The public editor theme preset surface and replay behavior remain
+unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme.rs` declares `install`, `patches`, `presets`, and `sync`,
+  then re-exports the public editor theme helpers.
+- `ecosystem/fret-ui-editor/src/theme/presets.rs` owns the preset enum and stable metadata.
+- `ecosystem/fret-ui-editor/src/theme/install.rs` owns install/replay state and helpers.
+- `ecosystem/fret-ui-editor/src/theme/sync.rs` owns the WindowMetrics-driven replay helpers.
+- `ecosystem/fret-ui-editor/src/theme/patches.rs` keeps the theme patch bodies.
+- `tools/gate_imui_workstream_source.py` freezes the hub/preset/install/sync split and rejects the
+  old monolithic helper bodies from drifting back into `theme.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_metadata_is_stable_for_tools default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome default_preset_resets_dense_numeric_scrub_tokens installed_preset_can_be_reapplied_after_base_theme_reset window_metrics_helper_reapplies_after_host_theme_sync window_metrics_helper_skips_replay_when_host_theme_sync_is_noop window_metrics_helper_ignores_unrelated_global_changes --no-fail-fast`:
+  pass, 8 tests run, 8 passed.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`:
+  pass, 6 tests run, 6 passed.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\check_layering.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret UI Editor IMUI Adapter Owner Split Evidence - 2026-06-11
 
 Claim verified: the `fret-ui-editor::imui` adapter surface is now split into a thin hub plus
