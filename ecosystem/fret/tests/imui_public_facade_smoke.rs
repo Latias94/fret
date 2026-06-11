@@ -2,8 +2,10 @@
 
 use std::sync::Arc;
 
+use fret::WindowId;
 use fret::component::prelude::{Model, Px, UiHost};
 use fret::imui::{
+    docking::{self, DockSpaceElementOptions, DockingRuntime},
     editor::{
         self,
         composites::{PropertyRow, PropertyRowOptions},
@@ -38,6 +40,8 @@ fn root_imui_editor_composites_compile<H: UiHost + 'static>(
         |cx| cx.text("Cube"),
         |_cx| None,
     );
+
+    docking::dock_space_declarative_with(ui, DockSpaceElementOptions::default());
 }
 
 #[test]
@@ -57,4 +61,9 @@ fn root_imui_facade_exposes_editor_composites_and_kit_sugar() {
         .width(Px(180.0))
         .height(Px(72.0))
         .size(Px(220.0), Px(88.0));
+
+    let dock_options = DockSpaceElementOptions::default();
+    assert!(dock_options.test_id.is_none());
+    let runtime = DockingRuntime::new(WindowId::default());
+    let _ = runtime.main_window();
 }
