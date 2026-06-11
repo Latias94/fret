@@ -7,8 +7,15 @@ Last updated: 2026-06-11
 `ecosystem/fret-ui-editor/src/theme.rs` now keeps only the thin hub and public re-exports,
 `theme/presets.rs` owns the preset enum and stable metadata, `theme/install.rs` owns install /
 replay state helpers, `theme/sync.rs` owns the WindowMetrics-driven replay helpers, and
-`theme/patches.rs` keeps the patch bodies. Public editor theme behavior and boundaries remain
-unchanged.
+`theme/patches.rs` keeps the patch hub and shared override dispatch. Public editor theme behavior
+and boundaries remain unchanged.
+
+2026-06-11 editor theme default patch owner-split result:
+`ecosystem/fret-ui-editor/src/theme/patches.rs` now keeps the patch hub and shared override
+dispatch. The private `theme/patches/default.rs` owner contains the default editor patch body,
+`theme/patches/helpers.rs` owns shared metric/color insertion helpers, and
+`theme/patches/dense.rs` remains the dense override owner. Public editor theme preset metadata,
+install/replay behavior, and style/theme picker semantics remain unchanged.
 
 2026-06-11 Fret UI Editor IMUI adapter owner-split result:
 `ecosystem/fret-ui-editor/src/imui/mod.rs` now keeps only the thin hub and shared helper,

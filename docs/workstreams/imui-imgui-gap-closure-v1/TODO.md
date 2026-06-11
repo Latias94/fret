@@ -10,7 +10,15 @@ Last updated: 2026-06-11
       helpers, or theme patch behavior.
       Result: `theme.rs` is now a thin hub, `theme/presets.rs` owns the preset enum and metadata,
       `theme/install.rs` owns install/replay state and helpers, `theme/sync.rs` owns the
-      WindowMetrics-driven replay helpers, and `theme/patches.rs` keeps the patch bodies.
+      WindowMetrics-driven replay helpers, and `theme/patches.rs` keeps the patch hub and shared
+      override dispatch.
+- [x] Split the editor theme patch default body and shared patch insertion helpers into private
+      owners without changing preset metadata, install/replay APIs, dense override behavior, or the
+      style/theme picker proof surface.
+      Result: `theme/patches.rs` keeps the patch hub and shared override dispatch,
+      `theme/patches/default.rs` owns the default editor patch body, `theme/patches/helpers.rs`
+      owns the shared metric/color insertion helpers, and `theme/patches/dense.rs` remains the
+      dense override owner.
 
 ## Fret UI Editor IMUI Adapter Owner Split - 2026-06-11
 

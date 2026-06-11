@@ -16,7 +16,9 @@ Evidence:
 - `ecosystem/fret-ui-editor/src/theme/presets.rs` owns the preset enum and stable metadata.
 - `ecosystem/fret-ui-editor/src/theme/install.rs` owns install/replay state and helpers.
 - `ecosystem/fret-ui-editor/src/theme/sync.rs` owns the WindowMetrics-driven replay helpers.
-- `ecosystem/fret-ui-editor/src/theme/patches.rs` keeps the theme patch bodies.
+- `ecosystem/fret-ui-editor/src/theme/patches.rs` keeps the patch hub and shared override
+  dispatch, while `theme/patches/default.rs`, `theme/patches/helpers.rs`, and
+  `theme/patches/dense.rs` own the body and token helper details.
 - `tools/gate_imui_workstream_source.py` freezes the hub/preset/install/sync split and rejects the
   old monolithic helper bodies from drifting back into `theme.rs`.
 
@@ -32,6 +34,33 @@ Focused gates:
   pass, 6 tests run, 6 passed.
 - `python tools\check_workstream_catalog.py`: pass.
 - `python tools\check_layering.py`: pass.
+- `git diff --check`: pass.
+
+## Editor Theme Default Patch Owner Split Evidence - 2026-06-11
+
+Claim verified: the editor theme default patch body and shared patch insertion helpers moved into
+private owner modules without changing preset metadata, install/replay APIs, dense override
+behavior, or style/theme picker semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme/patches.rs` now keeps the patch hub and shared override
+  dispatch only.
+- `ecosystem/fret-ui-editor/src/theme/patches/default.rs` owns the default editor patch body.
+- `ecosystem/fret-ui-editor/src/theme/patches/helpers.rs` owns the shared metric/color insertion
+  helpers.
+- `ecosystem/fret-ui-editor/src/theme/patches/dense.rs` remains the dense override owner.
+- `tools/gate_imui_workstream_source.py` now freezes the four-way patch split and rejects default
+  patch bodies or shared insertion helpers drifting back into the hub.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_metadata_is_stable_for_tools default_preset_keeps_existing_editor_patch_baseline imgui_like_dense_preset_overrides_density_and_field_chrome default_preset_resets_dense_numeric_scrub_tokens installed_preset_can_be_reapplied_after_base_theme_reset --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
 - `git diff --check`: pass.
 
 ## Fret UI Editor IMUI Adapter Owner Split Evidence - 2026-06-11
