@@ -550,7 +550,7 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
-            Path("apps/fret-examples/src/workspace_shell_demo.rs"),
+            Path("apps/fret-examples/src/workspace_shell_demo/driver.rs"),
             required=[
                 "use fret::{imui::prelude::*, shadcn, shadcn::themes::ShadcnColorScheme};",
                 "imui_build(cx, out, move |ui| {",

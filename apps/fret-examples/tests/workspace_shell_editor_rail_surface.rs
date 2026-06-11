@@ -1,6 +1,6 @@
 #[test]
 fn workspace_shell_demo_composes_editor_rail_through_workspace_frame_slots() {
-    let source = include_str!("../src/workspace_shell_demo.rs");
+    let source = include_str!("../src/workspace_shell_demo/driver.rs");
 
     for needle in [
         "fn workspace_shell_editor_rail<'a, Cx>(",

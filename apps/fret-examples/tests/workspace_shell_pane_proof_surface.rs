@@ -1,6 +1,6 @@
 #[test]
 fn workspace_shell_demo_keeps_shell_mounted_imui_pane_proof_explicit() {
-    let source = include_str!("../src/workspace_shell_demo.rs");
+    let source = include_str!("../src/workspace_shell_demo/driver.rs");
 
     for needle in [
         "struct WorkspaceShellPaneProofState {",

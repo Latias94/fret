@@ -3,6 +3,59 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Workspace Shell Demo Owner Split Evidence - 2026-06-11
+
+Claim verified: `workspace_shell_demo` is now a thin hub plus a dedicated
+`workspace_shell_demo/driver.rs` owner. Public `run` behavior, shell-mounted pane proof, editor
+rail composition, and dirty-close handling remain unchanged.
+
+Evidence:
+
+- `apps/fret-examples/src/workspace_shell_demo.rs` keeps only `mod driver;` and
+  `pub use driver::run;`.
+- `apps/fret-examples/src/workspace_shell_demo/driver.rs` owns the previous route body, state,
+  render, and command handling.
+- `apps/fret-examples/tests/workspace_shell_pane_proof_surface.rs` and
+  `apps/fret-examples/tests/workspace_shell_editor_rail_surface.rs` now inspect the driver owner.
+- `tools/gate_imui_workstream_source.py` freezes both the thin hub and the driver owner.
+- `tools/examples_source_tree_policy/gate.py` and `tools/examples_source_tree_policy/grouped_state.py`
+  now point the workspace-shell source policies at `workspace_shell_demo/driver.rs`.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now lists both the hub and driver
+  source paths.
+
+Focused gates:
+
+- `cargo check -p fret-examples`: pass.
+- `cargo nextest run -p fret-examples --test workspace_shell_pane_proof_surface --test
+  workspace_shell_editor_rail_surface --no-fail-fast`: pass.
+- `python tools/gate_imui_workstream_source.py`: pass.
+- `python tools/check_workstream_catalog.py`: pass.
+- `python -m py_compile tools/examples_source_tree_policy/gate.py
+  tools/examples_source_tree_policy/grouped_state.py`: pass.
+- `git diff --check`: pass.
+
+## Workspace Shell State Owner Split Evidence - 2026-06-11
+
+Claim verified: `workspace_shell_demo/state.rs` now owns the shared window state model, file-tree
+fixture, dirty-close prompt helper, dirty-close policy helper, and shared command constants while
+the driver keeps the render and handler path.
+
+Evidence:
+
+- `apps/fret-examples/src/workspace_shell_demo/state.rs` owns the shared window state model,
+  file-tree fixture, dirty-close prompt helper, dirty-close policy helper, and shared command
+  constants.
+- `apps/fret-examples/src/workspace_shell_demo/driver.rs` imports the state owner and keeps the
+  render/handler path.
+- `apps/fret-examples/tests/workspace_shell_state_surface.rs` now inspects the state owner.
+- `tools/gate_imui_workstream_source.py` freezes the new state owner path.
+- `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` now lists the new state owner
+  source path.
+
+Focused gates:
+
+- `cargo check -p fret-examples`: pass.
+
 ## Fret UI Editor Theme Owner Split Evidence - 2026-06-11
 
 Claim verified: `fret-ui-editor::theme` is now split into a thin hub plus dedicated preset,
@@ -34,6 +87,43 @@ Focused gates:
   pass, 6 tests run, 6 passed.
 - `python tools\check_workstream_catalog.py`: pass.
 - `python tools\check_layering.py`: pass.
+- `git diff --check`: pass.
+
+## Fret UI Editor Theme Test Owner Split Evidence - 2026-06-11
+
+Claim verified: `fret-ui-editor::theme` test coverage is now split into a thin hub plus dedicated
+metadata, preset-baseline, and replay owner files. Public editor theme preset behavior, patch
+behavior, and install/replay helpers remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/theme/tests.rs` imports the shared test dependencies and declares
+  `mod metadata;`, `mod preset_baseline;`, and `mod replay;`.
+- `ecosystem/fret-ui-editor/src/theme/tests/metadata.rs` owns preset metadata assertions and
+  key/label/status checks.
+- `ecosystem/fret-ui-editor/src/theme/tests/preset_baseline.rs` owns the default and ImGui-like
+  dense baseline assertions plus dense token reset coverage.
+- `ecosystem/fret-ui-editor/src/theme/tests/replay.rs` owns install/reapply and
+  WindowMetrics-driven replay assertions.
+- `tools/gate_imui_workstream_source.py` freezes the hub/owner split and rejects the old
+  monolithic test body from drifting back into `theme/tests.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-editor --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-editor editor_theme_preset_metadata_is_stable_for_tools
+  default_preset_keeps_existing_editor_patch_baseline
+  imgui_like_dense_preset_overrides_density_and_field_chrome
+  default_preset_resets_dense_numeric_scrub_tokens
+  installed_preset_can_be_reapplied_after_base_theme_reset
+  window_metrics_helper_reapplies_after_host_theme_sync
+  window_metrics_helper_skips_replay_when_host_theme_sync_is_noop
+  window_metrics_helper_ignores_unrelated_global_changes --no-fail-fast`: pass, 8 tests run, 8
+  passed.
+- `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
 ## Editor Theme Default Patch Owner Split Evidence - 2026-06-11

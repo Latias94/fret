@@ -3,6 +3,26 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Workspace Shell Demo Owner Split - 2026-06-11
+
+- [x] Split `apps/fret-examples/src/workspace_shell_demo.rs` into a thin hub plus
+      `workspace_shell_demo/driver.rs` owner without changing the public `run` entry,
+      shell-mounted pane proof, editor rail composition, dirty-close logic, or diagnostics
+      behavior.
+      Result: `workspace_shell_demo.rs` now keeps only `mod driver;` and `pub use driver::run;`,
+      `workspace_shell_demo/driver.rs` owns the previous route body, the source-surface tests now
+      point at the driver owner, and the workstream source catalog includes both the hub and
+      driver paths.
+
+- [x] Split the workspace shell state and dirty-close owner out of
+      `apps/fret-examples/src/workspace_shell_demo/driver.rs` into
+      `workspace_shell_demo/state.rs` without changing the window state model, file-tree fixture,
+      dirty-close prompt semantics, or dirty-close policy behavior.
+      Result: `workspace_shell_demo/state.rs` now owns the shared window state model, the file-tree
+      fixture, the dirty-close prompt helper, the dirty-close policy helper, and the shared
+      command constants, while `driver.rs` keeps the render/handler path and the workstream source
+      gate freezes the new owner path.
+
 ## Fret UI Editor Theme Owner Split - 2026-06-11
 
 - [x] Split `ecosystem/fret-ui-editor/src/theme.rs` into dedicated preset, install, sync, and
@@ -19,6 +39,15 @@ Last updated: 2026-06-11
       `theme/patches/default.rs` owns the default editor patch body, `theme/patches/helpers.rs`
       owns the shared metric/color insertion helpers, and `theme/patches/dense.rs` remains the
       dense override owner.
+
+- [x] Split `ecosystem/fret-ui-editor/src/theme/tests.rs` into dedicated metadata, preset-baseline,
+      and replay owner files without changing the public editor theme preset surface, patch
+      behavior, or install/replay helpers.
+      Result: `theme/tests.rs` is now a thin hub that owns the shared imports and child-module
+      declarations, `theme/tests/metadata.rs` owns preset metadata assertions,
+      `theme/tests/preset_baseline.rs` owns the default and dense preset baseline assertions, and
+      `theme/tests/replay.rs` owns install/reapply and WindowMetrics-driven replay assertions. The
+      IMUI workstream source gate and source catalog now freeze the new owner split.
 
 ## Fret UI Editor IMUI Adapter Owner Split - 2026-06-11
 

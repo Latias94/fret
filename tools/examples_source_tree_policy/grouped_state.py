@@ -872,11 +872,11 @@ SELECTED_GROUPED_STATE_POLICIES = [
             'LocalState::from_model(app.models_mut().insert(',
         ],
     ),
-    (
-        'workspace_shell_demo.rs',
-        [
-            "fn workspace_shell_command_button<'a, Cx>(",
-            "Cx: fret::app::ElementContextAccess<'a, App>,",
+        (
+            'workspace_shell_demo/driver.rs',
+            [
+                "fn workspace_shell_command_button<'a, Cx>(",
+                "Cx: fret::app::ElementContextAccess<'a, App>,",
             'let cx = cx.elements();',
             'let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =',
             'cx.data().selector_model_layout(',

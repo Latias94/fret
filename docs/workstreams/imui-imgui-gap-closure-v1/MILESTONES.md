@@ -3,6 +3,17 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 workspace_shell_demo owner-split result:
+`apps/fret-examples/src/workspace_shell_demo.rs` is now a thin hub, while
+`apps/fret-examples/src/workspace_shell_demo/driver.rs` owns the previous demo body. The
+shell-mounted pane proof, editor rail composition, and dirty-close handling remain unchanged.
+
+2026-06-11 workspace_shell_demo state owner-split result:
+`apps/fret-examples/src/workspace_shell_demo/state.rs` now owns the shared window state model, the
+file-tree fixture, the dirty-close prompt helper, the dirty-close policy helper, and the shared
+command constants. `driver.rs` keeps the render/handler path and the public route behavior stays
+unchanged.
+
 2026-06-11 Fret UI Editor theme owner-split result:
 `ecosystem/fret-ui-editor/src/theme.rs` now keeps only the thin hub and public re-exports,
 `theme/presets.rs` owns the preset enum and stable metadata, `theme/install.rs` owns install /
@@ -16,6 +27,13 @@ dispatch. The private `theme/patches/default.rs` owner contains the default edit
 `theme/patches/helpers.rs` owns shared metric/color insertion helpers, and
 `theme/patches/dense.rs` remains the dense override owner. Public editor theme preset metadata,
 install/replay behavior, and style/theme picker semantics remain unchanged.
+
+2026-06-11 Fret UI Editor theme test owner-split result:
+`ecosystem/fret-ui-editor/src/theme/tests.rs` now keeps only the shared imports and child-module
+declarations, while `theme/tests/metadata.rs` owns preset metadata assertions,
+`theme/tests/preset_baseline.rs` owns the default and dense preset baseline assertions, and
+`theme/tests/replay.rs` owns install/reapply and WindowMetrics-driven replay assertions. Public
+editor theme behavior, install/replay helpers, and patch behavior remain unchanged.
 
 2026-06-11 Fret UI Editor IMUI adapter owner-split result:
 `ecosystem/fret-ui-editor/src/imui/mod.rs` now keeps only the thin hub and shared helper,

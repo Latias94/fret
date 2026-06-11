@@ -747,7 +747,7 @@ DRIVER_OWNED_SOURCE_SLICES = [
         ["let show = app.models().read(&st.view.show, |v| *v).unwrap_or(true);"],
     ),
     (
-        EXAMPLES_SRC / "workspace_shell_demo.rs",
+        EXAMPLES_SRC / "workspace_shell_demo/driver.rs",
         "fn handle_command(",
         "fn handle_event(",
         ["let prompt = app.models().get_cloned(&state.dirty_close_prompt).flatten();"],
@@ -1171,7 +1171,7 @@ def check_fret_docking_owner_imports(failures: list[Failure]) -> None:
 
 
 def check_workspace_shell_capability_helpers(failures: list[Failure]) -> None:
-    path = EXAMPLES_SRC / "workspace_shell_demo.rs"
+    path = EXAMPLES_SRC / "workspace_shell_demo/driver.rs"
     check_required_forbidden_markers(
         path,
         read_source(path),
