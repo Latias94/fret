@@ -458,8 +458,12 @@ def main() -> None:
             ["DropTargetResponse"],
         ),
         OpaqueStructCheck(
-            Path("ecosystem/fret-ui-kit/src/imui/response/floating.rs"),
-            ["FloatingAreaResponse", "FloatingWindowResponse"],
+            Path("ecosystem/fret-ui-kit/src/imui/response/floating/area.rs"),
+            ["FloatingAreaResponse"],
+        ),
+        OpaqueStructCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/floating/window.rs"),
+            ["FloatingWindowResponse"],
         ),
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/hover/types.rs"),
@@ -34142,6 +34146,23 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/floating.rs"),
             required=[
+                "mod area;",
+                "mod window;",
+                "pub use area::FloatingAreaResponse;",
+                "pub use window::FloatingWindowResponse;",
+            ],
+            forbidden=[
+                "pub struct FloatingAreaResponse",
+                "pub struct FloatingWindowResponse",
+                "pub(crate) id: GlobalElementId",
+                "pub(crate) area: FloatingAreaResponse",
+                "pub id: GlobalElementId",
+                "pub area: FloatingAreaResponse",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/floating/area.rs"),
+            required=[
                 "pub struct FloatingAreaResponse",
                 "pub(crate) id: GlobalElementId",
                 "pub(crate) rect: Option<Rect>",
@@ -34150,11 +34171,33 @@ def main() -> None:
                 "pub(crate) drag_kind: fret_runtime::DragKindId",
                 "pub fn id(self) -> GlobalElementId",
                 "pub fn drag_kind(self) -> fret_runtime::DragKindId",
+            ],
+            forbidden=[
                 "pub struct FloatingWindowResponse",
                 "pub(crate) area: FloatingAreaResponse",
                 "pub fn area(self) -> FloatingAreaResponse",
+                "pub id: GlobalElementId",
+                "pub rect: Option<Rect>",
+                "pub position: Point",
+                "pub dragging: bool",
+                "pub drag_kind: fret_runtime::DragKindId",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/floating/window.rs"),
+            required=[
+                "use super::FloatingAreaResponse;",
+                "pub struct FloatingWindowResponse",
+                "pub(crate) area: FloatingAreaResponse",
+                "pub(crate) size: Option<Size>",
+                "pub(crate) resizing: bool",
+                "pub(crate) collapsed: bool",
+                "pub fn area(self) -> FloatingAreaResponse",
+                "pub fn id(self) -> GlobalElementId",
+                "pub fn drag_kind(self) -> fret_runtime::DragKindId",
             ],
             forbidden=[
+                "pub struct FloatingAreaResponse",
                 "pub id: GlobalElementId",
                 "pub rect: Option<Rect>",
                 "pub position: Point",
