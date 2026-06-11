@@ -1,3 +1,4 @@
+mod defaults;
 mod options;
 mod submit_key;
 

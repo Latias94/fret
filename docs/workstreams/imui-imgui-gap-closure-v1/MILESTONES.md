@@ -3,6 +3,12 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Kit textarea defaults owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/options.rs` now keeps the public
+`TextAreaOptions` field contract, while `textarea/defaults.rs` owns the `Default` implementation.
+Default values, submit/cancel command fields, multiline chrome behavior, `fret-imui` textarea
+policy tests, public APIs, docking, runner, and runtime contracts remain unchanged.
+
 2026-06-11 Fret UI Kit input text defaults owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/options.rs` now keeps the public
 `InputTextOptions` field contract, while `input/defaults.rs` owns the `Default` implementation.

@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Textarea Defaults Owner Split - 2026-06-11
+
+- [x] Split `TextAreaOptions` default policy out of
+      `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/options.rs` without changing
+      the public option type, public fields, default values, multiline command behavior,
+      `fret-imui` facade shape, or crate boundaries.
+      Result: `textarea.rs` is the public hub, `textarea/options.rs` owns the `TextAreaOptions`
+      field contract, and `textarea/defaults.rs` owns the `Default` implementation. The IMUI
+      workstream source gate now freezes that field/default split.
+
 ## Fret UI Kit Input Text Defaults Owner Split - 2026-06-11
 
 - [x] Split `InputTextOptions` default policy out of

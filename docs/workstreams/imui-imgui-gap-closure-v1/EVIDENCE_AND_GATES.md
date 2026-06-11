@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Textarea Defaults Owner Split Evidence - 2026-06-11
+
+Claim verified: `TextAreaOptions` field ownership and default-value policy are now separate
+owners. The public type and default behavior remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea.rs` declares `defaults`,
+  `options`, and `submit_key`, then re-exports `TextAreaOptions` and `TextAreaSubmitKey`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/options.rs` owns the public
+  `TextAreaOptions` field contract.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea/defaults.rs` owns
+  `impl Default for TextAreaOptions`, including min height, submit key, unset command hooks,
+  repeat policy, and stable-line-box default.
+- `tools/gate_imui_workstream_source.py` freezes the hub/field/default split and rejects default
+  policy from drifting back into `options.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --test imui_textarea_smoke`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_textarea_smoke --no-fail-fast`:
+  pass, 1 passed.
+- `cargo nextest run -p fret-imui models_text_area --no-fail-fast`: pass, 8 passed.
+- `cargo nextest run -p fret-ui-kit --features imui textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`:
+  pass, 1 passed after rerun with a longer timeout.
+- `python tools\check_layering.py`: pass.
+
 ## Fret UI Kit Input Text Defaults Owner Split Evidence - 2026-06-11
 
 Claim verified: `InputTextOptions` field ownership and default-value policy are now separate
