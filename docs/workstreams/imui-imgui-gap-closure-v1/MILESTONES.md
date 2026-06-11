@@ -3,6 +3,12 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Editor IMUI adapter owner-split result:
+`ecosystem/fret-ui-editor/src/imui/mod.rs` now keeps only the thin hub and shared helper,
+`imui/controls.rs` owns the control adapter forwards, and `imui/composites.rs` owns the composite
+adapter forwards. Public adapter names, declarative editor behavior, and `fret-ui-editor` crate
+boundaries remain unchanged.
+
 2026-06-11 Fret UI Kit List Box options owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` now keeps only the hub
 declarations and `pub use options::ListBoxOptions;`, while `list_box/options.rs` owns the public

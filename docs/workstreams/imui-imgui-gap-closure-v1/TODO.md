@@ -3,6 +3,15 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Editor IMUI Adapter Owner Split - 2026-06-11
+
+- [x] Split the `fret-ui-editor::imui` adapter hub into directory owners without changing the
+      public adapter surface, editor control forwarding, composite forwarding, or crate
+      boundaries.
+      Result: `imui/mod.rs` is now the thin hub, `imui/controls.rs` owns the control adapters,
+      `imui/composites.rs` owns the composite adapters, and the IMUI workstream source gate now
+      freezes that hub/owner split.
+
 ## Fret UI Kit List Box Options Owner Split - 2026-06-11
 
 - [x] Split `ListBoxOptions` field, builder, and default ownership out of

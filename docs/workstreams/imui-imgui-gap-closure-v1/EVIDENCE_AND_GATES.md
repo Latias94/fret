@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Editor IMUI Adapter Owner Split Evidence - 2026-06-11
+
+Claim verified: the `fret-ui-editor::imui` adapter surface is now split into a thin hub plus
+separate control and composite owner modules. The public adapter names and declarative editor
+behavior remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/imui/mod.rs` declares `composites`, `controls`, and the shared
+  `add_editor_element` helper, then re-exports the adapter functions.
+- `ecosystem/fret-ui-editor/src/imui/controls.rs` owns the editor control adapter forwards.
+- `ecosystem/fret-ui-editor/src/imui/composites.rs` owns the editor composite adapter forwards.
+- `tools/gate_imui_workstream_source.py` freezes the thin-hub/control/composite split and rejects
+  style-stack APIs from drifting into the adapter surface.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-editor --features imui --test imui_adapter_smoke`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test imui_surface_policy --no-fail-fast`:
+  pass, 6 tests run, 6 passed.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\check_layering.py`: pass.
+- `git diff --check`: pass.
+
 ## Fret UI Kit List Box Options Owner Split Evidence - 2026-06-11
 
 Claim verified: `ListBoxOptions` field ownership, builder behavior, and default policy are now

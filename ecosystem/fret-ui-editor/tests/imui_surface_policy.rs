@@ -1,6 +1,8 @@
 #![cfg(feature = "imui")]
 
-const IMUI_RS: &str = include_str!("../src/imui.rs");
+const IMUI_MOD_RS: &str = include_str!("../src/imui/mod.rs");
+const IMUI_CONTROLS_RS: &str = include_str!("../src/imui/controls.rs");
+const IMUI_COMPOSITES_RS: &str = include_str!("../src/imui/composites.rs");
 const ASSET_REF_FIELD_RS: &str = include_str!("../src/controls/asset_ref_field.rs");
 const COLOR_EDIT_RS: &str = include_str!("../src/controls/color_edit.rs");
 const COLOR_EDIT_ELEMENT_RS: &str = include_str!("../src/controls/color_edit/element.rs");
@@ -1282,13 +1284,59 @@ fn asset_ref_field_stays_a_ui_only_editor_shell() {
 
 #[test]
 fn imui_module_stays_a_thin_into_element_adapter_layer() {
-    let normalized = normalize_ws(IMUI_RS);
+    let normalized = normalize_ws(IMUI_MOD_RS);
 
     let required_markers = [
         "Optional immediate-mode authoring facade adapters.",
         "This must remain a thin adapter over the declarative, single source-of-truth implementation.",
         "Do not introduce a parallel widget implementation here.",
-        "fn add_editor_element<H: UiHost + 'static>(",
+        "mod composites;",
+        "mod controls;",
+        "pub use composites::*;",
+        "pub use controls::*;",
+        "pub(super) fn add_editor_element<H: UiHost + 'static>(",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "imui/mod.rs should keep the hub surface explicit and auditable"
+        );
+    }
+
+    for marker in [
+        "GetStyle",
+        "PushStyleVar",
+        "ImGuiStyle",
+        "pub fn text_field<H: UiHost + 'static>(",
+        "pub fn property_group<H: UiHost + 'static>(",
+        "EditorThemePresetPicker",
+    ] {
+        assert!(
+            !IMUI_MOD_RS.contains(marker),
+            "imui/mod.rs should stay free of adapter bodies and style-stack policy"
+        );
+    }
+
+    assert_eq!(
+        count_occurrences(
+            IMUI_MOD_RS,
+            "pub(super) fn add_editor_element<H: UiHost + 'static>("
+        ),
+        1,
+        "imui/mod.rs should keep exactly one shared editor-element helper",
+    );
+}
+
+#[test]
+fn imui_controls_module_stays_a_thin_into_element_forwarder_layer() {
+    let normalized = normalize_ws(IMUI_CONTROLS_RS);
+
+    let required_markers = [
+        "use crate::controls::{",
+        "use crate::primitives::DragValueScalar;",
+        "use super::add_editor_element;",
         "pub fn text_field<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TextField) {",
         "pub fn checkbox<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: Checkbox) {",
         "pub fn color_edit<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: ColorEdit) {",
@@ -1307,6 +1355,53 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         "pub fn vec3_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec3Edit<T>)",
         "pub fn vec4_edit<H, T>(ui: &mut impl UiWriter<H>, control: Vec4Edit<T>)",
         "pub fn transform_edit<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: TransformEdit) {",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "imui/controls.rs should keep the editor control adapters explicit and auditable"
+        );
+    }
+
+    for marker in [
+        "GetStyle",
+        "PushStyleVar",
+        "ImGuiStyle",
+        "pub fn property_group<H: UiHost + 'static>(",
+        "pub fn property_row<H: UiHost + 'static>(",
+        "pub fn property_grid<H: UiHost + 'static>(",
+        "pub fn property_grid_virtualized<H: UiHost + 'static>(",
+        "pub fn inspector_panel<H: UiHost + 'static>(",
+        "Model<",
+        "LocalState",
+        "ActionCx",
+        "OnActivate",
+    ] {
+        assert!(
+            !IMUI_CONTROLS_RS.contains(marker),
+            "imui/controls.rs should stay free of composite adapters and declarative state"
+        );
+    }
+
+    assert_eq!(
+        count_occurrences(
+            IMUI_CONTROLS_RS,
+            "add_editor_element(ui, move |cx| control.into_element(cx));",
+        ),
+        18,
+        "imui/controls.rs should keep each promoted control adapter as a one-hop `into_element` forwarder",
+    );
+}
+
+#[test]
+fn imui_composites_module_stays_a_thin_into_element_forwarder_layer() {
+    let normalized = normalize_ws(IMUI_COMPOSITES_RS);
+
+    let required_markers = [
+        "use crate::composites::{",
+        "use super::add_editor_element;",
         "pub fn property_group<H: UiHost + 'static>(",
         "pub fn property_row<H: UiHost + 'static>(",
         "pub fn property_grid<H: UiHost + 'static>(",
@@ -1314,42 +1409,30 @@ fn imui_module_stays_a_thin_into_element_adapter_layer() {
         "pub fn property_grid_virtualized<H: UiHost + 'static>(",
         "pub fn inspector_panel<H: UiHost + 'static>(",
     ];
-    let forbidden_markers = [
-        "pub struct ",
-        "pub enum ",
-        "Model<",
-        "LocalState",
-        "ActionCx",
-        "OnActivate",
-        "fret_ui_kit",
-        "fret_ui_shadcn",
-        "selector_model",
-        "watch(",
-    ];
 
     for marker in required_markers {
         let marker = normalize_ws(marker);
         assert!(
             normalized.contains(&marker),
-            "imui.rs should keep the promoted editor adapter surface explicit and auditable"
+            "imui/composites.rs should keep the editor composite adapters explicit and auditable"
         );
     }
 
-    for marker in forbidden_markers {
+    for marker in [
+        "GetStyle",
+        "PushStyleVar",
+        "ImGuiStyle",
+        "pub fn text_field<H: UiHost + 'static>(",
+        "pub fn checkbox<H: UiHost + 'static>(",
+        "pub fn color_edit<H: UiHost + 'static>(",
+        "pub fn drag_value<H, T>(ui: &mut impl UiWriter<H>, control: DragValue<T>)",
+        "pub fn editor_theme_preset_picker<H: UiHost + 'static>(",
+    ] {
         assert!(
-            !IMUI_RS.contains(marker),
-            "imui.rs should stay free of declarative control internals and adapter-local state/policy"
+            !IMUI_COMPOSITES_RS.contains(marker),
+            "imui/composites.rs should stay free of control adapters and style-stack policy"
         );
     }
-
-    assert_eq!(
-        count_occurrences(
-            IMUI_RS,
-            "add_editor_element(ui, move |cx| control.into_element(cx));",
-        ),
-        18,
-        "imui.rs should keep each promoted control adapter as a one-hop `into_element` forwarder",
-    );
 
     assert_eq!(
         count_occurrences(

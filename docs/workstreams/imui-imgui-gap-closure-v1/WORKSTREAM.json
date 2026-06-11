@@ -157,7 +157,7 @@
     },
     {
       "name": "imui component surface editor anchors",
-      "command": "rg -n \"pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|asset_ref_field|property_grid|gradient_editor|inspector_panel)\" ecosystem/fret-ui-editor/src/imui.rs"
+      "command": "rg -n \"pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|asset_ref_field|property_grid|gradient_editor|inspector_panel)\" ecosystem/fret-ui-editor/src/imui/mod.rs ecosystem/fret-ui-editor/src/imui/controls.rs ecosystem/fret-ui-editor/src/imui/composites.rs"
     },
     {
       "name": "imui component surface upstream anchors",
@@ -1207,7 +1207,9 @@
     "ecosystem/fret-ui-kit/src/imui/options/controls/value.rs",
     "ecosystem/fret-ui-kit/src/imui/options/controls/value/slider.rs",
     "ecosystem/fret-ui-kit/tests/imui_leaf_control_options_smoke.rs",
-    "ecosystem/fret-ui-editor/src/imui.rs",
+    "ecosystem/fret-ui-editor/src/imui/mod.rs",
+    "ecosystem/fret-ui-editor/src/imui/controls.rs",
+    "ecosystem/fret-ui-editor/src/imui/composites.rs",
     "ecosystem/fret-ui-editor/src/theme.rs",
     "ecosystem/fret-ui-editor/src/theme/patches.rs",
     "ecosystem/fret-ui-editor/src/theme/patches/dense.rs",
