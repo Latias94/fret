@@ -3,6 +3,12 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Kit input text defaults owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/controls/text/input/options.rs` now keeps the public
+`InputTextOptions` field contract, while `input/defaults.rs` owns the `Default` implementation.
+Default values, command/filter fields, text chrome behavior, `fret-imui` text mode/command/filter
+tests, public APIs, docking, runner, and runtime contracts remain unchanged.
+
 2026-06-11 Fret UI Kit IMUI export surface owner-split result:
 `ecosystem/fret-ui-kit/src/imui/exports.rs` now keeps only private export-owner declarations and
 star re-exports, while `exports/debug_draw.rs`, `exports/facade.rs`, `exports/options.rs`,

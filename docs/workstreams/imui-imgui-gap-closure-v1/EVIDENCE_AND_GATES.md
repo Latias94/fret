@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Input Text Defaults Owner Split Evidence - 2026-06-11
+
+Claim verified: `InputTextOptions` field ownership and default-value policy are now separate
+owners. The public type and default behavior remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` declares `defaults`, `mode`, and
+  `options`, then re-exports `InputTextMode` and `InputTextOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/options.rs` owns the public
+  `InputTextOptions` field contract.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/defaults.rs` owns
+  `impl Default for InputTextOptions`, including text-field role, plain-text mode, default filters,
+  unset command hooks, and repeat flags.
+- `tools/gate_imui_workstream_source.py` freezes the hub/field/default split and rejects default
+  policy from drifting back into `options.rs`.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --test imui_input_text_options_smoke`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_input_text_options_smoke --no-fail-fast`:
+  pass, 2 passed.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui input_text_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`:
+  pass, 1 passed.
+- `cargo nextest run -p fret-imui models_text_modes models_text_commands models_text_filters --no-fail-fast`:
+  pass, 11 passed.
+- `python tools\check_layering.py`: pass.
+
 ## Fret UI Kit IMUI Export Surface Owner Split Evidence - 2026-06-11
 
 Claim verified: `exports.rs` no longer owns every IMUI public re-export group inline. The root

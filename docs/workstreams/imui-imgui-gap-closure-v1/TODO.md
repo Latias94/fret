@@ -3,6 +3,16 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Input Text Defaults Owner Split - 2026-06-11
+
+- [x] Split `InputTextOptions` default policy out of
+      `ecosystem/fret-ui-kit/src/imui/options/controls/text/input/options.rs` without changing the
+      public option type, public fields, default values, input text command/filter behavior,
+      `fret-imui` facade shape, or crate boundaries.
+      Result: `input.rs` is the public hub, `input/options.rs` owns the `InputTextOptions` field
+      contract, and `input/defaults.rs` owns the `Default` implementation. The IMUI workstream
+      source gate now freezes that field/default split.
+
 ## Fret UI Kit IMUI Export Surface Owner Split - 2026-06-11
 
 - [x] Split the `ecosystem/fret-ui-kit/src/imui/exports.rs` public re-export surface into private
