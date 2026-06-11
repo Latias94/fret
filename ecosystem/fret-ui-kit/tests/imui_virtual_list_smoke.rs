@@ -42,10 +42,13 @@ fn virtual_list_option_defaults_compile() {
     assert_eq!(options.viewport_height, Px(240.0));
     assert_eq!(options.estimate_row_height, Px(28.0));
     assert_eq!(options.overscan, 6);
+    assert_eq!(options.items_revision, 0);
     assert_eq!(options.measure_mode, VirtualListMeasureMode::Measured);
     assert_eq!(options.key_cache, VirtualListKeyCacheMode::AllKeys);
     assert_eq!(options.keep_alive, 0);
     assert_eq!(options.gap, Px(0.0));
+    assert_eq!(options.scroll_margin, Px(0.0));
+    assert!(options.known_row_height_at.is_none());
     assert!(options.handle.is_none());
     assert!(options.test_id.is_none());
 }

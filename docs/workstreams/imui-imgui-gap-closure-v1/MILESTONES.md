@@ -3,6 +3,13 @@
 Status: Active
 Last updated: 2026-06-11
 
+2026-06-11 Fret UI Kit virtual-list options owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs` now keeps only the hub
+declarations and `pub use options::VirtualListOptions;`, while `virtual_list/options.rs` owns the
+public field contract, `virtual_list/debug.rs` owns the `Debug` impl, and
+`virtual_list/defaults.rs` owns `Default`. Public option names, default values, debug shape,
+virtual-list behavior, `fret-imui`, docking, runner, and runtime contracts remain unchanged.
+
 2026-06-11 Fret UI Kit input text picker defaults owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker/options.rs` now keeps the public
 `InputTextPickerOptions` field contract, while `picker/defaults.rs` owns the `Default`

@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-06-11
 
+## Fret UI Kit Virtual List Options Owner Split Evidence - 2026-06-11
+
+Claim verified: `VirtualListOptions` field ownership, debug formatting, and default-value policy
+are now separate owners. The public type, public fields, default values, debug projection, and
+virtual-list behavior remain unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs` declares `debug`,
+  `defaults`, and `options`, then re-exports `VirtualListOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list/options.rs` owns the public
+  `VirtualListOptions` field contract.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list/debug.rs` owns
+  `impl std::fmt::Debug for VirtualListOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list/defaults.rs` owns
+  `impl Default for VirtualListOptions`.
+- `tools/gate_imui_workstream_source.py` freezes the hub/field/debug/default split and rejects the
+  owner bodies from drifting back into `virtual_list.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --test imui_virtual_list_smoke`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_virtual_list_smoke --no-fail-fast`:
+  pass, 1 passed.
+- `cargo nextest run -p fret-imui composition virtual_list --no-fail-fast`: pass, 38 passed.
+- `python tools\check_workstream_catalog.py`: pass.
+- `python tools\check_layering.py`: pass.
+- `python tools\report_largest_files.py --top 30 --min-lines 800`: pass.
+- `git diff --check`: pass.
+
 ## Fret UI Kit Input Text Picker Defaults Owner Split Evidence - 2026-06-11
 
 Claim verified: `InputTextPickerOptions` field ownership and default-value policy are now separate
