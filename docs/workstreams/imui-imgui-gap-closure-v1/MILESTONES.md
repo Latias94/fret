@@ -1,7 +1,14 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-10
+Last updated: 2026-06-11
+
+2026-06-11 Fret UI Kit drag response core owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/drag.rs` now keeps only the drag response module
+declarations and public re-exports, while `response/drag/core.rs` owns the `DragResponse` core
+record, private mutation helpers, edge merging, and public accessors. Public IMUI response names,
+drag source/drop target response owners, drag/drop behavior, `fret-imui`, docking, runner, and
+runtime contracts remain unchanged.
 
 2026-06-10 Fret Examples collection modularization surface authoring parity owner-split result:
 `apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs` now keeps the single

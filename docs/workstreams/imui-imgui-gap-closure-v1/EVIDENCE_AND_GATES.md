@@ -1,7 +1,36 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-10
+Last updated: 2026-06-11
+
+## Fret UI Kit Drag Response Core Owner Split Evidence - 2026-06-11
+
+Claim verified: `DragResponse` no longer lives in the `response/drag.rs` hub. The hub still exports
+the existing public response names, while `response/drag/core.rs` owns the core drag response
+state and accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/drag.rs` declares the `core`, `source`, and `target`
+  child owners and re-exports `DragResponse`, `DragSourceResponse`, and `DropTargetResponse`.
+- `ecosystem/fret-ui-kit/src/imui/response/drag/core.rs` owns `DragResponse`, its private mutation
+  helpers, edge merge policy, and public `started` / `dragging` / `stopped` / `delta` / `total`
+  accessors.
+- `tools/gate_imui_workstream_source.py` checks the hub/core split and keeps the opaque
+  `DragResponse` body check pointed at the core owner.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `cargo fmt -p fret-ui-kit -- --check`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo check -p fret-ui-kit --features imui --test imui_response_contract_smoke --test imui_drag_drop_smoke`:
+  pass.
+- `python tools\check_layering.py`: pass.
+- `python tools\report_largest_files.py --top 30 --min-lines 800`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke --test imui_drag_drop_smoke --no-fail-fast`:
+  pass, 3 passed.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass, 11 passed.
 
 ## Fret Examples Collection Modularization Surface Authoring Parity Owner Split Evidence - 2026-06-10
 

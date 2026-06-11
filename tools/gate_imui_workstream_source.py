@@ -446,7 +446,7 @@ def main() -> None:
             ],
         ),
         OpaqueStructCheck(
-            Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
+            Path("ecosystem/fret-ui-kit/src/imui/response/drag/core.rs"),
             ["DragResponse"],
         ),
         OpaqueStructCheck(
@@ -65973,10 +65973,22 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
             required=[
+                "mod core;",
                 "mod source;",
                 "mod target;",
+                "pub use core::DragResponse;",
                 "pub use source::DragSourceResponse;",
                 "pub use target::DropTargetResponse;",
+            ],
+            forbidden=[
+                "pub struct DragResponse",
+                "pub struct DragSourceResponse",
+                "pub struct DropTargetResponse",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/response/drag/core.rs"),
+            required=[
                 "pub struct DragResponse {\n    pub(crate) started: bool,\n    pub(crate) dragging: bool,\n    pub(crate) stopped: bool,\n    pub(crate) delta: Point,\n    pub(crate) total: Point,\n}",
                 "pub fn started(self) -> bool",
                 "pub fn dragging(self) -> bool",
