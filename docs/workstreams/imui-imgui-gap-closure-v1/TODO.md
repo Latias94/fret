@@ -3794,6 +3794,13 @@ Last updated: 2026-06-11
       adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.
       Result: `controls/editor_theme_preset_picker.rs` keeps picker rendering and behavior, while
       `controls/editor_theme_preset_picker/options.rs` owns `EditorThemePresetPickerOptions`.
+- [x] Split editor-owned IMUI style/theme preset picker root policy into a private state owner
+      without changing public control names, option fields/defaults, controls re-exports, IMUI
+      adapter callsite, listbox semantics, selected-state behavior, or reversible preset replay.
+      Result: `controls/editor_theme_preset_picker.rs` is now a thin hub that re-exports
+      `EditorThemePresetPickerOptions` and `EditorThemePresetPicker`, while
+      `controls/editor_theme_preset_picker/state.rs` owns preset installation, theme resolution,
+      and render dispatch.
 - [x] Productize the editor-owned IMUI style/theme preset picker rows with stable density status
       labels without adding Dear ImGui `GetStyle`, `PushStyleVar`, a global style stack, or
       `fret-ui-kit::imui` theme-editor policy.

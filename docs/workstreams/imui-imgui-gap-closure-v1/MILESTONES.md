@@ -4305,6 +4305,13 @@ priority over pressed/hover, pressed priority over hover/raw-hover, hover/raw-ho
 disabled text dimming. This keeps the style/theme picker row chrome proof local to the visual owner
 instead of depending only on rendered ListBox behavior tests.
 
+2026-06-11 editor theme preset picker state owner-split result:
+`ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now keeps module
+declarations and public re-exports only. The private `controls/editor_theme_preset_picker/state.rs`
+owner contains preset installation, theme resolution, render dispatch, and picker element
+assembly. Public picker APIs, option defaults, selected-state behavior, reversible preset replay,
+and row/listbox owners remain unchanged.
+
 2026-05-31 editor numeric-input tests child-owner result:
 `ecosystem/fret-ui-editor/src/controls/numeric_input.rs` now keeps numeric input control
 orchestration and test-owner routing. `controls/numeric_input/tests.rs` owns edit line-box and

@@ -14526,6 +14526,31 @@ Focused gates:
 - `python tools\gate_imui_workstream_source.py`: pass.
 - `git diff --check`: pass.
 
+## Editor Theme Preset Picker State Owner Split Evidence - 2026-06-11
+
+Claim verified: editor theme preset picker root policy/install/render dispatch moved into a private
+state owner without changing public picker APIs, option records, listbox semantics, selected-state
+behavior, or reversible preset replay.
+
+Evidence:
+
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` now declares `mod state;`
+  and re-exports `EditorThemePresetPicker` from the state owner.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker/state.rs` owns
+  `EditorThemePresetPicker`, preset installation, theme resolution, and render dispatch.
+- `tools/gate_imui_workstream_source.py` now requires the hub/state split and rejects the moved
+  body from drifting back into the root owner file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-editor -- --check`: pass.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --test
+  imui_surface_policy --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Editor Field-Status Tests Child-Owner Split Evidence - 2026-05-31
 
 Claim verified: editor field-status badge palette regressions split into a private test owner
