@@ -1,6 +1,7 @@
 //! Local view-owned state for the app-facing `View` authoring lane.
 
 use std::any::Any;
+#[cfg(feature = "shadcn")]
 use std::sync::Arc;
 
 use fret_runtime::{Model, ModelStore, ModelUpdateError};
