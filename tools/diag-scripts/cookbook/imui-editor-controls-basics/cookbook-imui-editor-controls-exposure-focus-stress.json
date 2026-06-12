@@ -1,0 +1,180 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook imui editor controls: exposure focus stress",
+    "tags": [
+      "cookbook",
+      "cookbook.imui_editor_controls_basics",
+      "imui",
+      "editor-controls",
+      "numeric-input",
+      "focus",
+      "overlay",
+      "stress"
+    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
+    "target_hints": [
+      "Exercises Exposure NumericInput focus, draft replacement, Enter commit, Escape cancel, and focus handoff with the Asset text-assist overlay.",
+      "Targets the manual report where repeated clicks can appear to freeze or exit without a visible error."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1000.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+      "text": "2.50",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+        "text": "2.50"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+      "text": "-0.75",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+        "text": "-0.75"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+      "text": "bad",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "enter" },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.exposure.input" },
+        "text": "-0.75"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.summary" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "cookbook-imui-editor-controls-exposure-focus-stress.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-imui-editor-controls-exposure-focus-stress"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-imui-editor-controls-exposure-focus-stress"
+    }
+  ]
+}

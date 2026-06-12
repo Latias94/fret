@@ -47,3 +47,17 @@ fn text_assist_max_content_height(
             .then(|| editor_popup_list_default_max_content_height(row_height))
     })
 }
+
+fn should_clear_text_assist_dismissal_on_focus_gain(
+    query: &str,
+    dismissed_query: &str,
+    visible_count: usize,
+    was_focused: bool,
+    is_focused: bool,
+) -> bool {
+    is_focused
+        && !was_focused
+        && !query.trim().is_empty()
+        && query == dismissed_query
+        && visible_count > 0
+}
