@@ -6,10 +6,7 @@ use fret_ui::UiHost;
 use super::super::ImUiTableColumnVisibilityState;
 use crate::imui::{MenuItemOptions, ResponseExt, TableColumn, UiWriterImUiFacadeExt};
 
-pub(in crate::imui::table_column_visibility) fn table_column_visibility_menu_item<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
+pub fn table_column_visibility_menu_item<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     column: &TableColumn,
     model: &Model<ImUiTableColumnVisibilityState>,

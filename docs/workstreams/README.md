@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-06-06
+Catalog updated: 2026-06-12
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -111,13 +111,14 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/P5_CURRENT_IMGUI_CAPABILITY_REBASE_2026-06-12.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`
   - Scope: current source-backed Dear ImGui gap audit and cleanup/prioritization lane. Use this when
     deciding which IMUI gaps are still real, which old parity claims are stale, and which cleanup,
-    perf-discipline, or follow-on should be split next.
+    product-chain, perf-discipline, or follow-on should be split next.
 
 - Closed kit private owner split follow-on:
   - `docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json`
@@ -2215,7 +2216,7 @@ Rule:
 - `docs/workstreams/imui-identity-browser-html-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for offline HTML identity warning browsing)
 - `docs/workstreams/imui-identity-browser-visual-gate-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for offline HTML identity browser smoke gates)
 - `docs/workstreams/imui-identity-browser-fixture-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for committed identity browser sample bundles)
-- `docs/workstreams/imui-imgui-gap-closure-v1/` — first 2026-05-06, latest 2026-05-15, 16 markdown docs (active source-audit lane for rebaselining the Dear ImGui gap against current Fret sources and `repo-ref/imgui` before further fearless cleanup, perf-discipline work, or helper widening)
+- `docs/workstreams/imui-imgui-gap-closure-v1/` — first 2026-05-06, latest 2026-06-12, 19 markdown docs (active source-audit lane for rebaselining the Dear ImGui gap against current Fret sources and `repo-ref/imgui` before further product-chain work, perf-discipline work, or helper widening)
 - `docs/workstreams/imui-kit-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 10 markdown docs (closed narrow follow-on for private `fret-ui-kit::imui` owner splits and proven duplication deletion without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-disclosure-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for disclosure facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-boolean-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for checkbox/radio/switch facade wrapper owner split without public API or runtime contract widening)

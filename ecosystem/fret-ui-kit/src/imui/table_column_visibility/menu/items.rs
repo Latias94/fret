@@ -12,10 +12,7 @@ use super::{
 };
 use crate::imui::{TableColumn, UiWriterImUiFacadeExt};
 
-pub(in crate::imui::table_column_visibility) fn table_column_visibility_menu_items<
-    H: UiHost,
-    W: UiWriterImUiFacadeExt<H> + ?Sized,
->(
+pub fn table_column_visibility_menu_items<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     columns: &[TableColumn],
     model: &Model<ImUiTableColumnVisibilityState>,

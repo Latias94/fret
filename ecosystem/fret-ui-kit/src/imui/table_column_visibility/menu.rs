@@ -12,10 +12,10 @@ mod item;
 mod items;
 
 pub(super) use identity::{menu_column_id, menu_test_id_suffix, visible_menu_label};
-pub(super) use item::table_column_visibility_menu_item;
-pub(super) use items::table_column_visibility_menu_items;
+pub use item::table_column_visibility_menu_item;
+pub use items::table_column_visibility_menu_items;
 
-pub(super) fn table_column_visibility_header_context_menu<
+pub fn table_column_visibility_header_context_menu<
     H: UiHost,
     W: UiWriterImUiFacadeExt<H> + ?Sized,
 >(

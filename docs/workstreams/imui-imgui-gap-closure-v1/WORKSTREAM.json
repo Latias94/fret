@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-06-11",
+  "updated": "2026-06-12",
   "scope_kind": "execution",
   "lane_slug": "imui-docking",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
@@ -64,6 +64,10 @@
     {
       "role": "status",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P5_CURRENT_IMGUI_CAPABILITY_REBASE_2026-06-12.md"
     },
     {
       "role": "execution",
@@ -448,6 +452,7 @@
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P5_CURRENT_IMGUI_CAPABILITY_REBASE_2026-06-12.md",
     "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "ecosystem/fret-imui/Cargo.toml",

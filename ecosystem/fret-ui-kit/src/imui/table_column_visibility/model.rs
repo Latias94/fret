@@ -3,7 +3,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use super::ImUiTableColumnVisibilityState;
 
-pub(super) fn table_column_visibility_use_model<H: UiHost>(
+pub fn table_column_visibility_use_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     controlled: Option<Model<ImUiTableColumnVisibilityState>>,
     default_value: impl FnOnce() -> ImUiTableColumnVisibilityState,

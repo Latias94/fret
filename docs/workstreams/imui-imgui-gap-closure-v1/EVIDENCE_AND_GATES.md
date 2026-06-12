@@ -1,7 +1,32 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-06-11
+Last updated: 2026-06-12
+
+## Current Dear ImGui Capability Rebase Evidence - 2026-06-12
+
+Claim verified: the current active gap is product-chain coherence, diagnostics reachability,
+multi-window hand-feel, and public surface discipline rather than missing basic widget breadth.
+
+Evidence:
+
+- `docs/workstreams/imui-imgui-gap-closure-v1/P5_CURRENT_IMGUI_CAPABILITY_REBASE_2026-06-12.md`
+  records the refreshed source-backed capability read.
+- `ecosystem/fret-imui/src/frontend.rs` keeps the thin facade and identity/closure helpers.
+- `ecosystem/fret-ui-kit/src/imui.rs` and `ecosystem/fret-ui-kit/src/imui/exports.rs` keep the
+  policy/helper and export surfaces outside `crates/fret-ui`.
+- `ecosystem/fret-ui-editor/src/imui/mod.rs`, `controls.rs`, and `composites.rs` keep editor
+  adapters thin over declarative editor controls.
+- `ecosystem/fret/src/lib.rs` exposes the explicit `fret::imui` facade groups.
+- `repo-ref/imgui/imgui.h` and `repo-ref/imgui/imgui_demo.cpp` remain the comparison anchors for
+  Dear ImGui public API breadth and Demo/Metrics/Debug/product examples.
+
+Focused gates:
+
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`
+- `python tools/check_workstream_catalog.py`
+- `python tools/gate_imui_workstream_source.py`
+- `git diff --check`
 
 ## Workspace Shell Demo Owner Split Evidence - 2026-06-11
 

@@ -1,7 +1,13 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-06-11
+Last updated: 2026-06-12
+
+2026-06-12 Dear ImGui capability rebase result:
+`P5_CURRENT_IMGUI_CAPABILITY_REBASE_2026-06-12.md` is now the first-open note for the current
+capability read. It keeps the lane active, but narrows the next work away from broad widget/API
+cloning and toward product-chain coherence, diagnostics reachability, docking/multi-window feel,
+and evidence-gated public surface growth.
 
 2026-06-11 workspace_shell_demo owner-split result:
 `apps/fret-examples/src/workspace_shell_demo.rs` is now a thin hub, while

@@ -1,7 +1,18 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-06-11
+Last updated: 2026-06-12
+
+## Current Dear ImGui Capability Rebase - 2026-06-12
+
+- [x] Rebase the active Dear ImGui capability read against current `fret-imui`,
+      `fret-ui-kit::imui`, `fret-ui-editor::imui`, `fret::imui`, and `repo-ref/imgui`.
+      Result: the current gap is not basic widget breadth. The active pressure is product-chain
+      coherence, Demo/Metrics/Debug discoverability, docking/multi-window hand-feel, and public
+      surface discipline. New public helpers still need proof-led evidence instead of API-name
+      mirroring.
+- [ ] Pick the next narrow slice from the P5 rebase: either product-chain evidence refresh,
+      editor workbench proof deepening, or a follow-on with a specific repro/gate/evidence set.
 
 ## Workspace Shell Demo Owner Split - 2026-06-11
 
