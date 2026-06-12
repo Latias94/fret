@@ -134,8 +134,8 @@ impl TextAssistField {
                         surface_height,
                         ..
                     } = rendered_panel;
-                    inline_panel = match input_id_out.get() {
-                        Some(input_id) => request_text_assist_overlay(
+                    if let Some(input_id) = input_id_out.get() {
+                        request_text_assist_overlay(
                             cx,
                             input_id,
                             field_id_out.get(),
@@ -144,9 +144,10 @@ impl TextAssistField {
                             dismissed_query_model.clone(),
                             panel,
                             surface_height,
-                        ),
-                        None => Some(panel),
-                    };
+                        );
+                    } else {
+                        cx.app.request_redraw(cx.window);
+                    }
                 }
             }
         }

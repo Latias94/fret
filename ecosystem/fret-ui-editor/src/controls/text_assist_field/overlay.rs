@@ -22,9 +22,12 @@ pub(super) fn request_text_assist_overlay<H: UiHost>(
     dismissed_query_model: Model<String>,
     panel: AnyElement,
     surface_height: Px,
-) -> Option<AnyElement> {
+) {
     let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, input_id) else {
-        return Some(panel);
+        // The panel belongs to the overlay layer. If anchor bounds are not available on this
+        // frame, skip it and retry next frame instead of inserting it into layout flow.
+        cx.app.request_redraw(cx.window);
+        return;
     };
     let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
         cx,
@@ -103,7 +106,6 @@ pub(super) fn request_text_assist_overlay<H: UiHost>(
         }));
 
     OverlayController::request(cx, request);
-    None
 }
 
 #[track_caller]
