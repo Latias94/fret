@@ -1,17 +1,20 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, Px};
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle};
+use fret_core::Px;
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::primitives::EditorDensity;
 use crate::primitives::chrome::ResolvedEditorFrameChrome;
 use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::input_group::{
-    editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
-    editor_input_value_text, editor_text_segment,
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
+    editor_input_group_row, editor_input_value_text, editor_text_segment,
 };
-use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
+use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
+
+#[cfg(test)]
+mod tests;
 
 pub(super) struct DragValueScrubFrameArgs {
     pub(super) density: EditorDensity,
@@ -47,8 +50,18 @@ pub(super) fn drag_value_scrub_frame<H: UiHost>(
         value_test_id,
     } = args;
 
-    let theme = Theme::global(&*cx.app);
-    let visuals = EditorWidgetVisuals::new(theme).frame_visuals(
+    let mut scrub_frame = editor_input_group_frame(
+        cx,
+        LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Fill,
+                min_height: Some(Length::Px(density.row_height)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        density,
         scrub_chrome,
         EditorFrameState {
             enabled: true,
@@ -58,37 +71,17 @@ pub(super) fn drag_value_scrub_frame<H: UiHost>(
             open: false,
             semantic: EditorFrameSemanticState::default(),
         },
-    );
-
-    let mut scrub_frame = cx.container(
-        ContainerProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Fill,
-                    min_height: Some(Length::Px(density.row_height)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            padding: scrub_chrome.padding.into(),
-            background: Some(visuals.bg),
-            border: Edges::all(scrub_chrome.border_width),
-            border_color: Some(visuals.border),
-            corner_radii: Corners::all(scrub_chrome.radius),
-            ..Default::default()
-        },
-        move |cx| {
+        move |cx, visuals| {
             let theme = Theme::global(&*cx.app);
             let affix_color = editor_muted_foreground(theme);
-            let divider = visuals.border;
+            let divider = scrub_chrome.border;
             let value_text_el = editor_input_value_text(
                 cx,
                 density,
                 scrub_chrome.text_px,
                 value_text.clone(),
                 visuals.fg,
-                Length::Auto,
+                Length::Fill,
             );
             let mut value = editor_input_group_inset(cx, scrub_chrome.padding, value_text_el);
             if let Some(test_id) = value_test_id.as_ref() {

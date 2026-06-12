@@ -68,6 +68,14 @@
       "timeout_frames": 240
     },
     {
+      "type": "capture_layout_sidecar",
+      "label": "cookbook-imui-editor-controls-roughness-typing-active.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-imui-editor-controls-roughness-typing-active"
+    },
+    {
       "type": "set_text_value",
       "target": {
         "kind": "test_id",
