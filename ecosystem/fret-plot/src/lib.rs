@@ -113,4 +113,17 @@ mod surface_policy_tests {
         assert!(!line_chart.contains("into_canvas("));
         assert!(!line_chart.contains("LinePlotCanvas"));
     }
+
+    #[test]
+    fn plot_panel_default_background_uses_core_theme_surface_background_token() {
+        let panel_paint = include_str!("declarative/panel_paint.rs");
+        assert!(
+            panel_paint
+                .contains("PLOT_PANEL_BACKGROUND_TOKEN: &str = \"color.surface.background\"")
+        );
+        assert!(
+            !panel_paint.contains("color_required(\"surface\")"),
+            "plot panels must not request an undefined bare `surface` color token"
+        );
+    }
 }

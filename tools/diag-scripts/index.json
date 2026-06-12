@@ -648,6 +648,32 @@
       ]
     },
     {
+      "id": "cookbook-imui-plot-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/imui-plot-basics/cookbook-imui-plot-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui-plot"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-plot-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_plot_basics",
+        "imui",
+        "plot",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the IMUI plot lesson root, panel, and model-output readouts.",
+        "Captures screenshot and bundle evidence so startup/theme regressions fail deterministically."
+      ]
+    },
+    {
       "id": "cookbook-markdown-and-code-basics-smoke",
       "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
       "required_capabilities": [

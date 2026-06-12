@@ -29,6 +29,8 @@ use super::selection::{
 };
 use super::series_paint::paint_line_plot_series;
 
+pub(super) const PLOT_PANEL_BACKGROUND_TOKEN: &str = "color.surface.background";
+
 pub(super) fn paint_line_plot_panel(
     painter: &mut CanvasPainter<'_>,
     model: &PlotPanelModel,
@@ -57,9 +59,12 @@ pub(super) fn paint_line_plot_panel(
         return;
     }
 
-    let background = style
-        .background
-        .unwrap_or_else(|| painter.theme().snapshot().color_required("surface"));
+    let background = style.background.unwrap_or_else(|| {
+        painter
+            .theme()
+            .snapshot()
+            .color_required(PLOT_PANEL_BACKGROUND_TOKEN)
+    });
     painter.scene().push(fret_core::SceneOp::Quad {
         order: DrawOrder(0),
         rect: bounds,
