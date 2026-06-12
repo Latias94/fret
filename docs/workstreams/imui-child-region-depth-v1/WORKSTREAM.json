@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-collection-pane-proof-v1",
   "problem": "The closed collection/pane proof lane already proved the pane-first child-region floor, and this follow-on has now closed the narrower `BeginChild()`-scale depth question by landing the bounded `ChildRegionChrome::{Framed, Bare}` slice while freezing that resize, auto-resize, focus-boundary flattening, and begin-return posture still do not belong in generic `fret-ui-kit::imui` on current first-party evidence.",
   "authoritative_docs": [
     {
@@ -122,7 +121,6 @@
     "ecosystem/fret-ui-kit/src/imui/child_region.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers.rs",
     "ecosystem/fret-ui-kit/src/style/layout.rs",
-    "ecosystem/fret-imui/src/tests/composition.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "ecosystem/fret-workspace/src/panes.rs",
@@ -140,5 +138,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "Do not reopen this lane from historical TODO rows. Treat this folder as the closeout record for the landed `ChildRegionChrome::{Framed, Bare}` slice. If future first-party proof still demands generic child-depth behavior beyond the chrome slice, start a different narrower follow-on instead of widening this folder."
-  }
+  },
+  "follow_on_of": "imui-collection-pane-proof-v1"
 }

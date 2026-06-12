@@ -28,11 +28,11 @@
       "path": "docs/workstreams/fret-examples-build-latency-v1/M1_SOURCE_POLICY_AUDIT_2026-04-29.md"
     },
     {
-      "role": "decision",
+      "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M2_DEMO_BUILD_SPLIT_DECISION_2026-04-29.md"
     },
     {
-      "role": "decision",
+      "role": "status",
       "path": "docs/workstreams/fret-examples-build-latency-v1/M3_PROFILE_POLICY_DECISION_2026-04-29.md"
     },
     {

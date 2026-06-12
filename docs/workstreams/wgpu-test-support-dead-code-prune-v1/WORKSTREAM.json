@@ -4,8 +4,7 @@
   "title": "WGPU Test Support Dead Code Prune v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
-  "follow_on_of": "wgpu-renderer-dead-code-prune-followon-v1",
+  "scope_kind": "closeout",
   "problem": "The only remaining fret-render-wgpu dead_code allowance lived in integration-test support because readback-only test crates imported the whole default scene-render support module without using render_scene_rgba8.",
   "authoritative_docs": [
     {
@@ -21,11 +20,11 @@
       "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/HANDOFF.md"
     },
     {
@@ -81,11 +80,17 @@
     "crates/fret-render-wgpu/tests/composite_group_conformance.rs",
     "crates/fret-render-wgpu/tests/output_srgb_transfer_conformance.rs",
     "crates/fret-render-wgpu/tests/path_base_conformance.rs",
-    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/DESIGN.md",
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/TODO.md",
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {
     "default_action": "stay_closed",
     "notes": "The final dead_code allowance is removed. Larger WGPU conformance harness consolidation should use a separate fixture-driven follow-on."
-  }
+  },
+  "follow_on_of": "wgpu-renderer-dead-code-prune-followon-v1"
 }

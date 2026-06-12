@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "follow_on_of": "fret-node-paint-root-cached-edge-label-build-state-adapter-v1",
   "problem": "Move cached edge and edge-label build-state temporary scene construction behind a named build-state helper while keeping clip-op construction, replay sinks, cache keys, route-input adapters, and overlays as separate follow-ons.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -60,13 +59,12 @@
   "evidence": [
     "docs/workstreams/fret-node-paint-root-cached-edge-label-build-state-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/DESIGN.md",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/temp_scene.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/step.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges/single.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/edges/tiled.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/labels/single.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/labels/tiled.rs",
-    "ecosystem/fret-node/src/lib.rs"
+    "ecosystem/fret-node/src/lib.rs",
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/TODO.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/HANDOFF.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
@@ -75,5 +73,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed. Start a separate operation-family follow-on for cache-local clip-op construction/merge cleanup, overlay routing, or another retained paint-root cleanup surface."
-  }
+  },
+  "follow_on_of": "fret-node-paint-root-cached-edge-label-build-state-adapter-v1"
 }

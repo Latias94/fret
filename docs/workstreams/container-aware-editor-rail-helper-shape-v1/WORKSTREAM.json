@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-11",
   "scope_kind": "execution",
-  "follow_on_of": "container-aware-editor-rail-surface-v1",
   "problem": "The previous lane closed after proving two shell-mounted editor-rail consumers. What remained was the narrower question of whether those two consumers now justify a shared helper below any future public extraction, or whether the wrapper layer should stay explicit and app-local.",
   "authoritative_docs": [
     {
@@ -84,7 +83,8 @@
     "docs/adr/0156-workspace-shell-tabs-and-pane-layout.md"
   ],
   "continue_policy": {
-    "default_action": "new_follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed on a no-new-helper verdict. Reopen only through a narrower follow-on when repeated container-aware rail behavior exists beyond the already-owned shell seam and inner editor content."
-  }
+  },
+  "follow_on_of": "container-aware-editor-rail-surface-v1"
 }

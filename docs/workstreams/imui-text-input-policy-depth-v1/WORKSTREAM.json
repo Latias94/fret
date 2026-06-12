@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-04",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Close the next Dear ImGui-class text input gap without turning `fret-imui` into a monolithic widget library: runtime text controls own mechanism-level read-only and multiline Tab behavior, while `fret-ui-kit::imui` owns immediate-mode authoring options such as focus-time selection and opt-in AllowTabInput policy.",
   "authoritative_docs": [
     {
@@ -25,7 +24,7 @@
       "path": "docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/imui-text-input-policy-depth-v1/GOAL_BACKWARD_AUDIT_2026-05-04.md"
     },
     {
@@ -75,23 +74,23 @@
       "name": "workspace layering",
       "command": "python tools/check_layering.py"
     },
-        {
-            "name": "workstream json",
-            "command": "python -m json.tool docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json"
-        },
-        {
-            "name": "workstream catalog",
-            "command": "python tools/check_workstream_catalog.py"
-        },
-        {
-            "name": "skills anchors and symbols",
-            "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
-        },
-        {
-            "name": "diff check",
-            "command": "git diff --check"
-        }
-    ],
+    {
+      "name": "workstream json",
+      "command": "python -m json.tool docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "skills anchors and symbols",
+      "command": "python .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols"
+    },
+    {
+      "name": "diff check",
+      "command": "git diff --check"
+    }
+  ],
   "evidence": [
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui_widgets.cpp",
@@ -99,14 +98,17 @@
     "ecosystem/fret-ui-kit/src/imui/facade_support.rs",
     "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
     "ecosystem/fret-imui/src/frontend.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
     "apps/fret-cookbook/examples/imui_action_basics.rs",
     "apps/fret-cookbook/src/lib.rs",
     "docs/workstreams/imui-text-input-policy-depth-v1/GOAL_BACKWARD_AUDIT_2026-05-04.md",
     "docs/workstreams/imui-text-input-policy-depth-v1/CLOSEOUT_AUDIT_2026-05-04.md",
     "crates/fret-ui/src/text/input/widget.rs",
     "crates/fret-ui/src/text/area/widget.rs",
-    "crates/fret-ui/src/declarative/tests/interactions/text_area.rs"
+    "crates/fret-ui/src/declarative/tests/interactions/text_area.rs",
+    "docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md",
+    "docs/workstreams/imui-text-input-policy-depth-v1/TODO.md",
+    "docs/workstreams/imui-text-input-policy-depth-v1/MILESTONES.md",
+    "docs/workstreams/imui-text-input-policy-depth-v1/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -115,5 +117,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This bounded text-input policy-depth lane is closed. Keep text editing mechanism in `crates/fret-ui`; keep IMUI policy flags and authoring defaults in `ecosystem/fret-ui-kit::imui`; start narrower follow-ons for editor-owned ranking/storage, active-descendant picker accessibility, numeric scalar input editing, or multiline wrapping/no-horizontal-scroll flags."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

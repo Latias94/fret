@@ -4,7 +4,7 @@
   "title": "Material 3 ChipSet Roving Packet v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed the ChipSet matrix residual by recording direct root-selector, group semantics, roving focus, trailing-action focus handoff, and chip visual diagnostics evidence without moving the policy into kit or changing crates/*.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/material3-chip-set-roving-packet-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-chip-set-roving-packet-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-chip-set-roving-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-chip-set-roving-packet-v1/HANDOFF.md"
     }
   ],
@@ -79,13 +79,19 @@
     "docs/workstreams/material3-chip-set-roving-packet-v1/artifacts/chip_set_roving_packet_v1.md",
     "repo-ref/compose-multiplatform-core/compose/material3/material3/samples/src/main/java/androidx/compose/material3/samples/ChipSamples.kt",
     "repo-ref/base-ui/packages/react/src/toolbar/root/ToolbarRoot.tsx",
-    "repo-ref/base-ui/packages/react/src/internals/composite/root/useCompositeRoot.ts"
+    "repo-ref/base-ui/packages/react/src/internals/composite/root/useCompositeRoot.ts",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/TODO.md",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/MILESTONES.md",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-chip-set-roving-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "ChipSet is closed for current root selector, group semantics, roving focus, and trailing-action handoff evidence. Extract to fret-ui-kit only after another design-system consumer proves the same policy should be shared."
   }
 }

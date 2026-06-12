@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-13",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-imgui-gap-closure-v1",
   "problem": "Reduce the structural risk in `fret-ui-kit::imui` by splitting large policy owners and deleting local duplication while keeping `fret-imui` thin, preserving the current app-facing `fret::imui` surface, and avoiding runtime contract widening.",
   "authoritative_docs": [
     {
@@ -55,6 +54,10 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-kit-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md"
     }
   ],
   "repro": {
@@ -133,5 +136,6 @@
   "continue_policy": {
     "default_action": "stay_closed",
     "notes": "Treat this lane as closed history for the private `fret-ui-kit::imui` owner splits landed in M1-M4. Start `imui-facade-disclosure-owner-split-v1` for disclosure wrappers, and separate follow-ons for additive widgets, debug draw feature growth, docking/multi-window behavior, or runtime public API changes."
-  }
+  },
+  "follow_on_of": "imui-imgui-gap-closure-v1"
 }

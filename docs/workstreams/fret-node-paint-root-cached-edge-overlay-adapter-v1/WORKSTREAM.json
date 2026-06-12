@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "follow_on_of": "fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1",
   "problem": "Move cached edge selected/hovered overlay route ownership behind a named adapter while keeping anchor target, fallback uncached rendering, replay, cache keys, route-input adapters, and build-state helpers as separate follow-ons.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -60,19 +59,20 @@
   "evidence": [
     "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/DESIGN.md",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/overlay_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/overlay_retained_cx.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/single_rect.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/tile_path.rs",
     "ecosystem/fret-node/src/lib.rs",
-    "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/TODO.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-overlay-adapter-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "start_narrow_follow_on",
+    "default_action": "start_follow_on",
     "notes": "Lane closed after CEAO-020/CEAO-030. Keep anchor target, fallback uncached rendering, replay, cache keys, route-input adapters, and build-state helpers as separate follow-ons."
-  }
+  },
+  "follow_on_of": "fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1"
 }

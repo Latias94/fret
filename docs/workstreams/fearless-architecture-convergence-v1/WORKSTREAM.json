@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "lane_slug": "framework-boundaries",
   "problem": "Coordinate the six fearless architecture cuts without reopening closed broad lanes or mixing runtime mechanisms, ecosystem policy, low-level adapters, and launch posture into one unreviewable refactor.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/fearless-architecture-convergence-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fearless-architecture-convergence-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -59,7 +58,11 @@
     "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md",
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
     "crates/fret-ui/src/lib.rs",
-    "ecosystem/fret-node/Cargo.toml"
+    "ecosystem/fret-node/Cargo.toml",
+    "docs/workstreams/fearless-architecture-convergence-v1/TODO.md",
+    "docs/workstreams/fearless-architecture-convergence-v1/MILESTONES.md",
+    "docs/workstreams/fearless-architecture-convergence-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fearless-architecture-convergence-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
@@ -69,5 +72,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue this coordinator while the six cuts are being split into owner lanes. Each implementation-heavy slice should live in its own narrow workstream or existing active lane."
-  }
+  },
+  "lane_slug": "framework-boundaries"
 }

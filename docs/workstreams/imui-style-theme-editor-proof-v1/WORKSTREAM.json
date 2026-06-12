@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-editor-workbench-golden-path-v1",
   "problem": "Dear ImGui exposes a style editor and mutable style stack, but Fret's architecture keeps runtime theme mechanics separate from editor/component policy. This lane adds the narrow editor-owned proof surface: stable preset metadata, reversible editor theme preset switching, and a thin IMUI adapter over a declarative editor control.",
   "authoritative_docs": [
     {
@@ -29,7 +28,7 @@
       "path": "docs/workstreams/imui-style-theme-editor-proof-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     },
     {
-      "role": "upstream_route",
+      "role": "reference",
       "path": "docs/workstreams/imui-editor-workbench-golden-path-v1/WORKSTREAM.json"
     },
     {
@@ -76,7 +75,6 @@
     "ecosystem/fret-ui-editor/src/theme.rs",
     "ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
-    "ecosystem/fret-ui-editor/src/imui.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-examples/src/editor_notes_device_shell_demo.rs",
     "apps/fret-examples/src/lib.rs",
@@ -84,7 +82,13 @@
     "ecosystem/fret-ui-editor/tests/imui_adapter_smoke.rs",
     "apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs",
     "tools/gate_imui_workstream_source.py",
-    "docs/workstreams/imui-style-theme-editor-proof-v1/EVIDENCE_AND_GATES.md"
+    "docs/workstreams/imui-style-theme-editor-proof-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-style-theme-editor-proof-v1/DESIGN.md",
+    "docs/workstreams/imui-style-theme-editor-proof-v1/TODO.md",
+    "docs/workstreams/imui-style-theme-editor-proof-v1/MILESTONES.md",
+    "docs/workstreams/imui-style-theme-editor-proof-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/imui-editor-workbench-golden-path-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -93,5 +97,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed for editor-owned theme preset metadata, picker control, IMUI adapter, and canonical workbench integration. Do not move Dear ImGui `GetStyle`, `PushStyleVar`, global mutable style stacks, or style editor policy into `crates/fret-ui` or `fret-ui-kit::imui`; start a new follow-on for additional editor-owned theme tooling."
-  }
+  },
+  "follow_on_of": "imui-editor-workbench-golden-path-v1"
 }

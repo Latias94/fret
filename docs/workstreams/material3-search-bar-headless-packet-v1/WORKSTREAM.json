@@ -4,7 +4,7 @@
   "title": "Material 3 SearchBar Headless Automation Packet v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed the remaining Material3 SearchBar follow-on by confirming stable automation selectors and headless goldens across schemes and scales, without adding a gallery script or moving policy into crates/*.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/material3-search-bar-headless-packet-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-search-bar-headless-packet-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-search-bar-headless-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-search-bar-headless-packet-v1/HANDOFF.md"
     }
   ],
@@ -77,13 +77,18 @@
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
     "docs/workstreams/material3-search-view-state-packet-v1/artifacts/search_view_source_packet_v1.md",
     "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt",
-    "goldens/material3-headless/v1/material3-search-bar.*.json"
+    "docs/workstreams/material3-search-bar-headless-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-search-bar-headless-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-search-bar-headless-packet-v1/TODO.md",
+    "docs/workstreams/material3-search-bar-headless-packet-v1/MILESTONES.md",
+    "docs/workstreams/material3-search-bar-headless-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-search-bar-headless-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "SearchBar is a closed recipe primitive. SearchView overlay and presentation remain in their own closed packet. If new visual or interaction drift appears later, start a narrower follow-on instead of reopening this lane."
   }
 }

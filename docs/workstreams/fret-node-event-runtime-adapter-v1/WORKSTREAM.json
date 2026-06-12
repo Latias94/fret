@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "follow_on_of": "fret-node-low-level-adapter-v1",
   "problem": "Split the retained `EventCx` widget entrypoint from node graph event routing so route orchestration can move behind a named runtime adapter instead of depending on retained widget authoring.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/fret-node-event-runtime-adapter-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-event-runtime-adapter-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -58,18 +57,19 @@
     "docs/workstreams/fret-node-event-runtime-adapter-v1/DESIGN.md",
     "docs/workstreams/fret-node-event-runtime-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
-    "ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/event_router.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs",
-    "ecosystem/fret-node/src/lib.rs"
+    "ecosystem/fret-node/src/lib.rs",
+    "docs/workstreams/fret-node-event-runtime-adapter-v1/TODO.md",
+    "docs/workstreams/fret-node-event-runtime-adapter-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-event-runtime-adapter-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-event-runtime-adapter-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "Do not reopen this lane. Use fret-node-paint-prepaint-adapter-v1 for paint/prepaint, or open a fresh route-policy audit lane for pointer/keyboard/context-menu route trait cleanup."
-  }
+  },
+  "follow_on_of": "fret-node-low-level-adapter-v1"
 }

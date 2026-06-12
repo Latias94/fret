@@ -4,7 +4,7 @@
   "title": "WGPU Output sRGB Transfer Conformance Harness Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "The output sRGB transfer WGPU conformance test duplicates RGBA8 readback and pixel helpers already owned by the shared integration-test support module. The duplication hides the format-specific transfer evidence inside local mechanics instead of the test body.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/HANDOFF.md"
     },
     {
@@ -63,7 +63,12 @@
   "evidence": [
     "crates/fret-render-wgpu/tests/support/mod.rs",
     "crates/fret-render-wgpu/tests/output_srgb_transfer_conformance.rs",
-    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/workstreams/renderer-effects-semantics-and-extensibility-v1/todo.md"

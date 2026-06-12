@@ -12,15 +12,15 @@
       "path": "docs/workstreams/icon-install-error-reporting-v1/DESIGN.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/icon-install-error-reporting-v1/BASELINE_AUDIT_2026-04-09.md"
     },
     {
-      "role": "decision",
+      "role": "status",
       "path": "docs/workstreams/icon-install-error-reporting-v1/M1_CONTRACT_FREEZE_2026-04-09.md"
     },
     {
-      "role": "proof",
+      "role": "status",
       "path": "docs/workstreams/icon-install-error-reporting-v1/M2_PROOF_SURFACE_2026-04-09.md"
     },
     {

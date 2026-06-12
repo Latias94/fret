@@ -4,7 +4,7 @@
   "title": "Render Text Dead Code Prune v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "fret-render-text retained three dead_code allowances after text measurement and hit-testing had moved to shared measurement and prepared-line geometry owners.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/render-text-dead-code-prune-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/render-text-dead-code-prune-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/render-text-dead-code-prune-v1/HANDOFF.md"
     },
     {
@@ -79,7 +79,12 @@
     "crates/fret-render-text/src/wrapper_boundaries.rs",
     "crates/fret-render-text/src/geometry.rs",
     "crates/fret-render-wgpu/src/text/queries.rs",
-    "docs/workstreams/render-text-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/render-text-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/render-text-dead-code-prune-v1/DESIGN.md",
+    "docs/workstreams/render-text-dead-code-prune-v1/TODO.md",
+    "docs/workstreams/render-text-dead-code-prune-v1/MILESTONES.md",
+    "docs/workstreams/render-text-dead-code-prune-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/render-text-dead-code-prune-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

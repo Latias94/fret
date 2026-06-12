@@ -5,8 +5,6 @@
   "status": "active",
   "updated": "2026-05-24",
   "scope_kind": "execution",
-  "lane_slug": "editor-canvas",
-  "follow_on_of": "editor-canvas-paint-replay-fast-path-v1",
   "problem": "After the r65 fast-path closeout, the parent owner still remains canvas-paint-replay. The remaining evidence points at Canvas exclusive and paint.widget overhead outside row setup, so this lane attributes and reduces that residual without reopening the closed row-setup or no-overlay fast-path slices.",
   "authoritative_docs": [
     {
@@ -18,19 +16,19 @@
       "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/HANDOFF.md"
     },
     {
-      "role": "parent",
+      "role": "reference",
       "path": "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
     }
   ],
@@ -112,7 +110,9 @@
     "crates/fret-ui/src/canvas.rs",
     "ecosystem/fret-code-editor/src/editor/mod.rs",
     "ecosystem/fret-code-editor/src/editor/paint/mod.rs",
-    "ecosystem/fret-code-editor/src/editor/paint/scene.rs"
+    "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/DESIGN.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
   ],
   "adr_refs": [
     "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md",
@@ -122,5 +122,7 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "The r65 fast-path lane is closed, and the remaining owner is being split with `paint.canvas_on_paint`; keep this lane bounded until the residual boundary is proven."
-  }
+  },
+  "follow_on_of": "editor-canvas-paint-replay-fast-path-v1",
+  "lane_slug": "editor-canvas"
 }

@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-24",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-interaction-inspector-v1",
   "problem": "`imui-interaction-inspector-v1` landed a product-facing response inspector but explicitly deferred full diag automation. This follow-on owns one promoted diagnostics gate that drives a real response edge and asserts the inspector-visible state without widening public IMUI or runtime contracts.",
   "authoritative_docs": [
     {
@@ -82,7 +81,6 @@
     }
   ],
   "evidence": [
-    "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
     "apps/fret-examples/src/lib.rs",
     "tools/diag-scripts/ui-editor/imui/imui-interaction-showcase-inspector-response-gate.json",
     "tools/diag-scripts/suites/imui-interaction-inspector-diag-gate/suite.json",
@@ -101,5 +99,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed after landing one promoted inspector response diag gate. Start a narrower follow-on for broader response automation, second-surface reuse, or public/runtime response contract work."
-  }
+  },
+  "follow_on_of": "imui-interaction-inspector-v1"
 }

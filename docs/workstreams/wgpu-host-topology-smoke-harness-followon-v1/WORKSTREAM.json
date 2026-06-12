@@ -4,7 +4,7 @@
   "title": "WGPU Host Topology Smoke Harness Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "The host-provided GPU topology smoke test duplicated RGBA8 readback and pixel helpers already owned by the shared integration-test support module. The duplication made the host-topology evidence noisier without adding behavior coverage.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/HANDOFF.md"
     },
     {
@@ -63,7 +63,12 @@
   "evidence": [
     "crates/fret-render-wgpu/tests/support/mod.rs",
     "crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs",
-    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0010-wgpu-context-ownership.md",

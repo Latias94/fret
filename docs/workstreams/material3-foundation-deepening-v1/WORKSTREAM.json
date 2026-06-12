@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-31",
   "scope_kind": "execution",
-  "follow_on_of": "material3-visual-behavior-layout-parity-v2",
   "problem": "Material3 has useful foundation modules, but Material context, field-family chrome, and token matrix outcomes are still shallow enough that RTL, field geometry, and token drift fixes can spread across large recipe modules.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/material3-foundation-deepening-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-foundation-deepening-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-foundation-deepening-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-foundation-deepening-v1/HANDOFF.md"
     },
     {
@@ -116,7 +115,10 @@
     "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/selection.rs",
     "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/navigation.rs",
     "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/overlays.rs",
-    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/surfaces.rs"
+    "ecosystem/fret-ui-material3/src/tokens/visual_fixtures/surfaces.rs",
+    "docs/workstreams/material3-foundation-deepening-v1/MILESTONES.md",
+    "docs/workstreams/material3-foundation-deepening-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-foundation-deepening-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0032-style-tokens-and-theme-resolution.md",
@@ -125,7 +127,8 @@
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "Material context, field-family chrome, and token matrix fixture interfaces were deepened and verified. Continue token resolver/fallback policy in the material3-token-resolver-fallback-v1 follow-on instead of reopening this lane."
-  }
+  },
+  "follow_on_of": "material3-visual-behavior-layout-parity-v2"
 }

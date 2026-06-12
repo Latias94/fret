@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-24",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-response-status-lifecycle-v1",
   "problem": "`imui-response-status-lifecycle-v1` landed the first private `ResponseExt` lifecycle vocabulary, but the edit lifecycle proof still needed a promoted diagnostics gate and the editor-proof scripts had drifted from the shipped demo semantics. This follow-on owns the narrow repro/gate/evidence closure without widening public IMUI, `fret-ui-kit::imui`, or runtime APIs.",
   "authoritative_docs": [
     {
@@ -91,7 +90,6 @@
     }
   ],
   "evidence": [
-    "apps/fret-examples/src/imui_response_signals_demo.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "tools/diag-scripts/ui-editor/imui/imui-response-signals-edit-lifecycle-gate.json",
     "tools/diag-scripts/ui-editor/imui/imui-editor-proof-drag-value-outcomes.json",
@@ -104,7 +102,8 @@
     "docs/workstreams/imui-edit-lifecycle-diag-gate-v1/MILESTONES.md",
     "docs/workstreams/imui-edit-lifecycle-diag-gate-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/imui-edit-lifecycle-diag-gate-v1/CLOSEOUT_AUDIT_2026-04-24.md",
-    "docs/workstreams/imui-edit-lifecycle-diag-gate-v1/WORKSTREAM.json"
+    "docs/workstreams/imui-edit-lifecycle-diag-gate-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
@@ -112,5 +111,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed after adding the narrow edit lifecycle diag gates and fixing the proof surfaces they rely on. Start a narrower follow-on for additional lifecycle coverage, public `fret-imui` widening, or runtime contract changes."
-  }
+  },
+  "follow_on_of": "imui-response-status-lifecycle-v1"
 }

@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "execution",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The immediate-mode product-closure umbrella already narrowed the remaining P0/P1 backlog, but collection-first and pane-first proof breadth still lacks a dedicated owner: Fret needs a narrow follow-on that can validate asset-grid/file-browser style collection proof, child-region/pane composition proof, and any directly justified helper widening without reopening runtime growth, shell-helper promotion, key ownership, or multi-window runner parity.",
   "authoritative_docs": [
     {
@@ -138,8 +137,6 @@
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region.rs",
-    "ecosystem/fret-ui-editor/src/imui.rs",
-    "ecosystem/fret-imui/src/tests/interaction.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
@@ -152,12 +149,12 @@
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
-    "docs/adr/0042-scroll-contract-and-scrollbar-ownership.md",
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0084-virtualized-accessibility-and-collection-semantics.md"
   ],
   "continue_policy": {
-    "default_action": "close",
+    "default_action": "stay_closed",
     "notes": "This lane is closed. Reuse it as the closeout record for the shipped M2/M3 collection-first and pane-first proof pair. Do not widen `child_region`, do not add a narrower collection/pane demo split, and do not add a narrower pane-only diagnostics path here by default. If future pressure shifts to key ownership, shell-helper promotion, broader menu/tab policy, or runner/backend multi-window parity, start or resume a different narrow lane instead of reopening this folder."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

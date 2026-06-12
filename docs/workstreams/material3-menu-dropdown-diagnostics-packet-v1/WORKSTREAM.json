@@ -4,7 +4,7 @@
   "title": "Material 3 Menu And Dropdown Diagnostics Packet v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "diagnostics_follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed the Menu and DropdownMenu matrix residuals by adding dedicated Material3 focus/dismiss diagnostics and revalidating chrome-fill, selector, dismiss/restore, pressed-scene, and style override gates.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/TODO.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/HANDOFF.md"
     }
   ],
@@ -72,13 +72,18 @@
     "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-focus-dismiss.json",
     "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-menu-item-chrome-fill.json",
     "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/artifacts/menu_dropdown_diagnostics_packet_v1.md",
-    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/TODO.md",
+    "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-menu-dropdown-diagnostics-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "Menu and DropdownMenu are closed for dedicated Material3 gallery diagnostics. Keep shared dismiss/focus overlay policy in fret-ui-kit."
   }
 }

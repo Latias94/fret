@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-28",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-control-geometry-stability-v1",
   "problem": "Fret IMUI has explicit `ui.id` / `ui.push_id` and keyed iteration, but it does not yet provide Dear ImGui-style label identity ergonomics (`Label##suffix`, `Label###stable_id`, `##hidden_id`) for label-bearing controls. This makes same-visible-label controls and dynamic labels more verbose than Dear ImGui and leaves the historical identity TODO without an active owner.",
   "authoritative_docs": [
     {
@@ -88,7 +87,6 @@
     "docs/workstreams/imui-label-identity-ergonomics-v1/CLOSEOUT_AUDIT_2026-04-28.md",
     "Cargo.toml",
     "ecosystem/fret-imui/src/frontend.rs",
-    "ecosystem/fret-imui/src/tests/label_identity.rs",
     "ecosystem/fret-ui-kit/src/imui/label_identity.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
@@ -102,7 +100,11 @@
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",
-    "repo-ref/imgui/imgui_widgets.cpp"
+    "repo-ref/imgui/imgui_widgets.cpp",
+    "docs/workstreams/imui-label-identity-ergonomics-v1/DESIGN.md",
+    "docs/workstreams/imui-label-identity-ergonomics-v1/TODO.md",
+    "docs/workstreams/imui-label-identity-ergonomics-v1/MILESTONES.md",
+    "docs/workstreams/imui-label-identity-ergonomics-v1/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -111,5 +113,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed after covering the admitted label-bearing IMUI control helpers. Start a narrower follow-on for runtime ID-stack debugging, table-header policy, localization, test-id inference, or future label-bearing helpers instead of reopening this folder broadly."
-  }
+  },
+  "follow_on_of": "imui-control-geometry-stability-v1"
 }

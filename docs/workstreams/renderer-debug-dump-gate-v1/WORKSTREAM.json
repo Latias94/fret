@@ -4,7 +4,7 @@
   "title": "Renderer Debug Dump Gate v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "Render-plan and text debug dumps duplicated the same native frame-gate and dump-directory mechanism, creating drift risk between dump surfaces.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/renderer-debug-dump-gate-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/renderer-debug-dump-gate-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/renderer-debug-dump-gate-v1/HANDOFF.md"
     },
     {
@@ -70,7 +70,12 @@
     "crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs",
     "crates/fret-render-wgpu/src/renderer/render_text_dump.rs",
     "crates/fret-render-wgpu/src/renderer/mod.rs",
-    "docs/workstreams/renderer-debug-dump-gate-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/renderer-debug-dump-gate-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/renderer-debug-dump-gate-v1/DESIGN.md",
+    "docs/workstreams/renderer-debug-dump-gate-v1/TODO.md",
+    "docs/workstreams/renderer-debug-dump-gate-v1/MILESTONES.md",
+    "docs/workstreams/renderer-debug-dump-gate-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/renderer-debug-dump-gate-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

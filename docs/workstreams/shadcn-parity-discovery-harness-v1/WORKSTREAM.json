@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-11",
   "scope_kind": "execution",
-  "lane_slug": "shadcn-parity",
   "problem": "Build a proactive shadcn parity discovery loop that maps upstream shadcn facts to Fret UI Gallery evidence and classifies drift before users have to report screenshots by hand.",
   "authoritative_docs": [
     {
@@ -25,7 +24,7 @@
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v1/SECOND_SWEEP_AUDIT_2026-05-10.md"
     }
   ],
@@ -168,7 +167,11 @@
     "ecosystem/fret-ui-shadcn/src/drawer.rs",
     "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/mechanism_harness.rs",
     "ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json",
-    "docs/mechanism-harness-v2.md"
+    "docs/mechanism-harness-v2.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/DESIGN.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/TODO.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/MILESTONES.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v1/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -177,5 +180,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue this lane until the discovery report format has at least four components, two viewport classes, and a stable promotion rule for diag scripts, component fixtures, and mechanism harness cases. The M4a shell-sizing fix has passing targeted root-cause unit gates, passing lightweight Drawer/Popover mechanism harness cases, and fresh post-fix UI Gallery responsive combobox reports with zero mismatches. M4b adds a runner-level effective viewport predicate/script and report-level upstream_contexts metadata so responsive parity can separate runner drift from component or mechanism geometry. M4c adds derived triage scoring, top_findings, and a suite manifest/summary so future sweeps can prioritize high-confidence runner/mechanism findings without hand-running every report command."
-  }
+  },
+  "lane_slug": "shadcn-parity"
 }

@@ -4,7 +4,7 @@
   "title": "Material3 Tabs Stacked Icon v1",
   "status": "closed",
   "updated": "2026-05-30",
-  "scope_kind": "follow_on",
+  "scope_kind": "closeout",
   "problem": "Material3 Tabs supported label-only and leading-icon tab items, but did not expose the Compose generic Tab(icon, text) stacked shape with the 72dp large tab height.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/material3-tabs-stacked-icon-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-tabs-stacked-icon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-tabs-stacked-icon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-tabs-stacked-icon-v1/HANDOFF.md"
     }
   ],
@@ -71,7 +71,12 @@
     "ecosystem/fret-ui-material3/src/tokens/tabs.rs",
     "ecosystem/fret-ui-material3/src/tokens/v30.rs",
     "ecosystem/fret-ui-material3/tests/tabs_state.rs",
-    "docs/workstreams/material3-tabs-stacked-icon-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    "docs/workstreams/material3-tabs-stacked-icon-v1/CLOSEOUT_AUDIT_2026-05-30.md",
+    "docs/workstreams/material3-tabs-stacked-icon-v1/DESIGN.md",
+    "docs/workstreams/material3-tabs-stacked-icon-v1/TODO.md",
+    "docs/workstreams/material3-tabs-stacked-icon-v1/MILESTONES.md",
+    "docs/workstreams/material3-tabs-stacked-icon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-tabs-stacked-icon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

@@ -4,7 +4,7 @@
   "title": "Material 3 Dialog Diagnostics Packet v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "diagnostics_follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed the Dialog matrix residual by adding dedicated Material3 Dialog UI Gallery diagnostics evidence for modal barrier, panel/scrim selectors, Dialog role, Escape dismissal, and focus restore.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/TODO.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-dialog-diagnostics-packet-v1/HANDOFF.md"
     }
   ],
@@ -66,13 +66,18 @@
     "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-dialog-focus-trap-restore.json",
     "tools/diag-scripts/suites/ui-gallery-material3-dialog-focus-trap-restore/suite.json",
     "docs/workstreams/material3-dialog-diagnostics-packet-v1/artifacts/dialog_diagnostics_packet_v1.md",
-    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-dialog-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-dialog-diagnostics-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-dialog-diagnostics-packet-v1/TODO.md",
+    "docs/workstreams/material3-dialog-diagnostics-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-dialog-diagnostics-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "Dialog is closed for dedicated Material3 gallery diagnostics. Keep modal policy in fret-ui-kit and recipe selectors/visual tokens in fret-ui-material3."
   }
 }

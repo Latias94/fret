@@ -4,7 +4,7 @@
   "title": "Diagnostics Platform Capabilities Environment Admission",
   "status": "closed",
   "updated": "2026-04-26",
-  "scope_kind": "narrow-follow-on",
+  "scope_kind": "closeout",
   "problem": "Add one source-scoped diagnostics environment admission surface for launch-time platform capability posture so Wayland-only docking campaigns can skip honestly on non-Wayland hosts.",
   "authoritative_docs": [
     {
@@ -16,7 +16,7 @@
       "path": "docs/workstreams/diag-platform-capabilities-environment-v1/TODO.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/diag-platform-capabilities-environment-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -53,10 +53,15 @@
     "crates/fret-diag/src/registry/campaigns.rs",
     "crates/fret-diag/src/diag_campaign.rs",
     "tools/diag-campaigns/imui-p3-wayland-real-host.json",
-    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
+    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+    "docs/workstreams/diag-platform-capabilities-environment-v1/DESIGN.md",
+    "docs/workstreams/diag-platform-capabilities-environment-v1/TODO.md",
+    "docs/workstreams/diag-platform-capabilities-environment-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/diag-platform-capabilities-environment-v1/CLOSEOUT_AUDIT_2026-04-26.md"
   ],
+  "adr_refs": [],
   "continue_policy": {
-    "default_action": "do_not_reopen",
+    "default_action": "stay_closed",
     "notes": "This follow-on only admits platform.capabilities for exact launch-time platform posture checks. Do not widen requires_environment into generic boolean expressions here; open a new narrow lane if a third source or combination semantics becomes necessary."
   }
 }

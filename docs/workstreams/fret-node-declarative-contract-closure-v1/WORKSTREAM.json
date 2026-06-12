@@ -16,15 +16,15 @@
       "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/HANDOFF.md"
     },
     {
@@ -32,16 +32,41 @@
       "path": "docs/workstreams/fret-node-declarative-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-28.md"
     }
   ],
-  "current_task": null,
-  "next_task": null,
+  "repro": {
+    "summary": "First-open repro for fret-node-declarative-contract-closure-v1; see the lane gates for the runnable surface.",
+    "commands": [
+      "cargo nextest run -p fret-node --no-default-features retained_node_graph_current_guidance_stays_declarative"
+    ]
+  },
   "gates": [
-    "cargo nextest run -p fret-node --no-default-features retained_node_graph_current_guidance_stays_declarative",
-    "cargo nextest run -p fret-node --no-default-features",
-    "cargo nextest run -p fret-node",
-    "cargo nextest run -p fret-canvas",
-    "cargo fmt --check",
-    "python3 tools/check_layering.py",
-    "python3 tools/check_workstream_catalog.py"
+    {
+      "name": "nextest",
+      "command": "cargo nextest run -p fret-node --no-default-features retained_node_graph_current_guidance_stays_declarative"
+    },
+    {
+      "name": "nextest",
+      "command": "cargo nextest run -p fret-node --no-default-features"
+    },
+    {
+      "name": "nextest",
+      "command": "cargo nextest run -p fret-node"
+    },
+    {
+      "name": "nextest",
+      "command": "cargo nextest run -p fret-canvas"
+    },
+    {
+      "name": "cargo-fmt",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "python3-tools-check-layering-py",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
   ],
   "evidence": [
     "docs/workstreams/fret-node-declarative-contract-closure-v1/DESIGN.md",
@@ -51,9 +76,11 @@
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md",
     "docs/adr/0135-node-graph-canvas-middleware.md",
     "ecosystem/fret-node/src/surface_policy_tests.rs",
-    "ecosystem/fret-node/src/runtime/store.rs",
     "ecosystem/fret-node/src/ui/binding.rs",
-    "ecosystem/fret-node/src/ui/declarative/paint_only.rs"
+    "ecosystem/fret-node/src/ui/declarative/paint_only.rs",
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-declarative-contract-closure-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
@@ -64,13 +91,15 @@
     "docs/adr/0135-node-graph-canvas-middleware.md",
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md"
   ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Do not reopen closed retained lanes; split pointer/command hook expansion, ReactFlow facade work, semantic focus tree work, or deeper cache/scene-plan extraction into narrower follow-ons."
+  },
+  "current_task": null,
+  "next_task": null,
   "dependencies": [
     "docs/workstreams/fret-node-architecture-fearless-refactor-v2",
     "docs/workstreams/fret-node-runtime-store-contract-closure-v1",
     "docs/workstreams/fret-node-retained-exit-and-parity-seams-v1"
-  ],
-  "continue_policy": {
-    "default_action": "split_follow_on",
-    "notes": "This lane is closed. Do not reopen closed retained lanes; split pointer/command hook expansion, ReactFlow facade work, semantic focus tree work, or deeper cache/scene-plan extraction into narrower follow-ons."
-  }
+  ]
 }

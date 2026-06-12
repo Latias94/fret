@@ -20,11 +20,11 @@
       "path": "docs/workstreams/text-bootstrap-platform-owner-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/text-bootstrap-platform-owner-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/text-bootstrap-platform-owner-v1/HANDOFF.md"
     },
     {
@@ -76,7 +76,12 @@
   "evidence": [
     "crates/fret-render-wgpu/src/text/bootstrap.rs",
     "crates/fret-render-wgpu/src/text/bootstrap/platform.rs",
-    "docs/workstreams/text-bootstrap-platform-owner-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/text-bootstrap-platform-owner-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/text-bootstrap-platform-owner-v1/DESIGN.md",
+    "docs/workstreams/text-bootstrap-platform-owner-v1/TODO.md",
+    "docs/workstreams/text-bootstrap-platform-owner-v1/MILESTONES.md",
+    "docs/workstreams/text-bootstrap-platform-owner-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/text-bootstrap-platform-owner-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

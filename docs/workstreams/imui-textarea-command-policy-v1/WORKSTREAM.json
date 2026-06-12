@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-06",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-text-input-policy-depth-v1",
   "problem": "Close the Fret-native multiline submit/cancel command-policy gap by adding app-owned textarea command routing to `fret-ui-kit::imui::TextAreaOptions`, without widening `crates/fret-ui::TextAreaProps` or adding Dear ImGui mutable-buffer callbacks.",
   "authoritative_docs": [
     {
@@ -89,9 +88,12 @@
     "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
     "ecosystem/fret-ui-kit/tests/imui_textarea_smoke.rs",
-    "ecosystem/fret-imui/src/tests/models_text_area.rs",
     "docs/audits/imui-imgui-gap-audit-2026-04-22.md",
-    "docs/workstreams/imui-textarea-command-policy-v1/CLOSEOUT_AUDIT_2026-05-06.md"
+    "docs/workstreams/imui-textarea-command-policy-v1/CLOSEOUT_AUDIT_2026-05-06.md",
+    "docs/workstreams/imui-textarea-command-policy-v1/DESIGN.md",
+    "docs/workstreams/imui-textarea-command-policy-v1/TODO.md",
+    "docs/workstreams/imui-textarea-command-policy-v1/MILESTONES.md",
+    "docs/workstreams/imui-textarea-command-policy-v1/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
@@ -99,5 +101,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This multiline submit/cancel command-routing slice is closed. Future textarea work should start as narrower follow-ons for editor-owned multiline undo stacks, selection/range APIs, richer IME/platform semantics, or Ctrl+Enter newline policies if app pressure proves that contract."
-  }
+  },
+  "follow_on_of": "imui-text-input-policy-depth-v1"
 }

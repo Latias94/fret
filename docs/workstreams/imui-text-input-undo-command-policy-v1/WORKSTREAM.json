@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-04",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-text-input-policy-depth-v1",
   "problem": "Close the Fret-native equivalent of Dear ImGui `InputText` undo/redo shortcut policy by adding opt-in app-owned undo/redo command hooks to single-line `fret-ui-kit::imui` input text options, without inventing an internal text undo stack or exposing mutable-buffer callbacks.",
   "authoritative_docs": [
     {
@@ -79,8 +78,12 @@
     "repo-ref/imgui/imgui_widgets.cpp",
     "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
-    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md",
+    "docs/workstreams/imui-text-input-undo-command-policy-v1/DESIGN.md",
+    "docs/workstreams/imui-text-input-undo-command-policy-v1/TODO.md",
+    "docs/workstreams/imui-text-input-undo-command-policy-v1/MILESTONES.md",
+    "docs/workstreams/imui-text-input-undo-command-policy-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-text-input-undo-command-policy-v1/CLOSEOUT_AUDIT_2026-05-04.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -89,5 +92,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This undo/redo command-routing slice is closed. The first visible completion/history picker recipe is tracked by `imui-text-input-picker-recipe-v1`. Start separate follow-ons for active-descendant picker keyboard navigation, deeper multiline behavior, or app/editor undo stack integration; do not add a runtime-owned text undo stack merely to mimic Dear ImGui's active-buffer implementation."
-  }
+  },
+  "follow_on_of": "imui-text-input-policy-depth-v1"
 }

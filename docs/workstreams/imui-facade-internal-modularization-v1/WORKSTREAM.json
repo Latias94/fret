@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "execution",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The remaining immediate-mode parity pressure is now dominated by narrow policy/proof lanes, but `ecosystem/fret-ui-kit::imui` still concentrates too much internal ownership in a few large files. Fret needs a narrow follow-on that reduces refactor hazard by modularizing the immediate facade internals without widening public surface, reopening runtime contracts, or conflating internal structure cleanup with menu/tab policy depth, collection breadth, or key-owner follow-ons.",
   "authoritative_docs": [
     {
@@ -153,14 +152,17 @@
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime",
     "ecosystem/fret-ui-kit/src/imui/options.rs",
     "ecosystem/fret-ui-kit/src/imui/response.rs",
-    "apps/fret-examples/src/lib.rs"
+    "apps/fret-examples/src/lib.rs",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json",
+    "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "new_follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed. Future work should open a narrower follow-on for writer-family decomposition, additive helper surface, stronger menu/tab policy, collection interaction depth, or runtime changes rather than reopening this generic internal modularization folder."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

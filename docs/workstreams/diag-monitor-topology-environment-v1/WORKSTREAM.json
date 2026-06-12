@@ -91,7 +91,6 @@
     "crates/fret-runtime/src/runner_monitor_topology_diagnostics.rs",
     "crates/fret-runtime/src/lib.rs",
     "crates/fret-launch/src/runner/desktop/runner/app_handler.rs",
-    "crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",

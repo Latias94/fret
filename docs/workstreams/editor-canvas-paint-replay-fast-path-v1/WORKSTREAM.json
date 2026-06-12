@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-24",
   "scope_kind": "execution",
-  "follow_on_of": "editor-canvas-paint-replay-row-setup-v1",
   "problem": "After the r64 row-setup attribution closeout, the parent owner remains canvas-paint-replay. Planned no-overlay row replay still entered the general paint_row setup path before replaying retained ops. This lane makes retained row scene fragments preserve capture bounds so matching no-overlay planned replay rows can replay by bounds-preserving translation and return early.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/HANDOFF.md"
     },
     {
@@ -33,7 +32,7 @@
       "path": "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/CLOSEOUT_AUDIT_2026-05-24.md"
     },
     {
-      "role": "parent",
+      "role": "reference",
       "path": "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
     }
   ],
@@ -117,11 +116,12 @@
     "ecosystem/fret-code-editor/src/editor/paint/mod.rs",
     "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
-    "cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit planned_replay_rows_with_selection_still_paint_overlay retained_row_scene_origin_preserves_bounds_offset --features syntax-rust --no-fail-fast",
-    "cargo check -p fret-code-editor --tests --features syntax-rust",
-    "cargo check -p fret-code-editor --tests",
-    "cargo fmt -p fret-code-editor --check",
-    "python tools/check_workstream_catalog.py"
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/DESIGN.md",
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/TODO.md",
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/MILESTONES.md",
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/HANDOFF.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
   ],
   "adr_refs": [
     "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md",
@@ -129,7 +129,8 @@
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "Closed after r65 target-machine validation, attribution, artifact verification, and closeout. The no-overlay planned replay fast path is retained as a baseline-neutral cleanup. The closeout still selects owner=canvas-paint-replay, so follow-up work belongs in a new bounded lane."
-  }
+  },
+  "follow_on_of": "editor-canvas-paint-replay-row-setup-v1"
 }

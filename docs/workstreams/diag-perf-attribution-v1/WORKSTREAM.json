@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-21",
   "scope_kind": "execution",
-  "lane_slug": "diagnostics-performance",
   "problem": "Make Fret performance evidence explainable and reviewable by keeping stats, diffs, triage, gates, and trace artifacts versioned, additive-only, source-labeled, and tied to runnable repros. This lane owns attribution tooling, not the underlying UI hot-path optimizations.",
   "authoritative_docs": [
     {
@@ -17,11 +16,11 @@
       "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-todo.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-milestones.md"
     },
     {
-      "role": "field-inventory",
+      "role": "reference",
       "path": "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md"
     }
   ],
@@ -102,7 +101,8 @@
     "apps/fret-devtools-mcp/src/native.rs",
     "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1.md",
     "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-todo.md",
-    "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md"
+    "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-field-inventory.md",
+    "docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1-milestones.md"
   ],
   "adr_refs": [
     "docs/adr/0095-renderer-perf-snapshot-and-stress-harness.md"
@@ -110,5 +110,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue here for attribution artifact contracts, schema hygiene, and trace/diff/triage tooling. Split separate implementation lanes for UI hot-path optimizations, platform-specific perf baselines, or real-span tracing if the work requires runtime-wide instrumentation."
-  }
+  },
+  "lane_slug": "diagnostics-performance"
 }

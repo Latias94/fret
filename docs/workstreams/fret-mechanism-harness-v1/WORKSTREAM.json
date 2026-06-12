@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-24",
   "scope_kind": "execution",
-  "lane_slug": "framework-boundaries",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
     {
@@ -29,55 +28,55 @@
       "path": "docs/workstreams/fret-mechanism-harness-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-12.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-14.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-15.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-16.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-17.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-18.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-19.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-20.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-21.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-22.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-23.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-24.md"
     }
   ],
@@ -1341,129 +1340,171 @@
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json > $null"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json > $null"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json > $null"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null"
     },
     {
+      "name": "python-tools-check-diag-scripts",
       "command": "python tools/check_diag_scripts_registry.py --write"
     },
     {
+      "name": "python-tools-check-diag-scripts",
       "command": "python tools/check_diag_scripts_registry.py"
     },
     {
+      "name": "rustfmt-edition-2024-check-apps",
       "command": "rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs apps/fret-ui-gallery/src/ui/snippets/textarea/mod.rs apps/fret-ui-gallery/src/ui/pages/textarea.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-ui-shadcn/src/textarea.rs apps/fret-ui-gallery/tests/textarea_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
     },
     {
+      "name": "cargo-build-profile-dev-fast",
       "command": "cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn textarea_required_builder_sets_textarea_required_semantics --lib -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn textarea_aria_invalid_builder_sets_textarea_invalid_semantics --lib -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_page_documents_source_axes_and_leaf_children_api_decision -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_snippets_keep_the_docs_path_examples_and_leaf_surface -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_diag_scripts_cover_docs_path_and_label_follow_up -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_page_uses_typed_doc_sections_for_app_facing_snippets -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface -- --nocapture"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json --dir target/fret-diag-textarea-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-textarea-semantics --dir target/fret-diag-textarea-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn input_otp_slot_part_aria_invalid_sets_hidden_input_semantics_invalid --lib -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn input_otp_required_builder_exposes_required_semantics --lib -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_otp_invalid_required_semantics -- --nocapture"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json --dir target/fret-diag-input-otp-invalid-required-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-input-otp-semantics --dir target/fret-diag-input-otp-semantics-suite-v2 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json > $null"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json > $null"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json > $null"
     },
     {
+      "name": "python-m-json-tool-tools",
       "command": "python -m json.tool tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json > $null"
     },
     {
+      "name": "rustfmt-edition-2024-check-apps",
       "command": "rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs apps/fret-ui-gallery/src/ui/snippets/date_picker/mod.rs apps/fret-ui-gallery/src/ui/pages/date_picker.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn date_picker_required_exposes_required_semantics --lib -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-shadcn date_picker_aria_invalid_exposes_invalid_semantics --lib -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_date_picker_required_invalid_semantics -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy -- --nocapture"
     },
     {
+      "name": "cargo-test",
       "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json --dir target/fret-diag-date-picker-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json --dir target/fret-diag-select-invalid-form-state-click-hardening-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker-semantics --dir target/fret-diag-date-picker-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "target-dev-fast-fretboard-dev",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2 --session-auto --timeout-ms 2400000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
@@ -1538,24 +1579,78 @@
       "name": "ui-gallery-toggle-group-disabled-item-row-suite",
       "command": "target/dev-fast/fretboard-dev.exe diag suite --glob 'tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json' --dir target/fret-diag-toggle-group-disabled-item-suite-glob-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
-    "crates/fret-ui/src/declarative/host_widget/semantics.rs",
-    "crates/fret-ui/src/declarative/tests/semantics.rs",
-    "ecosystem/fret-ui-shadcn/src/menubar.rs",
-    "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs",
-    "apps/fret-ui-gallery/src/spec.rs",
-    "apps/fret-ui-gallery/src/driver/runtime_driver.rs",
-    "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json",
-    "tools/diag-scripts/ui-gallery-menubar-disabled-item-action-state.json",
-    "tools/diag-scripts/suites/ui-gallery-menubar-semantics/suite.json",
-    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json",
-    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json",
-    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json",
-    "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json",
-    "tools/diag-scripts/suites/ui-gallery-context-menu/suite.json",
-    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json",
-    "tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json",
-    "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json",
-    "tools/diag-scripts/suites/ui-gallery-vlist-retained-action-state/suite.json",
+    {
+      "name": "crates-fret-ui-src-declarative",
+      "command": "crates/fret-ui/src/declarative/host_widget/semantics.rs"
+    },
+    {
+      "name": "crates-fret-ui-src-declarative",
+      "command": "crates/fret-ui/src/declarative/tests/semantics.rs"
+    },
+    {
+      "name": "ecosystem-fret-ui-shadcn-src",
+      "command": "ecosystem/fret-ui-shadcn/src/menubar.rs"
+    },
+    {
+      "name": "apps-fret-ui-gallery-src",
+      "command": "apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs"
+    },
+    {
+      "name": "apps-fret-ui-gallery-src",
+      "command": "apps/fret-ui-gallery/src/spec.rs"
+    },
+    {
+      "name": "apps-fret-ui-gallery-src",
+      "command": "apps/fret-ui-gallery/src/driver/runtime_driver.rs"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery-menubar-disabled-item-action-state.json"
+    },
+    {
+      "name": "tools-diag-scripts-suites-ui",
+      "command": "tools/diag-scripts/suites/ui-gallery-menubar-semantics/suite.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json"
+    },
+    {
+      "name": "tools-diag-scripts-suites-ui",
+      "command": "tools/diag-scripts/suites/ui-gallery-context-menu/suite.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json"
+    },
+    {
+      "name": "tools-diag-scripts-suites-ui",
+      "command": "tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json"
+    },
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json"
+    },
+    {
+      "name": "tools-diag-scripts-suites-ui",
+      "command": "tools/diag-scripts/suites/ui-gallery-vlist-retained-action-state/suite.json"
+    },
     {
       "name": "ui-gallery-resizable-moving-cached-popover-outside-press-diag",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json --dir target/fret-diag-resizable-moving-popover-outside-press-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe"
@@ -1564,7 +1659,10 @@
       "name": "ui-gallery-resizable-suite-popover-outside-press",
       "command": "target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-popover-outside-press-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
-    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json",
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json"
+    },
     {
       "name": "ui-gallery-context-menu-basic-typeahead-reload-diag",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json --dir target/fret-diag-context-menu-basic-typeahead-reload-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe"
@@ -1573,7 +1671,10 @@
       "name": "ui-gallery-context-menu-suite-typeahead-reload",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-typeahead-reload-v1 --session-auto --include-triage --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
-    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json",
+    {
+      "name": "tools-diag-scripts-ui-gallery",
+      "command": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json"
+    },
     {
       "name": "ui-gallery-context-menu-submenu-typeahead-name-window-diag",
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json --dir target/fret-diag-context-menu-submenu-typeahead-name-window-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe"
@@ -1765,59 +1866,31 @@
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json",
     "tools/diag-scripts/ui-gallery-combobox-placement-ownership-scroll-rtl.json",
     "tools/diag-scripts/suites/ui-gallery-combobox/suite.json",
-    "target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/script.result.json",
-    "target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/1778879725145/ai.packet",
-    "target/fret-diag-combobox-placement-ownership-scroll-rtl-v3/sessions/1778879722585-104312/share/1778879725145.zip",
-    "target/fret-diag-combobox-suite-placement-ownership-v1/sessions/1778879747388-60292/suite.summary.json",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs",
-    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs",
     "apps/fret-ui-gallery/src/ui/snippets/dialog/nested_combobox.rs",
     "apps/fret-ui-gallery/src/ui/pages/dialog.rs",
     "tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json",
     "tools/diag-scripts/ui-gallery-dialog-nested-combobox-modal-boundary.json",
-    "tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json",
-    "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/script.result.json",
-    "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json",
-    "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip",
-    ".fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/script.result.json",
-    ".fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/share/1778914891818.zip",
-    ".fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/script.result.json",
-    ".fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/share/1778919283142.zip",
     "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
     "tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json",
-    ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json",
-    ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip",
     "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json",
-    "target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/script.result.json",
-    "target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/1779029357027/ai.packet",
-    "target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/share/1779029357027.zip",
     "tools/check_diag_scripts_registry.py",
     "tools/test_check_diag_scripts_registry.py",
     "tools/diag-scripts/suites/ui-gallery-hover-card/suite.json",
-    "target/fret-diag-hover-card-strict-authoring-v1/sessions/1779002136522-139728/suite.summary.json",
     "tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json",
-    "target/fret-diag-menubar-placement-strict-authoring-v1/sessions/1779003319016-117380/suite.summary.json",
     "tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json",
-    "target/fret-diag-dropdown-menu-strict-authoring-v2/sessions/1779004799053-142764/suite.summary.json",
     "tools/diag-scripts/suites/ui-gallery-context-menu/suite.json",
-    "target/fret-diag-context-menu-strict-authoring-v1/sessions/1779005731883-139360/suite.summary.json",
     "tools/diag-scripts/suites/ui-gallery-button-group/suite.json",
     "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json",
     "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-accessibility-screenshots.json",
     "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json",
-    "target/fret-diag-button-group-select-strict-authoring-rerun-v1/sessions/1779007993048-40528/1779008006425/ai.packet",
-    "target/fret-diag-button-group-strict-authoring-v2/sessions/1779008052527-138688/suite.summary.json",
     "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
     "apps/fret-ui-gallery/src/driver/diag_snapshot.rs",
     "apps/fret-ui-gallery/src/ui/pages/motion_presets.rs",
     "apps/fret-ui-gallery/src/ui/snippets/motion_presets/environment_probe.rs",
     "ecosystem/fret-ui-kit/src/overlay.rs",
-    "ecosystem/fret-ui-shadcn/src/popover.rs",
-    "ecosystem/fret-ui-shadcn/src/select.rs",
     "ecosystem/fret-ui-shadcn/src/tooltip.rs",
     "ecosystem/fret-ui-shadcn/src/hover_card.rs",
-    "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
-    "ecosystem/fret-ui-shadcn/src/context_menu.rs",
     "ecosystem/fret-ui-shadcn/src/menubar.rs",
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json",
     "tools/diag-scripts/ui-gallery-tabs-selected-state-mutation.json",
@@ -1827,7 +1900,6 @@
     "tools/diag-scripts/ui-gallery-data-table-default-pagination-collection-metadata.json",
     "crates/fret-ui/src/element.rs",
     "crates/fret-ui/src/declarative/host_widget/semantics.rs",
-    "crates/fret-ui/src/declarative/tests/semantics.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
     "ecosystem/fret-ui-kit/src/declarative/tree.rs",
     "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
@@ -1839,7 +1911,6 @@
     "tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
     "tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json",
     "tools/diag-scripts/suites/ui-gallery-sonner-docs/suite.json",
-    "tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json",
     "tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json",
     "apps/fret-ui-gallery/src/ui/snippets/accordion/focusable_disabled.rs",
     "ecosystem/fret-ui-kit/src/primitives/accordion.rs",
@@ -1851,35 +1922,17 @@
     "ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs",
     "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs",
     "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
-    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
     "crates/fret-ui/src/tree/prepaint/interaction.rs",
     "crates/fret-ui/src/tree/prepaint/mod.rs",
     "crates/fret-ui/src/tree/tests/prepaint.rs",
     "apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs",
     "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
     "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json",
-    "target/fret-diag-resizable-moving-combobox-disabled-action-state-v1/sessions/1779467403958-68712/1779467419798/ai.packet",
-    "target/fret-diag-resizable-moving-combobox-disabled-action-state-v1/sessions/1779467403958-68712/share/1779467419798.zip",
-    "target/fret-diag-resizable-suite-disabled-action-state-v1/sessions/1779467543831-72756/suite.summary.json",
-    "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/script.result.json",
-    "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/1779027983606/ai.packet",
-    "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/share/1779027983606.zip",
-    "target/fret-diag-resizable-suite-after-moving-cached-combobox-v1/sessions/1779029073205-16452/suite.summary.json",
-    "ecosystem/fret-ui-kit/src/declarative/table.rs",
-    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs",
-    "ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs",
-    "crates/fret-diag-protocol/src/lib.rs",
-    "crates/fret-diag-protocol/src/builder.rs",
-    "crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
     "tools/diag-scripts/suites/ui-gallery-table-retained/suite.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-desc.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-window-boundary-scroll.json",
-    "target/fret-diag-table-retained-sort-desc-fix-v1/sessions/1779035666721-164056/1779035679726/ai.packet",
-    "target/fret-diag-table-retained-window-boundary-scroll-focused-v4/sessions/1779037981653-160576/1779038066334/ai.packet",
-    "target/fret-diag-table-retained-suite-candidate-v4/sessions/1779038155054-118992/suite.summary.json",
-    "crates/fret-ui/src/declarative/mount.rs",
     "crates/fret-ui/src/layout/engine.rs",
     "crates/fret-ui/src/layout/engine/flow.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/measurement.rs",
@@ -1890,76 +1943,35 @@
     "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-toggle.json",
     "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-actions.json",
     "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-large-scroll.json",
-    "target/fret-diag-ai-file-tree-semantics-action-state-after-vlist-measured-leaf-dirty-v1/sessions/1779041323318-52900/suite.summary.json",
-    "target/fret-diag-ai-file-tree-zero-warning-hidden-markers-v2/sessions/1779043283276-169328/suite.summary.json",
-    "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
-    "crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_only_paint_cache_probe.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/frame_stats.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
     "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json",
     "tools/diag-scripts/suites/ui-gallery-hit-test-only-paint-cache/suite.json",
-    "target/fret-diag-hit-test-only-paint-cache-probe-sweep-v2/sessions/1779247851157-129852/1779247865248/ai.packet",
-    "target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json",
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-ui/src/tree/dispatch/window.rs",
     "crates/fret-ui/src/tree/tests/hit_test.rs",
     "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json",
     "tools/diag-scripts/suites/ui-gallery-switch-semantics/suite.json",
-    "target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/1779301465865/ai.packet",
-    "target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/share/1779301465865.zip",
-    "target/fret-diag-switch-semantics-suite-v1/sessions/1779301571842-137052/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
     "tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json",
-    "target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/1779303569865/ai.packet",
-    "target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/share/1779303569865.zip",
-    "target/fret-diag-checkbox-semantics-suite-v1/sessions/1779303815632-98108/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1/sessions/1779304064247-171464/suite.summary.json",
     "ecosystem/fret-ui-shadcn/src/slider.rs",
     "ecosystem/fret-ui-shadcn/src/test_id.rs",
     "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json",
     "tools/diag-scripts/suites/ui-gallery-slider-semantics/suite.json",
-    "target/fret-diag-slider-semantics-suite-v1/sessions/1779306432063-174216/1779306461660-ui-gallery-slider-numeric-action-state/check.lint.json",
-    "target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/1779307931755/ai.packet",
-    "target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/share/1779307931755.zip",
-    "target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-slider-numeric-v1/sessions/1779308003840-152848/suite.summary.json",
-    "target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/1779310495372/ai.packet",
-    "target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/share/1779310495372.zip",
-    "target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-checkbox-table-mixed-v1/sessions/1779311169346-151568/suite.summary.json",
-    "target/fret-diag-toggle-interaction-selected-probe-v1/sessions/1779313631621-83488/1779313643019/ai.packet",
-    "target/fret-diag-toggle-interaction-selected-probe-v1/sessions/1779313631621-83488/share/1779313643019.zip",
-    "target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet",
-    "target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/share/1779314805300.zip",
-    "target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-toggle-pressed-v2/sessions/1779316094427-64032/suite.summary.json",
     "crates/fret-mechanism-harness/src/lib.rs",
     "apps/fret-ui-gallery/src/ui/snippets/input/invalid.rs",
     "apps/fret-ui-gallery/src/ui/snippets/input/required.rs",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json",
     "tools/diag-scripts/suites/ui-gallery-input-semantics/suite.json",
-    "target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet",
-    "target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/share/1779318973423.zip",
-    "target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-input-required-invalid-v1/sessions/1779319155073-96032/suite.summary.json",
     "tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json",
     "tools/diag-scripts/suites/ui-gallery-select-semantics/suite.json",
-    "target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet",
-    "target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/share/1779321650994.zip",
-    "target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json",
     "apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs",
     "apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs",
     "apps/fret-ui-gallery/src/ui/pages/textarea.rs",
     "ecosystem/fret-ui-shadcn/src/textarea.rs",
     "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json",
     "tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json",
-    "target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet",
-    "target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/share/1779324602377.zip",
-    "target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2/sessions/1779326355415-96352/suite.summary.json",
     "ecosystem/fret-ui-shadcn/src/input_otp.rs",
     "apps/fret-ui-gallery/src/ui/snippets/input_otp/invalid.rs",
     "apps/fret-ui-gallery/src/ui/snippets/input_otp/form.rs",
@@ -1967,10 +1979,6 @@
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json",
     "tools/diag-scripts/ui-gallery-input-otp-invalid-required-semantics.json",
     "tools/diag-scripts/suites/ui-gallery-input-otp-semantics/suite.json",
-    "target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet",
-    "target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/share/1779329877911.zip",
-    "target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1/sessions/1779330056274-195352/suite.summary.json",
     "ecosystem/fret-ui-shadcn/src/date_picker.rs",
     "apps/fret-ui-gallery/src/ui/snippets/date_picker/compact_builder.rs",
     "apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs",
@@ -1980,111 +1988,42 @@
     "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
     "tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json",
     "tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json",
-    "target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/1779334968449/ai.packet",
-    "target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/share/1779334968449.zip",
-    "target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json",
-    "target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/1779337229373/ai.packet",
-    "target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/share/1779337229373.zip",
-    "target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json",
     "apps/fret-ui-gallery/src/ui/snippets/form/submit_validation.rs",
     "apps/fret-ui-gallery/src/ui/snippets/form/mod.rs",
     "apps/fret-ui-gallery/src/ui/pages/form.rs",
     "tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json",
     "tools/diag-scripts/ui-gallery-form-submit-validation-semantics.json",
     "tools/diag-scripts/suites/ui-gallery-form-semantics/suite.json",
-    "target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/1779342789863/ai.packet",
-    "target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/share/1779342789863.zip",
-    "target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json",
     "apps/fret-ui-gallery/src/ui/snippets/form/disabled_field.rs",
     "tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json",
     "tools/diag-scripts/ui-gallery-form-disabled-field-action-state.json",
-    "target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/1779351805821/ai.packet",
-    "target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/share/1779351805821.zip",
-    "target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json",
     "ecosystem/fret-ui-kit/src/primitives/radio_group.rs",
     "ecosystem/fret-ui-shadcn/src/radio_group.rs",
     "apps/fret-ui-gallery/src/ui/snippets/radio_group/required_disabled.rs",
     "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json",
     "tools/diag-scripts/ui-gallery-radio-group-required-disabled-action-state.json",
-    "target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/1779358468383/ai.packet",
-    "target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/share/1779358468383.zip",
-    "target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json",
     "apps/fret-ui-gallery/src/ui/snippets/checkbox/required_disabled_group.rs",
     "apps/fret-ui-gallery/src/ui/pages/checkbox.rs",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
     "tools/diag-scripts/ui-gallery-checkbox-required-disabled-group-action-state.json",
-    "target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/1779363101513/ai.packet",
-    "target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/share/1779363101513.zip",
-    "target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json",
     "ecosystem/fret-ui-kit/src/primitives/toggle_group.rs",
     "ecosystem/fret-ui-shadcn/src/toggle_group.rs",
     "apps/fret-ui-gallery/src/ui/snippets/toggle_group/disabled_item_action_state.rs",
     "apps/fret-ui-gallery/src/ui/pages/toggle_group.rs",
     "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json",
     "tools/diag-scripts/ui-gallery-toggle-group-disabled-item-action-state.json",
-    "target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/1779371026922/ai.packet",
-    "target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/share/1779371026922.zip",
-    "target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json",
-    "target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json",
-    "target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet",
-    "target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/share/1779383395682.zip",
-    "target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json",
-    "ecosystem/fret-ui-shadcn/src/context_menu.rs",
     "apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs",
-    "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
-    "crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
     "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json",
     "tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json",
     "tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json",
-    "tools/diag-scripts/suites/ui-gallery-context-menu/suite.json",
-    "tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json",
-    "target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet",
-    "target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/share/1779387844608.zip",
-    "target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json",
-    "target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json",
     "crates/fret-ui/src/tree/tests/key_dispatch_barrier_root.rs",
     "apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs",
-    "target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/1779402658765/ai.packet",
-    "target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/share/1779402658765.zip",
-    "target/fret-diag-context-menu-disabled-item-action-state-panel-id-v2/sessions/1779402701538-231548/1779402722466/ai.packet",
-    "target/fret-diag-context-menu-disabled-item-action-state-panel-id-v2/sessions/1779402701538-231548/share/1779402722466.zip",
-    "target/fret-diag-context-menu-basic-right-click-last-action-panel-id-v1/sessions/1779402791091-235960/1779402810724/ai.packet",
-    "target/fret-diag-context-menu-basic-right-click-last-action-panel-id-v1/sessions/1779402791091-235960/share/1779402810724.zip",
-    "target/fret-diag-context-menu-basic-touch-long-press-open-panel-id-v1/sessions/1779403229924-212604/1779403249948/ai.packet",
-    "target/fret-diag-context-menu-basic-touch-long-press-open-panel-id-v1/sessions/1779403229924-212604/share/1779403249948.zip",
-    "target/fret-diag-context-menu-basic-overlay-placement-trace-panel-id-v1/sessions/1779403312109-236372/1779403333605/ai.packet",
-    "target/fret-diag-context-menu-basic-overlay-placement-trace-panel-id-v1/sessions/1779403312109-236372/share/1779403333605.zip",
-    "target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json",
-    "target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json",
-    "target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/1779407145527/ai.packet",
-    "target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/share/1779407145527.zip",
-    "target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json",
     "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json",
-    "target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/1779415611375/ai.packet",
-    "target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/share/1779415611375.zip",
-    "target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1/sessions/1779415674198-166024/suite.summary.json",
-    "target/fret-diag-vlist-retained-selected-action-state-bounce-v2/sessions/1779431631089-228876/1779431677188/ai.packet",
-    "target/fret-diag-vlist-retained-selected-action-state-bounce-v2/sessions/1779431631089-228876/share/1779431677188.zip",
-    "target/fret-diag-vlist-retained-action-state-v1/sessions/1779433457108-255908/suite.summary.json",
-    "target/fret-diag-vlist-window-boundary-retained-selected-action-state-v3/sessions/1779433457127-264980/suite.summary.json",
     "apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_popover.rs",
     "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json",
-    "target/fret-diag-resizable-moving-popover-outside-press-v3/sessions/1779469453540-79064/1779469463236/ai.packet",
-    "target/fret-diag-resizable-moving-popover-outside-press-v3/sessions/1779469453540-79064/share/1779469463236.zip",
-    "target/fret-diag-resizable-suite-popover-outside-press-v1/sessions/1779469537437-26788/suite.summary.json",
     "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json",
-    "target/fret-diag-context-menu-basic-typeahead-reload-v1/sessions/1779472134533-73472/1779472143821/ai.packet",
-    "target/fret-diag-context-menu-basic-typeahead-reload-v1/sessions/1779472134533-73472/share/1779472143821.zip",
-    "target/fret-diag-context-menu-suite-typeahead-reload-v1/sessions/1779472199452-77576/suite.summary.json",
     "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json",
-    "target/fret-diag-context-menu-submenu-typeahead-name-window-v1/sessions/1779473854793-15920/1779473864097/ai.packet",
-    "target/fret-diag-context-menu-submenu-typeahead-name-window-v1/sessions/1779473854793-15920/share/1779473864097.zip",
-    "target/fret-diag-context-menu-suite-submenu-typeahead-v1/sessions/1779473909388-74436/suite.summary.json",
     "crates/fret-ui/src/cache_key.rs",
     "ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs",
     "apps/fret-ui-gallery/src/ui/snippets/resizable/notes.rs",
@@ -2092,13 +2031,18 @@
     "docs/component-author-guide.md",
     "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json",
     "tools/diag-scripts/suites/ui-gallery-ai-transcript-retained/suite.json",
-    "target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/1779479217864/ai.packet",
-    "target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/share/1779479217864.zip",
-    "target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
-    "target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/1779480725739/ai.packet",
-    "target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/share/1779480725739.zip",
-    "target/fret-diag-table-retained-suite-row-pinning-selected-action-v1/sessions/1779480750237-48512/suite.summary.json"
+    "docs/workstreams/fret-mechanism-harness-v1/DESIGN.md",
+    "docs/workstreams/fret-mechanism-harness-v1/TODO.md",
+    "docs/workstreams/fret-mechanism-harness-v1/MILESTONES.md",
+    "docs/workstreams/fret-mechanism-harness-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-18.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-19.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-20.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-21.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-22.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-23.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-24.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -2107,5 +2051,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue this lane until the core mechanism domains have fixture-driven synthetic coverage plus at least one runtime diagnostics gate for their highest-risk invariants. Split follow-ons only when a domain becomes large enough to own its own fixture matrix."
-  }
+  },
+  "lane_slug": "framework-boundaries"
 }

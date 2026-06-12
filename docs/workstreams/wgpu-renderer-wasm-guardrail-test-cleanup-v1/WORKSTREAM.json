@@ -4,7 +4,7 @@
   "title": "WGPU Renderer Wasm Guardrail Test Cleanup v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "The wasm-only WebGPU/Tint guardrail shader constant in renderer tests lived at outer scope and forced a native dead_code allowance. While moving it, the test suite also exposed wgpu 29 API drift and a cfg-shaped perf reporting literal mismatch.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/HANDOFF.md"
     },
     {
@@ -72,7 +72,12 @@
   "evidence": [
     "crates/fret-render-wgpu/src/renderer/tests.rs",
     "crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs",
-    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/DESIGN.md",
+    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/TODO.md",
+    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

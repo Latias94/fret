@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-15",
   "scope_kind": "execution",
-  "follow_on_of": "code-editor-row-content-snapshot-cache-v1",
   "problem": "After row content snapshots made replay-hit rows cheap, resize worst frames can still come from newly exposed viewport edge rows that miss the prepaint replay plan and walk the row content, rich text, geometry, and row scene path during paint.",
   "authoritative_docs": [
     {
@@ -97,15 +96,13 @@
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/M3_EDGE_ROW_PREBUILD_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/CLOSEOUT_AUDIT_2026-05-15.md",
     "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/EVIDENCE_AND_GATES.md",
-    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m1-20260515/1778830062977/bundle.schema2.json",
-    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m2-diagnostics-20260515/1778832028679/bundle.schema2.json",
-    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-syntax-key-content-eq-20260515/1778835965902/bundle.schema2.json",
-    "target/fret-diag/code-editor-edge-row-full-path-prefetch-v1-after-m3-edge-prebuild-diagnostics-split-20260515/1778841130928/bundle.schema2.json",
-    "target/fret-diag/code-editor-row-content-snapshot-cache-v1-after-m2-20260515/1778827921081/bundle.schema2.json",
     "crates/fret-ui/src/canvas.rs",
     "crates/fret-ui/src/declarative/tests/canvas.rs",
     "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
-    "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs"
+    "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/TODO.md",
+    "docs/workstreams/code-editor-edge-row-full-path-prefetch-v1/MILESTONES.md",
+    "docs/workstreams/code-editor-row-content-snapshot-cache-v1/CLOSEOUT_AUDIT_2026-05-15.md"
   ],
   "adr_refs": [
     "docs/adr/0175-prepaint-windowed-virtual-surfaces.md",
@@ -115,5 +112,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed because the edge-row paint full-path objective is complete. Start a narrow follow-on for planner-cost work, CanvasPrepaint API cleanup, renderer/display-list work, or global fret-ui layout/view-cache/VirtualList semantics if future evidence points there."
-  }
+  },
+  "follow_on_of": "code-editor-row-content-snapshot-cache-v1"
 }

@@ -4,7 +4,7 @@
   "title": "WGPU Paint Eval Space Conformance Harness Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "Two paint evaluation-space WGPU conformance tests duplicated the same Rgba8Unorm final-render readback helpers already owned by the shared integration-test support module. The duplication made paint evaluation-space evidence harder to audit without adding behavior coverage.",
   "authoritative_docs": [
     {
@@ -16,15 +16,15 @@
       "path": "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/HANDOFF.md"
     },
     {
@@ -64,7 +64,12 @@
     "crates/fret-render-wgpu/tests/support/mod.rs",
     "crates/fret-render-wgpu/tests/paint_eval_space_stroke_s01_conformance.rs",
     "crates/fret-render-wgpu/tests/paint_eval_space_viewport_conformance.rs",
-    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0233-paint-primitives-brushes-and-gradients-v1.md",

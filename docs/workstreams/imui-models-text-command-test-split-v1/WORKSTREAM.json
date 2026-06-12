@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-04",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-models-text-mode-test-split-v1",
   "problem": "Keep IMUI single-line text command-policy verification reviewable by splitting completion, history, undo/redo, and repeat opt-in tests out of the remaining `models_text.rs` proof file without changing command behavior or public APIs.",
   "authoritative_docs": [
     {
@@ -72,13 +71,18 @@
   ],
   "evidence": [
     "ecosystem/fret-imui/src/tests/mod.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
     "ecosystem/fret-imui/src/tests/models_text_commands.rs",
-    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md",
+    "docs/workstreams/imui-models-text-command-test-split-v1/DESIGN.md",
+    "docs/workstreams/imui-models-text-command-test-split-v1/TODO.md",
+    "docs/workstreams/imui-models-text-command-test-split-v1/MILESTONES.md",
+    "docs/workstreams/imui-models-text-command-test-split-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-models-text-command-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md"
   ],
   "adr_refs": [],
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This mechanical single-line command-policy test split is closed. Start separate follow-ons for textarea or lifecycle splits instead of adding more command cases back into `models_text.rs`."
-  }
+  },
+  "follow_on_of": "imui-models-text-mode-test-split-v1"
 }

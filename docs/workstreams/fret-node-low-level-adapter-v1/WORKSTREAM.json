@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "follow_on_of": "fret-node-declarative-fearless-refactor-v1",
   "problem": "Replace the remaining retained node graph canvas/editor island with a named low-level canvas/viewport adapter so `fret-node` no longer depends on retained widget authoring as its implementation escape hatch.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/fret-node-low-level-adapter-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-low-level-adapter-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -30,6 +29,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    },
+    {
+      "role": "closeout",
       "path": "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
@@ -55,15 +58,11 @@
     "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md",
     "ecosystem/fret-node/Cargo.toml",
-    "ecosystem/fret-node/src/ui/canvas/widget.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs",
-    "ecosystem/fret-node/src/lib.rs"
+    "ecosystem/fret-node/src/lib.rs",
+    "docs/workstreams/fret-node-low-level-adapter-v1/TODO.md",
+    "docs/workstreams/fret-node-low-level-adapter-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-low-level-adapter-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-low-level-adapter-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
@@ -72,7 +71,8 @@
     "docs/adr/0321-node-graph-per-entity-geometry-overrides-v1.md"
   ],
   "continue_policy": {
-    "default_action": "split_follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed after low-level host operations and command dispatch adapter proofs. Continue event runtime work in fret-node-event-runtime-adapter-v1 and paint/prepaint work in fret-node-paint-prepaint-adapter-v1."
-  }
+  },
+  "follow_on_of": "fret-node-declarative-fearless-refactor-v1"
 }

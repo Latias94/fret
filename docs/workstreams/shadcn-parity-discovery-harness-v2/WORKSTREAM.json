@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-11",
   "scope_kind": "execution",
-  "lane_slug": "shadcn-parity",
   "problem": "Expand the completed shadcn parity discovery harness into a coverage-driven sweep that prioritizes the highest-risk component/state/viewport combinations, finds new layout/rendering/overlay/responsive mismatches proactively, and turns confirmed findings into reusable regression gates.",
   "authoritative_docs": [
     {
@@ -13,39 +12,39 @@
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/DESIGN.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/FIRST_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/SECOND_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/THIRD_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/FOURTH_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/FIFTH_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/SIXTH_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/SEVENTH_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/EIGHTH_SWEEP_AUDIT_2026-05-11.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/NINTH_SWEEP_AUDIT_2026-05-11.md"
     },
     {
@@ -61,14 +60,6 @@
       "path": "docs/workstreams/shadcn-parity-discovery-harness-v2/EVIDENCE_AND_GATES.md"
     }
   ],
-  "coverage_manifest": {
-    "path": "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json",
-    "purpose": "Prioritized target list for the v2 sweep"
-  },
-  "suite_manifest": {
-    "path": "tools/parity-discovery/suites/shadcn_parity_discovery_v2.json",
-    "purpose": "One-command replay for the promoted v2 discovery slices, including the hover-card bundle-semantics fallback case, the sheet mobile vp375x240 responsive gate, the tooltip cross-root evidence-source gate, the dialog docs-demo app-demo composition gate, the menubar root/trigger chrome gate, the Input OTP slot/separator geometry gate, and the Table row-geometry gate. DataTable policy-heavy coverage is promoted as a diagnostics suite gate at tools/diag-scripts/suites/ui-gallery-data-table/suite.json because it is procedural rather than fixture geometry."
-  },
   "repro": {
     "summary": "Validate the v2 coverage manifest and replay the promoted v2 discovery slices from the suite manifest.",
     "commands": [
@@ -254,12 +245,8 @@
     "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/input_otp_demo_mismatch_report_v2.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/table_demo_mismatch_report_v2.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
-    "target/fret-diag/shadcn-parity-discovery-harness-v2-data-table-policy-suite-run-dir-fix/sessions/1778496500156-72456/suite.summary.json",
     "crates/fret-ui/src/tree/tests/subtree_layout_dirty_underflow_repair.rs",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json",
-    "target/fret-diag/checkbox-demo-label-underflow-recheck/sessions/1778492552327-170372/1778492556818/ai.packet",
-    "target/fret-diag/checkbox-demo-label-underflow-latest-recheck/sessions/1778497032417-172344/1778497041912/script.result.json",
-    "target/fret-diag/checkbox-demo-label-underflow-latest-recheck/sessions/1778497032417-172344/1778497041912/ai.packet/doctor.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/FIRST_SWEEP_AUDIT_2026-05-11.md",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/SECOND_SWEEP_AUDIT_2026-05-11.md",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/THIRD_SWEEP_AUDIT_2026-05-11.md",
@@ -290,10 +277,24 @@
     "apps/fret-ui-gallery/src/ui/snippets/table/demo.rs",
     "tools/parity-discovery/shadcn_parity_discovery.py",
     "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-docs-smoke.json",
-    "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-docs-demo-open-screenshot.json"
+    "tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-docs-demo-open-screenshot.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v2/DESIGN.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v2/TODO.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v2/MILESTONES.md",
+    "docs/workstreams/shadcn-parity-discovery-harness-v2/EVIDENCE_AND_GATES.md"
   ],
+  "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue until the promoted v2 surfaces remain green, the next uncovered P1/P2 interactive surface has a fixture-driven report and gate, and any new confirmed finding is promoted with evidence and layer classification. Keep the existing v1 lock surfaces as regression anchors while expanding beyond overlays into input-heavy, table-heavy, and policy-heavy surfaces. The discovery tool may use sibling bundle.schema2 semantics as a fallback when a layout sidecar misses stable nodes; dialog docs-demo composition drift should stay classified as app_demo unless new evidence points at recipe or mechanism. Procedural policy-heavy surfaces such as DataTable may be promoted as diagnostics suite gates instead of fixture geometry reports."
+  },
+  "lane_slug": "shadcn-parity",
+  "coverage_manifest": {
+    "path": "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json",
+    "purpose": "Prioritized target list for the v2 sweep"
+  },
+  "suite_manifest": {
+    "path": "tools/parity-discovery/suites/shadcn_parity_discovery_v2.json",
+    "purpose": "One-command replay for the promoted v2 discovery slices, including the hover-card bundle-semantics fallback case, the sheet mobile vp375x240 responsive gate, the tooltip cross-root evidence-source gate, the dialog docs-demo app-demo composition gate, the menubar root/trigger chrome gate, the Input OTP slot/separator geometry gate, and the Table row-geometry gate. DataTable policy-heavy coverage is promoted as a diagnostics suite gate at tools/diag-scripts/suites/ui-gallery-data-table/suite.json because it is procedural rather than fixture geometry."
   }
 }

@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "follow_on_of": "fret-node-low-level-adapter-v1",
   "problem": "Split node graph paint and prepaint retained lifecycle entrypoints behind named adapter seams without rewriting the entire retained paint module tree.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -57,15 +56,14 @@
   "evidence": [
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/DESIGN.md",
     "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
-    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/prepaint_cull_window_adapter.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs",
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
-    "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/",
-    "ecosystem/fret-node/src/lib.rs"
+    "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1",
+    "ecosystem/fret-node/src/lib.rs",
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/TODO.md",
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
@@ -73,7 +71,8 @@
     "docs/adr/0175-prepaint-windowed-virtual-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed. Continue cache-plan paint adapter work in docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/."
-  }
+  },
+  "follow_on_of": "fret-node-low-level-adapter-v1"
 }

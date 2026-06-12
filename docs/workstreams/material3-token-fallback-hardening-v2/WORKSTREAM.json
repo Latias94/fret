@@ -1,9 +1,59 @@
 {
-  "id": "material3-token-fallback-hardening-v2",
+  "schema_version": 1,
+  "slug": "material3-token-fallback-hardening-v2",
   "title": "Material3 Token Fallback Hardening v2",
   "status": "closed",
-  "created": "2026-05-31",
   "updated": "2026-05-31",
+  "scope_kind": "closeout",
+  "problem": "Track material3-token-fallback-hardening-v2 lane state, gates, and evidence.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-token-fallback-hardening-v2/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-token-fallback-hardening-v2/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-token-fallback-hardening-v2/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-token-fallback-hardening-v2/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-token-fallback-hardening-v2/CLOSEOUT_AUDIT_2026-05-31.md"
+    }
+  ],
+  "repro": {
+    "summary": "First-open repro for material3-token-fallback-hardening-v2; see the lane gates for the runnable surface.",
+    "commands": [
+      "python -m json.tool docs/workstreams/material3-token-fallback-hardening-v2/WORKSTREAM.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-token-fallback-hardening-v2/WORKSTREAM.json"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-token-fallback-hardening-v2/DESIGN.md",
+    "docs/workstreams/material3-token-fallback-hardening-v2/TODO.md",
+    "docs/workstreams/material3-token-fallback-hardening-v2/MILESTONES.md",
+    "docs/workstreams/material3-token-fallback-hardening-v2/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-token-fallback-hardening-v2/CLOSEOUT_AUDIT_2026-05-31.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Treat this lane as closed unless fresh evidence justifies a narrower follow-on."
+  },
+  "id": "material3-token-fallback-hardening-v2",
+  "created": "2026-05-31",
   "owner": "codex",
   "scope": [
     "ecosystem/fret-ui-material3/src/tokens",

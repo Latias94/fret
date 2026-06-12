@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-11",
   "scope_kind": "execution",
-  "follow_on_of": "adaptive-layout-contract-closure-v1",
   "problem": "The closed adaptive-layout lane already froze that shadcn `Sidebar` stays app-shell-only and that `WorkspaceFrame.left/right` already provides the outer shell seam for editor rails. What remains open is the narrower question of how a future reusable editor rail surface should be shaped, how mobile vs container adaptation should be split, and what proof threshold justifies public extraction.",
   "authoritative_docs": [
     {
@@ -21,7 +20,7 @@
       "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M0_BASELINE_AUDIT_2026-04-11.md"
     },
     {
-      "role": "decision",
+      "role": "status",
       "path": "docs/workstreams/container-aware-editor-rail-surface-v1/M1_CONTRACT_FREEZE_2026-04-11.md"
     },
     {
@@ -145,7 +144,8 @@
     "docs/adr/0156-workspace-shell-tabs-and-pane-layout.md"
   ],
   "continue_policy": {
-    "default_action": "new_follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed. Future work should open a narrower follow-on for shared container-aware helper extraction, public rail promotion, or outer-shell downgrade composition rather than reopening this owner-split lane."
-  }
+  },
+  "follow_on_of": "adaptive-layout-contract-closure-v1"
 }

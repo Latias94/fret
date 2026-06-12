@@ -42,9 +42,12 @@
   ],
   "evidence": [
     "docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md",
-    "apps/fretboard/src/scaffold/templates.rs",
     "apps/fret-cookbook/examples/simple_todo.rs",
-    "apps/fret-examples/src/todo_demo.rs"
+    "apps/fret-examples/src/todo_demo.rs",
+    "docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md",
+    "docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md",
+    "docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md"
   ],
   "adr_refs": [],
   "continue_policy": {

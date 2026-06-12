@@ -4,7 +4,7 @@
   "title": "Material 3 Radio Scene Semantics Packet v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed the Radio matrix residual after Switch foundation evidence was available by recording Radio scene, selector, ripple, and semantics gates without moving roving/typeahead policy into kit or changing crates/*.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-radio-scene-semantics-packet-v1/HANDOFF.md"
     }
   ],
@@ -77,13 +77,19 @@
     "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/RadioButton.kt",
     "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/RadioButtonTokens.kt",
     "repo-ref/base-ui/packages/react/src/radio-group/RadioGroup.tsx",
-    "repo-ref/base-ui/packages/react/src/radio/root/RadioRoot.tsx"
+    "repo-ref/base-ui/packages/react/src/radio/root/RadioRoot.tsx",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/TODO.md",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/MILESTONES.md",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-radio-scene-semantics-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "Radio is closed for current selector, scene geometry, ripple origin, pressed-scene stability, and recipe/foundation split. Move RadioGroup roving/typeahead into kit only after another design system proves shared policy reuse."
   }
 }

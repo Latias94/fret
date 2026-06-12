@@ -75,7 +75,6 @@
     "tools/gate_fret_launch_runner_scheduling_source.py",
     "apps/fret-examples/src/first_frame_smoke_demo.rs",
     "apps/fret-demo/src/bin/first_frame_smoke_demo.rs",
-    "crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs",
     "crates/fret-launch/src/runner/desktop/runner/app_handler.rs",
     "crates/fret-launch/src/runner/desktop/runner/mod.rs",
     "crates/fret-launch/src/runner/desktop/runner/run.rs",

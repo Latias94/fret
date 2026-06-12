@@ -20,11 +20,11 @@
       "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/TODO.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/HANDOFF.md"
     }
   ],
@@ -58,13 +58,18 @@
     "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-top-app-bar-scroll-screenshots.json",
     "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/artifacts/top_app_bar_scroll_diagnostics_packet_v1.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
-    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/TODO.md",
+    "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-top-app-bar-scroll-diagnostics-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "TopAppBar scroll diagnostics are closed for the current gallery scenarios. Keep scroll behavior recipe-owned unless another design system or app surface proves shared kit-policy pressure."
   }
 }

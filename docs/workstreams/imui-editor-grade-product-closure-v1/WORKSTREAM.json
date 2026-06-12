@@ -5,7 +5,6 @@
   "status": "maintenance",
   "updated": "2026-05-21",
   "scope_kind": "execution",
-  "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
   "authoritative_docs": [
     {
@@ -691,7 +690,6 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
-    "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/slider.rs",
@@ -701,24 +699,13 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/element.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/drag_drop.rs",
     "ecosystem/fret-imui/src/tests/mod.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs",
-    "ecosystem/fret-imui/src/tests/models_controls.rs",
-    "ecosystem/fret-imui/src/tests/models_combo.rs",
     "ecosystem/fret-imui/src/tests/models_text_basic.rs",
     "ecosystem/fret-imui/src/tests/models_text_lifecycle.rs",
     "ecosystem/fret-imui/src/tests/models_text_identity.rs",
-    "ecosystem/fret-imui/src/tests/models_text_picker.rs",
     "ecosystem/fret-imui/src/tests/models_text_filters.rs",
     "ecosystem/fret-imui/src/tests/models_text_modes.rs",
     "ecosystem/fret-imui/src/tests/models_text_commands.rs",
-    "ecosystem/fret-imui/src/tests/models_text_area.rs",
-    "ecosystem/fret-imui/src/tests/popup_hover.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
-    "apps/fret-examples/src/imui_hello_demo.rs",
-    "apps/fret-examples/src/imui_response_signals_demo.rs",
-    "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
-    "apps/fret-examples/src/imui_floating_windows_demo.rs",
-    "apps/fret-examples/src/imui_shadcn_adapter_demo.rs",
     "apps/fret-examples/src/imui_node_graph_demo.rs",
     "apps/fret-examples/src/lib.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
@@ -745,7 +732,10 @@
     "docs/workstreams/text-clean-geometry-stability-v1/WORKSTREAM.json",
     "docs/workstreams/text-clean-geometry-stability-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/text-clean-geometry-stability-v1/CLOSEOUT_AUDIT_2026-05-21.md",
-    "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-25.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md",
+    "docs/workstreams/imui-child-region-depth-v1/WORKSTREAM.json"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
@@ -756,5 +746,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and treat `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`, `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`, and `M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md` as local source/admission/policy-skip/acceptance-boundary evidence only. M17 is the first local policy-skip gate; M18 broadens it into the Windows plus Linux/X11 sidecar matrix; M19 freezes that local policy-skip evidence is not Wayland compositor acceptance. Treat `text-clean-geometry-stability-v1` as the closed boundary record for current text clean-geometry eligibility and diagnostics detail; future wrapped-text clean geometry needs a new behavior-changing proof lane after fresh material-perf evidence. Treat `editor-canvas-paint-replay-slice-v1` as the closed 2026-05-23 r59 Canvas replay owner-lane closeout; it kept checked-in baselines unchanged and does not move perf pressure into `fret-imui`. The 2026-05-15 goal audit remains not complete until real-host Wayland hand-feel, DevTools GUI productization, and broader perf attribution/smoothness close in their owner lanes; start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
-  }
+  },
+  "follow_on_of": "imui-stack-fearless-refactor-v2"
 }

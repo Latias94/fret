@@ -1,7 +1,77 @@
 {
+  "schema_version": 1,
   "slug": "fret-node-runtime-store-contract-closure-v1",
   "title": "fret-node Runtime/Store Contract Closure v1",
-  "status": "complete",
+  "status": "closed",
+  "updated": "2026-06-12",
+  "scope_kind": "closeout",
+  "problem": "Track fret-node-runtime-store-contract-closure-v1 lane state, gates, and evidence.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-runtime-store-contract-closure-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-runtime-store-contract-closure-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-runtime-store-contract-closure-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-runtime-store-contract-closure-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-runtime-store-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+    }
+  ],
+  "repro": {
+    "summary": "First-open repro for fret-node-runtime-store-contract-closure-v1; see the lane gates for the runnable surface.",
+    "commands": [
+      "cargo fmt --check"
+    ]
+  },
+  "gates": [
+    {
+      "name": "cargo-fmt",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "nextest",
+      "command": "cargo nextest run -p fret-node --no-default-features runtime"
+    },
+    {
+      "name": "cargo-check",
+      "command": "cargo check -p fret-node --no-default-features"
+    },
+    {
+      "name": "cargo-check",
+      "command": "cargo check -p fret-node --no-default-features --features headless"
+    },
+    {
+      "name": "cargo-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "python3-tools-check-layering-py",
+      "command": "python3 tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1/DESIGN.md",
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1/TODO.md",
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1/MILESTONES.md",
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/fret-node-runtime-store-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Treat this lane as closed unless fresh evidence justifies a narrower follow-on."
+  },
   "created_at": "2026-05-26",
   "updated_at": "2026-05-27",
   "scope": [
@@ -69,13 +139,5 @@
         "FNRS-060"
       ]
     }
-  ],
-  "gates": [
-    "cargo fmt --check",
-    "cargo nextest run -p fret-node --no-default-features runtime",
-    "cargo check -p fret-node --no-default-features",
-    "cargo check -p fret-node --no-default-features --features headless",
-    "cargo check -p fret-node --features compat-retained-canvas",
-    "python3 tools/check_layering.py"
   ]
 }

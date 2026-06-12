@@ -4,8 +4,7 @@
   "title": "Material3 Token Resolver Non-Field Fallback v1",
   "status": "closed",
   "updated": "2026-05-31",
-  "scope_kind": "fearless_refactor",
-  "follow_on_of": "material3-token-resolver-fallback-v1",
+  "scope_kind": "closeout",
   "problem": "Non-field Material3 token modules still duplicate component-to-system color fallback chains instead of using the Material token resolver seam.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/HANDOFF.md"
     },
     {
@@ -33,7 +32,6 @@
       "path": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/CLOSEOUT_AUDIT_2026-05-31.md"
     }
   ],
-  "context_manifest": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/CONTEXT.jsonl",
   "repro": {
     "summary": "Audit residual non-field Material3 token fallback chains and prove migrated families through the token visual matrix.",
     "commands": [
@@ -146,22 +144,26 @@
     "ecosystem/fret-ui-material3/tests/checkbox_state.rs",
     "ecosystem/fret-ui-material3/tests/slider_state.rs",
     "ecosystem/fret-ui-material3/tests/switch_state.rs",
-    "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
+    "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json",
+    "docs/workstreams/material3-token-resolver-non-field-fallback-v1/MILESTONES.md",
+    "docs/workstreams/material3-token-resolver-non-field-fallback-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0032-style-tokens-and-theme-resolution.md",
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Closed after M3NF-060. Do not reopen this lane for non-color direct token lookup governance; start a narrower follow-on if fresh evidence shows typography weight, time picker/input numeric, or runtime token reads need resolver policy."
+  },
+  "follow_on_of": "material3-token-resolver-fallback-v1",
+  "context_manifest": "docs/workstreams/material3-token-resolver-non-field-fallback-v1/CONTEXT.jsonl",
   "capability_tags": [
     "material3",
     "tokens",
     "fallback",
     "non-field",
     "fearless-refactor"
-  ],
-  "continue_policy": {
-    "default_action": "start_follow_on",
-    "notes": "Closed after M3NF-060. Do not reopen this lane for non-color direct token lookup governance; start a narrower follow-on if fresh evidence shows typography weight, time picker/input numeric, or runtime token reads need resolver policy."
-  }
+  ]
 }

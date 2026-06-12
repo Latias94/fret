@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-14",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-facade-container-wrapper-owner-split-v1",
   "problem": "Split floating, popup, tooltip, drag/drop, and window `UiWriterImUiFacadeExt` default implementation bodies out of `facade_writer.rs` without changing public IMUI names, `fret-imui`, or `crates/fret-ui` runtime contracts.",
   "authoritative_docs": [
     {
@@ -39,6 +38,10 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-facade-container-wrapper-owner-split-v1/CLOSEOUT_AUDIT_2026-05-13.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-facade-floating-popup-owner-split-v1/CLOSEOUT_AUDIT_2026-05-14.md"
     }
   ],
   "repro": {
@@ -117,5 +120,6 @@
   "continue_policy": {
     "default_action": "stay_closed",
     "notes": "Treat this lane as closed history for the floating/popup trait-default owner split. Start separate follow-ons for trait-surface reshaping, additive popup/floating behavior, docking/multi-window behavior, or runtime public API changes."
-  }
+  },
+  "follow_on_of": "imui-facade-container-wrapper-owner-split-v1"
 }

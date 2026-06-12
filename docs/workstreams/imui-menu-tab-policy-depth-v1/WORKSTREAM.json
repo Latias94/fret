@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-22",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The maintenance IMUI product-closure umbrella and the closed menu/tab trigger-response lanes already settled outward response shape and canonical helper naming, and the current follow-on has now landed top-level menubar hover-switch, submenu hover-open / sibling hover-switch with an end-to-end enforced grace corridor including safe-corridor close-timer cancellation, menubar keyboard-open / top-level left-right switching, and the reverse-direction same-frame focus handoff fix while also freezing the verdict that editor-grade tab overflow / reorder / close stays in `fret-workspace` and outer-scope active-menubar mnemonic / roving posture stays shell-owned. Fret still needs a narrow owner that can decide whether richer submenu-intent tuning belongs in generic `fret-ui-kit::imui`, without reopening response-surface naming, key-owner work, shell helpers, workspace tabstrip policy, or runtime widening.",
   "authoritative_docs": [
     {
@@ -161,13 +160,10 @@
     "ecosystem/fret-ui-kit/src/primitives/menu/sub.rs",
     "ecosystem/fret-ui-kit/src/primitives/menu/pointer_grace_intent.rs",
     "ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs.rs",
     "ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs",
     "ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs",
     "ecosystem/fret-workspace/tests/tab_strip_pinned_boundary_has_test_id.rs",
     "ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs",
-    "apps/fret-examples/src/imui_interaction_showcase_demo.rs",
-    "apps/fret-examples/src/imui_response_signals_demo.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "repo-ref/imgui/imgui.cpp",
     "repo-ref/imgui/imgui_demo.cpp",
@@ -179,5 +175,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "Do not reopen this lane from historical TODO rows. Start a narrower follow-on only if fresh first-party evidence shows the current generic submenu floor is insufficient."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

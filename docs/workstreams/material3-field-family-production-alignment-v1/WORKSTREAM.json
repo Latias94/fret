@@ -4,8 +4,7 @@
   "title": "Material3 Field Family Production Alignment v1",
   "status": "closed",
   "updated": "2026-05-31",
-  "scope_kind": "follow_on",
-  "follow_on_of": "material3-field-logical-insets-v1",
+  "scope_kind": "closeout",
   "problem": "TextField, Autocomplete, ExposedDropdown, and Select needed a source-backed production audit to separate shared field foundation gaps from component-owned combobox/listbox policy. The landed slice fixes logical icon-slot geometry and Select trigger automation coverage.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/material3-field-family-production-alignment-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-field-family-production-alignment-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-field-family-production-alignment-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-field-family-production-alignment-v1/HANDOFF.md"
     },
     {
@@ -80,17 +79,24 @@
     "ecosystem/fret-ui-material3/src/select.rs",
     "ecosystem/fret-ui-material3/tests/text_field_hover.rs",
     "ecosystem/fret-ui-material3/tests/automation_surface.rs",
-    "docs/workstreams/material3-field-family-production-alignment-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    "docs/workstreams/material3-field-family-production-alignment-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "docs/workstreams/material3-field-family-production-alignment-v1/DESIGN.md",
+    "docs/workstreams/material3-field-family-production-alignment-v1/TODO.md",
+    "docs/workstreams/material3-field-family-production-alignment-v1/MILESTONES.md",
+    "docs/workstreams/material3-field-family-production-alignment-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-field-family-production-alignment-v1/HANDOFF.md"
   ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a narrower follow-on for multiline field padding, shared selectable menu rows, or optional TextField builder surface."
+  },
+  "follow_on_of": "material3-field-logical-insets-v1",
   "source_refs": [
     "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/internal/TextFieldImpl.kt",
     "repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt",
     "repo-ref/base-ui/packages/react/src/combobox/input/ComboboxInput.tsx",
     "repo-ref/base-ui/packages/react/src/select/trigger/SelectTrigger.tsx",
     "repo-ref/base-ui/packages/react/src/select/item/SelectItem.tsx"
-  ],
-  "continue_policy": {
-    "default_action": "start_follow_on",
-    "notes": "This lane is closed. Start a narrower follow-on for multiline field padding, shared selectable menu rows, or optional TextField builder surface."
-  }
+  ]
 }

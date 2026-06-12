@@ -4,7 +4,7 @@
   "title": "Material 3 Segmented Button Diagnostics Packet v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "diagnostics_follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed the SegmentedButtonSet matrix residual by promoting the Material3 roving-semantics gallery suite and revalidating semantics-role plus headless golden gates.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/TODO.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/HANDOFF.md"
     }
   ],
@@ -59,13 +59,18 @@
     "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-segmented-button-roving-semantics-screenshots.json",
     "tools/diag-scripts/suites/ui-gallery-material3-segmented-button-roving-semantics-screenshots/suite.json",
     "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/artifacts/segmented_button_diagnostics_packet_v1.md",
-    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json"
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md",
+    "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/DESIGN.md",
+    "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/TODO.md",
+    "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-segmented-button-diagnostics-packet-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "return_to_material3_sweep",
+    "default_action": "start_follow_on",
     "notes": "SegmentedButtonSet is closed for dedicated Material3 gallery roving diagnostics. Keep roving policy in the Material recipe unless another design system proves a shared need."
   }
 }

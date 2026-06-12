@@ -4,7 +4,7 @@
   "title": "Material3 Token Visual Matrix v1",
   "status": "closed",
   "updated": "2026-05-30",
-  "scope_kind": "fearless_refactor",
+  "scope_kind": "closeout",
   "problem": "The closed M3PV2 lane proves current component axes, but does not provide an exhaustive token visual matrix across component variants, states, schemes, parts, and visual roles.",
   "authoritative_docs": [
     {
@@ -16,27 +16,27 @@
       "path": "docs/workstreams/material3-token-visual-matrix-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/HANDOFF.md"
     },
     {
-      "role": "token_visual_matrix",
+      "role": "reference",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_v1.json"
     },
     {
-      "role": "token_inventory_report",
+      "role": "reference",
       "path": "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_inventory_report_v1.json"
     },
     {
-      "role": "token_visual_fixture_suite",
+      "role": "reference",
       "path": "ecosystem/fret-ui-material3/tests/fixtures/material3_token_visual_cases_v1.json"
     },
     {
@@ -102,7 +102,12 @@
     "ecosystem/fret-ui-material3/src/tokens",
     "ecosystem/fret-ui-material3/src/foundation",
     "ecosystem/fret-ui-material3/tests",
-    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_closeout_audit.md"
+    "docs/workstreams/material3-token-visual-matrix-v1/artifacts/material3_token_visual_matrix_closeout_audit.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/DESIGN.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/TODO.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/MILESTONES.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-token-visual-matrix-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -110,7 +115,7 @@
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "M3TVM-010 through M3TVM-090 are complete. Reopen only by creating a new follow-on workstream for API breadth or fallback hardening outside this lane."
   }
 }

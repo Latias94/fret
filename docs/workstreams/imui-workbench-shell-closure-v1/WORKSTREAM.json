@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "execution",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The immediate-mode product-closure umbrella already froze the P1 shell proof roster and diagnostics floor, but implementation-heavy workbench shell closure now needs its own lane so workspace shell composition can advance without reopening generic imui helper growth or collapsing into the older tabstrip parity lanes.",
   "authoritative_docs": [
     {
@@ -124,7 +123,8 @@
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "new_follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed on a no-new-helper-yet verdict. Reopen only if fresh repeated full-shell evidence justifies promoted helper extraction; continue tabstrip and runner/backend work in their existing owner lanes by default."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

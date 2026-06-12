@@ -100,7 +100,8 @@
     "crates/fret-launch/src/runner/web/effects.rs",
     "docs/README.md",
     "docs/crate-usage-guide.md",
-    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md"
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md",
+    "docs/workstreams/fretboard-public-app-author-surface-v1/TARGET_INTERFACE_STATE.md"
   ],
   "adr_refs": [
     "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
@@ -108,7 +109,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed after the first shipped public `dev` surface and docs landed. If later work broadens into public diagnostics, hotpatch, or theme import packaging, start narrower follow-ons instead of reopening this folder."
   },
   "follow_on_of": "fretboard-public-app-author-surface-v1"

@@ -4,7 +4,7 @@
   "title": "Material 3 Canvas Draw Region Diagnostics v1",
   "status": "closed",
   "updated": "2026-05-28",
-  "scope_kind": "follow_on",
+  "scope_kind": "closeout",
   "problem": "Closed lane that classified Material3 canvas-painted subregion diagnostics, added truthful rectangular recipe anchors for ProgressIndicator and Slider, and split exact named SceneOp diagnostics as a future mechanism concern.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/HANDOFF.md"
     }
   ],
@@ -81,11 +81,15 @@
     "crates/fret-ui/src/canvas.rs",
     "crates/fret-core/src/scene/mod.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs",
-    "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs"
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/DESIGN.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/TODO.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/MILESTONES.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
-    "docs/adr/0141-declarative-canvas-hosted-resources.md",
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
   "continue_policy": {

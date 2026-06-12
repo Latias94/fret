@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-04",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-text-input-history-completion-policy-v1",
   "problem": "Close the first user-facing completion/history UI recipe gap by adding a Fret-native input text picker helper that composes a model-backed single-line input with a non-modal selectable popup, without moving candidate storage, mutable-buffer callbacks, or editor domain logic into `crates/fret-ui`.",
   "authoritative_docs": [
     {
@@ -80,8 +79,12 @@
     "ecosystem/fret-ui-kit/src/imui/options/controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
-    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md",
+    "docs/workstreams/imui-text-input-picker-recipe-v1/DESIGN.md",
+    "docs/workstreams/imui-text-input-picker-recipe-v1/TODO.md",
+    "docs/workstreams/imui-text-input-picker-recipe-v1/MILESTONES.md",
+    "docs/workstreams/imui-text-input-picker-recipe-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-text-input-picker-recipe-v1/CLOSEOUT_AUDIT_2026-05-04.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
@@ -89,5 +92,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This first picker recipe slice is closed. Start separate follow-ons for active-descendant keyboard navigation, editor-owned completion ranking/storage, multiline conflicts, or command-driven history index mutation; do not move candidate storage or Dear ImGui mutable-buffer callbacks into `crates/fret-ui`."
-  }
+  },
+  "follow_on_of": "imui-text-input-history-completion-policy-v1"
 }

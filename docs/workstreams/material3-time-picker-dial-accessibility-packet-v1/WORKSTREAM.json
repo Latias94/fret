@@ -1,17 +1,65 @@
 {
+  "schema_version": 1,
   "slug": "material3-time-picker-dial-accessibility-packet-v1",
+  "title": "Material3 Time Picker Dial Accessibility Packet V1",
   "status": "closed",
-  "created": "2026-05-28",
   "updated": "2026-05-28",
-  "objective": "Resolve the Material 3 TimePicker picker-packet follow-on for value-derived clock dial label ids.",
-  "owner": "Codex",
+  "scope_kind": "closeout",
+  "problem": "Track material3-time-picker-dial-accessibility-packet-v1 lane state, gates, and evidence.",
   "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
+    }
+  ],
+  "repro": {
+    "summary": "First-open repro for material3-time-picker-dial-accessibility-packet-v1; see the lane gates for the runnable surface.",
+    "commands": [
+      "python -m json.tool docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/WORKSTREAM.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/WORKSTREAM.json"
+    }
+  ],
+  "evidence": [
     "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/DESIGN.md",
     "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/TODO.md",
     "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/MILESTONES.md",
     "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/EVIDENCE_AND_GATES.md",
-    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/HANDOFF.md"
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/HANDOFF.md",
+    "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/CLOSEOUT_AUDIT_2026-05-28.md"
   ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Treat this lane as closed unless fresh evidence justifies a narrower follow-on."
+  },
+  "created": "2026-05-28",
+  "objective": "Resolve the Material 3 TimePicker picker-packet follow-on for value-derived clock dial label ids.",
+  "owner": "Codex",
   "artifacts": [
     "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md"
   ],

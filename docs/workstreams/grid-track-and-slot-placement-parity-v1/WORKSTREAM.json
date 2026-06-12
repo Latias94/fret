@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "grid-track-and-slot-placement-parity-v1",
   "title": "Grid Track And Slot Placement Parity v1",
-  "status": "completed",
+  "status": "closed",
   "updated": "2026-04-07",
   "scope_kind": "execution",
   "problem": "Keep Fret's declarative grid contract strong enough to express source-aligned shadcn slot placement when upstream components depend on explicit non-uniform tracks, independent row/column gaps, and grid item/container alignment semantics such as `justify-items`, `self-start`, and `justify-self-end`.",
@@ -22,6 +22,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/grid-track-and-slot-placement-parity-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/grid-track-and-slot-placement-parity-v1/WORKSTREAM.json"
     }
   ],
   "repro": {
@@ -74,7 +78,9 @@
     "ecosystem/fret-ui-shadcn/src/alert_dialog.rs",
     "apps/fret-ui-gallery/src/ui/snippets/card/demo.rs",
     "apps/fret-ui-gallery/src/driver/render_flow.rs",
-    "apps/fret-ui-gallery/tests/card_docs_surface.rs"
+    "apps/fret-ui-gallery/tests/card_docs_surface.rs",
+    "docs/workstreams/grid-track-and-slot-placement-parity-v1/MILESTONES.md",
+    "docs/workstreams/grid-track-and-slot-placement-parity-v1/WORKSTREAM.json"
   ],
   "adr_refs": [
     "docs/adr/0035-layout-constraints-and-optional-taffy-integration.md",
@@ -82,7 +88,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "close",
+    "default_action": "stay_closed",
     "notes": "Close this lane. If later parity work still drifts on `w-fit` / `self-start` / `items-stretch`, start a narrower declarative item-alignment follow-on rather than reopening the grid runtime contract."
   },
   "follow_on_of": "shadcn-source-alignment-v1"

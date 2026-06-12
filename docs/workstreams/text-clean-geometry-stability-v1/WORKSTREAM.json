@@ -16,15 +16,15 @@
       "path": "docs/workstreams/text-clean-geometry-stability-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/text-clean-geometry-stability-v1/MILESTONES.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/text-clean-geometry-stability-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/text-clean-geometry-stability-v1/HANDOFF.md"
     },
     {
@@ -73,7 +73,13 @@
     "ecosystem/fret-ui-shadcn/src/card.rs",
     "apps/fret-ui-gallery/src/ui/content.rs",
     "docs/workstreams/scroll-optimization-v1/HANDOFF.md",
-    "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md"
+    "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/DESIGN.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/TODO.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/MILESTONES.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/HANDOFF.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/CLOSEOUT_AUDIT_2026-05-21.md"
   ],
   "adr_refs": [],
   "continue_policy": {

@@ -4,7 +4,7 @@
   "title": "WGPU Composite Conformance Harness Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "The shared WGPU integration-test render/readback harness covers the Rgba8Unorm conformance tests, but composite-group conformance still duplicated the same helper shape because its expected pixels depend on rendering to Rgba8UnormSrgb. Keeping the duplication made composite renderer evidence noisier while hiding the format requirement inside a local test helper.",
   "authoritative_docs": [
     {
@@ -16,15 +16,15 @@
       "path": "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/HANDOFF.md"
     },
     {
@@ -63,11 +63,14 @@
   "evidence": [
     "crates/fret-render-wgpu/tests/support/mod.rs",
     "crates/fret-render-wgpu/tests/composite_group_conformance.rs",
-    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-composite-conformance-harness-followon-v1/HANDOFF.md"
   ],
-  "adr_refs": [
-    "docs/adr/0277-composite-effect-isolation-v1.md"
-  ],
+  "adr_refs": [],
   "continue_policy": {
     "default_action": "stay_closed",
     "notes": "The named composite-group test migrated successfully. Future duplicated readback helpers in effect, text, stroke, viewport, or MSAA tests should start as separate one-family follow-ons because their scale-factor, format, or render-target requirements may differ."

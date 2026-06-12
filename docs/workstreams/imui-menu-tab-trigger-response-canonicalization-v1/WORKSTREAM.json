@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "execution",
-  "follow_on_of": "imui-menu-tab-trigger-response-surface-v1",
   "problem": "The prior lane already landed helper-owned menu/submenu/tab trigger responses, but it left a duplicate alias layer behind (`*_response*` plus the older helper names). This lane canonicalizes the public facade so the primary helper names carry the richer response values directly and the duplicate alias track can be removed without widening runtime/mechanism contracts.",
   "authoritative_docs": [
     {
@@ -31,6 +30,10 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-canonicalization-v1/FINAL_STATUS.md"
     }
   ],
   "repro": {
@@ -80,9 +83,6 @@
     "ecosystem/fret-ui-kit/src/imui/response.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
-    "ecosystem/fret-imui/src/tests/composition.rs",
-    "ecosystem/fret-imui/src/tests/interaction.rs",
-    "apps/fret-examples/src/imui_response_signals_demo.rs",
     "tools/gate_imui_workstream_source.py",
     "tools/gate_imui_facade_teaching_source.py"
   ],
@@ -91,7 +91,8 @@
     "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md"
   ],
   "continue_policy": {
-    "default_action": "close",
+    "default_action": "stay_closed",
     "notes": "This lane is closed. Reuse it as the latest verdict for helper-owned trigger-response canonical naming only. If future work shifts to broader menu/tab policy, key ownership, or shell-level tabstrip behavior, start a different narrow follow-on instead of reopening this cleanup lane."
-  }
+  },
+  "follow_on_of": "imui-menu-tab-trigger-response-surface-v1"
 }

@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-23",
   "scope_kind": "execution",
-  "follow_on_of": "ui-perf-zed-smoothness-v1",
   "problem": "The 20260523-r59 closeout kept owner=canvas-paint-replay after the first replay-bookkeeping slice. Remaining attribution still showed per-frame row-scene prepaint planning/probing/key-compare work across hundreds of visible rows. This lane owned a narrow, baseline-neutral follow-on that reuses a validated overlapping-window row-scene replay plan inside fret-code-editor without broadening Canvas, renderer, or fret-ui-kit contracts.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/HANDOFF.md"
     },
     {
@@ -33,11 +32,11 @@
       "path": "docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/CLOSEOUT_AUDIT_2026-05-23.md"
     },
     {
-      "role": "parent",
+      "role": "reference",
       "path": "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
     },
     {
-      "role": "previous-closeout",
+      "role": "closeout",
       "path": "docs/workstreams/editor-canvas-paint-replay-slice-v1/CLOSEOUT_AUDIT_2026-05-23.md"
     }
   ],
@@ -100,7 +99,10 @@
     "target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/editor-paint-contract-closeout.summary.json",
     "target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/runner-logs/resize-jitter/stats.stdout.json",
     "target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/runner-logs/typical-autoscroll/stats.stdout.json",
-    "target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/runner-logs/complex-wheel/stats.stdout.json"
+    "target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/runner-logs/complex-wheel/stats.stdout.json",
+    "docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/MILESTONES.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json",
+    "docs/workstreams/editor-canvas-paint-replay-slice-v1/CLOSEOUT_AUDIT_2026-05-23.md"
   ],
   "adr_refs": [
     "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md",
@@ -108,7 +110,8 @@
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "Closed after the 20260523-r61 target-machine validation, attribution, artifact verification, and closeout. The overlapping-window plan cache is retained as a baseline-neutral fret-code-editor improvement. The parent performance lane still selects owner=canvas-paint-replay; do not reopen this lane unless fresh evidence shows a bug in the plan-cache mechanism itself."
-  }
+  },
+  "follow_on_of": "ui-perf-zed-smoothness-v1"
 }

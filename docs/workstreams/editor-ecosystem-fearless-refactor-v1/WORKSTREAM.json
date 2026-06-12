@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-12",
   "scope_kind": "execution",
-  "lane_slug": "framework-boundaries",
   "problem": "Keep Fret's editor-facing ecosystem coherent while it scales: reusable editor widgets stay in fret-ui-editor, authoring syntax stays thin in fret-imui, shell chrome stays in fret-workspace, dock-aware policy stays in fret-docking, viewport tooling converges through fret-viewport-tooling and fret-gizmo, and app-local inspector/project protocols stay app-owned until a second consumer justifies extraction.",
   "authoritative_docs": [
     {
@@ -94,7 +93,6 @@
     "docs/workstreams/editor-ecosystem-fearless-refactor-v1/EER_THEME_122_SHARED_PALETTE_AUDIT_2026-05-12.md",
     "docs/workstreams/editor-ecosystem-fearless-refactor-v1/TOKEN_INVENTORY.md",
     "ecosystem/fret-ui-editor/src/lib.rs",
-    "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-workspace/src/lib.rs",
     "ecosystem/fret-docking/src/lib.rs",
     "ecosystem/fret-viewport-tooling/src/lib.rs",
@@ -104,7 +102,10 @@
     "tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json",
     "tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json",
     "tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json",
-    "tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json"
+    "tools/diag-scripts/ui-editor/imui/imui-editor-proof-inspector-search-assist-popup-screenshots.json",
+    "docs/workstreams/editor-ecosystem-fearless-refactor-v1/IMGUI_LIKE_PRESET.md",
+    "docs/workstreams/editor-ecosystem-fearless-refactor-v1/PARITY_MATRIX.md",
+    "docs/workstreams/editor-ecosystem-fearless-refactor-v1/WORKSPACE_SHELL_STARTER_SET.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -113,5 +114,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue this lane for boundary, token, component-system, and proof-surface orchestration. Implementation-heavy work should split into narrower follow-ons unless it is a direct update to the listed docs. Do not move apps/fret-editor protocols directly into fret-ui-editor; property/inspector extraction needs a second consumer or a deliberately scoped protocol crate. Keep EER-THEME-122, EER-CLEANUP-135, EER-Q-141, and EER-Q-142 explicit until they are resolved or split."
-  }
+  },
+  "lane_slug": "framework-boundaries"
 }

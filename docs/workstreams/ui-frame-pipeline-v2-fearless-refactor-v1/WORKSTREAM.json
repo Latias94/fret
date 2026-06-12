@@ -16,7 +16,7 @@
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TARGET_INTERFACE_STATE.md"
     },
     {
-      "role": "progress",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md"
     },
     {
@@ -32,7 +32,7 @@
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_BASELINE_AUDIT_2026-05-13.md"
     },
     {
@@ -40,103 +40,103 @@
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M0_CONTRACT_FREEZE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M1_BOUNDARY_DIAGNOSTICS_SLICE_2026-05-13.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2_CANVAS_PREPAINT_WINDOWED_ROWS_SLICE_2026-05-13.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M2B_VIEW_BOUNDARY_PREPAINT_STATE_SLICE_2026-05-13.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3_ROW_SCENE_PREPAINT_REPLAY_PLAN_SLICE_2026-05-13.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3A_WINDOWED_ROWS_CANONICAL_ROW_RECT_SLICE_2026-05-13.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3B_ROW_SCENE_PREPAINT_OUTPUT_CARRIER_SLICE_2026-05-13.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4A_BOUNDARY_DIRTY_SET_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4B_BOUNDARY_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4C_BOUNDARY_HINT_API_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4D_VIEW_CACHE_BUILD_BOUNDARY_STORE_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4E_BOUNDARY_PAINT_CACHE_ENTRY_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4F_NODE_PAINT_CACHE_FALLBACK_DELETION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4G_PREVIOUS_FRAME_PAINT_RECORDING_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4H_PREVIOUS_FRAME_PAINT_REPLAY_SPAN_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4I_PAINT_CACHE_RELAX_VIEW_CACHE_GATING_DELETION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4J_HIT_TEST_ONLY_PAINT_CACHE_REPLAY_DEFAULT_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4K_PREVIOUS_FRAME_RECORDING_RETENTION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4L_RETAINED_PAINT_CACHE_ENTRY_STORE_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4M_VIEW_CACHE_BUILD_BOUNDARY_STORE_RETENTION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4N_LAYOUT_ENV_KNOB_CANONICALIZATION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4O_CACHE_ROOT_CONTAINMENT_DIAGNOSTICS_CANONICALIZATION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4P_VIEW_CACHE_LAYOUT_DEPENDENCY_RUNTIME_FLAG_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4Q_CACHE_ROOT_CONTAINED_LAYOUT_SCHEMA_DELETION_SLICE_2026-05-14.md"
     },
     {
-      "role": "implementation",
+      "role": "status",
       "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M4R_SECOND_PROOF_SURFACE_VIEW_CACHE_REUSE_SLICE_2026-05-14.md"
     },
     {
@@ -203,7 +203,11 @@
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/PROGRESS.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/DESIGN.md",
-    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md"
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/TODO.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/MILESTONES.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",

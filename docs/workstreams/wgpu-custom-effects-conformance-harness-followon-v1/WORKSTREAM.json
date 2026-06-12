@@ -4,7 +4,7 @@
   "title": "WGPU Custom Effects Conformance Harness Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "The CustomV1, CustomV2, and CustomV3 WGPU conformance tests duplicated the same Rgba8Unorm final-render readback helpers already owned by the shared integration-test support module. The duplication made custom-effect evidence harder to audit without adding behavior coverage.",
   "authoritative_docs": [
     {
@@ -16,15 +16,15 @@
       "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/HANDOFF.md"
     },
     {
@@ -65,7 +65,12 @@
     "crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs",
     "crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs",
     "crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs",
-    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md",

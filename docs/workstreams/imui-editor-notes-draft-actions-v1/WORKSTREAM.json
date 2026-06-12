@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-next-gap-audit-v1",
   "problem": "The next-gap audit recommends a locally testable app-owned editor-notes draft action slice. This lane adds explicit inspector-local draft action affordances without persistence, workspace dirty-close, command-bus, clipboard, TextField draft-buffer APIs, or public IMUI helper widening.",
   "authoritative_docs": [
     {
@@ -25,7 +24,7 @@
       "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/imui-editor-notes-draft-actions-v1/M1_APP_OWNED_DRAFT_ACTIONS_SLICE_2026-04-24.md"
     },
     {
@@ -86,5 +85,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed after app-owned draft action markers. Start a new narrow API-proof lane for persistence, workspace dirty-close, command-bus integration, preserved TextField draft-buffer contracts, or public IMUI helper APIs."
-  }
+  },
+  "follow_on_of": "imui-next-gap-audit-v1"
 }

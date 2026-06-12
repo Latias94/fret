@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-27",
   "scope_kind": "execution",
-  "lane_slug": "shadcn-parity",
   "problem": "Fret's shadcn parity tracking still mixes human visual review with automated harness evidence. This lane records how far self-rendered component parity can be proven automatically across source refs, upstream DOM/CSS snapshots, Fret layout, semantics, text/paint, behavior scripts, responsive coverage, and repair queues.",
   "authoritative_docs": [
     {
@@ -25,7 +24,7 @@
       "path": "docs/workstreams/shadcn-component-parity-matrix-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "matrix",
+      "role": "reference",
       "path": "docs/workstreams/shadcn-component-parity-matrix-v1/MATRIX.md"
     }
   ],
@@ -1695,16 +1694,22 @@
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/chart_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/native_select_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toast_agent_packet_p0_v1.json",
-    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json"
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/DESIGN.md",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/TODO.md",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/MILESTONES.md",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/EVIDENCE_AND_GATES.md"
   ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, card.docs-path.desktop, checkbox.docs-path.desktop, collapsible.docs-path.desktop, command.docs-path.desktop-overlay, empty.docs-path.desktop, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, item.docs-path.desktop, kbd.docs-path.desktop, label.docs-path.desktop, radio-group.docs-path.desktop, scroll-area.docs-path.desktop, separator.docs-path.desktop, skeleton.docs-path.desktop, spinner.docs-path.desktop, textarea.docs-path.desktop, toggle.docs-path.desktop, toggle-group.docs-path.desktop, slider.docs-path.desktop, sonner.docs-path.desktop-mobile, switch.docs-path.desktop, tabs.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, resizable.docs-path.desktop, and sidebar.docs-path.desktop-mobile are promoted to regression_locked. Sidebar now has repair=0, hardening=0, and gate=0 after closing the runtime-observable SidebarMenuBadge pointer-events-none gap with HitTestGate(false), while preserving the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, action/badge peer size-state, active peer foreground, collapsed visibility, RTL anchoring, and compact text gates. Full React DOM/data-slot/class-name and API-shape one-to-one parity remains a non-blocking portability note. Carousel, Chart, and Native Select are audited_deferred with zero queues and explicit resume conditions; Toast and Typography are audited_skipped with zero queues because they are respectively a Sonner compatibility alias and a docs/helper surface rather than standalone component contracts. No implemented surface remains inventory_only, harness_hardening, or not_in_harness. Current matrix totals are 54 regression_locked, 3 audited_deferred, 2 audited_skipped, 0 harness_hardening, 0 inventory_only, and 0 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
+  },
+  "lane_slug": "shadcn-parity",
   "upstream_refs": [
     "repo-ref/ui/apps/v4/registry/new-york-v4/ui",
     "repo-ref/ui/apps/v4/content/docs/components",
     "repo-ref/primitives",
     "repo-ref/base-ui"
-  ],
-  "continue_policy": {
-    "default_action": "continue",
-    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, card.docs-path.desktop, checkbox.docs-path.desktop, collapsible.docs-path.desktop, command.docs-path.desktop-overlay, empty.docs-path.desktop, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, item.docs-path.desktop, kbd.docs-path.desktop, label.docs-path.desktop, radio-group.docs-path.desktop, scroll-area.docs-path.desktop, separator.docs-path.desktop, skeleton.docs-path.desktop, spinner.docs-path.desktop, textarea.docs-path.desktop, toggle.docs-path.desktop, toggle-group.docs-path.desktop, slider.docs-path.desktop, sonner.docs-path.desktop-mobile, switch.docs-path.desktop, tabs.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, resizable.docs-path.desktop, and sidebar.docs-path.desktop-mobile are promoted to regression_locked. Sidebar now has repair=0, hardening=0, and gate=0 after closing the runtime-observable SidebarMenuBadge pointer-events-none gap with HitTestGate(false), while preserving the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, action/badge peer size-state, active peer foreground, collapsed visibility, RTL anchoring, and compact text gates. Full React DOM/data-slot/class-name and API-shape one-to-one parity remains a non-blocking portability note. Carousel, Chart, and Native Select are audited_deferred with zero queues and explicit resume conditions; Toast and Typography are audited_skipped with zero queues because they are respectively a Sonner compatibility alias and a docs/helper surface rather than standalone component contracts. No implemented surface remains inventory_only, harness_hardening, or not_in_harness. Current matrix totals are 54 regression_locked, 3 audited_deferred, 2 audited_skipped, 0 harness_hardening, 0 inventory_only, and 0 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
-  }
+  ]
 }

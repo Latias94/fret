@@ -4,7 +4,7 @@
   "title": "Material3 Tabs RTL Indicator v1",
   "status": "closed",
   "updated": "2026-05-30",
-  "scope_kind": "follow_on",
+  "scope_kind": "closeout",
   "problem": "Material3 Tabs did not consume layout direction for horizontal keyboard navigation or active-indicator fallback geometry, and the public Material3 context facade did not expose layout direction helpers.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-tabs-rtl-indicator-v1/HANDOFF.md"
     }
   ],
@@ -80,7 +80,12 @@
     "ecosystem/fret-ui-material3/src/tabs.rs",
     "ecosystem/fret-ui-material3/src/lib.rs",
     "ecosystem/fret-ui-material3/tests/tabs_state.rs",
-    "docs/workstreams/material3-tabs-rtl-indicator-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/CLOSEOUT_AUDIT_2026-05-30.md",
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/DESIGN.md",
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/TODO.md",
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/MILESTONES.md",
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-tabs-rtl-indicator-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

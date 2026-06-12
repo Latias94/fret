@@ -4,7 +4,7 @@
   "title": "Text Atlas Debug Facade Owner v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "General text diagnostics owned native-only atlas debug dump facade methods, leaving target-specific dump surface mixed into telemetry diagnostics.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/text-atlas-debug-facade-owner-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/text-atlas-debug-facade-owner-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/text-atlas-debug-facade-owner-v1/HANDOFF.md"
     },
     {
@@ -78,7 +78,12 @@
     "crates/fret-render-wgpu/src/text/diagnostics_debug.rs",
     "crates/fret-render-wgpu/src/text/mod.rs",
     "crates/fret-render-wgpu/src/renderer/render_text_dump.rs",
-    "docs/workstreams/text-atlas-debug-facade-owner-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/text-atlas-debug-facade-owner-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/text-atlas-debug-facade-owner-v1/DESIGN.md",
+    "docs/workstreams/text-atlas-debug-facade-owner-v1/TODO.md",
+    "docs/workstreams/text-atlas-debug-facade-owner-v1/MILESTONES.md",
+    "docs/workstreams/text-atlas-debug-facade-owner-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/text-atlas-debug-facade-owner-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

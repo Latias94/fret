@@ -4,8 +4,7 @@
   "title": "Material3 Interaction Regression Family Split v1",
   "status": "closed",
   "updated": "2026-05-31",
-  "scope_kind": "fearless_refactor",
-  "follow_on_of": "material3-interaction-regression-harness-split-v1",
+  "scope_kind": "closeout",
   "problem": "The intermediate Material3 interaction-regression binary still mixed navigation, overlay, choice/action, field, time picker, and plain text input tests, making ownership and focused gates too coarse.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/material3-interaction-regression-family-split-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-interaction-regression-family-split-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-interaction-regression-family-split-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-interaction-regression-family-split-v1/HANDOFF.md"
     },
     {
@@ -33,7 +32,6 @@
       "path": "docs/workstreams/material3-interaction-regression-family-split-v1/CLOSEOUT_AUDIT_2026-05-31.md"
     }
   ],
-  "context_manifest": "docs/workstreams/material3-interaction-regression-family-split-v1/CONTEXT.jsonl",
   "repro": {
     "summary": "Run the new family-owned binaries separately from the residual interaction-regression binary.",
     "commands": [
@@ -87,16 +85,23 @@
     "ecosystem/fret-ui-material3/tests/material3_navigation_interactions.rs",
     "ecosystem/fret-ui-material3/tests/material3_overlay_interactions.rs",
     "ecosystem/fret-ui-material3/tests/material3_choice_action_interactions.rs",
-    "ecosystem/fret-ui-material3/tests/material3_interaction_regressions.rs",
     "docs/workstreams/material3-interaction-regression-family-split-v1/DESIGN.md",
     "docs/workstreams/material3-interaction-regression-family-split-v1/TODO.md",
     "docs/workstreams/material3-interaction-regression-family-split-v1/EVIDENCE_AND_GATES.md",
-    "docs/workstreams/material3-interaction-regression-family-split-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    "docs/workstreams/material3-interaction-regression-family-split-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "docs/workstreams/material3-interaction-regression-family-split-v1/MILESTONES.md",
+    "docs/workstreams/material3-interaction-regression-family-split-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Closed after the first family split. Start narrower follow-ons for TimePicker, field-family autocomplete/dropdown, or plain TextInput mechanism ownership."
+  },
+  "follow_on_of": "material3-interaction-regression-harness-split-v1",
+  "context_manifest": "docs/workstreams/material3-interaction-regression-family-split-v1/CONTEXT.jsonl",
   "capability_tags": [
     "material3",
     "interaction",
@@ -105,9 +110,5 @@
     "overlay",
     "choice-action",
     "fearless-refactor"
-  ],
-  "continue_policy": {
-    "default_action": "start_follow_on",
-    "notes": "Closed after the first family split. Start narrower follow-ons for TimePicker, field-family autocomplete/dropdown, or plain TextInput mechanism ownership."
-  }
+  ]
 }

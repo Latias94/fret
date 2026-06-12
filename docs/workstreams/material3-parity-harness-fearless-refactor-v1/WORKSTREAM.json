@@ -20,18 +20,24 @@
       "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/HANDOFF.md"
     }
   ],
+  "repro": {
+    "summary": "First-open repro for material3-parity-harness-fearless-refactor-v1; see the lane gates for the runnable surface.",
+    "commands": [
+      "python -m json.tool docs/workstreams/material3-parity-harness-fearless-refactor-v1/WORKSTREAM.json | Out-Null"
+    ]
+  },
   "gates": [
     {
       "name": "workstream-state-json",
@@ -121,7 +127,11 @@
     "ecosystem/fret-ui-material3/src",
     "ecosystem/fret-ui-material3/tests",
     "apps/fret-ui-gallery/src/ui/snippets/material3",
-    "tools/diag-scripts/ui-gallery/material3"
+    "tools/diag-scripts/ui-gallery/material3",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-27.md",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/MILESTONES.md",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

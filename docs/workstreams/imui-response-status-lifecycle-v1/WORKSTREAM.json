@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-30",
   "scope_kind": "execution",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The active immediate-mode product-closure umbrella already narrowed the remaining P0 backlog, but the missing `ResponseExt` item-status lifecycle vocabulary now needs its own bounded lane so the repo can freeze activation/deactivation/edit semantics without widening `fret-authoring::Response`, `crates/fret-ui`, or the separate key-owner problem.",
   "authoritative_docs": [
     {
@@ -43,6 +42,10 @@
     {
       "role": "reference",
       "path": "docs/workstreams/imui-stack-fearless-refactor-v1/UIWRITER_RESPONSE_CONTRACT_CLOSEOUT_2026-03-29.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-response-status-lifecycle-v1/FINAL_STATUS.md"
     }
   ],
   "repro": {
@@ -112,9 +115,6 @@
     "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_model_controls.rs",
     "ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs",
-    "ecosystem/fret-imui/src/tests/interaction.rs",
-    "ecosystem/fret-imui/src/tests/models.rs",
-    "apps/fret-examples/src/imui_response_signals_demo.rs",
     "apps/fret-examples/src/lib.rs",
     "tools/gate_imui_facade_teaching_source.py",
     "tools/gate_imui_workstream_source.py"
@@ -125,7 +125,8 @@
     "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md"
   ],
   "continue_policy": {
-    "default_action": "close",
+    "default_action": "stay_closed",
     "notes": "This lane is closed. Reuse it as the closeout record for the first `ResponseExt` lifecycle vocabulary. If future pressure shifts to key ownership, broader proof depth, or helper-owned trigger policy, start another narrow follow-on instead of reopening this folder."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

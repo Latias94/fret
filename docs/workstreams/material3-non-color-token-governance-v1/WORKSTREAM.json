@@ -4,8 +4,7 @@
   "title": "Material3 Non-Color Token Governance v1",
   "status": "closed",
   "updated": "2026-05-31",
-  "scope_kind": "fearless_refactor",
-  "follow_on_of": "material3-token-resolver-non-field-fallback-v1",
+  "scope_kind": "closeout",
   "problem": "Material3 still has a smaller set of direct non-color token reads that need ownership classification before more visual matrix work hardens around them.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/material3-non-color-token-governance-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-non-color-token-governance-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-non-color-token-governance-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-non-color-token-governance-v1/HANDOFF.md"
     },
     {
@@ -33,7 +32,6 @@
       "path": "docs/workstreams/material3-non-color-token-governance-v1/CLOSEOUT_AUDIT_2026-05-31.md"
     }
   ],
-  "context_manifest": "docs/workstreams/material3-non-color-token-governance-v1/CONTEXT.jsonl",
   "repro": {
     "summary": "Audit Material3 non-color direct token reads and prove migrated slices with token visual and targeted component gates.",
     "commands": [
@@ -118,22 +116,26 @@
     "ecosystem/fret-ui-material3/tests/dialog_state.rs",
     "ecosystem/fret-ui-material3/tests/snackbar_state.rs",
     "ecosystem/fret-ui-material3/tests/navigation_drawer_state.rs",
-    "ecosystem/fret-ui-material3/tests/automation_surface.rs"
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "docs/workstreams/material3-non-color-token-governance-v1/MILESTONES.md",
+    "docs/workstreams/material3-non-color-token-governance-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0032-style-tokens-and-theme-resolution.md",
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "Closed after M3NC-060. Do not reopen this lane unless a classified residual owner proves wrong; start a narrower follow-on for that owner."
+  },
+  "follow_on_of": "material3-token-resolver-non-field-fallback-v1",
+  "context_manifest": "docs/workstreams/material3-non-color-token-governance-v1/CONTEXT.jsonl",
   "capability_tags": [
     "material3",
     "tokens",
     "non-color",
     "fallback",
     "fearless-refactor"
-  ],
-  "continue_policy": {
-    "default_action": "start_follow_on",
-    "notes": "Closed after M3NC-060. Do not reopen this lane unless a classified residual owner proves wrong; start a narrower follow-on for that owner."
-  }
+  ]
 }

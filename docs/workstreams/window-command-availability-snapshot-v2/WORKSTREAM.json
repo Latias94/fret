@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-16",
   "scope_kind": "execution",
-  "lane_slug": "ui-frame-overlay",
   "problem": "Window runtime command/action availability publication must be bounded, observable, and frame-scoped. Pointer movement over overlay-heavy UI must not synchronously recompute full widget availability, overlay pointer-move dispatch must stay under the initial 1.5ms gate, and command availability frames above 500us must expose per-command/per-route attribution.",
   "authoritative_docs": [
     {
@@ -85,11 +84,10 @@
     "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
     "crates/fret-diag/src/stats.rs",
     "crates/fret-diag/src/stats/bundle_stats_sort.rs",
-    "target/fret-diag/codex-command-availability-pointer-after-focus-route-20260516/1778902482724/bundle.schema2.json",
-    "target/fret-diag/codex-command-availability-pointer-after-focus-route-20260516/stats.command_availability.top3.json",
-    "target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json",
-    "target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/stats.command_availability.top10.json",
-    "target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/focus_traversal_snapshot.by_frame.json"
+    "docs/workstreams/window-command-availability-snapshot-v2/DESIGN.md",
+    "docs/workstreams/window-command-availability-snapshot-v2/TODO.md",
+    "docs/workstreams/window-command-availability-snapshot-v2/MILESTONES.md",
+    "docs/workstreams/window-command-availability-snapshot-v2/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -98,5 +96,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue here for runtime/UI-tree command availability snapshot publication, attribution, and gates. Keep generic stats, diff, trace, and perf-key registry work in diag-perf-attribution-v1 or diag-perf-profiling-infra-v1; keep broad smoothness baselines in ui-perf-* lanes."
-  }
+  },
+  "lane_slug": "ui-frame-overlay"
 }

@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-editor-notes-draft-actions-v1",
   "problem": "The editor-notes draft-actions lane closed with app-owned action/status markers instead of external access to the preserved TextField draft buffer. This audit decides whether the internal draft buffer is ready to become a public contract.",
   "authoritative_docs": [
     {
@@ -25,7 +24,7 @@
       "path": "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/M1_DRAFT_BUFFER_CONTRACT_AUDIT_2026-04-24.md"
     },
     {
@@ -74,7 +73,8 @@
     "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
     "docs/workstreams/imui-textfield-draft-buffer-contract-audit-v1/WORKSTREAM.json",
     "ecosystem/fret-ui-editor/src/controls/text_field.rs",
-    "tools/gate_imui_workstream_source.py"
+    "tools/gate_imui_workstream_source.py",
+    "docs/workstreams/imui-editor-notes-draft-actions-v1/CLOSEOUT_AUDIT_2026-04-24.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
@@ -82,5 +82,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This audit is closed with a no-public-API verdict. Start a new API-proof lane only when a proof surface truly needs external preserved-draft commit/discard."
-  }
+  },
+  "follow_on_of": "imui-editor-notes-draft-actions-v1"
 }

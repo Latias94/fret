@@ -4,8 +4,7 @@
   "title": "Material3 TextInput Mechanism Test Ownership v1",
   "status": "closed",
   "updated": "2026-05-31",
-  "scope_kind": "fearless_refactor",
-  "follow_on_of": "material3-field-interaction-family-split-v1",
+  "scope_kind": "closeout",
   "problem": "The final Material3 residual interaction-regression binary contained only a raw fret-ui TextInputProps Event::TextInput model-update test, which belongs to mechanism-layer coverage.",
   "authoritative_docs": [
     {
@@ -17,15 +16,15 @@
       "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/HANDOFF.md"
     },
     {
@@ -33,7 +32,6 @@
       "path": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md"
     }
   ],
-  "context_manifest": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CONTEXT.jsonl",
   "repro": {
     "summary": "Run the focused fret-ui TextInput mechanism test and verify Material3 no longer has a residual interaction-regression binary.",
     "commands": [
@@ -85,15 +83,22 @@
   ],
   "evidence": [
     "crates/fret-ui/src/declarative/tests/interactions/text_input.rs",
-    "ecosystem/fret-ui-material3/tests/material3_interaction_regressions.rs",
     "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/DESIGN.md",
     "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/TODO.md",
     "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/EVIDENCE_AND_GATES.md",
-    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md"
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CLOSEOUT_AUDIT_2026-05-31.md",
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/MILESTONES.md",
+    "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "Closed after moving the final raw TextInput residual coverage into fret-ui and deleting the Material3 residual interaction-regression binary."
+  },
+  "follow_on_of": "material3-field-interaction-family-split-v1",
+  "context_manifest": "docs/workstreams/material3-text-input-mechanism-test-ownership-v1/CONTEXT.jsonl",
   "capability_tags": [
     "material3",
     "fret-ui",
@@ -101,9 +106,5 @@
     "mechanism",
     "test-ownership",
     "fearless-refactor"
-  ],
-  "continue_policy": {
-    "default_action": "closed",
-    "notes": "Closed after moving the final raw TextInput residual coverage into fret-ui and deleting the Material3 residual interaction-regression binary."
-  }
+  ]
 }

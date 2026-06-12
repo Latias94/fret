@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-14",
   "scope_kind": "execution",
-  "follow_on_of": "dataflow-authoring-surface-fearless-refactor-v1",
   "problem": "The repo already split read-state queries from executor-backed mutations in principle, but the default app-facing surface still productizes the query lane far better than the submit/mutation lane. Real tool-app evidence now shows that first-time users can still author click-driven async submissions as render-observed queries, which replays the wrong lifecycle semantics and hides the missing executor-backed mutation contract.",
   "authoritative_docs": [
     {
@@ -149,7 +148,9 @@
     "apps/fret-examples/src/api_workbench_lite_demo.rs",
     "apps/fret-examples/src/lib.rs",
     "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-baseline.json",
-    "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json"
+    "tools/diag-scripts/tooling/api-workbench-lite/api-workbench-lite-shell-and-response.json",
+    "docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md",
+    "docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md"
   ],
   "adr_refs": [
     "docs/adr/0184-execution-and-concurrency-surface-v1.md",
@@ -159,7 +160,8 @@
     "docs/adr/0326-query-vs-mutation-read-vs-submit-default-app-lane-v1.md"
   ],
   "continue_policy": {
-    "default_action": "follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed. Reuse it as the closeout record for the default app-facing submit/mutation split. If future pressure is about mutation-to-feedback projection, GenUI command-to-mutation examples, or a genuinely new consumer failure, start a narrower follow-on instead of reopening this folder."
-  }
+  },
+  "follow_on_of": "dataflow-authoring-surface-fearless-refactor-v1"
 }

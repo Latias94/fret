@@ -5,8 +5,6 @@
   "status": "active",
   "updated": "2026-05-12",
   "scope_kind": "execution",
-  "lane_slug": "editor-canvas",
-  "follow_on_of": "code-editor-ecosystem-v1",
   "problem": "Stabilize the Fret code editor as an editor-grade subsystem by auditing and tightening its public API, buffer/view/surface boundaries, feature extension points, and performance gates before adding more editor features or broad hot-path rewrites.",
   "authoritative_docs": [
     {
@@ -18,7 +16,7 @@
       "path": "docs/workstreams/code-editor-public-api-and-architecture-v1/TARGET_INTERFACE_STATE.md"
     },
     {
-      "role": "guide",
+      "role": "reference",
       "path": "docs/code-editor.md"
     },
     {
@@ -447,7 +445,12 @@
     "apps/fret-ui-gallery/src/driver/render_flow.rs",
     "ecosystem/fret-ui-kit/src/overlay_controller.rs",
     "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
-    "ecosystem/fret-ui-editor/src/controls/enum_select.rs"
+    "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/DESIGN.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/TARGET_INTERFACE_STATE.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/TODO.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/MILESTONES.md",
+    "docs/workstreams/code-editor-public-api-and-architecture-v1/EVIDENCE_AND_GATES.md"
   ],
   "adr_refs": [
     "docs/adr/0011-overlays-and-multi-root.md",
@@ -462,5 +465,7 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue this narrow follow-on until the code editor public API, extension model, and first performance/diagnostics gate set are explicit. Keep broad feature implementation in smaller slices after M1."
-  }
+  },
+  "follow_on_of": "code-editor-ecosystem-v1",
+  "lane_slug": "editor-canvas"
 }

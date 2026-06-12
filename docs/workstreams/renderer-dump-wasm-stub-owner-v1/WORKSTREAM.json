@@ -4,7 +4,7 @@
   "title": "Renderer Dump Wasm Stub Owner v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "Renderer root module owned inline wasm debug dump stubs and empty wasm modules for native-only dump internals, mixing module assembly with implementation detail.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/renderer-dump-wasm-stub-owner-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/renderer-dump-wasm-stub-owner-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/renderer-dump-wasm-stub-owner-v1/HANDOFF.md"
     },
     {
@@ -77,7 +77,12 @@
     "crates/fret-render-wgpu/src/renderer/mod.rs",
     "crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble_wasm.rs",
     "crates/fret-render-wgpu/src/renderer/render_text_dump_wasm.rs",
-    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/DESIGN.md",
+    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/TODO.md",
+    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/MILESTONES.md",
+    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/renderer-dump-wasm-stub-owner-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "execution",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "The lifecycle lane already proved public response semantics on menu/combo surfaces that return `ResponseExt` or `ComboResponse`, but helper-owned menu/submenu/tab triggers used to collapse their internal trigger state into `bool open` or no outward return. This lane closes with an additive helper-level verdict: `begin_menu_response[_with_options]` and `begin_submenu_response[_with_options]` return `DisclosureResponse`, `tab_bar_response[_with_options]` returns `TabBarResponse`, and legacy wrappers stay intact without reopening richer menu/tab policy or widening `fret-authoring::Response`.",
   "authoritative_docs": [
     {
@@ -47,6 +46,10 @@
     {
       "role": "reference",
       "path": "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-menu-tab-trigger-response-surface-v1/FINAL_STATUS.md"
     }
   ],
   "repro": {
@@ -103,9 +106,9 @@
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
-    "ecosystem/fret-imui/src/tests/interaction.rs",
     "tools/gate_imui_workstream_source.py",
-    "tools/gate_imui_facade_teaching_source.py"
+    "tools/gate_imui_facade_teaching_source.py",
+    "docs/workstreams/imui-response-status-lifecycle-v1/WORKSTREAM.json"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
@@ -113,7 +116,8 @@
     "docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md"
   ],
   "continue_policy": {
-    "default_action": "close",
+    "default_action": "stay_closed",
     "notes": "This lane is closed. Reuse it only as the latest verdict for additive helper-owned trigger response surfaces. If pressure shifts to richer menu/tab policy, key ownership, or shell-level tabstrip product work, start or resume a different narrow lane instead of reopening this one."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1"
 }

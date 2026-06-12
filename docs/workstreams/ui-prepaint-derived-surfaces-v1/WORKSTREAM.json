@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-15",
   "scope_kind": "execution",
-  "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1",
   "problem": "Extend the accepted Frame Pipeline v2 boundary ownership model from the initial code-editor and view-cache-toggle proof surfaces to retained virtual-list and retained data-table surfaces, so derived prepaint and scene-fragment reuse becomes a reusable mechanism rather than a surface-specific optimization. Closed state: retained virtual-list boundary-owned prepaint output is implemented; retained data-table and view-cache proof surfaces pass; retained mechanisms and follow-ons are recorded in the closeout audit.",
   "authoritative_docs": [
     {
@@ -97,20 +96,6 @@
     "crates/fret-ui/src/tree/tests/paint_cache.rs",
     "crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs",
     "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-virtual-list-attrib/1778755322233/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-virtual-list-attrib/1778755328023-ui-gallery-virtual-list-bottom-steady/bundle.schema2.json",
-    "target/fret-diag/1778777905741/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-torture/1778759907796-script-step-0023-assert-failed/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-torture-current-dev/1778762426810-ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-current-dev-cargo-run/1778762568416-script-step-0022-assert-failed/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-after-sort-anchor-split-suite/suite.summary.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-after-sort-anchor-split-suite/1778776884214-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-after-sort-anchor-split-suite/1778776885328-ui-gallery-data-table-retained-multi-sort-shift-click/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-2026-05-15-after-scroll-wait/suite.summary.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-view-cache-2026-05-15-after-scroll-wait/1778777531409-ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-2026-05-15-after-scroll-wait/suite.summary.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-2026-05-15-after-scroll-wait/1778777573643-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
-    "target/fret-diag/ui-prepaint-derived-surfaces-v1-data-table-retained-2026-05-15-after-scroll-wait/1778777574739-ui-gallery-data-table-retained-multi-sort-shift-click/bundle.schema2.json",
     "tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json",
     "tools/diag-scripts/suites/ui-gallery-data-table-view-cache-torture/suite.json",
     "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json",
@@ -124,5 +109,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed. Start a separate ADR-backed follow-on for renderer Scene recording evolution, per-boundary previous-frame recording, public boundary API changes, or a new layout dirty-breadth optimization lane."
-  }
+  },
+  "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1"
 }

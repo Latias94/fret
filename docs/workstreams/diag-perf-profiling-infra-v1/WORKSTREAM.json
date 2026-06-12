@@ -5,7 +5,6 @@
   "status": "active",
   "updated": "2026-05-15",
   "scope_kind": "execution",
-  "lane_slug": "diagnostics-performance",
   "problem": "Make Fret performance profiling surfaces review-grade by keeping frame stats, phase timelines, CPU-vs-wall signals, trace artifacts, and perf key contracts explainable, additive, and tied to reproducible evidence.",
   "authoritative_docs": [
     {
@@ -17,11 +16,11 @@
       "path": "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-todo.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-milestones.md"
     },
     {
-      "role": "audit",
+      "role": "status",
       "path": "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md"
     }
   ],
@@ -144,7 +143,8 @@
     "crates/fret-diag/src/trace.rs",
     "crates/fret-diag/src/diag_perf/thresholds.rs",
     "crates/fret-diag/src/diag_repro/launch.rs",
-    "docs/tracy.md"
+    "docs/tracy.md",
+    "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-milestones.md"
   ],
   "adr_refs": [
     "docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md",
@@ -154,5 +154,6 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue here for perf profiling infrastructure, phase coverage, CPU-vs-wall attribution, and perf key registry work. Split a narrower follow-on for automated real-span capture/export if it needs runtime-wide tracing subscriber changes."
-  }
+  },
+  "lane_slug": "diagnostics-performance"
 }

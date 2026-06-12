@@ -5,8 +5,6 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "lane_slug": "framework-boundaries",
-  "follow_on_of": "retained-bridge-exit-v1",
   "problem": "Make retained widget authoring explicit compatibility surface instead of the default `fret-ui` public authoring model, while keeping the remaining `fret-node` retained canvas island compiling behind its migration feature.",
   "authoritative_docs": [
     {
@@ -22,7 +20,7 @@
       "path": "docs/workstreams/retained-public-surface-exit-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -64,7 +62,11 @@
     "crates/fret-ui/src/lib.rs",
     "ecosystem/fret-node/Cargo.toml",
     "ecosystem/fret-node/src/lib.rs",
-    "docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md"
+    "docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md",
+    "docs/workstreams/retained-public-surface-exit-v1/TODO.md",
+    "docs/workstreams/retained-public-surface-exit-v1/MILESTONES.md",
+    "docs/workstreams/retained-public-surface-exit-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
@@ -73,5 +75,7 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue until the default root retained authoring exports are gated and follow-on adapter work has a named owner lane."
-  }
+  },
+  "follow_on_of": "retained-bridge-exit-v1",
+  "lane_slug": "framework-boundaries"
 }

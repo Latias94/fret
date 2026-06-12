@@ -4,7 +4,7 @@
   "title": "Direction Infrastructure v1",
   "status": "closed",
   "updated": "2026-05-30",
-  "scope_kind": "refactor",
+  "scope_kind": "closeout",
   "problem": "Direction handling exists in several layers but repeated RTL policy remains in design-system components. The lane defines ownership and extracts the first shared direction policy helpers without claiming full Flex RTL layout support.",
   "authoritative_docs": [
     {
@@ -20,15 +20,15 @@
       "path": "docs/workstreams/direction-infrastructure-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/direction-infrastructure-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/direction-infrastructure-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/direction-infrastructure-v1/HANDOFF.md"
     }
   ],
@@ -67,7 +67,13 @@
     "ecosystem/fret-ui-shadcn/src/rtl.rs",
     "ecosystem/fret-ui-material3/src/chip_set.rs",
     "ecosystem/fret-ui-material3/src/segmented_button.rs",
-    "ecosystem/fret-ui-material3/src/tabs.rs"
+    "ecosystem/fret-ui-material3/src/tabs.rs",
+    "docs/workstreams/direction-infrastructure-v1/CLOSEOUT_AUDIT_2026-05-30.md",
+    "docs/workstreams/direction-infrastructure-v1/DESIGN.md",
+    "docs/workstreams/direction-infrastructure-v1/TODO.md",
+    "docs/workstreams/direction-infrastructure-v1/MILESTONES.md",
+    "docs/workstreams/direction-infrastructure-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/direction-infrastructure-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"

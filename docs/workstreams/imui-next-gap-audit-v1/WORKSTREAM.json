@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-01",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-editor-notes-dirty-status-v1",
   "problem": "Recent IMUI follow-ons closed collection helper readiness and editor-notes inspector/draft-status depth. This audit chooses the next locally testable non-multi-window IMUI gap without reopening umbrella lanes or widening public helper APIs by default.",
   "authoritative_docs": [
     {
@@ -25,7 +24,7 @@
       "path": "docs/workstreams/imui-next-gap-audit-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md"
     },
     {
@@ -73,7 +72,9 @@
     "docs/workstreams/imui-next-gap-audit-v1/M1_NEXT_GAP_AUDIT_2026-04-24.md",
     "docs/workstreams/imui-next-gap-audit-v1/CLOSEOUT_AUDIT_2026-04-24.md",
     "docs/workstreams/imui-next-gap-audit-v1/WORKSTREAM.json",
-    "tools/gate_imui_workstream_source.py"
+    "tools/gate_imui_workstream_source.py",
+    "docs/workstreams/imui-editor-notes-dirty-status-v1/CLOSEOUT_AUDIT_2026-04-24.md",
+    "docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
@@ -81,5 +82,6 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This audit is closed. Start `imui-editor-notes-draft-actions-v1` for the recommended next app-owned implementation slice; do not reopen this folder for implementation work."
-  }
+  },
+  "follow_on_of": "imui-editor-notes-dirty-status-v1"
 }

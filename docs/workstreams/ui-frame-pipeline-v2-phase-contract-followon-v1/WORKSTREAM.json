@@ -5,8 +5,6 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "lane_slug": "ui-frame-overlay",
-  "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1",
   "problem": "Extend the accepted Frame Pipeline v2 contract with one narrow proof that build, layout, prepaint, paint, and commit responsibilities remain explicit outside the original closeout surfaces.",
   "authoritative_docs": [
     {
@@ -22,7 +20,7 @@
       "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -50,8 +48,12 @@
   "evidence": [
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
     "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md",
-    "crates/fret-ui/src/frame_pipeline/",
-    "crates/fret-ui/src/tree/"
+    "crates/fret-ui/src/tree",
+    "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/DESIGN.md",
+    "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/TODO.md",
+    "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/MILESTONES.md",
+    "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
@@ -59,5 +61,7 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue as a narrow follow-on. Do not reopen the closed global Frame Pipeline v2 lane."
-  }
+  },
+  "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1",
+  "lane_slug": "ui-frame-overlay"
 }

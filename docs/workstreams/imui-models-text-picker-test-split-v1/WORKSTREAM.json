@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-04",
   "scope_kind": "closeout",
-  "follow_on_of": "imui-text-input-picker-a11y-v1",
   "problem": "Keep IMUI text-input picker verification reviewable by splitting completion/history picker tests out of the growing `models_text.rs` god test file without changing runtime or policy behavior.",
   "authoritative_docs": [
     {
@@ -72,13 +71,17 @@
   ],
   "evidence": [
     "ecosystem/fret-imui/src/tests/mod.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
-    "ecosystem/fret-imui/src/tests/models_text_picker.rs",
-    "docs/audits/imui-imgui-gap-audit-2026-04-22.md"
+    "docs/audits/imui-imgui-gap-audit-2026-04-22.md",
+    "docs/workstreams/imui-models-text-picker-test-split-v1/DESIGN.md",
+    "docs/workstreams/imui-models-text-picker-test-split-v1/TODO.md",
+    "docs/workstreams/imui-models-text-picker-test-split-v1/MILESTONES.md",
+    "docs/workstreams/imui-models-text-picker-test-split-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-models-text-picker-test-split-v1/CLOSEOUT_AUDIT_2026-05-04.md"
   ],
   "adr_refs": [],
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This mechanical picker test split is closed. Start separate follow-ons for filter/lifecycle/textarea splits or fixture-driven extraction where the cases become data-shaped rather than procedural."
-  }
+  },
+  "follow_on_of": "imui-text-input-picker-a11y-v1"
 }

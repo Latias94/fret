@@ -165,7 +165,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "follow_on",
+    "default_action": "start_follow_on",
     "notes": "This lane is closed. Future work should open narrow implementation follow-ons for public `dev`, public diagnostics, or dedicated theme-import packaging instead of reopening the product-taxonomy debate."
   },
   "follow_on_of": "release-surface-fearless-refactor-v1"

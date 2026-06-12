@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "material3-visual-behavior-layout-parity-v2",
   "title": "Material 3 Visual Behavior Layout Parity v2",
-  "status": "complete",
+  "status": "closed",
   "updated": "2026-05-29",
-  "scope_kind": "fearless_refactor",
+  "scope_kind": "closeout",
   "problem": "Material3 v1 closed component coverage and follow-ons, but did not prove shadcn-level style, layout, behavior, accessibility, and motion parity. This lane turns that residual risk into an axis-driven refactor plan with bounded packets and gates.",
   "authoritative_docs": [
     {
@@ -16,20 +16,24 @@
       "path": "docs/workstreams/material3-visual-behavior-layout-parity-v2/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-visual-behavior-layout-parity-v2/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-visual-behavior-layout-parity-v2/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-visual-behavior-layout-parity-v2/HANDOFF.md"
     },
     {
-      "role": "axis_matrix",
+      "role": "reference",
       "path": "docs/workstreams/material3-visual-behavior-layout-parity-v2/artifacts/material3_parity_axis_matrix_v2.json"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-visual-behavior-layout-parity-v2/WORKSTREAM.json"
     }
   ],
   "repro": {
@@ -130,7 +134,13 @@
     "ecosystem/fret-ui-material3/src",
     "ecosystem/fret-ui-material3/tests",
     "apps/fret-ui-gallery/src/ui/snippets/material3",
-    "tools/diag-scripts/ui-gallery/material3"
+    "tools/diag-scripts/ui-gallery/material3",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/DESIGN.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/TODO.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/MILESTONES.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/HANDOFF.md",
+    "docs/workstreams/material3-visual-behavior-layout-parity-v2/WORKSTREAM.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -140,7 +150,7 @@
     "docs/adr/0324-a11y-state-description-semantics-v1.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "The v2 component-axis lane is complete. Start a new workstream for residual API breadth, exhaustive visual matrices, or test-maintenance follow-ons."
   }
 }

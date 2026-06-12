@@ -4,7 +4,7 @@
   "title": "WGPU Image Registry Metadata Prune Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "ImageRegistry retained per-entry image color-space metadata after registration/update validation had already consumed it. That state had no runtime reader and required dead-code suppressions beside metadata that is actively used by render encoding.",
   "authoritative_docs": [
     {
@@ -20,11 +20,11 @@
       "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/HANDOFF.md"
     },
     {
@@ -62,7 +62,12 @@
   ],
   "evidence": [
     "crates/fret-render-wgpu/src/images.rs",
-    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {

@@ -5,8 +5,6 @@
   "status": "active",
   "updated": "2026-05-25",
   "scope_kind": "execution",
-  "lane_slug": "ui-frame-overlay",
-  "follow_on_of": "ui-focus-overlay-fearless-refactor-v1",
   "problem": "Create a reusable policy oracle for overlay dismissal, focus restore, modal barriers, and nested focus scopes so Radix/Base UI behavior does not drift across recipes and diagnostics scripts.",
   "authoritative_docs": [
     {
@@ -22,7 +20,7 @@
       "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -51,7 +49,12 @@
     "docs/workstreams/ui-focus-overlay-fearless-refactor-v1/README.md",
     "crates/fret-ui/src/tree/tests/outside_press.rs",
     "crates/fret-ui/src/declarative/tests/interactions/dismissible.rs",
-    "tools/diag-scripts/ui-gallery/overlay/"
+    "tools/diag-scripts/ui-gallery/overlay",
+    "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/DESIGN.md",
+    "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/TODO.md",
+    "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/MILESTONES.md",
+    "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
@@ -61,5 +64,7 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue above runtime mechanisms. The oracle should validate policy outcomes without moving policy into `crates/fret-ui`."
-  }
+  },
+  "follow_on_of": "ui-focus-overlay-fearless-refactor-v1",
+  "lane_slug": "ui-frame-overlay"
 }

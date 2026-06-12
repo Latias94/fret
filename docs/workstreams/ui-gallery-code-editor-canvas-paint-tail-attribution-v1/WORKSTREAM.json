@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-05-18",
   "scope_kind": "audit",
-  "follow_on_of": "view-cache-resize-jitter-attribution-v1",
   "problem": "Fresh UI Gallery code-editor resize-jitter evidence shows the current worst frame is dominated by a Canvas paint tail, while ViewCache is not the top layout owner. This lane attributes that Canvas tail before any code-editor, windowed-rows-surface, diagnostics, or renderer runtime change.",
   "authoritative_docs": [
     {
@@ -21,19 +20,19 @@
       "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/HANDOFF.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md"
     },
     {
-      "role": "evidence",
+      "role": "execution",
       "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md"
     },
     {
@@ -98,10 +97,6 @@
     "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md",
     "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md",
-    "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json",
-    "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json",
-    "target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json",
-    "target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json",
     "ecosystem/fret-code-editor/src/editor/mod.rs",
     "ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs",
     "crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs",
@@ -113,7 +108,8 @@
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
   ],
   "continue_policy": {
-    "default_action": "closed",
+    "default_action": "stay_closed",
     "notes": "Closed with a fret-ui positioned-container layout fix. Open a new narrow lane only if a future bounded-viewport bundle proves a remaining owner."
-  }
+  },
+  "follow_on_of": "view-cache-resize-jitter-attribution-v1"
 }

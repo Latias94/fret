@@ -5,8 +5,6 @@
   "status": "active",
   "updated": "2026-06-12",
   "scope_kind": "execution",
-  "lane_slug": "imui-docking",
-  "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
   "authoritative_docs": [
     {
@@ -82,7 +80,7 @@
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "integration",
+      "role": "status",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/WORKTREE_CONVERGENCE_PLAN_2026-05-26.md"
     }
   ],
@@ -933,8 +931,6 @@
     "ecosystem/fret-ui-kit/src/imui/drag_drop/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/tests/source.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/tests/target.rs",
-    "ecosystem/fret-ui-kit/src/imui/facade_support.rs",
-    "ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/drag_accessors.rs",
@@ -1688,7 +1684,6 @@
     "apps/fret-cookbook/EXAMPLES.md",
     "docs/examples/README.md",
     "apps/fret-cookbook/examples/imui_action_basics.rs",
-    "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
     "apps/fret-cookbook/examples/imui_editor_controls_basics.rs",
     "apps/fret-cookbook/examples/imui_plot_basics.rs",
     "apps/fretboard/src/demos.rs",
@@ -2282,7 +2277,6 @@
     "ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/movable.rs",
     "ecosystem/fret-imui/src/tests/floating/window_options/disabled_options/resizable.rs",
     "ecosystem/fret-imui/src/tests/floating/window_options/resize.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/mod.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/command_activation.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/menu_activation/keyboard_navigation.rs",
@@ -2296,14 +2290,6 @@
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/open_delay.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/sibling_switch.rs",
     "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_hover/top_level.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs/response_edges.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs/selection.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/tabs/shortcut_scoping.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/repeat.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/response_edges.rs",
-    "ecosystem/fret-imui/src/tests/interaction_menu_tabs/submenu_shortcuts/trigger_scoping.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/hover_flags.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/hover_flags/active_item.rs",
@@ -2399,7 +2385,12 @@
     "ecosystem/fret-imui/src/tests/interaction_drag/collection_drag/scenario/order_flip.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/sortable.rs",
     "ecosystem/fret-imui/src/tests/interaction_drag/sortable/fixtures.rs",
-    "ecosystem/fret-imui/src/tests/interaction_drag/sortable/scenario.rs"
+    "ecosystem/fret-imui/src/tests/interaction_drag/sortable/scenario.rs",
+    "docs/workstreams/imui-imgui-gap-closure-v1/DESIGN.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/TODO.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/WORKTREE_CONVERGENCE_PLAN_2026-05-26.md"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
@@ -2409,5 +2400,7 @@
   "continue_policy": {
     "default_action": "continue",
     "notes": "Continue here while the work is source-audit, prioritization, and first-slice coordination. `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md` is part of this lane's active evidence: performance work should stay in the dedicated perf attribution/smoothness lanes and product-chain perf gates, not become a widget/API backlog. Split implementation-heavy fixes into narrower follow-ons once a specific owner, repro, and gate is named."
-  }
+  },
+  "follow_on_of": "imui-editor-grade-product-closure-v1",
+  "lane_slug": "imui-docking"
 }

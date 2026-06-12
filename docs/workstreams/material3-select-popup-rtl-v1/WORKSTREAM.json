@@ -4,8 +4,7 @@
   "title": "Material3 Select Popup RTL v1",
   "status": "closed",
   "updated": "2026-05-30",
-  "scope_kind": "follow_on",
-  "follow_on_of": "material3-field-logical-insets-v1",
+  "scope_kind": "closeout",
   "problem": "Material3 Select trigger label/supporting text now use logical inline edges, but the popup/listbox path still needs RTL proof for popper start alignment and option-row leading/trailing visual slots.",
   "authoritative_docs": [
     {
@@ -17,19 +16,19 @@
       "path": "docs/workstreams/material3-select-popup-rtl-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/material3-select-popup-rtl-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/material3-select-popup-rtl-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/material3-select-popup-rtl-v1/HANDOFF.md"
     },
     {
-      "role": "context",
+      "role": "reference",
       "path": "docs/workstreams/material3-select-popup-rtl-v1/CONTEXT.jsonl"
     },
     {
@@ -37,7 +36,6 @@
       "path": "docs/workstreams/material3-select-popup-rtl-v1/CLOSEOUT_AUDIT_2026-05-30.md"
     }
   ],
-  "context_manifest": "docs/workstreams/material3-select-popup-rtl-v1/CONTEXT.jsonl",
   "repro": {
     "summary": "Run focused Select RTL popup/listbox geometry diagnostics tests.",
     "commands": [
@@ -91,7 +89,13 @@
   "evidence": [
     "ecosystem/fret-ui-material3/src/select.rs",
     "ecosystem/fret-ui-material3/tests/select_behavior.rs",
-    "docs/workstreams/material3-select-popup-rtl-v1/CLOSEOUT_AUDIT_2026-05-30.md"
+    "docs/workstreams/material3-select-popup-rtl-v1/CLOSEOUT_AUDIT_2026-05-30.md",
+    "docs/workstreams/material3-select-popup-rtl-v1/DESIGN.md",
+    "docs/workstreams/material3-select-popup-rtl-v1/TODO.md",
+    "docs/workstreams/material3-select-popup-rtl-v1/MILESTONES.md",
+    "docs/workstreams/material3-select-popup-rtl-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/material3-select-popup-rtl-v1/HANDOFF.md",
+    "docs/workstreams/material3-select-popup-rtl-v1/CONTEXT.jsonl"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -100,5 +104,7 @@
   "continue_policy": {
     "default_action": "start_follow_on",
     "notes": "This lane is closed after Select popup/listbox RTL placement and option-row proof. Split trigger input-row RTL, ExposedDropdown/Autocomplete adoption, and broader field-family choreography into follow-ons."
-  }
+  },
+  "follow_on_of": "material3-field-logical-insets-v1",
+  "context_manifest": "docs/workstreams/material3-select-popup-rtl-v1/CONTEXT.jsonl"
 }

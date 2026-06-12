@@ -5,7 +5,6 @@
   "status": "closed",
   "updated": "2026-04-28",
   "scope_kind": "execution",
-  "follow_on_of": "imui-text-control-chrome-stability-v1",
   "problem": "The text-control chrome follow-on fixed the visible input/textarea focus-size jump, but IMUI needed a lane-owned invariant that every base control keeps the same outer geometry across hover, focus, pressed, active/open, changed, and disabled states. This closed lane owns the local, non-Linux proof that compact editor control geometry is stable by construction.",
   "authoritative_docs": [
     {
@@ -108,16 +107,14 @@
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
-    "ecosystem/fret-imui/src/tests/composition.rs",
-    "ecosystem/fret-imui/src/tests/interaction.rs",
-    "ecosystem/fret-imui/src/tests/models_text.rs",
     "repo-ref/imgui/imgui_widgets.cpp"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md"
   ],
   "continue_policy": {
-    "default_action": "open_follow_on",
+    "default_action": "start_follow_on",
     "notes": "Keep this lane closed after the local base-control geometry floor. Add only narrow maintenance tests for the same invariant here; start a focused follow-on for identity ergonomics, floating-window contract cleanup, Linux/Wayland compositor acceptance, or editor-grade tab policy."
-  }
+  },
+  "follow_on_of": "imui-text-control-chrome-stability-v1"
 }

@@ -4,7 +4,7 @@
   "title": "WGPU Image Sampling Conformance Harness Follow-on v1",
   "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "follow-on",
+  "scope_kind": "closeout",
   "problem": "The image sampling WGPU conformance test duplicated RGBA8 readback and pixel helpers already owned by the shared integration-test support module. Its explicit render-target setup remains local because the test is validating image sampling behavior.",
   "authoritative_docs": [
     {
@@ -16,15 +16,15 @@
       "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/HANDOFF.md"
     },
     {
@@ -63,7 +63,12 @@
   "evidence": [
     "crates/fret-render-wgpu/tests/support/mod.rs",
     "crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs",
-    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/DESIGN.md",
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/TODO.md",
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/MILESTONES.md",
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0276-image-sampling-hints-v1.md"

@@ -16,15 +16,15 @@
       "path": "docs/workstreams/path-base-conformance-v1/TODO.md"
     },
     {
-      "role": "milestones",
+      "role": "execution",
       "path": "docs/workstreams/path-base-conformance-v1/MILESTONES.md"
     },
     {
-      "role": "gates",
+      "role": "execution",
       "path": "docs/workstreams/path-base-conformance-v1/EVIDENCE_AND_GATES.md"
     },
     {
-      "role": "handoff",
+      "role": "reference",
       "path": "docs/workstreams/path-base-conformance-v1/HANDOFF.md"
     },
     {
@@ -65,7 +65,12 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
     "crates/fret-render-wgpu/src/renderer/path.rs",
     "crates/fret-render-wgpu/tests/path_base_conformance.rs",
-    "docs/workstreams/path-base-conformance-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    "docs/workstreams/path-base-conformance-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/path-base-conformance-v1/DESIGN.md",
+    "docs/workstreams/path-base-conformance-v1/TODO.md",
+    "docs/workstreams/path-base-conformance-v1/MILESTONES.md",
+    "docs/workstreams/path-base-conformance-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/path-base-conformance-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0080-vector-path-contract.md",
