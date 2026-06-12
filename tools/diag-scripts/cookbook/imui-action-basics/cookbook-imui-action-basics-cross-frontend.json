@@ -4,6 +4,7 @@
     "name": "Cookbook: imui action basics (cross-frontend)",
     "tags": ["cookbook", "imui", "view_runtime", "actions", "smoke"],
     "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
     "target_hints": [
       "Invokes the command palette, clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
       "Asserts all triggers update the same view-local state via a shared typed action handler."

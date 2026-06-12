@@ -550,7 +550,10 @@
         "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
       "suite_memberships": [
         "cookbook-imui-action-basics"
       ],
@@ -573,7 +576,10 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
       "suite_memberships": [
         "cookbook-imui-debug-draw-basics"
       ],
@@ -596,7 +602,10 @@
         "diag.screenshot_png",
         "diag.script_v2"
       ],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
       "suite_memberships": [
         "cookbook-imui-editor-controls-basics"
       ],
@@ -618,7 +627,10 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
       "suite_memberships": [
         "cookbook-imui-editor-controls-basics"
       ],

@@ -11,6 +11,7 @@
       "typing"
     ],
     "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
     "target_hints": [
       "Proves DragValue typing test ids are published only while typing mode is active.",
       "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again."

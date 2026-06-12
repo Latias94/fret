@@ -4,6 +4,7 @@
     "name": "cookbook imui debug draw: smoke",
     "tags": ["cookbook", "cookbook.imui_debug_draw_basics", "imui", "debug-draw", "screenshots"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
     "target_hints": [
       "Waits for the IMUI debug-draw root, canvas, metadata, and response anchors to exist.",
       "Captures a screenshot and bundle for reviewable draw-list evidence."

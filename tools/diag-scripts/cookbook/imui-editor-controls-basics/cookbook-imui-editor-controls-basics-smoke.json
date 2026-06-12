@@ -4,6 +4,7 @@
     "name": "cookbook imui editor controls: smoke",
     "tags": ["cookbook", "cookbook.imui_editor_controls_basics", "imui", "editor-controls", "screenshots"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
     "target_hints": [
       "Waits for the IMUI editor controls lesson root and key controls.",
       "Focuses the text-assist field, waits for the anchored assist list, then captures layout, screenshot, and bundle evidence."

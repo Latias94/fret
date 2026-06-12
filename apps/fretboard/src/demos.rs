@@ -375,9 +375,9 @@ pub(crate) fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
         "router_basics" => "--features cookbook-router",
         "undo_basics" => "--features cookbook-undo",
         "async_inbox_basics" => "--features cookbook-async",
-        "imui_action_basics" => "--features cookbook-imui",
-        "imui_debug_draw_basics" => "--features cookbook-imui",
-        "imui_editor_controls_basics" => "--features cookbook-imui",
+        "imui_action_basics" => "--features cookbook-imui,cookbook-diag",
+        "imui_debug_draw_basics" => "--features cookbook-imui,cookbook-diag",
+        "imui_editor_controls_basics" => "--features cookbook-imui,cookbook-diag",
         "imui_plot_basics" => "--features cookbook-imui-plot",
         "docking_basics" => "--features cookbook-docking",
         "embedded_viewport_basics" => "--features cookbook-interop",
@@ -564,15 +564,15 @@ mod tests {
     fn cookbook_feature_hints_cover_imui_teaching_examples() {
         assert_eq!(
             cookbook_example_feature_hint("imui_action_basics"),
-            Some("--features cookbook-imui")
+            Some("--features cookbook-imui,cookbook-diag")
         );
         assert_eq!(
             cookbook_example_feature_hint("imui_debug_draw_basics"),
-            Some("--features cookbook-imui")
+            Some("--features cookbook-imui,cookbook-diag")
         );
         assert_eq!(
             cookbook_example_feature_hint("imui_editor_controls_basics"),
-            Some("--features cookbook-imui")
+            Some("--features cookbook-imui,cookbook-diag")
         );
         assert_eq!(
             cookbook_example_feature_hint("imui_plot_basics"),
