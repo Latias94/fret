@@ -10,14 +10,21 @@ execution: code
 ## Summary
 This plan tracks the ongoing effort to push Fret's immediate-mode surfaces toward stable 120Hz behavior under editor-grade composition. The first confirmed slice is `select`; broader menu, overlay, and combobox families remain secondary candidates until the first slice shows whether the dominant cost is shell depth, layout churn, or shared primitive policy.
 
+This lane is now explicitly documented in `docs/plans/` so each follow-on decision can record evidence, not just chat history.
+
 ## Problem Frame
 The current IMUI surface is good enough for small demos, but it is not yet consistently boring under heavy composition. The failures seen in `imui_action_basics`, `imui_editor_controls_basics`, and `imui_plot_basics` are not one bug class: they mix stack pressure, layout instability, and contract gaps.
 
 The working question is not "does the UI function at all". The question is whether the current module shapes can sustain dense editor-like usage without visible jank, overflow, or panic-level contract misses.
 
 ## Current Findings
-- `ecosystem/fret-ui-shadcn/src/select.rs` is the largest recipe surface and currently mixes state transitions, sizing, scroll affordances, positioning, item rendering, and modal/pointer behavior.
+- `ecosystem/fret-ui-shadcn/src/select.rs` is the largest recipe surface and currently mixes state transitions, sizing, scroll affordances, positioning, item rendering, modal/pointer behavior, and the test suite.
+- The module is already far beyond a normal recipe file in size: it is about 481 KB, which is a strong signal that the interface is too shallow for the amount of behavior behind it.
 - `ecosystem/fret-ui-kit/src/primitives/select.rs` is also substantial, but it is still a mechanism/helper layer rather than a recipe shell.
+- `repo-ref/base-ui/packages/react/src/select/` splits the same concept into many small files (`root`, `trigger`, `positioner`, `popup`, `list`, `item`, `group`, `scroll arrows`, `portal`, `backdrop`, `arrow`, `icon`). That is the clearest external signal that Fret's current single-file recipe surface is too shallow.
+- `ecosystem/fret-ui-shadcn/src/select.rs` already contains four different responsibilities in one file-shaped module: the public builder surface, the open/close and typeahead state machines, the placement/scroll geometry math, and the regression suite. Those are natural seam candidates for a fearless split.
+- The shape is also materially out of line with the reference `base-ui` structure, which splits the same concept across `root`, `trigger`, `positioner`, `popup`, `list`, `item`, `group`, `scroll arrows`, `portal`, `backdrop`, and `icon` modules. That is strong evidence that the current Fret surface is too shallow to stay maintainable under more heavy examples.
+- `ecosystem/fret-ui-kit/src/primitives/select.rs` is in a better state than the recipe layer, but it still combines policy, state, placement, and event plumbing. It should remain the mechanism baseline, not a place where recipe-specific growth accumulates.
 - `imui_editor_controls_basics` shows visible height jitter when controls open or change state, which points to layout or chrome coupling rather than a pure paint issue.
 - The jitter is not isolated to one widget: `DragValue`, `AxisDragValue`, and `Slider` all shared a common "two mounted branches" pattern without a stable outer shell contract.
 - `NumericInput` already carries a stable outer flex box with a `min_height` row-height contract, which explains why `Exposure` behaved more consistently than `Roughness` in the demo.
@@ -49,6 +56,8 @@ The working question is not "does the UI function at all". The question is wheth
 - Keep `fret-ui` mechanism-only; move policy and defaults outward whenever a seam is available.
 - Use `repo-ref/ui`, `repo-ref/base-ui`, and `repo-ref/imgui` as comparison sources, not as dependencies.
 - Do not preserve compatibility when a cleaner seam is obviously better, unless a current consumer proves the old shape is still needed.
+- Deepen `select` by extracting the state/placement/render seams first, then reassess whether any adjacent heavy recipe needs the same cut.
+- Keep the public `Select` builder as a thin facade over narrower internal modules; the goal is locality and simpler change points, not a bigger single file.
 
 ## Implementation Units
 
@@ -88,6 +97,8 @@ The working question is not "does the UI function at all". The question is wheth
 - Keyboard navigation and selection still match the current contract.
 - Scroll affordances still appear only when needed.
 - The refactor does not add a new size jump or focus regression.
+- The split should preserve the current public builder surface while moving internal state, placement, and render concerns behind narrower seams.
+- The first cut should isolate the state machine and placement math before any further attempt to split rendering parts.
 
 **Verification:**
 - `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs`
@@ -130,11 +141,19 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `cargo test -p fret-ui-editor session_shell -j 1` passed.
 - 2026-06-14: `cargo check -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics -j 1` passed.
 - 2026-06-14: `cargo check -p fret-cookbook --features cookbook-imui --example imui_action_basics -j 1` passed.
+- 2026-06-14: `repo-ref/base-ui` shows the reference `select` surface split across many small files, which strongly argues for deepening `fret-ui-shadcn::Select` instead of continuing to grow one large recipe module.
+- 2026-06-14: current `select` evidence points to three practical seams: state machine, placement/layout, and render parts. The first refactor should target the first two seams.
+- 2026-06-14: adjacent heavy recipes remain candidates, but `select` is the highest-leverage first cut because it concentrates the most behavior behind the current facade.
+- 2026-06-14: first code slice split `select.rs` into private seam modules: `select/interaction.rs` for open-change and trigger/session state, `select/geometry.rs` for popper width and list-height sizing, and `select/content_tree.rs` for entry traversal/typeahead/value-label helpers.
+- 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the seam split.
+- 2026-06-14: focused `cargo test` / `cargo nextest` select filters did not produce a failure, but timed out during test compilation on Windows; rerun the focused select gates after the test artifact cache is warm or with a longer timeout.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
 - Which heavy surface gives the cleanest before/after perf signal after the first deep slice?
 - Should this plan remain a single audit lane, or split into a narrower follow-on once `select` proves the pattern?
+- After the state/placement split, should render-part extraction stay in `select.rs` or move into a sibling module tree immediately?
 
 ## Sources
 - `docs/architecture.md`

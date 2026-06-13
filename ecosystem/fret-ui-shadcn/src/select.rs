@@ -3,9 +3,7 @@ use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
 use crate::test_id::{attach_test_id, attach_test_id_suffix, test_id_slug};
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
-};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
@@ -54,6 +52,21 @@ use std::cell::Cell;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+mod content_tree;
+mod geometry;
+mod interaction;
+
+use content_tree::{
+    count_items, find_item_label_overrides, flatten_items_for_typeahead, trigger_value_text,
+};
+use geometry::{
+    select_content_desired_width_with_probe, select_list_desired_height_from_content_height,
+};
+use interaction::{
+    SelectOpenChangeCallbackState, SelectScrollArrowAutoScrollState, SelectTriggerKeyState,
+    select_open_change_events,
+};
+
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
@@ -64,87 +77,6 @@ fn select_overlay_background(theme: &ThemeSnapshot) -> Color {
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
-
-#[derive(Default)]
-struct SelectOpenChangeCallbackState {
-    initialized: bool,
-    last_open: bool,
-    pending_complete: Option<bool>,
-}
-
-#[derive(Debug, Default)]
-struct SelectScrollArrowAutoScrollState {
-    token: Option<TimerToken>,
-    last_pos: Option<Point>,
-    hovered: bool,
-}
-
-fn select_open_change_events(
-    state: &mut SelectOpenChangeCallbackState,
-    open: bool,
-    present: bool,
-    animating: bool,
-) -> (Option<bool>, Option<bool>) {
-    let mut changed = None;
-    let mut completed = None;
-
-    if !state.initialized {
-        state.initialized = true;
-        state.last_open = open;
-    } else if state.last_open != open {
-        state.last_open = open;
-        state.pending_complete = Some(open);
-        changed = Some(open);
-    }
-
-    if state.pending_complete == Some(open) && present == open && !animating {
-        state.pending_complete = None;
-        completed = Some(open);
-    }
-
-    (changed, completed)
-}
-
-fn select_list_desired_height_from_content_height(
-    min_row_height: Px,
-    content_height: Px,
-    max_height: Px,
-    outer_height: Px,
-) -> Px {
-    let outer_height = Px(outer_height.0.max(0.0));
-    let max_height = Px(max_height.0.max(0.0).min(outer_height.0));
-
-    let min_height = Px(min_row_height.0.max(0.0).min(max_height.0));
-    let content_height = Px(content_height.0.max(0.0));
-
-    Px(content_height.0.min(max_height.0).max(min_height.0))
-}
-
-fn select_content_desired_width_with_probe(
-    outer: Rect,
-    anchor: Rect,
-    min_width: Px,
-    border_width: Px,
-    width_probe_w: Option<Px>,
-    position: SelectPosition,
-) -> Px {
-    let base = radix_select::select_popper_desired_width(outer, anchor, min_width);
-    let probe = width_probe_w.map(|probe_w| {
-        let border_extra = Px(border_width.0 * 2.0);
-        Px(probe_w.0 + border_extra.0)
-    });
-
-    let desired = match (position, probe) {
-        // Upstream shadcn/radix `position="popper"` keeps the content at least as wide as the
-        // trigger (`min-w-[var(--radix-select-trigger-width)]`). Do not let the width probe shrink
-        // the popup below the trigger-derived base width once it becomes available a frame later.
-        (SelectPosition::Popper, Some(probe)) => Px(base.0.max(probe.0)),
-        (_, Some(probe)) => probe,
-        (_, None) => base,
-    };
-
-    Px(desired.0.max(min_width.0).min(outer.size.width.0))
-}
 
 fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
@@ -1865,70 +1797,6 @@ fn select_impl<H: UiHost>(
                 .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
         });
         let test_id_prefix = test_id_prefix.clone();
-        fn find_item_label_overrides(
-            entries: &[SelectEntry],
-            value: &str,
-        ) -> Option<(
-            Arc<str>,
-            Vec<fret_core::TextFontFeatureSetting>,
-            Vec<fret_core::TextFontAxisSetting>,
-        )> {
-            for entry in entries {
-                match entry {
-                    SelectEntry::Item(it) => {
-                        if it.value.as_ref() == value {
-                            return Some((
-                                it.label.clone(),
-                                it.label_features_override.clone(),
-                                it.label_axes_override.clone(),
-                            ));
-                        }
-                    }
-                    SelectEntry::Group(group) => {
-                        if let Some(out) = find_item_label_overrides(&group.entries, value) {
-                            return Some(out);
-                        }
-                    }
-                    SelectEntry::Label(_) | SelectEntry::Separator(_) => {}
-                }
-            }
-            None
-        }
-
-        fn trigger_value_text(
-            selected: Option<Arc<str>>,
-            entries: &[SelectEntry],
-            placeholder: &Arc<str>,
-            trigger_label_policy: SelectTriggerLabelPolicy,
-        ) -> Arc<str> {
-            if trigger_label_policy == SelectTriggerLabelPolicy::Value
-                && let Some(value) = selected.as_ref()
-            {
-                return value.clone();
-            }
-
-            selected
-                .as_ref()
-                .and_then(|v| {
-                    find_item_label_overrides(entries, v.as_ref()).map(
-                        |(label, _label_features_override, _label_axes_override)| label,
-                    )
-                })
-                .unwrap_or_else(|| placeholder.clone())
-        }
-
-        fn count_items(entries: &[SelectEntry]) -> usize {
-            let mut count: usize = 0;
-            for entry in entries {
-                match entry {
-                    SelectEntry::Item(_) => count = count.saturating_add(1),
-                    SelectEntry::Group(group) => count = count.saturating_add(count_items(&group.entries)),
-                    SelectEntry::Label(_) | SelectEntry::Separator(_) => {}
-                }
-            }
-            count
-        }
-
         let theme = Theme::global(&*cx.app).snapshot();
         let enabled = !disabled;
         let model_open = cx.app.models().get_copied(&open).unwrap_or(false);
@@ -2040,99 +1908,6 @@ fn select_impl<H: UiHost>(
         let style_for_options = style;
 
         let item_len = count_items(entries);
-
-        #[derive(Debug)]
-        struct SelectTriggerKeyState {
-            trigger: radix_select::SelectTriggerKeyState,
-            pointer: radix_select::SelectTriggerPointerState,
-            content: radix_select::SelectContentKeyState,
-            was_open: bool,
-            opened_by_pointer: bool,
-            opened_by_touch: bool,
-            scroll_handle: fret_ui::scroll::ScrollHandle,
-            value_node: Option<GlobalElementId>,
-            viewport: Option<GlobalElementId>,
-            listbox: Option<GlobalElementId>,
-            content_panel: Option<GlobalElementId>,
-            selected_item: Option<GlobalElementId>,
-            selected_item_text: Option<GlobalElementId>,
-            alignment_item_pos: Option<usize>,
-            alignment_item_has_leading_non_item: bool,
-            width_probe: Option<GlobalElementId>,
-            // Item-aligned select placement can be sensitive to sub-frame layout settling (e.g.
-            // text measurement, scroll affordances). To avoid visible "jitter" on hover/focus
-            // changes, lock the first stable item-aligned layout for the duration of a single
-            // open session (cleared on close/unmount).
-            last_item_aligned_layout: Option<radix_select::SelectItemAlignedLayout>,
-            pending_item_aligned_scroll_to_y: Option<Px>,
-            last_item_aligned_scroll_to_y: Option<Px>,
-            item_aligned_user_scrolled: bool,
-            did_item_aligned_scroll_initial: bool,
-            did_item_aligned_scroll_reposition: bool,
-            did_item_aligned_focus_scroll: bool,
-            item_aligned_scroll_up_visible: bool,
-            pending_active_align_top_scroll: bool,
-            pending_active_scroll_into_view: bool,
-            last_item_pointer_move_pos_window: Option<Point>,
-            keyboard_hover_suppressed: bool,
-        }
-
-        impl SelectTriggerKeyState {
-            fn new() -> Self {
-                Self {
-                    trigger: radix_select::SelectTriggerKeyState::default(),
-                    pointer: radix_select::SelectTriggerPointerState::default(),
-                    content: radix_select::SelectContentKeyState::default(),
-                    was_open: false,
-                    opened_by_pointer: false,
-                    opened_by_touch: false,
-                    scroll_handle: fret_ui::scroll::ScrollHandle::default(),
-                    value_node: None,
-                    viewport: None,
-                    listbox: None,
-                    content_panel: None,
-                    selected_item: None,
-                    selected_item_text: None,
-                    alignment_item_pos: None,
-                    alignment_item_has_leading_non_item: false,
-                    width_probe: None,
-                    last_item_aligned_layout: None,
-                    pending_item_aligned_scroll_to_y: None,
-                    last_item_aligned_scroll_to_y: None,
-                    item_aligned_user_scrolled: false,
-                    did_item_aligned_scroll_initial: false,
-                    did_item_aligned_scroll_reposition: false,
-                    did_item_aligned_focus_scroll: false,
-                    item_aligned_scroll_up_visible: false,
-                    pending_active_align_top_scroll: false,
-                    pending_active_scroll_into_view: false,
-                    last_item_pointer_move_pos_window: None,
-                    keyboard_hover_suppressed: false,
-                }
-            }
-        }
-
-        fn flatten_items_for_typeahead(
-            entries: &[SelectEntry],
-            enabled: bool,
-            values: &mut Vec<Arc<str>>,
-            labels: &mut Vec<Arc<str>>,
-            disabled: &mut Vec<bool>,
-        ) {
-            for entry in entries {
-                match entry {
-                    SelectEntry::Item(item) => {
-                        values.push(item.value.clone());
-                        labels.push(item.label.clone());
-                        disabled.push(item.disabled || !enabled);
-                    }
-                    SelectEntry::Group(group) => {
-                        flatten_items_for_typeahead(&group.entries, enabled, values, labels, disabled);
-                    }
-                    SelectEntry::Label(_) | SelectEntry::Separator(_) => {}
-                }
-            }
-        }
 
         // `control_chrome_pressable_with_id_props` stores handlers; keep dedicated clones for
         // trigger-owned hooks.
