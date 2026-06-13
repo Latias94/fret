@@ -1395,23 +1395,76 @@ fn resolved_dropdown_menu_shortcut_element<H: UiHost>(
         .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
 }
 
-fn focusable_item_count(entries: &[DropdownMenuEntry]) -> usize {
-    let mut out = 0usize;
-    for entry in entries {
-        match entry {
-            DropdownMenuEntry::Item(_)
-            | DropdownMenuEntry::CheckboxItem(_)
-            | DropdownMenuEntry::RadioItem(_) => out += 1,
-            DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
-            DropdownMenuEntry::Group(group) => out += focusable_item_count(&group.entries),
-            DropdownMenuEntry::RadioGroup(group) => out += group.items.len(),
-        }
-    }
-    out
-}
-
 fn dropdown_menu_item_roving_disabled(item: &DropdownMenuItem) -> bool {
     item.disabled && !item.focusable_when_disabled
+}
+
+struct DropdownMenuRovingMetadata {
+    item_count: usize,
+    labels: Arc<[Arc<str>]>,
+    disabled: Arc<[bool]>,
+}
+
+impl DropdownMenuRovingMetadata {
+    fn from_entries(entries: &[DropdownMenuEntry]) -> Self {
+        let mut builder = DropdownMenuRovingMetadataBuilder::default();
+        builder.extend(entries);
+        builder.finish()
+    }
+
+    fn roving_props(&self) -> RovingFocusProps {
+        RovingFocusProps {
+            enabled: true,
+            wrap: false,
+            disabled: self.disabled.clone(),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Default)]
+struct DropdownMenuRovingMetadataBuilder {
+    labels: Vec<Arc<str>>,
+    disabled: Vec<bool>,
+}
+
+impl DropdownMenuRovingMetadataBuilder {
+    fn extend(&mut self, entries: &[DropdownMenuEntry]) {
+        for entry in entries {
+            match entry {
+                DropdownMenuEntry::Item(item) => {
+                    self.labels.push(item.label.clone());
+                    self.disabled.push(dropdown_menu_item_roving_disabled(item));
+                }
+                DropdownMenuEntry::CheckboxItem(item) => {
+                    self.labels.push(item.label.clone());
+                    self.disabled.push(item.disabled);
+                }
+                DropdownMenuEntry::RadioItem(item) => {
+                    self.labels.push(item.label.clone());
+                    self.disabled.push(item.disabled);
+                }
+                DropdownMenuEntry::RadioGroup(group) => {
+                    for item in &group.items {
+                        self.labels.push(item.label.clone());
+                        self.disabled.push(item.disabled);
+                    }
+                }
+                DropdownMenuEntry::Group(group) => {
+                    self.extend(&group.entries);
+                }
+                DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
+            }
+        }
+    }
+
+    fn finish(self) -> DropdownMenuRovingMetadata {
+        DropdownMenuRovingMetadata {
+            item_count: self.labels.len(),
+            labels: Arc::from(self.labels.into_boxed_slice()),
+            disabled: Arc::from(self.disabled.into_boxed_slice()),
+        }
+    }
 }
 
 fn dropdown_menu_item_semantics_override(
@@ -1461,39 +1514,6 @@ fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
         }
     }
     false
-}
-
-fn collect_roving_labels_and_disabled(
-    entries: &[DropdownMenuEntry],
-    labels: &mut Vec<Arc<str>>,
-    disabled: &mut Vec<bool>,
-) {
-    for entry in entries {
-        match entry {
-            DropdownMenuEntry::Item(item) => {
-                labels.push(item.label.clone());
-                disabled.push(dropdown_menu_item_roving_disabled(item));
-            }
-            DropdownMenuEntry::CheckboxItem(item) => {
-                labels.push(item.label.clone());
-                disabled.push(item.disabled);
-            }
-            DropdownMenuEntry::RadioItem(item) => {
-                labels.push(item.label.clone());
-                disabled.push(item.disabled);
-            }
-            DropdownMenuEntry::RadioGroup(group) => {
-                for item in &group.items {
-                    labels.push(item.label.clone());
-                    disabled.push(item.disabled);
-                }
-            }
-            DropdownMenuEntry::Group(group) => {
-                collect_roving_labels_and_disabled(&group.entries, labels, disabled);
-            }
-            DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
-        }
-    }
 }
 
 fn dropdown_menu_label_element<H: UiHost>(
@@ -2416,19 +2436,10 @@ fn render_dropdown_submenu_panel_tree<H: UiHost>(
     style: &DropdownMenuSubmenuPanelStyleEnv,
 ) -> AnyElement {
     let reserve_leading_slot_enabled = style.align_leading_icons && reserve_leading_slot(&entries);
-    let item_count = focusable_item_count(&entries);
-
-    let mut submenu_labels: Vec<Arc<str>> = Vec::with_capacity(item_count);
-    let mut submenu_disabled_flags: Vec<bool> = Vec::with_capacity(item_count);
-    collect_roving_labels_and_disabled(&entries, &mut submenu_labels, &mut submenu_disabled_flags);
-    let submenu_labels_arc: Arc<[Arc<str>]> = Arc::from(submenu_labels.into_boxed_slice());
-    let submenu_disabled_arc: Arc<[bool]> = Arc::from(submenu_disabled_flags.into_boxed_slice());
-    let roving = RovingFocusProps {
-        enabled: true,
-        wrap: false,
-        disabled: submenu_disabled_arc,
-        ..Default::default()
-    };
+    let roving_metadata = DropdownMenuRovingMetadata::from_entries(&entries);
+    let item_count = roving_metadata.item_count;
+    let labels = roving_metadata.labels.clone();
+    let roving = roving_metadata.roving_props();
 
     let labelled_by_element = cx
         .app
@@ -2516,7 +2527,7 @@ fn render_dropdown_submenu_panel_tree<H: UiHost>(
                     },
                     roving,
                 },
-                submenu_labels_arc.clone(),
+                labels.clone(),
                 style_for_panel.typeahead_timeout_ticks,
                 current_submenu_models_for_panel.clone(),
                 move |_cx| rows,
@@ -3668,13 +3679,10 @@ impl DropdownMenu {
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
-                    let item_count = focusable_item_count(&entries);
-                    let mut labels: Vec<Arc<str>> = Vec::with_capacity(item_count);
-                    let mut disabled_flags: Vec<bool> = Vec::with_capacity(item_count);
-                    collect_roving_labels_and_disabled(&entries, &mut labels, &mut disabled_flags);
-
-                    let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
-                    let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
+                    let roving_metadata = DropdownMenuRovingMetadata::from_entries(&entries);
+                    let item_count = roving_metadata.item_count;
+                    let labels = roving_metadata.labels.clone();
+                    let roving_props = roving_metadata.roving_props();
 
                     let outer = overlay::outer_bounds_with_window_margin_for_element_root(
                         cx,
@@ -3922,14 +3930,9 @@ impl DropdownMenu {
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
                                                     },
-                                                    roving: RovingFocusProps {
-                                                        enabled: true,
-                                                        wrap: false,
-                                                        disabled: disabled_arc.clone(),
-                                                        ..Default::default()
-                                                    },
+                                                    roving: roving_props.clone(),
                                                 },
-                                                labels_arc.clone(),
+                                                labels.clone(),
                                                 typeahead_timeout_ticks,
                                                 move |cx| {
                                                     let font_size = theme.metric_token("font.size");
@@ -7477,30 +7480,26 @@ mod tests {
 
     #[test]
     fn dropdown_menu_disabled_focusable_items_remain_roving_candidates() {
-        let mut labels = Vec::new();
-        let mut disabled = Vec::new();
-        collect_roving_labels_and_disabled(
-            &[
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha").disabled(true)),
-                DropdownMenuEntry::Item(
-                    DropdownMenuItem::new("Beta")
-                        .disabled(true)
-                        .focusable_when_disabled(true),
-                ),
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
-            ],
-            &mut labels,
-            &mut disabled,
-        );
+        let metadata = DropdownMenuRovingMetadata::from_entries(&[
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha").disabled(true)),
+            DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Beta")
+                    .disabled(true)
+                    .focusable_when_disabled(true),
+            ),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+        ]);
 
         assert_eq!(
-            labels
+            metadata
+                .labels
                 .iter()
                 .map(|label| label.as_ref())
                 .collect::<Vec<_>>(),
             vec!["Alpha", "Beta", "Gamma"]
         );
-        assert_eq!(disabled, vec![true, false, false]);
+        assert_eq!(metadata.disabled.as_ref(), &[true, false, false]);
+        assert_eq!(metadata.item_count, 3);
     }
 
     #[test]

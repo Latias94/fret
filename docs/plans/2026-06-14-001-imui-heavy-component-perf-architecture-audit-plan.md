@@ -161,6 +161,9 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `cargo test -p fret-ui-shadcn --lib select_rows_ -j 1` surfaced a test-only temporary-Arc lifetime bug, which was fixed; reruns then timed out during Windows test-target compilation without a test failure result.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the focused `SelectRows` tests were added.
 - 2026-06-14: adjacent audit found the same repeated metadata pattern in `dropdown_menu.rs` and `context_menu.rs`: root/submenu paths separately compute item counts, roving labels, and disabled masks before rendering. These are good follow-on candidates for a menu row snapshot seam, but they are riskier than `SelectRows` because they include submenu extraction and command gating.
+- 2026-06-14: `dropdown_menu.rs` now has a private `DropdownMenuRovingMetadata` seam that builds root/submenu roving labels, disabled flags, and item count in one recursive pass, replacing separate count/collect passes in both menu surfaces.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the dropdown-menu metadata seam.
+- 2026-06-14: `cargo test -p fret-ui-shadcn --lib dropdown_menu_disabled_focusable_items_remain_roving_candidates -j 1` timed out during Windows test-target compilation without a test failure result; the focused test body was updated to assert the new metadata seam.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
