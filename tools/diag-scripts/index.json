@@ -7952,6 +7952,7 @@
       ],
       "suite_memberships": [
         "perf-ui-gallery-context-menu-right-click-steady",
+        "perf-ui-gallery-general-app-components",
         "perf-ui-gallery-overlay-interaction-steady",
         "perf-ui-gallery-overlay-steady",
         "perf-ui-gallery-steady",
@@ -8556,6 +8557,7 @@
         "gallery-dev"
       ],
       "suite_memberships": [
+        "perf-ui-gallery-general-app-components",
         "ui-gallery-data-table-view-cache-torture"
       ],
       "tags": [
@@ -8807,6 +8809,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-dialog-escape-focus-restore-steady",
+        "perf-ui-gallery-general-app-components",
         "perf-ui-gallery-overlay-interaction-steady",
         "perf-ui-gallery-overlay-steady",
         "perf-ui-gallery-steady",
@@ -12348,6 +12351,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "perf-ui-gallery-general-app-components",
         "perf-ui-gallery-overlay-interaction-steady",
         "perf-ui-gallery-overlay-pointer-move-steady",
         "perf-ui-gallery-overlay-steady",
@@ -15046,6 +15050,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery-complex-steady",
+        "perf-ui-gallery-general-app-components",
         "perf-ui-gallery-layout-steady",
         "perf-ui-gallery-steady"
       ],

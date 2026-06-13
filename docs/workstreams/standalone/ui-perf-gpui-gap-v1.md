@@ -134,6 +134,25 @@ Recent editor-class wins (evidence lives in the perf log):
     so the remaining gap is not "make Fret viable"; it is to add a same-workload Fret microbench and then attack the
     extra frame phases that Fret currently measures in diagnostics: prepaint/paint, renderer payload, and resize layout
     roots.
+- Local general-app / shadcn-density probe (2026-06-13, Windows):
+  - Added representative suite:
+    `tools/diag-scripts/suites/perf-ui-gallery-general-app-components/suite.json`. Run it with
+    `--reuse-launch --reuse-launch-per-script` because the member scripts target different gallery pages and launch
+    defaults. Treat the full suite as a long-run baseline entrypoint; for quick edit-loop checks, run the individual
+    member scripts that cover the area being changed.
+  - Current repeat=3 evidence shows mixed readiness for GPUI-like general app feel. Context menu is within a 120Hz
+    frame (`top_total p95/max=6.398/6.398ms`), overlay pointer move is close to the 120Hz edge
+    (`7.991/7.991ms`), while dialog focus restore (`12.372/12.372ms`), virtual-list torture
+    (`9.311/9.311ms`), and data-table view-cache/filter/vlist (`17.068/17.068ms`) are not yet safely within a
+    120Hz budget.
+  - The dominant cost is layout, not renderer work. Representative p95 layout times are `5.704ms` for context menu,
+    `10.833ms` for dialog, `7.366ms` for overlay pointer move, `8.232ms` for virtual-list, and `15.336ms` for the
+    data-table view-cache/filter/vlist script. Renderer scene encode/text-prepare p95 remains much smaller
+    (`0.139..0.395ms` encode, `0.044..0.125ms` text prepare).
+  - Interpretation: for shadcn-like application surfaces with many overlays, lists, and table controls, the current
+    gap to GPUI-like feel is primarily hot layout-root breadth and cache containment, not GPU throughput. The next
+    optimization lane should make view-cache/virtual-list/data-table interactions avoid full page relayout and add a
+    formal baseline for this suite after the first layout-containment pass.
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
