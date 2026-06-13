@@ -103,14 +103,18 @@ python -m json.tool docs\workstreams\ui-table-row-cell-structural-churn-v1\WORKS
 python tools\check_workstream_catalog.py
 ```
 
-Gate not completed:
+Additional shadcn gate retry:
 
 ```powershell
 cargo nextest run -p fret-ui-shadcn retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast
+cargo nextest run -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast
 ```
 
-- Timed out after a 300s attempt and again after a 600s attempt, with no failure output.
-- No residual `cargo.exe`, `rustc.exe`, or `nextest.exe` processes remained after the timeout.
+- The unscoped package run failed while listing an unrelated integration-test executable:
+  `extras_relative_time_auto_update` returned Windows `os error 740`.
+- The target itself lives in the `fret-ui-shadcn` library test binary.
+- Retried with `--lib`; the gate passed:
+  `data_table::tests::retained_data_table_header_debug_ids_sort_with_column_actions`.
 
 Perf read:
 
