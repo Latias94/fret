@@ -35,6 +35,9 @@ The working question is not "does the UI function at all". The question is wheth
 - The combobox long-list probe's worst frame is layout-dominated, not renderer-dominated: `total=24090us`, `layout=21581us`, `layout.engine_solve=10687us`, `layout.nodes=1827`, `paint.nodes=2599`, and `inv.calls=272`.
 - The command probe's worst frame is much smaller but still layout-heavy: `total=3791us`, `layout=3214us`, `layout.engine_solve=1306us`.
 - The next optimization target should therefore be combobox popup/list layout breadth and invalidation scope before further GPU or command-palette work.
+- The first combobox policy optimization is now identified: searchable combobox commits used to clear the query in the same frame that the overlay started closing, which rematerialized the full long list while close presence was still mounted.
+- Deferring the query clear until `Popover`/`Drawer` close completion addresses that close-phase rematerialization, but it does not solve the heavier filter-time cost: the command/combobox path still creates filtered rows and row elements for the full matching result set.
+- `repo-ref/base-ui` uses virtualized combobox rows for large option sets, and Fret already has reusable virtual list mechanisms in `ecosystem/fret-ui-kit/src/declarative/list.rs`. The next deepening target is therefore a recipe-layer virtualized row seam for `CommandPalette`/searchable `Combobox`, not an example-only shortcut.
 
 ## Scope Boundaries
 ### In scope
@@ -141,23 +144,57 @@ The working question is not "does the UI function at all". The question is wheth
 
 **Files:**
 - `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- `ecosystem/fret-ui-shadcn/src/command.rs`
 - `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
+- `ecosystem/fret-ui-kit/src/declarative/list.rs`
 - `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`
 - `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json`
 
 **Evidence target:**
 - Current local worst frame: `target/fret-diag/imui-heavy-perf-probes-combobox/1781389001428/bundle.schema2.json`.
 - Current bottleneck: `roots.apply=12311us`, `request_build=7374us`, `layout.engine_solve=10687us`, `layout.nodes=1827`, `paint.nodes=2599`.
+- Deferred query-clear direction check: `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-after/1781392775186/bundle.schema2.json`.
+- Directional result: close/selection frames shrink after the query-clear deferral, while the worst dev-fast frame moves to `set_text_value("249")`; that means the remaining problem is long-list filtering/materialization and layout breadth.
 
 **Test scenarios:**
 - Open long-list combobox, filter to one item, select it, and close without selector regressions.
 - Preserve keyboard/focus/dismiss behavior.
 - Keep command-adapter metadata behavior covered by the existing focused unit test.
+- Closing commits keep the filtered list stable until overlay close completion, then clear the query exactly once.
+- Virtualized long-list rendering keeps row-level diagnostics selectors available for filtered results.
 
 **Verification:**
 - `target\debug\fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json --dir target/fret-diag/imui-heavy-perf-probes-combobox --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\release\fret-ui-gallery.exe`
 - `cargo check -p fret-ui-shadcn -j 1`
 - Focused `combobox` tests when Windows test-target compilation is warm enough.
+
+### U5. Add a CommandPalette virtual row seam
+**Goal:** Make long command/combobox lists pay for visible rows instead of all matching rows while preserving cmdk filtering, keyboard navigation, a11y collection metadata, and diagnostics selectors.
+
+**Files:**
+- `ecosystem/fret-ui-shadcn/src/command.rs`
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- `ecosystem/fret-ui-kit/src/declarative/list.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json`
+
+**Design decisions:**
+- Keep filtering and navigation snapshot construction in `CommandPalette`; those are cmdk policy and must remain available to keyboard handling even when rows are not mounted.
+- Virtualize row element materialization and layout, not the filtered item model itself. Filtering all items is acceptable at 250 rows; building and solving all row nodes is not.
+- Keep the initial seam opt-in or threshold-driven at the recipe layer so small command palettes stay simple and existing command behavior remains easy to reason about.
+- Prefer the existing `fret-ui-kit` virtual list helpers over introducing a new list mechanism inside `fret-ui-shadcn`.
+
+**Test scenarios:**
+- Filtering to a single long-list option still produces a stable row `test_id` and selection action.
+- Keyboard navigation still updates active descendant against the full filtered item set.
+- The empty, loading, separator, heading, and grouped-row cases do not lose semantics.
+- Non-virtual command palettes continue to render the same row order and collection metadata.
+
+**Verification:**
+- Focused `command_palette` and `combobox` unit filters after implementation.
+- `cargo check -p fret-ui-shadcn -j 1`
+- Directional dev-fast perf for `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json`.
+- Release perf rerun when `target\release\fret-ui-gallery.exe` can be rebuilt without a release codegen timeout.
 
 ## Progress Log
 - 2026-06-14: user-reported failures include stack overflow in `imui_action_basics`, missing theme token `surface` in `imui_plot_basics`, and height jitter in `imui_editor_controls_basics`.
@@ -212,12 +249,20 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: rerunning command probe against `target\release\fret-ui-gallery.exe` passed with worst frame `total=3791us`, `layout=3214us`, `layout.engine_solve=1306us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-command/1781388826377/bundle.schema2.json`.
 - 2026-06-14: rerunning combobox probe against `target\release\fret-ui-gallery.exe` passed but exposed a real perf problem: worst frame `total=24090us`, `layout=21581us`, `layout.engine_solve=10687us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox/1781389001428/bundle.schema2.json`.
 - 2026-06-14: `diag stats --sort cpu_cycles` and `--sort time` on the combobox bundle show the spike is real UI-thread work, not a renderer-only issue: `roots.apply=12311us`, `request_build=7374us`, `layout.nodes=1827`, `paint.nodes=2599`, `inv.calls=272`.
+- 2026-06-14: `combobox.rs` now defers query clearing for close-on-commit selections until `Popover`/`Drawer` close completion, keeping the filtered list stable during close presence instead of rematerializing the full list on the selection frame.
+- 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed for the deferred query-clear change.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed for the deferred query-clear change.
+- 2026-06-14: `cargo test -p fret-ui-shadcn --lib combobox_ -j 1` timed out during Windows test-target compilation without a test failure result.
+- 2026-06-14: `cargo build -p fret-ui-gallery --release -j 1` did not produce a fresh release binary after more than 20 minutes of `fret_ui_gallery` codegen, so no same-profile after number is available yet.
+- 2026-06-14: `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed and the dev-fast perf rerun moved the worst work to the filter-input step, with close/selection frames much smaller afterward. This supports the next decision: optimize row materialization/layout via a virtual row seam.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
 - Which heavy surface gives the cleanest before/after perf signal after the first deep slice?
 - Should this plan remain a single audit lane, or split into a narrower follow-on once `select` proves the pattern?
 - After the state/placement split, should render-part extraction stay in `select.rs` or move into a sibling module tree immediately?
+- Should `CommandPalette` virtualize automatically above a row-count threshold, or expose an explicit recipe option first and make automatic policy a later decision?
+- Should command virtualization live directly in `CommandPalette`, or should `Combobox` get a narrower virtualized-search adapter first and only promote it after one successful perf slice?
 
 ## Sources
 - `docs/architecture.md`

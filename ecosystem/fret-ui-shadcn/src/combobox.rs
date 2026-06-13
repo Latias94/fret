@@ -1,6 +1,9 @@
 use std::cell::Cell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
+};
 
 use crate::bool_model::IntoBoolModel;
 use crate::direction::LayoutDirection;
@@ -410,6 +413,50 @@ pub use kit_combobox::ComboboxOpenChangeReason;
 type OnOpenChange = kit_combobox::OnOpenChange;
 type OnOpenChangeWithReason = kit_combobox::OnOpenChangeWithReason;
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+
+fn combobox_overlay_commit_policy(
+    mut policy: kit_combobox::SelectionCommitPolicy,
+) -> kit_combobox::SelectionCommitPolicy {
+    if policy.close_on_commit {
+        policy.clear_query_on_commit = false;
+    }
+    policy
+}
+
+fn combobox_open_change_complete_handler(
+    close_complete_query_clear: Arc<AtomicBool>,
+    user_handler: Option<OnOpenChange>,
+) -> OnOpenChange {
+    Arc::new(move |open| {
+        if !open {
+            close_complete_query_clear.store(true, Ordering::Relaxed);
+        }
+        if let Some(handler) = user_handler.as_ref() {
+            handler(open);
+        }
+    })
+}
+
+fn combobox_clear_query_after_close_complete<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    query_model: &Model<String>,
+    close_complete_query_clear: &AtomicBool,
+) {
+    if close_complete_query_clear.swap(false, Ordering::Relaxed) {
+        let changed = cx
+            .app
+            .models_mut()
+            .update(query_model, |query| {
+                let changed = !query.is_empty();
+                query.clear();
+                changed
+            })
+            .unwrap_or(false);
+        if changed {
+            cx.request_frame();
+        }
+    }
+}
 
 /// Trigger rendering preset for [`Combobox`].
 ///
@@ -1630,20 +1677,15 @@ fn combobox_with_patch<H: UiHost>(
             .copied()
             .unwrap_or(None)
             .unwrap_or(ComboboxOpenChangeReason::None);
-        let (open_change, open_change_complete) = cx
+        let (open_change, _) = cx
             .slot_state(kit_combobox::OpenChangeCallbackState::default, |state| {
-                kit_combobox::open_change_events(state, is_open, is_open, false)
+                kit_combobox::open_change_events(state, is_open, is_open, true)
             });
         if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
             handler(open);
         }
         if let (Some(open), Some(handler)) = (open_change, on_open_change_with_reason.as_ref()) {
             handler(open, open_change_reason);
-        }
-        if let (Some(open), Some(handler)) =
-            (open_change_complete, on_open_change_complete.as_ref())
-        {
-            handler(open);
         }
 
         let query_model = if let Some(q) = query {
@@ -1657,12 +1699,13 @@ fn combobox_with_patch<H: UiHost>(
                 .map(|prefix| Arc::<str>::from(format!("{prefix}-content")))
         });
 
-        let should_clear_query = cx.slot_state(kit_combobox::ClearQueryOnCloseState::default, |state| {
-            kit_combobox::should_clear_query_on_close(state, is_open)
-        });
-        if should_clear_query {
-            let _ = cx.app.models_mut().update(&query_model, |v| v.clear());
-        }
+        let close_complete_query_clear =
+            cx.slot_state(|| Arc::new(AtomicBool::new(false)), |state| state.clone());
+        let overlay_open_change_complete = Some(combobox_open_change_complete_handler(
+            close_complete_query_clear.clone(),
+            on_open_change_complete.clone(),
+        ));
+        let selection_commit_policy = combobox_overlay_commit_policy(selection_commit_policy);
 
         let size = Size::default();
         let radius = chrome_patch
@@ -1866,13 +1909,15 @@ fn combobox_with_patch<H: UiHost>(
             let show_trigger_for_trigger = show_trigger;
             let items_for_content = items;
             let groups_for_content = groups;
-            return Drawer::new(open.clone())
+            let query_model_for_deferred_clear = query_model.clone();
+            let element = Drawer::new(open.clone())
                 .on_dismiss_request(Some(
                     kit_combobox::set_open_change_reason_on_dismiss_request(
                         open_change_reason_model.clone(),
                     ),
                 ))
                 .on_close_auto_focus(Some(close_auto_focus.clone()))
+                .on_open_change_complete(overlay_open_change_complete.clone())
                 .into_element(
                     cx,
                     move |cx| {
@@ -2452,6 +2497,12 @@ fn combobox_with_patch<H: UiHost>(
                         }
                     },
                 );
+            combobox_clear_query_after_close_complete(
+                cx,
+                &query_model_for_deferred_clear,
+                &close_complete_query_clear,
+            );
+            return element;
         }
 
         let open_change_reason_model_for_trigger = open_change_reason_model.clone();
@@ -2499,7 +2550,8 @@ fn combobox_with_patch<H: UiHost>(
                     open_change_reason_model.clone(),
                 ),
             ))
-            .on_close_auto_focus(Some(close_auto_focus.clone()));
+            .on_close_auto_focus(Some(close_auto_focus.clone()))
+            .on_open_change_complete(overlay_open_change_complete.clone());
         if !use_content_shell_for_diag {
             popover = popover.diagnostics_content_element_from_cell(listbox_id_for_diag);
         }
@@ -2511,7 +2563,8 @@ fn combobox_with_patch<H: UiHost>(
             popover = popover.anchor_element(anchor_element_id);
         }
 
-        popover.into_element_with_anchor(
+        let query_model_for_deferred_clear = query_model.clone();
+        let element = popover.into_element_with_anchor(
             cx,
             move |cx| {
                 let open_change_reason_model = open_change_reason_model_for_trigger.clone();
@@ -3042,7 +3095,13 @@ fn combobox_with_patch<H: UiHost>(
                 }
                 content.into_element(cx)
             },
-        )
+        );
+        combobox_clear_query_after_close_complete(
+            cx,
+            &query_model_for_deferred_clear,
+            &close_complete_query_clear,
+        );
+        element
     })
 }
 
@@ -3786,6 +3845,52 @@ mod tests {
         assert_eq!(
             combobox_command_item_test_id(Some("framework"), "react/router").as_deref(),
             Some("framework-item-react-router")
+        );
+    }
+
+    #[test]
+    fn combobox_closing_commit_defers_query_clear_until_overlay_complete() {
+        let closing =
+            combobox_overlay_commit_policy(kit_combobox::SelectionCommitPolicy::default());
+        assert!(closing.close_on_commit);
+        assert!(
+            !closing.clear_query_on_commit,
+            "closing commits should keep the filtered list stable during close presence"
+        );
+
+        let keep_open = combobox_overlay_commit_policy(kit_combobox::SelectionCommitPolicy {
+            close_on_commit: false,
+            clear_query_on_commit: true,
+            ..kit_combobox::SelectionCommitPolicy::default()
+        });
+        assert!(
+            keep_open.clear_query_on_commit,
+            "keep-open combobox policies still clear the query on commit"
+        );
+    }
+
+    #[test]
+    fn combobox_close_complete_handler_marks_deferred_query_clear() {
+        let clear = Arc::new(AtomicBool::new(false));
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let seen_for_handler = seen.clone();
+        let handler = combobox_open_change_complete_handler(
+            clear.clone(),
+            Some(Arc::new(move |open| {
+                seen_for_handler
+                    .lock()
+                    .unwrap_or_else(|err| err.into_inner())
+                    .push(open);
+            })),
+        );
+
+        handler(true);
+        assert!(!clear.load(Ordering::Relaxed));
+        handler(false);
+        assert!(clear.load(Ordering::Relaxed));
+        assert_eq!(
+            *seen.lock().unwrap_or_else(|err| err.into_inner()),
+            vec![true, false]
         );
     }
 
