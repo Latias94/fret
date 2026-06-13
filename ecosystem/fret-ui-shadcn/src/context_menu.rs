@@ -391,6 +391,98 @@ fn menu_destructive_focus_bg(
     crate::theme_variants::menu_destructive_focus_bg(theme, destructive_fg)
 }
 
+struct ContextMenuRovingMetadata {
+    reserve_leading_slot: bool,
+    item_count: usize,
+    labels: Arc<[Arc<str>]>,
+    disabled: Arc<[bool]>,
+}
+
+impl ContextMenuRovingMetadata {
+    fn from_entries<H: UiHost>(
+        cx: &ElementContext<'_, H>,
+        gating: &WindowCommandGatingSnapshot,
+        entries: &[ContextMenuEntry],
+        align_leading_icons: bool,
+    ) -> Self {
+        let mut builder = ContextMenuRovingMetadataBuilder {
+            cx,
+            gating,
+            labels: Vec::new(),
+            disabled: Vec::new(),
+            has_leading_slot: false,
+        };
+        builder.extend(entries);
+        builder.finish(align_leading_icons)
+    }
+
+    fn roving_props(&self) -> RovingFocusProps {
+        RovingFocusProps {
+            enabled: true,
+            wrap: false,
+            disabled: self.disabled.clone(),
+        }
+    }
+}
+
+struct ContextMenuRovingMetadataBuilder<'a, 'cx, H: UiHost> {
+    cx: &'a ElementContext<'cx, H>,
+    gating: &'a WindowCommandGatingSnapshot,
+    labels: Vec<Arc<str>>,
+    disabled: Vec<bool>,
+    has_leading_slot: bool,
+}
+
+impl<H: UiHost> ContextMenuRovingMetadataBuilder<'_, '_, H> {
+    fn extend(&mut self, entries: &[ContextMenuEntry]) {
+        for entry in entries {
+            match entry {
+                ContextMenuEntry::Item(item) => {
+                    self.has_leading_slot |= item.leading.is_some() || item.leading_icon.is_some();
+                    self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                }
+                ContextMenuEntry::CheckboxItem(item) => {
+                    self.has_leading_slot |= item.leading.is_some();
+                    self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                }
+                ContextMenuEntry::RadioItem(item) => {
+                    self.has_leading_slot |= item.leading.is_some();
+                    self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                }
+                ContextMenuEntry::RadioGroup(group) => {
+                    for item in &group.items {
+                        self.has_leading_slot |= item.leading.is_some();
+                        self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                    }
+                }
+                ContextMenuEntry::Group(group) => self.extend(&group.entries),
+                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
+            }
+        }
+    }
+
+    fn push_leaf(&mut self, label: &Arc<str>, disabled: bool, command: Option<&CommandId>) {
+        self.labels.push(label.clone());
+        self.disabled.push(
+            disabled
+                || crate::command_gating::command_is_disabled_by_gating(
+                    &*self.cx.app,
+                    self.gating,
+                    command,
+                ),
+        );
+    }
+
+    fn finish(self, align_leading_icons: bool) -> ContextMenuRovingMetadata {
+        ContextMenuRovingMetadata {
+            reserve_leading_slot: align_leading_icons && self.has_leading_slot,
+            item_count: self.labels.len(),
+            labels: Arc::from(self.labels.into_boxed_slice()),
+            disabled: Arc::from(self.disabled.into_boxed_slice()),
+        }
+    }
+}
+
 const CONTEXT_MENU_CANCEL_OPEN_DELAY: Duration = Duration::from_millis(500);
 const CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX: f32 = 1.0;
 
@@ -2842,143 +2934,16 @@ fn context_menu_submenu_panel<H: UiHost>(
 
     let entries_tree = entries;
 
-    fn reserve_leading_slot(entries: &[ContextMenuEntry]) -> bool {
-        for entry in entries {
-            match entry {
-                ContextMenuEntry::Item(item) => {
-                    if item.leading.is_some() || item.leading_icon.is_some() {
-                        return true;
-                    }
-                }
-                ContextMenuEntry::CheckboxItem(item) => {
-                    if item.leading.is_some() {
-                        return true;
-                    }
-                }
-                ContextMenuEntry::RadioItem(item) => {
-                    if item.leading.is_some() {
-                        return true;
-                    }
-                }
-                ContextMenuEntry::RadioGroup(group) => {
-                    if group.items.iter().any(|item| item.leading.is_some()) {
-                        return true;
-                    }
-                }
-                ContextMenuEntry::Group(group) => {
-                    if reserve_leading_slot(&group.entries) {
-                        return true;
-                    }
-                }
-                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
-            }
-        }
-        false
-    }
-
-    fn item_count(entries: &[ContextMenuEntry]) -> usize {
-        let mut count = 0usize;
-        for entry in entries {
-            match entry {
-                ContextMenuEntry::Item(_)
-                | ContextMenuEntry::CheckboxItem(_)
-                | ContextMenuEntry::RadioItem(_) => count += 1,
-                ContextMenuEntry::RadioGroup(group) => count += group.items.len(),
-                ContextMenuEntry::Group(group) => count += item_count(&group.entries),
-                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
-            }
-        }
-        count
-    }
-
-    fn push_leaf_label_and_disabled<H: UiHost>(
-        cx: &ElementContext<'_, H>,
-        gating: &WindowCommandGatingSnapshot,
-        label: &Arc<str>,
-        disabled: bool,
-        command: Option<&CommandId>,
-        labels: &mut Vec<Arc<str>>,
-        disabled_flags: &mut Vec<bool>,
-    ) {
-        labels.push(label.clone());
-        disabled_flags.push(
-            disabled
-                || crate::command_gating::command_is_disabled_by_gating(&*cx.app, gating, command),
-        );
-    }
-
-    fn collect_labels_and_disabled<H: UiHost>(
-        cx: &ElementContext<'_, H>,
-        gating: &WindowCommandGatingSnapshot,
-        entries: &[ContextMenuEntry],
-        labels: &mut Vec<Arc<str>>,
-        disabled_flags: &mut Vec<bool>,
-    ) {
-        for entry in entries {
-            match entry {
-                ContextMenuEntry::Item(item) => push_leaf_label_and_disabled(
-                    cx,
-                    gating,
-                    &item.label,
-                    item.disabled,
-                    item.command.as_ref(),
-                    labels,
-                    disabled_flags,
-                ),
-                ContextMenuEntry::CheckboxItem(item) => push_leaf_label_and_disabled(
-                    cx,
-                    gating,
-                    &item.label,
-                    item.disabled,
-                    item.command.as_ref(),
-                    labels,
-                    disabled_flags,
-                ),
-                ContextMenuEntry::RadioItem(item) => push_leaf_label_and_disabled(
-                    cx,
-                    gating,
-                    &item.label,
-                    item.disabled,
-                    item.command.as_ref(),
-                    labels,
-                    disabled_flags,
-                ),
-                ContextMenuEntry::RadioGroup(group) => {
-                    for spec in group.items.iter() {
-                        push_leaf_label_and_disabled(
-                            cx,
-                            gating,
-                            &spec.label,
-                            spec.disabled,
-                            spec.command.as_ref(),
-                            labels,
-                            disabled_flags,
-                        );
-                    }
-                }
-                ContextMenuEntry::Group(group) => {
-                    collect_labels_and_disabled(cx, gating, &group.entries, labels, disabled_flags);
-                }
-                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
-            }
-        }
-    }
-
-    let reserve_leading_slot = align_leading_icons && reserve_leading_slot(entries_tree.as_slice());
-    let item_count = item_count(entries_tree.as_slice());
-
-    let mut labels: Vec<Arc<str>> = Vec::new();
-    let mut disabled_flags: Vec<bool> = Vec::new();
-    collect_labels_and_disabled(
+    let roving_metadata = ContextMenuRovingMetadata::from_entries(
         cx,
         &gating,
         entries_tree.as_slice(),
-        &mut labels,
-        &mut disabled_flags,
+        align_leading_icons,
     );
-
-    let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
-    let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
+    let reserve_leading_slot = roving_metadata.reserve_leading_slot;
+    let item_count = roving_metadata.item_count;
+    let labels = roving_metadata.labels.clone();
+    let roving_props = roving_metadata.roving_props();
 
     let border = theme.color_token("border");
     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
@@ -3063,14 +3028,9 @@ fn context_menu_submenu_panel<H: UiHost>(
                             align: CrossAlign::Stretch,
                             wrap: false,
                         },
-                        roving: RovingFocusProps {
-                            enabled: true,
-                            wrap: false,
-                            disabled: disabled_arc.clone(),
-                            ..Default::default()
-                        },
+                        roving: roving_props.clone(),
                     },
-                    labels_arc.clone(),
+                    labels.clone(),
                     typeahead_timeout_ticks,
                     submenu_models.clone(),
                     move |_cx| out,
@@ -3674,151 +3634,16 @@ impl ContextMenu {
 
                     let entries_tree: Vec<ContextMenuEntry> = entries(cx).into_iter().collect();
                     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
-                    fn reserve_leading_slot(entries: &[ContextMenuEntry]) -> bool {
-                        for entry in entries {
-                            match entry {
-                                ContextMenuEntry::Item(item) => {
-                                    if item.leading.is_some() || item.leading_icon.is_some() {
-                                        return true;
-                                    }
-                                }
-                                ContextMenuEntry::CheckboxItem(item) => {
-                                    if item.leading.is_some() {
-                                        return true;
-                                    }
-                                }
-                                ContextMenuEntry::RadioItem(item) => {
-                                    if item.leading.is_some() {
-                                        return true;
-                                    }
-                                }
-                                ContextMenuEntry::RadioGroup(group) => {
-                                    if group.items.iter().any(|item| item.leading.is_some()) {
-                                        return true;
-                                    }
-                                }
-                                ContextMenuEntry::Group(group) => {
-                                    if reserve_leading_slot(&group.entries) {
-                                        return true;
-                                    }
-                                }
-                                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
-                            }
-                        }
-                        false
-                    }
-
-                    fn item_count(entries: &[ContextMenuEntry]) -> usize {
-                        let mut count = 0usize;
-                        for entry in entries {
-                            match entry {
-                                ContextMenuEntry::Item(_)
-                                | ContextMenuEntry::CheckboxItem(_)
-                                | ContextMenuEntry::RadioItem(_) => count += 1,
-                                ContextMenuEntry::RadioGroup(group) => count += group.items.len(),
-                                ContextMenuEntry::Group(group) => count += item_count(&group.entries),
-                                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
-                            }
-                        }
-                        count
-                    }
-
-                    fn push_leaf_label_and_disabled<H: UiHost>(
-                        cx: &ElementContext<'_, H>,
-                        gating: &WindowCommandGatingSnapshot,
-                        label: &Arc<str>,
-                        disabled: bool,
-                        command: Option<&CommandId>,
-                        labels: &mut Vec<Arc<str>>,
-                        disabled_flags: &mut Vec<bool>,
-                    ) {
-                        labels.push(label.clone());
-                        disabled_flags.push(
-                            disabled
-                                || crate::command_gating::command_is_disabled_by_gating(
-                                    &*cx.app,
-                                    gating,
-                                    command,
-                                ),
-                        );
-                    }
-
-                    fn collect_labels_and_disabled<H: UiHost>(
-                        cx: &ElementContext<'_, H>,
-                        gating: &WindowCommandGatingSnapshot,
-                        entries: &[ContextMenuEntry],
-                        labels: &mut Vec<Arc<str>>,
-                        disabled_flags: &mut Vec<bool>,
-                    ) {
-                        for entry in entries {
-                            match entry {
-                                ContextMenuEntry::Item(item) => push_leaf_label_and_disabled(
-                                    cx,
-                                    gating,
-                                    &item.label,
-                                    item.disabled,
-                                    item.command.as_ref(),
-                                    labels,
-                                    disabled_flags,
-                                ),
-                                ContextMenuEntry::CheckboxItem(item) => push_leaf_label_and_disabled(
-                                    cx,
-                                    gating,
-                                    &item.label,
-                                    item.disabled,
-                                    item.command.as_ref(),
-                                    labels,
-                                    disabled_flags,
-                                ),
-                                ContextMenuEntry::RadioItem(item) => push_leaf_label_and_disabled(
-                                    cx,
-                                    gating,
-                                    &item.label,
-                                    item.disabled,
-                                    item.command.as_ref(),
-                                    labels,
-                                    disabled_flags,
-                                ),
-                                ContextMenuEntry::RadioGroup(group) => {
-                                    for spec in group.items.iter() {
-                                        push_leaf_label_and_disabled(
-                                            cx,
-                                            gating,
-                                            &spec.label,
-                                            spec.disabled,
-                                            spec.command.as_ref(),
-                                            labels,
-                                            disabled_flags,
-                                        );
-                                    }
-                                }
-                                ContextMenuEntry::Group(group) => collect_labels_and_disabled(
-                                    cx,
-                                    gating,
-                                    &group.entries,
-                                    labels,
-                                    disabled_flags,
-                                ),
-                                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
-                            }
-                        }
-                    }
-
-                    let reserve_leading_slot =
-                        align_leading_icons && reserve_leading_slot(entries_tree.as_slice());
-                    let item_count = item_count(entries_tree.as_slice());
-                    let mut labels: Vec<Arc<str>> = Vec::new();
-                    let mut disabled_flags: Vec<bool> = Vec::new();
-                    collect_labels_and_disabled(
+                    let roving_metadata = ContextMenuRovingMetadata::from_entries(
                         cx,
                         &gating,
                         entries_tree.as_slice(),
-                        &mut labels,
-                        &mut disabled_flags,
+                        align_leading_icons,
                     );
-
-                    let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
-                    let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
+                    let reserve_leading_slot = roving_metadata.reserve_leading_slot;
+                    let item_count = roving_metadata.item_count;
+                    let labels = roving_metadata.labels.clone();
+                    let roving_props = roving_metadata.roving_props();
 
                     let outer = overlay::outer_bounds_with_window_margin_for_root(
                         cx,
@@ -4033,15 +3858,10 @@ impl ContextMenu {
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
                                                     },
-                                                    roving: RovingFocusProps {
-                                                        enabled: true,
-                                                        wrap: false,
-                                                        disabled: disabled_arc.clone(),
-                                                        ..Default::default()
-                                                    },
+                                                    roving: roving_props.clone(),
                                                 },
-                                                 labels_arc.clone(),
-                                                 typeahead_timeout_ticks,
+                                                labels.clone(),
+                                                typeahead_timeout_ticks,
                                                 move |cx| {
                                                     let render_env = ContextMenuContentRenderEnv {
                                                         open: open_for_overlay.clone(),
