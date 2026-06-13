@@ -151,8 +151,9 @@ Recent editor-class wins (evidence lives in the perf log):
     (`0.139..0.395ms` encode, `0.044..0.125ms` text prepare).
   - Interpretation: for shadcn-like application surfaces with many overlays, lists, and table controls, the current
     gap to GPUI-like feel is primarily hot layout-root breadth and cache containment, not GPU throughput. The next
-    optimization lane should make view-cache/virtual-list/data-table interactions avoid full page relayout and add a
-    formal baseline for this suite after the first layout-containment pass.
+    optimization lane is `docs/workstreams/ui-table-row-cell-structural-churn-v1/`, focused on row/cell structural
+    churn inside the contained table subtree. It should make view-cache/virtual-list/data-table interactions avoid
+    avoidable row-root relayout and add a formal baseline for this suite after the first layout-containment pass.
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.

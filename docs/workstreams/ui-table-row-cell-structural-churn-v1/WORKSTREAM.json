@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "slug": "ui-table-row-cell-structural-churn-v1",
+  "title": "UI Table Row/Cell Structural Churn v1",
+  "status": "active",
+  "updated": "2026-06-13",
+  "scope_kind": "execution",
+  "problem": "General-app and shadcn-heavy perf probes show data-table and virtual-list frames are still layout-dominant after the prior data-table dirty-breadth lane closed. This lane owns the narrower follow-on: reduce or prove the remaining row/cell structural churn inside the contained fret-ui-kit table subtree without reopening page-cache, input chrome, renderer, or broad runtime invalidation scope.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/ui-table-row-cell-structural-churn-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-table-row-cell-structural-churn-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-table-row-cell-structural-churn-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-table-row-cell-structural-churn-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/ui-layout-dirty-breadth-data-table-v1/CLOSEOUT_AUDIT_2026-05-15.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/standalone/ui-perf-gpui-gap-v1.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the general-app data-table view-cache/filter shrink bundle and compare it with the virtual-list torture bundle; use layout node profiling for row/cell solve attribution before changing table rendering.",
+    "commands": [
+      "target/release/fretboard-dev.exe diag stats target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/1781333281689/bundle.schema2.json --sort cpu_cycles --top 30",
+      "target/release/fretboard-dev.exe diag stats target/fret-general-app-perf/virtual-list-torture-steady-r3/1781332244223/bundle.schema2.json --sort cpu_cycles --top 30",
+      "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/ui-table-row-cell-structural-churn-v1-data-table-r3 --launch -- target/release/fret-ui-gallery.exe"
+    ]
+  },
+  "gates": [
+    {
+      "name": "table-row-cell-correctness",
+      "command": "cargo nextest run -p fret-ui-kit table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast"
+    },
+    {
+      "name": "shadcn-data-table-correctness",
+      "command": "cargo nextest run -p fret-ui-shadcn retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/ui-table-row-cell-structural-churn-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/ui-table-row-cell-structural-churn-v1/DESIGN.md",
+    "docs/workstreams/ui-table-row-cell-structural-churn-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-layout-dirty-breadth-data-table-v1/CLOSEOUT_AUDIT_2026-05-15.md",
+    "docs/workstreams/standalone/ui-perf-gpui-gap-v1.md",
+    "tools/diag-scripts/suites/perf-ui-gallery-general-app-components/suite.json",
+    "target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/regression.summary.json",
+    "target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/1781333281689/bundle.schema2.json",
+    "target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/layout.perf.summary.v1.json",
+    "target/fret-general-app-perf/virtual-list-torture-steady-r3/regression.summary.json",
+    "target/fret-general-app-perf/virtual-list-torture-steady-r3/1781332244223/bundle.schema2.json",
+    "target/fret-general-app-perf/virtual-list-torture-steady-r3/layout.perf.summary.v1.json",
+    "ecosystem/fret-ui-kit/src/declarative/table.rs",
+    "ecosystem/fret-ui-shadcn/src/data_table.rs",
+    "crates/fret-ui/src/elements/cx.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md",
+    "docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue here for row/cell structural churn inside the contained table subtree. Do not reopen ui-layout-dirty-breadth-data-table-v1 unless fresh evidence changes the page-cache/input-chrome/runtime-boundary owner decision. Split a narrower follow-on only if the measured owner moves to VirtualList retained reconciliation, command availability, renderer payload, or a public runtime contract."
+  },
+  "follow_on_of": "ui-layout-dirty-breadth-data-table-v1"
+}

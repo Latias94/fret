@@ -18,7 +18,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 541
+- Dedicated directories: 542
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2435,6 +2435,7 @@ Rule:
 - `docs/workstreams/ui-perf-zed-smoothness-v1/` — first 2026-02-02, latest 2026-05-12, 6 markdown docs (active editor-grade performance contract lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-prepaint-derived-surfaces-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for extending Frame Pipeline v2 boundary-owned derived prepaint/scene-fragment proofs to retained virtual-list and retained data-table surfaces; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-layout-dirty-breadth-data-table-v1/` — first n/a, latest n/a, 5 markdown docs (closed follow-on for attributing and reducing data-table retained/view-cache layout dirty breadth; includes `WORKSTREAM.json`)
+- `docs/workstreams/ui-table-row-cell-structural-churn-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for reducing or proving data-table row/cell structural churn inside the contained table subtree; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-typography-presets-v1/` — first 2026-02-22, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/uicx-compat-alias-release-retirement-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs
