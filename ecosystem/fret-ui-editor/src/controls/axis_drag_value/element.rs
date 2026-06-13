@@ -94,6 +94,22 @@ where
             (style.density, frame_chrome, (text_style, input_chrome))
         };
 
+        let shell_layout = crate::controls::session_shell::session_shell_layout(
+            self.options.layout,
+            density.row_height,
+        );
+        let active_branch_layout = crate::controls::session_shell::session_branch_layout();
+        let scrub_layout = if typing {
+            crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+        } else {
+            active_branch_layout
+        };
+        let typing_layout = if typing {
+            active_branch_layout
+        } else {
+            crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+        };
+
         let scrub = axis_drag_value_scrub_element(
             cx,
             AxisDragValueScrubElementArgs {
@@ -104,9 +120,8 @@ where
                 value,
                 value_text: value_text.clone(),
                 scrub_revision,
-                typing,
                 mode,
-                layout: self.options.layout,
+                layout: scrub_layout,
                 constraints: self.options.constraints,
                 density,
                 frame_chrome,
@@ -136,7 +151,7 @@ where
                 on_outcome: on_outcome.clone(),
                 value_text: value_text.clone(),
                 typing,
-                layout: self.options.layout,
+                layout: typing_layout,
                 constraints: self.options.constraints,
                 density,
                 frame_chrome,
@@ -162,6 +177,6 @@ where
 
         // Render both: scrub stays mounted so focus can restore, typing stays mounted so focus
         // requests have a stable target.
-        cx.container(Default::default(), move |_cx| vec![scrub, typing_field])
+        crate::controls::session_shell::session_shell(cx, shell_layout, vec![scrub, typing_field])
     }
 }

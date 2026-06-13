@@ -17,6 +17,8 @@ pub mod text_field;
 pub mod transform_edit;
 pub mod vec_edit;
 
+mod session_shell;
+
 pub use crate::primitives::{
     EditorTextCancelBehavior, EditorTextSelectionBehavior, NumericPresentation, NumericTextAffixes,
     NumericValueConstraints, affixed_number_format, affixed_number_parse, degrees_format,

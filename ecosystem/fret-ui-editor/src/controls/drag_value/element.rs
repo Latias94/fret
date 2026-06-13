@@ -1,17 +1,17 @@
 use std::sync::{Arc, Mutex};
 
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use super::DragValue;
 use super::model::{DragValueMode, DragValueState};
 use super::scrub_element::{DragValueScrubElementArgs, drag_value_scrub_element};
-use super::session::hidden_layout;
 use super::typing::{DragValueTypingInputArgs, drag_value_typing_input};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::NumericTextEntryFocusHandoffState;
+use crate::primitives::style::EditorStyle;
 
 pub(super) fn drag_value_into_element_keyed<H, T>(
     drag_value: DragValue<T>,
@@ -62,14 +62,23 @@ where
     let suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
     let value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
 
+    let density = EditorStyle::resolve(Theme::global(&*cx.app)).density;
+    let shell_layout =
+        crate::controls::session_shell::session_shell_layout(options.layout, density.row_height);
+    let active_branch_layout = crate::controls::session_shell::session_branch_layout();
+
+    let scrub_layout = if typing {
+        crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+    } else {
+        active_branch_layout
+    };
     let scrub = drag_value_scrub_element(
         cx,
         DragValueScrubElementArgs {
             model: model.clone(),
             value,
             value_text: value_text.clone(),
-            layout: options.layout,
-            typing,
+            layout: scrub_layout,
             scrub_enabled: mode == DragValueMode::Scrub,
             constraints: options.constraints,
             scrub_revision,
@@ -85,9 +94,9 @@ where
         },
     );
 
-    let mut input_layout = options.layout;
+    let mut input_layout = active_branch_layout;
     if !typing {
-        input_layout = hidden_layout(input_layout);
+        input_layout = crate::controls::session_shell::hidden_session_branch_layout(input_layout);
     }
 
     let input = drag_value_typing_input(
@@ -112,5 +121,5 @@ where
 
     // Render both: scrub stays mounted so focus can restore, input stays mounted so focus
     // requests have a stable target.
-    cx.container(Default::default(), move |_cx| vec![scrub, input])
+    crate::controls::session_shell::session_shell(cx, shell_layout, vec![scrub, input])
 }

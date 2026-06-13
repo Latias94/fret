@@ -7,7 +7,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::model::{DragValueMode, DragValueState};
 use super::scrub::{DragValueScrubFrameArgs, drag_value_scrub_frame};
-use super::session::{emit_drag_value_outcome, hidden_layout};
+use super::session::emit_drag_value_outcome;
 use super::{DragValueOutcome, OnDragValueOutcome};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::numeric_text_entry::{
@@ -21,7 +21,6 @@ pub(super) struct DragValueScrubElementArgs<T> {
     pub(super) value: T,
     pub(super) value_text: Arc<str>,
     pub(super) layout: LayoutStyle,
-    pub(super) typing: bool,
     pub(super) scrub_enabled: bool,
     pub(super) constraints: NumericValueConstraints,
     pub(super) scrub_revision: u64,
@@ -49,7 +48,6 @@ where
         value,
         value_text,
         layout,
-        typing,
         scrub_enabled,
         constraints,
         scrub_revision,
@@ -78,11 +76,7 @@ where
         });
 
     let mut scrub_opts = DragValueCoreOptions::default();
-    scrub_opts.layout = if typing {
-        hidden_layout(layout)
-    } else {
-        layout
-    };
+    scrub_opts.layout = layout;
     scrub_opts.enabled = scrub_enabled;
     scrub_opts.scrub_on_double_click = false;
     scrub_opts.constraints = constraints;

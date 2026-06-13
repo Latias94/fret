@@ -6,9 +6,7 @@ use crate::controls::numeric_input::{
 use crate::primitives::drag_value_core::DragValueScalar;
 use fret_core::{PointerId, Px};
 use fret_ui::GlobalElementId;
-use fret_ui::element::{
-    FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
-};
+use fret_ui::element::{FlexItemStyle, LayoutStyle, Length, SizeStyle};
 
 #[cfg(test)]
 mod tests;
@@ -102,24 +100,6 @@ pub(super) fn compose_affixed_value_text(
             Arc::from(out)
         }
     }
-}
-
-pub(super) fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
-    layout.size = SizeStyle {
-        width: Length::Px(Px(0.0)),
-        height: Length::Px(Px(0.0)),
-        min_width: Some(Length::Px(Px(0.0))),
-        min_height: Some(Length::Px(Px(0.0))),
-        ..Default::default()
-    };
-    layout.position = PositionStyle::Absolute;
-    layout.inset = InsetStyle {
-        top: Some(Px(0.0)).into(),
-        left: Some(Px(0.0)).into(),
-        ..Default::default()
-    };
-    layout.overflow = Overflow::Clip;
-    layout
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

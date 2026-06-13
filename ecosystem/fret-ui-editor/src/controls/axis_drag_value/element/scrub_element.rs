@@ -21,7 +21,7 @@ use super::super::model::{
     AxisDragValueMode, AxisDragValueOutcome, AxisDragValueResetAction, AxisDragValueState,
     OnAxisDragValueOutcome,
 };
-use super::super::session::{emit_axis_drag_value_outcome, hidden_layout};
+use super::super::session::emit_axis_drag_value_outcome;
 use super::scrub::{AxisDragValueScrubFrameArgs, axis_drag_value_scrub_frame};
 
 pub(super) struct AxisDragValueScrubElementArgs<T> {
@@ -32,7 +32,6 @@ pub(super) struct AxisDragValueScrubElementArgs<T> {
     pub(super) value: T,
     pub(super) value_text: Arc<str>,
     pub(super) scrub_revision: u64,
-    pub(super) typing: bool,
     pub(super) mode: AxisDragValueMode,
     pub(super) layout: LayoutStyle,
     pub(super) constraints: NumericValueConstraints,
@@ -68,7 +67,6 @@ where
         value,
         value_text,
         scrub_revision,
-        typing,
         mode,
         layout,
         constraints,
@@ -89,11 +87,7 @@ where
     } = args;
 
     let mut scrub_opts = DragValueCoreOptions::default();
-    scrub_opts.layout = if typing {
-        hidden_layout(layout)
-    } else {
-        layout
-    };
+    scrub_opts.layout = layout;
     scrub_opts.enabled = enabled && mode == AxisDragValueMode::Scrub;
     scrub_opts.scrub_on_double_click = false;
     scrub_opts.constraints = constraints;

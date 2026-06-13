@@ -17,7 +17,7 @@ use crate::primitives::numeric_text_entry::{
 use crate::primitives::{EditorDensity, NumericValueConstraints};
 
 use super::super::model::{AxisDragValueResetAction, AxisDragValueState, OnAxisDragValueOutcome};
-use super::super::session::{draft_model, error_model, hidden_layout};
+use super::super::session::{draft_model, error_model};
 use super::input::{AxisDragValueTypingInputArgs, axis_drag_value_typing_input};
 use super::typing::{AxisDragValueTypingFrameArgs, axis_drag_value_typing_field};
 use super::typing_focus::{
@@ -107,11 +107,7 @@ where
     let focus_state = numeric_text_entry_focus_state(cx);
     let last_draft_text = cx.slot_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
 
-    let input_group_layout = if typing {
-        layout
-    } else {
-        hidden_layout(layout)
-    };
+    let input_group_layout = layout;
     let has_error = cx
         .get_model_cloned(&error, fret_ui::Invalidation::Paint)
         .unwrap_or(None)

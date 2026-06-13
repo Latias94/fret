@@ -5,13 +5,13 @@ use crate::primitives::input_group::derived_test_id;
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::NumericTextEntryFocusHandoffState;
 use crate::primitives::style::EditorStyle;
-use fret_ui::element::{AnyElement, Length, PressableA11y, PressableProps};
+use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use super::Slider;
 use super::chrome::{resolve_slider_geometry, resolve_slider_paint};
 use super::frame::{SliderFrameArgs, slider_frame};
-use super::model::{SliderMode, compose_affixed_value_text, hidden_layout};
+use super::model::{SliderMode, compose_affixed_value_text};
 use super::pointer::reset_slider_interaction;
 use super::value_math::{quantize_value, t_from_value};
 
@@ -87,15 +87,21 @@ where
         reset_slider_interaction(&mut st);
     }
 
-    let mut slider_layout = options.layout;
-    if typing {
-        slider_layout = hidden_layout(slider_layout);
-    }
+    let shell_layout =
+        crate::controls::session_shell::session_shell_layout(options.layout, density.row_height);
+    let active_branch_layout = crate::controls::session_shell::session_branch_layout();
 
-    let mut input_layout = options.layout;
-    if !typing {
-        input_layout = hidden_layout(input_layout);
-    }
+    let slider_layout = if typing {
+        crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+    } else {
+        active_branch_layout
+    };
+
+    let input_layout = if typing {
+        active_branch_layout
+    } else {
+        crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+    };
 
     let model_for_change = model.clone();
     let a11y_label = options.a11y_label.clone();
@@ -107,11 +113,6 @@ where
     let value_display_test_id = derived_test_id(options.test_id.as_ref(), "value_display");
 
     let interactive_enabled = enabled && !typing;
-
-    let mut layout = slider_layout;
-    if layout.size.min_height.is_none() {
-        layout.size.min_height = Some(Length::Px(density.row_height));
-    }
 
     let display_format = format.clone();
     let value_text = (display_format)(T::from_f64(value_f));
@@ -128,7 +129,7 @@ where
     let mut slider_el = cx.pressable(
         PressableProps {
             enabled: interactive_enabled,
-            layout,
+            layout: slider_layout,
             a11y: PressableA11y {
                 label: a11y_label,
                 ..Default::default()
@@ -217,5 +218,5 @@ where
         },
     );
 
-    cx.container(Default::default(), move |_cx| vec![slider_el, input])
+    crate::controls::session_shell::session_shell(cx, shell_layout, vec![slider_el, input])
 }
