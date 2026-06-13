@@ -65,6 +65,59 @@ Interpretation:
 - The first implementation should reduce or prove row/cell wrapper churn in
   `ecosystem/fret-ui-kit/src/declarative/table.rs`.
 
+## 2026-06-13 First Slice - Single Center Group Fast Path
+
+Owner:
+
+- Default non-retained data tables start with no pinned left/right columns and a non-empty center
+  column group.
+- The old header/body path still rendered empty left/right groups plus an outer horizontal grouping
+  row before reaching the center group.
+
+Change:
+
+- `ecosystem/fret-ui-kit/src/declarative/table.rs` adds a table-local fast path for
+  `left_len == 0 && center_len > 0 && right_len == 0`.
+- In that case, the non-retained header and body render the center group directly with the existing
+  horizontal scroll handle.
+- Pinned columns, empty tables, retained table rendering, grouped rows, row selection, and shadcn
+  recipe code stay on their existing paths.
+
+Expected effect:
+
+- Reduce one wrapper/grouping row level around the header and each visible body row in the default
+  shadcn-style data-table path.
+- Reduce avoidable row/cell structural churn before considering broader retained/windowing or
+  runtime layout-cache changes.
+
+Focused correctness gates passed:
+
+```powershell
+cargo fmt --package fret-ui-kit
+cargo nextest run -p fret-ui-kit table_single_center_group_fast_path_requires_nonempty_center_only --no-fail-fast
+cargo nextest run -p fret-ui-kit table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height --no-fail-fast
+cargo nextest run -p fret-ui-kit table_virtualized_pointer_row_selection_policy_list_like --no-fail-fast
+cargo nextest run -p fret-ui-kit table_virtualized_nested_pressable_remains_hittable_when_pointer_row_selection_disabled --no-fail-fast
+git diff --check
+python -m json.tool docs\workstreams\ui-table-row-cell-structural-churn-v1\WORKSTREAM.json
+python tools\check_workstream_catalog.py
+```
+
+Gate not completed:
+
+```powershell
+cargo nextest run -p fret-ui-shadcn retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast
+```
+
+- Timed out after a 300s attempt and again after a 600s attempt, with no failure output.
+- No residual `cargo.exe`, `rustc.exe`, or `nextest.exe` processes remained after the timeout.
+
+Perf read:
+
+- Not yet re-run after this first slice.
+- Next evidence step is to run the fresh data-table layout-node repro below and compare the same
+  counters against the baseline bundle.
+
 ## First Repro Commands
 
 Existing bundle attribution:

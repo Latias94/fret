@@ -286,6 +286,10 @@ fn table_wrap_horizontal_scroll<H: UiHost>(
     }
 }
 
+fn table_has_single_center_group(left_len: usize, center_len: usize, right_len: usize) -> bool {
+    left_len == 0 && center_len > 0 && right_len == 0
+}
+
 fn take_single_root_test_id(children: &mut [AnyElement]) -> Option<Arc<str>> {
     let mut found: Option<(usize, Arc<str>)> = None;
 
@@ -740,6 +744,15 @@ mod tests {
         assert_eq!(layout.size.width, Length::Fill);
         assert_eq!(layout.size.height, Length::Auto);
         assert_eq!(layout.overflow, LayoutStyle::default().overflow);
+    }
+
+    #[test]
+    fn table_single_center_group_fast_path_requires_nonempty_center_only() {
+        assert!(table_has_single_center_group(0, 1, 0));
+        assert!(table_has_single_center_group(0, 4, 0));
+        assert!(!table_has_single_center_group(0, 0, 0));
+        assert!(!table_has_single_center_group(1, 1, 0));
+        assert!(!table_has_single_center_group(0, 1, 1));
     }
 
     #[test]
@@ -7309,7 +7322,18 @@ where
                                                             }
                                                 };
 
-                                            vec![ui::h_row(|cx| {
+                                            if table_has_single_center_group(
+                                                left_cols.len(),
+                                                center_cols.len(),
+                                                right_cols.len(),
+                                            ) {
+                                                vec![render_header_group(
+                                                    cx,
+                                                    &center_cols,
+                                                    Some(scroll_x.clone()),
+                                                )]
+                                            } else {
+                                                vec![ui::h_row(|cx| {
                                                     let has_left = !left_cols.is_empty();
                                                     let has_center = !center_cols.is_empty();
                                                     let has_right = !right_cols.is_empty();
@@ -7374,11 +7398,12 @@ where
 
                                                     let right = render_header_group(cx, &right_cols, None);
                                                     [left, center, right]
-                                            })
-                                            .gap(Space::N0)
-                                            .justify_start()
-                                            .items_stretch()
-                                            .into_element(cx)]
+                                                })
+                                                .gap(Space::N0)
+                                                .justify_start()
+                                                .items_stretch()
+                                                .into_element(cx)]
+                                            }
                                         },
                                     );
                                     let header = if let Some(test_id) = debug_header_row_test_id {
@@ -8573,7 +8598,18 @@ where
                                                                     )
                                                                 };
 
-                                                            out.push(ui::h_row(|cx| {
+                                                            if table_has_single_center_group(
+                                                                left_cols.len(),
+                                                                center_cols.len(),
+                                                                right_cols.len(),
+                                                            ) {
+                                                                out.push(render_row_group(
+                                                                    cx,
+                                                                    &center_cols,
+                                                                    Some(scroll_x.clone()),
+                                                                ));
+                                                            } else {
+                                                                out.push(ui::h_row(|cx| {
                                                                     let has_left = !left_cols.is_empty();
                                                                     let has_center = !center_cols.is_empty();
                                                                     let has_right = !right_cols.is_empty();
@@ -8640,11 +8676,12 @@ where
                                                                     let right =
                                                                         render_row_group(cx, &right_cols, None);
                                                                     vec![left, center, right]
-                                                            })
-                                                            .gap(Space::N0)
-                                                            .justify_start()
-                                                            .items_stretch()
-                                                            .into_element(cx));
+                                                                })
+                                                                .gap(Space::N0)
+                                                                .justify_start()
+                                                                .items_stretch()
+                                                                .into_element(cx));
+                                                            }
                                                             out
                                                         },
                                                     )]

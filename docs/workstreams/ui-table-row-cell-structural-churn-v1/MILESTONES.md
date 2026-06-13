@@ -5,7 +5,7 @@ Last updated: 2026-06-13
 
 ## M0 - Baseline Attribution
 
-Status: In progress.
+Status: In progress; first implementation owner classified from the existing worst-bundle evidence.
 
 Done criteria:
 
@@ -19,10 +19,14 @@ Current evidence:
   `target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/1781333281689/bundle.schema2.json`
 - virtual-list torture worst bundle:
   `target/fret-general-app-perf/virtual-list-torture-steady-r3/1781332244223/bundle.schema2.json`
+- First implementation owner:
+  default non-retained data-table column group structure. The unpinned path had no left/right
+  columns but still built empty left/right groups and an outer grouping row around the center
+  group.
 
 ## M1 - First Reversible Table-Local Slice
 
-Status: Pending.
+Status: First slice landed; before/after perf read pending.
 
 Done criteria:
 
@@ -37,6 +41,13 @@ Potential owners:
 - cell content wrapper construction;
 - row and cache key stability under filter/sort;
 - fixed-height row contracts not being exploited by layout/cache reuse.
+
+Landed slice:
+
+- `ecosystem/fret-ui-kit/src/declarative/table.rs` now renders the center group directly when
+  `left_len == 0 && center_len > 0 && right_len == 0`.
+- Pinned-column layouts, grouped rows, retained table rendering, and shadcn recipes keep the
+  existing structural path.
 
 ## M2 - Before/After Perf Read
 

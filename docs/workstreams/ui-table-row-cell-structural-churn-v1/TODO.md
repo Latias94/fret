@@ -9,22 +9,18 @@ Last updated: 2026-06-13
 - [x] Record the current general-app data-table and virtual-list evidence.
 - [ ] Re-run the data-table view-cache/filter shrink script with layout node profiling enabled.
 - [ ] Run `diag stats --sort cpu_cycles --top 30` and save the worst-frame summary.
-- [ ] Identify whether the first implementation owner is:
-  - table row `Pressable` wrapper roots;
-  - pinned/center/right cell group wrappers;
-  - cell content wrapper churn;
-  - row key/cache-key instability;
-  - VirtualList retained/window reconciliation;
-  - or command availability outside this lane.
+- [x] Identify the first implementation owner as default unpinned table column group structure:
+      the non-retained data-table path rendered empty left/right groups and an outer row around the
+      only non-empty center group.
 
 ## M1 - First Row/Cell Slice
 
-- [ ] Pick one measured structural-churn owner and make a small reversible change.
-- [ ] Prefer table-local cleanup in `ecosystem/fret-ui-kit/src/declarative/table.rs` unless the
+- [x] Pick one measured structural-churn owner and make a small reversible change.
+- [x] Prefer table-local cleanup in `ecosystem/fret-ui-kit/src/declarative/table.rs` unless the
       bundle proves a generic runtime mechanism owner.
-- [ ] Add or adjust a focused unit test if row identity, row selection, focus, or semantics could
+- [x] Add or adjust a focused unit test if row identity, row selection, focus, or semantics could
       regress.
-- [ ] Keep shadcn recipe behavior unchanged unless attribution moves to recipe-owned controls.
+- [x] Keep shadcn recipe behavior unchanged unless attribution moves to recipe-owned controls.
 
 ## M2 - Perf Evidence
 
