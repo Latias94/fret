@@ -78,6 +78,107 @@ fn derive_item_test_id(
     })
 }
 
+struct MenubarRovingMetadata {
+    reserve_leading_slot: bool,
+    item_count: usize,
+    labels: Arc<[Arc<str>]>,
+    disabled: Arc<[bool]>,
+    active: Option<usize>,
+}
+
+impl MenubarRovingMetadata {
+    fn from_entries<H: UiHost>(
+        cx: &ElementContext<'_, H>,
+        gating: &WindowCommandGatingSnapshot,
+        entries: &[MenubarEntry],
+        align_leading_icons: bool,
+    ) -> Self {
+        let mut builder = MenubarRovingMetadataBuilder {
+            cx,
+            gating,
+            labels: Vec::new(),
+            disabled: Vec::new(),
+            has_leading_slot: false,
+        };
+        builder.extend(entries);
+        builder.finish(align_leading_icons)
+    }
+
+    fn roving_props(&self) -> RovingFocusProps {
+        RovingFocusProps {
+            enabled: true,
+            wrap: false,
+            disabled: self.disabled.clone(),
+            ..Default::default()
+        }
+    }
+}
+
+struct MenubarRovingMetadataBuilder<'a, 'cx, H: UiHost> {
+    cx: &'a ElementContext<'cx, H>,
+    gating: &'a WindowCommandGatingSnapshot,
+    labels: Vec<Arc<str>>,
+    disabled: Vec<bool>,
+    has_leading_slot: bool,
+}
+
+impl<H: UiHost> MenubarRovingMetadataBuilder<'_, '_, H> {
+    fn extend(&mut self, entries: &[MenubarEntry]) {
+        for entry in entries {
+            match entry {
+                MenubarEntry::Item(item) => {
+                    self.has_leading_slot |= item.leading.is_some() || item.leading_icon.is_some();
+                    self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                }
+                MenubarEntry::CheckboxItem(item) => {
+                    self.has_leading_slot |= item.leading.is_some() || item.leading_icon.is_some();
+                    self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                }
+                MenubarEntry::RadioItem(item) => {
+                    self.has_leading_slot |= item.leading.is_some() || item.leading_icon.is_some();
+                    self.push_leaf(&item.label, item.disabled, item.command.as_ref());
+                }
+                MenubarEntry::Submenu(submenu) => {
+                    self.has_leading_slot |=
+                        submenu.trigger.leading.is_some() || submenu.trigger.leading_icon.is_some();
+                    self.push_leaf(
+                        &submenu.trigger.label,
+                        submenu.trigger.disabled,
+                        submenu.trigger.command.as_ref(),
+                    );
+                }
+                MenubarEntry::Label(_)
+                | MenubarEntry::Separator
+                | MenubarEntry::Group(_)
+                | MenubarEntry::RadioGroup(_) => {}
+            }
+        }
+    }
+
+    fn push_leaf(&mut self, label: &Arc<str>, disabled: bool, command: Option<&CommandId>) {
+        self.labels.push(label.clone());
+        self.disabled.push(
+            disabled
+                || crate::command_gating::command_is_disabled_by_gating(
+                    &*self.cx.app,
+                    self.gating,
+                    command,
+                ),
+        );
+    }
+
+    fn finish(self, align_leading_icons: bool) -> MenubarRovingMetadata {
+        let active = roving_focus_group::first_enabled(&self.disabled);
+        MenubarRovingMetadata {
+            reserve_leading_slot: align_leading_icons && self.has_leading_slot,
+            item_count: self.labels.len(),
+            labels: Arc::from(self.labels.into_boxed_slice()),
+            disabled: Arc::from(self.disabled.into_boxed_slice()),
+            active,
+        }
+    }
+}
+
 type OnCheckedChange = menu_authoring::OnCheckedChange;
 type OnValueChange = menu_authoring::OnValueChange;
 pub type MenubarCheckboxChecked = menu_authoring::MenuCheckboxChecked;
@@ -2174,104 +2275,19 @@ impl MenubarMenuEntries {
                             scale,
                             true,
                         );
-                        let reserve_leading_slot = align_leading_icons
-                            && entries.iter().any(|e| match e {
-                                MenubarEntry::Item(item) => {
-                                    item.leading.is_some() || item.leading_icon.is_some()
-                                }
-                                MenubarEntry::CheckboxItem(item) => {
-                                    item.leading.is_some() || item.leading_icon.is_some()
-                                }
-                                MenubarEntry::RadioItem(item) => {
-                                    item.leading.is_some() || item.leading_icon.is_some()
-                                }
-                                MenubarEntry::Submenu(submenu) => {
-                                    submenu.trigger.leading.is_some()
-                                        || submenu.trigger.leading_icon.is_some()
-                                }
-                                MenubarEntry::Label(_)
-                                | MenubarEntry::Group(_)
-                                | MenubarEntry::RadioGroup(_)
-                                | MenubarEntry::Separator => false,
-                            });
-
-                        let item_count = entries
-                            .iter()
-                            .filter(|e| {
-                                matches!(
-                                    e,
-                                    MenubarEntry::Item(_)
-                                        | MenubarEntry::CheckboxItem(_)
-                                        | MenubarEntry::RadioItem(_)
-                                        | MenubarEntry::Submenu(_)
-                                )
-                            })
-                            .count();
-
                         let gating: WindowCommandGatingSnapshot =
                             crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
-
-                        let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
-                            .iter()
-                            .filter_map(|e| match e {
-                                MenubarEntry::Item(item) => Some((
-                                    item.label.clone(),
-                                    item.disabled
-                                        || crate::command_gating::command_is_disabled_by_gating(
-                                            &*cx.app,
-                                            &gating,
-                                            item.command.as_ref(),
-                                        ),
-                                )),
-                                MenubarEntry::CheckboxItem(item) => {
-                                    Some((
-                                        item.label.clone(),
-                                        item.disabled
-                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                &*cx.app,
-                                                &gating,
-                                                item.command.as_ref(),
-                                            ),
-                                    ))
-                                }
-                                MenubarEntry::RadioItem(item) => Some((
-                                    item.label.clone(),
-                                    item.disabled
-                                        || crate::command_gating::command_is_disabled_by_gating(
-                                            &*cx.app,
-                                            &gating,
-                                            item.command.as_ref(),
-                                        ),
-                                )),
-                                MenubarEntry::Submenu(submenu) => {
-                                    Some((
-                                        submenu.trigger.label.clone(),
-                                        submenu.trigger.disabled
-                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                &*cx.app,
-                                                &gating,
-                                                submenu.trigger.command.as_ref(),
-                                            ),
-                                    ))
-                                }
-                                MenubarEntry::Label(_)
-                                | MenubarEntry::Separator
-                                | MenubarEntry::Group(_)
-                                | MenubarEntry::RadioGroup(_) => None,
-                            })
-                            .unzip();
-
-                        let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
-                        let disabled_arc: Arc<[bool]> =
-                            Arc::from(disabled_flags.clone().into_boxed_slice());
-                        let active = roving_focus_group::first_enabled(&disabled_flags);
-
-                        let roving = RovingFocusProps {
-                            enabled: true,
-                            wrap: false,
-                            disabled: disabled_arc,
-                            ..Default::default()
-                        };
+                        let roving_metadata = MenubarRovingMetadata::from_entries(
+                            cx,
+                            &gating,
+                            &entries,
+                            align_leading_icons,
+                        );
+                        let reserve_leading_slot = roving_metadata.reserve_leading_slot;
+                        let item_count = roving_metadata.item_count;
+                        let labels = roving_metadata.labels.clone();
+                        let active = roving_metadata.active;
+                        let roving = roving_metadata.roving_props();
 
                         let border = theme.color_token("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
@@ -2390,7 +2406,7 @@ impl MenubarMenuEntries {
                                                   },
                                                   roving,
                                               },
-                                              labels_arc.clone(),
+                                              labels.clone(),
                                               typeahead_timeout_ticks,
                                               submenu_for_panel_for_content.clone(),
                                               move |cx| {
@@ -3400,108 +3416,20 @@ impl MenubarMenuEntries {
                             let mut submenu_entries_flat: Vec<MenubarEntry> = Vec::new();
                             flatten_entries(&mut submenu_entries_flat, submenu_entries);
                             let submenu_entries: Vec<MenubarEntry> = submenu_entries_flat;
-                                     let reserve_leading_slot = align_leading_icons
-                                         && submenu_entries.iter().any(|e| match e {
-                                             MenubarEntry::Item(item) => {
-                                                 item.leading.is_some() || item.leading_icon.is_some()
-                                             }
-                                             MenubarEntry::CheckboxItem(item) => {
-                                                 item.leading.is_some() || item.leading_icon.is_some()
-                                             }
-                                             MenubarEntry::RadioItem(item) => {
-                                                 item.leading.is_some() || item.leading_icon.is_some()
-                                             }
-                                             MenubarEntry::Submenu(submenu) => {
-                                                 submenu.trigger.leading.is_some()
-                                                     || submenu.trigger.leading_icon.is_some()
-                                             }
-                                             MenubarEntry::Label(_)
-                                             | MenubarEntry::Group(_)
-                                             | MenubarEntry::RadioGroup(_)
-                                             | MenubarEntry::Separator => false,
-                                         });
 
-                                    let gating: WindowCommandGatingSnapshot =
-                                        crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
-
-                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
-                                         submenu_entries
-                                             .iter()
-                                             .filter_map(|e| match e {
-                                                 MenubarEntry::Item(item) => {
-                                                     Some((
-                                                         item.label.clone(),
-                                                         item.disabled
-                                                             || crate::command_gating::command_is_disabled_by_gating(
-                                                                 &*cx.app,
-                                                                 &gating,
-                                                                 item.command.as_ref(),
-                                                             ),
-                                                     ))
-                                                 }
-                                                 MenubarEntry::CheckboxItem(item) => {
-                                                     Some((
-                                                         item.label.clone(),
-                                                         item.disabled
-                                                             || crate::command_gating::command_is_disabled_by_gating(
-                                                                 &*cx.app,
-                                                                 &gating,
-                                                                 item.command.as_ref(),
-                                                             ),
-                                                     ))
-                                                 }
-                                                 MenubarEntry::RadioItem(item) => {
-                                                     Some((
-                                                         item.label.clone(),
-                                                         item.disabled
-                                                             || crate::command_gating::command_is_disabled_by_gating(
-                                                                 &*cx.app,
-                                                                 &gating,
-                                                                 item.command.as_ref(),
-                                                             ),
-                                                     ))
-                                                 }
-                                                 MenubarEntry::Submenu(submenu) => Some((
-                                                     submenu.trigger.label.clone(),
-                                                     submenu.trigger.disabled
-                                                         || crate::command_gating::command_is_disabled_by_gating(
-                                                             &*cx.app,
-                                                             &gating,
-                                                             submenu.trigger.command.as_ref(),
-                                                         ),
-                                                 )),
-                                                 MenubarEntry::Label(_)
-                                                 | MenubarEntry::Separator
-                                                 | MenubarEntry::Group(_)
-                                                 | MenubarEntry::RadioGroup(_) => None,
-                                             })
-                                             .unzip();
-
-                                    let labels_arc: Arc<[Arc<str>]> =
-                                        Arc::from(labels.into_boxed_slice());
-                                    let disabled_arc: Arc<[bool]> = Arc::from(
-                                        disabled_flags.clone().into_boxed_slice(),
-                                    );
-                                    let active = roving_focus_group::first_enabled(&disabled_flags);
-                                    let item_count = submenu_entries
-                                        .iter()
-                                        .filter(|e| {
-                                            matches!(
-                                                e,
-                                                MenubarEntry::Item(_)
-                                                    | MenubarEntry::CheckboxItem(_)
-                                                    | MenubarEntry::RadioItem(_)
-                                                    | MenubarEntry::Submenu(_)
-                                            )
-                                        })
-                                        .count();
-
-                                    let roving = RovingFocusProps {
-                                        enabled: true,
-                                        wrap: false,
-                                        disabled: disabled_arc,
-                                        ..Default::default()
-                                    };
+                            let gating: WindowCommandGatingSnapshot =
+                                crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+                            let roving_metadata = MenubarRovingMetadata::from_entries(
+                                cx,
+                                &gating,
+                                &submenu_entries,
+                                align_leading_icons,
+                            );
+                            let reserve_leading_slot = roving_metadata.reserve_leading_slot;
+                            let item_count = roving_metadata.item_count;
+                            let labels = roving_metadata.labels.clone();
+                            let active = roving_metadata.active;
+                            let roving = roving_metadata.roving_props();
 
                                     let submenu_entries_for_panel = submenu_entries;
                                     let open_for_submenu = open_for_submenu.clone();
@@ -3556,7 +3484,7 @@ impl MenubarMenuEntries {
                                                             },
                                                             roving,
                                                          },
-                                                          labels_arc.clone(),
+                                                          labels.clone(),
                                                           typeahead_timeout_ticks,
                                                           move |cx| {
                                                               let gating: WindowCommandGatingSnapshot =
