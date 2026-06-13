@@ -107,6 +107,33 @@ Recent editor-class wins (evidence lives in the perf log):
 - Current renderer text-prepare win (2026-05-11): pre-deduplicated glyph pin keys reduced complex-wheel renderer text
   prepare p95/max from `1287/1302us` to `660/722us`, with the non-instrumented baseline check still passing the
   checked-in v1 contract.
+- Local Fret vs GPUI baseline probe (2026-06-13, Windows):
+  - GPUI/Zed `editor_render` was built from `repo-ref/zed` with Rust `1.95.0` and run through Criterion:
+    `editor_render --bench editor_render --sample-size 10 --warm-up-time 1 --measurement-time 3`.
+    Result: Criterion time `[524.30us 546.93us 565.01us]`; GPUI frame report over `7712` samples shows
+    `window draw` mean/p50/p95/max `0.469/0.451/0.584/1.629ms`, and `window dirty-to-draw`
+    mean/p50/p95/max `0.523/0.503/0.665/2.118ms`.
+  - Important comparability caveat: this GPUI bench uses `NoopTextSystem`; on Windows it does not include production
+    GPU submission, while the Fret diagnostics below include the real Fret gallery renderer path and production text
+    preparation. Treat the GPUI number as a lean editor-render lower-bound, not a direct end-to-end replacement for a
+    Fret `diag perf` bundle.
+  - Fret `ui-gallery-code-editor-torture-autoscroll-typical` repeat=3 passed the current Windows RTX4090 v2
+    payload-aware baseline. Current top total p50/p95/max is `1.365/1.505/1.505ms`; layout p95 is `0.087ms`,
+    paint p95 is `0.691ms`, renderer encode/text-prepare p95 is `0.248/0.060ms`, payload is `195880` instance bytes
+    and `339` text ops. Artifact:
+    `target/fret-vs-gpui-baseline/fret-code-editor-autoscroll-typical-r3/regression.summary.json`.
+  - Fret `ui-code-editor-resize-probes` repeat=3 passed the current Windows RTX4090 v2 resize baseline. Current top
+    total p50/p95/max is `2.525/2.640/2.640ms`; layout p95 is `1.345ms`, paint p95 is `0.817ms`, and renderer
+    encode/text-prepare p95 is `0.476/0.104ms`. Artifact:
+    `target/fret-vs-gpui-baseline/ui-code-editor-resize-probes-r3-cargo-launch/summary.json`.
+  - Fret `ui-resize-probes` repeat=3 passed the current Windows RTX4090 v2 resize baseline. The two script rows report
+    top total p95/max `2.293/2.293ms` and `3.397/3.397ms`. Artifact:
+    `target/fret-vs-gpui-baseline/ui-resize-probes-r3-cargo-launch/summary.json`.
+  - Interpretation: Fret is already inside the Tier B guidance (`p95 <= 4ms`, `max <= 8ms`) for these formal editor and
+    resize probes on this machine. GPUI's focused editor render bench is still materially leaner (`~0.58ms` draw p95),
+    so the remaining gap is not "make Fret viable"; it is to add a same-workload Fret microbench and then attack the
+    extra frame phases that Fret currently measures in diagnostics: prepaint/paint, renderer payload, and resize layout
+    roots.
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
