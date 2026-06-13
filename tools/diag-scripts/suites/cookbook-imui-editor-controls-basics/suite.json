@@ -3,6 +3,9 @@
   "kind": "diag_script_suite_manifest",
   "scripts": [
     "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json",
+    "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-exposure-focus-stress.json",
+    "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json",
+    "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-overlay-focus-cycle.json",
     "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json"
   ]
 }

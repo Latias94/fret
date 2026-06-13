@@ -622,6 +622,91 @@
       ]
     },
     {
+      "id": "cookbook-imui-editor-controls-click-stress",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "imui",
+        "overlay",
+        "stress"
+      ],
+      "target_hints": [
+        "Exercises the manual path that repeatedly opens and dismisses editor-control overlays.",
+        "Covers text assist open/dismiss/reopen, option accept, roughness typing, search focus, and color popup open/dismiss."
+      ]
+    },
+    {
+      "id": "cookbook-imui-editor-controls-exposure-focus-stress",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-exposure-focus-stress.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "focus",
+        "imui",
+        "numeric-input",
+        "overlay",
+        "stress"
+      ],
+      "target_hints": [
+        "Exercises Exposure NumericInput focus, draft replacement, Enter commit, Escape cancel, and focus handoff with the Asset text-assist overlay.",
+        "Targets the manual report where repeated clicks can appear to freeze or exit without a visible error."
+      ]
+    },
+    {
+      "id": "cookbook-imui-editor-controls-overlay-focus-cycle",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-overlay-focus-cycle.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "color-edit",
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "focus",
+        "imui",
+        "overlay",
+        "text-assist"
+      ],
+      "target_hints": [
+        "Exercises ColorEdit popup open, Escape dismiss, focus restore, then TextAssist open and dismiss in the same retained example.",
+        "Protects the editor controls lesson from overlay focus regressions that previously looked like freezes or silent exits during manual clicking."
+      ]
+    },
+    {
       "id": "cookbook-imui-editor-controls-roughness-typing",
       "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json",
       "required_capabilities": [

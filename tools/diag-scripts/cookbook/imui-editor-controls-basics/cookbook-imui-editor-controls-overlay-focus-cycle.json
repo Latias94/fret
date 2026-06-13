@@ -1,0 +1,133 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook imui editor controls: overlay focus cycle",
+    "tags": [
+      "cookbook",
+      "cookbook.imui_editor_controls_basics",
+      "imui",
+      "editor-controls",
+      "color-edit",
+      "text-assist",
+      "focus",
+      "overlay"
+    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
+    "target_hints": [
+      "Exercises ColorEdit popup open, Escape dismiss, focus restore, then TextAssist open and dismiss in the same retained example.",
+      "Protects the editor controls lesson from overlay focus regressions that previously looked like freezes or silent exits during manual clicking."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1000.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.tint.swatch" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.tint.swatch" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.tint.popup" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "cookbook-imui-editor-controls-overlay-focus-cycle.color-popup.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-imui-editor-controls-overlay-focus-cycle.color-popup"
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.tint.popup" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.tint.swatch" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },
+      "text": "ca"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "cookbook-imui-editor-controls-overlay-focus-cycle.final.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-imui-editor-controls-overlay-focus-cycle.final"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-imui-editor-controls-overlay-focus-cycle"
+    }
+  ]
+}
