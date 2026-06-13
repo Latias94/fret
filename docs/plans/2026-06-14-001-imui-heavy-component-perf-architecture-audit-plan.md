@@ -151,6 +151,9 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: second code slice moved overlay row normalization into `select/content_tree.rs` (`SelectRow`, row disabled mask, labels, values, item-count, selected-index helpers), leaving render assembly in `select.rs`.
 - 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed again after row-normalization extraction.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed again after row-normalization extraction.
+- 2026-06-14: third code slice moved the grouped entry recursion into `select/content_render.rs` (`render_select_entries`), keeping row rendering closures in `select.rs` while giving future render-part extraction a concrete seam.
+- 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed after entry-render extraction.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after entry-render extraction.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

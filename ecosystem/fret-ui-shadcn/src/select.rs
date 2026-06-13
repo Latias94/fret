@@ -10,7 +10,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
-    ScrollAxis, ScrollProps, SemanticsDecoration, SemanticsProps, WheelRegionProps,
+    ScrollAxis, ScrollProps, SemanticsDecoration, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -52,14 +52,16 @@ use std::cell::Cell;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+mod content_render;
 mod content_tree;
 mod geometry;
 mod interaction;
 
+use content_render::render_select_entries;
 use content_tree::{
     SelectRow, contains_item_value, count_items, find_item_label_overrides,
     flatten_items_for_typeahead, flattened_rows, row_disabled_mask, row_item_count, row_labels,
-    row_values, select_group_label, selected_row_index, trigger_value_text,
+    row_values, selected_row_index, trigger_value_text,
 };
 use geometry::{
     select_content_desired_width_with_probe, select_list_desired_height_from_content_height,
@@ -4029,97 +4031,8 @@ fn select_impl<H: UiHost>(
                                                                     }
                                                                 };
 
-                                                                fn render_entries<H: UiHost>(
-                                                                    cx: &mut ElementContext<'_, H>,
-                                                                    entries: &[SelectEntry],
-                                                                    out: &mut Vec<AnyElement>,
-                                                                    row_idx_cursor: &mut usize,
-                                                                    render_row: &mut impl FnMut(
-                                                                        &mut ElementContext<'_, H>,
-                                                                        usize,
-                                                                        SelectRow,
-                                                                        &mut Vec<AnyElement>,
-                                                                    ),
-                                                                ) {
-                                                                    for entry in entries {
-                                                                        match entry {
-                                                                            SelectEntry::Item(item) => {
-                                                                                let row_idx = *row_idx_cursor;
-                                                                                *row_idx_cursor = row_idx.saturating_add(1);
-                                                                                render_row(
-                                                                                    cx,
-                                                                                    row_idx,
-                                                                                    SelectRow::Item(item.clone()),
-                                                                                    out,
-                                                                                );
-                                                                            }
-                                                                            SelectEntry::Label(label) => {
-                                                                                let row_idx = *row_idx_cursor;
-                                                                                *row_idx_cursor = row_idx.saturating_add(1);
-                                                                                render_row(
-                                                                                    cx,
-                                                                                    row_idx,
-                                                                                    SelectRow::Label(label.clone()),
-                                                                                    out,
-                                                                                );
-                                                                            }
-                                                                            SelectEntry::Separator(_) => {
-                                                                                let row_idx = *row_idx_cursor;
-                                                                                *row_idx_cursor = row_idx.saturating_add(1);
-                                                                                render_row(
-                                                                                    cx,
-                                                                                    row_idx,
-                                                                                    SelectRow::Separator,
-                                                                                    out,
-                                                                                );
-                                                                            }
-                                                                            SelectEntry::Group(group) => {
-                                                                                let label =
-                                                                                    select_group_label(&group.entries);
-                                                                                let mut layout =
-                                                                                    LayoutStyle::default();
-                                                                                layout.size.width = Length::Fill;
-                                                                                out.push(cx.semantics(
-                                                                                    SemanticsProps {
-                                                                                        layout,
-                                                                                        role: SemanticsRole::Group,
-                                                                                        label,
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    |cx| {
-                                                                                        vec![cx.flex(
-                                                                                            FlexProps {
-                                                                                                layout: LayoutStyle::default(),
-                                                                                                direction:
-                                                                                                    fret_core::Axis::Vertical,
-                                                                                                gap: Px(0.0).into(),
-                                                                                                padding: Edges::all(Px(0.0)).into(),
-                                                                                                justify: MainAlign::Start,
-                                                                                                align: CrossAlign::Stretch,
-                                                                                                wrap: false,
-                                                                                            },
-                                                                                            |cx| {
-                                                                                                let mut inner =
-                                                                                                    Vec::new();
-                                                                                                render_entries(
-                                                                                                    cx,
-                                                                                                    &group.entries,
-                                                                                                    &mut inner,
-                                                                                                    row_idx_cursor,
-                                                                                                    render_row,
-                                                                                                );
-                                                                                                inner
-                                                                                            },
-                                                                                        )]
-                                                                                    },
-                                                                                ));
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-
                                                                 let mut row_idx_cursor: usize = 0;
-                                                                render_entries(
+                                                                render_select_entries(
                                                                     cx,
                                                                     entries,
                                                                     &mut out,
