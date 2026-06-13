@@ -212,3 +212,67 @@ pub(super) fn flatten_items_for_typeahead(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::select::{SelectGroup, SelectSeparator};
+
+    #[test]
+    fn select_rows_flattens_groups_and_caches_row_metadata() {
+        let entries = vec![
+            SelectLabel::new("Fruits").into(),
+            SelectItem::new("apple", "Apple").into(),
+            SelectGroup::new([
+                SelectLabel::new("Citrus").into(),
+                SelectItem::new("orange", "Orange").disabled(true).into(),
+                SelectSeparator.into(),
+                SelectItem::new("lemon", "Lemon").into(),
+            ])
+            .into(),
+        ];
+
+        let rows = SelectRows::from_entries(&entries, true);
+
+        assert_eq!(rows.len(), 6);
+        assert_eq!(rows.item_count(), 3);
+        assert_eq!(rows.disabled(), &[true, false, true, true, false, false]);
+        assert_eq!(rows.disabled_at(99), true);
+        assert_eq!(rows.selected_row_index("apple"), Some(1));
+        assert_eq!(rows.selected_row_index("lemon"), Some(5));
+        assert_eq!(rows.selected_row_index("missing"), None);
+        assert!(rows.contains_item_value("orange"));
+        assert!(!rows.contains_item_value("missing"));
+
+        let labels_arc = rows.labels_arc();
+        let labels: Vec<&str> = labels_arc.iter().map(|label| label.as_ref()).collect();
+        assert_eq!(labels, ["", "Apple", "", "Orange", "", "Lemon"]);
+
+        let values_arc = rows.values_by_row_arc();
+        let values: Vec<Option<&str>> = values_arc.iter().map(|value| value.as_deref()).collect();
+        assert_eq!(
+            values,
+            [
+                None,
+                Some("apple"),
+                None,
+                Some("orange"),
+                None,
+                Some("lemon")
+            ]
+        );
+    }
+
+    #[test]
+    fn select_rows_marks_all_items_disabled_when_root_is_disabled() {
+        let entries = vec![
+            SelectItem::new("small", "Small").into(),
+            SelectItem::new("large", "Large").into(),
+        ];
+
+        let rows = SelectRows::from_entries(&entries, false);
+
+        assert_eq!(rows.disabled(), &[true, true]);
+        assert_eq!(rows.item_count(), 2);
+    }
+}

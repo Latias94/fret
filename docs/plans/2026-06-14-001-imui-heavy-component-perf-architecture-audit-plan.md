@@ -157,6 +157,9 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: fourth code slice replaced per-frame repeated row derivations with a single `SelectRows` snapshot in `select/content_tree.rs`, co-locating row order, disabled mask, labels, values-by-row, and item count behind one private interface.
 - 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed after `SelectRows` extraction.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after `SelectRows` extraction.
+- 2026-06-14: added focused `SelectRows` unit coverage for grouped flattening, disabled masks, labels, values-by-row, selected lookup, and disabled-root behavior.
+- 2026-06-14: `cargo test -p fret-ui-shadcn --lib select_rows_ -j 1` surfaced a test-only temporary-Arc lifetime bug, which was fixed; reruns then timed out during Windows test-target compilation without a test failure result.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the focused `SelectRows` tests were added.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
