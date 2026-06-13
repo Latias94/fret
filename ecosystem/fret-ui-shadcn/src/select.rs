@@ -57,7 +57,9 @@ mod geometry;
 mod interaction;
 
 use content_tree::{
-    count_items, find_item_label_overrides, flatten_items_for_typeahead, trigger_value_text,
+    SelectRow, contains_item_value, count_items, find_item_label_overrides,
+    flatten_items_for_typeahead, flattened_rows, row_disabled_mask, row_item_count, row_labels,
+    row_values, select_group_label, selected_row_index, trigger_value_text,
 };
 use geometry::{
     select_content_desired_width_with_probe, select_list_desired_height_from_content_height,
@@ -2998,26 +3000,7 @@ fn select_impl<H: UiHost>(
                             .is_some()
                             .then_some(mouse_up_selection_gate_for_overlay.clone());
 
-                        #[derive(Clone)]
-                        enum SelectRow {
-                            Item(SelectItem),
-                            Label(SelectLabel),
-                            Separator,
-                        }
-
-                        fn flatten_entries(into: &mut Vec<SelectRow>, entries: &[SelectEntry]) {
-                            for entry in entries {
-                                match entry {
-                                    SelectEntry::Item(item) => into.push(SelectRow::Item(item.clone())),
-                                    SelectEntry::Label(label) => into.push(SelectRow::Label(label.clone())),
-                                    SelectEntry::Group(group) => flatten_entries(into, &group.entries),
-                                    SelectEntry::Separator(_) => into.push(SelectRow::Separator),
-                                }
-                            }
-                        }
-
-                        let mut rows: Vec<SelectRow> = Vec::new();
-                        flatten_entries(&mut rows, entries);
+                        let rows = flattened_rows(entries);
 
                         let model = model_for_overlay.clone();
                         let selected = cx
@@ -3026,33 +3009,15 @@ fn select_impl<H: UiHost>(
                             .unwrap_or_default();
                         let on_value_change = on_value_change_for_overlay_children.clone();
 
-                        let item_count = rows
-                            .iter()
-                            .filter(|r| matches!(r, SelectRow::Item(_)))
-                            .count();
+                        let item_count = row_item_count(&rows);
 
-                        let disabled: Vec<bool> = rows
-                            .iter()
-                            .map(|row| match row {
-                                SelectRow::Item(item) => item.disabled || !enabled,
-                                SelectRow::Label(_) | SelectRow::Separator => true,
-                            })
-                            .collect();
+                        let disabled = row_disabled_mask(&rows, enabled);
 
-                        let labels: Vec<Arc<str>> = rows
-                            .iter()
-                            .map(|row| match row {
-                                SelectRow::Item(item) => item.label.clone(),
-                                SelectRow::Label(_) | SelectRow::Separator => Arc::from(""),
-                            })
-                            .collect();
+                        let labels = row_labels(&rows);
                         let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
 
                         let initial_active_row = if let Some(selected) = selected.as_deref() {
-                            let selected_idx = rows.iter().position(|row| match row {
-                                SelectRow::Item(item) => item.value.as_ref() == selected,
-                                SelectRow::Label(_) | SelectRow::Separator => false,
-                            });
+                            let selected_idx = selected_row_index(&rows, selected);
                             selected_idx
                                 .and_then(|idx| (!disabled.get(idx).copied().unwrap_or(true)).then_some(idx))
                                 .or_else(|| roving_focus_group::first_enabled(&disabled))
@@ -3220,19 +3185,8 @@ fn select_impl<H: UiHost>(
                                         let disabled_for_key: Arc<[bool]> =
                                             Arc::from(disabled.clone().into_boxed_slice());
                                         let labels_for_key = labels_arc.clone();
-                                        let values_by_row: Arc<[Option<Arc<str>>]> = Arc::from(
-                                            rows.iter()
-                                                .map(|row| match row {
-                                                    SelectRow::Item(item) => {
-                                                        Some(item.value.clone())
-                                                    }
-                                                    SelectRow::Label(_) | SelectRow::Separator => {
-                                                        None
-                                                    }
-                                                })
-                                                .collect::<Vec<_>>()
-                                                .into_boxed_slice(),
-                                        );
+                                        let values_by_row: Arc<[Option<Arc<str>>]> =
+                                            Arc::from(row_values(&rows).into_boxed_slice());
 
                                         let state_for_key =
                                             trigger_state_for_overlay_in_content.clone();
@@ -3404,11 +3358,7 @@ fn select_impl<H: UiHost>(
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;
                                                                 let alignment_selected_value = selected.as_ref().and_then(|value| {
-                                                                    rows.iter()
-                                                                        .any(|row| match row {
-                                                                            SelectRow::Item(item) => item.value.as_ref() == value.as_ref(),
-                                                                            SelectRow::Label(_) | SelectRow::Separator => false,
-                                                                        })
+                                                                    contains_item_value(&rows, value.as_ref())
                                                                         .then(|| value.clone())
                                                                 });
                                                                 let mut first_valid_alignment_item_found = false;
@@ -4078,13 +4028,6 @@ fn select_impl<H: UiHost>(
                                                                         }
                                                                     }
                                                                 };
-
-                                                                fn select_group_label(entries: &[SelectEntry]) -> Option<Arc<str>> {
-                                                                    entries.iter().find_map(|e| match e {
-                                                                        SelectEntry::Label(label) => Some(label.text.clone()),
-                                                                        _ => None,
-                                                                    })
-                                                                }
 
                                                                 fn render_entries<H: UiHost>(
                                                                     cx: &mut ElementContext<'_, H>,
