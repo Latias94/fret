@@ -1843,6 +1843,101 @@ enum CommandPaletteRenderRow {
     Item(usize),
 }
 
+#[derive(Clone)]
+struct CommandPaletteNavigationEntry {
+    value: Arc<str>,
+    command: Option<CommandId>,
+    on_select: Option<fret_ui::action::OnActivate>,
+    on_select_value: Option<OnSelectValueAction>,
+    activation_disabled: bool,
+    navigation_disabled: bool,
+    semantics_disabled: bool,
+}
+
+#[derive(Clone, Default)]
+struct CommandPaletteNavigationSnapshot {
+    entries: Arc<[CommandPaletteNavigationEntry]>,
+    navigation_disabled: Arc<[bool]>,
+    activation_disabled: Arc<[bool]>,
+    semantics_disabled: Arc<[bool]>,
+    item_groups: Arc<[Option<u32>]>,
+    group_order: Arc<[u32]>,
+}
+
+impl CommandPaletteNavigationSnapshot {
+    fn from_items(
+        items: &[Option<CommandItem>],
+        item_groups: Vec<Option<u32>>,
+        disabled: bool,
+    ) -> Self {
+        let mut entries = Vec::with_capacity(items.len());
+        let mut navigation_disabled = Vec::with_capacity(items.len());
+        let mut activation_disabled = Vec::with_capacity(items.len());
+        let mut semantics_disabled = Vec::with_capacity(items.len());
+
+        for item in items {
+            let Some(item) = item.as_ref() else {
+                entries.push(CommandPaletteNavigationEntry {
+                    value: Arc::from(""),
+                    command: None,
+                    on_select: None,
+                    on_select_value: None,
+                    activation_disabled: true,
+                    navigation_disabled: true,
+                    semantics_disabled: true,
+                });
+                navigation_disabled.push(true);
+                activation_disabled.push(true);
+                semantics_disabled.push(true);
+                continue;
+            };
+
+            let has_activation = item.command.is_some()
+                || item.on_select.is_some()
+                || item.on_select_value.is_some();
+            let activation_disabled_flag = disabled || item.disabled || !has_activation;
+            let navigation_disabled_flag =
+                disabled || (item.disabled && !item.focusable_when_disabled);
+            let semantics_disabled_flag = disabled || item.disabled;
+            entries.push(CommandPaletteNavigationEntry {
+                value: item.value.clone(),
+                command: item.command.clone(),
+                on_select: item.on_select.clone(),
+                on_select_value: item.on_select_value.clone(),
+                activation_disabled: activation_disabled_flag,
+                navigation_disabled: navigation_disabled_flag,
+                semantics_disabled: semantics_disabled_flag,
+            });
+            navigation_disabled.push(navigation_disabled_flag);
+            activation_disabled.push(activation_disabled_flag);
+            semantics_disabled.push(semantics_disabled_flag);
+        }
+
+        let item_groups: Arc<[Option<u32>]> = Arc::from(item_groups.into_boxed_slice());
+        let group_order = command_palette_group_order(item_groups.as_ref());
+        Self {
+            entries: Arc::from(entries.into_boxed_slice()),
+            navigation_disabled: Arc::from(navigation_disabled.into_boxed_slice()),
+            activation_disabled: Arc::from(activation_disabled.into_boxed_slice()),
+            semantics_disabled: Arc::from(semantics_disabled.into_boxed_slice()),
+            item_groups,
+            group_order,
+        }
+    }
+}
+
+fn command_palette_group_order(item_groups: &[Option<u32>]) -> Arc<[u32]> {
+    let mut order = Vec::new();
+    let mut last: Option<u32> = None;
+    for group in item_groups.iter().copied().flatten() {
+        if last != Some(group) {
+            order.push(group);
+            last = Some(group);
+        }
+    }
+    Arc::from(order.into_boxed_slice())
+}
+
 fn command_palette_render_rows_for_query_with_options(
     entries: Vec<CommandEntry>,
     query: &str,
@@ -2463,17 +2558,6 @@ impl CommandPalette {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        #[derive(Clone)]
-        struct PaletteEntry {
-            value: Arc<str>,
-            command: Option<CommandId>,
-            on_select: Option<fret_ui::action::OnActivate>,
-            on_select_value: Option<OnSelectValueAction>,
-            activation_disabled: bool,
-            navigation_disabled: bool,
-            semantics_disabled: bool,
-        }
-
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         enum RowKey {
             Command(CommandId),
@@ -2484,8 +2568,7 @@ impl CommandPalette {
             disabled: Rc<Cell<bool>>,
             wrap: Rc<Cell<bool>>,
             vim_bindings: Rc<Cell<bool>>,
-            entries: Rc<RefCell<Arc<[PaletteEntry]>>>,
-            item_groups: Rc<RefCell<Arc<[Option<u32>]>>>,
+            navigation: Rc<RefCell<CommandPaletteNavigationSnapshot>>,
             handler: fret_ui::action::OnKeyDown,
         }
 
@@ -2537,49 +2620,8 @@ impl CommandPalette {
                 .iter()
                 .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
-            let (entries, navigation_disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
-                .iter()
-                .map(|item| {
-                    let Some(item) = item.as_ref() else {
-                        return (
-                            PaletteEntry {
-                                value: Arc::from(""),
-                                command: None,
-                                on_select: None,
-                                on_select_value: None,
-                                activation_disabled: true,
-                                navigation_disabled: true,
-                                semantics_disabled: true,
-                            },
-                            true,
-                        );
-                    };
-                    let has_activation = item.command.is_some()
-                        || item.on_select.is_some()
-                        || item.on_select_value.is_some();
-                    let activation_disabled = disabled || item.disabled || !has_activation;
-                    let navigation_disabled =
-                        disabled || (item.disabled && !item.focusable_when_disabled);
-                    let semantics_disabled = disabled || item.disabled;
-                    (
-                        PaletteEntry {
-                            value: item.value.clone(),
-                            command: item.command.clone(),
-                            on_select: item.on_select.clone(),
-                            on_select_value: item.on_select_value.clone(),
-                            activation_disabled,
-                            navigation_disabled,
-                            semantics_disabled,
-                        },
-                        navigation_disabled,
-                    )
-                })
-                .unzip();
-            let activation_disabled_flags: Vec<bool> =
-                entries.iter().map(|entry| entry.activation_disabled).collect();
-            let semantics_disabled_flags: Vec<bool> =
-                entries.iter().map(|entry| entry.semantics_disabled).collect();
-            let entries_arc: Arc<[PaletteEntry]> = Arc::from(entries.into_boxed_slice());
+            let navigation =
+                CommandPaletteNavigationSnapshot::from_items(&items, item_groups, disabled);
 
             let default_value_for_hook = default_value.clone();
             let active = controllable_state::use_controllable_model(cx, value, move || {
@@ -2594,31 +2636,34 @@ impl CommandPalette {
                 cur_active
                     .as_ref()
                     .and_then(|v| {
-                        entries_arc
+                        navigation
+                            .entries
                             .iter()
                             .enumerate()
                             .find(|(idx, e)| {
-                                navigation_disabled_flags.get(*idx).copied() == Some(false)
+                                navigation.navigation_disabled.get(*idx).copied() == Some(false)
                                     && e.value.as_ref() == v.as_ref()
                             })
                             .map(|(_, e)| e.value.clone())
                     })
                     .or_else(|| {
-                        entries_arc
+                        navigation
+                            .entries
                             .iter()
                             .enumerate()
                             .find(|(idx, _)| {
-                                navigation_disabled_flags.get(*idx).copied() == Some(false)
+                                navigation.navigation_disabled.get(*idx).copied() == Some(false)
                             })
                             .map(|(_, e)| e.value.clone())
                     })
             } else {
                 cur_active.as_ref().and_then(|v| {
-                    entries_arc
+                    navigation
+                        .entries
                         .iter()
                         .enumerate()
                         .find(|(idx, e)| {
-                            navigation_disabled_flags.get(*idx).copied() == Some(false)
+                            navigation.navigation_disabled.get(*idx).copied() == Some(false)
                                 && e.value.as_ref() == v.as_ref()
                         })
                         .map(|(_, e)| e.value.clone())
@@ -2671,7 +2716,7 @@ impl CommandPalette {
 
             let active_idx = next_active.as_ref().and_then(|active_value| {
                 items.iter().enumerate().find_map(|(idx, item)| {
-                    let navigable = navigation_disabled_flags.get(idx).copied() == Some(false);
+                    let navigable = navigation.navigation_disabled.get(idx).copied() == Some(false);
                     let Some(item) = item.as_ref() else {
                         return None;
                     };
@@ -2761,11 +2806,11 @@ impl CommandPalette {
                         let pending_dispatch_for_row = pending_dispatch.clone();
                         cx.keyed((base, occ), |cx| {
                             let enabled =
-                                activation_disabled_flags.get(idx).copied() == Some(false);
+                                navigation.activation_disabled.get(idx).copied() == Some(false);
                             let navigable =
-                                navigation_disabled_flags.get(idx).copied() == Some(false);
+                                navigation.navigation_disabled.get(idx).copied() == Some(false);
                             let semantics_disabled =
-                                semantics_disabled_flags.get(idx).copied().unwrap_or(true);
+                                navigation.semantics_disabled.get(idx).copied().unwrap_or(true);
                             let active_row = active_idx.is_some_and(|i| i == idx);
 
                             let label = item.label.clone();
@@ -3231,12 +3276,9 @@ impl CommandPalette {
 
             let key_handler = cx.slot_state(
                 || {
-                    let entries_cell: Rc<RefCell<Arc<[PaletteEntry]>>> =
-                        Rc::new(RefCell::new(Arc::from([])));
-                    let entries_read = entries_cell.clone();
-                    let item_groups_cell: Rc<RefCell<Arc<[Option<u32>]>>> =
-                        Rc::new(RefCell::new(Arc::from([])));
-                    let item_groups_read = item_groups_cell.clone();
+                    let navigation_cell =
+                        Rc::new(RefCell::new(CommandPaletteNavigationSnapshot::default()));
+                    let navigation_read = navigation_cell.clone();
                     let disabled_cell = Rc::new(Cell::new(false));
                     let wrap_cell = Rc::new(Cell::new(true));
                     let vim_bindings_cell = Rc::new(Cell::new(true));
@@ -3257,12 +3299,12 @@ impl CommandPalette {
                                 return false;
                             }
 
-                            let entries = entries_read.borrow();
-                            let navigation_disabled_flags: Vec<bool> =
-                                entries.iter().map(|e| e.navigation_disabled).collect();
-                            let activation_disabled_flags: Vec<bool> =
-                                entries.iter().map(|e| e.activation_disabled).collect();
-                            let groups = item_groups_read.borrow();
+                            let navigation = navigation_read.borrow();
+                            let entries = navigation.entries.as_ref();
+                            let navigation_disabled_flags = navigation.navigation_disabled.as_ref();
+                            let activation_disabled_flags = navigation.activation_disabled.as_ref();
+                            let groups = navigation.item_groups.as_ref();
+                            let group_order = navigation.group_order.as_ref();
 
                             let current_value =
                                 host.models_mut().get_cloned(&active).unwrap_or(None);
@@ -3318,38 +3360,38 @@ impl CommandPalette {
                                     return;
                                 };
 
-                                // Group order is the order of appearance in the rendered rows.
-                                let mut order: Vec<u32> = Vec::new();
-                                let mut last: Option<u32> = None;
-                                for g in groups.iter().copied().flatten() {
-                                    if last != Some(g) {
-                                        order.push(g);
-                                        last = Some(g);
-                                    }
-                                }
-
-                                let Some(pos) = order.iter().position(|g| *g == cur_group) else {
+                                let Some(pos) = group_order.iter().position(|g| *g == cur_group)
+                                else {
                                     move_by_item(forward, set_active_by_idx);
                                     return;
                                 };
 
-                                let candidates: Box<dyn Iterator<Item = u32>> = if forward {
-                                    Box::new(order.iter().copied().skip(pos + 1))
+                                if forward {
+                                    for group_id in group_order.iter().copied().skip(pos + 1) {
+                                        let next_idx =
+                                            groups.iter().enumerate().find_map(|(idx, g)| {
+                                                (navigation_disabled_flags.get(idx).copied()
+                                                    == Some(false)
+                                                    && *g == Some(group_id))
+                                                    .then_some(idx)
+                                            });
+                                        if next_idx.is_some() {
+                                            set_active_by_idx(next_idx);
+                                            return;
+                                        }
+                                    }
                                 } else {
-                                    Box::new(order.iter().copied().take(pos).rev())
-                                };
-
-                                for group_id in candidates {
-                                    let next_idx =
-                                        groups.iter().enumerate().find_map(|(idx, g)| {
+                                    for group_id in group_order[..pos].iter().copied().rev() {
+                                        let next_idx = groups.iter().enumerate().find_map(|(idx, g)| {
                                             (navigation_disabled_flags.get(idx).copied()
                                                 == Some(false)
                                                 && *g == Some(group_id))
                                                 .then_some(idx)
                                         });
-                                    if next_idx.is_some() {
-                                        set_active_by_idx(next_idx);
-                                        return;
+                                        if next_idx.is_some() {
+                                            set_active_by_idx(next_idx);
+                                            return;
+                                        }
                                     }
                                 }
 
@@ -3458,8 +3500,7 @@ impl CommandPalette {
                         disabled: disabled_cell,
                         wrap: wrap_cell,
                         vim_bindings: vim_bindings_cell,
-                        entries: entries_cell,
-                        item_groups: item_groups_cell,
+                        navigation: navigation_cell,
                         handler,
                     }
                 },
@@ -3467,9 +3508,7 @@ impl CommandPalette {
                     state.disabled.set(disabled);
                     state.wrap.set(wrap);
                     state.vim_bindings.set(vim_bindings);
-                    *state.entries.borrow_mut() = entries_arc.clone();
-                    *state.item_groups.borrow_mut() =
-                        Arc::from(item_groups.clone().into_boxed_slice());
+                    *state.navigation.borrow_mut() = navigation.clone();
                     state.handler.clone()
                 },
             );
@@ -6851,6 +6890,59 @@ mod tests {
                 "S".to_string(),
                 "I:Gamma".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn command_palette_navigation_snapshot_reuses_disabled_and_group_metadata() {
+        let entries = vec![
+            CommandGroup::new(vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta")
+                    .disabled(true)
+                    .focusable_when_disabled(true)
+                    .on_select(CommandId::new("beta")),
+            ])
+            .heading("First")
+            .into(),
+            CommandGroup::new(vec![
+                CommandItem::new("Gamma")
+                    .disabled(true)
+                    .on_select(CommandId::new("gamma")),
+            ])
+            .heading("Second")
+            .into(),
+            CommandItem::new("Delta").into(),
+        ];
+
+        let (_rows, items, item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "", true, None);
+        let navigation = CommandPaletteNavigationSnapshot::from_items(&items, item_groups, false);
+
+        assert_eq!(
+            navigation
+                .entries
+                .iter()
+                .map(|entry| entry.value.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["Alpha", "Beta", "Gamma", "Delta"]
+        );
+        assert_eq!(navigation.group_order.as_ref(), &[0, 1]);
+        assert_eq!(
+            navigation.item_groups.as_ref(),
+            &[Some(0), Some(0), Some(1), None]
+        );
+        assert_eq!(
+            navigation.navigation_disabled.as_ref(),
+            &[false, false, true, false]
+        );
+        assert_eq!(
+            navigation.activation_disabled.as_ref(),
+            &[false, true, true, true]
+        );
+        assert_eq!(
+            navigation.semantics_disabled.as_ref(),
+            &[false, true, true, false]
         );
     }
 

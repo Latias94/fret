@@ -171,6 +171,10 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `menubar.rs` now has a private `MenubarRovingMetadata` seam that computes leading-slot need, gated labels/disabled flags, item count, and first active index in one pass for root and submenu panels without changing submenu extraction or rendering.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the menubar metadata seam.
 - 2026-06-14: `cargo test -p fret-ui-shadcn --lib menubar_items_have_collection_position_metadata_excluding_separators -j 1` timed out during Windows test-target compilation without a test failure result.
+- 2026-06-14: The next P1 heavy-component candidates are `CommandPalette`, `Combobox`, `Carousel`, `DataTable` toolbar recipes, and `Sidebar`; `Tabs` and `Calendar` remain lower-priority because their repeated row metadata exists but typical row counts are smaller or current parity risk is lower.
+- 2026-06-14: `command.rs` now has a private `CommandPaletteNavigationSnapshot` seam that co-locates command entries, navigation/activation/semantics disabled flags, item groups, and group order. The key handler now reuses this snapshot instead of allocating disabled flag vectors and group order on every navigation key press.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the command-palette navigation snapshot seam.
+- 2026-06-14: `cargo test -p fret-ui-shadcn --lib command_palette_navigation_snapshot_reuses_disabled_and_group_metadata -j 1` timed out during Windows test-target compilation without a test failure result; residual `cargo`/`rustc` processes from that validation were stopped.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
