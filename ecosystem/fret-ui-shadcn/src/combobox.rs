@@ -165,6 +165,131 @@ pub(crate) fn combobox_group_items(group: &ComboboxGroup) -> &[ComboboxItem] {
     }
 }
 
+#[derive(Debug)]
+struct ComboboxCommandSections {
+    root_items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxCommandGroupSection>,
+}
+
+#[derive(Debug)]
+struct ComboboxCommandGroupSection {
+    heading: Arc<str>,
+    items: Vec<ComboboxItem>,
+}
+
+fn combobox_command_sections(
+    mut root_items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxGroup>,
+) -> ComboboxCommandSections {
+    let mut non_empty_groups = Vec::new();
+
+    for group in groups {
+        let group_items = if !group.items.is_empty() {
+            group.items
+        } else {
+            group.collection.map(|c| c.items).unwrap_or_default()
+        };
+        if group_items.is_empty() {
+            continue;
+        }
+
+        if let Some(label) = group.label {
+            non_empty_groups.push(ComboboxCommandGroupSection {
+                heading: label.text,
+                items: group_items,
+            });
+        } else {
+            root_items.extend(group_items);
+        }
+    }
+
+    ComboboxCommandSections {
+        root_items,
+        groups: non_empty_groups,
+    }
+}
+
+fn combobox_command_entry_capacity(
+    sections: &ComboboxCommandSections,
+    group_separators: bool,
+) -> usize {
+    let mut capacity = sections.root_items.len() + sections.groups.len();
+    if group_separators {
+        if !sections.root_items.is_empty() && !sections.groups.is_empty() {
+            capacity += 1;
+        }
+        capacity += sections.groups.len().saturating_sub(1);
+    }
+    capacity
+}
+
+fn combobox_separator_test_id(prefix: Option<&str>, suffix: &str) -> Option<Arc<str>> {
+    prefix.map(|prefix| Arc::<str>::from(format!("{prefix}-sep-{suffix}")))
+}
+
+fn combobox_command_separator(prefix: Option<&str>, suffix: &str) -> CommandSeparator {
+    let separator = CommandSeparator::new();
+    if let Some(test_id) = combobox_separator_test_id(prefix, suffix) {
+        separator.test_id(test_id)
+    } else {
+        separator
+    }
+}
+
+fn combobox_command_entries(
+    items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxGroup>,
+    group_separators: bool,
+    test_id_prefix: Option<&str>,
+    make_item: impl FnMut(ComboboxItem) -> CommandItem,
+) -> Vec<CommandEntry> {
+    combobox_command_entries_from_sections(
+        combobox_command_sections(items, groups),
+        group_separators,
+        test_id_prefix,
+        make_item,
+    )
+}
+
+fn combobox_command_entries_from_sections(
+    sections: ComboboxCommandSections,
+    group_separators: bool,
+    test_id_prefix: Option<&str>,
+    mut make_item: impl FnMut(ComboboxItem) -> CommandItem,
+) -> Vec<CommandEntry> {
+    let mut entries =
+        Vec::with_capacity(combobox_command_entry_capacity(&sections, group_separators));
+
+    for item in sections.root_items {
+        entries.push(CommandEntry::Item(make_item(item)));
+    }
+
+    let non_empty_groups_len = sections.groups.len();
+    if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
+        entries.push(CommandEntry::Separator(combobox_command_separator(
+            test_id_prefix,
+            "items-groups",
+        )));
+    }
+
+    for (idx, group) in sections.groups.into_iter().enumerate() {
+        let group_items: Vec<CommandItem> = group.items.into_iter().map(&mut make_item).collect();
+        entries.push(CommandEntry::Group(
+            CommandGroup::new(group_items).heading(group.heading),
+        ));
+
+        if group_separators && idx + 1 < non_empty_groups_len {
+            let suffix = format!("group-{idx}");
+            entries.push(CommandEntry::Separator(combobox_command_separator(
+                test_id_prefix,
+                &suffix,
+            )));
+        }
+    }
+
+    entries
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ComboboxStyle {
     pub trigger_background: OverrideSlot<ColorRef>,
@@ -2069,9 +2194,7 @@ fn combobox_with_patch<H: UiHost>(
                                 })
                                 .shadow(ShadowPreset::Md);
 
-                            let mut entries: Vec<CommandEntry> =
-                                Vec::with_capacity(items.len() + groups.len());
-                            let mut make_item = |item: ComboboxItem| -> CommandItem {
+                            let make_item = |item: ComboboxItem| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -2139,60 +2262,13 @@ fn combobox_with_patch<H: UiHost>(
                                 cmd_item
                             };
 
-                            let mut root_items = items;
-                            let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> =
-                                Vec::new();
-                            for group in groups {
-                                let group_items = if !group.items.is_empty() {
-                                    group.items
-                                } else {
-                                    group.collection.map(|c| c.items).unwrap_or_default()
-                                };
-                                if group_items.is_empty() {
-                                    continue;
-                                }
-                                if let Some(label) = group.label {
-                                    non_empty_groups.push((label.text, group_items));
-                                } else {
-                                    root_items.extend(group_items);
-                                }
-                            }
-
-                            for item in root_items {
-                                entries.push(CommandEntry::Item(make_item(item)));
-                            }
-
-                            let non_empty_groups_len = non_empty_groups.len();
-                            if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
-                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                    CommandSeparator::new()
-                                        .test_id(format!("{prefix}-sep-items-groups"))
-                                } else {
-                                    CommandSeparator::new()
-                                };
-                                entries.push(CommandEntry::Separator(sep));
-                            }
-
-                            for (idx, (heading, group_items)) in
-                                non_empty_groups.into_iter().enumerate()
-                            {
-                                let group_items: Vec<CommandItem> = group_items
-                                    .into_iter()
-                                    .map(&mut make_item)
-                                    .collect();
-                                entries.push(CommandEntry::Group(
-                                    CommandGroup::new(group_items).heading(heading),
-                                ));
-                                if group_separators && idx + 1 < non_empty_groups_len {
-                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                        CommandSeparator::new()
-                                            .test_id(format!("{prefix}-sep-group-{idx}"))
-                                    } else {
-                                        CommandSeparator::new()
-                                    };
-                                    entries.push(CommandEntry::Separator(sep));
-                                }
-                            }
+                            let entries = combobox_command_entries(
+                                items,
+                                groups,
+                                group_separators,
+                                test_id_prefix.as_deref(),
+                                make_item,
+                            );
 
                             {
                                 let mut palette =
@@ -2231,9 +2307,7 @@ fn combobox_with_patch<H: UiHost>(
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
-                            let mut entries: Vec<CommandEntry> =
-                                Vec::with_capacity(items.len() + groups.len());
-                            let mut make_item = |item: ComboboxItem| -> CommandItem {
+                            let make_item = |item: ComboboxItem| -> CommandItem {
                                     let item_disabled = disabled || item.disabled;
                                     let is_selected = selected
                                         .as_ref()
@@ -2323,60 +2397,13 @@ fn combobox_with_patch<H: UiHost>(
                                     cmd_item
                                 };
 
-                            let mut root_items = items;
-                            let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> =
-                                Vec::new();
-                            for group in groups {
-                                let group_items = if !group.items.is_empty() {
-                                    group.items
-                                } else {
-                                    group.collection.map(|c| c.items).unwrap_or_default()
-                                };
-                                if group_items.is_empty() {
-                                    continue;
-                                }
-                                if let Some(label) = group.label {
-                                    non_empty_groups.push((label.text, group_items));
-                                } else {
-                                    root_items.extend(group_items);
-                                }
-                            }
-
-                            for item in root_items {
-                                entries.push(CommandEntry::Item(make_item(item)));
-                            }
-
-                            let non_empty_groups_len = non_empty_groups.len();
-                            if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
-                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                    CommandSeparator::new()
-                                        .test_id(format!("{prefix}-sep-items-groups"))
-                                } else {
-                                    CommandSeparator::new()
-                                };
-                                entries.push(CommandEntry::Separator(sep));
-                            }
-
-                            for (idx, (heading, group_items)) in
-                                non_empty_groups.into_iter().enumerate()
-                            {
-                                let group_items: Vec<CommandItem> = group_items
-                                    .into_iter()
-                                    .map(&mut make_item)
-                                    .collect();
-                                entries.push(CommandEntry::Group(
-                                    CommandGroup::new(group_items).heading(heading),
-                                ));
-                                if group_separators && idx + 1 < non_empty_groups_len {
-                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                        CommandSeparator::new()
-                                            .test_id(format!("{prefix}-sep-group-{idx}"))
-                                    } else {
-                                        CommandSeparator::new()
-                                    };
-                                    entries.push(CommandEntry::Separator(sep));
-                                }
-                            }
+                            let entries = combobox_command_entries(
+                                items,
+                                groups,
+                                group_separators,
+                                test_id_prefix.as_deref(),
+                                make_item,
+                            );
 
                             CommandList::new_entries(entries)
                                 .disabled(disabled)
@@ -2856,10 +2883,8 @@ fn combobox_with_patch<H: UiHost>(
 
                     let items = items.take().unwrap_or_default();
                     let groups = groups.take().unwrap_or_default();
-                    let mut entries: Vec<CommandEntry> =
-                        Vec::with_capacity(items.len() + groups.len());
 
-                    let mut make_item = |item: ComboboxItem| -> CommandItem {
+                    let make_item = |item: ComboboxItem| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -2926,54 +2951,13 @@ fn combobox_with_patch<H: UiHost>(
                         cmd_item
                     };
 
-                    let mut root_items = items;
-                    let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> = Vec::new();
-                    for group in groups {
-                        let group_items = if !group.items.is_empty() {
-                            group.items
-                        } else {
-                            group.collection.map(|c| c.items).unwrap_or_default()
-                        };
-                        if group_items.is_empty() {
-                            continue;
-                        }
-                        if let Some(label) = group.label {
-                            non_empty_groups.push((label.text, group_items));
-                        } else {
-                            root_items.extend(group_items);
-                        }
-                    }
-
-                    for item in root_items {
-                        entries.push(CommandEntry::Item(make_item(item)));
-                    }
-
-                    let non_empty_groups_len = non_empty_groups.len();
-                    if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
-                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                            CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
-                        } else {
-                            CommandSeparator::new()
-                        };
-                        entries.push(CommandEntry::Separator(sep));
-                    }
-
-                    for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
-                    {
-                        let group_items: Vec<CommandItem> =
-                            group_items.into_iter().map(&mut make_item).collect();
-                        entries.push(CommandEntry::Group(
-                            CommandGroup::new(group_items).heading(heading),
-                        ));
-                        if group_separators && idx + 1 < non_empty_groups_len {
-                            let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                CommandSeparator::new().test_id(format!("{prefix}-sep-group-{idx}"))
-                            } else {
-                                CommandSeparator::new()
-                            };
-                            entries.push(CommandEntry::Separator(sep));
-                        }
-                    }
+                    let entries = combobox_command_entries(
+                        items,
+                        groups,
+                        group_separators,
+                        test_id_prefix.as_deref(),
+                        make_item,
+                    );
 
                     {
                         let mut palette = CommandPalette::new(query_model.clone(), [])
@@ -3015,10 +2999,8 @@ fn combobox_with_patch<H: UiHost>(
 
                     let items = items.take().unwrap_or_default();
                     let groups = groups.take().unwrap_or_default();
-                    let mut entries: Vec<CommandEntry> =
-                        Vec::with_capacity(items.len() + groups.len());
 
-                    let mut make_item = |item: ComboboxItem| -> CommandItem {
+                    let make_item = |item: ComboboxItem| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -3101,54 +3083,13 @@ fn combobox_with_patch<H: UiHost>(
                         cmd_item
                     };
 
-                    let mut root_items = items;
-                    let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> = Vec::new();
-                    for group in groups {
-                        let group_items = if !group.items.is_empty() {
-                            group.items
-                        } else {
-                            group.collection.map(|c| c.items).unwrap_or_default()
-                        };
-                        if group_items.is_empty() {
-                            continue;
-                        }
-                        if let Some(label) = group.label {
-                            non_empty_groups.push((label.text, group_items));
-                        } else {
-                            root_items.extend(group_items);
-                        }
-                    }
-
-                    for item in root_items {
-                        entries.push(CommandEntry::Item(make_item(item)));
-                    }
-
-                    let non_empty_groups_len = non_empty_groups.len();
-                    if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
-                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                            CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
-                        } else {
-                            CommandSeparator::new()
-                        };
-                        entries.push(CommandEntry::Separator(sep));
-                    }
-
-                    for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
-                    {
-                        let group_items: Vec<CommandItem> =
-                            group_items.into_iter().map(&mut make_item).collect();
-                        entries.push(CommandEntry::Group(
-                            CommandGroup::new(group_items).heading(heading),
-                        ));
-                        if group_separators && idx + 1 < non_empty_groups_len {
-                            let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                CommandSeparator::new().test_id(format!("{prefix}-sep-group-{idx}"))
-                            } else {
-                                CommandSeparator::new()
-                            };
-                            entries.push(CommandEntry::Separator(sep));
-                        }
-                    }
+                    let entries = combobox_command_entries(
+                        items,
+                        groups,
+                        group_separators,
+                        test_id_prefix.as_deref(),
+                        make_item,
+                    );
 
                     CommandList::new_entries(entries)
                         .disabled(disabled)
@@ -3802,6 +3743,90 @@ mod tests {
         assert_eq!(group_items[0].detail.as_deref(), Some("React"));
         assert_eq!(group_items[0].label.as_ref(), "Beta");
         assert_eq!(group_items[0].keywords.len(), 0);
+    }
+
+    #[test]
+    fn combobox_command_sections_merge_unlabeled_groups_and_skip_empty_groups() {
+        let sections = combobox_command_sections(
+            vec![ComboboxItem::new("root", "Root")],
+            vec![
+                ComboboxGroup::new().label(ComboboxLabel::new("Empty")),
+                ComboboxGroup::new().items([ComboboxItem::new("inline", "Inline")]),
+                ComboboxGroup::new()
+                    .label(ComboboxLabel::new("Frameworks"))
+                    .collection(ComboboxCollection::new([ComboboxItem::new(
+                        "react", "React",
+                    )])),
+            ],
+        );
+
+        let root_values: Vec<&str> = sections
+            .root_items
+            .iter()
+            .map(|item| item.value.as_ref())
+            .collect();
+        assert_eq!(root_values, ["root", "inline"]);
+
+        assert_eq!(sections.groups.len(), 1);
+        assert_eq!(sections.groups[0].heading.as_ref(), "Frameworks");
+        let group_values: Vec<&str> = sections.groups[0]
+            .items
+            .iter()
+            .map(|item| item.value.as_ref())
+            .collect();
+        assert_eq!(group_values, ["react"]);
+    }
+
+    #[test]
+    fn combobox_command_entries_keep_separator_order_and_test_id_suffixes() {
+        fn entry_kinds(entries: &[CommandEntry]) -> Vec<&'static str> {
+            entries
+                .iter()
+                .map(|entry| match entry {
+                    CommandEntry::Item(_) => "item",
+                    CommandEntry::Group(_) => "group",
+                    CommandEntry::Separator(_) => "separator",
+                    CommandEntry::Loading(_) => "loading",
+                })
+                .collect()
+        }
+
+        let entries = combobox_command_entries(
+            vec![ComboboxItem::new("root", "Root")],
+            vec![
+                ComboboxGroup::new()
+                    .label(ComboboxLabel::new("First"))
+                    .items([ComboboxItem::new("one", "One")]),
+                ComboboxGroup::new()
+                    .label(ComboboxLabel::new("Second"))
+                    .items([ComboboxItem::new("two", "Two")]),
+            ],
+            true,
+            Some("cb"),
+            |item| CommandItem::new(item.label.clone()).value(item.value.clone()),
+        );
+
+        assert_eq!(
+            entry_kinds(&entries),
+            ["item", "separator", "group", "separator", "group"]
+        );
+        assert_eq!(
+            combobox_separator_test_id(Some("cb"), "items-groups").as_deref(),
+            Some("cb-sep-items-groups")
+        );
+        assert_eq!(
+            combobox_separator_test_id(Some("cb"), "group-0").as_deref(),
+            Some("cb-sep-group-0")
+        );
+
+        let root_only_entries = combobox_command_entries(
+            vec![ComboboxItem::new("root", "Root")],
+            vec![ComboboxGroup::new().label(ComboboxLabel::new("Empty"))],
+            true,
+            Some("cb"),
+            |item| CommandItem::new(item.label.clone()).value(item.value.clone()),
+        );
+        assert_eq!(entry_kinds(&root_only_entries), ["item"]);
     }
 
     #[test]
