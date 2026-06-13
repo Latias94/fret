@@ -167,6 +167,7 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `context_menu.rs` now has a private `ContextMenuRovingMetadata` seam that computes leading-slot need, roving labels, gated disabled flags, and item count in one recursive pass for both submenu and root panels.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the context-menu metadata seam.
 - 2026-06-14: `cargo test -p fret-ui-shadcn --lib context_menu_items_have_collection_position_metadata_excluding_separators -j 1` timed out during Windows test-target compilation without a test failure result.
+- 2026-06-14: `menubar.rs` has the same labels/disabled/item-count pattern in root and submenu panels, but the surrounding closure also owns active-row selection, submenu entry extraction, and group-active switching. Treat it as a next candidate only after adding/choosing a tighter regression gate.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
