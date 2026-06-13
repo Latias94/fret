@@ -290,6 +290,84 @@ fn combobox_command_entries_from_sections(
     entries
 }
 
+struct ComboboxCommandItemFrame {
+    command: CommandItem,
+    label_text: Arc<str>,
+    disabled: bool,
+    selected: bool,
+}
+
+fn combobox_command_label_text(item: &ComboboxItem) -> Arc<str> {
+    if item.content.is_some() {
+        return item.label.clone();
+    }
+
+    item.detail
+        .as_ref()
+        .map(|detail| Arc::<str>::from(format!("{} ({})", item.label.as_ref(), detail.as_ref())))
+        .unwrap_or_else(|| item.label.clone())
+}
+
+fn combobox_command_keywords(item: &ComboboxItem) -> Vec<Arc<str>> {
+    let mut keywords = item.keywords.clone();
+    if let Some(detail) = item.detail.clone() {
+        keywords.push(detail);
+    }
+    keywords
+}
+
+fn combobox_command_item_test_id(test_id_prefix: Option<&str>, value: &str) -> Option<String> {
+    test_id_prefix.map(|prefix| format!("{prefix}-item-{}", test_id_slug(value)))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn combobox_command_item_frame(
+    item: &ComboboxItem,
+    disabled: bool,
+    selected: Option<&Arc<str>>,
+    model: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    query_model: Model<String>,
+    open_change_reason_model: Model<Option<ComboboxOpenChangeReason>>,
+    selection_commit_policy: kit_combobox::SelectionCommitPolicy,
+    test_id_prefix: Option<&str>,
+) -> ComboboxCommandItemFrame {
+    let item_disabled = disabled || item.disabled;
+    let is_selected = selected.is_some_and(|v| v.as_ref() == item.value.as_ref());
+    let label_text = combobox_command_label_text(item);
+    let model_for_select = model;
+    let open_for_select = open;
+    let query_for_select = query_model;
+    let open_change_reason_model_for_select = open_change_reason_model;
+
+    let mut command = CommandItem::new(label_text.clone())
+        .value(item.value.clone())
+        .keywords(combobox_command_keywords(item))
+        .disabled(item_disabled)
+        .on_select_value_action(move |host, action_cx, reason, value| {
+            let on_select = kit_combobox::commit_selection_on_activate(
+                selection_commit_policy,
+                model_for_select.clone(),
+                open_for_select.clone(),
+                query_for_select.clone(),
+                open_change_reason_model_for_select.clone(),
+                value,
+            );
+            on_select(host, action_cx, reason);
+        });
+
+    if let Some(test_id) = combobox_command_item_test_id(test_id_prefix, item.value.as_ref()) {
+        command = command.test_id(test_id);
+    }
+
+    ComboboxCommandItemFrame {
+        command,
+        label_text,
+        disabled: item_disabled,
+        selected: is_selected,
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ComboboxStyle {
     pub trigger_background: OverrideSlot<ColorRef>,
@@ -2195,52 +2273,18 @@ fn combobox_with_patch<H: UiHost>(
                                 .shadow(ShadowPreset::Md);
 
                             let make_item = |item: ComboboxItem| -> CommandItem {
-                                let item_disabled = disabled || item.disabled;
-                                let is_selected = selected
-                                    .as_ref()
-                                    .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                                let model_for_select = model.clone();
-                                let open_for_select = open.clone();
-                                let query_for_select = query_model.clone();
-                                let open_change_reason_model_for_select =
-                                    open_change_reason_model.clone();
-
-                                let label_text = if item.content.is_none() {
-                                    if let Some(detail) = item.detail.as_ref() {
-                                        Arc::<str>::from(format!(
-                                            "{} ({})",
-                                            item.label.as_ref(),
-                                            detail.as_ref()
-                                        ))
-                                    } else {
-                                        item.label.clone()
-                                    }
-                                } else {
-                                    item.label.clone()
-                                };
-
-                                let mut keywords = item.keywords.clone();
-                                if let Some(detail) = item.detail.clone() {
-                                    keywords.push(detail);
-                                }
-
-                                let mut cmd_item = CommandItem::new(label_text)
-                                    .value(item.value.clone())
-                                    .keywords(keywords)
-                                    .disabled(item_disabled)
-                                    .checkmark(is_selected)
-                                    .on_select_value_action(move |host, action_cx, reason, value| {
-                                        let on_select = kit_combobox::commit_selection_on_activate(
-                                            selection_commit_policy,
-                                            model_for_select.clone(),
-                                            open_for_select.clone(),
-                                            query_for_select.clone(),
-                                            open_change_reason_model_for_select.clone(),
-                                            value,
-                                        );
-                                        on_select(host, action_cx, reason);
-                                    });
+                                let mut frame = combobox_command_item_frame(
+                                    &item,
+                                    disabled,
+                                    selected.as_ref(),
+                                    model.clone(),
+                                    open.clone(),
+                                    query_model.clone(),
+                                    open_change_reason_model.clone(),
+                                    selection_commit_policy,
+                                    test_id_prefix.as_deref(),
+                                );
+                                frame.command = frame.command.checkmark(frame.selected);
 
                                 if let Some(content) = item.content {
                                     let body = ui::h_flex( move |_cx| vec![content])
@@ -2249,17 +2293,10 @@ fn combobox_with_patch<H: UiHost>(
                                         .flex_1()
                                         .basis_0()
                                         .into_element(cx);
-                                    cmd_item = cmd_item.children([body]);
+                                    frame.command = frame.command.children([body]);
                                 }
 
-                                if let Some(prefix) = test_id_prefix.as_deref() {
-                                    cmd_item = cmd_item.test_id(format!(
-                                        "{prefix}-item-{}",
-                                        test_id_slug(item.value.as_ref())
-                                    ));
-                                }
-
-                                cmd_item
+                                frame.command
                             };
 
                             let entries = combobox_command_entries(
@@ -2308,94 +2345,53 @@ fn combobox_with_patch<H: UiHost>(
                             let item_text_style = crate::command::item_text_style(&theme);
 
                             let make_item = |item: ComboboxItem| -> CommandItem {
-                                    let item_disabled = disabled || item.disabled;
-                                    let is_selected = selected
-                                        .as_ref()
-                                        .is_some_and(|v| v.as_ref() == item.value.as_ref());
+                                let mut frame = combobox_command_item_frame(
+                                    &item,
+                                    disabled,
+                                    selected.as_ref(),
+                                    model.clone(),
+                                    open.clone(),
+                                    query_model.clone(),
+                                    open_change_reason_model.clone(),
+                                    selection_commit_policy,
+                                    test_id_prefix.as_deref(),
+                                );
 
-                                    let model_for_select = model.clone();
-                                    let open_for_select = open.clone();
-                                    let query_for_select = query_model.clone();
-                                    let open_change_reason_model_for_select =
-                                        open_change_reason_model.clone();
-
-                                    let label_text = if item.content.is_none() {
-                                        if let Some(detail) = item.detail.as_ref() {
-                                            Arc::<str>::from(format!(
-                                                "{} ({})",
-                                                item.label.as_ref(),
-                                                detail.as_ref()
-                                            ))
-                                        } else {
-                                            item.label.clone()
-                                        }
+                                let label_style = item_text_style.clone();
+                                let icon = decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHECK,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(if frame.disabled {
+                                        fg_disabled
                                     } else {
-                                        item.label.clone()
-                                    };
+                                        fg
+                                    })),
+                                );
+                                let icon = cx.opacity(
+                                    if frame.selected { 1.0 } else { 0.0 },
+                                    move |_cx| vec![icon],
+                                );
 
-                                    let mut keywords = item.keywords.clone();
-                                    if let Some(detail) = item.detail.clone() {
-                                        keywords.push(detail);
-                                    }
-
-                                    let label_style = item_text_style.clone();
-                                    let icon = decl_icon::icon_with(
+                                let body = if let Some(content) = item.content {
+                                    ui::h_flex( move |_cx| vec![content])
+                                        .w_full()
+                                        .min_w_0()
+                                        .flex_1()
+                                        .basis_0()
+                                        .into_element(cx)
+                                } else {
+                                    combobox_item_text(
                                         cx,
-                                        ids::ui::CHECK,
-                                        Some(Px(16.0)),
-                                        Some(ColorRef::Color(if item_disabled {
-                                            fg_disabled
-                                        } else {
-                                            fg
-                                        })),
-                                    );
-                                    let icon = cx.opacity(
-                                        if is_selected { 1.0 } else { 0.0 },
-                                        move |_cx| vec![icon],
-                                    );
-
-                                    let body = if let Some(content) = item.content {
-                                        ui::h_flex( move |_cx| vec![content])
-                                            .w_full()
-                                            .min_w_0()
-                                            .flex_1()
-                                            .basis_0()
-                                            .into_element(cx)
-                                    } else {
-                                        combobox_item_text(
-                                            cx,
-                                            label_text.clone(),
-                                            &label_style,
-                                            if item_disabled { fg_disabled } else { fg },
-                                        )
-                                    };
-
-                                    let mut cmd_item = CommandItem::new(label_text)
-                                        .value(item.value.clone())
-                                        .keywords(keywords)
-                                        .disabled(item_disabled)
-                                        .on_select_value_action(move |host, action_cx, reason, value| {
-                                            let on_select = kit_combobox::commit_selection_on_activate(
-                                                selection_commit_policy,
-                                                model_for_select.clone(),
-                                                open_for_select.clone(),
-                                                query_for_select.clone(),
-                                                open_change_reason_model_for_select.clone(),
-                                                value,
-                                            );
-                                            on_select(host, action_cx, reason);
-                                        })
-                                        .children(vec![body, icon]);
-
-                                    if let Some(prefix) = test_id_prefix.as_deref() {
-                                        cmd_item = cmd_item.test_id(format!(
-                                            "{prefix}-item-{}",
-                                            test_id_slug(item.value.as_ref())
-                                        ));
-                                    }
-
-                                    cmd_item
+                                        frame.label_text.clone(),
+                                        &label_style,
+                                        if frame.disabled { fg_disabled } else { fg },
+                                    )
                                 };
+
+                                frame.command = frame.command.children(vec![body, icon]);
+                                frame.command
+                            };
 
                             let entries = combobox_command_entries(
                                 items,
@@ -2885,51 +2881,18 @@ fn combobox_with_patch<H: UiHost>(
                     let groups = groups.take().unwrap_or_default();
 
                     let make_item = |item: ComboboxItem| -> CommandItem {
-                        let item_disabled = disabled || item.disabled;
-                        let is_selected = selected
-                            .as_ref()
-                            .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                        let model_for_select = model.clone();
-                        let open_for_select = open.clone();
-                        let query_for_select = query_model.clone();
-                        let open_change_reason_model_for_select = open_change_reason_model.clone();
-
-                        let label_text = if item.content.is_none() {
-                            if let Some(detail) = item.detail.as_ref() {
-                                Arc::<str>::from(format!(
-                                    "{} ({})",
-                                    item.label.as_ref(),
-                                    detail.as_ref()
-                                ))
-                            } else {
-                                item.label.clone()
-                            }
-                        } else {
-                            item.label.clone()
-                        };
-
-                        let mut keywords = item.keywords.clone();
-                        if let Some(detail) = item.detail.clone() {
-                            keywords.push(detail);
-                        }
-
-                        let mut cmd_item = CommandItem::new(label_text)
-                            .value(item.value.clone())
-                            .keywords(keywords)
-                            .disabled(item_disabled)
-                            .checkmark(is_selected)
-                            .on_select_value_action(move |host, action_cx, reason, value| {
-                                let on_select = kit_combobox::commit_selection_on_activate(
-                                    selection_commit_policy,
-                                    model_for_select.clone(),
-                                    open_for_select.clone(),
-                                    query_for_select.clone(),
-                                    open_change_reason_model_for_select.clone(),
-                                    value,
-                                );
-                                on_select(host, action_cx, reason);
-                            });
+                        let mut frame = combobox_command_item_frame(
+                            &item,
+                            disabled,
+                            selected.as_ref(),
+                            model.clone(),
+                            open.clone(),
+                            query_model.clone(),
+                            open_change_reason_model.clone(),
+                            selection_commit_policy,
+                            test_id_prefix.as_deref(),
+                        );
+                        frame.command = frame.command.checkmark(frame.selected);
 
                         if let Some(content) = item.content {
                             let body = ui::h_flex( move |_cx| vec![content])
@@ -2938,17 +2901,10 @@ fn combobox_with_patch<H: UiHost>(
                                 .flex_1()
                                 .basis_0()
                                 .into_element(cx);
-                            cmd_item = cmd_item.children([body]);
+                            frame.command = frame.command.children([body]);
                         }
 
-                        if let Some(prefix) = test_id_prefix.as_deref() {
-                            cmd_item = cmd_item.test_id(format!(
-                                "{prefix}-item-{}",
-                                test_id_slug(item.value.as_ref())
-                            ));
-                        }
-
-                        cmd_item
+                        frame.command
                     };
 
                     let entries = combobox_command_entries(
@@ -3001,44 +2957,30 @@ fn combobox_with_patch<H: UiHost>(
                     let groups = groups.take().unwrap_or_default();
 
                     let make_item = |item: ComboboxItem| -> CommandItem {
-                        let item_disabled = disabled || item.disabled;
-                        let is_selected = selected
-                            .as_ref()
-                            .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                        let model_for_select = model.clone();
-                        let open_for_select = open.clone();
-                        let query_for_select = query_model.clone();
-                        let open_change_reason_model_for_select = open_change_reason_model.clone();
-
-                        let label_text = if item.content.is_none() {
-                            if let Some(detail) = item.detail.as_ref() {
-                                Arc::<str>::from(format!(
-                                    "{} ({})",
-                                    item.label.as_ref(),
-                                    detail.as_ref()
-                                ))
-                            } else {
-                                item.label.clone()
-                            }
-                        } else {
-                            item.label.clone()
-                        };
-
-                        let mut keywords = item.keywords.clone();
-                        if let Some(detail) = item.detail.clone() {
-                            keywords.push(detail);
-                        }
-
+                        let mut frame = combobox_command_item_frame(
+                            &item,
+                            disabled,
+                            selected.as_ref(),
+                            model.clone(),
+                            open.clone(),
+                            query_model.clone(),
+                            open_change_reason_model.clone(),
+                            selection_commit_policy,
+                            test_id_prefix.as_deref(),
+                        );
                         let label_style = item_text_style.clone();
                         let icon = decl_icon::icon_with(
                             cx,
                             ids::ui::CHECK,
                             Some(Px(16.0)),
-                            Some(ColorRef::Color(if item_disabled { fg_disabled } else { fg })),
+                            Some(ColorRef::Color(if frame.disabled {
+                                fg_disabled
+                            } else {
+                                fg
+                            })),
                         );
                         let icon =
-                            cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
+                            cx.opacity(if frame.selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
 
                         let body = if let Some(content) = item.content {
                             ui::h_flex( move |_cx| vec![content])
@@ -3050,37 +2992,14 @@ fn combobox_with_patch<H: UiHost>(
                         } else {
                             combobox_item_text(
                                 cx,
-                                label_text.clone(),
+                                frame.label_text.clone(),
                                 &label_style,
-                                if item_disabled { fg_disabled } else { fg },
+                                if frame.disabled { fg_disabled } else { fg },
                             )
                         };
 
-                        let mut cmd_item = CommandItem::new(label_text)
-                            .value(item.value.clone())
-                            .keywords(keywords)
-                            .disabled(item_disabled)
-                            .on_select_value_action(move |host, action_cx, reason, value| {
-                                let on_select = kit_combobox::commit_selection_on_activate(
-                                    selection_commit_policy,
-                                    model_for_select.clone(),
-                                    open_for_select.clone(),
-                                    query_for_select.clone(),
-                                    open_change_reason_model_for_select.clone(),
-                                    value,
-                                );
-                                on_select(host, action_cx, reason);
-                            })
-                            .children(vec![body, icon]);
-
-                        if let Some(prefix) = test_id_prefix.as_deref() {
-                            cmd_item = cmd_item.test_id(format!(
-                                "{prefix}-item-{}",
-                                test_id_slug(item.value.as_ref())
-                            ));
-                        }
-
-                        cmd_item
+                        frame.command = frame.command.children(vec![body, icon]);
+                        frame.command
                     };
 
                     let entries = combobox_command_entries(
@@ -3827,6 +3746,47 @@ mod tests {
             |item| CommandItem::new(item.label.clone()).value(item.value.clone()),
         );
         assert_eq!(entry_kinds(&root_only_entries), ["item"]);
+    }
+
+    #[test]
+    fn combobox_command_item_frame_derives_command_row_metadata() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(Some(Arc::<str>::from("react")));
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("react"));
+        let reason = app.models_mut().insert(None::<ComboboxOpenChangeReason>);
+
+        let item = ComboboxItem::new("react", "React")
+            .detail("Library")
+            .keywords(["ui"])
+            .disabled(true);
+        let selected = Arc::<str>::from("react");
+        let frame = combobox_command_item_frame(
+            &item,
+            false,
+            Some(&selected),
+            model,
+            open,
+            query,
+            reason,
+            kit_combobox::SelectionCommitPolicy::default(),
+            Some("framework"),
+        );
+
+        assert_eq!(frame.label_text.as_ref(), "React (Library)");
+        assert!(frame.disabled);
+        assert!(frame.selected);
+        assert_eq!(
+            combobox_command_keywords(&item)
+                .iter()
+                .map(|keyword| keyword.as_ref())
+                .collect::<Vec<_>>(),
+            ["ui", "Library"]
+        );
+        assert_eq!(
+            combobox_command_item_test_id(Some("framework"), "react/router").as_deref(),
+            Some("framework-item-react-router")
+        );
     }
 
     #[test]

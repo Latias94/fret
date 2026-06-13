@@ -175,6 +175,9 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `command.rs` now has a private `CommandPaletteNavigationSnapshot` seam that co-locates command entries, navigation/activation/semantics disabled flags, item groups, and group order. The key handler now reuses this snapshot instead of allocating disabled flag vectors and group order on every navigation key press.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the command-palette navigation snapshot seam.
 - 2026-06-14: `cargo test -p fret-ui-shadcn --lib command_palette_navigation_snapshot_reuses_disabled_and_group_metadata -j 1` timed out during Windows test-target compilation without a test failure result; residual `cargo`/`rustc` processes from that validation were stopped.
+- 2026-06-14: `combobox.rs` now has a private `ComboboxCommandItemFrame` seam that centralizes the repeated `ComboboxItem -> CommandItem` adapter metadata: detail-aware label text, keywords, disabled/selected state, test id derivation, and selection commit action. Drawer/popover search and plain-list paths now share this seam while keeping their own visuals.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the combobox command-adapter seam.
+- 2026-06-14: `cargo test -p fret-ui-shadcn --lib combobox_command_item_frame_derives_command_row_metadata -j 1` timed out during Windows test-target compilation without a test failure result; residual validation `cargo`/`rustc` processes were stopped.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
