@@ -154,6 +154,9 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: third code slice moved the grouped entry recursion into `select/content_render.rs` (`render_select_entries`), keeping row rendering closures in `select.rs` while giving future render-part extraction a concrete seam.
 - 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed after entry-render extraction.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after entry-render extraction.
+- 2026-06-14: fourth code slice replaced per-frame repeated row derivations with a single `SelectRows` snapshot in `select/content_tree.rs`, co-locating row order, disabled mask, labels, values-by-row, and item count behind one private interface.
+- 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed after `SelectRows` extraction.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after `SelectRows` extraction.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

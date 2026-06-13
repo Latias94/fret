@@ -9,6 +9,118 @@ pub(super) enum SelectRow {
     Separator,
 }
 
+pub(super) struct SelectRows {
+    rows: Vec<SelectRow>,
+    disabled: Arc<[bool]>,
+    labels: Arc<[Arc<str>]>,
+    values_by_row: Arc<[Option<Arc<str>>]>,
+    item_count: usize,
+}
+
+impl SelectRows {
+    pub(super) fn from_entries(entries: &[SelectEntry], enabled: bool) -> Self {
+        let mut builder = SelectRowsBuilder::default();
+        builder.extend(entries, enabled);
+        builder.finish()
+    }
+
+    pub(super) fn len(&self) -> usize {
+        self.rows.len()
+    }
+
+    pub(super) fn rows(&self) -> &[SelectRow] {
+        &self.rows
+    }
+
+    pub(super) fn disabled(&self) -> &[bool] {
+        self.disabled.as_ref()
+    }
+
+    pub(super) fn disabled_arc(&self) -> Arc<[bool]> {
+        self.disabled.clone()
+    }
+
+    pub(super) fn disabled_at(&self, row_idx: usize) -> bool {
+        self.disabled.get(row_idx).copied().unwrap_or(true)
+    }
+
+    pub(super) fn labels_arc(&self) -> Arc<[Arc<str>]> {
+        self.labels.clone()
+    }
+
+    pub(super) fn values_by_row_arc(&self) -> Arc<[Option<Arc<str>>]> {
+        self.values_by_row.clone()
+    }
+
+    pub(super) fn item_count(&self) -> usize {
+        self.item_count
+    }
+
+    pub(super) fn selected_row_index(&self, selected: &str) -> Option<usize> {
+        self.rows.iter().position(|row| match row {
+            SelectRow::Item(item) => item.value.as_ref() == selected,
+            SelectRow::Label(_) | SelectRow::Separator => false,
+        })
+    }
+
+    pub(super) fn contains_item_value(&self, value: &str) -> bool {
+        self.rows.iter().any(|row| match row {
+            SelectRow::Item(item) => item.value.as_ref() == value,
+            SelectRow::Label(_) | SelectRow::Separator => false,
+        })
+    }
+}
+
+#[derive(Default)]
+struct SelectRowsBuilder {
+    rows: Vec<SelectRow>,
+    disabled: Vec<bool>,
+    labels: Vec<Arc<str>>,
+    values_by_row: Vec<Option<Arc<str>>>,
+    item_count: usize,
+}
+
+impl SelectRowsBuilder {
+    fn extend(&mut self, entries: &[SelectEntry], enabled: bool) {
+        for entry in entries {
+            match entry {
+                SelectEntry::Item(item) => {
+                    self.rows.push(SelectRow::Item(item.clone()));
+                    self.disabled.push(item.disabled || !enabled);
+                    self.labels.push(item.label.clone());
+                    self.values_by_row.push(Some(item.value.clone()));
+                    self.item_count = self.item_count.saturating_add(1);
+                }
+                SelectEntry::Label(label) => {
+                    self.rows.push(SelectRow::Label(label.clone()));
+                    self.disabled.push(true);
+                    self.labels.push(Arc::from(""));
+                    self.values_by_row.push(None);
+                }
+                SelectEntry::Group(group) => {
+                    self.extend(&group.entries, enabled);
+                }
+                SelectEntry::Separator(_) => {
+                    self.rows.push(SelectRow::Separator);
+                    self.disabled.push(true);
+                    self.labels.push(Arc::from(""));
+                    self.values_by_row.push(None);
+                }
+            }
+        }
+    }
+
+    fn finish(self) -> SelectRows {
+        SelectRows {
+            rows: self.rows,
+            disabled: Arc::from(self.disabled.into_boxed_slice()),
+            labels: Arc::from(self.labels.into_boxed_slice()),
+            values_by_row: Arc::from(self.values_by_row.into_boxed_slice()),
+            item_count: self.item_count,
+        }
+    }
+}
+
 pub(super) fn find_item_label_overrides(
     entries: &[SelectEntry],
     value: &str,
@@ -70,70 +182,6 @@ pub(super) fn count_items(entries: &[SelectEntry]) -> usize {
         }
     }
     count
-}
-
-pub(super) fn flatten_entries(into: &mut Vec<SelectRow>, entries: &[SelectEntry]) {
-    for entry in entries {
-        match entry {
-            SelectEntry::Item(item) => into.push(SelectRow::Item(item.clone())),
-            SelectEntry::Label(label) => into.push(SelectRow::Label(label.clone())),
-            SelectEntry::Group(group) => flatten_entries(into, &group.entries),
-            SelectEntry::Separator(_) => into.push(SelectRow::Separator),
-        }
-    }
-}
-
-pub(super) fn flattened_rows(entries: &[SelectEntry]) -> Vec<SelectRow> {
-    let mut rows = Vec::new();
-    flatten_entries(&mut rows, entries);
-    rows
-}
-
-pub(super) fn row_item_count(rows: &[SelectRow]) -> usize {
-    rows.iter()
-        .filter(|row| matches!(row, SelectRow::Item(_)))
-        .count()
-}
-
-pub(super) fn row_disabled_mask(rows: &[SelectRow], enabled: bool) -> Vec<bool> {
-    rows.iter()
-        .map(|row| match row {
-            SelectRow::Item(item) => item.disabled || !enabled,
-            SelectRow::Label(_) | SelectRow::Separator => true,
-        })
-        .collect()
-}
-
-pub(super) fn row_labels(rows: &[SelectRow]) -> Vec<Arc<str>> {
-    rows.iter()
-        .map(|row| match row {
-            SelectRow::Item(item) => item.label.clone(),
-            SelectRow::Label(_) | SelectRow::Separator => Arc::from(""),
-        })
-        .collect()
-}
-
-pub(super) fn row_values(rows: &[SelectRow]) -> Vec<Option<Arc<str>>> {
-    rows.iter()
-        .map(|row| match row {
-            SelectRow::Item(item) => Some(item.value.clone()),
-            SelectRow::Label(_) | SelectRow::Separator => None,
-        })
-        .collect()
-}
-
-pub(super) fn selected_row_index(rows: &[SelectRow], selected: &str) -> Option<usize> {
-    rows.iter().position(|row| match row {
-        SelectRow::Item(item) => item.value.as_ref() == selected,
-        SelectRow::Label(_) | SelectRow::Separator => false,
-    })
-}
-
-pub(super) fn contains_item_value(rows: &[SelectRow], value: &str) -> bool {
-    rows.iter().any(|row| match row {
-        SelectRow::Item(item) => item.value.as_ref() == value,
-        SelectRow::Label(_) | SelectRow::Separator => false,
-    })
 }
 
 pub(super) fn select_group_label(entries: &[SelectEntry]) -> Option<Arc<str>> {

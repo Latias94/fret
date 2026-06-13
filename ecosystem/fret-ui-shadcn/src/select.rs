@@ -59,9 +59,8 @@ mod interaction;
 
 use content_render::render_select_entries;
 use content_tree::{
-    SelectRow, contains_item_value, count_items, find_item_label_overrides,
-    flatten_items_for_typeahead, flattened_rows, row_disabled_mask, row_item_count, row_labels,
-    row_values, selected_row_index, trigger_value_text,
+    SelectRow, SelectRows, count_items, find_item_label_overrides, flatten_items_for_typeahead,
+    trigger_value_text,
 };
 use geometry::{
     select_content_desired_width_with_probe, select_list_desired_height_from_content_height,
@@ -3002,7 +3001,7 @@ fn select_impl<H: UiHost>(
                             .is_some()
                             .then_some(mouse_up_selection_gate_for_overlay.clone());
 
-                        let rows = flattened_rows(entries);
+                        let rows = SelectRows::from_entries(entries, enabled);
 
                         let model = model_for_overlay.clone();
                         let selected = cx
@@ -3011,20 +3010,13 @@ fn select_impl<H: UiHost>(
                             .unwrap_or_default();
                         let on_value_change = on_value_change_for_overlay_children.clone();
 
-                        let item_count = row_item_count(&rows);
-
-                        let disabled = row_disabled_mask(&rows, enabled);
-
-                        let labels = row_labels(&rows);
-                        let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
-
                         let initial_active_row = if let Some(selected) = selected.as_deref() {
-                            let selected_idx = selected_row_index(&rows, selected);
+                            let selected_idx = rows.selected_row_index(selected);
                             selected_idx
-                                .and_then(|idx| (!disabled.get(idx).copied().unwrap_or(true)).then_some(idx))
-                                .or_else(|| roving_focus_group::first_enabled(&disabled))
+                                .and_then(|idx| (!rows.disabled_at(idx)).then_some(idx))
+                                .or_else(|| roving_focus_group::first_enabled(rows.disabled()))
                         } else {
-                            roving_focus_group::first_enabled(&disabled)
+                            roving_focus_group::first_enabled(rows.disabled())
                         };
                         let active_row = {
                             let mut state = trigger_state_for_overlay
@@ -3108,7 +3100,7 @@ fn select_impl<H: UiHost>(
                             },
                             |cx| {
                                 let mut out: Vec<AnyElement> = Vec::new();
-                                for row in rows.iter().cloned() {
+                                for row in rows.rows().iter().cloned() {
                                     let SelectRow::Item(item) = row else {
                                         continue;
                                     };
@@ -3184,11 +3176,9 @@ fn select_impl<H: UiHost>(
                                     move |cx, _st, listbox_id| {
                                         content_panel_id_out.set(Some(listbox_id));
 
-                                        let disabled_for_key: Arc<[bool]> =
-                                            Arc::from(disabled.clone().into_boxed_slice());
-                                        let labels_for_key = labels_arc.clone();
-                                        let values_by_row: Arc<[Option<Arc<str>>]> =
-                                            Arc::from(row_values(&rows).into_boxed_slice());
+                                        let disabled_for_key = rows.disabled_arc();
+                                        let labels_for_key = rows.labels_arc();
+                                        let values_by_row = rows.values_by_row_arc();
 
                                         let state_for_key =
                                             trigger_state_for_overlay_in_content.clone();
@@ -3359,8 +3349,9 @@ fn select_impl<H: UiHost>(
                                             move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;
+                                                                let item_count = rows.item_count();
                                                                 let alignment_selected_value = selected.as_ref().and_then(|value| {
-                                                                    contains_item_value(&rows, value.as_ref())
+                                                                    rows.contains_item_value(value.as_ref())
                                                                         .then(|| value.clone())
                                                                 });
                                                                 let mut first_valid_alignment_item_found = false;
@@ -3433,7 +3424,7 @@ fn select_impl<H: UiHost>(
                                                                         }
                                                                         SelectRow::Item(item) => {
                                                                             let item_disabled =
-                                                                                disabled.get(row_idx).copied().unwrap_or(true);
+                                                                                rows.disabled_at(row_idx);
                                                                             let is_active =
                                                                                 active_row.is_some_and(|a| a == row_idx);
                                                                             let is_selected = alignment_selected_value
