@@ -31,6 +31,10 @@ The working question is not "does the UI function at all". The question is wheth
 - `imui_plot_basics` currently fails on a missing theme token (`surface`), which is a contract coverage problem and should be treated separately from perf.
 - `imui_action_basics` can overflow the stack after repeated clicks, which suggests either uncontrolled nesting or a recursive update path that needs a dedicated repro.
 - The broader menu/select policy lane already has a closeout record; this plan does not reopen it.
+- The first promoted command/combobox perf probes now split the two cases clearly: command palette query/navigation is currently inside a 120Hz frame budget on the local RTX 4090 Windows run, while searchable combobox long-list filter/commit is not.
+- The combobox long-list probe's worst frame is layout-dominated, not renderer-dominated: `total=24090us`, `layout=21581us`, `layout.engine_solve=10687us`, `layout.nodes=1827`, `paint.nodes=2599`, and `inv.calls=272`.
+- The command probe's worst frame is much smaller but still layout-heavy: `total=3791us`, `layout=3214us`, `layout.engine_solve=1306us`.
+- The next optimization target should therefore be combobox popup/list layout breadth and invalidation scope before further GPU or command-palette work.
 
 ## Scope Boundaries
 ### In scope
@@ -132,6 +136,29 @@ The working question is not "does the UI function at all". The question is wheth
 - `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs`
 - `ecosystem/fret-ui-shadcn/tests/combobox_filtering.rs`
 
+### U4. Narrow combobox long-list layout breadth
+**Goal:** Reduce the searchable combobox long-list filter/commit worst frame below the 120Hz budget by shrinking popup/list layout work, invalidation scope, or row materialization cost.
+
+**Files:**
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json`
+
+**Evidence target:**
+- Current local worst frame: `target/fret-diag/imui-heavy-perf-probes-combobox/1781389001428/bundle.schema2.json`.
+- Current bottleneck: `roots.apply=12311us`, `request_build=7374us`, `layout.engine_solve=10687us`, `layout.nodes=1827`, `paint.nodes=2599`.
+
+**Test scenarios:**
+- Open long-list combobox, filter to one item, select it, and close without selector regressions.
+- Preserve keyboard/focus/dismiss behavior.
+- Keep command-adapter metadata behavior covered by the existing focused unit test.
+
+**Verification:**
+- `target\debug\fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json --dir target/fret-diag/imui-heavy-perf-probes-combobox --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\release\fret-ui-gallery.exe`
+- `cargo check -p fret-ui-shadcn -j 1`
+- Focused `combobox` tests when Windows test-target compilation is warm enough.
+
 ## Progress Log
 - 2026-06-14: user-reported failures include stack overflow in `imui_action_basics`, missing theme token `surface` in `imui_plot_basics`, and height jitter in `imui_editor_controls_basics`.
 - 2026-06-14: local inspection showed `select` is the largest recipe surface and a strong candidate for the first deepening slice.
@@ -178,6 +205,13 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `combobox.rs` now has a private `ComboboxCommandItemFrame` seam that centralizes the repeated `ComboboxItem -> CommandItem` adapter metadata: detail-aware label text, keywords, disabled/selected state, test id derivation, and selection commit action. Drawer/popover search and plain-list paths now share this seam while keeping their own visuals.
 - 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the combobox command-adapter seam.
 - 2026-06-14: `cargo test -p fret-ui-shadcn --lib combobox_command_item_frame_derives_command_row_metadata -j 1` timed out during Windows test-target compilation without a test failure result; residual validation `cargo`/`rustc` processes were stopped.
+- 2026-06-14: added `ui-gallery-command-palette-navigation-filter-steady` and `ui-gallery-combobox-filter-select-steady` perf probes and promoted them into `perf-ui-gallery-general-app-components`.
+- 2026-06-14: `python -m json.tool` passed for the two new perf probes and the updated suite manifest.
+- 2026-06-14: `python tools/check_diag_scripts_registry.py --write` refreshed `tools/diag-scripts/index.json`; the follow-up strict registry check passed. The registry pass itself takes about 80-90 seconds locally.
+- 2026-06-14: first `diag perf` attempt used `cargo run -p fret-ui-gallery --release` and timed out at 10 minutes while the release build consumed the timeout; residual validation processes were stopped.
+- 2026-06-14: rerunning command probe against `target\release\fret-ui-gallery.exe` passed with worst frame `total=3791us`, `layout=3214us`, `layout.engine_solve=1306us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-command/1781388826377/bundle.schema2.json`.
+- 2026-06-14: rerunning combobox probe against `target\release\fret-ui-gallery.exe` passed but exposed a real perf problem: worst frame `total=24090us`, `layout=21581us`, `layout.engine_solve=10687us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox/1781389001428/bundle.schema2.json`.
+- 2026-06-14: `diag stats --sort cpu_cycles` and `--sort time` on the combobox bundle show the spike is real UI-thread work, not a renderer-only issue: `roots.apply=12311us`, `request_build=7374us`, `layout.nodes=1827`, `paint.nodes=2599`, `inv.calls=272`.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

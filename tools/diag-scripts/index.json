@@ -6834,6 +6834,30 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-filter-select-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "perf-ui-gallery-general-app-components"
+      ],
+      "tags": [
+        "combobox",
+        "filter",
+        "perf",
+        "select",
+        "shadcn",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts on the Combobox page to measure the long-list searchable combobox without Gallery navigation search.",
+        "Exercises open, query filtering, and item commit after warmup."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-flip-tight-window",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-flip-tight-window.json",
       "required_capabilities": [
@@ -7686,6 +7710,30 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-navigation-filter-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-command-palette-navigation-filter-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "perf-ui-gallery-general-app-components"
+      ],
+      "tags": [
+        "command",
+        "filter",
+        "keyboard",
+        "perf",
+        "shadcn",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts on the Command page to measure the command palette itself, not Gallery navigation search.",
+        "Exercises query filtering and repeated keyboard navigation after warmup."
+      ]
     },
     {
       "id": "ui-gallery-command-palette-separator-always-render-visible",

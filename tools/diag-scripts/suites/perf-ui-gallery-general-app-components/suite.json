@@ -2,6 +2,8 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-command-palette-navigation-filter-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json",
     "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
     "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
     "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
