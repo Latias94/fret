@@ -145,6 +145,150 @@ fn text_color_prop_changes_are_paint_only_in_declarative_diff() {
     );
 }
 
+#[test]
+fn stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_stable_text_content_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "Query: 2",
+        fret_core::TextWrap::None,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let children = ui.children(root);
+    assert_eq!(children.len(), 1);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.semantics_snapshot()
+            .expect("initial semantics snapshot")
+            .nodes
+            .iter()
+            .any(|n| n.role == fret_core::SemanticsRole::Text
+                && n.label.as_deref() == Some("Query: 2")),
+        "baseline text semantics should expose the initial label"
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "expected the baseline tree to be clean before the text-content rerender"
+    );
+    let prepares_after_first_paint = services.prepare_calls;
+
+    app.advance_frame();
+    let root = render_stable_text_content_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "Query: 249",
+        fret_core::TextWrap::None,
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "single-line clipped text content changes should invalidate paint without forcing layout"
+    );
+    assert!(
+        ui.request_semantics_snapshot_if_dirty(),
+        "text content changes should mark semantics dirty even when layout is skipped"
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.semantics_snapshot()
+            .expect("updated semantics snapshot")
+            .nodes
+            .iter()
+            .any(|n| n.role == fret_core::SemanticsRole::Text
+                && n.label.as_deref() == Some("Query: 249")),
+        "updated text semantics should expose the new label"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(
+        services.prepare_calls,
+        prepares_after_first_paint + 1,
+        "text content changes should prepare new blobs during paint, not through layout"
+    );
+}
+
+#[test]
+fn wrapped_text_content_changes_still_invalidate_layout_in_declarative_diff() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_stable_text_content_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "short",
+        fret_core::TextWrap::Word,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "expected the baseline tree to be clean before the wrapped text-content rerender"
+    );
+
+    app.advance_frame();
+    let root = render_stable_text_content_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a longer status label whose wrapped height may depend on content",
+        fret_core::TextWrap::Word,
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.debug_stats().layout_nodes_performed > 0,
+        "wrapped text content changes must keep invalidating layout because height can change"
+    );
+}
+
 fn render_colored_text_diff_root(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
@@ -179,6 +323,34 @@ fn render_colored_text_diff_root(
                 cx.styled_text_props(styled_props),
                 cx.selectable_text_props(selectable_props),
             ]
+        },
+    )
+}
+
+fn render_stable_text_content_diff_root(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    bounds: Rect,
+    text: &'static str,
+    wrap: fret_core::TextWrap,
+) -> NodeId {
+    render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "text-content-diff",
+        move |cx| {
+            let mut plain_props = crate::element::TextProps::new(text);
+            plain_props.wrap = wrap;
+            plain_props.overflow = fret_core::TextOverflow::Clip;
+            plain_props.layout.size.width = Length::Fill;
+            plain_props.layout.size.height = Length::Px(Px(20.0));
+
+            vec![cx.text_props(plain_props)]
         },
     )
 }

@@ -2372,6 +2372,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
 const INVALIDATION_HIT_TEST: u8 = 1 << 0;
 const INVALIDATION_LAYOUT: u8 = 1 << 1;
 const INVALIDATION_PAINT: u8 = 1 << 2;
+const INVALIDATION_SEMANTICS: u8 = 1 << 3;
 
 fn paint_passthrough_for_layout(
     layout: LayoutStyle,
@@ -2535,6 +2536,7 @@ fn declarative_instance_change_mask(
     let mut hit_test_changed = false;
     let mut layout_changed = layout_style_for_instance(previous) != layout_style_for_instance(next);
     let mut paint_changed = false;
+    let mut semantics_changed = false;
 
     match (previous, next) {
         (ElementInstance::Container(a), ElementInstance::Container(b)) => {
@@ -2641,13 +2643,37 @@ fn declarative_instance_change_mask(
             }
         }
         (ElementInstance::Text(a), ElementInstance::Text(b)) => {
-            if a.text != b.text
-                || a.style != b.style
+            if a.style != b.style
                 || a.wrap != b.wrap
                 || a.overflow != b.overflow
+                || a.align != b.align
+                || a.ink_overflow != b.ink_overflow
             {
                 layout_changed = true;
                 paint_changed = true;
+            }
+            if a.text != b.text {
+                if text_content_update_can_skip_layout(
+                    &a.layout,
+                    a.style.as_ref(),
+                    a.wrap,
+                    a.overflow,
+                    a.align,
+                    a.ink_overflow,
+                ) && text_content_update_can_skip_layout(
+                    &b.layout,
+                    b.style.as_ref(),
+                    b.wrap,
+                    b.overflow,
+                    b.align,
+                    b.ink_overflow,
+                ) {
+                    paint_changed = true;
+                    semantics_changed = true;
+                } else {
+                    layout_changed = true;
+                    paint_changed = true;
+                }
             }
             if a.color != b.color {
                 paint_changed = true;
@@ -2658,6 +2684,8 @@ fn declarative_instance_change_mask(
                 || a.style != b.style
                 || a.wrap != b.wrap
                 || a.overflow != b.overflow
+                || a.align != b.align
+                || a.ink_overflow != b.ink_overflow
             {
                 layout_changed = true;
                 paint_changed = true;
@@ -2671,6 +2699,9 @@ fn declarative_instance_change_mask(
                 || a.style != b.style
                 || a.wrap != b.wrap
                 || a.overflow != b.overflow
+                || a.align != b.align
+                || a.ink_overflow != b.ink_overflow
+                || a.interactive_spans != b.interactive_spans
             {
                 layout_changed = true;
                 paint_changed = true;
@@ -2703,7 +2734,46 @@ fn declarative_instance_change_mask(
     } else if paint_changed {
         mask |= INVALIDATION_PAINT;
     }
+    if semantics_changed && !layout_changed {
+        mask |= INVALIDATION_SEMANTICS;
+    }
     mask
+}
+
+fn text_content_update_can_skip_layout(
+    layout: &LayoutStyle,
+    style: Option<&fret_core::TextStyle>,
+    wrap: fret_core::TextWrap,
+    overflow: fret_core::TextOverflow,
+    align: fret_core::TextAlign,
+    ink_overflow: crate::element::TextInkOverflow,
+) -> bool {
+    if !matches!(wrap, fret_core::TextWrap::None) {
+        return false;
+    }
+    if !matches!(
+        overflow,
+        fret_core::TextOverflow::Clip | fret_core::TextOverflow::Ellipsis
+    ) {
+        return false;
+    }
+    if !matches!(align, fret_core::TextAlign::Start) {
+        return false;
+    }
+    if ink_overflow != crate::element::TextInkOverflow::None {
+        return false;
+    }
+    if matches!(layout.size.width, crate::element::Length::Auto) {
+        return false;
+    }
+
+    matches!(layout.size.height, crate::element::Length::Px(_))
+        || style.is_some_and(|style| {
+            matches!(
+                style.line_height_policy,
+                fret_core::TextLineHeightPolicy::FixedFromStyle
+            ) && (style.line_height.is_some() || style.line_height_em.is_some())
+        })
 }
 
 fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) -> bool {
@@ -2742,7 +2812,23 @@ fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut Hash
             ui.invalidate(node, Invalidation::Layout);
         }
         if (mask & INVALIDATION_PAINT) != 0 {
-            ui.invalidate(node, Invalidation::Paint);
+            if (mask & INVALIDATION_SEMANTICS) != 0 {
+                ui.invalidate_with_source_and_detail(
+                    node,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::DeclarativeTextContentChanged,
+                );
+            } else {
+                ui.invalidate(node, Invalidation::Paint);
+            }
+        } else if (mask & INVALIDATION_SEMANTICS) != 0 {
+            ui.invalidate_with_source_and_detail(
+                node,
+                Invalidation::Paint,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::DeclarativeTextContentChanged,
+            );
         }
     }
 }

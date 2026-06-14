@@ -148,6 +148,12 @@ fn fill_growing_single_line_layout() -> LayoutStyle {
     fill_growing_zero_min_layout()
 }
 
+fn fill_growing_single_line_layout_with_height(height: Px) -> LayoutStyle {
+    let mut layout = fill_growing_single_line_layout();
+    layout.size.height = Length::Px(height);
+    layout
+}
+
 fn fill_growing_zero_min_layout() -> LayoutStyle {
     let mut layout = fill_shrinkable_single_line_layout();
     layout.flex.grow = 1.0;
@@ -656,14 +662,19 @@ pub fn text_control_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let refinement = {
+    let (refinement, line_height) = {
         let theme = Theme::global(&*cx.app);
-        text_sm_refinement(theme)
+        let style = text_sm_style(theme);
+        let line_height = style.line_height.unwrap_or(style.size);
+        (
+            ui_typography::composable_refinement_from_style(&style),
+            line_height,
+        )
     };
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: fill_growing_single_line_layout(),
+            layout: fill_growing_single_line_layout_with_height(line_height),
             text: text.into(),
             style: None,
             color: None,
@@ -1635,6 +1646,11 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        let expected_style = text_sm_style(&theme);
+        assert_eq!(
+            props.layout.size.height,
+            Length::Px(expected_style.line_height.unwrap_or(expected_style.size))
+        );
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));

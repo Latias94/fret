@@ -47,6 +47,13 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
 
+        if matches!(
+            detail,
+            UiDebugInvalidationDetail::DeclarativeTextContentChanged
+        ) {
+            return true;
+        }
+
         match inv {
             Invalidation::Layout | Invalidation::HitTest | Invalidation::HitTestOnly => true,
             Invalidation::Paint => matches!(

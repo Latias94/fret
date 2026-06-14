@@ -38,6 +38,9 @@ The working question is not "does the UI function at all". The question is wheth
 - The first combobox policy optimization is now identified: searchable combobox commits used to clear the query in the same frame that the overlay started closing, which rematerialized the full long list while close presence was still mounted.
 - Deferring the query clear until `Popover`/`Drawer` close completion addresses that close-phase rematerialization, but it does not solve the heavier filter-time cost: the command/combobox path still creates filtered rows and row elements for the full matching result set.
 - `repo-ref/base-ui` uses virtualized combobox rows for large option sets, and Fret already has reusable virtual list mechanisms in `ecosystem/fret-ui-kit/src/declarative/list.rs`. The next deepening target is therefore a recipe-layer virtualized row seam for `CommandPalette`/searchable `Combobox`, not an example-only shortcut.
+- After row virtualization and command availability pruning, the remaining combobox long-list tail is now dominated by root/layout apply breadth. The newest scroll profile shows `layout=17672us`, `layout_roots_apply_time_us=11805`, `layout_engine_solve_time_us=3824`, `layout_clean_geometry_apply_nodes=628`, `layout_clean_geometry_apply_fallback_layouts=20`, `invalidation_walk_calls=11`, and `invalidation_walk_nodes=396`.
+- The popup listbox itself is no longer the main layout bottleneck. The expensive scroll profile is the main page viewport (`ui-gallery-content-viewport`), not `ui-gallery-combobox-long-list-listbox`: `total_us=11244`, `solve_barrier_us=8320`, `layout_children_corrected_content_us=1207`, `corrected_content_relayout=true`, `direct_children_layout_invalidated=true`, and `descendant_subtree_layout_dirty=true`.
+- The concrete trigger in the current combobox long-list gallery snippet is the `Query: ...` state text under the combobox. It reads the query model and rerenders on every typed character. Because declarative text diffs currently treat any text content change as `Layout`, that tiny status label invalidates the surrounding main scroll content and pulls the whole page viewport into a costly corrected-content relayout.
 
 ## Scope Boundaries
 ### In scope
@@ -199,6 +202,34 @@ The working question is not "does the UI function at all". The question is wheth
 - Directional dev-fast perf for `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json`.
 - Release perf rerun when `target\release\fret-ui-gallery.exe` can be rebuilt without a release codegen timeout.
 
+### U6. Keep stable status text out of layout dirty frontiers
+**Goal:** Avoid turning stable, single-line text content updates into layout invalidations when the text contract proves the node's layout box is unchanged.
+
+**Files:**
+- `crates/fret-ui/src/declarative/mount.rs`
+- `crates/fret-ui/src/declarative/tests/text_cache.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`
+
+**Design decisions:**
+- This is a mechanism-level diff optimization, not a component-only shortcut: counters, status labels, badges, and form echoes are common in dense application UIs.
+- The first landed optimization is intentionally limited to plain `Text`. Styled/selectable text content changes still invalidate layout until there are dedicated gates for span-boundary semantics, interactive span hit-testing, and selection geometry.
+- The plain-text optimization must stay conservative. Text content changes may skip layout only when layout style, text style, wrap, overflow, alignment, and ink overflow are unchanged, wrapping is `TextWrap::None`, overflow is `Clip` or `Ellipsis`, the width is non-auto, and the height is fixed by layout or fixed line-height policy.
+- Plain text content changes are not truly "paint-only": they skip layout, but mark semantics dirty with `DeclarativeTextContentChanged` so accessibility labels and automation snapshots refresh.
+- Wrapped text (`Word`, `Balance`, `WordBreak`, `Grapheme`) must continue to invalidate layout because content changes can change height under the same width.
+- Gallery state labels should opt into a stable single-line typography contract instead of using block-style `muted()` (`TextWrap::Word`).
+
+**Evidence target:**
+- Latest bottleneck bundle: `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-scroll-profile/1781401573447/bundle.schema2.json`.
+- Primary hotspot: main content viewport scroll relayout, not popup listbox relayout.
+
+**Verification:**
+- `cargo test -p fret-ui --lib stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff -j 1`
+- `cargo test -p fret-ui --lib wrapped_text_content_changes_still_invalidate_layout_in_declarative_diff -j 1`
+- `cargo fmt -p fret-ui`
+- `cargo check -p fret-ui -j 1`
+- `cargo build -p fret-ui-gallery --profile dev-fast -j 1`
+- Directional dev-fast perf for `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json` with scroll layout profiling enabled.
+
 ## Progress Log
 - 2026-06-14: user-reported failures include stack overflow in `imui_action_basics`, missing theme token `surface` in `imui_plot_basics`, and height jitter in `imui_editor_controls_basics`.
 - 2026-06-14: local inspection showed `select` is the largest recipe surface and a strong candidate for the first deepening slice.
@@ -273,6 +304,16 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed after the command availability slice.
 - 2026-06-14: dev-fast combobox perf after the declarative availability-interest fast path passed with worst frame `total=23687us`, `layout=18558us`, `layout.engine_solve=4063us`, `paint=4415us`, `command_availability_eval=4734us`, and `roots.apply=12546us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-declarative-availability-interest/1781401057880/bundle.schema2.json`.
 - 2026-06-14: compared to the virtualized dev-fast bundle (`total=46780us`, `command_availability_eval=15030us`, `roots.apply=20769us`), the availability-interest slice confirms that shared mechanism overhead was a real bottleneck. The next bottleneck is now root/layout apply breadth, not full row materialization or availability probing alone.
+- 2026-06-14: scroll profiling of the post-availability combobox run identified the main gallery content viewport as the remaining expensive layout frontier: the popup listbox profile is sub-millisecond, while the main viewport pays about 11ms because the query status text rerender is classified as layout invalidation.
+- 2026-06-14: next slice is a conservative declarative text diff optimization plus a gallery status-label layout contract change: single-line stable text content changes should be paint-only, while wrapped text remains layout-affecting.
+- 2026-06-14: during review, the text diff optimization was narrowed from plain/styled/selectable text to plain `Text` only. Rich/selectable text carries span-boundary, interactive-span, and selection-geometry obligations that need separate gates before skipping layout safely.
+- 2026-06-14: plain text content changes now use a non-layout invalidation path that still marks semantics dirty via `DeclarativeTextContentChanged`; the focused regression test asserts both zero layout work and updated text semantics.
+- 2026-06-14: `text_control_label` now has a fixed line-box height, and the combobox long-list snippet uses explicit single-line `TextProps` for `Query:` / `Selected:` state rows instead of block-style `muted()` typography.
+- 2026-06-14: validation passed for `cargo fmt -p fret-ui -p fret-ui-kit`, `git diff --check`, `cargo check -p fret-ui -j 1`, `cargo check -p fret-ui-kit -j 1`, `cargo check -p fret-ui-shadcn -j 1`, and `cargo build -p fret-ui-gallery --profile dev-fast -j 1`.
+- 2026-06-14: focused tests `cargo test -p fret-ui --lib stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff -j 1` and `cargo test -p fret-ui --lib wrapped_text_content_changes_still_invalidate_layout_in_declarative_diff -j 1` still timed out during Windows test-target compilation without a test assertion result; residual Fret `rustc` processes were stopped.
+- 2026-06-14: final dev-fast combobox perf after semantics-safe text diff passed with worst frame `total=12232us`, `layout=5463us`, `layout.engine_solve=1412us`, `paint=5998us`, `roots.apply=859us`, `layout.nodes=29`, and evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-final-semantics/1781406489463/bundle.schema2.json`.
+- 2026-06-14: compared to the earlier final control-label-height bundle (`total=9999us`, `layout=4578us`, `paint=4691us`), the 12.2ms run shows measurement noise and remaining non-layout hotspots. The important structural result holds: roots.apply is now about 1ms and clean geometry applies only a handful of nodes instead of hundreds.
+- 2026-06-14: remaining above-120Hz work is no longer the main scroll layout frontier. The next hotspots are command availability eval spikes (`~3.5ms` to `~4.9ms` in worst frames), paint cache misses / text prepare, and renderer finish/encode tail.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
@@ -282,6 +323,8 @@ The working question is not "does the UI function at all". The question is wheth
 - Should `CommandPalette` virtualize automatically above a row-count threshold, or expose an explicit recipe option first and make automatic policy a later decision?
 - Should command virtualization live directly in `CommandPalette`, or should `Combobox` get a narrower virtualized-search adapter first and only promote it after one successful perf slice?
 - Should root apply / command availability be optimized as a shared framework seam after command-list virtualization, since the remaining dev-fast tail is no longer dominated by row count?
+- Should `fret-ui-shadcn::typography` expose a named one-line muted helper, or should examples keep using explicit `TextProps` when they need a stable status-label contract?
+- Should rich/selectable text content changes get a future non-layout path with explicit span-boundary and selection-hit-test gates, or remain layout-affecting until a broader text surface refactor?
 
 ## Sources
 - `docs/architecture.md`

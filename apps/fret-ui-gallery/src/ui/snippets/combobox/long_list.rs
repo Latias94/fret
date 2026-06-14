@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("long_list.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::typography::fixed_line_box_style;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -20,7 +21,18 @@ fn state_row(
         )
     });
     cx.container(props, move |cx| {
-        [shadcn::raw::typography::muted(text).into_element(cx)]
+        let mut label = TextProps::new(text);
+        label.style = Some(fixed_line_box_style(
+            fret_core::FontId::ui(),
+            Px(14.0),
+            Px(20.0),
+        ));
+        label.color = cx.with_theme(|theme| theme.color_by_key("muted-foreground"));
+        label.wrap = TextWrap::None;
+        label.overflow = TextOverflow::Clip;
+        label.layout.size.width = fret_ui::element::Length::Fill;
+        label.layout.size.height = fret_ui::element::Length::Px(Px(20.0));
+        [cx.text_props(label)]
     })
     .test_id(test_id)
 }
