@@ -61,6 +61,7 @@ impl<H: UiHost> UiTree<H> {
         self.dispatch_snapshot_generation = self.dispatch_snapshot_generation.wrapping_add(1);
         self.dispatch_snapshot_cache.clear();
         self.focus_traversal_availability_cache = None;
+        self.command_availability_interest_cache = None;
         #[cfg(feature = "diagnostics")]
         {
             self.debug_dispatch_snapshot = None;

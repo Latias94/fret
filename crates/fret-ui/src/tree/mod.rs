@@ -265,6 +265,19 @@ pub(crate) struct WindowFocusTraversalAvailabilityCacheEntry {
     pub(crate) needs_layout_refine: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::tree) struct WindowCommandAvailabilityInterestCacheKey {
+    pub(in crate::tree) frame_id: FrameId,
+    pub(in crate::tree) command_availability_revision: u64,
+    pub(in crate::tree) window: Option<AppWindowId>,
+}
+
+#[derive(Debug, Clone)]
+pub(in crate::tree) struct WindowCommandAvailabilityInterestCache {
+    pub(in crate::tree) key: WindowCommandAvailabilityInterestCacheKey,
+    pub(in crate::tree) by_node: HashMap<NodeId, commands::DeclarativeCommandAvailabilityInterest>,
+}
+
 /// Retained UI tree and per-window interaction state machine.
 ///
 /// `UiTree` owns the widget/node graph for a single window and is responsible for:
@@ -340,6 +353,7 @@ pub struct UiTree<H: UiHost> {
     last_window_command_action_availability_snapshot_signature:
         Option<WindowCommandActionAvailabilitySnapshotSignature>,
     focus_traversal_availability_cache: Option<WindowFocusTraversalAvailabilityCacheEntry>,
+    command_availability_interest_cache: Option<WindowCommandAvailabilityInterestCache>,
 
     #[cfg(debug_assertions)]
     debug_last_declarative_render_root_frame_id: Option<FrameId>,

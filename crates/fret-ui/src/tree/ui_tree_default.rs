@@ -65,6 +65,7 @@ impl<H: UiHost> Default for UiTree<H> {
             command_availability_revision: 0,
             last_window_command_action_availability_snapshot_signature: None,
             focus_traversal_availability_cache: None,
+            command_availability_interest_cache: None,
             #[cfg(debug_assertions)]
             debug_last_declarative_render_root_frame_id: None,
             debug_enabled: false,

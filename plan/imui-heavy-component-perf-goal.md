@@ -132,6 +132,32 @@ popover overlay root solve tail.
 - The next higher-leverage target is therefore the popover overlay root solve / paint tail, not more
   semantics micro-optimization.
 
+## 2026-06-14 Third Slice Findings
+
+- Added a frame-local declarative command-availability interest cache in `fret-ui`. It caches only
+  whether a node may handle a command class, not the final command availability result, and is keyed
+  by `(frame_id, command_availability_revision, window)`.
+- This is intentionally narrower than caching `Available` / `Blocked`: command availability hooks
+  still run when a node is a possible handler, while repeated runtime-snapshot publications in the
+  same frame avoid re-reading declarative element state for every node in the same command path.
+- Focused tests prove the intended boundaries:
+  `action_availability_snapshot_reuses_declarative_interest_across_same_frame_refine` shows a
+  forced same-frame refine reuses the cached interest metadata, and a layout invalidation bumps the
+  command availability revision and forces a re-read.
+- Validation passed:
+  `cargo test -p fret-ui --lib window_command_action_availability_snapshot --profile dev-fast -j 1`,
+  `cargo fmt -p fret-ui`, and `cargo check -p fret-ui -j 1`.
+- The current combobox gate still fails on a single dev-fast probe:
+  `target/fret-diag/gate-combobox-filter-select-devfast-interest-cache/1781443011610/bundle.schema2.json`
+  had `17523us` total, `7973us` layout, `914us` solve, `8829us` paint, and failed only
+  `top_total_time_us > 15443us`.
+- This probe reduced the worst runtime snapshot command-availability evaluation shape compared with
+  the earlier `1.4-1.8ms` readings, but it did not move the overall gate under budget. The worst
+  frame is now dominated by paint/cache behavior: `paint.cache_misses=1033`, `paint.nodes=1099`,
+  and `cache.reused=0`.
+- Current decision: keep this slice as a low-risk mechanism optimization, but move the next
+  investigation to paint cache root reuse during the combobox filter/select path.
+
 ## Next Verification
 
 1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual

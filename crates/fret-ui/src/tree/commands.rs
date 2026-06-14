@@ -4,7 +4,7 @@ use fret_runtime::CommandScope;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DeclarativeCommandAvailabilityInterest {
+pub(in crate::tree) enum DeclarativeCommandAvailabilityInterest {
     All,
     TextEdit,
     SelectableTextEdit,
@@ -999,25 +999,64 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn declarative_node_may_handle_command_availability(
-        &self,
+        &mut self,
         app: &mut H,
         node: NodeId,
         command: &CommandId,
         publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> bool {
+        let frame_id = app.frame_id();
         if let Some(cache) = publication_cache {
             let interest = if let Some(interest) = cache.declarative_interest.get(&node).copied() {
                 interest
             } else {
-                let interest = self.declarative_node_command_availability_interest(app, node);
+                let interest =
+                    self.declarative_node_command_availability_interest_cached(app, frame_id, node);
                 cache.declarative_interest.insert(node, interest);
                 interest
             };
             return interest.matches(command);
         }
 
-        self.declarative_node_command_availability_interest(app, node)
+        self.declarative_node_command_availability_interest_cached(app, frame_id, node)
             .matches(command)
+    }
+
+    fn declarative_node_command_availability_interest_cached(
+        &mut self,
+        app: &mut H,
+        frame_id: FrameId,
+        node: NodeId,
+    ) -> DeclarativeCommandAvailabilityInterest {
+        let key = WindowCommandAvailabilityInterestCacheKey {
+            frame_id,
+            command_availability_revision: self.command_availability_revision,
+            window: self.window,
+        };
+
+        if self
+            .command_availability_interest_cache
+            .as_ref()
+            .is_none_or(|cache| cache.key != key)
+        {
+            self.command_availability_interest_cache =
+                Some(WindowCommandAvailabilityInterestCache {
+                    key,
+                    by_node: HashMap::new(),
+                });
+        }
+
+        if let Some(cache) = self.command_availability_interest_cache.as_ref()
+            && let Some(interest) = cache.by_node.get(&node).copied()
+        {
+            return interest;
+        }
+
+        let interest = self.declarative_node_command_availability_interest(app, node);
+        if let Some(cache) = self.command_availability_interest_cache.as_mut() {
+            cache.by_node.insert(node, interest);
+        }
+        interest
     }
 
     fn declarative_node_command_availability_interest(
