@@ -1,4 +1,5 @@
 use super::*;
+use std::any::TypeId;
 
 #[test]
 fn view_cache_invalidation_stops_at_boundary_for_paint() {
@@ -1415,6 +1416,196 @@ fn widget_request_animation_frame_marks_nearest_view_cache_root_dirty() {
         "request_animation_frame should behave like notify(view) and disable view-cache reuse"
     );
     assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
+fn view_cache_observation_collapse_skips_already_rooted_observations() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(0u32);
+    let global = TypeId::of::<usize>();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+
+    let mut observed = ObservationIndex::default();
+    observed.record(boundary, &[(model.id(), Invalidation::Layout)]);
+    assert!(!ui.observation_index_needs_view_cache_collapse(&observed));
+    let observed = ui.collapse_observation_index_to_view_cache_roots(observed);
+
+    assert!(observed.by_node.contains_key(&boundary));
+    assert_eq!(observed.by_node.len(), 1);
+    let by_model = observed
+        .by_model
+        .get(&model.id())
+        .expect("expected model observation");
+    let mask = by_model
+        .get(&boundary)
+        .copied()
+        .expect("expected cache-root observation");
+    assert!(mask.layout);
+    assert!(mask.paint);
+    assert!(!mask.hit_test);
+
+    let mut observed_globals = GlobalObservationIndex::default();
+    observed_globals.record(boundary, &[(global, Invalidation::Paint)]);
+    assert!(!ui.global_observation_index_needs_view_cache_collapse(&observed_globals));
+    let observed_globals =
+        ui.collapse_global_observation_index_to_view_cache_roots(observed_globals);
+
+    assert!(observed_globals.by_node.contains_key(&boundary));
+    assert_eq!(observed_globals.by_node.len(), 1);
+    let by_global = observed_globals
+        .by_global
+        .get(&global)
+        .expect("expected global observation");
+    let mask = by_global
+        .get(&boundary)
+        .copied()
+        .expect("expected cache-root global observation");
+    assert!(mask.paint);
+    assert!(!mask.layout);
+    assert!(!mask.hit_test);
+}
+
+#[test]
+fn view_cache_observation_collapse_uplifts_descendant_observations() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(0u32);
+    let global = TypeId::of::<usize>();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+
+    let mut observed = ObservationIndex::default();
+    observed.record(leaf, &[(model.id(), Invalidation::HitTestOnly)]);
+    assert!(ui.observation_index_needs_view_cache_collapse(&observed));
+    let observed = ui.collapse_observation_index_to_view_cache_roots(observed);
+
+    assert!(observed.by_node.contains_key(&boundary));
+    assert!(!observed.by_node.contains_key(&leaf));
+    let by_model = observed
+        .by_model
+        .get(&model.id())
+        .expect("expected model observation");
+    assert!(by_model.contains_key(&boundary));
+    assert!(!by_model.contains_key(&leaf));
+    let mask = by_model
+        .get(&boundary)
+        .copied()
+        .expect("expected uplifted observation");
+    assert!(mask.paint);
+    assert!(!mask.layout);
+    assert!(mask.hit_test);
+
+    let mut observed_globals = GlobalObservationIndex::default();
+    observed_globals.record(leaf, &[(global, Invalidation::HitTest)]);
+    assert!(ui.global_observation_index_needs_view_cache_collapse(&observed_globals));
+    let observed_globals =
+        ui.collapse_global_observation_index_to_view_cache_roots(observed_globals);
+
+    assert!(observed_globals.by_node.contains_key(&boundary));
+    assert!(!observed_globals.by_node.contains_key(&leaf));
+    let by_global = observed_globals
+        .by_global
+        .get(&global)
+        .expect("expected global observation");
+    assert!(by_global.contains_key(&boundary));
+    assert!(!by_global.contains_key(&leaf));
+    let mask = by_global
+        .get(&boundary)
+        .copied()
+        .expect("expected uplifted global observation");
+    assert!(mask.paint);
+    assert!(mask.layout);
+    assert!(mask.hit_test);
+}
+
+#[test]
+fn view_cache_observation_collapse_merges_root_and_descendant_masks() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(0u32);
+    let global = TypeId::of::<usize>();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+
+    let mut observed = ObservationIndex::default();
+    observed.record(boundary, &[(model.id(), Invalidation::Paint)]);
+    observed.record(leaf, &[(model.id(), Invalidation::Layout)]);
+    let observed = ui.collapse_observation_index_to_view_cache_roots(observed);
+
+    assert!(!observed.by_node.contains_key(&leaf));
+    let by_model = observed
+        .by_model
+        .get(&model.id())
+        .expect("expected model observation");
+    assert_eq!(by_model.len(), 1);
+    let mask = by_model
+        .get(&boundary)
+        .copied()
+        .expect("expected merged cache-root observation");
+    assert!(mask.paint);
+    assert!(mask.layout);
+    assert!(!mask.hit_test);
+    let by_node = observed
+        .by_node
+        .get(&boundary)
+        .expect("expected cache-root observations");
+    assert_eq!(by_node.len(), 1);
+    assert_eq!(by_node[0].0, model.id());
+    assert_eq!(by_node[0].1, mask);
+
+    let mut observed_globals = GlobalObservationIndex::default();
+    observed_globals.record(boundary, &[(global, Invalidation::Paint)]);
+    observed_globals.record(leaf, &[(global, Invalidation::HitTestOnly)]);
+    let observed_globals =
+        ui.collapse_global_observation_index_to_view_cache_roots(observed_globals);
+
+    assert!(!observed_globals.by_node.contains_key(&leaf));
+    let by_global = observed_globals
+        .by_global
+        .get(&global)
+        .expect("expected global observation");
+    assert_eq!(by_global.len(), 1);
+    let mask = by_global
+        .get(&boundary)
+        .copied()
+        .expect("expected merged cache-root global observation");
+    assert!(mask.paint);
+    assert!(!mask.layout);
+    assert!(mask.hit_test);
+    let by_node = observed_globals
+        .by_node
+        .get(&boundary)
+        .expect("expected cache-root global observations");
+    assert_eq!(by_node.len(), 1);
+    assert_eq!(by_node[0].0, global);
+    assert_eq!(by_node[0].1, mask);
 }
 
 #[test]

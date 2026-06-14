@@ -254,64 +254,102 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn collapse_observation_index_to_view_cache_roots(
+    pub(in crate::tree) fn collapse_observation_index_to_view_cache_roots(
         &self,
         mut index: ObservationIndex,
     ) -> ObservationIndex {
-        let mut per_root: HashMap<NodeId, HashMap<ModelId, ObservationMask>> = HashMap::new();
-        for (node, entries) in index.by_node.drain() {
-            let target = self.nearest_view_cache_root(node).unwrap_or(node);
-            let models = per_root.entry(target).or_default();
-            for (model, mask) in entries {
-                models
-                    .entry(model)
-                    .and_modify(|m| *m = m.union(mask))
-                    .or_insert(mask);
-            }
+        let moves: Vec<(NodeId, NodeId)> = index
+            .by_node
+            .keys()
+            .filter_map(|&node| {
+                self.nearest_view_cache_root(node)
+                    .filter(|&root| root != node)
+                    .map(|root| (node, root))
+            })
+            .collect();
+
+        if moves.is_empty() {
+            return index;
         }
 
-        let mut out = ObservationIndex::default();
-        for (node, models) in per_root {
-            let mut list: Vec<(ModelId, ObservationMask)> = Vec::with_capacity(models.len());
-            for (model, mask) in models {
-                list.push((model, mask));
-            }
-            out.by_node.insert(node, list.clone());
-            for (model, mask) in list {
-                out.by_model.entry(model).or_default().insert(node, mask);
+        for (node, target) in moves {
+            let Some(entries) = index.by_node.remove(&node) else {
+                continue;
+            };
+            for (model, mask) in entries {
+                let remove_model = if let Some(nodes) = index.by_model.get_mut(&model) {
+                    nodes.remove(&node);
+                    nodes.is_empty()
+                } else {
+                    false
+                };
+                if remove_model {
+                    index.by_model.remove(&model);
+                }
+                merge_model_observation(&mut index, target, model, mask);
             }
         }
-        out
+        index
     }
 
-    fn collapse_global_observation_index_to_view_cache_roots(
+    #[cfg(test)]
+    pub(in crate::tree) fn observation_index_needs_view_cache_collapse(
+        &self,
+        index: &ObservationIndex,
+    ) -> bool {
+        index.by_node.keys().any(|&node| {
+            self.nearest_view_cache_root(node)
+                .is_some_and(|root| root != node)
+        })
+    }
+
+    pub(in crate::tree) fn collapse_global_observation_index_to_view_cache_roots(
         &self,
         mut index: GlobalObservationIndex,
     ) -> GlobalObservationIndex {
-        let mut per_root: HashMap<NodeId, HashMap<TypeId, ObservationMask>> = HashMap::new();
-        for (node, entries) in index.by_node.drain() {
-            let target = self.nearest_view_cache_root(node).unwrap_or(node);
-            let globals = per_root.entry(target).or_default();
-            for (global, mask) in entries {
-                globals
-                    .entry(global)
-                    .and_modify(|m| *m = m.union(mask))
-                    .or_insert(mask);
-            }
+        let moves: Vec<(NodeId, NodeId)> = index
+            .by_node
+            .keys()
+            .filter_map(|&node| {
+                self.nearest_view_cache_root(node)
+                    .filter(|&root| root != node)
+                    .map(|root| (node, root))
+            })
+            .collect();
+
+        if moves.is_empty() {
+            return index;
         }
 
-        let mut out = GlobalObservationIndex::default();
-        for (node, globals) in per_root {
-            let mut list: Vec<(TypeId, ObservationMask)> = Vec::with_capacity(globals.len());
-            for (global, mask) in globals {
-                list.push((global, mask));
-            }
-            out.by_node.insert(node, list.clone());
-            for (global, mask) in list {
-                out.by_global.entry(global).or_default().insert(node, mask);
+        for (node, target) in moves {
+            let Some(entries) = index.by_node.remove(&node) else {
+                continue;
+            };
+            for (global, mask) in entries {
+                let remove_global = if let Some(nodes) = index.by_global.get_mut(&global) {
+                    nodes.remove(&node);
+                    nodes.is_empty()
+                } else {
+                    false
+                };
+                if remove_global {
+                    index.by_global.remove(&global);
+                }
+                merge_global_observation(&mut index, target, global, mask);
             }
         }
-        out
+        index
+    }
+
+    #[cfg(test)]
+    pub(in crate::tree) fn global_observation_index_needs_view_cache_collapse(
+        &self,
+        index: &GlobalObservationIndex,
+    ) -> bool {
+        index.by_node.keys().any(|&node| {
+            self.nearest_view_cache_root(node)
+                .is_some_and(|root| root != node)
+        })
     }
 
     pub(in crate::tree) fn collapse_layout_observations_to_view_cache_roots_if_needed(&mut self) {
@@ -392,4 +430,48 @@ impl<H: UiHost> UiTree<H> {
 
         self.rebuild_subtree_layout_dirty_counts_and_propagate(root);
     }
+}
+
+fn merge_model_observation(
+    index: &mut ObservationIndex,
+    node: NodeId,
+    model: ModelId,
+    mask: ObservationMask,
+) {
+    let entry = index.by_node.entry(node).or_default();
+    if let Some((_, existing)) = entry.iter_mut().find(|(existing, _)| *existing == model) {
+        *existing = existing.union(mask);
+    } else {
+        entry.push((model, mask));
+    }
+
+    index
+        .by_model
+        .entry(model)
+        .or_default()
+        .entry(node)
+        .and_modify(|existing| *existing = existing.union(mask))
+        .or_insert(mask);
+}
+
+fn merge_global_observation(
+    index: &mut GlobalObservationIndex,
+    node: NodeId,
+    global: TypeId,
+    mask: ObservationMask,
+) {
+    let entry = index.by_node.entry(node).or_default();
+    if let Some((_, existing)) = entry.iter_mut().find(|(existing, _)| *existing == global) {
+        *existing = existing.union(mask);
+    } else {
+        entry.push((global, mask));
+    }
+
+    index
+        .by_global
+        .entry(global)
+        .or_default()
+        .entry(node)
+        .and_modify(|existing| *existing = existing.union(mask))
+        .or_insert(mask);
 }

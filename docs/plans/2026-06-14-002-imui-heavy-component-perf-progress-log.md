@@ -45,6 +45,16 @@ active heavy-component performance goal. It complements the main plan rather tha
   `failures=[]`.
 - This is still above the strict 120Hz target. Treat the gate as a regression guard for the fixed
   failure classes, not as closeout evidence for general-app component parity with GPUI/Zed.
+- The latest `fret-ui` view-cache observation-collapse slice keeps that gate green and removes a
+  real shared-mechanism cost inside view-cache frames. The accepted implementation relocates only
+  descendant observation entries to their nearest view-cache root instead of draining and rebuilding
+  the full model/global observation indexes.
+- The accepted dev-fast gate after this slice reports worst frame `total=11575us`, `layout=5994us`,
+  `layout.engine_solve=927us`, `paint=4900us`, and `failures=[]`. In the comparable baseline gate,
+  worst frame was `total=12666us`, `layout=8072us`, `layout.engine_solve=1155us`, and `paint=3953us`.
+- The targeted subphase moved as intended: `layout_collapse_layout_observations_time_us` dropped
+  from about `1783us` to `386us`, while `paint_collapse_observations_time_us` dropped from about
+  `511us` to `137us` on the compared worst frames.
 
 ## Decisions
 
@@ -111,6 +121,25 @@ it should catch unbounded virtual-list viewport probing, full-list row materiali
 whole-page cache invalidation. A release Windows RTX4090 baseline remains a separate follow-up once a
 fresh release gallery binary is available.
 
+### D6. Collapse view-cache observations incrementally
+
+The first attempted view-cache collapse optimization was a conservative pre-scan fast path: if all
+observation entries were already rooted, return the original index. The evidence rejected it for the
+current combobox path. The hot frames still contained descendant observations that needed uplift, so
+the implementation still drained and rebuilt the full index; the perf gate stayed around
+`total=12578us`, and layout collapse stayed around `1872us`.
+
+The accepted change keeps the same correctness rule but changes the amount of work: compute the
+nodes that actually have a distinct nearest view-cache root, remove only those nodes from
+`by_node`/reverse indexes, and merge their masks into the target root. Entries already on a
+view-cache root or outside a view-cache subtree remain in place.
+
+This belongs in `fret-ui` rather than a recipe crate because model/global observation collapse is a
+shared cache mechanism. The new tests cover three invariants for both model and global indexes:
+already-rooted observations stay intact, descendant observations still uplift to the nearest root,
+and root plus descendant observations for the same dependency union their masks instead of
+overwriting each other.
+
 ## Current Architecture Read
 
 The current evidence argues against a single framework-level rewrite as the next move. The large
@@ -120,6 +149,7 @@ wins came from a sequence of narrower seams:
 - Component rendering: virtualized long command/combobox rows.
 - Component composition: bounded internal scroll probing for the virtualized command row branch.
 - Shared mechanism: command availability interest caching.
+- Shared mechanism: incremental view-cache observation collapse.
 - Declarative diff: stable single-line plain text content changes avoid layout invalidation.
 - Gallery policy: combobox page opts out of whole-page content cache.
 
@@ -172,3 +202,18 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
   `renderer.encode=800us`.
 - `python -m json.tool docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`
   passed.
+- `cargo fmt -p fret-ui` passed after incremental view-cache observation collapse.
+- `git diff --check` passed after incremental view-cache observation collapse.
+- `cargo check -p fret-ui -j 1` passed after incremental view-cache observation collapse.
+- `cargo check -p fret-ui --tests -j 1` passed after incremental view-cache observation collapse.
+- `cargo test -p fret-ui --lib view_cache_observation_collapse --profile dev-fast -j 1`
+  passed: 3 tests, 0 failures.
+- `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed after incremental view-cache
+  observation collapse.
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\gate-combobox-filter-select-devfast-viewcache-collapse-incremental --repeat 1 --warmup-frames 5 --prewarm-script tools\diag-scripts\_prelude\tooling-suite-prewarm-fonts.json --prelude-script tools\diag-scripts\_prelude\tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  passed with `failures=[]`; evidence bundle
+  `target/fret-diag/gate-combobox-filter-select-devfast-viewcache-collapse-incremental/1781428813597/bundle.schema2.json`.
+- `target\debug\fretboard-dev.exe diag stats target\fret-diag\gate-combobox-filter-select-devfast-viewcache-collapse-incremental\1781428813597\bundle.schema2.json --sort time --top 6`
+  reports `script_capture_skipped=1` and worst frame `total=11575us`, `layout=5994us`,
+  `layout.engine_solve=927us`, `paint=4900us`, `renderer.finish=1493us`, and
+  `renderer.encode=819us`.
