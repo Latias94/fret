@@ -139,8 +139,10 @@ impl<H: UiHost> UiTree<H> {
         detail: UiDebugInvalidationDetail,
     ) {
         let node_exists = self.nodes.contains_key(node);
-        if node_exists && Self::invalidation_may_affect_semantics(source, inv, detail) {
+        if node_exists && Self::invalidation_may_affect_command_availability(source, inv, detail) {
             self.bump_command_availability_revision();
+        }
+        if node_exists && Self::invalidation_may_affect_semantics(source, inv, detail) {
             self.mark_semantics_dirty();
         }
 

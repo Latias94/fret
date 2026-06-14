@@ -230,6 +230,41 @@ popover overlay root solve tail.
   should only revisit paint cache if a fresh profile shows cache misses returning; otherwise the
   higher-leverage targets are overlay root apply/layout and renderer retained-text work.
 
+## 2026-06-14 Sixth Slice Findings
+
+- Investigated residual command-availability churn during the searchable combobox filter/select
+  gate. Runtime snapshot publication can happen more than once in a frame while pending
+  declarative/post-layout refine state is active, but the previous signature gate treated any
+  pending state as a hard reason to recompute.
+- Added pending window-runtime snapshot state to
+  `WindowCommandActionAvailabilitySnapshotSignature`: sorted pending declarative roots plus the
+  frame-local post-layout refine marker. This keeps the required post-layout authoritative publish
+  while deduping duplicate same-frame interim publishes with identical inputs.
+- Split command-availability invalidation from the broader semantics invalidation predicate for the
+  first safe case: `ScrollHandleHitTestOnly` invalidations still keep semantics behavior unchanged,
+  but no longer reset command-interest metadata or force a command-availability revision bump.
+- Focused tests cover both contracts:
+  `action_availability_snapshot_dedupes_same_pending_refine_but_post_layout_republishes` and
+  `action_availability_snapshot_keeps_interest_cache_for_scroll_hit_test_only_invalidation`.
+- Validation passed:
+  `cargo test -p fret-ui --lib window_command_action_availability_snapshot --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui --lib focus_traversal_prepaint_cache --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo fmt -p fret-ui`, `cargo check -p fret-ui -j 1`, and `git diff --check`.
+- The correct combobox dev-fast perf gate still failed on one noisy probe, but the shape changed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-inv-split-vc/1781453177303/bundle.schema2.json`
+  had `total=11586us`, `layout=1575us`, `solve=0us`, `prepaint=1129us`, `paint=8882us`,
+  `paint.cache_misses=0`, `cache.reused=1`, and `cache.replayed_ops=222`.
+- Remaining failures were pointer-tail thresholds only:
+  `pointer_move_max_dispatch_time_us=1507` over `1001`, and
+  `pointer_move_max_hit_test_time_us=210` over `170`. The top frame was under the checked-in
+  `top_total_time_us` threshold, so this slice is a conservative mechanism cleanup rather than the
+  final answer for 120Hz dense UI.
+- The remaining command-availability hotspot is still
+  `ui_gallery.switch.command_gate.action@focused_or_default`, which is a gallery-level widget
+  command registered globally for the UI gallery. The next architectural question is whether runtime
+  snapshots should publish all widget commands for every surface, or whether command groups/surfaces
+  need a deeper interface for filtering without weakening app command behavior.
+
 ## Next Verification
 
 1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual
@@ -241,6 +276,9 @@ popover overlay root solve tail.
 5. Re-run the current combobox dev-fast perf gate and compare the newest bundle with
    `diag stats --sort time --top 6`. Done; rerun passed with zero threshold failures.
 6. Run final diff and focused verification before commit.
+7. Investigate whether app-level gallery commands should be excluded from unrelated heavy-component
+   runtime snapshots through a command-surface/group mechanism instead of per-component micro
+   caching.
 
 ## Open Questions
 
@@ -252,3 +290,6 @@ popover overlay root solve tail.
 - Should current-window `exists` / `not_exists(test_id)` ever use the cached bounds map when a fresh
   semantics snapshot was intentionally skipped? Current answer: no, unless a stronger freshness
   marker is added.
+- Should command availability snapshots evaluate every registered widget command for a window, or
+  should apps expose command surfaces/groups so unrelated command families do not tax dense
+  component interactions?

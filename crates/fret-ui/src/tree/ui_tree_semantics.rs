@@ -66,6 +66,18 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn invalidation_may_affect_command_availability(
+        source: UiDebugInvalidationSource,
+        inv: Invalidation,
+        detail: UiDebugInvalidationDetail,
+    ) -> bool {
+        if matches!(detail, UiDebugInvalidationDetail::ScrollHandleHitTestOnly) {
+            return false;
+        }
+
+        Self::invalidation_may_affect_semantics(source, inv, detail)
+    }
+
     pub(in crate::tree) fn refresh_semantics_snapshot(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             self.semantics = None;

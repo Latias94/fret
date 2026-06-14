@@ -1393,26 +1393,34 @@ impl<H: UiHost> UiTree<H> {
             .global::<fret_runtime::WindowMenuBarFocusService>()
             .is_some_and(|svc| svc.present(window));
         let command_registry_revision = app.commands().revision();
+        let mut pending_declarative_roots = self
+            .pending_declarative_window_snapshot_roots
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
+        pending_declarative_roots.sort_by_key(|node| node.data().as_ffi());
         let snapshot_signature = WindowCommandActionAvailabilitySnapshotSignature {
             window: Some(window),
             base_root: Some(base_root),
             active_focus_layers: active_focus_layers.clone(),
             barrier_root,
             focus,
+            pending: WindowRuntimeSnapshotPendingSignature {
+                declarative_roots: pending_declarative_roots,
+                post_layout_refine_frame: self
+                    .pending_post_layout_window_runtime_snapshot_refine
+                    .then_some(frame_id),
+            },
             command_availability_revision: self.command_availability_revision,
             input_ctx: WindowCommandActionAvailabilityInputSignature::from(input_ctx),
             key_contexts: next_key_contexts.clone(),
             command_registry_revision,
             menu_bar_present,
         };
-        let has_pending_window_runtime_snapshot_changes =
-            !self.pending_declarative_window_snapshot_roots.is_empty()
-                || self.pending_post_layout_window_runtime_snapshot_refine;
-        if !has_pending_window_runtime_snapshot_changes
-            && self
-                .last_window_command_action_availability_snapshot_signature
-                .as_ref()
-                .is_some_and(|prev| prev == &snapshot_signature)
+        if self
+            .last_window_command_action_availability_snapshot_signature
+            .as_ref()
+            .is_some_and(|prev| prev == &snapshot_signature)
         {
             return;
         }

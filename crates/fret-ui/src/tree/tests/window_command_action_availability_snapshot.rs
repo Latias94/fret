@@ -272,6 +272,91 @@ fn action_availability_snapshot_reuses_declarative_interest_across_same_frame_re
 }
 
 #[test]
+fn action_availability_snapshot_keeps_interest_cache_for_scroll_hit_test_only_invalidation() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.first_unhandled"),
+        widget_command_meta("First Unhandled"),
+    );
+    app.register_command(
+        CommandId::from("test.second_unhandled"),
+        widget_command_meta("Second Unhandled"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root_element = crate::elements::GlobalElementId(0xCC1);
+    let leaf_element = crate::elements::GlobalElementId(0xCC2);
+    let root = ui.create_node_for_element(root_element, TestStack);
+    let leaf = ui.create_node_for_element(leaf_element, TestStack);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        for (node, element) in [(root, root_element), (leaf, leaf_element)] {
+            window_frame.instances.insert(
+                node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::Stack(
+                        crate::element::StackProps::default(),
+                    ),
+                    inherited_foreground: None,
+                    inherited_text_style: None,
+                    semantics_decoration: None,
+                    key_context: None,
+                    layout_direction: fret_core::LayoutDirection::default(),
+                },
+            );
+        }
+    });
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    crate::tree::reset_command_availability_interest_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        crate::tree::take_command_availability_interest_probe_count(),
+        2
+    );
+
+    ui.invalidate_with_detail(
+        leaf,
+        Invalidation::HitTestOnly,
+        UiDebugInvalidationDetail::ScrollHandleHitTestOnly,
+    );
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    crate::tree::reset_command_availability_interest_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        crate::tree::take_command_availability_interest_probe_count(),
+        0,
+        "scroll hit-test-only invalidations should not reset command-interest metadata"
+    );
+
+    ui.invalidate_with_detail(
+        leaf,
+        Invalidation::Layout,
+        UiDebugInvalidationDetail::LocalInvalidation,
+    );
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    crate::tree::reset_command_availability_interest_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        crate::tree::take_command_availability_interest_probe_count(),
+        2,
+        "layout-sensitive invalidations should still reset command-interest metadata"
+    );
+}
+
+#[test]
 fn action_availability_snapshot_marks_unhandled_commands_unavailable() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
@@ -557,6 +642,68 @@ fn action_availability_snapshot_skips_recompute_when_inputs_are_unchanged() {
         .map(|counter| counter.count)
         .unwrap_or(0);
     assert_eq!(fourth_count, 2);
+}
+
+#[test]
+fn action_availability_snapshot_dedupes_same_pending_refine_but_post_layout_republishes() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+    let first_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(first_count, 1);
+
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+    let pending_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        pending_count, 2,
+        "entering a pending post-layout refine state should publish a fresh interim snapshot"
+    );
+
+    publish_snapshot(&mut ui, &mut app, window);
+    let duplicate_pending_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        duplicate_pending_count, pending_count,
+        "same-frame duplicate publishes with the same pending-refine signature should be skipped"
+    );
+
+    ui.refine_pending_window_runtime_snapshots_after_layout(&mut app);
+    let post_layout_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        post_layout_count,
+        pending_count + 1,
+        "post-layout refine should still force the authoritative final snapshot"
+    );
 }
 
 #[test]
