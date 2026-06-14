@@ -28,6 +28,26 @@ impl<H: UiHost> UiTree<H> {
 
     pub(in crate::tree) fn mark_semantics_dirty(&mut self) {
         self.semantics_dirty = true;
+        self.semantics_dirty_all = true;
+    }
+
+    pub(in crate::tree) fn mark_semantics_dirty_for_node(&mut self, node: NodeId) {
+        if self.semantics_dirty_all {
+            self.semantics_dirty = true;
+            return;
+        }
+
+        let Some(entry) = self.nodes.get_mut(node) else {
+            self.mark_semantics_dirty();
+            return;
+        };
+        self.semantics_dirty = true;
+        if entry.semantics_dirty {
+            return;
+        }
+
+        entry.semantics_dirty = true;
+        self.apply_subtree_semantics_dirty_delta_to_node_and_ancestors(node, 1);
     }
 
     pub(in crate::tree) fn invalidation_may_affect_semantics(
@@ -82,6 +102,7 @@ impl<H: UiHost> UiTree<H> {
         let Some(window) = self.window else {
             self.semantics = None;
             self.semantics_dirty = true;
+            self.semantics_dirty_all = true;
             return;
         };
 
@@ -101,6 +122,8 @@ impl<H: UiHost> UiTree<H> {
                 ..SemanticsSnapshot::default()
             }));
             self.semantics_dirty = false;
+            self.clear_all_semantics_dirty_tracking();
+            self.semantics_dirty_all = false;
             return;
         }
 
@@ -181,7 +204,34 @@ impl<H: UiHost> UiTree<H> {
         let focus = self.focus;
         let captured = self.captured_for(PointerId(0));
 
+        let previous_snapshot = self.semantics.clone();
+        let can_reuse_previous_snapshot = previous_snapshot.as_deref().is_some_and(|previous| {
+            !self.semantics_dirty_all
+                && previous.window == window
+                && previous.roots.len() == roots.len()
+                && previous.barrier_root == barrier_root
+                && previous.focus_barrier_root == focus_barrier_root
+                && previous.focus == focus
+                && previous.captured == captured
+                && previous.roots.iter().zip(roots.iter()).all(|(a, b)| {
+                    a.root == b.root
+                        && a.visible == b.visible
+                        && a.blocks_underlay_input == b.blocks_underlay_input
+                        && a.hit_testable == b.hit_testable
+                        && a.z_index == b.z_index
+                })
+        });
+        let previous_ranges = previous_snapshot
+            .as_deref()
+            .filter(|_| can_reuse_previous_snapshot)
+            .map(semantics_subtree_ranges);
+        let previous_nodes = previous_snapshot
+            .as_deref()
+            .filter(|_| can_reuse_previous_snapshot)
+            .map(|snapshot| snapshot.nodes.as_slice());
+
         let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
+        let mut cleared_semantics_dirty_nodes: Vec<NodeId> = Vec::new();
 
         let retained_node_count = self.nodes.len();
         let root_count = roots.len();
@@ -206,9 +256,23 @@ impl<H: UiHost> UiTree<H> {
                     // screen-space (excluding this node's own `render_transform`).
                     let mut stack = self.take_scratch_semantics_stack();
                     stack.clear();
-                    stack.push((root, Transform2D::IDENTITY));
+                    stack.push((root, Transform2D::IDENTITY, false));
                     let mut scratch_children = self.take_scratch_semantics_children();
-                    while let Some((id, before)) = stack.pop() {
+                    while let Some((id, before, ancestor_rebuilt)) = stack.pop() {
+                        if can_reuse_previous_snapshot
+                            && !ancestor_rebuilt
+                            && self
+                                .nodes
+                                .get(id)
+                                .is_some_and(|entry| entry.subtree_semantics_dirty_count == 0)
+                            && let (Some(previous_nodes), Some(previous_ranges)) =
+                                (previous_nodes, previous_ranges.as_ref())
+                            && let Some((start, end)) = previous_ranges.get(&id).copied()
+                        {
+                            nodes.extend(previous_nodes[start..end].iter().cloned());
+                            continue;
+                        }
+
                         if !visited.insert(id) {
                             if crate::strict_runtime::strict_runtime_enabled() {
                                 panic!(
@@ -228,6 +292,7 @@ impl<H: UiHost> UiTree<H> {
                             is_focusable,
                             traverse_children,
                             before_child,
+                            node_semantics_dirty,
                         ) = {
                             let Some(node) = self.nodes.get(id) else {
                                 continue;
@@ -250,10 +315,16 @@ impl<H: UiHost> UiTree<H> {
                                 )
                             })
                     {
+                        if node.subtree_semantics_dirty_count > 0 {
+                            cleared_semantics_dirty_nodes.push(id);
+                        }
                         continue;
                     }
                             let widget = node.widget.as_ref();
                             if widget.is_some_and(|w| !w.semantics_present()) {
+                                if node.subtree_semantics_dirty_count > 0 {
+                                    cleared_semantics_dirty_nodes.push(id);
+                                }
                                 continue;
                             }
 
@@ -306,6 +377,9 @@ impl<H: UiHost> UiTree<H> {
                                 })
                                 .unwrap_or(Transform2D::IDENTITY);
                             let before_child = at_node.compose(child_transform);
+                            if node.semantics_dirty {
+                                cleared_semantics_dirty_nodes.push(id);
+                            }
 
                             (
                                 node.parent,
@@ -314,6 +388,7 @@ impl<H: UiHost> UiTree<H> {
                                 is_focusable,
                                 traverse_children,
                                 before_child,
+                                node.semantics_dirty,
                             )
                         };
 
@@ -449,8 +524,10 @@ impl<H: UiHost> UiTree<H> {
 
                         if traverse_children {
                             // Preserve a stable-ish order: visit children in declared order.
+                            let descendant_ancestor_rebuilt =
+                                ancestor_rebuilt || node_semantics_dirty;
                             for &child in scratch_children.iter().rev() {
-                                stack.push((child, before_child));
+                                stack.push((child, before_child, descendant_ancestor_rebuilt));
                             }
                         }
                     }
@@ -542,6 +619,12 @@ impl<H: UiHost> UiTree<H> {
             nodes,
         }));
         self.semantics_dirty = false;
+        if self.semantics_dirty_all || !can_reuse_previous_snapshot {
+            self.clear_all_semantics_dirty_tracking();
+        } else {
+            self.clear_semantics_dirty_nodes(cleared_semantics_dirty_nodes);
+        }
+        self.semantics_dirty_all = false;
 
         if let Some(snapshot) = self.semantics.as_deref() {
             semantics::validate_semantics_if_enabled(snapshot);
@@ -591,4 +674,35 @@ impl<H: UiHost> UiTree<H> {
     pub fn is_descendant_via_children(&self, root: NodeId, node: NodeId) -> bool {
         self.is_reachable_from_root_via_children(root, node)
     }
+}
+
+fn semantics_subtree_ranges(snapshot: &SemanticsSnapshot) -> HashMap<NodeId, (usize, usize)> {
+    let mut ranges: HashMap<NodeId, (usize, usize)> = HashMap::with_capacity(snapshot.nodes.len());
+    let mut stack: Vec<NodeId> = Vec::new();
+
+    for (idx, node) in snapshot.nodes.iter().enumerate() {
+        loop {
+            match stack.last().copied() {
+                Some(parent) if node.parent == Some(parent) => break,
+                Some(open) => {
+                    stack.pop();
+                    if let Some(range) = ranges.get_mut(&open) {
+                        range.1 = idx;
+                    }
+                }
+                None => break,
+            }
+        }
+
+        ranges.insert(node.id, (idx, snapshot.nodes.len()));
+        stack.push(node.id);
+    }
+
+    while let Some(open) = stack.pop() {
+        if let Some(range) = ranges.get_mut(&open) {
+            range.1 = snapshot.nodes.len();
+        }
+    }
+
+    ranges
 }

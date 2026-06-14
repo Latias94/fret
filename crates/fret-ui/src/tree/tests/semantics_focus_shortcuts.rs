@@ -1,5 +1,41 @@
 use super::*;
 
+#[derive(Clone)]
+struct CountingSemantics {
+    label: &'static str,
+    calls: Arc<AtomicUsize>,
+}
+
+impl<H: UiHost> Widget<H> for CountingSemantics {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        self.calls.fetch_add(1, Ordering::Relaxed);
+        *cx.label = Some(self.label.to_string());
+    }
+}
+
+#[derive(Clone)]
+struct OffsetChildrenTransform {
+    offset_y_px: Arc<AtomicUsize>,
+}
+
+impl<H: UiHost> Widget<H> for OffsetChildrenTransform {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        for &child in cx.children {
+            let _ = cx.layout_in(child, cx.bounds);
+        }
+        cx.available
+    }
+
+    fn children_render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+        let offset_y = self.offset_y_px.load(Ordering::Relaxed) as f32;
+        (offset_y > 0.0).then(|| Transform2D::translation(Point::new(Px(0.0), Px(-offset_y))))
+    }
+}
+
 #[test]
 fn semantics_snapshot_includes_visible_roots_and_barrier() {
     let mut app = crate::test_host::TestHost::new();
@@ -42,6 +78,128 @@ fn semantics_snapshot_includes_visible_roots_and_barrier() {
     assert!(snap.nodes.iter().any(|n| n.id == base));
     assert!(snap.nodes.iter().any(|n| n.id == base_child));
     assert!(snap.nodes.iter().any(|n| n.id == overlay_root));
+}
+
+#[test]
+fn semantics_snapshot_rebuilds_clean_descendants_when_dirty_ancestor_transform_changes() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let offset_y_px = Arc::new(AtomicUsize::new(0));
+    let transformed_parent = ui.create_node(OffsetChildrenTransform {
+        offset_y_px: offset_y_px.clone(),
+    });
+    let child_calls = Arc::new(AtomicUsize::new(0));
+    let child = ui.create_node(CountingSemantics {
+        label: "child",
+        calls: child_calls.clone(),
+    });
+
+    ui.add_child(root, transformed_parent);
+    ui.add_child(transformed_parent, child);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let first_bounds = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| snapshot.nodes.iter().find(|node| node.id == child))
+        .map(|node| node.bounds)
+        .expect("first child semantics bounds");
+    assert_eq!(first_bounds.origin.y, Px(0.0));
+    assert_eq!(child_calls.load(Ordering::Relaxed), 1);
+
+    offset_y_px.store(40, Ordering::Relaxed);
+    ui.mark_invalidation_with_source(
+        transformed_parent,
+        Invalidation::HitTest,
+        UiDebugInvalidationSource::Notify,
+    );
+    assert!(ui.request_semantics_snapshot_if_dirty());
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let second_bounds = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| snapshot.nodes.iter().find(|node| node.id == child))
+        .map(|node| node.bounds)
+        .expect("second child semantics bounds");
+    assert_eq!(second_bounds.origin.y, Px(-40.0));
+    assert_eq!(
+        child_calls.load(Ordering::Relaxed),
+        2,
+        "dirty ancestor transforms must force clean descendants to rebuild bounds"
+    );
+}
+
+#[test]
+fn semantics_snapshot_reuses_clean_subtrees_between_dirty_refreshes() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let dirty_calls = Arc::new(AtomicUsize::new(0));
+    let clean_calls = Arc::new(AtomicUsize::new(0));
+    let dirty = ui.create_node(CountingSemantics {
+        label: "dirty",
+        calls: dirty_calls.clone(),
+    });
+    let clean = ui.create_node(CountingSemantics {
+        label: "clean",
+        calls: clean_calls.clone(),
+    });
+    ui.add_child(root, dirty);
+    ui.add_child(root, clean);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(dirty_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(clean_calls.load(Ordering::Relaxed), 1);
+
+    ui.mark_invalidation_with_source(
+        dirty,
+        Invalidation::Paint,
+        UiDebugInvalidationSource::Notify,
+    );
+    assert!(ui.request_semantics_snapshot_if_dirty());
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(dirty_calls.load(Ordering::Relaxed), 2);
+    assert_eq!(
+        clean_calls.load(Ordering::Relaxed),
+        1,
+        "clean sibling semantics should replay from the previous snapshot"
+    );
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|node| node.id == dirty && node.label.as_deref() == Some("dirty"))
+    );
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|node| node.id == clean && node.label.as_deref() == Some("clean"))
+    );
 }
 
 #[test]

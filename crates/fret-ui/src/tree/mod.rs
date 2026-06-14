@@ -454,6 +454,7 @@ pub struct UiTree<H: UiHost> {
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_dirty: bool,
+    semantics_dirty_all: bool,
     semantics_requested: bool,
     layout_node_profile: Option<LayoutNodeProfileState>,
     measure_node_profile: Option<MeasureNodeProfileState>,

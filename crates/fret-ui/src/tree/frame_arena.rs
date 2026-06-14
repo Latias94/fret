@@ -6,7 +6,7 @@ pub(super) struct FrameArenaScratch {
     pub(super) gc_reachable_from_view_cache_roots: HashSet<NodeId>,
     pub(super) gc_stack: Vec<NodeId>,
     pub(super) semantics_visited: HashSet<NodeId>,
-    pub(super) semantics_stack: Vec<(NodeId, Transform2D)>,
+    pub(super) semantics_stack: Vec<(NodeId, Transform2D, bool)>,
     pub(super) semantics_children: Vec<NodeId>,
 
     pub(super) gc_reachable_from_layers_cap_on_take: usize,
@@ -25,8 +25,11 @@ impl FrameArenaScratch {
                 .saturating_mul(std::mem::size_of::<NodeId>() as u128),
         );
         bytes = bytes.saturating_add(
-            (self.semantics_stack.capacity() as u128)
-                .saturating_mul(std::mem::size_of::<(NodeId, Transform2D)>() as u128),
+            (self.semantics_stack.capacity() as u128).saturating_mul(std::mem::size_of::<(
+                NodeId,
+                Transform2D,
+                bool,
+            )>() as u128),
         );
         bytes = bytes.saturating_add(
             (self.semantics_children.capacity() as u128)

@@ -82,7 +82,7 @@ impl<H: UiHost> UiTree<H> {
             self.bump_command_availability_revision();
         }
         if node_exists && Self::invalidation_may_affect_semantics(source, inv, detail) {
-            self.mark_semantics_dirty();
+            self.mark_semantics_dirty_for_node(node);
         }
 
         let (prev, next, layout_before, layout_after) = {

@@ -106,12 +106,15 @@ impl<H: UiHost> UiTree<H> {
         self.frame_arena.semantics_visited = scratch;
     }
 
-    pub(crate) fn take_scratch_semantics_stack(&mut self) -> Vec<(NodeId, Transform2D)> {
+    pub(crate) fn take_scratch_semantics_stack(&mut self) -> Vec<(NodeId, Transform2D, bool)> {
         self.frame_arena.semantics_stack_cap_on_take = self.frame_arena.semantics_stack.capacity();
         std::mem::take(&mut self.frame_arena.semantics_stack)
     }
 
-    pub(crate) fn restore_scratch_semantics_stack(&mut self, scratch: Vec<(NodeId, Transform2D)>) {
+    pub(crate) fn restore_scratch_semantics_stack(
+        &mut self,
+        scratch: Vec<(NodeId, Transform2D, bool)>,
+    ) {
         if scratch.capacity() > self.frame_arena.semantics_stack_cap_on_take {
             self.debug_stats.frame_arena_grow_events =
                 self.debug_stats.frame_arena_grow_events.saturating_add(1);

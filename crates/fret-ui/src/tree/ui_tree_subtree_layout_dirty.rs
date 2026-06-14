@@ -3,6 +3,154 @@ use slotmap::SecondaryMap;
 use std::collections::HashSet;
 
 impl<H: UiHost> UiTree<H> {
+    pub(in crate::tree) fn clear_all_semantics_dirty_tracking(&mut self) {
+        for (_id, node) in self.nodes.iter_mut() {
+            node.semantics_dirty = false;
+            node.subtree_semantics_dirty_count = 0;
+        }
+    }
+
+    pub(in crate::tree) fn clear_semantics_dirty_nodes(&mut self, nodes: Vec<NodeId>) {
+        let mut seen: HashSet<NodeId> = HashSet::with_capacity(nodes.len());
+        for node in nodes {
+            if !seen.insert(node) {
+                continue;
+            }
+            let Some(entry) = self.nodes.get_mut(node) else {
+                continue;
+            };
+            if !entry.semantics_dirty {
+                continue;
+            }
+            entry.semantics_dirty = false;
+            self.apply_subtree_semantics_dirty_delta_to_node_and_ancestors(node, -1);
+        }
+    }
+
+    pub(in crate::tree) fn apply_subtree_semantics_dirty_delta_to_node_and_ancestors(
+        &mut self,
+        mut current: NodeId,
+        delta: i32,
+    ) {
+        let mut remaining = self.nodes.len().saturating_add(1);
+        loop {
+            if remaining == 0 {
+                tracing::error!(
+                    node = ?current,
+                    "semantics dirty count propagation aborted (cycle or corrupt parent pointers?)"
+                );
+                break;
+            }
+            remaining = remaining.saturating_sub(1);
+
+            let (parent, underflow) = {
+                let Some(entry) = self.nodes.get_mut(current) else {
+                    break;
+                };
+                let underflow =
+                    apply_i32_delta_to_u32(&mut entry.subtree_semantics_dirty_count, delta);
+                (entry.parent, underflow)
+            };
+
+            if underflow {
+                tracing::error!(
+                    node = ?current,
+                    delta,
+                    "subtree semantics dirty count underflow"
+                );
+                self.rebuild_subtree_semantics_dirty_counts_from(current);
+                break;
+            }
+
+            let Some(parent) = parent else {
+                break;
+            };
+            current = parent;
+        }
+    }
+
+    fn rebuild_subtree_semantics_dirty_counts_from(&mut self, root: NodeId) {
+        let root_parent = self.nodes.get(root).and_then(|n| n.parent);
+        let old_root_count = self
+            .nodes
+            .get(root)
+            .map(|n| n.subtree_semantics_dirty_count)
+            .unwrap_or(0);
+
+        let mut stack: Vec<(NodeId, bool)> = vec![(root, false)];
+        while let Some((id, children_pushed)) = stack.pop() {
+            let Some(entry) = self.nodes.get(id) else {
+                continue;
+            };
+            if !children_pushed {
+                stack.push((id, true));
+                for &child in &entry.children {
+                    stack.push((child, false));
+                }
+                continue;
+            }
+
+            let mut sum: u32 = if entry.semantics_dirty { 1 } else { 0 };
+            for &child in &entry.children {
+                sum = sum.saturating_add(
+                    self.nodes
+                        .get(child)
+                        .map(|child| child.subtree_semantics_dirty_count)
+                        .unwrap_or(0),
+                );
+            }
+            if let Some(entry) = self.nodes.get_mut(id) {
+                entry.subtree_semantics_dirty_count = sum;
+            }
+        }
+
+        let new_root_count = self
+            .nodes
+            .get(root)
+            .map(|n| n.subtree_semantics_dirty_count)
+            .unwrap_or(0);
+        let delta_i64 = new_root_count as i64 - old_root_count as i64;
+        let delta = delta_i64.clamp(i32::MIN as i64, i32::MAX as i64) as i32;
+        self.apply_subtree_semantics_dirty_delta_to_ancestors(root_parent, delta);
+    }
+
+    fn apply_subtree_semantics_dirty_delta_to_ancestors(
+        &mut self,
+        mut current: Option<NodeId>,
+        delta: i32,
+    ) {
+        if delta == 0 {
+            return;
+        }
+
+        let mut remaining = self.nodes.len().saturating_add(1);
+        while let Some(id) = current {
+            if remaining == 0 {
+                tracing::error!(
+                    node = ?id,
+                    "semantics dirty ancestor propagation aborted (cycle or corrupt parent pointers?)"
+                );
+                break;
+            }
+            remaining = remaining.saturating_sub(1);
+
+            let (parent, underflow) = {
+                let Some(entry) = self.nodes.get_mut(id) else {
+                    break;
+                };
+                let underflow =
+                    apply_i32_delta_to_u32(&mut entry.subtree_semantics_dirty_count, delta);
+                (entry.parent, underflow)
+            };
+            if underflow {
+                tracing::error!(node = ?id, delta, "subtree semantics dirty count underflow");
+                self.rebuild_subtree_semantics_dirty_counts_from(id);
+                break;
+            }
+            current = parent;
+        }
+    }
+
     pub(in crate::tree) fn set_layout_dirty_children_suppressed(
         &mut self,
         node: NodeId,

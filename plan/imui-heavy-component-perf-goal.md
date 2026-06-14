@@ -713,6 +713,30 @@ popover overlay root solve tail.
   gate shows unnecessary mechanism costs, and reserve a `ViewCache`/layout-engine rethink for a
   stronger root-only dirty-cause contract.
 
+## 2026-06-15 Sixteenth Slice Findings
+
+- The first broad incremental semantics-reuse pass was too permissive. It let clean descendants
+  reuse old semantics records even when an ancestor had a semantic invalidation that changed the
+  ancestor's children transform, which left scroll/visibility scripts observing stale descendant
+  bounds.
+- Narrowed the reuse contract so descendant replay is only allowed when no ancestor on that path was
+  rebuilt in the same traversal. This keeps the useful sibling-subtree reuse win while forcing
+  descendants to rebuild after scroll/transform changes.
+- Added a regression test that mutates a parent's children transform and verifies the child rebuilds
+  its semantics bounds on the next refresh.
+- Validation passed:
+  `cargo test -p fret-ui --lib semantics_focus_shortcuts --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui --profile dev-fast -j 1`, and `cargo fmt -p fret-ui`.
+- The corrected perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-semantics-incremental-rerun/1781481180728/bundle.schema2.json`.
+  `check.perf_thresholds.json` reports `failures=[]`; top frame was `9010us` with
+  `layout=5222us`, `solve=860us`, `paint=3202us`, `dispatch=0us`, and `hit_test=46us`.
+- The useful conclusion is narrower than the original experiment: semantics reuse is still a valid
+  lever, but only below an ancestor-sensitivity line. Do not broaden it again without a stronger
+  freshness marker for layout-affecting ancestors.
+- The next obvious follow-up is not more semantics reuse. The remaining dense-component tail is now
+  back where the earlier evidence pointed: overlay root solve/apply and renderer upload/finish.
+
 ## Open Questions
 
 - Should `ActiveScript` store the active wait predicate in `WaitUntilState` to avoid re-reading the

@@ -143,7 +143,7 @@ impl<H: UiHost> UiTree<H> {
             self.bump_command_availability_revision();
         }
         if node_exists && Self::invalidation_may_affect_semantics(source, inv, detail) {
-            self.mark_semantics_dirty();
+            self.mark_semantics_dirty_for_node(node);
         }
 
         let stop_at_view_cache = self.view_cache_active();
@@ -408,7 +408,7 @@ impl<H: UiHost> UiTree<H> {
         if self.nodes.contains_key(node)
             && Self::invalidation_may_affect_semantics(source, inv, detail)
         {
-            self.mark_semantics_dirty();
+            self.mark_semantics_dirty_for_node(node);
         }
 
         let stop_at_view_cache = self.view_cache_active();

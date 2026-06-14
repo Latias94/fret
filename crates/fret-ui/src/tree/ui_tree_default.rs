@@ -144,6 +144,7 @@ impl<H: UiHost> Default for UiTree<H> {
             invalidated_hit_test_nodes: 0,
             semantics: None,
             semantics_dirty: true,
+            semantics_dirty_all: true,
             semantics_requested: false,
             layout_node_profile: None,
             measure_node_profile: None,
