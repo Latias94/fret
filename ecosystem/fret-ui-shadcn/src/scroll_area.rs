@@ -283,6 +283,10 @@ impl ScrollAreaRoot {
         let scroll_handle = self.scroll_handle;
         let show_scrollbar = self.show_scrollbar;
 
+        if !show_scrollbar || scrollbars.is_empty() {
+            return scroll_area_viewport_only_element(cx, theme, viewport, layout, scroll_handle);
+        }
+
         cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
             let ScrollAreaViewport {
                 children: viewport_children,
@@ -352,104 +356,20 @@ impl ScrollAreaRoot {
                 scroll_layout.size.min_height = Some(Length::Px(Px(0.0)));
                 scroll_layout.overflow = Overflow::Clip;
 
-                let scroll = cx.scroll(
-                    ScrollProps {
-                        layout: scroll_layout,
-                        axis,
-                        scroll_handle: Some(handle.clone()),
-                        windowed_paint: false,
-                        probe_unbounded: viewport_probe_unbounded,
-                        intrinsic_measure_mode,
-                    },
-                    move |_cx| viewport_children,
+                let (viewport, scroll_id) = scroll_area_viewport_element(
+                    cx,
+                    &theme,
+                    viewport_children,
+                    axis,
+                    handle.clone(),
+                    scroll_layout,
+                    viewport_probe_unbounded,
+                    intrinsic_measure_mode,
+                    viewport_test_id,
+                    viewport_focus_test_id,
+                    viewport_focus_ring,
+                    viewport_focus_ring_radius,
                 );
-                let scroll = match viewport_test_id.clone() {
-                    Some(test_id) => scroll.test_id(test_id),
-                    None => scroll,
-                };
-
-                let scroll_id = scroll.id;
-                let viewport = if viewport_focus_ring {
-                    let viewport_scroll = scroll;
-                    let radius = viewport_focus_ring_radius
-                        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
-                    let ring = decl_style::focus_ring(&theme, radius);
-                    let viewport_layout = {
-                        let mut layout = scroll_layout;
-                        layout.overflow = Overflow::Visible;
-                        layout
-                    };
-
-                    let (viewport_id, viewport_semantics) = {
-                        use std::cell::Cell;
-                        use std::rc::Rc;
-
-                        let id_out: Rc<Cell<Option<fret_ui::GlobalElementId>>> =
-                            Rc::new(Cell::new(None));
-                        let id_out_for_closure = id_out.clone();
-                        let mut semantics = cx.semantics_with_id(
-                            SemanticsProps {
-                                layout: viewport_layout,
-                                role: SemanticsRole::Viewport,
-                                focusable: true,
-                                ..Default::default()
-                            },
-                            move |_cx, id| {
-                                id_out_for_closure.set(Some(id));
-                                vec![viewport_scroll]
-                            },
-                        );
-                        if let Some(test_id) = viewport_focus_test_id.clone() {
-                            semantics = semantics.test_id(test_id);
-                        }
-                        (id_out.get().expect("viewport semantics id"), semantics)
-                    };
-
-                    let focus_visible_for_viewport = cx.is_focused_element(viewport_id)
-                        && focus_visible::is_focus_visible(cx.app, Some(cx.window));
-
-                    let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
-                    let ring_alpha = motion::drive_tween_f32_for_element(
-                        cx,
-                        viewport_id,
-                        "scroll_area.viewport.ring.alpha",
-                        if focus_visible_for_viewport { 1.0 } else { 0.0 },
-                        duration,
-                        tailwind_transition_ease_in_out,
-                    );
-
-                    let ring = {
-                        let mut ring = ring;
-                        ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
-                        if let Some(offset) = ring.offset_color {
-                            ring.offset_color = Some(Color {
-                                a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
-                                ..offset
-                            });
-                        }
-                        ring
-                    };
-
-                    cx.container(
-                        ContainerProps {
-                            layout: viewport_layout,
-                            padding: Edges::all(Px(0.0)).into(),
-                            background: None,
-                            shadow: None,
-                            border: Edges::all(Px(0.0)),
-                            border_color: None,
-                            focus_ring: Some(ring),
-                            focus_ring_always_paint: ring_alpha.animating
-                                || (!focus_visible_for_viewport && ring_alpha.value > 1e-4),
-                            focus_within: true,
-                            corner_radii: Corners::all(radius),
-                            ..Default::default()
-                        },
-                        move |_cx| vec![viewport_semantics],
-                    )
-                } else {
-                    scroll
-                };
 
                 let mut children = vec![viewport];
 
@@ -670,6 +590,195 @@ impl ScrollAreaRoot {
             })]
         })
     }
+}
+
+fn scroll_area_viewport_only_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: ThemeSnapshot,
+    viewport: ScrollAreaViewport,
+    layout: LayoutRefinement,
+    scroll_handle: Option<ScrollHandle>,
+) -> AnyElement {
+    scroll_area_stack_element(cx, theme, viewport, layout, scroll_handle)
+}
+
+fn scroll_area_stack_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: ThemeSnapshot,
+    viewport: ScrollAreaViewport,
+    layout: LayoutRefinement,
+    scroll_handle: Option<ScrollHandle>,
+) -> AnyElement {
+    let ScrollAreaViewport {
+        children: viewport_children,
+        axis,
+        probe_unbounded: viewport_probe_unbounded,
+        viewport_test_id,
+        viewport_focus_test_id,
+        focus_ring: viewport_focus_ring,
+        focus_ring_radius: viewport_focus_ring_radius,
+        intrinsic_measure_mode,
+        ..
+    } = viewport;
+
+    let mut layout = decl_style::layout_style(&theme, layout);
+    if matches!(layout.size.width, Length::Auto) {
+        layout.size.width = Length::Fill;
+    }
+    layout.size.min_width.get_or_insert(Length::Px(Px(0.0)));
+    layout.size.min_height.get_or_insert(Length::Px(Px(0.0)));
+    let shrinkwrap_height = matches!(layout.size.height, Length::Auto);
+
+    cx.stack_props(StackProps { layout }, move |cx| {
+        let handle =
+            scroll_handle.unwrap_or_else(|| cx.slot_state(ScrollHandle::default, |h| h.clone()));
+
+        let mut scroll_layout = LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        // Avoid `Fill` (percent sizing) under an auto-height containing block.
+        // Percent heights under an auto-height containing block resolve to 0 in layout engines
+        // like Taffy, which breaks hit-testing and hover-driven selection.
+        scroll_layout.size.height = if shrinkwrap_height {
+            Length::Auto
+        } else {
+            Length::Fill
+        };
+        scroll_layout.size.min_width = Some(Length::Px(Px(0.0)));
+        scroll_layout.size.min_height = Some(Length::Px(Px(0.0)));
+        scroll_layout.overflow = Overflow::Clip;
+
+        let (viewport, _scroll_id) = scroll_area_viewport_element(
+            cx,
+            &theme,
+            viewport_children,
+            axis,
+            handle.clone(),
+            scroll_layout,
+            viewport_probe_unbounded,
+            intrinsic_measure_mode,
+            viewport_test_id,
+            viewport_focus_test_id,
+            viewport_focus_ring,
+            viewport_focus_ring_radius,
+        );
+
+        vec![viewport]
+    })
+}
+
+fn scroll_area_viewport_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &ThemeSnapshot,
+    viewport_children: Vec<AnyElement>,
+    axis: ScrollAxis,
+    handle: ScrollHandle,
+    scroll_layout: LayoutStyle,
+    viewport_probe_unbounded: bool,
+    intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
+    viewport_test_id: Option<Arc<str>>,
+    viewport_focus_test_id: Option<Arc<str>>,
+    viewport_focus_ring: bool,
+    viewport_focus_ring_radius: Option<Px>,
+) -> (AnyElement, fret_ui::GlobalElementId) {
+    let scroll = cx.scroll(
+        ScrollProps {
+            layout: scroll_layout,
+            axis,
+            scroll_handle: Some(handle),
+            windowed_paint: false,
+            probe_unbounded: viewport_probe_unbounded,
+            intrinsic_measure_mode,
+        },
+        move |_cx| viewport_children,
+    );
+    let scroll = match viewport_test_id {
+        Some(test_id) => scroll.test_id(test_id),
+        None => scroll,
+    };
+    let scroll_id = scroll.id;
+
+    if !viewport_focus_ring {
+        return (scroll, scroll_id);
+    }
+
+    let viewport_scroll = scroll;
+    let radius =
+        viewport_focus_ring_radius.unwrap_or_else(|| theme.metric_token("metric.radius.md"));
+    let ring = decl_style::focus_ring(theme, radius);
+    let viewport_layout = {
+        let mut layout = scroll_layout;
+        layout.overflow = Overflow::Visible;
+        layout
+    };
+
+    let (viewport_id, viewport_semantics) = {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let id_out: Rc<Cell<Option<fret_ui::GlobalElementId>>> = Rc::new(Cell::new(None));
+        let id_out_for_closure = id_out.clone();
+        let mut semantics = cx.semantics_with_id(
+            SemanticsProps {
+                layout: viewport_layout,
+                role: SemanticsRole::Viewport,
+                focusable: true,
+                ..Default::default()
+            },
+            move |_cx, id| {
+                id_out_for_closure.set(Some(id));
+                vec![viewport_scroll]
+            },
+        );
+        if let Some(test_id) = viewport_focus_test_id {
+            semantics = semantics.test_id(test_id);
+        }
+        (id_out.get().expect("viewport semantics id"), semantics)
+    };
+
+    let focus_visible_for_viewport = cx.is_focused_element(viewport_id)
+        && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+
+    let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
+    let ring_alpha = motion::drive_tween_f32_for_element(
+        cx,
+        viewport_id,
+        "scroll_area.viewport.ring.alpha",
+        if focus_visible_for_viewport { 1.0 } else { 0.0 },
+        duration,
+        tailwind_transition_ease_in_out,
+    );
+
+    let ring = {
+        let mut ring = ring;
+        ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+        if let Some(offset) = ring.offset_color {
+            ring.offset_color = Some(Color {
+                a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                ..offset
+            });
+        }
+        ring
+    };
+
+    let viewport = cx.container(
+        ContainerProps {
+            layout: viewport_layout,
+            padding: Edges::all(Px(0.0)).into(),
+            background: None,
+            shadow: None,
+            border: Edges::all(Px(0.0)),
+            border_color: None,
+            focus_ring: Some(ring),
+            focus_ring_always_paint: ring_alpha.animating
+                || (!focus_visible_for_viewport && ring_alpha.value > 1e-4),
+            focus_within: true,
+            corner_radii: Corners::all(radius),
+            ..Default::default()
+        },
+        move |_cx| vec![viewport_semantics],
+    );
+
+    (viewport, scroll_id)
 }
 
 #[derive(Debug)]
@@ -1029,6 +1138,14 @@ mod tests {
         el.children.iter().find_map(any_scroll_probe_unbounded)
     }
 
+    fn count_element_kind(el: &AnyElement, f: impl Fn(&ElementKind) -> bool + Copy) -> usize {
+        usize::from(f(&el.kind))
+            + el.children
+                .iter()
+                .map(|child| count_element_kind(child, f))
+                .sum::<usize>()
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -1297,6 +1414,49 @@ mod tests {
             matches!(viewport.kind, ElementKind::Scroll(_)),
             "expected disabling the viewport focus ring to mount Scroll directly, got {:?}",
             viewport.kind
+        );
+    }
+
+    #[test]
+    fn scroll_area_show_scrollbar_false_uses_viewport_only_chrome() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::new([ui::text("Row").into_element(cx)])
+                .show_scrollbar(false)
+                .viewport_focus_ring(false)
+                .viewport_test_id("sa.viewport")
+                .into_element(cx)
+        });
+
+        assert!(
+            matches!(element.kind, ElementKind::Stack(_)),
+            "expected scrollbarless ScrollArea to keep the layout stack root, got {:?}",
+            element.kind
+        );
+        assert_eq!(
+            count_element_kind(&element, |kind| matches!(kind, ElementKind::HoverRegion(_))),
+            0,
+            "scrollbarless ScrollArea should not mount hover-region chrome"
+        );
+        assert_eq!(
+            count_element_kind(&element, |kind| matches!(kind, ElementKind::Scrollbar(_))),
+            0,
+            "scrollbarless ScrollArea should not mount hidden scrollbar primitives"
+        );
+        assert_eq!(
+            count_element_kind(&element, |kind| matches!(kind, ElementKind::Scroll(_))),
+            1,
+            "scrollbarless ScrollArea should still mount one scroll viewport"
+        );
+        assert!(
+            any_element_has_test_id(&element, "sa.viewport"),
+            "expected viewport test_id to stay attached on scrollbarless ScrollArea"
         );
     }
 

@@ -581,8 +581,9 @@ popover overlay root solve tail.
 1. Revisit the contained popover `ViewCache` relayout solve tail now that parent-root request/apply
    is no longer the dominant overlay cost.
 2. Keep reducing the remaining contained overlay listbox cost only where evidence points to shared
-   fixed work. The latest slice removed the duplicated viewport focus wrapper; remaining hot areas
-   are contained overlay relayout solve, command publisher breadth, and renderer upload/finish/text.
+   fixed work. The latest slices removed the duplicated viewport focus wrapper, unbounded full-row
+   probing, and hidden scrollbar chrome; remaining hot areas are contained overlay relayout solve,
+   the core `Scroll` layout path, and renderer upload/finish/text.
 3. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
    snapshot command sets are still taxing dense component interactions. Per-handler filtering is now
    in place; the remaining lever is deciding which commands the publisher should evaluate at all.
@@ -624,6 +625,53 @@ popover overlay root solve tail.
 - Current decision: keep this slice as the publisher-level command surface mechanism. The remaining
   strict-120Hz gap is still distributed across contained overlay relayout, renderer upload/finish,
   and smaller command/text tails rather than a single shadcn nesting tax.
+
+## 2026-06-15 Fourteenth Slice Findings
+
+- Converted `ScrollArea::show_scrollbar(false)` into a real viewport-only chrome path. It keeps the
+  layout `Stack` root and `Scroll` viewport, but skips the `HoverRegion`, scrollbar visibility
+  state, hidden `Scrollbar` primitives, interactivity gates, opacity wrappers, and corner chrome.
+  The default `ScrollArea` path remains Radix/shadcn-aligned and still mounts scrollbar chrome.
+- Factored the shared viewport construction so the default chrome path and the viewport-only path
+  both use the same `Scroll` + optional focus-ring/semantics wrapper logic. This avoids a second
+  focus-ring implementation while still returning the inner `Scroll` element id for scrollbar
+  targeting.
+- `CommandPalette` now declares `.show_scrollbar(false)` for both the virtualized and full-row
+  listbox paths. This matches the recipe strategy: focus stays in the search input, highlight is
+  exposed via `active_descendant`, and the listbox does not need hover-gated scrollbar chrome.
+- Added structure tests:
+  `scroll_area_show_scrollbar_false_uses_viewport_only_chrome` locks the standalone
+  `show_scrollbar(false)` contract, and
+  `command_palette_listboxes_use_scrollbarless_viewport_chrome` locks the CommandPalette recipe
+  policy. These are element-tree tests rather than timing assertions.
+- Validation passed:
+  `cargo test -p fret-ui-shadcn --lib scroll_area --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib command_palette --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib combobox --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-shadcn --profile dev-fast -j 1`,
+  `cargo check -p fret-ui-gallery --profile dev-fast -j 1`,
+  `cargo fmt -p fret-ui-shadcn`, and `git diff --check`.
+- The first corrected combobox gate was a narrow solve-threshold miss:
+  `target/fret-diag/gate-combobox-filter-select-devfast-scrollbarless-listbox/1781474462029/bundle.schema2.json`
+  had `total=10814us`, `layout=6627us`, `layout.engine_solve=1469us`,
+  `paint=3543us`, and failed only `top_layout_engine_solve_time_us > 1389us`.
+  The run still showed the intended structural reduction: layout nodes around `32` and no hover
+  invalidations, so this looked like a solve-tail sample rather than a clear regression.
+- The rerun passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-scrollbarless-listbox-rerun/1781474598799/bundle.schema2.json`.
+  Top frame was `9710us` with `layout=5587us`, `layout.engine_solve=1085us`,
+  `paint=3516us`, `dispatch=0us`, `hit_test=48us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `contained_relayouts=1`.
+- Node profiling after the change also passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-scrollbarless-listbox-node-profile/1781474698584/bundle.schema2.json`.
+  Top frame was `10108us` with `layout=5848us`, `layout.engine_solve=1124us`,
+  and `paint=3588us`. The overlay listbox `Scroll` node measured around
+  `350us self / 517us total` on the profiled top frame, compared with the previous
+  `~500-1200us total` band seen before removing hidden chrome.
+- Decision: keep this slice. It is a policy-level trim rather than a broad framework rewrite, but
+  it removes avoidable recipe chrome and confirms that shadcn-style composition does not inherently
+  require hidden wrappers for every scroll surface. The remaining strict-120Hz gap is now dominated
+  by contained overlay relayout solve, the core `Scroll` layout cost, and renderer upload/finish.
 
 ## Open Questions
 

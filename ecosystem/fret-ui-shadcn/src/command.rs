@@ -3436,6 +3436,7 @@ impl CommandPalette {
 
                 let mut scroll_area = ScrollArea::new(vec![list_body])
                     .scroll_handle(scroll_handle.base_handle().clone())
+                    .show_scrollbar(false)
                     .viewport_focus_ring(false)
                     .viewport_probe_unbounded(false)
                     .refine_layout(scroll_layout.clone());
@@ -3567,6 +3568,7 @@ impl CommandPalette {
                     ),
                 ])
                 .scroll_handle(scroll_handle.clone())
+                .show_scrollbar(false)
                 .viewport_focus_ring(false)
                 .viewport_probe_unbounded(false)
                 .refine_layout(scroll_layout.clone());
@@ -4604,6 +4606,36 @@ mod tests {
             return Some(props.probe_unbounded);
         }
         el.children.iter().find_map(any_scroll_probe_unbounded)
+    }
+
+    fn has_test_id(el: &AnyElement, test_id: &str) -> bool {
+        el.semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+    }
+
+    fn parent_of_direct_child_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        if el.children.iter().any(|child| has_test_id(child, test_id)) {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| parent_of_direct_child_test_id(child, test_id))
+    }
+
+    fn count_element_kind(
+        el: &AnyElement,
+        f: impl Fn(&fret_ui::element::ElementKind) -> bool + Copy,
+    ) -> usize {
+        usize::from(f(&el.kind))
+            + el.children
+                .iter()
+                .map(|child| count_element_kind(child, f))
+                .sum::<usize>()
     }
 
     fn bounds() -> Rect {
@@ -5906,6 +5938,76 @@ mod tests {
             *observed_probe.borrow(),
             Some(false),
             "full-row command listboxes have explicit strategy sizing and should skip unbounded viewport probing"
+        );
+    }
+
+    #[test]
+    fn command_palette_listboxes_use_scrollbarless_viewport_chrome() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(640.0)),
+        );
+        let scroll_parent_child_count = RefCell::new(None);
+        let scrollbar_count = RefCell::new(None);
+        let hover_region_count = RefCell::new(None);
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-scrollbarless-listbox",
+            |cx| {
+                let element = CommandPalette::new(
+                    query.clone(),
+                    [
+                        CommandItem::new("Alpha"),
+                        CommandItem::new("Beta"),
+                        CommandItem::new("Gamma"),
+                    ],
+                )
+                .list_viewport_test_id("cmdk-list-viewport")
+                .into_element(cx);
+                *scroll_parent_child_count.borrow_mut() =
+                    parent_of_direct_child_test_id(&element, "cmdk-list-viewport")
+                        .map(|parent| parent.children.len());
+                *scrollbar_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
+                    matches!(kind, fret_ui::element::ElementKind::Scrollbar(_))
+                }));
+                *hover_region_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
+                    matches!(kind, fret_ui::element::ElementKind::HoverRegion(_))
+                }));
+                vec![element]
+            },
+        );
+        ui.set_root(root);
+
+        assert_eq!(
+            *scroll_parent_child_count.borrow(),
+            Some(1),
+            "command listbox scroll viewport should be the only child in its ScrollArea stack"
+        );
+        assert_eq!(
+            *scrollbar_count.borrow(),
+            Some(0),
+            "command listboxes keep focus in the input and should not mount hidden scrollbar primitives"
+        );
+        assert_eq!(
+            *hover_region_count.borrow(),
+            Some(0),
+            "command listboxes do not use hover-gated scrollbar chrome"
         );
     }
 
