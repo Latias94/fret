@@ -575,8 +575,12 @@ fn paint_cache_replay_touches_selectable_text_span_state_for_replayed_subtrees()
     let mut services = FakeUiServices;
     let mut scene = Scene::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let moved_bounds = Rect::new(
+        Point::new(Px(20.0), Px(15.0)),
+        Size::new(Px(100.0), Px(40.0)),
+    );
 
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.paint_all(&mut app, &mut services, moved_bounds, &mut scene, 1.0);
     assert_eq!(paints.load(Ordering::SeqCst), 1);
 
     for _ in 0..3 {
@@ -607,6 +611,153 @@ fn paint_cache_replay_touches_selectable_text_span_state_for_replayed_subtrees()
     assert_eq!(spans[0].tag.as_ref(), "https://example.com");
     assert_eq!(spans[0].bounds_local.origin.x, Px(6.0));
     assert_eq!(spans[0].bounds_local.size.width, Px(4.0));
+}
+
+#[test]
+fn paint_cache_rebases_descendant_entries_after_ancestor_replay() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let child_paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(CountingPaintWidget {
+        paints: child_paints.clone(),
+    });
+    ui.set_children(root, vec![child]);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let moved_bounds = Rect::new(
+        Point::new(Px(20.0), Px(15.0)),
+        Size::new(Px(100.0), Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(child_paints.load(Ordering::SeqCst), 1);
+    assert!(
+        ui.test_paint_cache_entry_for_node_has_entry(root),
+        "root should cache the full subtree after the initial paint"
+    );
+    assert!(
+        ui.test_paint_cache_entry_for_node_has_entry(child),
+        "child should cache its local paint range after the initial paint"
+    );
+
+    app.advance_frame();
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.paint_all(&mut app, &mut services, moved_bounds, &mut scene, 1.0);
+    assert_eq!(
+        child_paints.load(Ordering::SeqCst),
+        1,
+        "second frame should replay the ancestor subtree"
+    );
+    assert!(
+        ui.debug_paint_cache_replays.contains_key(&root),
+        "second frame should hit the root cache"
+    );
+    assert!(
+        !ui.debug_paint_cache_replays.contains_key(&child),
+        "child is not visited when the ancestor cache replays"
+    );
+
+    app.advance_frame();
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.invalidate(root, Invalidation::Paint);
+    ui.test_clear_node_invalidations(child);
+    ui.paint_all(&mut app, &mut services, moved_bounds, &mut scene, 1.0);
+
+    assert_eq!(
+        child_paints.load(Ordering::SeqCst),
+        1,
+        "ancestor repaint should still be able to replay stable child entries after an ancestor-only replay frame"
+    );
+    assert!(
+        !ui.debug_paint_cache_replays.contains_key(&root),
+        "paint-invalidated root should not replay"
+    );
+    assert!(
+        ui.debug_paint_cache_replays.contains_key(&child),
+        "stable child should replay from the descendant entry rebased during the previous ancestor replay"
+    );
+}
+
+#[test]
+fn paint_cache_rebase_prunes_paint_invalidated_descendant_subtrees() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let child_paints = Arc::new(AtomicUsize::new(0));
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let mid = ui.create_node(TestStack);
+    let child = ui.create_node(CountingPaintWidget {
+        paints: child_paints.clone(),
+    });
+    ui.set_children(root, vec![mid]);
+    ui.set_children(mid, vec![child]);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let moved_bounds = Rect::new(
+        Point::new(Px(20.0), Px(15.0)),
+        Size::new(Px(100.0), Px(40.0)),
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(child_paints.load(Ordering::SeqCst), 1);
+
+    app.advance_frame();
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.test_set_paint_invalidation(mid, true);
+    ui.paint_all(&mut app, &mut services, moved_bounds, &mut scene, 1.0);
+    assert_eq!(
+        child_paints.load(Ordering::SeqCst),
+        1,
+        "second frame should still replay the clean ancestor subtree"
+    );
+    assert!(
+        ui.debug_paint_cache_replays.contains_key(&root),
+        "second frame should hit the root cache"
+    );
+
+    app.advance_frame();
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.invalidate(root, Invalidation::Paint);
+    ui.test_clear_node_invalidations(child);
+    ui.paint_all(&mut app, &mut services, moved_bounds, &mut scene, 1.0);
+
+    assert_eq!(
+        child_paints.load(Ordering::SeqCst),
+        2,
+        "a paint-invalidated intermediate node should prune descendant rebase so child repaint is not skipped"
+    );
+    assert!(
+        !ui.debug_paint_cache_replays.contains_key(&root),
+        "paint-invalidated root should not replay"
+    );
+    assert!(
+        !ui.debug_paint_cache_replays.contains_key(&child),
+        "child should not replay through a paint-invalidated ancestor"
+    );
 }
 
 #[test]

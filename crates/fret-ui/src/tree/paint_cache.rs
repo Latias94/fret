@@ -274,6 +274,49 @@ impl PaintCacheState {
             .replay_entry_translated(scene, entry, delta)
     }
 
+    pub(super) fn rebase_entry_from_replayed_parent(
+        &self,
+        parent_previous: PaintCacheEntry,
+        parent_current_start: u32,
+        parent_current_text_blob_start: u32,
+        descendant_previous: PaintCacheEntry,
+    ) -> Option<PaintCacheEntry> {
+        if descendant_previous.generation != self.source_generation {
+            return None;
+        }
+
+        let parent_ranges = self.previous_frame.entry_ranges(parent_previous)?;
+        let descendant_ranges = self.previous_frame.entry_ranges(descendant_previous)?;
+        if descendant_ranges.ops.start < parent_ranges.ops.start
+            || descendant_ranges.ops.end > parent_ranges.ops.end
+            || descendant_ranges.text_blobs.start < parent_ranges.text_blobs.start
+            || descendant_ranges.text_blobs.end > parent_ranges.text_blobs.end
+        {
+            return None;
+        }
+
+        let op_start_offset =
+            u32::try_from(descendant_ranges.ops.start - parent_ranges.ops.start).ok()?;
+        let op_end_offset =
+            u32::try_from(descendant_ranges.ops.end - parent_ranges.ops.start).ok()?;
+        let text_blob_start_offset =
+            u32::try_from(descendant_ranges.text_blobs.start - parent_ranges.text_blobs.start)
+                .ok()?;
+        let text_blob_end_offset =
+            u32::try_from(descendant_ranges.text_blobs.end - parent_ranges.text_blobs.start)
+                .ok()?;
+
+        Some(PaintCacheEntry {
+            generation: self.target_generation,
+            key: descendant_previous.key,
+            origin: descendant_previous.origin,
+            start: parent_current_start.checked_add(op_start_offset)?,
+            end: parent_current_start.checked_add(op_end_offset)?,
+            text_blob_start: parent_current_text_blob_start.checked_add(text_blob_start_offset)?,
+            text_blob_end: parent_current_text_blob_start.checked_add(text_blob_end_offset)?,
+        })
+    }
+
     #[cfg(test)]
     pub(super) fn retained_recording_ops_len(&self) -> usize {
         self.previous_frame.ops_len()

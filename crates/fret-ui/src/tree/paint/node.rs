@@ -254,6 +254,12 @@ impl<H: UiHost> UiTree<H> {
                         text_blob_end: scene.text_blob_ids().len() as u32,
                     },
                 );
+                self.rebase_descendant_paint_cache_entries_for_replayed_subtree(
+                    node,
+                    entry,
+                    start as u32,
+                    text_blob_start as u32,
+                );
 
                 if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                     let prev = n.invalidation;
@@ -798,6 +804,58 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         });
+        self.restore_scratch_node_stack(stack);
+    }
+
+    fn rebase_descendant_paint_cache_entries_for_replayed_subtree(
+        &mut self,
+        node: NodeId,
+        parent_previous_entry: PaintCacheEntry,
+        parent_current_start: u32,
+        parent_current_text_blob_start: u32,
+    ) {
+        let mut stack = self.take_scratch_node_stack();
+        stack.clear();
+        let mut i = 0usize;
+        loop {
+            let child = self
+                .nodes
+                .get(node)
+                .and_then(|n| n.children.get(i))
+                .copied();
+            let Some(child) = child else {
+                break;
+            };
+            stack.push(child);
+            i += 1;
+        }
+
+        while let Some(id) = stack.pop() {
+            let paint_invalidated = self.nodes.get(id).is_some_and(|n| n.invalidation.paint);
+            if paint_invalidated {
+                continue;
+            }
+            if let Some(previous_entry) = self.paint_cache_entry_for_node(id)
+                && let Some(next_entry) = self.paint_cache.rebase_entry_from_replayed_parent(
+                    parent_previous_entry,
+                    parent_current_start,
+                    parent_current_text_blob_start,
+                    previous_entry,
+                )
+            {
+                self.set_paint_cache_entry_for_node(id, next_entry);
+            }
+
+            let mut i = 0usize;
+            loop {
+                let child = self.nodes.get(id).and_then(|n| n.children.get(i)).copied();
+                let Some(child) = child else {
+                    break;
+                };
+                stack.push(child);
+                i += 1;
+            }
+        }
         self.restore_scratch_node_stack(stack);
     }
 }

@@ -179,6 +179,7 @@ fn focus_traversal_availability_short_circuits_after_first_candidate() {
     );
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+    let before = is_focusable_calls.load(Ordering::SeqCst);
     for leaf in leaves {
         ui.nodes.get_mut(leaf).unwrap().invalidation.hit_test = true;
     }
@@ -188,7 +189,7 @@ fn focus_traversal_availability_short_circuits_after_first_candidate() {
         crate::widget::CommandAvailability::Available
     );
     assert_eq!(
-        is_focusable_calls.load(Ordering::SeqCst),
+        is_focusable_calls.load(Ordering::SeqCst) - before,
         1,
         "availability only needs to know whether at least one traversal candidate exists"
     );

@@ -189,6 +189,47 @@ popover overlay root solve tail.
   so the next optimization should target overlay/list cache boundaries or command-availability tail
   only if a fresh profile makes them hot again.
 
+## 2026-06-14 Fifth Slice Findings
+
+- Investigated the next paint/cache tail after the fixed-height `TextInput` slice. The important
+  failure mode was not a component-level combobox policy bug: when an ancestor subtree replayed from
+  paint cache, descendant `PaintCacheEntry` records could remain tied to the previous generation.
+  If the ancestor was paint-invalidated on the following frame, stable descendants no longer had
+  fresh ranges to replay and could fall back toward repainting the dense subtree.
+- Added a mechanism-level paint-cache rebase step after a successful ancestor replay. It walks
+  descendants and promotes only safe previous-frame entries into the current generation:
+  descendant ranges must be fully contained in the replayed parent range, the descendant entry must
+  come from the current source generation, and the walker prunes paint-invalidated descendant
+  subtrees. The rebase only remaps op/text-blob ranges; origin translation remains owned by the
+  existing cache replay/bounds translation path.
+- This keeps component caches local. It deliberately does not wrap the full `CommandPalette` or
+  `Combobox` in a broad view cache, because those surfaces carry active descendant, selection,
+  disabled/highlight state, semantics, and test-id behavior that should remain policy-owned.
+- Added `paint_cache_rebases_descendant_entries_after_ancestor_replay` to cover the three-frame
+  sequence: first full paint, second ancestor replay with changed bounds, third ancestor repaint
+  while the stable child still replays from the rebased descendant entry.
+- Added `paint_cache_rebase_prunes_paint_invalidated_descendant_subtrees` to prove an invalidated
+  intermediate node prevents deeper descendants from being rebased and later replayed through that
+  invalidated subtree.
+- Tightened the existing selectable-text replay test so cache replay across a bounds move still
+  touches selectable span state without corrupting local span bounds.
+- While running the broader paint-cache test filter, the existing
+  `focus_traversal_availability_short_circuits_after_first_candidate` assertion failed because it
+  counted layout/prepaint sampling work as part of command availability. The runtime behavior was
+  already short-circuiting correctly; the test now asserts the post-layout call delta instead.
+- Validation passed:
+  `cargo test -p fret-ui --lib paint_cache --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui --lib focus_traversal_prepaint_cache --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo fmt -p fret-ui`, and `cargo check -p fret-ui -j 1`.
+- The correct combobox dev-fast perf gate with view-cache env, prewarm, and prelude passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-paint-cache-rebase-prune-vc/1781449512986/bundle.schema2.json`.
+  Top frame was `10151us` with `layout=5855us`, `solve=1131us`, `prepaint=614us`,
+  `paint=3682us`, `paint.cache_misses=0`, `cache.reused=1`, and `cache.replayed_ops=203`.
+- Current residual tail is no longer full subtree repaint. The remaining top-frame cost is mostly
+  popover/root layout request/apply plus renderer upload/finish/text preparation. The next slice
+  should only revisit paint cache if a fresh profile shows cache misses returning; otherwise the
+  higher-leverage targets are overlay root apply/layout and renderer retained-text work.
+
 ## Next Verification
 
 1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual

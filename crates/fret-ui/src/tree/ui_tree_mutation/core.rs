@@ -187,6 +187,21 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
+    pub(crate) fn test_set_paint_invalidation(&mut self, node: NodeId, value: bool) {
+        let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
+            let prev = n.invalidation;
+            n.invalidation.paint = value;
+            if !value {
+                n.paint_invalidated_by_hit_test_only = false;
+            }
+            (prev, n.invalidation)
+        }) else {
+            return;
+        };
+        self.update_invalidation_counters(prev, next);
+    }
+
+    #[cfg(test)]
     pub(crate) fn test_set_node_parent(&mut self, node: NodeId, parent: Option<NodeId>) {
         let Some(n) = self.nodes.get_mut(node) else {
             return;
