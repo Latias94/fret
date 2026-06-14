@@ -407,24 +407,39 @@ fn render_root_contents(
     );
 
     let command_palette = cx.keyed("ui_gallery.global_command_palette", |cx| {
-        shadcn::CommandDialog::new_with_host_commands(
-            cx,
-            frame.content_models.cmdk_open.clone(),
-            frame.content_models.cmdk_query.clone(),
-        )
-        .a11y_label("Command palette")
-        .empty_text("No results found.")
-        .into_element(cx, |cx| {
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Px(Px(0.0));
-            layout.size.height = Length::Px(Px(0.0));
-            layout.flex.grow = 0.0;
-            layout.flex.shrink = 0.0;
-            cx.spacer(SpacerProps {
-                layout,
-                min: Px(0.0),
+        let cmdk_open = cx
+            .app
+            .models()
+            .get_copied(&frame.content_models.cmdk_open)
+            .unwrap_or(false);
+        let dialog = if cmdk_open {
+            shadcn::CommandDialog::new_with_host_commands(
+                cx,
+                frame.content_models.cmdk_open.clone(),
+                frame.content_models.cmdk_query.clone(),
+            )
+        } else {
+            shadcn::CommandDialog::new(
+                frame.content_models.cmdk_open.clone(),
+                frame.content_models.cmdk_query.clone(),
+                Vec::new(),
+            )
+        };
+
+        dialog
+            .a11y_label("Command palette")
+            .empty_text("No results found.")
+            .into_element(cx, |cx| {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(0.0));
+                layout.size.height = Length::Px(Px(0.0));
+                layout.flex.grow = 0.0;
+                layout.flex.shrink = 0.0;
+                cx.spacer(SpacerProps {
+                    layout,
+                    min: Px(0.0),
+                })
             })
-        })
     });
     content.push(command_palette);
 

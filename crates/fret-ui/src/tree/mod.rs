@@ -204,6 +204,7 @@ pub(crate) struct WindowCommandActionAvailabilitySnapshotSignature {
     pub(crate) barrier_root: Option<NodeId>,
     pub(crate) focus: Option<NodeId>,
     pub(crate) pending: WindowRuntimeSnapshotPendingSignature,
+    pub(crate) commands: WindowCommandActionAvailabilityCommandSetSignature,
     pub(crate) command_availability_revision: u64,
     /// Cache key for action-availability publishing.
     ///
@@ -220,6 +221,12 @@ pub(crate) struct WindowCommandActionAvailabilitySnapshotSignature {
 pub(crate) struct WindowRuntimeSnapshotPendingSignature {
     pub(crate) declarative_roots: Vec<NodeId>,
     pub(crate) post_layout_refine_frame: Option<FrameId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum WindowCommandActionAvailabilityCommandSetSignature {
+    AllRegisteredWidgetCommands,
+    FilteredWidgetCommands(Vec<CommandId>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

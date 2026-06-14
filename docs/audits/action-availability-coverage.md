@@ -20,6 +20,12 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
 
 - `UiTree::publish_window_command_action_availability_snapshot` publishes:
   - `WindowCommandActionAvailabilityService` (`HashMap<CommandId, bool>`)
+- `UiTree::publish_window_command_action_availability_snapshot_filtered` publishes the same
+  snapshot shape for a caller-owned command set:
+  - it is intended for app/driver surfaces that already know the exact command family they consume,
+  - it sorts/dedupes the requested command ids for stable snapshot signatures,
+  - it ignores unregistered and non-widget commands,
+  - omitted commands remain "unknown" to consumers rather than disabled.
 - Consumers combine:
   - `WindowInputContextService` (`InputContext`)
   - `WindowCommandEnabledService` (explicit overrides)

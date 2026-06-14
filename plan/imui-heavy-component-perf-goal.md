@@ -265,6 +265,46 @@ popover overlay root solve tail.
   snapshots should publish all widget commands for every surface, or whether command groups/surfaces
   need a deeper interface for filtering without weakening app command behavior.
 
+## 2026-06-14 Seventh Slice Findings
+
+- Added a mechanism-level filtered action-availability publisher:
+  `UiTree::publish_window_command_action_availability_snapshot_filtered(...)`. The existing
+  `publish_window_command_action_availability_snapshot(...)` remains the conservative full-window
+  default and still publishes every registered widget-scoped command.
+- The filtered publisher is intentionally caller-owned: it accepts a concrete command set, sorts and
+  dedupes it for stable snapshot signatures, ignores unregistered/non-widget commands, and leaves
+  omitted commands as `unknown` in `WindowCommandActionAvailabilityService` rather than publishing
+  them as disabled.
+- Focused tests cover the contract:
+  `action_availability_filtered_snapshot_publishes_only_requested_widget_commands` and
+  `action_availability_filtered_snapshot_signature_dedupes_sorted_command_set`.
+- Found the higher-leverage immediate issue in the UI Gallery strategy layer: the global shadcn
+  command dialog was built with `new_with_host_commands(...)` even while the dialog was closed.
+  That meant closed chrome still materialized host command entries and their command/action
+  surfaces during dense component frames.
+- Aligned the Gallery with the bootstrap command-palette strategy: when closed, render the dialog
+  shell with empty entries; when open, build host command entries. This keeps the first screen
+  behavior unchanged while removing unrelated command-entry surfaces from the combobox steady path.
+- Validation passed:
+  `cargo test -p fret-ui --lib window_command_action_availability_snapshot --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-gallery --profile dev-fast -j 1`, and
+  `cargo build -p fret-ui-gallery --profile dev-fast -j 1`.
+- The corrected combobox dev-fast perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-palette-closed-vc/1781455378046/bundle.schema2.json`.
+  Top frame was `11197us` with `layout=5662us`, `solve=913us`, `prepaint=659us`,
+  `paint=4876us`, `dispatch=95us`, `hit_test=26us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `cache.replayed_ops=203`.
+- Pointer-tail thresholds are now inside the checked-in gate:
+  `pointer_move_max_dispatch_time_us=846` and `pointer_move_max_hit_test_time_us=132`.
+- The diagnostics app snapshot still reports `command_palette_entries_count=134` because that value
+  is produced by the diagnostics snapshot provider from the host command catalog, not by the closed
+  dialog render tree. The runtime hotspot evidence is the important signal: the previous
+  `ui_gallery.switch.command_gate.action@focused_or_default` hotspot disappeared from the worst
+  frames after closed-dialog entry materialization was removed.
+- Current decision: keep both changes. The filtered publisher is the right mechanism for future
+  app-owned command surfaces, while the Gallery closed-dialog fix is the actual perf win for this
+  combobox gate.
+
 ## Next Verification
 
 1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual
@@ -279,6 +319,8 @@ popover overlay root solve tail.
 7. Investigate whether app-level gallery commands should be excluded from unrelated heavy-component
    runtime snapshots through a command-surface/group mechanism instead of per-component micro
    caching.
+8. Before committing the seventh slice, run `git diff --check` and re-run the focused
+   action-availability test after the documentation update.
 
 ## Open Questions
 

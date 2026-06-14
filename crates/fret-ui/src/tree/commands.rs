@@ -1356,6 +1356,41 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         input_ctx: &InputContext,
     ) {
+        self.publish_window_command_action_availability_snapshot_for_command_set(
+            app,
+            input_ctx,
+            WindowCommandActionAvailabilityCommandSetSignature::AllRegisteredWidgetCommands,
+        );
+    }
+
+    /// Publish a per-window action availability snapshot for a caller-owned command set.
+    ///
+    /// This is intended for app/driver layers that know the exact command family consumed by a
+    /// surface. Missing commands remain "unknown" to `WindowCommandActionAvailabilityService`, not
+    /// disabled, so this should not replace the conservative full-window publisher unless the
+    /// consumer owns the filtered set.
+    pub fn publish_window_command_action_availability_snapshot_filtered(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        commands: impl IntoIterator<Item = CommandId>,
+    ) {
+        let mut commands = commands.into_iter().collect::<Vec<_>>();
+        commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        commands.dedup_by(|a, b| a.as_str() == b.as_str());
+        self.publish_window_command_action_availability_snapshot_for_command_set(
+            app,
+            input_ctx,
+            WindowCommandActionAvailabilityCommandSetSignature::FilteredWidgetCommands(commands),
+        );
+    }
+
+    fn publish_window_command_action_availability_snapshot_for_command_set(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        command_set: WindowCommandActionAvailabilityCommandSetSignature,
+    ) {
         let Some(window) = self.window else {
             self.last_window_command_action_availability_snapshot_signature = None;
             return;
@@ -1411,6 +1446,7 @@ impl<H: UiHost> UiTree<H> {
                     .pending_post_layout_window_runtime_snapshot_refine
                     .then_some(frame_id),
             },
+            commands: command_set.clone(),
             command_availability_revision: self.command_availability_revision,
             input_ctx: WindowCommandActionAvailabilityInputSignature::from(input_ctx),
             key_contexts: next_key_contexts.clone(),
@@ -1440,13 +1476,26 @@ impl<H: UiHost> UiTree<H> {
                     command_registry_revision,
                 )
             },
-            || {
-                app.commands()
+            || match &command_set {
+                WindowCommandActionAvailabilityCommandSetSignature::AllRegisteredWidgetCommands => {
+                    app.commands()
+                        .iter()
+                        .filter_map(|(id, meta)| {
+                            (meta.scope == CommandScope::Widget).then_some(id.clone())
+                        })
+                        .collect::<Vec<_>>()
+                }
+                WindowCommandActionAvailabilityCommandSetSignature::FilteredWidgetCommands(
+                    commands,
+                ) => commands
                     .iter()
-                    .filter_map(|(id, meta)| {
-                        (meta.scope == CommandScope::Widget).then_some(id.clone())
+                    .filter(|id| {
+                        app.commands()
+                            .get((*id).clone())
+                            .is_some_and(|meta| meta.scope == CommandScope::Widget)
                     })
-                    .collect::<Vec<_>>()
+                    .cloned()
+                    .collect::<Vec<_>>(),
             },
         );
         if let Some(collect_elapsed) = collect_elapsed {

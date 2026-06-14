@@ -50,6 +50,9 @@ impl<H: UiHost> Widget<H> for FocusableLeaf {
 struct CountingAvailabilityNode;
 
 #[derive(Debug, Default)]
+struct CountingAllAvailabilityNode;
+
+#[derive(Debug, Default)]
 struct CommandAvailabilityQueryCount {
     count: u32,
 }
@@ -81,21 +84,47 @@ impl<H: UiHost> Widget<H> for CountingAvailabilityNode {
     }
 }
 
+impl<H: UiHost> Widget<H> for CountingAllAvailabilityNode {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> crate::widget::CommandAvailability {
+        cx.app.with_global_mut_untracked(
+            CommandAvailabilityQueryCount::default,
+            |counter, _app| {
+                counter.count = counter.count.saturating_add(1);
+            },
+        );
+        if command.as_str() == "test.available" {
+            return crate::widget::CommandAvailability::Available;
+        }
+        crate::widget::CommandAvailability::NotHandled
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
 fn widget_command_meta(title: &str) -> CommandMeta {
     CommandMeta::new(title).with_scope(CommandScope::Widget)
 }
 
-fn publish_snapshot(
+fn snapshot_input_ctx(
     ui: &mut UiTree<crate::test_host::TestHost>,
     app: &mut crate::test_host::TestHost,
-    window: AppWindowId,
-) {
+) -> InputContext {
     let caps = app
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
 
-    let input_ctx = InputContext {
+    InputContext {
         platform: Platform::current(),
         caps,
         ui_has_modal: false,
@@ -107,9 +136,34 @@ fn publish_snapshot(
         router_can_back: false,
         router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
-    };
+    }
+}
+
+fn publish_snapshot(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    window: AppWindowId,
+) {
+    let input_ctx = snapshot_input_ctx(ui, app);
 
     ui.publish_window_command_action_availability_snapshot(app, &input_ctx);
+
+    assert!(
+        app.global::<WindowCommandActionAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_some()
+    );
+}
+
+fn publish_filtered_snapshot(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    window: AppWindowId,
+    commands: impl IntoIterator<Item = CommandId>,
+) {
+    let input_ctx = snapshot_input_ctx(ui, app);
+
+    ui.publish_window_command_action_availability_snapshot_filtered(app, &input_ctx, commands);
 
     assert!(
         app.global::<WindowCommandActionAvailabilityService>()
@@ -404,6 +458,155 @@ fn action_availability_snapshot_marks_unhandled_commands_unavailable() {
     assert_eq!(
         svc.available(window, &CommandId::from("test.unhandled")),
         Some(false)
+    );
+}
+
+#[test]
+fn action_availability_filtered_snapshot_publishes_only_requested_widget_commands() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+    app.register_command(
+        CommandId::from("test.unhandled"),
+        widget_command_meta("Unhandled"),
+    );
+    app.register_command(
+        CommandId::from("test.window_scope"),
+        CommandMeta::new("Window Scope"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAllAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_filtered_snapshot(
+        &mut ui,
+        &mut app,
+        window,
+        [
+            CommandId::from("test.unhandled"),
+            CommandId::from("test.available"),
+            CommandId::from("test.unhandled"),
+            CommandId::from("test.window_scope"),
+            CommandId::from("test.missing"),
+        ],
+    );
+
+    let eval_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        eval_count, 2,
+        "filtered publication should evaluate each requested registered widget command once"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.unhandled")),
+        Some(false)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.window_scope")),
+        None,
+        "non-widget commands are not action-availability entries"
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.missing")),
+        None,
+        "unregistered commands are unknown rather than disabled"
+    );
+}
+
+#[test]
+fn action_availability_filtered_snapshot_signature_dedupes_sorted_command_set() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+    app.register_command(CommandId::from("test.other"), widget_command_meta("Other"));
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAllAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_filtered_snapshot(
+        &mut ui,
+        &mut app,
+        window,
+        [
+            CommandId::from("test.other"),
+            CommandId::from("test.available"),
+            CommandId::from("test.other"),
+        ],
+    );
+    let first_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(first_count, 2);
+
+    publish_filtered_snapshot(
+        &mut ui,
+        &mut app,
+        window,
+        [
+            CommandId::from("test.available"),
+            CommandId::from("test.other"),
+        ],
+    );
+    let second_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        second_count, first_count,
+        "same filtered command set should skip duplicate same-frame publication even when caller order changes"
+    );
+
+    publish_filtered_snapshot(
+        &mut ui,
+        &mut app,
+        window,
+        [CommandId::from("test.available")],
+    );
+    let third_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        third_count,
+        first_count + 1,
+        "changing the filtered command set should publish a new snapshot"
     );
 }
 
