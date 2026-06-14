@@ -544,6 +544,26 @@ fn roving_labels_and_disabled(entries: &[InWindowMenuEntry]) -> (Arc<[Arc<str>]>
     )
 }
 
+fn collect_menu_item_commands(items: &[MenuItem], out: &mut Vec<CommandId>) {
+    for item in items {
+        match item {
+            MenuItem::Command { command, .. } => out.push(command.clone()),
+            MenuItem::Submenu { items, .. } => collect_menu_item_commands(items, out),
+            MenuItem::Label { .. } | MenuItem::Separator | MenuItem::SystemMenu { .. } => {}
+        }
+    }
+}
+
+fn menu_bar_command_ids(menu_bar: &MenuBar) -> Vec<CommandId> {
+    let mut commands = Vec::new();
+    for menu in &menu_bar.menus {
+        collect_menu_item_commands(&menu.items, &mut commands);
+    }
+    commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+    commands.dedup_by(|a, b| a.as_str() == b.as_str());
+    commands
+}
+
 fn command_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     command: &CommandId,
@@ -774,6 +794,9 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     opts: MenubarFromRuntimeOptions,
 ) -> (AnyElement, InWindowMenubarFocusHandle) {
     let normalized_menu_bar = menu_bar.clone().normalized();
+    cx.request_window_command_action_availability_for_commands(menu_bar_command_ids(
+        &normalized_menu_bar,
+    ));
     let group = cx.root_id();
 
     let theme = Theme::global(&*cx.app).snapshot();

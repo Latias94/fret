@@ -473,7 +473,11 @@ impl<H: UiHost> UiTree<H> {
                     frame_id = frame_id.0,
                 )
             },
-            || self.publish_window_command_action_availability_snapshot(app, &input_ctx),
+            || {
+                self.publish_window_command_action_availability_snapshot_for_current_demand(
+                    app, &input_ctx,
+                )
+            },
         );
         if let Some(command_availability_elapsed) = command_availability_elapsed {
             self.debug_stats
@@ -495,6 +499,45 @@ impl<H: UiHost> UiTree<H> {
         if let Some(shortcut_overlay_elapsed) = shortcut_overlay_elapsed {
             self.debug_stats
                 .window_runtime_snapshot_shortcut_overlay_time += shortcut_overlay_elapsed;
+        }
+    }
+
+    fn publish_window_command_action_availability_snapshot_for_current_demand(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+    ) {
+        let demand = self.window.and_then(|window| {
+            crate::elements::with_window_state(app, window, |state| {
+                state.command_action_availability_demand().cloned()
+            })
+        });
+
+        match demand {
+            Some(
+                crate::elements::WindowCommandActionAvailabilityDemand::AllRegisteredWidgetCommands,
+            )
+            | None => {
+                self.publish_window_command_action_availability_snapshot(app, input_ctx);
+            }
+            Some(
+                crate::elements::WindowCommandActionAvailabilityDemand::FilteredWidgetCommands(
+                    commands,
+                ),
+            ) if commands.is_empty() => {
+                self.publish_window_command_action_availability_snapshot_filtered(
+                    app, input_ctx, commands,
+                );
+            }
+            Some(
+                crate::elements::WindowCommandActionAvailabilityDemand::FilteredWidgetCommands(
+                    commands,
+                ),
+            ) => {
+                self.publish_window_command_action_availability_snapshot_filtered(
+                    app, input_ctx, commands,
+                );
+            }
         }
     }
 

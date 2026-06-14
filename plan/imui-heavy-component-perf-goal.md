@@ -589,6 +589,42 @@ popover overlay root solve tail.
 4. Keep watching renderer upload/finish/encode p95, which is now often comparable to the remaining
    UI-side work in green combobox probes.
 
+## 2026-06-15 Thirteenth Slice Findings
+
+- Added a frame-local command action-availability demand contract in `fret-ui`. The default remains
+  conservative: if no surface declares demand, `publish_window_runtime_snapshots(...)` still
+  publishes all registered widget commands. Declared surfaces can now request either all widget
+  commands or a specific command set; omitted commands remain unknown, not disabled.
+- Kept the demand in `WindowElementState` and cleared it at frame boundaries. `ElementContext` now
+  exposes narrow request APIs so ecosystem surfaces can declare their command-gating consumption
+  without turning this into a global app setting.
+- Wired the two immediate consumers:
+  `command_catalog_entries_from_host_commands_with_options(...)` requests the full host catalog,
+  while `menubar_from_runtime_with_focus_handle(...)` requests only command ids found in the
+  normalized menu bar. This keeps OS/native menu compatibility conservative when no surface has
+  declared demand, and lets the in-window menu avoid unrelated widget-command probes.
+- Focused tests cover the compatibility boundary:
+  no demand keeps full publication, filtered demand publishes only requested commands, and full
+  demand wins over filtered demand.
+- Validation passed:
+  `cargo test -p fret-ui --lib window_command_action_availability_snapshot --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-gallery --profile dev-fast -j 1`,
+  `cargo check -p fret-ui-shadcn --profile dev-fast -j 1`,
+  `cargo fmt -p fret-ui -p fret-ui-kit -p fret -p fret-ui-gallery`, and `git diff --check`.
+- The corrected combobox dev-fast perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-demand-v1/1781472736858/bundle.schema2.json`.
+  Top frame was `10032us` with `layout=5946us`, `layout.engine_solve=1141us`,
+  `paint=3491us`, `dispatch=0us`, `hit_test=52us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `contained_relayouts=1`.
+- `diag stats` confirmed the demand contract is active in the dense path:
+  `window_runtime_snapshot.command_availability(widget_count/collect_us/eval_us)=4/34/112` on the
+  top frame, with the slower observed frame at `4/55/437`. This removes unrelated full-registry
+  widget-command publication from the closed command-palette + in-window-menu steady path, but it is
+  not the dominant remaining cost.
+- Current decision: keep this slice as the publisher-level command surface mechanism. The remaining
+  strict-120Hz gap is still distributed across contained overlay relayout, renderer upload/finish,
+  and smaller command/text tails rather than a single shadcn nesting tax.
+
 ## Open Questions
 
 - Should `ActiveScript` store the active wait predicate in `WaitUntilState` to avoid re-reading the

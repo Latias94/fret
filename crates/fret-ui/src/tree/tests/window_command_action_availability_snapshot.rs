@@ -611,6 +611,158 @@ fn action_availability_filtered_snapshot_signature_dedupes_sorted_command_set() 
 }
 
 #[test]
+fn runtime_snapshot_uses_full_action_availability_when_no_surface_declares_demand() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+    app.register_command(CommandId::from("test.other"), widget_command_meta("Other"));
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAllAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let eval_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        eval_count, 2,
+        "the default runtime snapshot publisher must stay conservative until a surface declares demand"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.other")),
+        Some(false)
+    );
+}
+
+#[test]
+fn runtime_snapshot_uses_filtered_action_availability_for_surface_demand() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+    app.register_command(CommandId::from("test.other"), widget_command_meta("Other"));
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAllAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    crate::elements::with_window_state(&mut app, window, |state| {
+        state.request_command_action_availability_for_commands([
+            CommandId::from("test.available"),
+            CommandId::from("test.available"),
+        ]);
+    });
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let eval_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        eval_count, 1,
+        "declared surface demand should evaluate only the requested widget command set"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.other")),
+        None,
+        "commands outside the declared surface demand remain unknown rather than disabled"
+    );
+}
+
+#[test]
+fn runtime_snapshot_all_surface_demand_wins_over_filtered_demand() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+    app.register_command(CommandId::from("test.other"), widget_command_meta("Other"));
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAllAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    crate::elements::with_window_state(&mut app, window, |state| {
+        state.request_command_action_availability_for_commands([CommandId::from("test.available")]);
+        state.request_all_command_action_availability();
+    });
+    ui.publish_window_runtime_snapshots(&mut app);
+
+    let eval_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        eval_count, 2,
+        "a complete host-command surface must keep the publisher in full conservative mode"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.other")),
+        Some(false)
+    );
+}
+
+#[test]
 fn action_availability_snapshot_publishes_focus_traversal_gating() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

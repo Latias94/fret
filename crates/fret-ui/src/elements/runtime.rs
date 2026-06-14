@@ -11,7 +11,7 @@ use fret_core::{
     AppWindowId, Color, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, NodeId,
     PointerType, Rect,
 };
-use fret_runtime::{FrameId, ModelId, TimerToken};
+use fret_runtime::{CommandId, FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
 #[cfg(feature = "diagnostics")]
@@ -767,6 +767,29 @@ impl ElementRuntime {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum WindowCommandActionAvailabilityDemand {
+    AllRegisteredWidgetCommands,
+    FilteredWidgetCommands(Vec<CommandId>),
+}
+
+impl Default for WindowCommandActionAvailabilityDemand {
+    fn default() -> Self {
+        Self::FilteredWidgetCommands(Vec::new())
+    }
+}
+
+impl WindowCommandActionAvailabilityDemand {
+    fn request_commands(&mut self, commands: impl IntoIterator<Item = CommandId>) {
+        let Self::FilteredWidgetCommands(existing) = self else {
+            return;
+        };
+        existing.extend(commands);
+        existing.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        existing.dedup_by(|a, b| a.as_str() == b.as_str());
+    }
+}
+
 #[derive(Default)]
 pub struct WindowElementState {
     pub(super) rendered_state: HashMap<(GlobalElementId, TypeId), Box<dyn Any>>,
@@ -778,6 +801,7 @@ pub struct WindowElementState {
     raf_notify_roots_debug: HashSet<GlobalElementId>,
     pub(super) pending_retained_virtual_list_reconciles:
         HashMap<GlobalElementId, crate::tree::UiDebugRetainedVirtualListReconcileKind>,
+    command_action_availability_demand: Option<WindowCommandActionAvailabilityDemand>,
     retained_virtual_list_keep_alive_roots: HashSet<NodeId>,
     prepared_frame: FrameId,
     #[cfg(any(test, feature = "diagnostics"))]
@@ -986,6 +1010,26 @@ impl WindowElementState {
         self.scratch_element_children_vec_pool.push(scratch);
     }
 
+    pub(crate) fn command_action_availability_demand(
+        &self,
+    ) -> Option<&WindowCommandActionAvailabilityDemand> {
+        self.command_action_availability_demand.as_ref()
+    }
+
+    pub(crate) fn request_all_command_action_availability(&mut self) {
+        self.command_action_availability_demand =
+            Some(WindowCommandActionAvailabilityDemand::AllRegisteredWidgetCommands);
+    }
+
+    pub(crate) fn request_command_action_availability_for_commands(
+        &mut self,
+        commands: impl IntoIterator<Item = CommandId>,
+    ) {
+        self.command_action_availability_demand
+            .get_or_insert_with(WindowCommandActionAvailabilityDemand::default)
+            .request_commands(commands);
+    }
+
     pub(crate) fn take_scratch_view_cache_keep_alive_elements(
         &mut self,
     ) -> HashSet<GlobalElementId> {
@@ -1044,6 +1088,7 @@ impl WindowElementState {
         #[cfg(feature = "diagnostics")]
         self.raf_notify_roots_debug.clear();
         self.view_cache_build_boundaries.prepare_for_frame();
+        self.command_action_availability_demand = None;
         self.element_children_vec_pool_reuses = 0;
         self.element_children_vec_pool_misses = 0;
         self.element_children_vec_pool_grow_events = 0;

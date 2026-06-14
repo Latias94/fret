@@ -241,6 +241,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         }
     }
 
+    /// Request full widget-command action availability for a window-level command surface.
+    ///
+    /// Surfaces such as global command palettes intentionally consume the complete host command
+    /// catalog. Narrower surfaces should prefer
+    /// [`Self::request_window_command_action_availability_for_commands`] so dense component frames
+    /// do not pay for unrelated widget-command probes.
+    pub fn request_all_window_command_action_availability(&mut self) {
+        self.window_state.request_all_command_action_availability();
+    }
+
+    /// Request widget-command action availability for a caller-owned command set.
+    ///
+    /// The runtime keeps the default snapshot publisher conservative when no surface declares a
+    /// demand. Once surfaces do declare demand, only the requested widget commands are published;
+    /// omitted commands remain unknown to cross-surface gating rather than disabled.
+    pub fn request_window_command_action_availability_for_commands(
+        &mut self,
+        commands: impl IntoIterator<Item = CommandId>,
+    ) {
+        self.window_state
+            .request_command_action_availability_for_commands(commands);
+    }
+
     pub(crate) fn new_for_existing_window_state(
         app: &'a mut H,
         window: AppWindowId,

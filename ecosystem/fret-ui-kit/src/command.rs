@@ -147,6 +147,8 @@ pub fn command_catalog_entries_from_host_commands_with_options<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     options: CommandCatalogOptions,
 ) -> Vec<CommandCatalogEntry> {
+    cx.request_all_window_command_action_availability();
+
     let fallback_input_ctx = command_palette_input_context(&*cx.app);
     let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
         &*cx.app,

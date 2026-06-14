@@ -33,4 +33,6 @@ pub(crate) use access::{
     update_hovered_pressable_with_node, with_observed_deps_for_element, with_window_state,
 };
 pub(crate) use queries::{record_bounds_for_element, record_visual_bounds_for_element};
-pub(crate) use runtime::{ActiveTextSelection, NodeEntry, TimerTarget};
+pub(crate) use runtime::{
+    ActiveTextSelection, NodeEntry, TimerTarget, WindowCommandActionAvailabilityDemand,
+};
