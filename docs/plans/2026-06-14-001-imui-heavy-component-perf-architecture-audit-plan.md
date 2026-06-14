@@ -258,6 +258,31 @@ The working question is not "does the UI function at all". The question is wheth
 - `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-command-availability-cache --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\dev-fast\fret-ui-gallery.exe`
 - Focused test `cargo test -p fret-ui --lib action_availability_snapshot_caches_declarative_interest_within_publication -j 1` still timed out during Windows test-target compilation; `cargo check --tests` covers compilation of the test body.
 
+### U8. Opt dynamic combobox page out of whole-page content cache
+**Goal:** Keep `FRET_UI_GALLERY_VIEW_CACHE=1` from wrapping the combobox page's high-churn query/open/overlay state in a whole-page content cache root.
+
+**Files:**
+- `apps/fret-ui-gallery/src/spec.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`
+
+**Design decisions:**
+- Treat this as a Gallery page policy correction, not a `fret-ui` mechanism change. The bad frame appears when an interactive page is wrapped by the content cache root, while shell-only cache stays near the current baseline.
+- Keep shell/sidebar cache available. The regression is specifically `cache_content=1` on the combobox page.
+- Do not use a broad global view-cache heuristic from this one case. Other mostly-static documentation pages remain cacheable until a page-specific perf script proves otherwise.
+
+**Evidence target:**
+- Before opt-out, same view-cache-on run produced worst `total=44825us`, `layout=40451us`, `layout_roots_apply=31049us`, `layout.clean_geometry.apply_nodes=630`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-viewcache-current/1781410310252/bundle.schema2.json`.
+- Shell-only view cache produced worst `total=12973us`, `layout=8143us`, `layout_roots_apply=968us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-viewcache-shell-only/1781410355737/bundle.schema2.json`.
+- After opt-out, same view-cache-on run produced worst `total=12643us`, `layout=7593us`, `layout_roots_apply=703us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-viewcache-after-combobox-optout/1781411687462/bundle.schema2.json`.
+- No-view-cache dev-fast baseline after this change produced worst `total=12951us`, `layout=3854us`, `paint=8185us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-baseline-after-cache-optout/1781411739477/bundle.schema2.json`.
+
+**Verification:**
+- `cargo fmt -p fret-ui-gallery`
+- `cargo check -p fret-ui-gallery --profile dev-fast -j 1`
+- `cargo build -p fret-ui-gallery --profile dev-fast -j 1`
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-viewcache-after-combobox-optout --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VIEW_CACHE_CONTENT=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
+- `cargo test -p fret-ui-gallery --lib combobox_opts_out_of_whole_page_content_cache -j 1` timed out during Windows test-target compilation without a test assertion result.
+
 ## Progress Log
 - 2026-06-14: user-reported failures include stack overflow in `imui_action_basics`, missing theme token `surface` in `imui_plot_basics`, and height jitter in `imui_editor_controls_basics`.
 - 2026-06-14: local inspection showed `select` is the largest recipe surface and a strong candidate for the first deepening slice.
@@ -348,6 +373,8 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: focused `cargo test -p fret-ui --lib action_availability_snapshot_caches_declarative_interest_within_publication -j 1` timed out during Windows test-target compilation without a test assertion result; residual Fret test `cargo`/`rustc` processes were stopped.
 - 2026-06-14: dev-fast combobox perf after the publication cache passed with worst frame `total=10874us`, `layout=4994us`, `layout.engine_solve=939us`, `paint=5101us`, `command_availability_eval=990us`, and evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-command-availability-cache/1781409098126/bundle.schema2.json`.
 - 2026-06-14: remaining combobox long-list tail is now split between small layout bursts, paint cache misses/text prepare, and renderer encode/finish time. Do not keep pushing command availability until a new trace makes it hot again.
+- 2026-06-14: view-cache experiments confirmed that whole-page content caching is the wrong boundary for the combobox page: view-cache-on with content caching produced `total=44825us` and `layout_roots_apply=31049us`, while shell-only view cache stayed near the current baseline at `total=12973us`.
+- 2026-06-14: `PAGE_COMBOBOX` now opts out of whole-page content cache. The same view-cache-on perf script dropped to `total=12643us` with `layout_roots_apply=703us`, matching the shell-only result and avoiding a `fret-ui` cache mechanism rewrite.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

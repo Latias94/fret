@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("long_list.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::typography::fixed_line_box_style;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
+use fret_ui_kit::typography::fixed_line_box_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 

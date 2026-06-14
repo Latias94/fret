@@ -235,6 +235,17 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn combobox_opts_out_of_whole_page_content_cache() {
+        assert_eq!(
+            page_content_cache_policy(PAGE_COMBOBOX),
+            PageContentCachePolicy::Uncached
+        );
+        assert!(!page_content_cache_contain_layout_when_bounds_known(
+            PAGE_COMBOBOX
+        ));
+    }
+
     #[cfg(feature = "gallery-dev")]
     #[test]
     fn editor_grade_pages_use_boundary_layout_containment_hint() {
@@ -870,6 +881,9 @@ pub(crate) enum PageContentCachePolicy {
 
 pub(crate) fn page_content_cache_policy(id: &str) -> PageContentCachePolicy {
     match id {
+        // The combobox page owns high-churn query/open/overlay state. Caching the whole page
+        // content root makes small input updates pay a large cache-root layout apply cost.
+        PAGE_COMBOBOX => PageContentCachePolicy::Uncached,
         #[cfg(feature = "gallery-dev")]
         PAGE_MAGIC_PATTERNS_TORTURE => PageContentCachePolicy::Uncached,
         #[cfg(feature = "gallery-material3")]
