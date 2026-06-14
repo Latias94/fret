@@ -3405,6 +3405,7 @@ impl CommandPalette {
 
                 let mut scroll_area = ScrollArea::new(vec![list_body])
                     .scroll_handle(scroll_handle.base_handle().clone())
+                    .viewport_probe_unbounded(false)
                     .refine_layout(scroll_layout.clone());
                 if let Some(test_id) = list_viewport_test_id.clone() {
                     scroll_area = scroll_area.viewport_test_id(test_id);
@@ -5722,6 +5723,98 @@ mod tests {
         assert_ne!(
             command_palette_item_rows_revision(&metas),
             command_palette_item_rows_revision(&reversed_metas)
+        );
+    }
+
+    #[test]
+    fn command_palette_virtualized_rows_use_bounded_scroll_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let query = app.models_mut().insert(String::new());
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(640.0)),
+        );
+        let max_list_h = Px(280.0);
+
+        let build_items = || {
+            (0..250)
+                .map(|i| CommandItem::new(format!("Item {i:03}")))
+                .collect::<Vec<_>>()
+        };
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "cmdk-virtual-bounded-scroll",
+                |cx| {
+                    vec![
+                        CommandPalette::new(query.clone(), build_items())
+                            .list_viewport_test_id("cmdk-virtual-viewport")
+                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let virtual_window = ui
+            .debug_virtual_list_windows()
+            .iter()
+            .rev()
+            .find(|record| !record.is_probe_layout && record.items_len == 250)
+            .expect("expected command palette virtual-list telemetry");
+        let range = virtual_window
+            .window_range
+            .expect("expected bounded virtual-list window range");
+        let visible_span = range
+            .end_index
+            .saturating_sub(range.start_index)
+            .saturating_add(1);
+
+        assert!(
+            virtual_window.viewport.0 <= max_list_h.0,
+            "virtualized command rows must stay bounded by the scroll viewport height: {virtual_window:?}"
+        );
+        let scroll_node = ui
+            .debug_scroll_nodes()
+            .iter()
+            .rev()
+            .find(|record| record.test_id.as_deref() == Some("cmdk-virtual-viewport"))
+            .expect("expected command palette scroll telemetry");
+        assert!(
+            scroll_node.viewport.height.0 <= max_list_h.0,
+            "virtualized command scroll viewport must stay bounded by the configured max height: {scroll_node:?}"
+        );
+        assert!(
+            virtual_window.content_extent.0 > virtual_window.viewport.0,
+            "virtualized command rows must still describe content that is taller than the viewport: {virtual_window:?}"
+        );
+        assert!(
+            visible_span <= 32,
+            "virtualized command rows should not materialize a large slice of the full list under max-height: {virtual_window:?}"
+        );
+        assert!(
+            range.count == 250,
+            "virtual range count should still describe the full filtered item set"
         );
     }
 

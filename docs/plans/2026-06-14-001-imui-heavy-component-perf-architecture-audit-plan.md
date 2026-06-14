@@ -38,6 +38,9 @@ The working question is not "does the UI function at all". The question is wheth
 - The first combobox policy optimization is now identified: searchable combobox commits used to clear the query in the same frame that the overlay started closing, which rematerialized the full long list while close presence was still mounted.
 - Deferring the query clear until `Popover`/`Drawer` close completion addresses that close-phase rematerialization, but it does not solve the heavier filter-time cost: the command/combobox path still creates filtered rows and row elements for the full matching result set.
 - `repo-ref/base-ui` uses virtualized combobox rows for large option sets, and Fret already has reusable virtual list mechanisms in `ecosystem/fret-ui-kit/src/declarative/list.rs`. The next deepening target is therefore a recipe-layer virtualized row seam for `CommandPalette`/searchable `Combobox`, not an example-only shortcut.
+- The first virtualized `CommandPalette` implementation had one important regression: the internal `ScrollArea` still used unbounded viewport probing, so the virtual list could see the full `8000px` content extent as its viewport and materialize a full-window range despite the outer max-height contract.
+- The bounded-viewport follow-up is recipe-local: `CommandPalette` now opts its internal virtualized `ScrollArea` out of unbounded viewport probing, while leaving global `ScrollArea` behavior unchanged.
+- The latest bounded-viewport evidence shows the virtual list is now actually bounded: `viewport=272px`, `window_range=0..8`, `count=250`, with the filtered item model still describing the full result set.
 - After row virtualization and command availability pruning, the remaining combobox long-list tail is now dominated by root/layout apply breadth. The newest scroll profile shows `layout=17672us`, `layout_roots_apply_time_us=11805`, `layout_engine_solve_time_us=3824`, `layout_clean_geometry_apply_nodes=628`, `layout_clean_geometry_apply_fallback_layouts=20`, `invalidation_walk_calls=11`, and `invalidation_walk_nodes=396`.
 - The popup listbox itself is no longer the main layout bottleneck. The expensive scroll profile is the main page viewport (`ui-gallery-content-viewport`), not `ui-gallery-combobox-long-list-listbox`: `total_us=11244`, `solve_barrier_us=8320`, `layout_children_corrected_content_us=1207`, `corrected_content_relayout=true`, `direct_children_layout_invalidated=true`, and `descendant_subtree_layout_dirty=true`.
 - The concrete trigger in the current combobox long-list gallery snippet is the `Query: ...` state text under the combobox. It reads the query model and rerenders on every typed character. Because declarative text diffs currently treat any text content change as `Layout`, that tiny status label invalidates the surrounding main scroll content and pulls the whole page viewport into a costly corrected-content relayout.
@@ -201,6 +204,9 @@ The working question is not "does the UI function at all". The question is wheth
 - `cargo check -p fret-ui-shadcn -j 1`
 - Directional dev-fast perf for `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json`.
 - Release perf rerun when `target\release\fret-ui-gallery.exe` can be rebuilt without a release codegen timeout.
+- Bounded viewport follow-up gate:
+  - `cargo test -p fret-ui-shadcn --lib command_palette_virtualized_rows_use_bounded_scroll_viewport --profile dev-fast -j 1`
+  - `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-bounded-viewport --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\dev-fast\fret-ui-gallery.exe`
 
 ### U6. Keep stable status text out of layout dirty frontiers
 **Goal:** Avoid turning stable, single-line text content updates into layout invalidations when the text contract proves the node's layout box is unchanged.
@@ -377,6 +383,9 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `PAGE_COMBOBOX` now opts out of whole-page content cache. The same view-cache-on perf script dropped to `total=12643us` with `layout_roots_apply=703us`, matching the shell-only result and avoiding a `fret-ui` cache mechanism rewrite.
 - 2026-06-14: a stats attribution audit found that the newest `dev-fast-current` bundle's old top frame 148 was the scripted `capture_bundle` frame. `fret-diag` stats now reads the adjacent `script.result.json` sidecar and skips capture frames for both full schema2 bundles and stats-lite `frames.index.json` paths.
 - 2026-06-14: re-running `diag stats` through the current source on `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-current/1781414534335/bundle.schema2.json` reports `script_capture_skipped=1`; the real top application frames are frame 145 (`total=21041us`) and frame 146 (`total=17686us`), not frame 148.
+- 2026-06-14: `CommandPalette` virtualized rows now force the internal `ScrollArea` to use bounded viewport probing. The focused dev-fast test passes and guards that a 250-item command list keeps `viewport <= max_h`, `content_extent > viewport`, and a small visible window instead of rematerializing the full item set.
+- 2026-06-14: dev-fast combobox perf after bounded virtual viewport passed with worst frame `total=9591us`, `layout=4436us`, `layout.engine_solve=829us`, `paint=4417us`, `roots.apply=516us`, and `script_capture_skipped=1`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-bounded-viewport/1781424587044/bundle.schema2.json`.
+- 2026-06-14: structured bundle extraction confirms the virtual command list records `viewport=272px`, `window_range=0..8`, `overscan=8`, and `count=250`. The remaining tail is no longer a 250-row materialization problem.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
@@ -388,6 +397,7 @@ The working question is not "does the UI function at all". The question is wheth
 - Should root apply / command availability be optimized as a shared framework seam after command-list virtualization, since the remaining dev-fast tail is no longer dominated by row count?
 - Should `fret-ui-shadcn::typography` expose a named one-line muted helper, or should examples keep using explicit `TextProps` when they need a stable status-label contract?
 - Should rich/selectable text content changes get a future non-layout path with explicit span-boundary and selection-hit-test gates, or remain layout-affecting until a broader text surface refactor?
+- Should the next sub-120Hz push target paint/text preparation and renderer finish/encode tails, or first add a perf gate around this now-acceptable combobox probe so future recipe changes do not re-open the row-materialization regression?
 
 ## Sources
 - `docs/architecture.md`

@@ -15,7 +15,10 @@ active heavy-component performance goal. It complements the main plan rather tha
 
 ## Current Baseline
 
-- The latest accepted code slice is `a2d54dbfe1 perf(gallery): avoid content cache on combobox page`.
+- The latest accepted code slice before this follow-up was
+  `a2d54dbfe1 perf(gallery): avoid content cache on combobox page`.
+- The current follow-up fixes the command/combobox virtual row viewport contract: virtualized
+  `CommandPalette` rows now opt the internal `ScrollArea` out of unbounded viewport probing.
 - `PAGE_COMBOBOX` opts out of whole-page content cache because the combobox page contains highly
   interactive query/list state.
 - The view-cache investigation showed the wrong cache boundary clearly:
@@ -29,6 +32,12 @@ active heavy-component performance goal. It complements the main plan rather tha
 - A follow-up stats audit found that the newest `dev-fast-current` bundle's apparent worst frame was
   the scripted `capture_bundle` frame itself. The real top application frames after filtering are
   frames 145 and 146, not frame 148.
+- The newest bounded-viewport run reports `total=9591us`, `layout=4436us`,
+  `layout.engine_solve=829us`, `paint=4417us`, `roots.apply=516us`, and
+  `script_capture_skipped=1`.
+- Virtual-list telemetry now shows the long command list as `viewport=272px`, `window_range=0..8`,
+  `overscan=8`, and `count=250`; the list model still describes all items, but layout only pays for
+  the visible virtual window.
 
 ## Decisions
 
@@ -73,6 +82,16 @@ Stats now derive a capture-frame filter from the bundle-adjacent `script.result.
 apply it to both materialized schema2 bundles and `frames.index.json` stats-lite paths. The report
 prints `script_capture_skipped` so future comparisons can tell when a diagnostic frame was excluded.
 
+### D4. Keep the virtual-list viewport fix in the recipe layer
+
+The bad behavior was not global `ScrollArea` semantics. It was the `CommandPalette` virtualized-row
+branch composing an internal scroll container where an unbounded probe let the virtual list observe
+the full content extent as its viewport.
+
+The fix stays local: virtualized command rows set `viewport_probe_unbounded(false)` on the internal
+`ScrollArea`. That keeps ordinary `ScrollArea` behavior unchanged and avoids pushing a policy
+decision into `fret-ui`.
+
 ## Current Architecture Read
 
 The current evidence argues against a single framework-level rewrite as the next move. The large
@@ -80,6 +99,7 @@ wins came from a sequence of narrower seams:
 
 - Component policy: delayed combobox query clearing during close presence.
 - Component rendering: virtualized long command/combobox rows.
+- Component composition: bounded internal scroll probing for the virtualized command row branch.
 - Shared mechanism: command availability interest caching.
 - Declarative diff: stable single-line plain text content changes avoid layout invalidation.
 - Gallery policy: combobox page opts out of whole-page content cache.
@@ -89,8 +109,9 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 
 ## Next Work
 
-1. Re-run the combobox long-list perf probe against the intended binary and profile.
-2. Use `diag stats --sort cpu_cycles --top 30` and `--sort time` on the newest bundle before
+1. Add a durable threshold/gate for the now-acceptable combobox long-list probe before broadening to
+   another heavy component.
+2. Use `diag stats --sort cpu_cycles --top 30` and `--sort time` on each newest bundle before
    changing code again.
 3. Treat stats output without `script_capture_skipped` support as stale for scripted capture bundles.
 4. If paint/text preparation dominates, inspect static text/code-block/icon preparation and paint
@@ -113,3 +134,9 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 - Focused Rust tests in this lane often time out during Windows test target compilation rather than
   failing assertions. Treat check/build plus perf bundles as the practical gate until the local test
   cache is warm or timeout budgets are raised.
+- `cargo test -p fret-ui-shadcn --lib command_palette_virtualized_rows_use_bounded_scroll_viewport --profile dev-fast -j 1`
+  passed and locks the bounded virtual-row viewport behavior.
+- `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed before the latest perf run.
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-bounded-viewport --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\dev-fast\fret-ui-gallery.exe`
+  passed with worst frame `total=9591us`; evidence bundle
+  `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-bounded-viewport/1781424587044/bundle.schema2.json`.
