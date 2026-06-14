@@ -1751,7 +1751,7 @@ impl PopoverHeader {
             LayoutRefinement::default().w_full().min_w_0(),
         );
         let children = self.children;
-        shadcn_layout::container_vstack(
+        shadcn_layout::container_vstack_fill_width(
             cx,
             props,
             shadcn_layout::VStackProps::default()
@@ -2197,11 +2197,10 @@ mod tests {
             .children
             .first()
             .expect("expected popover header inner stack");
-        let ElementKind::Flex(FlexProps { layout, .. }) = &stack.kind else {
-            panic!(
-                "expected popover header inner stack to be Flex, got {:?}",
-                stack.kind
-            );
+        let layout = match &stack.kind {
+            ElementKind::Container(props) => &props.layout,
+            ElementKind::Flex(FlexProps { layout, .. }) => layout,
+            other => panic!("expected popover header inner stack layout, got {other:?}"),
         };
         assert_eq!(layout.size.width, Length::Fill);
         assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));

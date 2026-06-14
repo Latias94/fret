@@ -446,10 +446,53 @@ popover overlay root solve tail.
   now again dominated by overlay/root layout request/apply, command-availability tails, and renderer
   upload/finish rather than text pin bucket reconstruction.
 
+## 2026-06-15 Eleventh Slice Findings
+
+- Re-profiled the correct combobox dev-fast gate with layout node profiling after the text pin-state
+  delta slice:
+  `target/fret-diag/gate-combobox-filter-select-devfast-layout-profile-after-text-pin-fx/1781463914238/bundle.schema2.json`.
+  The top frame was `9655us` with `layout=5711us`, `solve=1054us`, `paint=3353us`,
+  and renderer text preparation down to about `186us`.
+- Layout attribution showed the remaining high-cost dirty root was the popover overlay
+  `DismissibleLayer -> ViewCache -> InteractivityGate` chain. The important issue was that the
+  keep-alive overlay `ViewCache` remained parent-dependent even though its root bounds are known and
+  fill the overlay surface.
+- Added a shared `overlay_keep_alive_view_cache_props()` helper in `fret-ui-kit` and applied it to
+  modal, popover, hover overlay, and tooltip keep-alive caches. The helper gives the cache root
+  `width: fill`, `height: fill`, and
+  `ViewBoundaryHints::contain_layout_when_bounds_known(true)`.
+- The corrected all-overlay probe passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-overlay-contained-all-vc/1781464820646/bundle.schema2.json`.
+  Top frame was `9468us` with `layout=5682us`, `solve=1045us`, `paint=3205us`,
+  and `contained_relayouts=1`.
+- The main win is not a lower solve number yet; it is locality. `request_build` roots dropped from
+  about `1187us` to about `144us`, roots apply dropped from about `925us` to about `4us`, and the
+  parent `DismissibleLayer` became a cheap `mark_seen` pass of about `25us`.
+- The remaining layout solve is now isolated inside the contained `ViewCache` relayout root
+  (`layout_dependency = contained_when_bounds_known`), around `0.8-1.0ms` on the worst mutation
+  frame. This is the next high-leverage target if fresh evidence keeps pointing at layout.
+- While validating the shadcn overlay path, the focused `popover` test filter exposed an adjacent
+  existing layout-contract issue: `PopoverHeader` had drifted onto the shrink-wrapped stack helper
+  while its wrapping-text test still expected a fill-width inner stack. Restored the fill-width
+  helper and changed the test to assert the actual layout contract (`Fill` + `min-width: 0`) instead
+  of depending on whether the transparent helper materializes as `Flex` or `Container`.
+- Focused validation passed:
+  `cargo test -p fret-ui --lib try_with_state_mut_only_records_existing_state_keys_for_view_cache --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui --lib view_cache --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-kit --profile dev-fast -j 1`,
+  `cargo build -p fret-ui-gallery --profile dev-fast -j 1`,
+  `cargo test -p fret-ui-shadcn --lib popover --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib combobox --profile dev-fast -j 1 -- --test-threads=1`,
+  and `cargo fmt -p fret-ui -p fret-ui-kit -p fret-ui-shadcn`.
+- Current decision: keep this slice. It is a mechanism-level containment fix with direct benefit to
+  shadcn popover/combobox surfaces and likely to modal, hover-card, and tooltip surfaces. It also
+  makes the next optimization clearer: optimize the contained overlay cache relayout itself, not the
+  parent overlay root.
+
 ## Next Verification
 
-1. Revisit the popover/root layout request/apply tail (`request_build phase2 compute ~= 0.9ms`,
-   roots apply up to `0.96ms`) with node-level layout profiling.
+1. Revisit the contained popover `ViewCache` relayout solve tail now that parent-root request/apply
+   is no longer the dominant overlay cost.
 2. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
    snapshot command sets are still taxing dense component interactions. Per-handler filtering is now
    in place; the remaining lever is deciding which commands the publisher should evaluate at all.

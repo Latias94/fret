@@ -3444,7 +3444,7 @@ mod tests {
                 .get(&root)
                 .and_then(|frame| frame.state_keys.as_ref())
                 .map(Vec::as_slice),
-            Some(&[state_key, state_key][..])
+            Some(&[state_key][..])
         );
     }
 

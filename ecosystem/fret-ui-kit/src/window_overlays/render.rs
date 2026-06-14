@@ -353,6 +353,22 @@ fn visible_closing_popover_has_modal_restore_target<H: UiHost>(
     })
 }
 
+fn overlay_keep_alive_view_cache_props() -> fret_ui::element::ViewCacheProps {
+    fret_ui::element::ViewCacheProps {
+        layout: fret_ui::element::LayoutStyle {
+            size: fret_ui::element::SizeStyle {
+                width: fret_ui::element::Length::Fill,
+                height: fret_ui::element::Length::Fill,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        boundary_hints: fret_ui::element::ViewBoundaryHints::default()
+            .contain_layout_when_bounds_known(true),
+        ..Default::default()
+    }
+}
+
 fn finalize_hidden_modal_overlay<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -912,17 +928,7 @@ pub fn render<H: UiHost + 'static>(
                     }));
                 }
                 let subtree = cx.view_cache_keep_alive(
-                    fret_ui::element::ViewCacheProps {
-                        layout: fret_ui::element::LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Fill,
-                                height: fret_ui::element::Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    overlay_keep_alive_view_cache_props(),
                     keep_alive_children,
                     move |_cx| children,
                 );
@@ -1200,17 +1206,7 @@ pub fn render<H: UiHost + 'static>(
                     }));
                 }
                 let subtree = cx.view_cache_keep_alive(
-                    fret_ui::element::ViewCacheProps {
-                        layout: fret_ui::element::LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Fill,
-                                height: fret_ui::element::Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    overlay_keep_alive_view_cache_props(),
                     keep_alive_children,
                     move |_cx| children,
                 );
@@ -1704,17 +1700,7 @@ pub fn render<H: UiHost + 'static>(
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
                 let subtree = cx.view_cache_keep_alive(
-                    fret_ui::element::ViewCacheProps {
-                        layout: fret_ui::element::LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Fill,
-                                height: fret_ui::element::Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    overlay_keep_alive_view_cache_props(),
                     keep_alive_children,
                     move |_cx| children,
                 );
@@ -1810,17 +1796,7 @@ pub fn render<H: UiHost + 'static>(
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
                 let subtree = cx.view_cache_keep_alive(
-                    fret_ui::element::ViewCacheProps {
-                        layout: fret_ui::element::LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Fill,
-                                height: fret_ui::element::Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    overlay_keep_alive_view_cache_props(),
                     keep_alive_children,
                     move |_cx| children,
                 );
