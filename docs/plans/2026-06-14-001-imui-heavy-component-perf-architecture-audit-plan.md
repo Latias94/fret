@@ -230,6 +230,34 @@ The working question is not "does the UI function at all". The question is wheth
 - `cargo build -p fret-ui-gallery --profile dev-fast -j 1`
 - Directional dev-fast perf for `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-filter-select-steady.json` with scroll layout profiling enabled.
 
+### U7. Cache command availability interest during snapshot publication
+**Goal:** Reduce widget command snapshot publication overhead by caching whether declarative host nodes can participate in command availability for the duration of one publication.
+
+**Files:**
+- `crates/fret-ui/src/tree/commands.rs`
+- `crates/fret-ui/src/tree/mod.rs`
+- `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
+
+**Design decisions:**
+- Keep the cache local to `publish_window_command_action_availability_snapshot`. It is not a retained tree cache and must not survive cross-frame state or hook changes.
+- Cache a small interest profile (`All`, `TextEdit`, `SelectableTextEdit`, `FocusTraversal`, `None`) instead of caching `(node, command)` results. The profile shape is what gives cross-command leverage.
+- Keep single-command dispatch on the uncached path. Dispatch does not repeatedly probe all widget commands, so it does not need the extra cache object.
+- Treat declarative nodes with managed-surface hooks or action availability hooks as `All` until typed action hooks expose explicit command-interest metadata.
+- Use a test-only, thread-local probe counter to lock the publication-cache behavior without adding runtime diagnostics or parallel-test flakiness.
+
+**Evidence target:**
+- Before this slice, post-text-diff dev-fast combobox had worst `total=12232us` with command availability spikes around `3.5ms` to `4.9ms`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-final-semantics/1781406489463/bundle.schema2.json`.
+- After this slice, dev-fast combobox worst is `total=10874us`, `layout=4994us`, `paint=5101us`, and `command_availability_eval=990us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-command-availability-cache/1781409098126/bundle.schema2.json`.
+
+**Verification:**
+- `cargo fmt -p fret-ui`
+- `git diff --check`
+- `cargo check -p fret-ui -j 1`
+- `cargo check -p fret-ui --tests -j 1`
+- `cargo build -p fret-ui-gallery --profile dev-fast -j 1`
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-command-availability-cache --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\dev-fast\fret-ui-gallery.exe`
+- Focused test `cargo test -p fret-ui --lib action_availability_snapshot_caches_declarative_interest_within_publication -j 1` still timed out during Windows test-target compilation; `cargo check --tests` covers compilation of the test body.
+
 ## Progress Log
 - 2026-06-14: user-reported failures include stack overflow in `imui_action_basics`, missing theme token `surface` in `imui_plot_basics`, and height jitter in `imui_editor_controls_basics`.
 - 2026-06-14: local inspection showed `select` is the largest recipe surface and a strong candidate for the first deepening slice.
@@ -314,6 +342,12 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: final dev-fast combobox perf after semantics-safe text diff passed with worst frame `total=12232us`, `layout=5463us`, `layout.engine_solve=1412us`, `paint=5998us`, `roots.apply=859us`, `layout.nodes=29`, and evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-final-semantics/1781406489463/bundle.schema2.json`.
 - 2026-06-14: compared to the earlier final control-label-height bundle (`total=9999us`, `layout=4578us`, `paint=4691us`), the 12.2ms run shows measurement noise and remaining non-layout hotspots. The important structural result holds: roots.apply is now about 1ms and clean geometry applies only a handful of nodes instead of hundreds.
 - 2026-06-14: remaining above-120Hz work is no longer the main scroll layout frontier. The next hotspots are command availability eval spikes (`~3.5ms` to `~4.9ms` in worst frames), paint cache misses / text prepare, and renderer finish/encode tail.
+- 2026-06-14: command availability snapshot publication now uses a short-lived declarative interest cache shared across all widget command routes inside one publication. Ordinary declarative host nodes no longer re-read the same element record and hook states for every registered widget command.
+- 2026-06-14: added a focused structural test that uses a test-only thread-local probe counter to assert repeated widget command publication profiles each declarative node once per publication.
+- 2026-06-14: validation passed for `cargo fmt -p fret-ui`, `git diff --check`, `cargo check -p fret-ui -j 1`, `cargo check -p fret-ui --tests -j 1`, and `cargo build -p fret-ui-gallery --profile dev-fast -j 1`.
+- 2026-06-14: focused `cargo test -p fret-ui --lib action_availability_snapshot_caches_declarative_interest_within_publication -j 1` timed out during Windows test-target compilation without a test assertion result; residual Fret test `cargo`/`rustc` processes were stopped.
+- 2026-06-14: dev-fast combobox perf after the publication cache passed with worst frame `total=10874us`, `layout=4994us`, `layout.engine_solve=939us`, `paint=5101us`, `command_availability_eval=990us`, and evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-command-availability-cache/1781409098126/bundle.schema2.json`.
+- 2026-06-14: remaining combobox long-list tail is now split between small layout bursts, paint cache misses/text prepare, and renderer encode/finish time. Do not keep pushing command availability until a new trace makes it hot again.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

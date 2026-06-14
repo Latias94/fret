@@ -134,6 +134,65 @@ fn publish_snapshot_with_input_ctx(
 }
 
 #[test]
+fn action_availability_snapshot_caches_declarative_interest_within_publication() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.first_unhandled"),
+        widget_command_meta("First Unhandled"),
+    );
+    app.register_command(
+        CommandId::from("test.second_unhandled"),
+        widget_command_meta("Second Unhandled"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root_element = crate::elements::GlobalElementId(0xCA1);
+    let leaf_element = crate::elements::GlobalElementId(0xCA2);
+    let root = ui.create_node_for_element(root_element, TestStack);
+    let leaf = ui.create_node_for_element(leaf_element, TestStack);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        for (node, element) in [(root, root_element), (leaf, leaf_element)] {
+            window_frame.instances.insert(
+                node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::Stack(
+                        crate::element::StackProps::default(),
+                    ),
+                    inherited_foreground: None,
+                    inherited_text_style: None,
+                    semantics_decoration: None,
+                    key_context: None,
+                    layout_direction: fret_core::LayoutDirection::default(),
+                },
+            );
+        }
+    });
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    crate::tree::reset_command_availability_interest_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert_eq!(
+        crate::tree::take_command_availability_interest_probe_count(),
+        2,
+        "root and leaf interest should be profiled once each and then reused for all commands in the same snapshot publication"
+    );
+}
+
+#[test]
 fn action_availability_snapshot_marks_unhandled_commands_unavailable() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

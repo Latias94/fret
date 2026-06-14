@@ -434,4 +434,35 @@ pub struct UiTree<H: UiHost> {
 }
 
 #[cfg(test)]
+thread_local! {
+    static COMMAND_AVAILABILITY_INTEREST_PROBE_COUNT: std::cell::Cell<usize> =
+        const { std::cell::Cell::new(0) };
+    static COMMAND_AVAILABILITY_INTEREST_PROBE_ENABLED: std::cell::Cell<bool> =
+        const { std::cell::Cell::new(false) };
+}
+
+#[cfg(test)]
+pub(crate) fn reset_command_availability_interest_probe_count() {
+    COMMAND_AVAILABILITY_INTEREST_PROBE_COUNT.with(|count| count.set(0));
+    COMMAND_AVAILABILITY_INTEREST_PROBE_ENABLED.with(|enabled| enabled.set(true));
+}
+
+#[cfg(test)]
+pub(crate) fn record_command_availability_interest_probe() {
+    COMMAND_AVAILABILITY_INTEREST_PROBE_ENABLED.with(|enabled| {
+        if enabled.get() {
+            COMMAND_AVAILABILITY_INTEREST_PROBE_COUNT.with(|count| {
+                count.set(count.get().saturating_add(1));
+            });
+        }
+    });
+}
+
+#[cfg(test)]
+pub(crate) fn take_command_availability_interest_probe_count() -> usize {
+    COMMAND_AVAILABILITY_INTEREST_PROBE_ENABLED.with(|enabled| enabled.set(false));
+    COMMAND_AVAILABILITY_INTEREST_PROBE_COUNT.with(|count| count.get())
+}
+
+#[cfg(test)]
 mod tests;

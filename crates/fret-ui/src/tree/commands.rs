@@ -3,6 +3,38 @@ use crate::widget::{CommandAvailability, CommandAvailabilityCx};
 use fret_runtime::CommandScope;
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DeclarativeCommandAvailabilityInterest {
+    All,
+    TextEdit,
+    SelectableTextEdit,
+    FocusTraversal,
+    None,
+}
+
+impl DeclarativeCommandAvailabilityInterest {
+    fn matches(self, command: &CommandId) -> bool {
+        match self {
+            Self::All => true,
+            Self::TextEdit => {
+                let command = command.as_str();
+                command.starts_with("text.") || command.starts_with("edit.")
+            }
+            Self::SelectableTextEdit => matches!(
+                command.as_str(),
+                "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
+            ),
+            Self::FocusTraversal => matches!(command.as_str(), "focus.next" | "focus.previous"),
+            Self::None => false,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct CommandAvailabilityPublicationCache {
+    declarative_interest: HashMap<NodeId, DeclarativeCommandAvailabilityInterest>,
+}
+
 impl<H: UiHost> UiTree<H> {
     pub(crate) fn layout_active(&self) -> bool {
         self.layout_call_depth > 0
@@ -539,13 +571,13 @@ impl<H: UiHost> UiTree<H> {
         let default_root = barrier_root.unwrap_or(base_root);
         let start = self.focus.unwrap_or(default_root);
         let (mut availability, _) =
-            self.command_availability_from_node(app, &input_ctx, start, command);
+            self.command_availability_from_node(app, &input_ctx, start, command, None);
         // When focus lives in a non-default layer (e.g. a non-modal overlay), we still want
         // widget-scoped command availability to fall back to the default root so global shortcuts
         // and menus remain usable.
         if availability == CommandAvailability::NotHandled && start != default_root {
             availability = self
-                .command_availability_from_node(app, &input_ctx, default_root, command)
+                .command_availability_from_node(app, &input_ctx, default_root, command, None)
                 .0;
         }
 
@@ -562,7 +594,7 @@ impl<H: UiHost> UiTree<H> {
 
         if availability == CommandAvailability::NotHandled && barrier_root.is_none() {
             availability = self
-                .command_availability_in_subtree(app, &input_ctx, base_root, command)
+                .command_availability_in_subtree(app, &input_ctx, base_root, command, None)
                 .0;
         }
 
@@ -913,10 +945,21 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         command: &CommandId,
+        mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut node_id = start;
         loop {
-            if !self.declarative_node_may_handle_command_availability(app, node_id, command) {
+            let may_handle = if let Some(cache) = publication_cache.as_mut() {
+                self.declarative_node_may_handle_command_availability(
+                    app,
+                    node_id,
+                    command,
+                    Some(&mut **cache),
+                )
+            } else {
+                self.declarative_node_may_handle_command_availability(app, node_id, command, None)
+            };
+            if !may_handle {
                 node_id = match self.nodes.get(node_id).and_then(|n| n.parent) {
                     Some(parent) => parent,
                     None => break,
@@ -960,40 +1003,62 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         node: NodeId,
         command: &CommandId,
+        publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> bool {
+        if let Some(cache) = publication_cache {
+            let interest = if let Some(interest) = cache.declarative_interest.get(&node).copied() {
+                interest
+            } else {
+                let interest = self.declarative_node_command_availability_interest(app, node);
+                cache.declarative_interest.insert(node, interest);
+                interest
+            };
+            return interest.matches(command);
+        }
+
+        self.declarative_node_command_availability_interest(app, node)
+            .matches(command)
+    }
+
+    fn declarative_node_command_availability_interest(
+        &self,
+        app: &mut H,
+        node: NodeId,
+    ) -> DeclarativeCommandAvailabilityInterest {
+        #[cfg(test)]
+        super::record_command_availability_interest_probe();
+
         let Some(window) = self.window else {
-            return true;
+            return DeclarativeCommandAvailabilityInterest::All;
         };
         let Some(element) = self.nodes.get(node).and_then(|n| n.element) else {
-            return true;
+            return DeclarativeCommandAvailabilityInterest::All;
         };
 
         let built_in_interest =
             crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
                 match &record.instance {
-                    crate::declarative::frame::ElementInstance::ManagedSurface(_) => true,
+                    crate::declarative::frame::ElementInstance::ManagedSurface(_) => {
+                        DeclarativeCommandAvailabilityInterest::All
+                    }
                     crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                        matches!(
-                            command.as_str(),
-                            "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
-                        )
+                        DeclarativeCommandAvailabilityInterest::SelectableTextEdit
                     }
                     crate::declarative::frame::ElementInstance::TextInput(_)
                     | crate::declarative::frame::ElementInstance::TextArea(_) => {
-                        let command = command.as_str();
-                        command.starts_with("text.") || command.starts_with("edit.")
+                        DeclarativeCommandAvailabilityInterest::TextEdit
                     }
                     crate::declarative::frame::ElementInstance::FocusScope(props)
                         if props.trap_focus =>
                     {
-                        matches!(command.as_str(), "focus.next" | "focus.previous")
+                        DeclarativeCommandAvailabilityInterest::FocusTraversal
                     }
-                    _ => false,
+                    _ => DeclarativeCommandAvailabilityInterest::None,
                 }
             })
-            .unwrap_or(true);
-        if built_in_interest {
-            return true;
+            .unwrap_or(DeclarativeCommandAvailabilityInterest::All);
+        if built_in_interest != DeclarativeCommandAvailabilityInterest::None {
+            return built_in_interest;
         }
 
         if crate::elements::try_with_element_state(
@@ -1006,7 +1071,7 @@ impl<H: UiHost> UiTree<H> {
         )
         .unwrap_or(false)
         {
-            return true;
+            return DeclarativeCommandAvailabilityInterest::All;
         }
         if crate::elements::try_with_element_state(
             app,
@@ -1018,10 +1083,10 @@ impl<H: UiHost> UiTree<H> {
         )
         .unwrap_or(false)
         {
-            return true;
+            return DeclarativeCommandAvailabilityInterest::All;
         }
 
-        false
+        DeclarativeCommandAvailabilityInterest::None
     }
 
     fn timed_command_availability_from_node(
@@ -1032,6 +1097,7 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         route: &'static str,
         window: AppWindowId,
+        publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let start_time = if self.debug_enabled {
             Some(Instant::now())
@@ -1039,7 +1105,7 @@ impl<H: UiHost> UiTree<H> {
             None
         };
         let (availability, resolved_node) =
-            self.command_availability_from_node(app, input_ctx, start, command);
+            self.command_availability_from_node(app, input_ctx, start, command, publication_cache);
         if let Some(start_time) = start_time {
             self.debug_record_command_availability_hotspot(
                 app,
@@ -1061,6 +1127,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         root: NodeId,
         command: &CommandId,
+        mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut stack = vec![root];
         let mut nodes = Vec::new();
@@ -1074,8 +1141,13 @@ impl<H: UiHost> UiTree<H> {
         }
 
         for node in nodes {
-            let (availability, resolved_node) =
-                self.command_availability_from_node(app, input_ctx, node, command);
+            let (availability, resolved_node) = self.command_availability_from_node(
+                app,
+                input_ctx,
+                node,
+                command,
+                publication_cache.as_deref_mut(),
+            );
             match availability {
                 CommandAvailability::Available => {
                     return (availability, resolved_node.or(Some(node)));
@@ -1096,6 +1168,7 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         route: &'static str,
         window: AppWindowId,
+        publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let start_time = if self.debug_enabled {
             Some(Instant::now())
@@ -1103,7 +1176,7 @@ impl<H: UiHost> UiTree<H> {
             None
         };
         let (availability, resolved_node) =
-            self.command_availability_in_subtree(app, input_ctx, root, command);
+            self.command_availability_in_subtree(app, input_ctx, root, command, publication_cache);
         if let Some(start_time) = start_time {
             self.debug_record_command_availability_hotspot(
                 app,
@@ -1132,7 +1205,7 @@ impl<H: UiHost> UiTree<H> {
         let roots = crate::elements::action_route_fallback_roots(app, window);
         let (availability, resolved_node, _) = self
             .command_availability_in_action_route_fallback_root_elements(
-                app, input_ctx, command, window, roots,
+                app, input_ctx, command, window, roots, None,
             );
         (availability, resolved_node)
     }
@@ -1144,6 +1217,7 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         window: AppWindowId,
         roots: impl IntoIterator<Item = GlobalElementId>,
+        mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>, Option<NodeId>) {
         let mut first_resolved_root = None;
         for element in roots {
@@ -1153,8 +1227,13 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             };
             first_resolved_root.get_or_insert(node);
-            let (availability, resolved_node) =
-                self.command_availability_from_node(app, input_ctx, node, command);
+            let (availability, resolved_node) = self.command_availability_from_node(
+                app,
+                input_ctx,
+                node,
+                command,
+                publication_cache.as_deref_mut(),
+            );
             match availability {
                 CommandAvailability::Available => {
                     return (
@@ -1178,6 +1257,7 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         route: &'static str,
         window: AppWindowId,
+        publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let start_time = if self.debug_enabled {
             Some(Instant::now())
@@ -1192,6 +1272,7 @@ impl<H: UiHost> UiTree<H> {
                 command,
                 active_window,
                 roots,
+                publication_cache,
             )
         } else {
             (CommandAvailability::NotHandled, None, None)
@@ -1330,6 +1411,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats
                 .window_runtime_snapshot_widget_command_count = widget_command_count;
         }
+        let mut publication_cache = CommandAvailabilityPublicationCache::default();
 
         let (_, eval_elapsed) = fret_perf::measure_span(
             time_enabled,
@@ -1359,6 +1441,7 @@ impl<H: UiHost> UiTree<H> {
                         &id,
                         "focused_or_default",
                         window,
+                        Some(&mut publication_cache),
                     );
                     if availability == CommandAvailability::NotHandled
                         && focus.is_some()
@@ -1373,6 +1456,7 @@ impl<H: UiHost> UiTree<H> {
                                 &id,
                                 "default_root_fallback",
                                 window,
+                                Some(&mut publication_cache),
                             )
                             .0;
                     }
@@ -1401,6 +1485,7 @@ impl<H: UiHost> UiTree<H> {
                                 &id,
                                 "action_route_fallback_roots",
                                 window,
+                                Some(&mut publication_cache),
                             )
                             .0;
                     }
@@ -1423,6 +1508,7 @@ impl<H: UiHost> UiTree<H> {
                                 &id,
                                 "subtree_no_focus_fallback",
                                 window,
+                                Some(&mut publication_cache),
                             )
                             .0;
                     }
@@ -1609,7 +1695,7 @@ impl<H: UiHost> UiTree<H> {
                 route_node
             } else {
                 let (availability, route_node) =
-                    self.command_availability_in_subtree(app, &input_ctx, base_root, command);
+                    self.command_availability_in_subtree(app, &input_ctx, base_root, command, None);
                 (availability == CommandAvailability::Available)
                     .then_some(route_node)
                     .flatten()
