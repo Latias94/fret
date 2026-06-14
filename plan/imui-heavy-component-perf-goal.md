@@ -347,16 +347,60 @@ popover overlay root solve tail.
   popover/root layout request/apply plus renderer upload/finish/encode work and command availability
   tails around focus/text paste routing.
 
+## 2026-06-15 Ninth Slice Findings
+
+- Investigated the residual action availability tail after the renderer text-pin slice. The key
+  design issue was not that shadcn-style component nesting is inherently too expensive; it was that
+  owner-scoped action availability hooks could only declare "all commands" interest, so a runtime
+  snapshot could route unrelated widget commands into policy handlers.
+- Added command-specific availability interest to the action-route mechanism. The existing
+  `action_on_command_availability_for_owner` and `action_add_on_command_availability_for_owner`
+  APIs keep their conservative `All` behavior, while new command-specific APIs let strategy/app
+  layers declare a precise `CommandId` interest.
+- Refined the implementation from owner-level aggregation to entry-level filtering. This matters for
+  app render action hooks: a single owner can register many typed action availability handlers, and
+  the runtime should only invoke the entry whose declared command matches the command being queried.
+- Reworked declarative command-interest metadata into a small composable structure. Built-in
+  interests such as text editing, selectable text editing, and focus traversal can now union with
+  command-specific action interests without widening to `All`. This also fixes the semantic hazard
+  where an early built-in interest return on a `TextInput` node could hide a custom command-specific
+  action availability hook on the same element.
+- Updated `ecosystem/fret` app-render action availability to use the command-specific API. This
+  keeps typed action availability discoverable without forcing unrelated command probes through the
+  same app action owner.
+- Focused validation passed:
+  `cargo test -p fret-ui --lib owner_scoped_action_availability_for_command --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui --lib window_command_action_availability_snapshot --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui --profile dev-fast -j 1`,
+  `cargo check -p fret --profile dev-fast -j 1`,
+  `cargo check -p fret-ui-gallery --profile dev-fast -j 1`,
+  `cargo fmt -p fret-ui -p fret`, and `git diff --check`.
+- The correct combobox dev-fast perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-action-interest-entries-vc/1781460864667/bundle.schema2.json`.
+  Top frame was `9885us` with `layout=5872us`, `solve=1084us`, `prepaint=624us`,
+  `paint=3389us`, `dispatch=0us`, `hit_test=47us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `cache.replayed_ops=203`.
+- This slice is primarily a mechanism-correctness and future scaling improvement, not a dramatic
+  win for the current gate. The current run remains inside the green noise band around the previous
+  `10103us` text-pin bundle, but `ui_gallery.switch.command_gate.action` still appears when that
+  command itself is being evaluated. Command-interest filtering can prevent unrelated handlers from
+  running; it cannot remove a command from a full-window snapshot command set.
+- Current decision: keep the command-specific hook API and entry-level filtering. The next command
+  availability question is publisher-level command grouping/surfaces, not more per-handler
+  filtering.
+
 ## Next Verification
 
-1. Commit the renderer text pin bucket reuse slice after final `git status` and focused validation.
-2. Investigate why mutation frames still rebuild the full text bucket (`fast_reuse=0`) and whether
+1. Investigate why mutation frames still rebuild the full text bucket (`fast_reuse=0`) and whether
    a glyph-set delta keyed by changed `TextBlobId`s can avoid full `GlyphKeyBuckets` reconstruction
    without weakening atlas pin correctness.
-3. Revisit the popover/root layout request/apply tail (`request_build phase2 compute ~= 0.9ms`,
+2. Revisit the popover/root layout request/apply tail (`request_build phase2 compute ~= 0.9ms`,
    roots apply up to `0.96ms`) with node-level layout profiling.
-4. Re-check command availability tail after the paste/focus command hotspots (`~457-560us`) to
-   decide whether a command surface/group mechanism is now worth designing.
+3. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
+   snapshot command sets are still taxing dense component interactions. Per-handler filtering is now
+   in place; the remaining lever is deciding which commands the publisher should evaluate at all.
+4. Keep watching renderer upload/finish/encode p95, which is now often comparable to the remaining
+   UI-side work in green combobox probes.
 
 ## Open Questions
 

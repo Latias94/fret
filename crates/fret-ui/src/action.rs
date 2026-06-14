@@ -878,10 +878,16 @@ pub(crate) struct CommandActionHooks {
 }
 
 #[derive(Clone)]
+pub(crate) struct ActionRouteAvailabilityHook {
+    pub handler: OnCommandAvailability,
+    pub interest: CommandAvailabilityInterest,
+}
+
+#[derive(Clone)]
 pub(crate) struct ActionRouteOwnerHooks {
     pub owner: TypeId,
     pub on_command: Option<OnCommand>,
-    pub on_command_availability: Option<OnCommandAvailability>,
+    pub on_command_availability: Vec<ActionRouteAvailabilityHook>,
 }
 
 /// Owner-scoped action route hooks.
@@ -901,7 +907,7 @@ impl ActionRouteHooks {
         self.owners.push(ActionRouteOwnerHooks {
             owner,
             on_command: None,
-            on_command_availability: None,
+            on_command_availability: Vec::new(),
         });
         self.owners
             .last_mut()
@@ -941,7 +947,34 @@ impl ActionRouteHooks {
         owner: TypeId,
         handler: OnCommandAvailability,
     ) {
-        self.owner_mut(owner).on_command_availability = Some(handler);
+        self.set_on_command_availability_with_interest(
+            owner,
+            handler,
+            CommandAvailabilityInterest::All,
+        );
+    }
+
+    pub(crate) fn set_on_command_availability_for_command(
+        &mut self,
+        owner: TypeId,
+        command: CommandId,
+        handler: OnCommandAvailability,
+    ) {
+        self.set_on_command_availability_with_interest(
+            owner,
+            handler,
+            CommandAvailabilityInterest::commands([command]),
+        );
+    }
+
+    fn set_on_command_availability_with_interest(
+        &mut self,
+        owner: TypeId,
+        handler: OnCommandAvailability,
+        interest: CommandAvailabilityInterest,
+    ) {
+        let hooks = self.owner_mut(owner);
+        hooks.on_command_availability = vec![ActionRouteAvailabilityHook { handler, interest }];
     }
 
     pub(crate) fn add_on_command_availability(
@@ -949,37 +982,103 @@ impl ActionRouteHooks {
         owner: TypeId,
         handler: OnCommandAvailability,
     ) {
+        self.add_on_command_availability_with_interest(
+            owner,
+            handler,
+            CommandAvailabilityInterest::All,
+        );
+    }
+
+    pub(crate) fn add_on_command_availability_for_command(
+        &mut self,
+        owner: TypeId,
+        command: CommandId,
+        handler: OnCommandAvailability,
+    ) {
+        self.add_on_command_availability_with_interest(
+            owner,
+            handler,
+            CommandAvailabilityInterest::commands([command]),
+        );
+    }
+
+    fn add_on_command_availability_with_interest(
+        &mut self,
+        owner: TypeId,
+        handler: OnCommandAvailability,
+        interest: CommandAvailabilityInterest,
+    ) {
         let hooks = self.owner_mut(owner);
-        hooks.on_command_availability = match hooks.on_command_availability.clone() {
-            None => Some(handler),
-            Some(prev) => {
-                let next = handler.clone();
-                Some(Arc::new(move |host, cx, command| {
-                    let availability = prev(host, cx.clone(), command.clone());
-                    if availability != crate::widget::CommandAvailability::NotHandled {
-                        return availability;
-                    }
-                    next(host, cx, command)
-                }))
-            }
-        };
+        hooks
+            .on_command_availability
+            .push(ActionRouteAvailabilityHook { handler, interest });
     }
 
     pub(crate) fn clear_on_command_availability(&mut self, owner: TypeId) {
-        self.owner_mut(owner).on_command_availability = None;
+        self.owner_mut(owner).on_command_availability.clear();
     }
 
-    pub(crate) fn on_command_availability_handlers(&self) -> Vec<OnCommandAvailability> {
+    pub(crate) fn on_command_availability_handlers_for(
+        &self,
+        command: &CommandId,
+    ) -> Vec<OnCommandAvailability> {
         self.owners
             .iter()
-            .filter_map(|hooks| hooks.on_command_availability.clone())
+            .flat_map(|hooks| hooks.on_command_availability.iter())
+            .filter(|hook| hook.interest.matches(command))
+            .map(|hook| hook.handler.clone())
             .collect()
     }
 
-    pub(crate) fn has_on_command_availability_handlers(&self) -> bool {
+    pub(crate) fn command_availability_interest(&self) -> CommandAvailabilityInterest {
         self.owners
             .iter()
-            .any(|hooks| hooks.on_command_availability.is_some())
+            .flat_map(|hooks| hooks.on_command_availability.iter())
+            .fold(CommandAvailabilityInterest::None, |acc, hook| {
+                acc.union(hook.interest.clone())
+            })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CommandAvailabilityInterest {
+    None,
+    All,
+    Commands(Vec<CommandId>),
+}
+
+impl CommandAvailabilityInterest {
+    pub(crate) fn commands(commands: impl IntoIterator<Item = CommandId>) -> Self {
+        let mut commands = commands.into_iter().collect::<Vec<_>>();
+        commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        commands.dedup_by(|a, b| a.as_str() == b.as_str());
+        if commands.is_empty() {
+            Self::None
+        } else {
+            Self::Commands(commands)
+        }
+    }
+
+    pub(crate) fn union(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::All, _) | (_, Self::All) => Self::All,
+            (Self::None, rhs) => rhs,
+            (lhs, Self::None) => lhs,
+            (Self::Commands(mut lhs), Self::Commands(rhs)) => {
+                lhs.extend(rhs);
+                lhs.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+                lhs.dedup_by(|a, b| a.as_str() == b.as_str());
+                Self::Commands(lhs)
+            }
+        }
+    }
+
+    fn matches(&self, command: &CommandId) -> bool {
+        match self {
+            Self::None => false,
+            Self::All => true,
+            Self::Commands(commands) => commands.iter().any(|id| id == command),
+        }
     }
 }
 

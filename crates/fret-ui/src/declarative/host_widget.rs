@@ -597,7 +597,9 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
             &mut *cx.app,
             window,
             self.element,
-            |hooks: &mut crate::action::ActionRouteHooks| hooks.on_command_availability_handlers(),
+            |hooks: &mut crate::action::ActionRouteHooks| {
+                hooks.on_command_availability_handlers_for(command)
+            },
         )
         .unwrap_or_default();
         let legacy_hook = crate::elements::try_with_element_state(

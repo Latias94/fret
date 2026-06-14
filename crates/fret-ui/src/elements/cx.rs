@@ -3264,6 +3264,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn action_on_command_availability_for_command_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+        command: CommandId,
+        handler: OnCommandAvailability,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.set_on_command_availability_for_command(owner, command, handler);
+        });
+    }
+
     pub fn action_add_on_command_availability_for_owner<Owner: Any>(
         &mut self,
         element: GlobalElementId,
@@ -3272,6 +3284,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let owner = TypeId::of::<Owner>();
         self.state_for(element, ActionRouteHooks::default, |hooks| {
             hooks.add_on_command_availability(owner, handler);
+        });
+    }
+
+    pub fn action_add_on_command_availability_for_command_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+        command: CommandId,
+        handler: OnCommandAvailability,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.add_on_command_availability_for_command(owner, command, handler);
         });
     }
 

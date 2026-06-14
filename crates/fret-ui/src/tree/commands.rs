@@ -3,29 +3,107 @@ use crate::widget::{CommandAvailability, CommandAvailabilityCx};
 use fret_runtime::CommandScope;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::tree) enum DeclarativeCommandAvailabilityInterest {
-    All,
-    TextEdit,
-    SelectableTextEdit,
-    FocusTraversal,
-    None,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(in crate::tree) struct DeclarativeCommandAvailabilityInterest {
+    all: bool,
+    text_edit: bool,
+    selectable_text_edit: bool,
+    focus_traversal: bool,
+    commands: Vec<CommandId>,
 }
 
 impl DeclarativeCommandAvailabilityInterest {
-    fn matches(self, command: &CommandId) -> bool {
-        match self {
-            Self::All => true,
-            Self::TextEdit => {
-                let command = command.as_str();
-                command.starts_with("text.") || command.starts_with("edit.")
+    fn none() -> Self {
+        Self {
+            all: false,
+            text_edit: false,
+            selectable_text_edit: false,
+            focus_traversal: false,
+            commands: Vec::new(),
+        }
+    }
+
+    fn all() -> Self {
+        Self {
+            all: true,
+            ..Self::none()
+        }
+    }
+
+    fn text_edit() -> Self {
+        Self {
+            text_edit: true,
+            ..Self::none()
+        }
+    }
+
+    fn selectable_text_edit() -> Self {
+        Self {
+            selectable_text_edit: true,
+            ..Self::none()
+        }
+    }
+
+    fn focus_traversal() -> Self {
+        Self {
+            focus_traversal: true,
+            ..Self::none()
+        }
+    }
+
+    fn commands(commands: Vec<CommandId>) -> Self {
+        let mut commands = commands;
+        commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        commands.dedup_by(|a, b| a.as_str() == b.as_str());
+        if commands.is_empty() {
+            Self::none()
+        } else {
+            Self {
+                commands,
+                ..Self::none()
             }
-            Self::SelectableTextEdit => matches!(
-                command.as_str(),
-                "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
-            ),
-            Self::FocusTraversal => matches!(command.as_str(), "focus.next" | "focus.previous"),
-            Self::None => false,
+        }
+    }
+
+    fn matches(&self, command: &CommandId) -> bool {
+        if self.all {
+            return true;
+        }
+
+        let command_name = command.as_str();
+        (self.text_edit && (command_name.starts_with("text.") || command_name.starts_with("edit.")))
+            || (self.selectable_text_edit
+                && matches!(
+                    command_name,
+                    "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
+                ))
+            || (self.focus_traversal && matches!(command_name, "focus.next" | "focus.previous"))
+            || self.commands.iter().any(|id| id == command)
+    }
+
+    fn union(mut self, other: Self) -> Self {
+        if self.all || other.all {
+            return Self::all();
+        }
+
+        self.text_edit |= other.text_edit;
+        self.selectable_text_edit |= other.selectable_text_edit;
+        self.focus_traversal |= other.focus_traversal;
+        self.commands.extend(other.commands);
+        self.commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        self.commands.dedup_by(|a, b| a.as_str() == b.as_str());
+        self
+    }
+}
+
+impl From<crate::action::CommandAvailabilityInterest> for DeclarativeCommandAvailabilityInterest {
+    fn from(value: crate::action::CommandAvailabilityInterest) -> Self {
+        match value {
+            crate::action::CommandAvailabilityInterest::None => Self::none(),
+            crate::action::CommandAvailabilityInterest::All => Self::all(),
+            crate::action::CommandAvailabilityInterest::Commands(commands) => {
+                Self::commands(commands)
+            }
         }
     }
 }
@@ -1007,12 +1085,12 @@ impl<H: UiHost> UiTree<H> {
     ) -> bool {
         let frame_id = app.frame_id();
         if let Some(cache) = publication_cache {
-            let interest = if let Some(interest) = cache.declarative_interest.get(&node).copied() {
-                interest
+            let interest = if let Some(interest) = cache.declarative_interest.get(&node).cloned() {
+                interest.clone()
             } else {
                 let interest =
                     self.declarative_node_command_availability_interest_cached(app, frame_id, node);
-                cache.declarative_interest.insert(node, interest);
+                cache.declarative_interest.insert(node, interest.clone());
                 interest
             };
             return interest.matches(command);
@@ -1047,14 +1125,14 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if let Some(cache) = self.command_availability_interest_cache.as_ref()
-            && let Some(interest) = cache.by_node.get(&node).copied()
+            && let Some(interest) = cache.by_node.get(&node)
         {
-            return interest;
+            return interest.clone();
         }
 
         let interest = self.declarative_node_command_availability_interest(app, node);
         if let Some(cache) = self.command_availability_interest_cache.as_mut() {
-            cache.by_node.insert(node, interest);
+            cache.by_node.insert(node, interest.clone());
         }
         interest
     }
@@ -1068,51 +1146,47 @@ impl<H: UiHost> UiTree<H> {
         super::record_command_availability_interest_probe();
 
         let Some(window) = self.window else {
-            return DeclarativeCommandAvailabilityInterest::All;
+            return DeclarativeCommandAvailabilityInterest::all();
         };
         let Some(element) = self.nodes.get(node).and_then(|n| n.element) else {
-            return DeclarativeCommandAvailabilityInterest::All;
+            return DeclarativeCommandAvailabilityInterest::all();
         };
 
         let built_in_interest =
             crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
                 match &record.instance {
                     crate::declarative::frame::ElementInstance::ManagedSurface(_) => {
-                        DeclarativeCommandAvailabilityInterest::All
+                        DeclarativeCommandAvailabilityInterest::all()
                     }
                     crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                        DeclarativeCommandAvailabilityInterest::SelectableTextEdit
+                        DeclarativeCommandAvailabilityInterest::selectable_text_edit()
                     }
                     crate::declarative::frame::ElementInstance::TextInput(_)
                     | crate::declarative::frame::ElementInstance::TextArea(_) => {
-                        DeclarativeCommandAvailabilityInterest::TextEdit
+                        DeclarativeCommandAvailabilityInterest::text_edit()
                     }
                     crate::declarative::frame::ElementInstance::FocusScope(props)
                         if props.trap_focus =>
                     {
-                        DeclarativeCommandAvailabilityInterest::FocusTraversal
+                        DeclarativeCommandAvailabilityInterest::focus_traversal()
                     }
-                    _ => DeclarativeCommandAvailabilityInterest::None,
+                    _ => DeclarativeCommandAvailabilityInterest::none(),
                 }
             })
-            .unwrap_or(DeclarativeCommandAvailabilityInterest::All);
-        if built_in_interest != DeclarativeCommandAvailabilityInterest::None {
+            .unwrap_or_else(DeclarativeCommandAvailabilityInterest::all);
+        if built_in_interest.all {
             return built_in_interest;
         }
 
-        if crate::elements::try_with_element_state(
+        let action_route_interest = crate::elements::try_with_element_state(
             app,
             window,
             element,
-            |hooks: &mut crate::action::ActionRouteHooks| {
-                hooks.has_on_command_availability_handlers()
-            },
+            |hooks: &mut crate::action::ActionRouteHooks| hooks.command_availability_interest(),
         )
-        .unwrap_or(false)
-        {
-            return DeclarativeCommandAvailabilityInterest::All;
-        }
-        if crate::elements::try_with_element_state(
+        .map(DeclarativeCommandAvailabilityInterest::from)
+        .unwrap_or_else(DeclarativeCommandAvailabilityInterest::none);
+        let legacy_interest = if crate::elements::try_with_element_state(
             app,
             window,
             element,
@@ -1122,10 +1196,18 @@ impl<H: UiHost> UiTree<H> {
         )
         .unwrap_or(false)
         {
-            return DeclarativeCommandAvailabilityInterest::All;
+            DeclarativeCommandAvailabilityInterest::all()
+        } else {
+            DeclarativeCommandAvailabilityInterest::none()
+        };
+
+        if legacy_interest.all {
+            return legacy_interest;
         }
 
-        DeclarativeCommandAvailabilityInterest::None
+        built_in_interest
+            .union(action_route_interest)
+            .union(legacy_interest)
     }
 
     fn timed_command_availability_from_node(

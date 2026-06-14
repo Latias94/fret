@@ -860,8 +860,9 @@ fn app_render_on_action_availability<A>(
     prepare_app_render_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.action_add_on_command_availability_for_owner::<AppRenderActionHooksOwner>(
+    cx.action_add_on_command_availability_for_command_for_owner::<AppRenderActionHooksOwner>(
         action_root,
+        action.clone(),
         Arc::new(move |host, action_cx, command| {
             if command != action {
                 return fret_ui::CommandAvailability::NotHandled;

@@ -353,3 +353,231 @@ fn owner_scoped_action_hooks_coexist_with_legacy_command_hooks() {
         .expect("recorded command events");
     assert_eq!(recorded, vec!["action-a", "action-b", "legacy"]);
 }
+
+#[test]
+fn owner_scoped_action_availability_for_command_skips_unrelated_commands() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct ActionOwner;
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+    let calls = Arc::new(AtomicUsize::new(0));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "owner-command-interest",
+        |cx| {
+            let calls = calls.clone();
+            vec![
+                cx.container(crate::element::ContainerProps::default(), move |cx| {
+                    let id = cx.root_id();
+                    cx.action_on_command_availability_for_command_for_owner::<ActionOwner>(
+                        id,
+                        CommandId::from("test.target"),
+                        Arc::new(move |_host, _acx, command| {
+                            calls.fetch_add(1, Ordering::Relaxed);
+                            if command.as_str() == "test.target" {
+                                crate::widget::CommandAvailability::Available
+                            } else {
+                                crate::widget::CommandAvailability::NotHandled
+                            }
+                        }),
+                    );
+                    vec![]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target = CommandId::from("test.target");
+    let unrelated = CommandId::from("test.unrelated");
+
+    assert_eq!(
+        ui.command_availability(&mut app, &target),
+        crate::widget::CommandAvailability::Available
+    );
+    assert_eq!(calls.load(Ordering::Relaxed), 1);
+
+    assert_eq!(
+        ui.command_availability(&mut app, &unrelated),
+        crate::widget::CommandAvailability::NotHandled
+    );
+    assert_eq!(
+        calls.load(Ordering::Relaxed),
+        1,
+        "unrelated commands should be skipped by the declared action availability interest"
+    );
+}
+
+#[test]
+fn owner_scoped_action_availability_for_command_filters_entries_within_same_owner() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct ActionOwner;
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+    let first_calls = Arc::new(AtomicUsize::new(0));
+    let second_calls = Arc::new(AtomicUsize::new(0));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "owner-command-interest-entry-filter",
+        |cx| {
+            let first_calls = first_calls.clone();
+            let second_calls = second_calls.clone();
+            vec![
+                cx.container(crate::element::ContainerProps::default(), move |cx| {
+                    let id = cx.root_id();
+                    cx.action_add_on_command_availability_for_command_for_owner::<ActionOwner>(
+                        id,
+                        CommandId::from("test.first"),
+                        Arc::new(move |_host, _acx, command| {
+                            first_calls.fetch_add(1, Ordering::Relaxed);
+                            if command.as_str() == "test.first" {
+                                crate::widget::CommandAvailability::Available
+                            } else {
+                                crate::widget::CommandAvailability::NotHandled
+                            }
+                        }),
+                    );
+                    cx.action_add_on_command_availability_for_command_for_owner::<ActionOwner>(
+                        id,
+                        CommandId::from("test.second"),
+                        Arc::new(move |_host, _acx, command| {
+                            second_calls.fetch_add(1, Ordering::Relaxed);
+                            if command.as_str() == "test.second" {
+                                crate::widget::CommandAvailability::Blocked
+                            } else {
+                                crate::widget::CommandAvailability::NotHandled
+                            }
+                        }),
+                    );
+                    vec![]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.command_availability(&mut app, &CommandId::from("test.first")),
+        crate::widget::CommandAvailability::Available
+    );
+    assert_eq!(first_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(
+        second_calls.load(Ordering::Relaxed),
+        0,
+        "same-owner command-specific entries should not call unrelated handlers"
+    );
+
+    assert_eq!(
+        ui.command_availability(&mut app, &CommandId::from("test.second")),
+        crate::widget::CommandAvailability::Blocked
+    );
+    assert_eq!(first_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(second_calls.load(Ordering::Relaxed), 1);
+}
+
+#[test]
+fn owner_scoped_action_availability_for_command_coexists_with_text_input_interest() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct ActionOwner;
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+    let text = app.models_mut().insert(String::new());
+    let calls = Arc::new(AtomicUsize::new(0));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "owner-command-interest-text-input",
+        |cx| {
+            let calls = calls.clone();
+            vec![cx.text_input_with_id_props(move |cx, id| {
+                cx.action_on_command_availability_for_command_for_owner::<ActionOwner>(
+                    id,
+                    CommandId::from("test.target"),
+                    Arc::new(move |_host, _acx, command| {
+                        calls.fetch_add(1, Ordering::Relaxed);
+                        if command.as_str() == "test.target" {
+                            crate::widget::CommandAvailability::Available
+                        } else {
+                            crate::widget::CommandAvailability::NotHandled
+                        }
+                    }),
+                );
+                TextInputProps::new(text.clone())
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let text_input = ui.children(root)[0];
+    ui.set_focus(Some(text_input));
+
+    let target = CommandId::from("test.target");
+    let text_copy = CommandId::from("text.copy");
+    let unrelated = CommandId::from("test.unrelated");
+
+    assert_eq!(
+        ui.command_availability(&mut app, &target),
+        crate::widget::CommandAvailability::Available
+    );
+    assert_eq!(calls.load(Ordering::Relaxed), 1);
+
+    let _ = ui.command_availability(&mut app, &text_copy);
+    assert_eq!(
+        calls.load(Ordering::Relaxed),
+        1,
+        "built-in text-edit interest should not call the action-specific handler"
+    );
+
+    assert_eq!(
+        ui.command_availability(&mut app, &unrelated),
+        crate::widget::CommandAvailability::NotHandled
+    );
+    assert_eq!(
+        calls.load(Ordering::Relaxed),
+        1,
+        "unrelated commands should be skipped even when a built-in interest is present"
+    );
+}
