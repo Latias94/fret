@@ -489,14 +489,80 @@ popover overlay root solve tail.
   makes the next optimization clearer: optimize the contained overlay cache relayout itself, not the
   parent overlay root.
 
+## 2026-06-15 Twelfth Slice Exploration
+
+- Re-opened the latest contained-overlay bundle:
+  `target/fret-diag/gate-combobox-filter-select-devfast-overlay-contained-all-vc/1781464820646/bundle.schema2.json`.
+  The worst considered frame stayed green but still exceeded a strict 120Hz budget:
+  `total=9468us`, `layout=5682us`, `layout.engine_solve=1045us`, `paint=3205us`,
+  and `contained_relayouts=1`.
+- The important distinction is that the popover overlay cache root was not merely a clean reused
+  cache needing a root-only geometry update. On the worst mutation frame it was
+  `reuse_reason = needs_rerender`, with the filtered command/list subtree changing. A root-only
+  ViewCache relayout fast path would therefore not address the immediate gate unless it also had a
+  correct way to prove child layout dependencies were unchanged.
+- Root-only contained ViewCache relayout remains a future mechanism candidate, but it needs an
+  authoritative dirty-cause contract. Debug invalidation details are useful evidence, not a safe
+  behavior input. The runtime must distinguish root-only scheduling/geometric dirty from subtree
+  dependency dirty before it can skip descendant expansion globally.
+- The current residual cost is distributed across three regions rather than one obvious full rewrite
+  target: contained overlay subtree layout, semantics refresh on dirty frames, and renderer
+  upload/finish/text tail. This reinforces the current strategy: keep landing narrow mechanism and
+  strategy fixes with perf evidence instead of declaring shadcn-style nested composition inherently
+  too expensive.
+- Negative experiment: keeping a large plain command source on the virtual-list lane after filtering
+  to a tiny result set did remove the previous full-rows branch hotspot around `command.rs:3543`, but
+  it did not improve the gate. The measured run at
+  `target/fret-diag/gate-combobox-filter-select-devfast-large-source-virtual-vc/1781467734298/bundle.schema2.json`
+  regressed to `total=10364us`, `layout=6339us`, `layout.engine_solve=1339us`, `paint=3391us`.
+- Node-level profiling confirmed the reason. With forced virtualization on the one-row filtered
+  state, the hot overlay nodes became the virtual-list path itself:
+  `VirtualList self=640us total=796us`, `ScrollArea/Stack total=~0.95-1.18ms` at frame 160 in
+  `target/fret-diag/gate-combobox-filter-select-devfast-large-source-virtual-node-profile/1781467878354/bundle.schema2.json`.
+  Decision: do not land this strategy. Small filtered results should stay on the simple full-row
+  layout path until the virtual-list fixed cost is substantially lower.
+- The useful learning is architectural: stable layout shape is not automatically cheaper than the
+  simplest shape for the current result set. The next optimization should target shared container
+  fixed costs (`ScrollArea`, contained overlay relayout, virtual-list measurement/update) rather than
+  forcing every command state through virtualization.
+- Control experiment on the original non-forced strategy:
+  `target/fret-diag/gate-combobox-filter-select-devfast-original-node-profile/1781468169506/bundle.schema2.json`
+  passed with `total=10236us`, `layout=5985us`, `layout.engine_solve=1018us`,
+  `paint=3632us`. The one-row full-row path showed the overlay `ScrollArea` around `502us`, while
+  the forced virtual path added `VirtualList` work on top. This confirms the right immediate policy:
+  keep virtualization thresholded by rendered row count.
+- Landed the next narrow policy/mechanism split: the compact `ScrollArea` surface can now forward
+  the existing low-level `ScrollAreaViewport::focus_ring(false)` knob, and `CommandPalette` disables
+  the viewport focus-ring wrapper for its listbox scroll areas. Standalone `ScrollArea` parity stays
+  unchanged by default; command/combobox listboxes keep focus in the input and expose highlight via
+  `active_descendant`, so the viewport focus wrapper was duplicated strategy cost.
+- Validation passed:
+  `cargo test -p fret-ui-shadcn --lib scroll_area --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib command_palette --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib combobox --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-shadcn --profile dev-fast -j 1`, and
+  `cargo fmt -p fret-ui-shadcn`.
+- The corrected combobox gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-list-no-viewport-focus-ring/1781468669211/bundle.schema2.json`.
+  Top frame was `9827us` with `layout=5766us`, `layout.engine_solve=763us`,
+  `paint=3403us`, `dispatch=90us`, `hit_test=16us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `contained_relayouts=1`. Dirty invalidation nodes on the mutation frame
+  dropped to about `120-130`, and pointer tails stayed inside the checked-in thresholds.
+- Decision: keep this slice. It is not a broad architecture rewrite, but it is the right kind of
+  component-ecosystem optimization: expose an existing mechanism knob at the recipe surface and let
+  the CommandPalette strategy avoid unnecessary focus/animation/semantics wrapper nodes.
+
 ## Next Verification
 
 1. Revisit the contained popover `ViewCache` relayout solve tail now that parent-root request/apply
    is no longer the dominant overlay cost.
-2. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
+2. Keep reducing the remaining contained overlay listbox cost only where evidence points to shared
+   fixed work. The latest slice removed the duplicated viewport focus wrapper; remaining hot areas
+   are contained overlay relayout solve, command publisher breadth, and renderer upload/finish/text.
+3. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
    snapshot command sets are still taxing dense component interactions. Per-handler filtering is now
    in place; the remaining lever is deciding which commands the publisher should evaluate at all.
-3. Keep watching renderer upload/finish/encode p95, which is now often comparable to the remaining
+4. Keep watching renderer upload/finish/encode p95, which is now often comparable to the remaining
    UI-side work in green combobox probes.
 
 ## Open Questions

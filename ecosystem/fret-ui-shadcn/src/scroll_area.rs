@@ -683,6 +683,7 @@ pub struct ScrollArea {
     scroll_handle: Option<ScrollHandle>,
     viewport_test_id: Option<Arc<str>>,
     viewport_focus_test_id: Option<Arc<str>>,
+    viewport_focus_ring: bool,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
     viewport_probe_unbounded: Option<bool>,
 }
@@ -702,6 +703,7 @@ impl ScrollArea {
             scroll_handle: None,
             viewport_test_id: None,
             viewport_focus_test_id: None,
+            viewport_focus_ring: true,
             viewport_intrinsic_measure_mode: None,
             viewport_probe_unbounded: None,
         }
@@ -721,6 +723,7 @@ impl ScrollArea {
             scroll_handle: None,
             viewport_test_id: None,
             viewport_focus_test_id: None,
+            viewport_focus_ring: true,
             viewport_intrinsic_measure_mode: None,
             viewport_probe_unbounded: None,
             _phantom: PhantomData,
@@ -771,6 +774,11 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_focus_ring(mut self, enabled: bool) -> Self {
+        self.viewport_focus_ring = enabled;
+        self
+    }
+
     pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
         self.viewport_intrinsic_measure_mode = Some(mode);
         self
@@ -783,7 +791,9 @@ impl ScrollArea {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
+        let mut viewport = ScrollAreaViewport::new(self.children)
+            .axis(self.axis)
+            .focus_ring(self.viewport_focus_ring);
         if let Some(test_id) = self.viewport_test_id {
             viewport = viewport.viewport_test_id(test_id);
         }
@@ -844,6 +854,7 @@ pub struct ScrollAreaBuild<H, B> {
     scroll_handle: Option<ScrollHandle>,
     viewport_test_id: Option<Arc<str>>,
     viewport_focus_test_id: Option<Arc<str>>,
+    viewport_focus_ring: bool,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
     viewport_probe_unbounded: Option<bool>,
     _phantom: PhantomData<fn() -> H>,
@@ -893,6 +904,11 @@ where
         self
     }
 
+    pub fn viewport_focus_ring(mut self, enabled: bool) -> Self {
+        self.viewport_focus_ring = enabled;
+        self
+    }
+
     pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
         self.viewport_intrinsic_measure_mode = Some(mode);
         self
@@ -914,6 +930,7 @@ where
             .show_scrollbar(self.show_scrollbar)
             .type_(self.scrollbar_type)
             .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
+            .viewport_focus_ring(self.viewport_focus_ring)
             .refine_layout(self.layout);
 
         if let Some(handle) = self.scroll_handle {
@@ -1257,6 +1274,30 @@ mod tests {
             },
         );
         ui.set_root(root);
+    }
+
+    #[test]
+    fn scroll_area_compact_surface_can_disable_viewport_focus_ring_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::new([ui::text("Row").into_element(cx)])
+                .viewport_focus_ring(false)
+                .into_element(cx)
+        });
+
+        let stack = element.children.first().expect("hover region child stack");
+        let viewport = stack.children.first().expect("stack child viewport");
+        assert!(
+            matches!(viewport.kind, ElementKind::Scroll(_)),
+            "expected disabling the viewport focus ring to mount Scroll directly, got {:?}",
+            viewport.kind
+        );
     }
 
     fn node_id_by_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) -> fret_core::NodeId {

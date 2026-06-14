@@ -3436,6 +3436,7 @@ impl CommandPalette {
 
                 let mut scroll_area = ScrollArea::new(vec![list_body])
                     .scroll_handle(scroll_handle.base_handle().clone())
+                    .viewport_focus_ring(false)
                     .viewport_probe_unbounded(false)
                     .refine_layout(scroll_layout.clone());
                 if let Some(test_id) = list_viewport_test_id.clone() {
@@ -3566,6 +3567,7 @@ impl CommandPalette {
                     ),
                 ])
                 .scroll_handle(scroll_handle.clone())
+                .viewport_focus_ring(false)
                 .refine_layout(scroll_layout.clone());
                 if let Some(test_id) = list_viewport_test_id.clone() {
                     scroll_area = scroll_area.viewport_test_id(test_id);
