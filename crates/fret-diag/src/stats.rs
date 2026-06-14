@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 mod bundle_stats_snapshot;
@@ -254,6 +255,89 @@ include!("stats/bundle_stats_report.inc.rs");
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct BundleStatsOptions {
     pub(super) warmup_frames: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+struct BundleStatsFrameFilter {
+    script_capture_frames: HashSet<(Option<u64>, u64)>,
+}
+
+impl BundleStatsFrameFilter {
+    fn insert_script_capture_frame(&mut self, window: Option<u64>, frame_id: u64) {
+        self.script_capture_frames.insert((window, frame_id));
+    }
+
+    fn contains_script_capture_frame(&self, window: u64, frame_id: u64) -> bool {
+        self.script_capture_frames
+            .contains(&(Some(window), frame_id))
+            || self.script_capture_frames.contains(&(None, frame_id))
+    }
+}
+
+fn script_result_event_is_capture_frame(e: &serde_json::Value) -> bool {
+    let kind = e.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+    let note = e.get("note").and_then(|v| v.as_str()).unwrap_or("");
+    matches!(
+        kind,
+        "capture_bundle" | "bundle_dump_requested" | "bundle_dumped"
+    ) || note == "capture_bundle"
+}
+
+fn script_result_frame_filter(script_result: &serde_json::Value) -> BundleStatsFrameFilter {
+    let mut filter = BundleStatsFrameFilter::default();
+    let default_window = script_result.get("window").and_then(|v| v.as_u64());
+    let events = script_result
+        .get("evidence")
+        .and_then(|v| v.get("event_log"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    for e in events {
+        if !script_result_event_is_capture_frame(e) {
+            continue;
+        }
+        let Some(frame_id) = e.get("frame_id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        let window = e.get("window").and_then(|v| v.as_u64()).or(default_window);
+        filter.insert_script_capture_frame(window, frame_id);
+    }
+
+    filter
+}
+
+fn try_read_script_result_json_for_bundle(bundle_path: &Path) -> Option<serde_json::Value> {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let direct = dir.join("script.result.json");
+    let from_parent = if dir.file_name().and_then(|s| s.to_str()) == Some("_root") {
+        dir.parent().map(|p| p.join("script.result.json"))
+    } else {
+        None
+    };
+
+    let v = if direct.is_file() {
+        crate::util::read_json_value(&direct)?
+    } else if let Some(from_parent) = from_parent
+        && from_parent.is_file()
+    {
+        crate::util::read_json_value(&from_parent)?
+    } else {
+        return None;
+    };
+
+    if v.get("schema_version").and_then(|v| v.as_u64()) != Some(1) {
+        return None;
+    }
+    v.get("stage")?;
+    Some(v)
+}
+
+fn bundle_stats_frame_filter_from_sidecars(bundle_path: &Path) -> BundleStatsFrameFilter {
+    let Some(script_result) = try_read_script_result_json_for_bundle(bundle_path) else {
+        return BundleStatsFrameFilter::default();
+    };
+    script_result_frame_filter(&script_result)
 }
 
 #[derive(Debug, Clone)]
@@ -690,31 +774,37 @@ pub(super) fn bundle_stats_from_path(
     opts: BundleStatsOptions,
 ) -> Result<BundleStatsReport, String> {
     const MAX_MATERIALIZED_BUNDLE_BYTES: u64 = 64 * 1024 * 1024;
+    let frame_filter = bundle_stats_frame_filter_from_sidecars(bundle_path);
     let file_len = std::fs::metadata(bundle_path)
         .map(|m| m.len())
         .unwrap_or(MAX_MATERIALIZED_BUNDLE_BYTES + 1);
     if file_len > MAX_MATERIALIZED_BUNDLE_BYTES {
-        return bundle_stats_from_frames_index(bundle_path, top, sort, opts.warmup_frames).map_err(
-            |err| {
-                format!(
-                    "{err}\n\
+        return bundle_stats_from_frames_index(
+            bundle_path,
+            top,
+            sort,
+            opts.warmup_frames,
+            &frame_filter,
+        )
+        .map_err(|err| {
+            format!(
+                "{err}\n\
   bundle: {} ({} MiB)\n\
   hint: prefer schema2 + sidecars + lite triage:\n\
     - fretboard-dev diag doctor --fix-schema2 <bundle_dir> --warmup-frames {}\n\
     - fretboard-dev diag index <bundle_dir> --warmup-frames {}\n\
     - fretboard-dev diag triage --lite <bundle_dir> --warmup-frames {}",
-                    bundle_path.display(),
-                    file_len / (1024 * 1024),
-                    opts.warmup_frames,
-                    opts.warmup_frames,
-                    opts.warmup_frames
-                )
-            },
-        );
+                bundle_path.display(),
+                file_len / (1024 * 1024),
+                opts.warmup_frames,
+                opts.warmup_frames,
+                opts.warmup_frames
+            )
+        });
     }
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    bundle_stats_from_json_with_options(&bundle, top, sort, opts)
+    bundle_stats_from_json_with_options_and_filter(&bundle, top, sort, opts, &frame_filter)
 }
 
 include!("stats/bundle_stats_compute.inc.rs");
@@ -724,6 +814,7 @@ fn bundle_stats_from_frames_index(
     top: usize,
     sort: BundleStatsSort,
     warmup_frames: u64,
+    frame_filter: &BundleStatsFrameFilter,
 ) -> Result<BundleStatsReport, String> {
     if !matches!(sort, BundleStatsSort::Invalidation | BundleStatsSort::Time) {
         return Err(format!(
@@ -819,10 +910,6 @@ fn bundle_stats_from_frames_index(
             .get("rows")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v.as_slice());
-        out.snapshots_considered = out
-            .snapshots_considered
-            .saturating_add(rows_arr.len().min(u32::MAX as usize) as u32);
-
         let skipped = snapshots_total.saturating_sub(rows_arr.len() as u64);
         out.snapshots_skipped_warmup = out
             .snapshots_skipped_warmup
@@ -834,6 +921,13 @@ fn bundle_stats_from_frames_index(
             };
 
             let frame_id = row_u64(row, idx_frame_id).unwrap_or(0);
+            if frame_filter.contains_script_capture_frame(window_id, frame_id) {
+                out.snapshots_skipped_script_capture =
+                    out.snapshots_skipped_script_capture.saturating_add(1);
+                continue;
+            }
+            out.snapshots_considered = out.snapshots_considered.saturating_add(1);
+
             let snapshot_seq = row_u64(row, idx_snapshot_seq).unwrap_or(0);
             let ts = row_u64(row, idx_ts);
 
@@ -972,6 +1066,36 @@ mod tests {
             .expect("create bundle dir");
         std::fs::write(path, serde_json::to_vec(&bundle).expect("serialize bundle"))
             .expect("write bundle");
+    }
+
+    fn write_script_result_for_capture_frame(path: &Path, window: u64, frame_id: u64) {
+        let script_result = serde_json::json!({
+            "schema_version": 1,
+            "stage": "passed",
+            "window": window,
+            "evidence": {
+                "event_log": [
+                    {
+                        "kind": "step_start",
+                        "note": "capture_bundle",
+                        "window": window,
+                        "frame_id": frame_id,
+                        "step_index": 3
+                    },
+                    {
+                        "kind": "bundle_dump_requested",
+                        "window": window,
+                        "frame_id": frame_id,
+                        "step_index": 3
+                    }
+                ]
+            }
+        });
+        std::fs::write(
+            path,
+            serde_json::to_vec(&script_result).expect("serialize script result"),
+        )
+        .expect("write script result");
     }
 
     #[test]
@@ -1124,6 +1248,184 @@ mod tests {
         }));
         assert!(json.get("avg").is_some());
         assert!(json.get("budget_pct").is_some());
+    }
+
+    #[test]
+    fn script_result_frame_filter_marks_capture_bundle_frames() {
+        let script_result = serde_json::json!({
+            "schema_version": 1,
+            "stage": "passed",
+            "window": 7,
+            "evidence": {
+                "event_log": [
+                    { "kind": "step_start", "note": "set_text_value", "frame_id": 10 },
+                    { "kind": "step_start", "note": "capture_bundle", "frame_id": 11 },
+                    { "kind": "bundle_dump_requested", "frame_id": 12, "window": 8 },
+                    { "kind": "bundle_dumped" }
+                ]
+            }
+        });
+
+        let filter = script_result_frame_filter(&script_result);
+
+        assert!(!filter.contains_script_capture_frame(7, 10));
+        assert!(filter.contains_script_capture_frame(7, 11));
+        assert!(filter.contains_script_capture_frame(8, 12));
+    }
+
+    #[test]
+    fn bundle_stats_skips_script_capture_frames_for_top_and_percentiles() {
+        let bundle = serde_json::json!({
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 10,
+                        "tick_id": 10,
+                        "debug": { "stats": { "total_time_us": 100, "layout_time_us": 40, "prepaint_time_us": 10, "paint_time_us": 50 } }
+                    },
+                    {
+                        "frame_id": 11,
+                        "tick_id": 11,
+                        "debug": { "stats": { "total_time_us": 200, "layout_time_us": 80, "prepaint_time_us": 20, "paint_time_us": 100 } }
+                    },
+                    {
+                        "frame_id": 12,
+                        "tick_id": 12,
+                        "debug": { "stats": { "total_time_us": 10_000, "layout_time_us": 4_000, "prepaint_time_us": 1_000, "paint_time_us": 5_000 } }
+                    }
+                ]
+            }]
+        });
+        let mut filter = BundleStatsFrameFilter::default();
+        filter.insert_script_capture_frame(Some(1), 12);
+
+        let report = bundle_stats_from_json_with_options_and_filter(
+            &bundle,
+            3,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+            &filter,
+        )
+        .expect("bundle stats");
+
+        assert_eq!(report.snapshots, 3);
+        assert_eq!(report.snapshots_considered, 2);
+        assert_eq!(report.snapshots_skipped_script_capture, 1);
+        assert_eq!(report.top.first().map(|row| row.frame_id), Some(11));
+        assert_eq!(report.max_total_time_us, 200);
+        assert_eq!(report.p95_total_time_us, 200);
+        assert_eq!(
+            report
+                .to_json()
+                .get("snapshots_skipped_script_capture")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn bundle_stats_from_path_reads_script_result_and_skips_capture_frames() {
+        let dir = temp_stats_diff_dir("stats-script-capture-sidecar");
+        let bundle_path = dir.join("bundle.schema2.json");
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 99,
+                "snapshots": [
+                    {
+                        "frame_id": 41,
+                        "tick_id": 41,
+                        "debug": { "stats": { "total_time_us": 300, "layout_time_us": 100, "prepaint_time_us": 50, "paint_time_us": 150 } }
+                    },
+                    {
+                        "frame_id": 42,
+                        "tick_id": 42,
+                        "debug": { "stats": { "total_time_us": 30_000, "layout_time_us": 10_000, "prepaint_time_us": 5_000, "paint_time_us": 15_000 } }
+                    }
+                ]
+            }]
+        });
+        std::fs::create_dir_all(&dir).expect("create bundle dir");
+        std::fs::write(
+            &bundle_path,
+            serde_json::to_vec(&bundle).expect("serialize bundle"),
+        )
+        .expect("write bundle");
+        write_script_result_for_capture_frame(&dir.join("script.result.json"), 99, 42);
+
+        let report = bundle_stats_from_path(
+            &bundle_path,
+            2,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats");
+
+        assert_eq!(report.snapshots_considered, 1);
+        assert_eq!(report.snapshots_skipped_script_capture, 1);
+        assert_eq!(report.top.first().map(|row| row.frame_id), Some(41));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn bundle_stats_from_frames_index_skips_script_capture_frames() {
+        let dir = temp_stats_diff_dir("stats-script-capture-frames-index");
+        let bundle_path = dir.join("bundle.schema2.json");
+        std::fs::create_dir_all(&dir).expect("create bundle dir");
+        std::fs::write(&bundle_path, br#"{"schema_version":2,"windows":[]}"#)
+            .expect("write bundle");
+        std::fs::write(
+            dir.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": bundle_path.display().to_string(),
+                "features": [
+                    "window_aggregates.v1",
+                    "window_aggregates.overlay_synthesis.v1",
+                    "window_aggregates.view_cache_reuse_streak.v1",
+                    "window_aggregates.idle_no_paint.v1"
+                ],
+                "columns": [
+                    "frame_id",
+                    "window_snapshot_seq",
+                    "timestamp_unix_ms",
+                    "total_time_us",
+                    "layout_time_us",
+                    "prepaint_time_us",
+                    "paint_time_us",
+                    "invalidation_walk_calls",
+                    "invalidation_walk_nodes"
+                ],
+                "windows": [{
+                    "window": 99,
+                    "snapshots_total": 2,
+                    "rows": [
+                        [41, 1, 1000, 300, 100, 50, 150, 1, 10],
+                        [42, 2, 2000, 30000, 10000, 5000, 15000, 2, 20]
+                    ]
+                }]
+            }))
+            .expect("serialize frames index"),
+        )
+        .expect("write frames index");
+        let mut filter = BundleStatsFrameFilter::default();
+        filter.insert_script_capture_frame(Some(99), 42);
+
+        let report =
+            bundle_stats_from_frames_index(&bundle_path, 2, BundleStatsSort::Time, 0, &filter)
+                .expect("stats-lite bundle stats");
+
+        assert!(report.derived_from_frames_index());
+        assert_eq!(report.snapshots_considered, 1);
+        assert_eq!(report.snapshots_skipped_script_capture, 1);
+        assert_eq!(report.max_total_time_us, 300);
+        assert_eq!(report.top.first().map(|row| row.frame_id), Some(41));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

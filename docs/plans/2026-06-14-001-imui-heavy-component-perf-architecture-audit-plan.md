@@ -375,6 +375,8 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: remaining combobox long-list tail is now split between small layout bursts, paint cache misses/text prepare, and renderer encode/finish time. Do not keep pushing command availability until a new trace makes it hot again.
 - 2026-06-14: view-cache experiments confirmed that whole-page content caching is the wrong boundary for the combobox page: view-cache-on with content caching produced `total=44825us` and `layout_roots_apply=31049us`, while shell-only view cache stayed near the current baseline at `total=12973us`.
 - 2026-06-14: `PAGE_COMBOBOX` now opts out of whole-page content cache. The same view-cache-on perf script dropped to `total=12643us` with `layout_roots_apply=703us`, matching the shell-only result and avoiding a `fret-ui` cache mechanism rewrite.
+- 2026-06-14: a stats attribution audit found that the newest `dev-fast-current` bundle's old top frame 148 was the scripted `capture_bundle` frame. `fret-diag` stats now reads the adjacent `script.result.json` sidecar and skips capture frames for both full schema2 bundles and stats-lite `frames.index.json` paths.
+- 2026-06-14: re-running `diag stats` through the current source on `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-current/1781414534335/bundle.schema2.json` reports `script_capture_skipped=1`; the real top application frames are frame 145 (`total=21041us`) and frame 146 (`total=17686us`), not frame 148.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

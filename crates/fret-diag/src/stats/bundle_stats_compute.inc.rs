@@ -183,11 +183,23 @@ fn snapshot_code_editor_paint_perf(
     })
 }
 
+#[cfg(test)]
 pub(super) fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
     sort: BundleStatsSort,
     opts: BundleStatsOptions,
+) -> Result<BundleStatsReport, String> {
+    let frame_filter = BundleStatsFrameFilter::default();
+    bundle_stats_from_json_with_options_and_filter(bundle, top, sort, opts, &frame_filter)
+}
+
+fn bundle_stats_from_json_with_options_and_filter(
+    bundle: &serde_json::Value,
+    top: usize,
+    sort: BundleStatsSort,
+    opts: BundleStatsOptions,
+    frame_filter: &BundleStatsFrameFilter,
 ) -> Result<BundleStatsReport, String> {
     use std::collections::HashSet;
 
@@ -242,6 +254,11 @@ pub(super) fn bundle_stats_from_json_with_options(
             let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
             if frame_id < opts.warmup_frames {
                 out.snapshots_skipped_warmup = out.snapshots_skipped_warmup.saturating_add(1);
+                continue;
+            }
+            if frame_filter.contains_script_capture_frame(window_id, frame_id) {
+                out.snapshots_skipped_script_capture =
+                    out.snapshots_skipped_script_capture.saturating_add(1);
                 continue;
             }
             out.snapshots_considered = out.snapshots_considered.saturating_add(1);

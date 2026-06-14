@@ -13,6 +13,7 @@ pub(super) struct BundleStatsReport {
     pub(super) snapshots: u32,
     pub(super) snapshots_considered: u32,
     pub(super) snapshots_skipped_warmup: u32,
+    pub(super) snapshots_skipped_script_capture: u32,
     pub(super) snapshots_with_model_changes: u32,
     pub(super) snapshots_with_global_changes: u32,
     snapshots_with_propagated_model_changes: u32,
@@ -2786,11 +2787,12 @@ impl BundleStatsReport {
             );
         }
         println!(
-            "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
+            "windows={} snapshots={} considered={} warmup_skipped={} script_capture_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
             self.windows,
             self.snapshots,
             self.snapshots_considered,
             self.snapshots_skipped_warmup,
+            self.snapshots_skipped_script_capture,
             self.snapshots_with_model_changes,
             self.snapshots_with_global_changes,
             self.snapshots_with_propagated_model_changes,
@@ -3340,11 +3342,12 @@ impl BundleStatsReport {
             );
         }
         println!(
-            "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
+            "windows={} snapshots={} considered={} warmup_skipped={} script_capture_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
             self.windows,
             self.snapshots,
             self.snapshots_considered,
             self.snapshots_skipped_warmup,
+            self.snapshots_skipped_script_capture,
             self.snapshots_with_model_changes,
             self.snapshots_with_global_changes,
             self.snapshots_with_propagated_model_changes,
@@ -4920,6 +4923,10 @@ impl BundleStatsReport {
         root.insert(
             "snapshots_skipped_warmup".to_string(),
             Value::from(self.snapshots_skipped_warmup),
+        );
+        root.insert(
+            "snapshots_skipped_script_capture".to_string(),
+            Value::from(self.snapshots_skipped_script_capture),
         );
         root.insert(
             "snapshots_with_model_changes".to_string(),

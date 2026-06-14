@@ -26,6 +26,9 @@ active heavy-component performance goal. It complements the main plan rather tha
   - No-view-cache baseline: `total=12950us`, with most remaining time in paint.
 - The main bottleneck has shifted away from broad layout/root apply and toward paint, text
   preparation, renderer encode/finish, and occasional small layout bursts.
+- A follow-up stats audit found that the newest `dev-fast-current` bundle's apparent worst frame was
+  the scripted `capture_bundle` frame itself. The real top application frames after filtering are
+  frames 145 and 146, not frame 148.
 
 ## Decisions
 
@@ -59,6 +62,17 @@ The experiment was reverted before commit because it did not yet meet the eviden
 Do not revive this approach unless the next slice adds explicit cache keys and a same-binary perf
 comparison.
 
+### D3. Exclude script capture frames from perf attribution
+
+`capture_bundle` is diagnostic work, not application work. Counting the bundle dump frame in
+`diag stats` can invert the next optimization decision by making a script artifact look like the
+application's worst interaction frame.
+
+The fix belongs in `fret-diag` stats attribution, not in shadcn components or runtime scheduling.
+Stats now derive a capture-frame filter from the bundle-adjacent `script.result.json` sidecar and
+apply it to both materialized schema2 bundles and `frames.index.json` stats-lite paths. The report
+prints `script_capture_skipped` so future comparisons can tell when a diagnostic frame was excluded.
+
 ## Current Architecture Read
 
 The current evidence argues against a single framework-level rewrite as the next move. The large
@@ -78,11 +92,12 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 1. Re-run the combobox long-list perf probe against the intended binary and profile.
 2. Use `diag stats --sort cpu_cycles --top 30` and `--sort time` on the newest bundle before
    changing code again.
-3. If paint/text preparation dominates, inspect static text/code-block/icon preparation and paint
+3. Treat stats output without `script_capture_skipped` support as stale for scripted capture bundles.
+4. If paint/text preparation dominates, inspect static text/code-block/icon preparation and paint
    cache key churn before changing layout code.
-4. If renderer finish/encode dominates with low CPU signal, treat it as scheduling/renderer tail
+5. If renderer finish/encode dominates with low CPU signal, treat it as scheduling/renderer tail
    rather than a component tree problem until a trace proves otherwise.
-5. Keep `CommandPalette`, `Combobox`, `DataTable` toolbar recipes, `Sidebar`, and carousel-heavy
+6. Keep `CommandPalette`, `Combobox`, `DataTable` toolbar recipes, `Sidebar`, and carousel-heavy
    examples as the next heavy-component candidates. Avoid widening to every shadcn recipe until one
    candidate produces a reproducible tail.
 
@@ -90,7 +105,11 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 
 - `cargo check -p fret-ui-gallery --profile dev-fast -j 1` passed after returning
   `apps/fret-ui-gallery/src/ui/doc_layout.rs` to the mainline shape.
+- `cargo run -p fretboard-dev -- diag stats target/fret-diag/imui-heavy-perf-probes-combobox-devfast-current/1781414534335/bundle.schema2.json --sort time --top 5`
+  now reports `script_capture_skipped=1`; top frame moved from the old capture frame 148 to frame
+  145 (`total=21041us`) followed by frame 146 (`total=17686us`).
+- `cargo run -p fretboard-dev -- diag stats target/fret-diag/imui-heavy-perf-probes-combobox-devfast-current/1781414534335/bundle.schema2.json --sort cpu_cycles --top 5`
+  reports the same `script_capture_skipped=1` and the same top application frame 145.
 - Focused Rust tests in this lane often time out during Windows test target compilation rather than
   failing assertions. Treat check/build plus perf bundles as the practical gate until the local test
   cache is warm or timeout budgets are raised.
-
