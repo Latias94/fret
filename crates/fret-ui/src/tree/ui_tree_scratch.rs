@@ -119,6 +119,20 @@ impl<H: UiHost> UiTree<H> {
         self.frame_arena.semantics_stack = scratch;
     }
 
+    pub(crate) fn take_scratch_semantics_children(&mut self) -> Vec<NodeId> {
+        self.frame_arena.semantics_children_cap_on_take =
+            self.frame_arena.semantics_children.capacity();
+        std::mem::take(&mut self.frame_arena.semantics_children)
+    }
+
+    pub(crate) fn restore_scratch_semantics_children(&mut self, scratch: Vec<NodeId>) {
+        if scratch.capacity() > self.frame_arena.semantics_children_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.semantics_children = scratch;
+    }
+
     pub(crate) fn take_scratch_node_stack(&mut self) -> Vec<NodeId> {
         std::mem::take(&mut self.scratch_node_stack)
     }

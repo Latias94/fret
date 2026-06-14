@@ -195,6 +195,7 @@ impl<H: UiHost> UiTree<H> {
                     let mut stack = self.take_scratch_semantics_stack();
                     stack.clear();
                     stack.push((root, Transform2D::IDENTITY));
+                    let mut scratch_children = self.take_scratch_semantics_children();
                     while let Some((id, before)) = stack.pop() {
                         if !visited.insert(id) {
                             if crate::strict_runtime::strict_runtime_enabled() {
@@ -211,7 +212,6 @@ impl<H: UiHost> UiTree<H> {
                         let (
                             parent,
                             bounds,
-                            children,
                             is_text_input,
                             is_focusable,
                             traverse_children,
@@ -270,22 +270,15 @@ impl<H: UiHost> UiTree<H> {
                                 .unwrap_or(Transform2D::IDENTITY);
                             let at_node = before.compose(node_transform);
                             let bounds = rect_aabb_transformed(node.bounds, at_node);
-                            let ui_children = node.children.clone();
-                            let children = match window_frame_children.get(id) {
-                                None => ui_children,
-                                Some(frame_children) if ui_children.is_empty() => {
-                                    frame_children.as_ref().to_vec()
-                                }
-                                Some(frame_children) => {
-                                    let mut out = ui_children;
-                                    for &child in frame_children.iter() {
-                                        if !out.contains(&child) {
-                                            out.push(child);
-                                        }
+                            scratch_children.clear();
+                            scratch_children.extend_from_slice(&node.children);
+                            if let Some(frame_children) = window_frame_children.get(id) {
+                                for &child in frame_children.iter() {
+                                    if !scratch_children.contains(&child) {
+                                        scratch_children.push(child);
                                     }
-                                    out
                                 }
-                            };
+                            }
                             let is_text_input = widget.is_some_and(|w| w.is_text_input());
                             let is_focusable = widget.is_some_and(|w| w.is_focusable());
                             let traverse_children =
@@ -305,7 +298,6 @@ impl<H: UiHost> UiTree<H> {
                             (
                                 node.parent,
                                 bounds,
-                                children,
                                 is_text_input,
                                 is_focusable,
                                 traverse_children,
@@ -363,7 +355,7 @@ impl<H: UiHost> UiTree<H> {
                                 window: Some(window),
                                 element_id_map: Some(element_id_map.as_ref()),
                                 bounds,
-                                children: children.as_slice(),
+                                children: scratch_children.as_slice(),
                                 focus,
                                 captured,
                                 role: &mut role,
@@ -445,7 +437,7 @@ impl<H: UiHost> UiTree<H> {
 
                         if traverse_children {
                             // Preserve a stable-ish order: visit children in declared order.
-                            for &child in children.iter().rev() {
+                            for &child in scratch_children.iter().rev() {
                                 stack.push((child, before_child));
                             }
                         }
@@ -453,8 +445,10 @@ impl<H: UiHost> UiTree<H> {
 
                     visited.clear();
                     stack.clear();
+                    scratch_children.clear();
                     self.restore_scratch_semantics_visited(visited);
                     self.restore_scratch_semantics_stack(stack);
+                    self.restore_scratch_semantics_children(scratch_children);
                 }
             },
         );

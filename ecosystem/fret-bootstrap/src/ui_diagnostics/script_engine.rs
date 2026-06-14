@@ -62,6 +62,19 @@ fn predicate_can_eval_without_current_semantics(predicate: &UiPredicateV1) -> bo
         || UiDiagnosticsService::predicate_can_eval_off_window(predicate)
 }
 
+fn predicate_can_eval_without_semantics_refresh(predicate: &UiPredicateV1) -> bool {
+    matches!(
+        predicate,
+        UiPredicateV1::WindowInnerSizeApproxEqual { .. }
+            | UiPredicateV1::EventKindSeen { .. }
+            | UiPredicateV1::RunnerAccessibilityActivated
+            | UiPredicateV1::TextFontStackKeyStable { .. }
+            | UiPredicateV1::FontCatalogPopulated
+            | UiPredicateV1::SystemFontRescanIdle
+            | UiPredicateV1::AppSnapshotFieldEquals { .. }
+    ) || UiDiagnosticsService::predicate_can_eval_off_window(predicate)
+}
+
 fn script_step_requires_current_semantics(step: &UiActionStepV2) -> bool {
     match step {
         UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
@@ -139,8 +152,13 @@ fn no_frame_keepalive_redraw_output(window: AppWindowId) -> UiScriptFrameOutput 
 }
 
 pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
-    if active.wait_until.is_some() {
-        return true;
+    if let Some(state) = active.wait_until.as_ref() {
+        return match active.steps.get(state.step_index) {
+            Some(UiActionStepV2::WaitUntil { predicate, .. }) => {
+                !predicate_can_eval_without_semantics_refresh(predicate)
+            }
+            _ => true,
+        };
     }
 
     if let Some(state) = active.v2_step_state.as_ref() {
@@ -174,6 +192,9 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
     };
 
     match step {
+        UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
+            !predicate_can_eval_without_semantics_refresh(predicate)
+        }
         UiActionStepV2::Click { .. }
         | UiActionStepV2::Tap { .. }
         | UiActionStepV2::LongPress { .. }
@@ -195,9 +216,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::MovePointerSweep { .. }
         | UiActionStepV2::Wheel { .. }
         | UiActionStepV2::WheelBurst { .. }
-        | UiActionStepV2::WaitUntil { .. }
         | UiActionStepV2::WaitOverlayPlacementTrace { .. }
-        | UiActionStepV2::Assert { .. }
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
@@ -3399,5 +3418,85 @@ mod tests {
         };
 
         assert!(script_step_needs_element_runtime(&step));
+    }
+
+    #[test]
+    fn active_script_semantics_gate_skips_frame_independent_wait_until() {
+        let mut active = active_pointer_move_script();
+        active.steps = vec![UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::EventKindSeen {
+                event_kind: "timer".to_string(),
+            },
+            timeout_frames: 60,
+            timeout_ms: None,
+        }];
+        active.pointer_sessions.clear();
+
+        assert!(!active_script_needs_semantics_snapshot(&active));
+    }
+
+    #[test]
+    fn active_script_semantics_gate_keeps_skipping_active_frame_independent_wait_until() {
+        let mut active = active_pointer_move_script();
+        active.steps = vec![UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::EventKindSeen {
+                event_kind: "timer".to_string(),
+            },
+            timeout_frames: 60,
+            timeout_ms: None,
+        }];
+        active.wait_until = Some(WaitUntilState {
+            step_index: 0,
+            remaining_frames: 59,
+            deadline_unix_ms: None,
+            cached_test_id_predicate_last_stale: None,
+        });
+        active.pointer_sessions.clear();
+
+        assert!(!active_script_needs_semantics_snapshot(&active));
+    }
+
+    #[test]
+    fn active_script_semantics_gate_keeps_current_selector_waits_fresh() {
+        let mut active = active_pointer_move_script();
+        active.steps = vec![UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::LabelContains {
+                target: test_id_selector("imui-editor-proof.editor.search"),
+                text: "validate".to_string(),
+            },
+            timeout_frames: 60,
+            timeout_ms: None,
+        }];
+        active.pointer_sessions.clear();
+
+        assert!(active_script_needs_semantics_snapshot(&active));
+
+        active.wait_until = Some(WaitUntilState {
+            step_index: 0,
+            remaining_frames: 59,
+            deadline_unix_ms: None,
+            cached_test_id_predicate_last_stale: None,
+        });
+
+        assert!(active_script_needs_semantics_snapshot(&active));
+    }
+
+    #[test]
+    fn active_script_semantics_gate_keeps_current_test_id_existence_fresh() {
+        let mut active = active_pointer_move_script();
+        active.steps = vec![UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::Exists {
+                target: test_id_selector("ui-gallery-combobox-long-list-trigger"),
+            },
+            timeout_frames: 60,
+            timeout_ms: None,
+        }];
+        active.pointer_sessions.clear();
+
+        assert!(active_script_needs_semantics_snapshot(&active));
     }
 }
