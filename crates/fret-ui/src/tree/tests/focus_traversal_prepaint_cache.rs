@@ -142,3 +142,54 @@ fn focus_traversal_uses_prepaint_cache_for_clean_nodes() {
     assert!(final_counts.1 > after.1);
     assert!(final_counts.2 > after.2);
 }
+
+#[test]
+fn focus_traversal_availability_short_circuits_after_first_candidate() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let is_focusable_calls = Arc::new(AtomicUsize::new(0));
+    let focus_traversal_children_calls = Arc::new(AtomicUsize::new(0));
+    let can_scroll_descendant_into_view_calls = Arc::new(AtomicUsize::new(0));
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+    let mut leaves = Vec::new();
+    for _ in 0..32 {
+        let leaf = ui.create_node(CountingFocusWidget::new(
+            true,
+            false,
+            None,
+            is_focusable_calls.clone(),
+            focus_traversal_children_calls.clone(),
+            can_scroll_descendant_into_view_calls.clone(),
+        ));
+        ui.add_child(root, leaf);
+        leaves.push(leaf);
+    }
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for leaf in leaves {
+        ui.nodes.get_mut(leaf).unwrap().invalidation.hit_test = true;
+    }
+
+    assert_eq!(
+        ui.command_availability(&mut app, &CommandId::from("focus.next")),
+        crate::widget::CommandAvailability::Available
+    );
+    assert_eq!(
+        is_focusable_calls.load(Ordering::SeqCst),
+        1,
+        "availability only needs to know whether at least one traversal candidate exists"
+    );
+}

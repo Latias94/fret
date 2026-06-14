@@ -592,7 +592,7 @@ impl<H: UiHost> UiTree<H> {
         dispatch_snapshot: &UiDispatchSnapshot,
         scope_root: Option<NodeId>,
     ) -> (CommandAvailability, bool) {
-        let (focusables, needs_layout_refine) = self.focus_traversal_candidates_for_snapshot(
+        let (has_focusable, needs_layout_refine) = self.focus_traversal_has_candidate_for_snapshot(
             app,
             frame_id,
             dispatch_snapshot,
@@ -600,12 +600,12 @@ impl<H: UiHost> UiTree<H> {
         );
 
         (
-            if focusables.is_empty() {
-                CommandAvailability::NotHandled
-            } else {
+            if has_focusable {
                 CommandAvailability::Available
+            } else {
+                CommandAvailability::NotHandled
             },
-            needs_layout_refine && !focusables.is_empty(),
+            needs_layout_refine && has_focusable,
         )
     }
 
@@ -755,6 +755,43 @@ impl<H: UiHost> UiTree<H> {
         (focusables, needs_layout_refine)
     }
 
+    fn focus_traversal_has_candidate_for_snapshot(
+        &self,
+        app: &mut H,
+        frame_id: fret_runtime::FrameId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        scope_root: Option<NodeId>,
+    ) -> (bool, bool) {
+        let scope_root = scope_root.or(dispatch_snapshot.barrier_root).or_else(|| {
+            self.base_layer
+                .and_then(|id| self.layers.get(id).map(|l| l.root))
+        });
+        let Some(scope_root) = scope_root else {
+            return (false, false);
+        };
+
+        let needs_layout_refine = self.last_layout_frame_id != Some(frame_id)
+            || self.node_subtree_layout_dirty(scope_root);
+        if needs_layout_refine {
+            let has_focusable = dispatch_snapshot
+                .active_layer_roots
+                .iter()
+                .any(|&root| self.has_focusable_structural(app, root, dispatch_snapshot));
+            return (has_focusable, true);
+        }
+
+        let scope_bounds = self
+            .nodes
+            .get(scope_root)
+            .map(|n| n.bounds)
+            .unwrap_or_default();
+        let has_focusable = dispatch_snapshot
+            .active_layer_roots
+            .iter()
+            .any(|&root| self.has_focusable(root, dispatch_snapshot, scope_bounds));
+        (has_focusable, false)
+    }
+
     fn collect_focusables_structural(
         &self,
         app: &mut H,
@@ -781,6 +818,32 @@ impl<H: UiHost> UiTree<H> {
                 self.collect_focusables_structural(app, child, dispatch_snapshot, out);
             }
         }
+    }
+
+    fn has_focusable_structural(
+        &self,
+        app: &mut H,
+        node: NodeId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+    ) -> bool {
+        if dispatch_snapshot.pre.get(node).is_none() {
+            return false;
+        }
+
+        let Some(n) = self.nodes.get(node) else {
+            return false;
+        };
+
+        let (is_focusable, traverse_children) =
+            self.structural_focus_traversal_state_for_node(app, node);
+        if is_focusable {
+            return true;
+        }
+
+        traverse_children
+            && n.children
+                .iter()
+                .any(|&child| self.has_focusable_structural(app, child, dispatch_snapshot))
     }
 
     fn structural_focus_traversal_state_for_node(&self, app: &mut H, node: NodeId) -> (bool, bool) {
@@ -853,6 +916,14 @@ impl<H: UiHost> UiTree<H> {
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut node_id = start;
         loop {
+            if !self.declarative_node_may_handle_command_availability(app, node_id, command) {
+                node_id = match self.nodes.get(node_id).and_then(|n| n.parent) {
+                    Some(parent) => parent,
+                    None => break,
+                };
+                continue;
+            }
+
             let (availability, parent) = self.with_widget_mut(node_id, |widget, tree| {
                 let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                 let window = tree.window;
@@ -882,6 +953,75 @@ impl<H: UiHost> UiTree<H> {
         }
 
         (CommandAvailability::NotHandled, None)
+    }
+
+    fn declarative_node_may_handle_command_availability(
+        &self,
+        app: &mut H,
+        node: NodeId,
+        command: &CommandId,
+    ) -> bool {
+        let Some(window) = self.window else {
+            return true;
+        };
+        let Some(element) = self.nodes.get(node).and_then(|n| n.element) else {
+            return true;
+        };
+
+        let built_in_interest =
+            crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
+                match &record.instance {
+                    crate::declarative::frame::ElementInstance::ManagedSurface(_) => true,
+                    crate::declarative::frame::ElementInstance::SelectableText(_) => {
+                        matches!(
+                            command.as_str(),
+                            "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
+                        )
+                    }
+                    crate::declarative::frame::ElementInstance::TextInput(_)
+                    | crate::declarative::frame::ElementInstance::TextArea(_) => {
+                        let command = command.as_str();
+                        command.starts_with("text.") || command.starts_with("edit.")
+                    }
+                    crate::declarative::frame::ElementInstance::FocusScope(props)
+                        if props.trap_focus =>
+                    {
+                        matches!(command.as_str(), "focus.next" | "focus.previous")
+                    }
+                    _ => false,
+                }
+            })
+            .unwrap_or(true);
+        if built_in_interest {
+            return true;
+        }
+
+        if crate::elements::try_with_element_state(
+            app,
+            window,
+            element,
+            |hooks: &mut crate::action::ActionRouteHooks| {
+                hooks.has_on_command_availability_handlers()
+            },
+        )
+        .unwrap_or(false)
+        {
+            return true;
+        }
+        if crate::elements::try_with_element_state(
+            app,
+            window,
+            element,
+            |hooks: &mut crate::action::CommandAvailabilityActionHooks| {
+                hooks.on_command_availability.is_some()
+            },
+        )
+        .unwrap_or(false)
+        {
+            return true;
+        }
+
+        false
     }
 
     fn timed_command_availability_from_node(

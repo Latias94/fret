@@ -550,13 +550,15 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
         let Some(window) = cx.window else {
             return CommandAvailability::NotHandled;
         };
-        let managed_surface_availability = crate::elements::with_element_state(
+        let managed_surface_availability = crate::elements::try_with_element_state(
             &mut *cx.app,
             window,
             self.element,
-            crate::managed_surface::ManagedSurfaceHooks::<H>::default,
-            |hooks| hooks.on_command_availability.clone(),
-        );
+            |hooks: &mut crate::managed_surface::ManagedSurfaceHooks<H>| {
+                hooks.on_command_availability.clone()
+            },
+        )
+        .flatten();
         if let Some(managed_surface_availability) = managed_surface_availability {
             let mut managed_cx =
                 crate::managed_surface::ManagedSurfaceCommandAvailabilityCx::new(cx);
@@ -566,20 +568,22 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
             }
         }
 
-        let action_hooks = crate::elements::with_element_state(
+        let action_hooks = crate::elements::try_with_element_state(
             &mut *cx.app,
             window,
             self.element,
-            crate::action::ActionRouteHooks::default,
-            |hooks| hooks.on_command_availability_handlers(),
-        );
-        let legacy_hook = crate::elements::with_element_state(
+            |hooks: &mut crate::action::ActionRouteHooks| hooks.on_command_availability_handlers(),
+        )
+        .unwrap_or_default();
+        let legacy_hook = crate::elements::try_with_element_state(
             &mut *cx.app,
             window,
             self.element,
-            crate::action::CommandAvailabilityActionHooks::default,
-            |hooks| hooks.on_command_availability.clone(),
-        );
+            |hooks: &mut crate::action::CommandAvailabilityActionHooks| {
+                hooks.on_command_availability.clone()
+            },
+        )
+        .flatten();
         if !action_hooks.is_empty() || legacy_hook.is_some() {
             struct AvailabilityHookHost<'a, H: UiHost> {
                 app: &'a mut H,

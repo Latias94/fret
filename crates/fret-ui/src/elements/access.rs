@@ -99,6 +99,20 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
     })
 }
 
+pub(crate) fn try_with_element_state<H: UiHost, S: Any, R>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    f: impl FnOnce(&mut S) -> R,
+) -> Option<R> {
+    let frame_id = app.frame_id();
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+        window_state.try_with_state_mut(element, f)
+    })
+}
+
 pub(crate) fn with_window_state<H: UiHost, R>(
     app: &mut H,
     window: AppWindowId,

@@ -266,6 +266,13 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed after the virtual row seam.
 - 2026-06-14: dev-fast combobox perf after virtualization passed the script and materially reduced layout breadth: worst frame `total=46780us`, `layout=34640us`, `layout.engine_solve=6548us`, `layout.nodes=52`, `paint.nodes=1070`, `inv.calls=11`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-virtualized/1781397188538/bundle.schema2.json`.
 - 2026-06-14: compared to the prior dev-fast direction bundle (`total=105187us`, `layout=95079us`, `layout.engine_solve=50873us`, `layout.nodes=1775`, `paint.nodes=2598`, `inv.calls=265`), virtualization confirms row materialization/layout breadth was a real bottleneck. The remaining worst frames are still above 120Hz and now point at root apply, command availability, and focus traversal costs rather than 250-row layout.
+- 2026-06-14: a framework-level command availability slice now avoids creating optional declarative hook state during availability probes, short-circuits focus traversal availability once one candidate is found, and skips declarative host availability calls for nodes with no built-in or hook-level interest.
+- 2026-06-14: `cargo fmt -p fret-ui` passed after the command availability slice.
+- 2026-06-14: `cargo check -p fret-ui -j 1` passed after the command availability slice.
+- 2026-06-14: focused `cargo test -p fret-ui --lib try_with_state_mut_only_records_existing_state_keys_for_view_cache -j 1` and `cargo test -p fret-ui --lib focus_traversal_availability_short_circuits_after_first_candidate -j 1` timed out during Windows test-target compilation without a test failure result.
+- 2026-06-14: `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed after the command availability slice.
+- 2026-06-14: dev-fast combobox perf after the declarative availability-interest fast path passed with worst frame `total=23687us`, `layout=18558us`, `layout.engine_solve=4063us`, `paint=4415us`, `command_availability_eval=4734us`, and `roots.apply=12546us`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-declarative-availability-interest/1781401057880/bundle.schema2.json`.
+- 2026-06-14: compared to the virtualized dev-fast bundle (`total=46780us`, `command_availability_eval=15030us`, `roots.apply=20769us`), the availability-interest slice confirms that shared mechanism overhead was a real bottleneck. The next bottleneck is now root/layout apply breadth, not full row materialization or availability probing alone.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?

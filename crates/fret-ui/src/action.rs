@@ -975,6 +975,12 @@ impl ActionRouteHooks {
             .filter_map(|hooks| hooks.on_command_availability.clone())
             .collect()
     }
+
+    pub(crate) fn has_on_command_availability_handlers(&self) -> bool {
+        self.owners
+            .iter()
+            .any(|hooks| hooks.on_command_availability.is_some())
+    }
 }
 
 pub trait UiCommandAvailabilityActionHost {

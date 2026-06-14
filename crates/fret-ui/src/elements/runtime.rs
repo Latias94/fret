@@ -1441,9 +1441,8 @@ impl WindowElementState {
         }
 
         let key = (element, TypeId::of::<S>());
-        self.record_state_key_access(key);
-
         let value = self.take_state_box(&key)?;
+        self.record_state_key_access(key);
         let mut guard = StateBoxGuard {
             window_state: self,
             key,
@@ -3404,6 +3403,48 @@ mod tests {
                 .view_cache_elements_for_root(root)
                 .expect("touched elements should survive another frame"),
             &[root, child]
+        );
+    }
+
+    #[test]
+    fn try_with_state_mut_only_records_existing_state_keys_for_view_cache() {
+        let mut state = WindowElementState::default();
+        let root = GlobalElementId(1);
+        let child = GlobalElementId(2);
+        let state_key = (child, TypeId::of::<u32>());
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.begin_view_cache_scope(root);
+        assert_eq!(state.try_with_state_mut::<u32, _>(child, |_| ()), None);
+        state.end_view_cache_scope(root);
+
+        assert!(
+            state.view_cache_build_boundaries.next.get(&root).is_none(),
+            "missing optional state must not leave empty hook keys in the view-cache access set"
+        );
+
+        state.begin_view_cache_scope(root);
+        state.with_state_mut(
+            child,
+            || 7u32,
+            |value| {
+                assert_eq!(*value, 7);
+            },
+        );
+        assert_eq!(
+            state.try_with_state_mut::<u32, _>(child, |value| *value),
+            Some(7)
+        );
+        state.end_view_cache_scope(root);
+
+        assert_eq!(
+            state
+                .view_cache_build_boundaries
+                .next
+                .get(&root)
+                .and_then(|frame| frame.state_keys.as_ref())
+                .map(Vec::as_slice),
+            Some(&[state_key, state_key][..])
         );
     }
 

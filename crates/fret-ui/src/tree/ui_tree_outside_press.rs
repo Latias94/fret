@@ -279,6 +279,54 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn has_focusable(
+        &self,
+        node: NodeId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        scope_bounds: Rect,
+    ) -> bool {
+        if dispatch_snapshot.pre.get(node).is_none() {
+            return false;
+        }
+
+        let Some(n) = self.nodes.get(node) else {
+            return false;
+        };
+        if n.bounds.size.width.0 <= 0.0 || n.bounds.size.height.0 <= 0.0 {
+            return false;
+        }
+        if !Self::rects_intersect(n.bounds, scope_bounds)
+            && !self.node_has_scrollable_ancestor_in_scope(node, dispatch_snapshot, scope_bounds)
+        {
+            return false;
+        }
+
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        let is_focusable = prepaint
+            .as_ref()
+            .map(|p| p.is_focusable)
+            .unwrap_or_else(|| n.widget.as_ref().is_some_and(|w| w.is_focusable()));
+        if is_focusable {
+            return true;
+        }
+
+        let traverse_children = prepaint
+            .as_ref()
+            .map(|p| p.focus_traversal_children)
+            .unwrap_or_else(|| {
+                n.widget
+                    .as_ref()
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true)
+            });
+        traverse_children
+            && n.children
+                .iter()
+                .any(|&child| self.has_focusable(child, dispatch_snapshot, scope_bounds))
+    }
+
     fn node_has_scrollable_ancestor_in_scope(
         &self,
         mut node: NodeId,
