@@ -2495,6 +2495,37 @@ fn command_palette_render_rows_for_query_with_options(
         }
     };
 
+    if entries
+        .iter()
+        .all(|entry| matches!(entry, CommandEntry::Item(_)))
+    {
+        let mut scored_items: Vec<(usize, f32, CommandItem)> = entries
+            .into_iter()
+            .enumerate()
+            .filter_map(|(idx, entry)| {
+                let CommandEntry::Item(item) = entry else {
+                    return None;
+                };
+                let score = score_item(&item);
+                (score > 0.0 || item.force_mount).then_some((idx, score, item))
+            })
+            .collect();
+
+        if !query_for_filter.is_empty() {
+            scored_items.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+                b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+            });
+        }
+
+        let mut items: Vec<Option<CommandItem>> = Vec::with_capacity(scored_items.len());
+        items.extend(scored_items.into_iter().map(|(_, _, item)| Some(item)));
+        let render_rows = (0..items.len())
+            .map(CommandPaletteRenderRow::Item)
+            .collect();
+        let item_groups = vec![None; items.len()];
+        return (render_rows, items, item_groups);
+    }
+
     let mut pending_rows: Vec<PendingRow> = Vec::new();
     let mut next_group_id: u32 = 0;
     if query_for_filter.is_empty() {
@@ -7455,6 +7486,26 @@ mod tests {
             row_signatures(&rows, &items),
             vec!["I:alpha".to_string(), "I:pal".to_string()]
         );
+    }
+
+    #[test]
+    fn command_palette_item_only_fast_path_keeps_navigation_group_slots() {
+        let entries = vec![
+            CommandItem::new("pal").into(),
+            CommandItem::new("alpha").into(),
+        ];
+
+        let (rows, items, item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "al", true, None);
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec!["I:alpha".to_string(), "I:pal".to_string()]
+        );
+        assert_eq!(item_groups, vec![None, None]);
+
+        let navigation = CommandPaletteNavigationSnapshot::from_items(&items, item_groups, false);
+        assert_eq!(navigation.item_groups.as_ref(), &[None, None]);
+        assert!(navigation.group_order.is_empty());
     }
 
     #[test]

@@ -55,6 +55,12 @@ active heavy-component performance goal. It complements the main plan rather tha
 - The targeted subphase moved as intended: `layout_collapse_layout_observations_time_us` dropped
   from about `1783us` to `386us`, while `paint_collapse_observations_time_us` dropped from about
   `511us` to `137us` on the compared worst frames.
+- The current accepted recipe-layer slice is an item-only `CommandPalette` render-row fast path.
+  Pure item lists now skip the general pending-row/group/separator trimming pipeline while keeping
+  the same cmdk scoring, stable sort, `force_mount`, item vector, and group-slot contract.
+- The dev-fast combobox gate after this slice reports `failures=[]`, worst frame `total=11215us`,
+  `layout=6978us`, `layout.engine_solve=1211us`, and `paint=3560us`; evidence bundle:
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-item-only-fast-path/1781432649868/bundle.schema2.json`.
 
 ## Decisions
 
@@ -140,6 +146,59 @@ already-rooted observations stay intact, descendant observations still uplift to
 and root plus descendant observations for the same dependency union their masks instead of
 overwriting each other.
 
+### D7. Reject derived observed-deps presence
+
+An experiment removed the explicit `observed_deps_rendered` / `observed_deps_next` sets and derived
+dependency presence from the current model/global observation maps. The intent was to remove hundreds
+of empty host-widget observed-dependency lookups during paint.
+
+The evidence rejected the change. The combobox dev-fast gate regressed to `total=23587us`,
+`layout=13795us`, and `paint=8701us`, with `failures=5`; evidence bundle:
+`target/fret-diag/gate-combobox-filter-select-devfast-observed-deps-presence-derived/1781430201371/bundle.schema2.json`.
+
+The architectural conclusion is that the explicit presence sets are not just a broad cache of the
+current observation maps. They preserve dependency-presence continuity across view-cache reuse and
+touch paths. Any future optimization in this area must keep that continuity explicit and add stronger
+view-cache reuse tests before touching the mechanism again.
+
+### D8. Do not spend the next slice on `CommandAvailabilityCx` input-context borrowing
+
+An experiment changed `CommandAvailabilityCx` to borrow `InputContext` instead of cloning it for each
+widget availability route. The focused command-availability publication test passed, and the crate
+compiled, but the perf gate did not produce acceptable evidence.
+
+Two runs were noisy in different ways:
+
+- Before rebuilding `target\dev-fast\fret-ui-gallery.exe`, the run reported `total=10451us` but
+  failed pointer-move thresholds.
+- After rebuilding the dev-fast gallery binary, the run failed layout/solve thresholds with
+  `total=14365us`, `layout=9722us`, and `layout.engine_solve=1911us`; evidence bundle:
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-availability-borrowed-input-rerun/1781431629778/bundle.schema2.json`.
+
+The architectural conclusion is that the command availability publication Interface is still a real
+future Module candidate, but this small public-context borrowing change is not enough leverage to
+justify breaking the API or continuing the loop. Prefer a deeper publication Module or move to the
+CommandPalette query-window seam before revisiting this area.
+
+### D9. Accept an item-only `CommandPalette` render-row fast path
+
+The current `CommandPalette` long-list path still uses the general render-row builder even when all
+entries are plain root items. That general pipeline earns its depth for grouped, separator, loading,
+and custom-child palettes, but it becomes shallow overhead for the combobox search adapter: the
+caller only needs scored items, `CommandPaletteRenderRow::Item` rows, and a navigation group vector
+filled with `None`.
+
+The accepted change keeps the seam local to `ecosystem/fret-ui-shadcn/src/command.rs`. It does not
+change the cmdk scoring function, does not change sort stability, does not virtualize a new case,
+and does not push policy into `fret-ui`. The focused regression test locks the important invariant:
+item-only fast-path results still carry an `item_groups` vector with one `None` slot per item so the
+navigation snapshot remains shape-compatible with the general path.
+
+The perf evidence is positive but modest. The gate stayed green (`failures=[]`) with worst frame
+`total=11215us`, so this is worth landing as a low-risk recipe improvement. It is not enough to call
+the heavy-component lane complete. The next larger opportunity is still a deeper CommandPalette
+query/window Module or a paint/text prepared-layout Module, not more ad-hoc micro-branches.
+
 ## Current Architecture Read
 
 The current evidence argues against a single framework-level rewrite as the next move. The large
@@ -147,6 +206,7 @@ wins came from a sequence of narrower seams:
 
 - Component policy: delayed combobox query clearing during close presence.
 - Component rendering: virtualized long command/combobox rows.
+- Component rendering: item-only command row construction skips the general grouped-row pipeline.
 - Component composition: bounded internal scroll probing for the virtualized command row branch.
 - Shared mechanism: command availability interest caching.
 - Shared mechanism: incremental view-cache observation collapse.
@@ -171,6 +231,12 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 7. Keep `CommandPalette`, `Combobox`, `DataTable` toolbar recipes, `Sidebar`, and carousel-heavy
    examples as the next heavy-component candidates. Avoid widening to every shadcn recipe until one
    candidate produces a reproducible tail.
+8. Do not retry the rejected `observed_deps_presence` derivation or the small
+   `CommandAvailabilityCx` borrowing tweak without a new hypothesis and stronger view-cache or
+   publication tests.
+9. If the next slice stays inside `CommandPalette`, prefer a query/window Module that owns filtered
+   item scoring, navigation slots, visible-row metadata, and virtual range inputs behind one
+   testable Interface.
 
 ## Verification Notes
 
@@ -217,3 +283,23 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
   reports `script_capture_skipped=1` and worst frame `total=11575us`, `layout=5994us`,
   `layout.engine_solve=927us`, `paint=4900us`, `renderer.finish=1493us`, and
   `renderer.encode=819us`.
+- Rejected experiment: deriving observed dependency presence from model/global observation maps
+  regressed the combobox dev-fast gate to `total=23587us`, `layout=13795us`, `paint=8701us`, with
+  `failures=5`. The code was reverted before continuing.
+- Rejected experiment: changing `CommandAvailabilityCx` to borrow `InputContext` compiled and passed
+  `cargo test -p fret-ui --lib action_availability_snapshot_caches_declarative_interest_within_publication --profile dev-fast -j 1`,
+  but the rebuilt gallery perf gate failed on layout/solve thresholds. The code was reverted before
+  continuing.
+- `cargo fmt -p fret-ui-shadcn` passed after the item-only command render-row fast path.
+- `cargo check -p fret-ui-shadcn -j 1` passed after the item-only command render-row fast path.
+- `cargo test -p fret-ui-shadcn --lib command_palette_item_only_fast_path_keeps_navigation_group_slots --profile dev-fast -j 1`
+  passed and guards the item-only navigation slot contract.
+- `cargo test -p fret-ui-shadcn --lib command_palette_virtualized_rows_use_bounded_scroll_viewport --profile dev-fast -j 1`
+  passed after the fast path.
+- `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed after the fast path.
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\gate-combobox-filter-select-devfast-command-item-only-fast-path --repeat 1 --warmup-frames 5 --prewarm-script tools\diag-scripts\_prelude\tooling-suite-prewarm-fonts.json --prelude-script tools\diag-scripts\_prelude\tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  passed with `failures=[]`; evidence bundle
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-item-only-fast-path/1781432649868/bundle.schema2.json`.
+- The fast-path gate's worst frame was `total=11215us`, `layout=6978us`,
+  `layout.engine_solve=1211us`, and `paint=3560us`; the result protects against regression but
+  remains above strict 120Hz.
