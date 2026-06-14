@@ -124,6 +124,16 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => p.present,
             _ => true,
         };
+        let has_semantics_decoration =
+            with_element_record_for_node(cx.app, window, cx.node, |record| {
+                record.semantics_decoration.is_some()
+            })
+            .unwrap_or(false);
+        self.semantics_hook = if has_semantics_decoration {
+            super::SemanticsHookKind::Full
+        } else {
+            Self::classify_semantics_hook(&instance)
+        };
         self.focus_traversal_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,

@@ -1021,6 +1021,114 @@ fn declarative_attach_semantics_overrides_role_label_and_sets_test_id() {
 }
 
 #[test]
+fn declarative_attach_semantics_on_plain_container_survives_hook_gate() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-plain-container-decoration",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = crate::element::Length::Px(Px(120.0));
+            container.layout.size.height = crate::element::Length::Px(Px(40.0));
+            vec![
+                cx.container(container, |cx| vec![cx.text("Child")])
+                    .attach_semantics(
+                        crate::element::SemanticsDecoration::default()
+                            .test_id("decorated-container")
+                            .role(fret_core::SemanticsRole::Region)
+                            .label("Decorated container"),
+                    ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.test_id.as_deref() == Some("decorated-container")
+                && n.role == fret_core::SemanticsRole::Region
+                && n.label.as_deref() == Some("Decorated container")
+        }),
+        "expected attach_semantics on a plain container to survive the no-op hook gate"
+    );
+    assert!(
+        snap.nodes.iter().any(
+            |n| n.role == fret_core::SemanticsRole::Text && n.label.as_deref() == Some("Child")
+        ),
+        "expected children of a plain container to remain in the semantics snapshot"
+    );
+}
+
+#[test]
+fn declarative_plain_container_keeps_snapshot_node_without_semantics_hook() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-plain-container-node",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = crate::element::Length::Px(Px(120.0));
+            container.layout.size.height = crate::element::Length::Px(Px(40.0));
+            vec![cx.container(container, |cx| vec![cx.text("Child")])]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|n| n.role == fret_core::SemanticsRole::Generic
+                && n.label.is_none()
+                && n.test_id.is_none()
+                && n.bounds.size.width.0 > 0.0
+                && n.bounds.size.height.0 > 0.0),
+        "expected an undecorated plain container to remain as a generic semantics node"
+    );
+    assert!(
+        snap.nodes.iter().any(
+            |n| n.role == fret_core::SemanticsRole::Text && n.label.as_deref() == Some("Child")
+        ),
+        "expected children of an undecorated plain container to remain traversable"
+    );
+}
+
+#[test]
 fn declarative_attach_semantics_can_override_state_and_relations() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

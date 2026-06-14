@@ -132,6 +132,7 @@ pub(super) struct ElementHostWidget {
     focus_traversal_children: bool,
     semantics_present: bool,
     semantics_children: bool,
+    semantics_hook: SemanticsHookKind,
     is_focusable: bool,
     is_text_input: bool,
     can_scroll_descendant: bool,
@@ -140,6 +141,13 @@ pub(super) struct ElementHostWidget {
     text_input: Option<BoundTextInput>,
     text_area: Option<crate::text_area::BoundTextArea>,
     resizable_panel_group: Option<crate::resizable_panel_group::BoundResizablePanelGroup>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SemanticsHookKind {
+    Full,
+    RootGeneric,
+    None,
 }
 
 #[derive(Debug, Clone)]
@@ -164,6 +172,7 @@ impl ElementHostWidget {
             focus_traversal_children: true,
             semantics_present: true,
             semantics_children: true,
+            semantics_hook: SemanticsHookKind::Full,
             is_focusable: false,
             is_text_input: false,
             can_scroll_descendant: false,
@@ -754,6 +763,7 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
         self.focus_traversal_children = present && interactive;
         self.semantics_present = present;
         self.semantics_children = present;
+        self.semantics_hook = SemanticsHookKind::Full;
         self.is_focusable = false;
         self.is_text_input = false;
     }
@@ -1123,6 +1133,10 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        let role = *cx.role;
+        if !self.should_run_semantics_hook_for_role(role) {
+            return;
+        }
         self.semantics_impl(cx);
     }
 

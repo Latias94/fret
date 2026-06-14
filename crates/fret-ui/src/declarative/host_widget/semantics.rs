@@ -1,8 +1,75 @@
 use super::super::frame::*;
 use super::super::prelude::*;
-use super::ElementHostWidget;
+use super::{ElementHostWidget, SemanticsHookKind};
 
 impl ElementHostWidget {
+    pub(super) fn classify_semantics_hook(instance: &ElementInstance) -> SemanticsHookKind {
+        match instance {
+            ElementInstance::Text(_)
+            | ElementInstance::StyledText(_)
+            | ElementInstance::SelectableText(_)
+            | ElementInstance::Semantics(_)
+            | ElementInstance::SemanticFlex(_)
+            | ElementInstance::TextInput(_)
+            | ElementInstance::TextArea(_)
+            | ElementInstance::ResizablePanelGroup(_)
+            | ElementInstance::Pressable(_)
+            | ElementInstance::VirtualList(_)
+            | ElementInstance::TextInputRegion(_)
+            | ElementInstance::Image(_)
+            | ElementInstance::Scroll(_)
+            | ElementInstance::Scrollbar(_)
+            | ElementInstance::ViewportSurface(_) => SemanticsHookKind::Full,
+            ElementInstance::PointerRegion(_)
+            | ElementInstance::InternalDragRegion(_)
+            | ElementInstance::ExternalDragRegion(_)
+            | ElementInstance::HoverRegion(_)
+            | ElementInstance::Spinner(_)
+            | ElementInstance::ForegroundScope(_)
+            | ElementInstance::Opacity(_)
+            | ElementInstance::EffectLayer(_)
+            | ElementInstance::BackdropSourceGroup(_)
+            | ElementInstance::MaskLayer(_)
+            | ElementInstance::CompositeGroup(_)
+            | ElementInstance::VisualTransform(_)
+            | ElementInstance::RenderTransform(_)
+            | ElementInstance::FractionalRenderTransform(_)
+            | ElementInstance::Anchored(_) => SemanticsHookKind::RootGeneric,
+            ElementInstance::Flex(_)
+            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::FocusScope(_)
+            | ElementInstance::InteractivityGate(_)
+            | ElementInstance::FocusTraversalGate(_)
+            | ElementInstance::RovingFlex(_)
+            | ElementInstance::Grid(_)
+            | ElementInstance::Container(_)
+            | ElementInstance::LayoutQueryRegion(_)
+            | ElementInstance::HitTestGate(_)
+            | ElementInstance::Stack(_)
+            | ElementInstance::Spacer(_)
+            | ElementInstance::Canvas(_)
+            | ElementInstance::ManagedSurface(_)
+            | ElementInstance::ViewCache(_)
+            | ElementInstance::SvgIcon(_)
+            | ElementInstance::SvgImage(_)
+            | ElementInstance::WheelRegion(_) => SemanticsHookKind::None,
+        }
+    }
+
+    pub(super) fn should_run_semantics_hook_for_role(
+        &self,
+        role: fret_core::SemanticsRole,
+    ) -> bool {
+        match self.semantics_hook {
+            SemanticsHookKind::Full => true,
+            SemanticsHookKind::RootGeneric => {
+                role == fret_core::SemanticsRole::Window
+                    || role == fret_core::SemanticsRole::TextField
+            }
+            SemanticsHookKind::None => false,
+        }
+    }
+
     pub(super) fn semantics_impl<H: UiHost>(&mut self, cx: &mut SemanticsCx<'_, H>) {
         let _element_id = self.element;
         let Some(window) = cx.window else {

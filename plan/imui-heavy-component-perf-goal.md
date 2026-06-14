@@ -110,6 +110,28 @@ Do not broaden stale-semantics reuse until the runtime has an explicit freshness
 meaningful optimization should target either dirty-frame semantics traversal cost itself or the
 popover overlay root solve tail.
 
+## 2026-06-14 Second Slice Findings
+
+- Added a layout-derived semantics hook classifier for declarative host widgets. It skips the
+  expensive `semantics_impl` instance clone/match for plain pass-through nodes, while preserving
+  snapshot nodes, bounds, children traversal, focus/text-input defaults, root `Window` role behavior,
+  and any `attach_semantics` decoration.
+- Do not synchronize this classifier from `mount_element` for every declarative element. A trial
+  mount-path sync added one widget mutation per mounted element and made the dense combobox gate
+  worse. The final slice keeps classification on the layout path only.
+- Focused correctness tests cover both sides of the contract:
+  undecorated plain containers remain present as generic semantics nodes, and `attach_semantics` on
+  a plain container still stamps role/label/test_id and keeps child traversal.
+- The current combobox dev-fast gate still fails on repeated probes after this slice:
+  `target/fret-diag/gate-combobox-filter-select-devfast-semantics-hook-layout-only/1781440592740/bundle.schema2.json`
+  had `22850us` total, `12740us` layout, `2428us` solve, and `8927us` paint.
+- The failure shape is not semantics-led. The worst frame is the searchable combobox popover root
+  (`DismissibleLayer`) doing a `new_frame_same_key` solve of about 27 subtree nodes, plus root apply,
+  paint, and renderer finish. A semantics-profile probe with the same binary showed semantics
+  snapshots mostly in the `1-3ms` traversal range and a better top frame around `14365us`.
+- The next higher-leverage target is therefore the popover overlay root solve / paint tail, not more
+  semantics micro-optimization.
+
 ## Next Verification
 
 1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual
