@@ -183,12 +183,15 @@ The working question is not "does the UI function at all". The question is wheth
 - Virtualize row element materialization and layout, not the filtered item model itself. Filtering all items is acceptable at 250 rows; building and solving all row nodes is not.
 - Keep the initial seam opt-in or threshold-driven at the recipe layer so small command palettes stay simple and existing command behavior remains easy to reason about.
 - Prefer the existing `fret-ui-kit` virtual list helpers over introducing a new list mechanism inside `fret-ui-shadcn`.
+- First implementation is intentionally item-only: no headings, group padding, separators, loading rows, or custom `CommandItem::children`. Those cases stay on the full render path because they are variable-height or move-only and would make the seam shallow.
+- Active-descendant semantics remain tied to a mounted row element. The virtual range extractor keeps the active index mounted in addition to the visible window, so keyboard navigation does not point the input at a stale or missing row.
 
 **Test scenarios:**
 - Filtering to a single long-list option still produces a stable row `test_id` and selection action.
 - Keyboard navigation still updates active descendant against the full filtered item set.
 - The empty, loading, separator, heading, and grouped-row cases do not lose semantics.
 - Non-virtual command palettes continue to render the same row order and collection metadata.
+- Duplicate values keep distinct virtual row keys through occurrence suffixes, matching existing diagnostics selector behavior.
 
 **Verification:**
 - Focused `command_palette` and `combobox` unit filters after implementation.
@@ -255,6 +258,14 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `cargo test -p fret-ui-shadcn --lib combobox_ -j 1` timed out during Windows test-target compilation without a test failure result.
 - 2026-06-14: `cargo build -p fret-ui-gallery --release -j 1` did not produce a fresh release binary after more than 20 minutes of `fret_ui_gallery` codegen, so no same-profile after number is available yet.
 - 2026-06-14: `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed and the dev-fast perf rerun moved the worst work to the filter-input step, with close/selection frames much smaller afterward. This supports the next decision: optimize row materialization/layout via a virtual row seam.
+- 2026-06-14: `command.rs` now has a private item-only virtual row seam for `CommandPalette`: pure long item lists use `VirtualListOptions::fixed`, stable row keys/revisions, and active-index range injection while grouped/loading/custom-child palettes keep the full render path.
+- 2026-06-14: new command structural tests cover virtual eligibility, grouped/loading/custom-child rejection, duplicate occurrence row keys, test-id derivation, and row revision changes.
+- 2026-06-14: `cargo fmt -p fret-ui-shadcn` passed after the virtual row seam.
+- 2026-06-14: `cargo check -p fret-ui-shadcn -j 1` passed after the virtual row seam.
+- 2026-06-14: `cargo test -p fret-ui-shadcn --lib command_palette_virtual -j 1` timed out during Windows test-target compilation without a test failure result; no unrelated `dear-imgui`/`dear-implot` nextest processes were stopped.
+- 2026-06-14: `cargo build -p fret-ui-gallery --profile dev-fast -j 1` passed after the virtual row seam.
+- 2026-06-14: dev-fast combobox perf after virtualization passed the script and materially reduced layout breadth: worst frame `total=46780us`, `layout=34640us`, `layout.engine_solve=6548us`, `layout.nodes=52`, `paint.nodes=1070`, `inv.calls=11`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-virtualized/1781397188538/bundle.schema2.json`.
+- 2026-06-14: compared to the prior dev-fast direction bundle (`total=105187us`, `layout=95079us`, `layout.engine_solve=50873us`, `layout.nodes=1775`, `paint.nodes=2598`, `inv.calls=265`), virtualization confirms row materialization/layout breadth was a real bottleneck. The remaining worst frames are still above 120Hz and now point at root apply, command availability, and focus traversal costs rather than 250-row layout.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
@@ -263,6 +274,7 @@ The working question is not "does the UI function at all". The question is wheth
 - After the state/placement split, should render-part extraction stay in `select.rs` or move into a sibling module tree immediately?
 - Should `CommandPalette` virtualize automatically above a row-count threshold, or expose an explicit recipe option first and make automatic policy a later decision?
 - Should command virtualization live directly in `CommandPalette`, or should `Combobox` get a narrower virtualized-search adapter first and only promote it after one successful perf slice?
+- Should root apply / command availability be optimized as a shared framework seam after command-list virtualization, since the remaining dev-fast tail is no longer dominated by row count?
 
 ## Sources
 - `docs/architecture.md`

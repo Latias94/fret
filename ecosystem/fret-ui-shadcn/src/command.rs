@@ -1,5 +1,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -15,10 +17,11 @@ use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableKeyActivation, PressableProps, RovingFlexProps, RovingFocusProps,
-    RowProps, SemanticsDecoration, SizeStyle, TextInputProps,
+    RowProps, SemanticsDecoration, SizeStyle, TextInputProps, VirtualListKeyCacheMode,
+    VirtualListOptions,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::scroll::ScrollHandle;
+use fret_ui::scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::cmdk_score;
 use fret_ui_headless::cmdk_selection;
@@ -64,6 +67,9 @@ type OnSelectValueAction = Arc<
 
 type CommandPaletteFilter = dyn Fn(&str, &str, &[&str]) -> f32 + Send + Sync + 'static;
 pub type CommandPaletteFilterFn = Arc<CommandPaletteFilter>;
+
+const COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD: usize = 128;
+const COMMAND_PALETTE_VIRTUAL_OVERSCAN: usize = 8;
 
 /// Open-change reasons aligned with Base UI dialog semantics for command dialog usage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1844,6 +1850,515 @@ enum CommandPaletteRenderRow {
 }
 
 #[derive(Clone)]
+struct CommandPaletteRenderMetrics {
+    row_h: Px,
+    row_gap: Px,
+    pad_x: Px,
+    pad_y: Px,
+    radius: Px,
+    bg_hover: Color,
+    bg_selected: Color,
+    fg_selected: Color,
+    fg: Color,
+    fg_disabled: Color,
+    muted_fg: Color,
+    muted_fg_disabled: Color,
+    text_style: TextStyle,
+    item_layout: LayoutStyle,
+}
+
+impl CommandPaletteRenderMetrics {
+    fn from_theme(theme: &ThemeSnapshot, item_pad_y: Px) -> Self {
+        let row_h = MetricRef::space(Space::N8).resolve(theme);
+        let row_gap = MetricRef::space(Space::N2).resolve(theme);
+        let pad_x = MetricRef::space(Space::N2).resolve(theme);
+        let radius = MetricRef::radius(Radius::Sm).resolve(theme);
+
+        let bg_hover = item_bg_hover(theme);
+        let bg_selected = bg_hover;
+        let fg_selected = theme.color_token("accent-foreground");
+        let fg = theme.color_token("foreground");
+        let fg_disabled = alpha_mul(fg, 0.5);
+        let muted_fg = theme.color_token("muted-foreground");
+        let muted_fg_disabled = alpha_mul(muted_fg, 0.5);
+        let text_style = item_text_style(theme);
+        let item_layout = decl_style::layout_style(
+            theme,
+            LayoutRefinement::default()
+                .w_full()
+                .min_h(row_h)
+                .min_w_0()
+                .flex_shrink_0(),
+        );
+
+        Self {
+            row_h,
+            row_gap,
+            pad_x,
+            pad_y: item_pad_y,
+            radius,
+            bg_hover,
+            bg_selected,
+            fg_selected,
+            fg,
+            fg_disabled,
+            muted_fg,
+            muted_fg_disabled,
+            text_style,
+            item_layout,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum CommandPaletteRowKey {
+    Command(CommandId),
+    Value(Arc<str>),
+}
+
+#[derive(Debug, Clone)]
+struct CommandPaletteItemRowMeta {
+    key: CommandPaletteRowKey,
+    occurrence: u32,
+    test_id: Option<Arc<str>>,
+}
+
+#[derive(Clone)]
+struct CommandPaletteItemRowData {
+    label: Arc<str>,
+    value: Arc<str>,
+    checked: bool,
+    show_checkmark: bool,
+    shortcut: Option<Arc<str>>,
+    command: Option<CommandId>,
+    on_select: Option<fret_ui::action::OnActivate>,
+    on_select_value: Option<OnSelectValueAction>,
+    leading_icon: Option<IconId>,
+}
+
+impl CommandPaletteItemRowData {
+    fn from_item(item: &CommandItem) -> Self {
+        Self {
+            label: item.label.clone(),
+            value: item.value.clone(),
+            checked: item.checked,
+            show_checkmark: item.show_checkmark,
+            shortcut: item.shortcut.clone(),
+            command: item.command.clone(),
+            on_select: item.on_select.clone(),
+            on_select_value: item.on_select_value.clone(),
+            leading_icon: item.leading_icon.clone(),
+        }
+    }
+}
+
+fn command_palette_row_key(item: &CommandItem) -> CommandPaletteRowKey {
+    item.command
+        .clone()
+        .map(CommandPaletteRowKey::Command)
+        .unwrap_or_else(|| CommandPaletteRowKey::Value(item.value.clone()))
+}
+
+fn command_palette_row_item_key(meta: &CommandPaletteItemRowMeta) -> fret_ui::ItemKey {
+    let mut hasher = DefaultHasher::new();
+    meta.key.hash(&mut hasher);
+    meta.occurrence.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn command_palette_item_rows_revision(metas: &[CommandPaletteItemRowMeta]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    metas.len().hash(&mut hasher);
+    for meta in metas {
+        meta.key.hash(&mut hasher);
+        meta.occurrence.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+fn command_palette_item_row_metas(
+    items: &[Option<CommandItem>],
+    test_id_item_prefix: Option<&Arc<str>>,
+) -> Vec<CommandPaletteItemRowMeta> {
+    let mut counts: HashMap<CommandPaletteRowKey, u32> = HashMap::new();
+    items
+        .iter()
+        .filter_map(|item| item.as_ref())
+        .map(|item| {
+            let key = command_palette_row_key(item);
+            let occurrence = counts.entry(key.clone()).or_insert(0);
+            let occ = *occurrence;
+            *occurrence = occurrence.saturating_add(1);
+
+            let derived_test_id = test_id_item_prefix.map(|prefix| {
+                let seg = sanitize_test_id_segment(item.value.as_ref());
+                let id = if occ == 0 {
+                    format!("{}{}", prefix.as_ref(), seg)
+                } else {
+                    format!("{}{}-{}", prefix.as_ref(), seg, occ)
+                };
+                Arc::<str>::from(id)
+            });
+            let test_id = item.test_id.clone().or(derived_test_id);
+
+            CommandPaletteItemRowMeta {
+                key,
+                occurrence: occ,
+                test_id,
+            }
+        })
+        .collect()
+}
+
+fn command_palette_item_row_data(
+    items: &[Option<CommandItem>],
+) -> Option<Arc<[CommandPaletteItemRowData]>> {
+    items
+        .iter()
+        .map(|item| {
+            item.as_ref().and_then(|item| {
+                item.children
+                    .is_empty()
+                    .then(|| CommandPaletteItemRowData::from_item(item))
+            })
+        })
+        .collect::<Option<Vec<_>>>()
+        .map(Arc::from)
+}
+
+fn command_palette_can_virtualize_items(
+    render_rows: &[CommandPaletteRenderRow],
+    items: &[Option<CommandItem>],
+) -> bool {
+    render_rows.len() >= COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD
+        && render_rows
+            .iter()
+            .all(|row| matches!(row, CommandPaletteRenderRow::Item(_)))
+        && items
+            .iter()
+            .all(|item| item.as_ref().is_some_and(|item| item.children.is_empty()))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn command_palette_render_item_row<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    item: CommandPaletteItemRowData,
+    children: Vec<AnyElement>,
+    idx: usize,
+    item_count: usize,
+    meta: &CommandPaletteItemRowMeta,
+    navigation: &CommandPaletteNavigationSnapshot,
+    active_idx: Option<usize>,
+    active: Model<Option<Arc<str>>>,
+    pending_dispatch: Option<Arc<std::sync::Mutex<Option<PendingCommandDispatch>>>>,
+    disable_pointer_selection: bool,
+    a11y_selected_mode: CommandPaletteA11ySelectedMode,
+    query_for_row: Arc<str>,
+    metrics: &CommandPaletteRenderMetrics,
+) -> AnyElement {
+    let active_for_row = active;
+    let pending_dispatch_for_row = pending_dispatch;
+    cx.keyed((meta.key.clone(), meta.occurrence), |cx| {
+        let enabled = navigation.activation_disabled.get(idx).copied() == Some(false);
+        let navigable = navigation.navigation_disabled.get(idx).copied() == Some(false);
+        let semantics_disabled = navigation
+            .semantics_disabled
+            .get(idx)
+            .copied()
+            .unwrap_or(true);
+        let active_row = active_idx.is_some_and(|i| i == idx);
+
+        let label = item.label.clone();
+        let value = item.value.clone();
+        let checked = item.checked;
+        let show_checkmark = item.show_checkmark;
+        let shortcut = item.shortcut.clone();
+        let command = item.command;
+        let on_select = item.on_select.clone();
+        let on_select_value = item.on_select_value.clone();
+        let leading_icon = item.leading_icon;
+        let text_style = metrics.text_style.clone();
+
+        let selected_a11y = match a11y_selected_mode {
+            CommandPaletteA11ySelectedMode::Active => active_row,
+            CommandPaletteA11ySelectedMode::Checked => checked,
+        };
+
+        let test_id_for_row = meta.test_id.clone();
+        let chrome_test_id = test_id_for_row
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+        let label_test_id = test_id_for_row
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.label")));
+        let leading_icon_test_id = test_id_for_row
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.leading-icon")));
+        let checkmark_test_id = test_id_for_row
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.checkmark")));
+
+        let mut row = cx.pressable(
+            PressableProps {
+                layout: metrics.item_layout,
+                enabled: navigable,
+                focusable: false,
+                focus_ring: None,
+                key_activation: if !enabled && navigable {
+                    PressableKeyActivation::None
+                } else {
+                    PressableKeyActivation::default()
+                },
+                a11y: PressableA11y {
+                    role: Some(SemanticsRole::ListBoxOption),
+                    label: Some(label.clone()),
+                    test_id: test_id_for_row.clone(),
+                    selected: selected_a11y,
+                    ..Default::default()
+                }
+                .with_collection_position(idx, item_count),
+                ..Default::default()
+            },
+            move |cx, st| {
+                if enabled
+                    && let Some(command) = command.clone()
+                    && let Some(pending_dispatch) = pending_dispatch_for_row.clone()
+                {
+                    cx.pressable_add_on_activate(Arc::new({
+                        let command = command.clone();
+                        move |host, action_cx, reason| {
+                            if let Ok(mut slot) = pending_dispatch.lock() {
+                                *slot = Some(PendingCommandDispatch {
+                                    command: command.clone(),
+                                    reason,
+                                });
+                            }
+                            host.request_redraw(action_cx.window);
+                        }
+                    }));
+                } else if enabled {
+                    cx.pressable_dispatch_command_if_enabled_opt(command);
+                }
+                if enabled && (on_select.is_some() || on_select_value.is_some()) {
+                    let on_select = on_select.clone();
+                    let on_select_value = on_select_value.clone();
+                    let value = value.clone();
+                    cx.pressable_add_on_activate(Arc::new(move |host, action_cx, reason| {
+                        if let Some(on_select_value) = on_select_value.clone() {
+                            on_select_value(host, action_cx, reason, value.clone());
+                        }
+                        if let Some(on_select) = on_select.clone() {
+                            on_select(host, action_cx, reason);
+                        }
+                    }));
+                }
+                if navigable && !disable_pointer_selection {
+                    let active = active_for_row.clone();
+                    cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
+                        if !hovered {
+                            return;
+                        }
+                        let current = host.models_mut().get_cloned(&active).unwrap_or(None);
+                        let next = Some(value.clone());
+                        if current != next {
+                            let _ = host.models_mut().update(&active, |v| *v = next.clone());
+                            host.request_redraw(action_cx.window);
+                        }
+                    }));
+                }
+
+                let hovered = st.hovered && !st.pressed;
+                let pressed = st.pressed;
+                let bg = if active_row {
+                    Some(metrics.bg_selected)
+                } else if enabled && (hovered || pressed) {
+                    Some(metrics.bg_hover)
+                } else {
+                    None
+                };
+
+                let props = ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    padding: Edges {
+                        top: metrics.pad_y,
+                        right: metrics.pad_x,
+                        bottom: metrics.pad_y,
+                        left: metrics.pad_x,
+                    }
+                    .into(),
+                    background: bg,
+                    shadow: None,
+                    border: Edges::all(Px(0.0)),
+                    border_color: None,
+                    corner_radii: Corners::all(metrics.radius),
+                    ..Default::default()
+                };
+
+                let child = cx.container(props, move |cx| {
+                    let text_fg = if !semantics_disabled {
+                        if active_row {
+                            metrics.fg_selected
+                        } else {
+                            metrics.fg
+                        }
+                    } else {
+                        metrics.fg_disabled
+                    };
+                    let nonmatch_text_fg = if semantics_disabled {
+                        metrics.muted_fg_disabled
+                    } else if active_row {
+                        text_fg
+                    } else {
+                        metrics.muted_fg
+                    };
+                    let icon_fg = if !semantics_disabled {
+                        metrics.muted_fg
+                    } else {
+                        metrics.muted_fg_disabled
+                    };
+                    current_color::scope_children(cx, ColorRef::Color(text_fg), |cx| {
+                        let dir = crate::direction::use_direction(cx, None);
+                        vec![cx.row(
+                            RowProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout
+                                },
+                                gap: metrics.row_gap.into(),
+                                padding: Edges::all(Px(0.0)).into(),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                            },
+                            move |cx| {
+                                if !children.is_empty() {
+                                    return children;
+                                }
+
+                                let left_justify = crate::rtl::inline_start_end_pair(
+                                    dir,
+                                    MainAlign::Start,
+                                    MainAlign::End,
+                                )
+                                .0;
+                                let left = cx.row(
+                                    RowProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                            layout.flex.grow = 1.0;
+                                            layout.flex.shrink = 1.0;
+                                            layout.flex.basis = Length::Px(Px(0.0));
+                                            layout
+                                        },
+                                        gap: metrics.row_gap.into(),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: left_justify,
+                                        align: CrossAlign::Center,
+                                    },
+                                    move |cx| {
+                                        let mut out: Vec<AnyElement> = Vec::with_capacity(
+                                            usize::from(show_checkmark)
+                                                + usize::from(leading_icon.is_some())
+                                                + 1,
+                                        );
+
+                                        let label_el = cmdk_highlighted_label(
+                                            cx,
+                                            label.clone(),
+                                            query_for_row.as_ref(),
+                                            text_fg,
+                                            nonmatch_text_fg,
+                                            text_style.clone(),
+                                            label_test_id.clone(),
+                                        );
+
+                                        let icon_el = leading_icon.map(|icon| {
+                                            let mut icon = decl_icon::icon_with(
+                                                cx,
+                                                icon,
+                                                None,
+                                                Some(ColorRef::Color(icon_fg)),
+                                            );
+                                            if let Some(test_id) = leading_icon_test_id.clone() {
+                                                icon = icon.test_id(test_id);
+                                            }
+                                            icon
+                                        });
+
+                                        let check_el = show_checkmark.then(|| {
+                                            let mut icon = decl_icon::icon_with(
+                                                cx,
+                                                ids::ui::CHECK,
+                                                Some(Px(16.0)),
+                                                Some(ColorRef::Color(icon_fg)),
+                                            );
+                                            if let Some(test_id) = checkmark_test_id.clone() {
+                                                icon = icon.test_id(test_id);
+                                            }
+                                            cx.opacity(
+                                                if checked { 1.0 } else { 0.0 },
+                                                move |_cx| vec![icon],
+                                            )
+                                        });
+
+                                        let mut prefix = Vec::new();
+                                        if let Some(check_el) = check_el {
+                                            prefix.push(check_el);
+                                        }
+                                        if let Some(icon_el) = icon_el {
+                                            prefix.push(icon_el);
+                                        }
+                                        out.extend(crate::rtl::concat_main_with_inline_start_vec(
+                                            dir, label_el, prefix,
+                                        ));
+
+                                        out
+                                    },
+                                );
+
+                                if let Some(shortcut) = shortcut.clone() {
+                                    let shortcut =
+                                        CommandShortcut::new(shortcut).inline().into_element(cx);
+                                    let (a, b) =
+                                        crate::rtl::inline_start_end_pair(dir, left, shortcut);
+                                    vec![a, b]
+                                } else {
+                                    vec![left]
+                                }
+                            },
+                        )]
+                    })
+                });
+
+                let mut chrome = child;
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+
+                vec![chrome]
+            },
+        );
+
+        row = row.attach_semantics(
+            SemanticsDecoration::default()
+                .disabled(semantics_disabled)
+                .invokable(enabled),
+        );
+        if let Some(test_id) = test_id_for_row {
+            row = row.attach_semantics(SemanticsDecoration::default().test_id(test_id));
+        }
+
+        row
+    })
+}
+
+#[derive(Clone)]
 struct CommandPaletteNavigationEntry {
     value: Arc<str>,
     command: Option<CommandId>,
@@ -2677,42 +3192,14 @@ impl CommandPalette {
             }
 
             if let Some(handler) = on_value_change.as_ref() {
-                let change = cx.slot_state(
-                    CommandPaletteValueChangeCallbackState::default,
-                    |state| command_palette_value_change_event(state, next_active.clone()),
-                );
+                let change = cx
+                    .slot_state(CommandPaletteValueChangeCallbackState::default, |state| {
+                        command_palette_value_change_event(state, next_active.clone())
+                    });
                 if let Some(value) = change {
                     handler(value);
                 }
             }
-
-            let mut row_ids: Vec<fret_ui::elements::GlobalElementId> =
-                Vec::with_capacity(items.len());
-
-            let row_h = MetricRef::space(Space::N8).resolve(&theme);
-            let row_gap = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_y = item_pad_y;
-            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
-
-            let bg_hover = item_bg_hover(&theme);
-            let bg_selected = bg_hover;
-            let fg_selected = theme.color_token("accent-foreground");
-            let fg = theme.color_token("foreground");
-            let fg_disabled = alpha_mul(fg, 0.5);
-            let muted_fg = theme.color_token("muted-foreground");
-            let muted_fg_disabled = alpha_mul(muted_fg, 0.5);
-            let text_style = item_text_style(&theme);
-            let item_layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_h(row_h)
-                    .min_w_0()
-                    .flex_shrink_0(),
-            );
-
-            let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
 
             let active_idx = next_active.as_ref().and_then(|active_value| {
                 items.iter().enumerate().find_map(|(idx, item)| {
@@ -2728,459 +3215,20 @@ impl CommandPalette {
                 })
             });
             let item_count = items.len();
-            let rows: Vec<AnyElement> = render_rows
-                .into_iter()
-                .map(|row| match row {
-                    CommandPaletteRenderRow::Heading(heading) => {
-                        let test_id_for_row = test_id_heading_prefix.clone().map(|prefix| {
-                            let seg = sanitize_test_id_segment(heading.as_ref());
-                            Arc::<str>::from(format!("{prefix}{seg}"))
-                        });
-                        let mut heading_row = command_group_heading_element(cx, heading, pad_x);
-                        if let Some(test_id) = test_id_for_row {
-                            heading_row = heading_row.test_id(test_id);
-                        }
-                        heading_row
-                    }
-                    CommandPaletteRenderRow::GroupPad => cx.container(
-                        ContainerProps {
-                            layout: {
-                                let height = if group_next_top_pad_zero {
-                                    group_pad_y
-                                } else {
-                                    Px(group_pad_y.0 * 2.0)
-                                };
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Px(height);
-                                layout
-                            },
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    ),
-                    CommandPaletteRenderRow::Separator(test_id) => {
-                        let border = border(&theme);
-                        let mut sep = cx.container(
-                            ContainerProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.height = Length::Px(Px(1.0));
-                                    // new-york-v4: `-mx-1 h-px`.
-                                    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(-4.0));
-                                    layout.margin.right =
-                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
-                                    layout
-                                },
-                                background: Some(border),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::new(),
-                        );
-                        sep = sep.attach_semantics(
-                            SemanticsDecoration::default().role(SemanticsRole::Separator),
-                        );
-                        if let Some(test_id) = test_id.clone() {
-                            sep = sep.test_id(test_id);
-                        }
-                        sep
-                    }
-                    CommandPaletteRenderRow::Loading(loading) => loading.into_element(cx),
-                    CommandPaletteRenderRow::Item(idx) => {
-                        let Some(item) = items.get_mut(idx).and_then(Option::take) else {
-                            return cx.container(ContainerProps::default(), |_cx| Vec::new());
-                        };
+            let metrics = CommandPaletteRenderMetrics::from_theme(&theme, item_pad_y);
+            let item_row_metas: Arc<[CommandPaletteItemRowMeta]> = Arc::from(
+                command_palette_item_row_metas(&items, test_id_item_prefix.as_ref())
+                    .into_boxed_slice(),
+            );
+            let item_row_data = if command_palette_can_virtualize_items(&render_rows, &items) {
+                command_palette_item_row_data(&items)
+            } else {
+                None
+            };
+            let should_virtualize_items = item_row_data.is_some();
+            let active_row_element = Rc::new(Cell::new(None::<GlobalElementId>));
 
-                        let query_for_row = query_for_render.clone();
-                        let base = item
-                            .command
-                            .clone()
-                            .map(RowKey::Command)
-                            .unwrap_or_else(|| RowKey::Value(item.value.clone()));
-                        let count = key_counts.entry(base.clone()).or_insert(0);
-                        let occ = *count;
-                        *count = count.saturating_add(1);
-
-                        let active_for_row = active.clone();
-                        let pending_dispatch_for_row = pending_dispatch.clone();
-                        cx.keyed((base, occ), |cx| {
-                            let enabled =
-                                navigation.activation_disabled.get(idx).copied() == Some(false);
-                            let navigable =
-                                navigation.navigation_disabled.get(idx).copied() == Some(false);
-                            let semantics_disabled =
-                                navigation.semantics_disabled.get(idx).copied().unwrap_or(true);
-                            let active_row = active_idx.is_some_and(|i| i == idx);
-
-                            let label = item.label.clone();
-                            let value = item.value.clone();
-                            let checked = item.checked;
-                            let show_checkmark = item.show_checkmark;
-                            let test_id = item.test_id.clone();
-                            let shortcut = item.shortcut.clone();
-                            let command = item.command;
-                            let on_select = item.on_select.clone();
-                            let on_select_value = item.on_select_value.clone();
-                            let leading_icon = item.leading_icon.clone();
-                            let children = item.children;
-                            let text_style = text_style.clone();
-
-                            let selected_a11y = match a11y_selected_mode {
-                                CommandPaletteA11ySelectedMode::Active => active_row,
-                                CommandPaletteA11ySelectedMode::Checked => checked,
-                            };
-
-                            let derived_test_id_for_row =
-                                test_id_item_prefix.clone().map(|prefix| {
-                                let seg = sanitize_test_id_segment(value.as_ref());
-                                let id = if occ == 0 {
-                                    format!("{}{}", prefix, seg)
-                                } else {
-                                    format!("{}{}-{}", prefix, seg, occ)
-                                };
-                                Arc::<str>::from(id)
-                            });
-                            let test_id_for_row =
-                                test_id.clone().or_else(|| derived_test_id_for_row.clone());
-                            let chrome_test_id = test_id_for_row
-                                .clone()
-                                .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                            let label_test_id = test_id_for_row
-                                .clone()
-                                .map(|id| Arc::<str>::from(format!("{id}.label")));
-                            let leading_icon_test_id = test_id_for_row
-                                .clone()
-                                .map(|id| Arc::<str>::from(format!("{id}.leading-icon")));
-                            let checkmark_test_id = test_id_for_row
-                                .clone()
-                                .map(|id| Arc::<str>::from(format!("{id}.checkmark")));
-
-                            let mut row = cx.pressable(
-                                PressableProps {
-                                    layout: item_layout,
-                                    enabled: navigable,
-                                    focusable: false,
-                                    focus_ring: None,
-                                    key_activation: if !enabled && navigable {
-                                        PressableKeyActivation::None
-                                    } else {
-                                        PressableKeyActivation::default()
-                                    },
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::ListBoxOption),
-                                        label: Some(label.clone()),
-                                        test_id: test_id_for_row.clone(),
-                                        selected: selected_a11y,
-                                        ..Default::default()
-                                    }
-                                    .with_collection_position(idx, item_count),
-                                    ..Default::default()
-                                },
-                                move |cx, st| {
-                                    if enabled
-                                        && let Some(command) = command.clone()
-                                        && let Some(pending_dispatch) =
-                                            pending_dispatch_for_row.clone()
-                                    {
-                                        cx.pressable_add_on_activate(Arc::new({
-                                            let command = command.clone();
-                                            move |host, action_cx, reason| {
-                                                if let Ok(mut slot) = pending_dispatch.lock() {
-                                                    *slot = Some(PendingCommandDispatch {
-                                                        command: command.clone(),
-                                                        reason,
-                                                    });
-                                                }
-                                                host.request_redraw(action_cx.window);
-                                            }
-                                        }));
-                                    } else if enabled {
-                                        cx.pressable_dispatch_command_if_enabled_opt(command);
-                                    }
-                                    if enabled
-                                        && (on_select.is_some() || on_select_value.is_some())
-                                    {
-                                        let on_select = on_select.clone();
-                                        let on_select_value = on_select_value.clone();
-                                        let value = value.clone();
-                                        cx.pressable_add_on_activate(Arc::new(
-                                            move |host, action_cx, reason| {
-                                                if let Some(on_select_value) =
-                                                    on_select_value.clone()
-                                                {
-                                                    on_select_value(
-                                                        host,
-                                                        action_cx,
-                                                        reason,
-                                                        value.clone(),
-                                                    );
-                                                }
-                                                if let Some(on_select) = on_select.clone() {
-                                                    on_select(host, action_cx, reason);
-                                                }
-                                            },
-                                        ));
-                                    }
-                                    if navigable && !disable_pointer_selection {
-                                        let active = active_for_row.clone();
-                                        cx.pressable_on_hover_change(Arc::new(
-                                            move |host, action_cx, hovered| {
-                                                if !hovered {
-                                                    return;
-                                                }
-                                                let current = host
-                                                    .models_mut()
-                                                    .get_cloned(&active)
-                                                    .unwrap_or(None);
-                                                let next = Some(value.clone());
-                                                if current != next {
-                                                    let _ = host
-                                                        .models_mut()
-                                                        .update(&active, |v| *v = next.clone());
-                                                    host.request_redraw(action_cx.window);
-                                                }
-                                            },
-                                        ));
-                                    }
-
-                                    let hovered = st.hovered && !st.pressed;
-                                    let pressed = st.pressed;
-                                    let bg = if active_row {
-                                        Some(bg_selected)
-                                    } else if enabled && (hovered || pressed) {
-                                        Some(bg_hover)
-                                    } else {
-                                        None
-                                    };
-
-                                    let props = ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Fill;
-                                            layout
-                                        },
-                                        padding: Edges {
-                                            top: pad_y,
-                                            right: pad_x,
-                                            bottom: pad_y,
-                                            left: pad_x,
-                                        }
-                                        .into(),
-                                        background: bg,
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: Corners::all(radius),
-                                        ..Default::default()
-                                    };
-
-                                    let child = cx.container(props, move |cx| {
-                                        let text_fg = if !semantics_disabled {
-                                            if active_row { fg_selected } else { fg }
-                                        } else {
-                                            fg_disabled
-                                        };
-                                        let nonmatch_text_fg = if semantics_disabled {
-                                            muted_fg_disabled
-                                        } else if active_row {
-                                            text_fg
-                                        } else {
-                                            muted_fg
-                                        };
-                                        let icon_fg = if !semantics_disabled {
-                                            muted_fg
-                                        } else {
-                                            muted_fg_disabled
-                                        };
-                                        current_color::scope_children(
-                                            cx,
-                                            ColorRef::Color(text_fg),
-                                            |cx| {
-                                                let dir = crate::direction::use_direction(cx, None);
-                                                vec![cx.row(
-                                                    RowProps {
-                                                        layout: {
-                                                            let mut layout = LayoutStyle::default();
-                                                            layout.size.width = Length::Fill;
-                                                            layout
-                                                        },
-                                                        gap: row_gap.into(),
-                                                        padding: Edges::all(Px(0.0)).into(),
-                                                        justify: MainAlign::Start,
-                                                        align: CrossAlign::Center,
-                                                    },
-                                                    move |cx| {
-                                                        if !children.is_empty() {
-                                                            return children;
-                                                        }
-
-                                                        let left_justify = crate::rtl::inline_start_end_pair(
-                                                            dir,
-                                                            MainAlign::Start,
-                                                            MainAlign::End,
-                                                        )
-                                                        .0;
-                                                        let left = cx.row(
-                                                            RowProps {
-                                                                layout: {
-                                                                    let mut layout =
-                                                                        LayoutStyle::default();
-                                                                    layout.size.width =
-                                                                        Length::Fill;
-                                                                    layout.size.min_width =
-                                                                        Some(Length::Px(Px(0.0)));
-                                                                    layout.flex.grow = 1.0;
-                                                                    layout.flex.shrink = 1.0;
-                                                                    layout.flex.basis =
-                                                                        Length::Px(Px(0.0));
-                                                                    layout
-                                                                },
-                                                                gap: row_gap.into(),
-                                                                padding: Edges::all(Px(0.0)).into(),
-                                                                justify: left_justify,
-                                                                align: CrossAlign::Center,
-                                                            },
-                                                            move |cx| {
-                                                                let mut out: Vec<AnyElement> =
-                                                                    Vec::with_capacity(
-                                                                        usize::from(show_checkmark)
-                                                                            + usize::from(
-                                                                                leading_icon
-                                                                                    .is_some(),
-                                                                            )
-                                                                            + 1,
-                                                                    );
-
-                                                                let label_el =
-                                                                    cmdk_highlighted_label(
-                                                                        cx,
-                                                                        label.clone(),
-                                                                        query_for_row.as_ref(),
-                                                                        text_fg,
-                                                                        nonmatch_text_fg,
-                                                                        text_style.clone(),
-                                                                        label_test_id.clone(),
-                                                                    );
-
-                                                                let icon_el = leading_icon
-                                                                    .clone()
-                                                                    .map(|icon| {
-                                                                        let mut icon =
-                                                                            decl_icon::icon_with(
-                                                                            cx,
-                                                                            icon,
-                                                                            None,
-                                                                            Some(ColorRef::Color(
-                                                                                icon_fg,
-                                                                            )),
-                                                                        );
-                                                                        if let Some(test_id) =
-                                                                            leading_icon_test_id
-                                                                                .clone()
-                                                                        {
-                                                                            icon =
-                                                                                icon.test_id(test_id);
-                                                                        }
-                                                                        icon
-                                                                    });
-
-                                                                let check_el =
-                                                                    show_checkmark.then(|| {
-                                                                        let mut icon =
-                                                                            decl_icon::icon_with(
-                                                                                cx,
-                                                                                ids::ui::CHECK,
-                                                                                Some(Px(16.0)),
-                                                                                Some(
-                                                                                    ColorRef::Color(
-                                                                                        icon_fg,
-                                                                                    ),
-                                                                                ),
-                                                                            );
-                                                                        if let Some(test_id) =
-                                                                            checkmark_test_id.clone()
-                                                                        {
-                                                                            icon =
-                                                                                icon.test_id(test_id);
-                                                                        }
-                                                                        cx.opacity(
-                                                                            if checked {
-                                                                                1.0
-                                                                            } else {
-                                                                                0.0
-                                                                            },
-                                                                            move |_cx| vec![icon],
-                                                                        )
-                                                                    });
-
-                                                                let mut prefix = Vec::new();
-                                                                if let Some(check_el) = check_el {
-                                                                    prefix.push(check_el);
-                                                                }
-                                                                if let Some(icon_el) = icon_el {
-                                                                    prefix.push(icon_el);
-                                                                }
-                                                                out.extend(
-                                                                    crate::rtl::concat_main_with_inline_start_vec(
-                                                                        dir, label_el, prefix,
-                                                                    ),
-                                                                );
-
-                                                                out
-                                                            },
-                                                        );
-
-                                                        if let Some(shortcut) = shortcut.clone() {
-                                                            let shortcut =
-                                                                CommandShortcut::new(shortcut)
-                                                                    .inline()
-                                                                    .into_element(cx);
-                                                            let (a, b) =
-                                                                crate::rtl::inline_start_end_pair(
-                                                                    dir, left, shortcut,
-                                                                );
-                                                            vec![a, b]
-                                                        } else {
-                                                            vec![left]
-                                                        }
-                                                    },
-                                                )]
-                                            },
-                                        )
-                                    });
-
-                                    let mut chrome = child;
-                                    if let Some(test_id) = chrome_test_id.clone() {
-                                        chrome = chrome.test_id(test_id);
-                                    }
-
-                                    vec![chrome]
-                                },
-                            );
-
-                            row = row.attach_semantics(
-                                SemanticsDecoration::default()
-                                    .disabled(semantics_disabled)
-                                    .invokable(enabled),
-                            );
-                            if let Some(test_id) = test_id_for_row {
-                                row =
-                                    row.attach_semantics(SemanticsDecoration::default().test_id(test_id));
-                            }
-
-                            row_ids.push(row.id);
-                            row
-                        })
-                    }
-                })
-                .collect();
-
-            let active_row_element = active_desc::active_element_for_index(&row_ids, active_idx);
-            let active_descendant =
-                active_row_element.and_then(|element| cx.live_node_for_element(element));
-
-            let border = border(&theme);
+            let border_color = border(&theme);
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
                 .unwrap_or(input_wrapper_h_fallback);
@@ -3207,7 +3255,7 @@ impl CommandPalette {
                 bottom: Px(1.0),
                 left: Px(0.0),
             };
-            wrapper.border_color = Some(border);
+            wrapper.border_color = Some(border_color);
 
             if matches!(wrapper.layout.size.height, Length::Auto) {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
@@ -3230,8 +3278,8 @@ impl CommandPalette {
                 self.input_role,
                 self.input_required,
                 effective_input_test_id.clone(),
-                active_descendant,
-                active_row_element.map(|id| id.0),
+                None,
+                None,
                 self.input_expanded,
                 MetricRef::space(Space::N3).resolve(&theme),
                 Length::Px(input_h),
@@ -3242,6 +3290,290 @@ impl CommandPalette {
             let input_id = input.id;
             if let Some(cell) = self.input_id_out_cell.clone() {
                 cell.set(Some(input_id));
+            }
+            let list_labelled_by = Some(input_id.0);
+
+            let scroll_layout = self.scroll.w_full().min_w_0().min_h_0();
+            let list = if render_rows.is_empty() {
+                let empty = self.empty_text;
+                CommandEmpty::new(empty).into_element(cx)
+            } else if should_virtualize_items {
+                let Some(item_row_data) = item_row_data else {
+                    unreachable!("virtualized command rows require cloneable item row data");
+                };
+                let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
+                if let Some(active_idx) = active_idx {
+                    scroll_handle.scroll_to_item(active_idx, ScrollStrategy::Nearest);
+                }
+
+                let mut options =
+                    VirtualListOptions::fixed(metrics.row_h, COMMAND_PALETTE_VIRTUAL_OVERSCAN)
+                        .keep_alive(COMMAND_PALETTE_VIRTUAL_OVERSCAN.saturating_mul(2));
+                options.items_revision = command_palette_item_rows_revision(&item_row_metas);
+                options.key_cache = VirtualListKeyCacheMode::AllKeys;
+
+                let mut virtual_list_layout = LayoutStyle::default();
+                virtual_list_layout.size.width = Length::Fill;
+                virtual_list_layout.size.min_height = Some(Length::Px(Px(0.0)));
+                virtual_list_layout.overflow = Overflow::Clip;
+
+                let active_row_for_virtual = active_row_element.clone();
+                let active_for_range = active_idx;
+                let metas_for_keys = item_row_metas.clone();
+                let metas_for_rows = item_row_metas.clone();
+                let row_data_for_rows = item_row_data.clone();
+                let navigation_for_rows = navigation.clone();
+                let active_for_rows = active.clone();
+                let pending_dispatch_for_rows = pending_dispatch.clone();
+                let query_for_rows = query_for_render.clone();
+                let metrics_for_rows = metrics.clone();
+
+                let virtual_list = cx.virtual_list_keyed_with_layout_and_range_extractor(
+                    virtual_list_layout,
+                    item_count,
+                    options,
+                    &scroll_handle,
+                    move |idx| {
+                        metas_for_keys
+                            .get(idx)
+                            .map(command_palette_row_item_key)
+                            .unwrap_or(idx as fret_ui::ItemKey)
+                    },
+                    move |range| {
+                        let mut indices = fret_ui::virtual_list::default_range_extractor(range);
+                        if let Some(active_idx) = active_for_range
+                            && active_idx < range.count
+                        {
+                            indices.push(active_idx);
+                        }
+                        indices
+                    },
+                    move |cx, idx| {
+                        let Some(item) = row_data_for_rows.get(idx).cloned() else {
+                            return cx.container(ContainerProps::default(), |_cx| Vec::new());
+                        };
+                        let Some(meta) = metas_for_rows.get(idx) else {
+                            return cx.container(ContainerProps::default(), |_cx| Vec::new());
+                        };
+                        let row = command_palette_render_item_row(
+                            cx,
+                            item,
+                            Vec::new(),
+                            idx,
+                            item_count,
+                            meta,
+                            &navigation_for_rows,
+                            active_idx,
+                            active_for_rows.clone(),
+                            pending_dispatch_for_rows.clone(),
+                            disable_pointer_selection,
+                            a11y_selected_mode,
+                            query_for_rows.clone(),
+                            &metrics_for_rows,
+                        );
+                        if active_idx.is_some_and(|active_idx| active_idx == idx) {
+                            active_row_for_virtual.set(Some(row.id));
+                        }
+                        row
+                    },
+                );
+
+                let list_body = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.min_height = Some(Length::Px(Px(0.0)));
+                            layout
+                        },
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0).into(),
+                        padding: Edges {
+                            top: group_pad_y,
+                            right: group_pad_x,
+                            bottom: group_pad_y,
+                            left: group_pad_x,
+                        }
+                        .into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![virtual_list],
+                );
+
+                let mut scroll_area = ScrollArea::new(vec![list_body])
+                    .scroll_handle(scroll_handle.base_handle().clone())
+                    .refine_layout(scroll_layout.clone());
+                if let Some(test_id) = list_viewport_test_id.clone() {
+                    scroll_area = scroll_area.viewport_test_id(test_id);
+                }
+                scroll_area.into_element(cx)
+            } else {
+                let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+                let active_row_for_full = active_row_element.clone();
+                let rows: Vec<AnyElement> = render_rows
+                    .into_iter()
+                    .map(|row| match row {
+                        CommandPaletteRenderRow::Heading(heading) => {
+                            let test_id_for_row = test_id_heading_prefix.clone().map(|prefix| {
+                                let seg = sanitize_test_id_segment(heading.as_ref());
+                                Arc::<str>::from(format!("{prefix}{seg}"))
+                            });
+                            let mut heading_row =
+                                command_group_heading_element(cx, heading, metrics.pad_x);
+                            if let Some(test_id) = test_id_for_row {
+                                heading_row = heading_row.test_id(test_id);
+                            }
+                            heading_row
+                        }
+                        CommandPaletteRenderRow::GroupPad => cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let height = if group_next_top_pad_zero {
+                                        group_pad_y
+                                    } else {
+                                        Px(group_pad_y.0 * 2.0)
+                                    };
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Px(height);
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        ),
+                        CommandPaletteRenderRow::Separator(test_id) => {
+                            let border = border(&theme);
+                            let mut sep = cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Px(Px(1.0));
+                                        // new-york-v4: `-mx-1 h-px`.
+                                        layout.margin.left =
+                                            fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                        layout.margin.right =
+                                            fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                        layout
+                                    },
+                                    background: Some(border),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            );
+                            sep = sep.attach_semantics(
+                                SemanticsDecoration::default().role(SemanticsRole::Separator),
+                            );
+                            if let Some(test_id) = test_id.clone() {
+                                sep = sep.test_id(test_id);
+                            }
+                            sep
+                        }
+                        CommandPaletteRenderRow::Loading(loading) => loading.into_element(cx),
+                        CommandPaletteRenderRow::Item(idx) => {
+                            let Some(item) = items.get_mut(idx).and_then(Option::take) else {
+                                return cx.container(ContainerProps::default(), |_cx| Vec::new());
+                            };
+                            let item_data = CommandPaletteItemRowData::from_item(&item);
+                            let children = item.children;
+                            let Some(meta) = item_row_metas.get(idx) else {
+                                return cx.container(ContainerProps::default(), |_cx| Vec::new());
+                            };
+                            let row = command_palette_render_item_row(
+                                cx,
+                                item_data,
+                                children,
+                                idx,
+                                item_count,
+                                meta,
+                                &navigation,
+                                active_idx,
+                                active.clone(),
+                                pending_dispatch.clone(),
+                                disable_pointer_selection,
+                                a11y_selected_mode,
+                                query_for_render.clone(),
+                                &metrics,
+                            );
+                            if active_idx.is_some_and(|active_idx| active_idx == idx) {
+                                active_row_for_full.set(Some(row.id));
+                            }
+                            row
+                        }
+                    })
+                    .collect();
+
+                let mut scroll_area = ScrollArea::new(vec![
+                    cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.min_height = Some(Length::Px(Px(0.0)));
+                                layout
+                            },
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0).into(),
+                            padding: Edges {
+                                top: group_pad_y,
+                                right: group_pad_x,
+                                bottom: group_pad_y,
+                                left: group_pad_x,
+                            }
+                            .into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                            ..Default::default()
+                        },
+                        move |_cx| rows,
+                    ),
+                ])
+                .scroll_handle(scroll_handle.clone())
+                .refine_layout(scroll_layout.clone());
+                if let Some(test_id) = list_viewport_test_id.clone() {
+                    scroll_area = scroll_area.viewport_test_id(test_id);
+                }
+                let scroll_area = scroll_area.into_element(cx);
+
+                if let Some(active_row_element) = active_row_element.get() {
+                    let _ = active_desc::scroll_active_element_into_view_y(
+                        cx,
+                        &scroll_handle,
+                        scroll_area.id,
+                        active_row_element,
+                    );
+                }
+
+                scroll_area
+            };
+
+            if let Some(cell) = list_id_out_cell.as_ref() {
+                cell.set(Some(list.id));
+            }
+
+            let list = list.attach_semantics(SemanticsDecoration {
+                role: Some(SemanticsRole::ListBox),
+                busy: Some(list_busy),
+                multiselectable: list_multiselectable.then_some(true),
+                labelled_by_element: list_labelled_by,
+                ..Default::default()
+            });
+            let list = if let Some(test_id) = list_test_id.clone() {
+                list.test_id(test_id)
+            } else {
+                list
+            };
+
+            let active_row_element = active_row_element.get();
+            if let fret_ui::element::ElementKind::TextInput(props) = &mut input.kind {
+                props.active_descendant =
+                    active_row_element.and_then(|element| cx.live_node_for_element(element));
+                props.active_descendant_element = active_row_element.map(|id| id.0);
             }
 
             let icon_fg = theme.color_token("muted-foreground");
@@ -3272,7 +3604,6 @@ impl CommandPalette {
                     vec![a, b]
                 },
             );
-            let list_labelled_by = Some(input_id.0);
 
             let key_handler = cx.slot_state(
                 || {
@@ -3373,7 +3704,7 @@ impl CommandPalette {
                                                 (navigation_disabled_flags.get(idx).copied()
                                                     == Some(false)
                                                     && *g == Some(group_id))
-                                                    .then_some(idx)
+                                                .then_some(idx)
                                             });
                                         if next_idx.is_some() {
                                             set_active_by_idx(next_idx);
@@ -3382,12 +3713,13 @@ impl CommandPalette {
                                     }
                                 } else {
                                     for group_id in group_order[..pos].iter().copied().rev() {
-                                        let next_idx = groups.iter().enumerate().find_map(|(idx, g)| {
-                                            (navigation_disabled_flags.get(idx).copied()
-                                                == Some(false)
-                                                && *g == Some(group_id))
+                                        let next_idx =
+                                            groups.iter().enumerate().find_map(|(idx, g)| {
+                                                (navigation_disabled_flags.get(idx).copied()
+                                                    == Some(false)
+                                                    && *g == Some(group_id))
                                                 .then_some(idx)
-                                        });
+                                            });
                                         if next_idx.is_some() {
                                             set_active_by_idx(next_idx);
                                             return;
@@ -3527,78 +3859,11 @@ impl CommandPalette {
                 });
             }
 
-            let scroll_layout = self.scroll.w_full().min_w_0().min_h_0();
-            let list = if rows.is_empty() {
-                let empty = self.empty_text;
-                CommandEmpty::new(empty).into_element(cx)
-            } else {
-                let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
-                let mut scroll_area = ScrollArea::new(vec![
-                    cx.flex(
-                        FlexProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.min_height = Some(Length::Px(Px(0.0)));
-                                layout
-                            },
-                            direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0).into(),
-                            padding: Edges {
-                                top: group_pad_y,
-                                right: group_pad_x,
-                                bottom: group_pad_y,
-                                left: group_pad_x,
-                            }
-                            .into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                            ..Default::default()
-                        },
-                        move |_cx| rows,
-                    ),
-                ])
-                .scroll_handle(scroll_handle.clone())
-                .refine_layout(scroll_layout.clone());
-                if let Some(test_id) = list_viewport_test_id.clone() {
-                    scroll_area = scroll_area.viewport_test_id(test_id);
-                }
-                let scroll_area = scroll_area.into_element(cx);
-
-                if let Some(active_row_element) = active_row_element {
-                    let _ = active_desc::scroll_active_element_into_view_y(
-                        cx,
-                        &scroll_handle,
-                        scroll_area.id,
-                        active_row_element,
-                    );
-                }
-
-                scroll_area
-            };
-
-            if let Some(cell) = list_id_out_cell.as_ref() {
-                cell.set(Some(list.id));
-            }
-
-            let list = list.attach_semantics(SemanticsDecoration {
-                role: Some(SemanticsRole::ListBox),
-                busy: Some(list_busy),
-                multiselectable: list_multiselectable.then_some(true),
-                labelled_by_element: list_labelled_by,
-                ..Default::default()
-            });
-            let list = if let Some(test_id) = list_test_id.clone() {
-                list.test_id(test_id)
-            } else {
-                list
-            };
-
-            let mut command = Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
-                .refine_style(self.chrome)
-                .refine_layout(self.layout)
-                .into_element(cx);
+            let mut command =
+                Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
+                    .refine_style(self.chrome)
+                    .refine_layout(self.layout)
+                    .into_element(cx);
             command.id = palette_root_id;
             command
         })
@@ -5362,6 +5627,102 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    fn command_item_child_stub(id: u64) -> AnyElement {
+        AnyElement::new(
+            GlobalElementId(id),
+            fret_ui::element::ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        )
+    }
+
+    #[test]
+    fn command_palette_virtualizes_only_large_plain_item_lists() {
+        let entries = (0..COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD)
+            .map(|i| CommandItem::new(format!("Item {i}")).into())
+            .collect::<Vec<CommandEntry>>();
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "", true, None);
+
+        assert!(command_palette_can_virtualize_items(&rows, &items));
+        assert!(command_palette_item_row_data(&items).is_some());
+    }
+
+    #[test]
+    fn command_palette_virtualization_rejects_groups_loading_and_custom_children() {
+        let grouped_entries = vec![
+            CommandGroup::new(
+                (0..COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD)
+                    .map(|i| CommandItem::new(format!("Item {i}")))
+                    .collect::<Vec<_>>(),
+            )
+            .heading("Grouped")
+            .into(),
+        ];
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(grouped_entries, "", true, None);
+        assert!(!command_palette_can_virtualize_items(&rows, &items));
+
+        let loading_entries = std::iter::once(CommandLoading::new("Loading").into())
+            .chain(
+                (0..COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD)
+                    .map(|i| CommandItem::new(format!("Item {i}")).into()),
+            )
+            .collect::<Vec<CommandEntry>>();
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(loading_entries, "", true, None);
+        assert!(!command_palette_can_virtualize_items(&rows, &items));
+
+        let custom_entries = (0..COMMAND_PALETTE_VIRTUALIZE_ITEM_THRESHOLD)
+            .map(|i| {
+                let item = if i == 0 {
+                    CommandItem::new("Custom").children([command_item_child_stub(0xC0DE)])
+                } else {
+                    CommandItem::new(format!("Item {i}"))
+                };
+                item.into()
+            })
+            .collect::<Vec<CommandEntry>>();
+        let (rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(custom_entries, "", true, None);
+        assert!(!command_palette_can_virtualize_items(&rows, &items));
+        assert!(command_palette_item_row_data(&items).is_none());
+    }
+
+    #[test]
+    fn command_palette_virtual_row_keys_include_duplicate_occurrences_and_revision_changes() {
+        let entries = vec![
+            CommandItem::new("Duplicate")
+                .value("same")
+                .test_id("explicit-a")
+                .into(),
+            CommandItem::new("Duplicate").value("same").into(),
+        ];
+        let (_rows, items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(entries, "", true, None);
+        let metas = command_palette_item_row_metas(&items, Some(&Arc::from("cmdk-item-")));
+
+        assert_eq!(metas.len(), 2);
+        assert_ne!(
+            command_palette_row_item_key(&metas[0]),
+            command_palette_row_item_key(&metas[1])
+        );
+        assert_eq!(metas[0].test_id.as_deref(), Some("explicit-a"));
+        assert_eq!(metas[1].test_id.as_deref(), Some("cmdk-item-same-1"));
+
+        let reversed_entries = vec![
+            CommandItem::new("Other").value("other").into(),
+            CommandItem::new("Duplicate").value("same").into(),
+        ];
+        let (_rows, reversed_items, _item_groups) =
+            command_palette_render_rows_for_query_with_options(reversed_entries, "", true, None);
+        let reversed_metas = command_palette_item_row_metas(&reversed_items, None);
+
+        assert_ne!(
+            command_palette_item_rows_revision(&metas),
+            command_palette_item_rows_revision(&reversed_metas)
+        );
     }
 
     #[test]
