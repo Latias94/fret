@@ -44,6 +44,7 @@ tracing.workspace = true
 smallvec.workspace = true
 naga = { workspace = true, features = ["wgsl-in"] }
 pollster.workspace = true
+rustc-hash.workspace = true
 
 [dev-dependencies]
 fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["test-support"] }

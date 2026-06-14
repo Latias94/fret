@@ -389,17 +389,71 @@ popover overlay root solve tail.
   availability question is publisher-level command grouping/surfaces, not more per-handler
   filtering.
 
+## 2026-06-15 Layout Profile Follow-up
+
+- Re-ran the correct combobox dev-fast gate with layout node profiling after the command-specific
+  action-interest slice:
+  `target/fret-diag/gate-combobox-filter-select-devfast-layout-profile-after-action-interest/1781461140853/bundle.schema2.json`.
+- The gate remained green. Top frame was `10452us` with `layout=6134us`, `solve=1093us`,
+  `prepaint=644us`, `paint=3674us`, `dispatch=0us`, `hit_test=56us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `cache.replayed_ops=203`.
+- Root-level layout attribution showed the popover overlay root as the meaningful dirty root:
+  `root[window-overlays.popover.29fc70edc4575465]` rebuilt a `DismissibleLayer` subtree with
+  `subtree_layout_dirty_count=37` in about `285us`. The primary dirty source was model observation
+  flowing through the overlay `ViewCache` and `InteractivityGate`.
+- The main window root only performed a `mark_seen` pass over `1073` nodes in about `112us`. That is
+  not currently a high-leverage or low-risk target compared with the remaining layout request/apply
+  and renderer tails.
+- Query/filter changes in `CommandPalette` and combobox remain layout-sensitive because they can
+  change row materialization and content height. Treating those model observations as paint-only
+  would be a contract bug unless the runtime gains a deeper virtual row layout contract.
+- Renderer text preparation is now the cleaner next target for mutation frames: the latest profile
+  still shows `renderer.text_prepare p95/max ~= 440us`, with `collect_pin_keys ~= 251us` and
+  `bucket_delta ~= 171us` when `fast_reuse=0`. Stable frames are already covered by the retained
+  text pin bucket fast path, so the open question is whether changed-blob keyed glyph bucket deltas
+  can avoid rebuilding the full `GlyphKeyBuckets` on filter/select mutation frames.
+
+## 2026-06-15 Tenth Slice Findings
+
+- Implemented a renderer text pin-state delta path for mutation frames. `TextPinState` now keeps
+  per-ring-bucket glyph membership sets, collects a lightweight scene pin snapshot, and computes
+  retained/added/removed glyph keys directly from the current ref-count maps instead of rebuilding a
+  full `GlyphKeyBuckets` and diffing it against the old bucket.
+- The bucket update is in-place: removed glyph keys are deleted from the current ring bucket, added
+  glyph keys are appended after successful atlas prewarm, and the exact scene signature is recorded
+  only when the bucket is complete. This keeps atlas pin correctness aligned with the previous
+  full-diff path while reducing allocation and retained-key movement.
+- Switched the pin-state hot maps/sets to `rustc_hash::FxHashMap/FxHashSet`. These are internal
+  glyph/blob id maps, not attacker-controlled lookup tables, and match the existing choice in the
+  layout hot path.
+- Removed the old full-bucket diff helper from `atlas.rs`; the regression surface now uses the real
+  `prepare_for_scene` path instead of a detached helper test.
+- Focused validation passed:
+  `cargo test -p fret-render-wgpu --lib prepare_for_scene --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-render-wgpu --profile dev-fast -j 1`,
+  `cargo build -p fret-ui-gallery --profile dev-fast -j 1`,
+  `cargo fmt -p fret-render-wgpu`, and `git diff --check`.
+- The correct combobox dev-fast perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-text-pin-fx-delta-vc/1781463556043/bundle.schema2.json`.
+  Top frame was `9932us` with `layout=5635us`, `solve=1034us`, `prepaint=606us`,
+  `paint=3691us`, `dispatch=0us`, `hit_test=47us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `cache.replayed_ops=203`.
+- Renderer text preparation improved materially on the mutation frames:
+  previous layout-profile bundle showed `renderer.text_prepare p95/max ~= 440us` with
+  `collect_pin_keys=251us` and `bucket_delta=171us`; the accepted bundle shows
+  `renderer.text_prepare p95/max=179us`, `collect_pin_keys=76us`, and `bucket_delta=80us`.
+- Current decision: keep this slice as a shared renderer infrastructure win. The combobox gate is
+  now again dominated by overlay/root layout request/apply, command-availability tails, and renderer
+  upload/finish rather than text pin bucket reconstruction.
+
 ## Next Verification
 
-1. Investigate why mutation frames still rebuild the full text bucket (`fast_reuse=0`) and whether
-   a glyph-set delta keyed by changed `TextBlobId`s can avoid full `GlyphKeyBuckets` reconstruction
-   without weakening atlas pin correctness.
-2. Revisit the popover/root layout request/apply tail (`request_build phase2 compute ~= 0.9ms`,
+1. Revisit the popover/root layout request/apply tail (`request_build phase2 compute ~= 0.9ms`,
    roots apply up to `0.96ms`) with node-level layout profiling.
-3. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
+2. Design a publisher-level command surface/group mechanism only if fresh evidence shows full-window
    snapshot command sets are still taxing dense component interactions. Per-handler filtering is now
    in place; the remaining lever is deciding which commands the publisher should evaluate at all.
-4. Keep watching renderer upload/finish/encode p95, which is now often comparable to the remaining
+3. Keep watching renderer upload/finish/encode p95, which is now often comparable to the remaining
    UI-side work in green combobox probes.
 
 ## Open Questions

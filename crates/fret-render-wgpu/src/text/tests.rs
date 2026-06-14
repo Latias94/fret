@@ -446,6 +446,53 @@ fn prepare_for_scene_reuses_unchanged_ring_bucket_signature() {
 }
 
 #[test]
+fn prepare_for_scene_diffs_mutated_ring_bucket_incrementally() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let (blob_a, _) = text.prepare("aaaa", &style, TextConstraints::default());
+    let (blob_b, _) = text.prepare("zzzz", &style, TextConstraints::default());
+    let scene_ab = scene_with_texts(&[blob_a, blob_b]);
+    let scene_a = scene_with_text(blob_a);
+
+    let initial = text.prepare_for_scene_with_perf(&scene_ab, 0, true);
+    assert!(
+        initial.pinned_glyph_keys > 0,
+        "test setup should produce visible glyph pins"
+    );
+    assert!(initial.added_glyph_keys > 0);
+
+    let changed = text.prepare_for_scene_with_perf(&scene_a, 3, true);
+    assert!(
+        !changed.fast_scene_bucket_reused,
+        "changed text scene must still update pin state"
+    );
+    assert_eq!(changed.scene_text_blobs, 1);
+    assert!(
+        changed.retained_glyph_keys > 0,
+        "incremental delta should retain the still-visible blob glyphs"
+    );
+    assert!(
+        changed.removed_glyph_keys > 0,
+        "incremental delta should remove glyphs that left this ring bucket"
+    );
+    assert_eq!(
+        changed.added_glyph_keys, 0,
+        "removing a text blob from a prepared bucket should not prewarm new glyphs"
+    );
+
+    let reused = text.prepare_for_scene_with_perf(&scene_a, 6, true);
+    assert!(
+        reused.fast_scene_bucket_reused,
+        "post-delta bucket signature should support the stable-scene fast path"
+    );
+    assert_eq!(reused.pinned_glyph_keys, changed.pinned_glyph_keys);
+}
+
+#[test]
 fn text_locale_changes_font_stack_key() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);

@@ -2763,6 +2763,7 @@ dependencies = [
  "pollster",
  "read-fonts 0.37.0",
  "resvg",
+ "rustc-hash 2.1.1",
  "serde",
  "serde_json",
  "slotmap",

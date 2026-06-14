@@ -66,28 +66,24 @@ impl TextSystem {
 
         let collection = self
             .pin_state
-            .collect_scene_pinned_keys(scene, &self.blob_state);
-        let pinned_keys = collection.buckets;
+            .collect_scene_pin_snapshot(scene, &self.blob_state);
         perf.scene_text_blobs = usize_to_u64(collection.scene_text_blobs);
-        perf.pinned_glyph_keys = usize_to_u64(pinned_keys.total_len());
+        perf.pinned_glyph_keys = usize_to_u64(collection.pinned_glyph_keys);
         if let Some(start) = collect_start {
             perf.collect_pin_keys += start.elapsed();
         }
 
-        let Some((old_mask, old_color, old_subpixel)) = self.pin_state.bucket(bucket) else {
+        let delta_start = perf_enabled.then(Instant::now);
+        let Some(delta) = self.pin_state.current_scene_delta_for_bucket(bucket) else {
             return perf;
         };
-
-        let delta_start = perf_enabled.then(Instant::now);
-        let delta = pinned_keys.retain_delta_from_existing(old_mask, old_color, old_subpixel);
         if let Some(start) = delta_start {
             perf.bucket_delta += start.elapsed();
         }
-        let (retain_mask, retain_color, retain_subpixel) = delta.retained;
+        let retained_glyph_keys = delta.retained_len;
         let (mut add_mask, mut add_color, mut add_subpixel) = delta.added;
         let (remove_mask, remove_color, remove_subpixel) = delta.removed;
-        perf.retained_glyph_keys =
-            glyph_bucket_len_u64(&retain_mask, &retain_color, &retain_subpixel);
+        perf.retained_glyph_keys = usize_to_u64(retained_glyph_keys);
         perf.prewarm_glyph_keys = glyph_bucket_len_u64(&add_mask, &add_color, &add_subpixel);
         perf.removed_glyph_keys =
             glyph_bucket_len_u64(&remove_mask, &remove_color, &remove_subpixel);
@@ -119,13 +115,13 @@ impl TextSystem {
         self.atlas_runtime
             .inc_pin_bucket(&add_mask, &add_color, &add_subpixel);
 
-        self.pin_state.replace_bucket(
+        self.pin_state.apply_bucket_delta(
             bucket,
-            append_pin_bucket(retain_mask, add_mask),
-            append_pin_bucket(retain_color, add_color),
-            append_pin_bucket(retain_subpixel, add_subpixel),
-            next_signature,
+            (&add_mask, &add_color, &add_subpixel),
+            (&remove_mask, &remove_color, &remove_subpixel),
         );
+        self.pin_state
+            .replace_bucket_signature(bucket, next_signature);
         if let Some(start) = pin_update_start {
             perf.pin_bucket_update += start.elapsed();
         }
@@ -215,11 +211,6 @@ impl TextSystem {
             self.ensure_glyph_in_atlas(key, epoch);
         }
     }
-}
-
-fn append_pin_bucket(mut retained: Vec<GlyphKey>, mut added: Vec<GlyphKey>) -> Vec<GlyphKey> {
-    retained.append(&mut added);
-    retained
 }
 
 fn glyph_bucket_len_u64(mask: &[GlyphKey], color: &[GlyphKey], subpixel: &[GlyphKey]) -> u64 {
