@@ -87,6 +87,7 @@ pub(crate) struct TextPrepareScenePerf {
     pub(crate) prewarm: Duration,
     pub(crate) pin_bucket_update: Duration,
     pub(crate) flush_uploads: Duration,
+    pub(crate) fast_scene_bucket_reused: bool,
     pub(crate) scene_text_blobs: u64,
     pub(crate) pinned_glyph_keys: u64,
     pub(crate) prewarm_glyph_keys: u64,

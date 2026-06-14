@@ -1,4 +1,5 @@
 use super::atlas::GlyphKey;
+use super::pin_state::ScenePinBucketSignature;
 use super::prepare::{
     build_glyph_scaler_from_face_bytes, glyph_render_at_bins, render_glyph_image,
 };
@@ -49,10 +50,25 @@ impl TextSystem {
             .clear_for_atlas_reset_generation(self.atlas_runtime.reset_generation());
 
         let collect_start = perf_enabled.then(Instant::now);
-        let (pinned_keys, scene_text_blobs) = self
+        if let Some(reuse) = self
+            .pin_state
+            .try_reuse_scene_bucket(bucket, scene, &self.blob_state)
+        {
+            perf.fast_scene_bucket_reused = true;
+            perf.scene_text_blobs = usize_to_u64(reuse.scene_text_blobs);
+            perf.pinned_glyph_keys = usize_to_u64(reuse.pinned_glyph_keys);
+            perf.retained_glyph_keys = usize_to_u64(reuse.pinned_glyph_keys);
+            if let Some(start) = collect_start {
+                perf.collect_pin_keys += start.elapsed();
+            }
+            return perf;
+        }
+
+        let collection = self
             .pin_state
             .collect_scene_pinned_keys(scene, &self.blob_state);
-        perf.scene_text_blobs = usize_to_u64(scene_text_blobs);
+        let pinned_keys = collection.buckets;
+        perf.scene_text_blobs = usize_to_u64(collection.scene_text_blobs);
         perf.pinned_glyph_keys = usize_to_u64(pinned_keys.total_len());
         if let Some(start) = collect_start {
             perf.collect_pin_keys += start.elapsed();
@@ -93,6 +109,11 @@ impl TextSystem {
         add_color.retain(|key| self.atlas_runtime.contains_key(*key));
         add_subpixel.retain(|key| self.atlas_runtime.contains_key(*key));
         perf.added_glyph_keys = glyph_bucket_len_u64(&add_mask, &add_color, &add_subpixel);
+        let bucket_complete = perf.added_glyph_keys == perf.prewarm_glyph_keys;
+        let next_signature = collection.signature.and_then(|signature| {
+            bucket_complete
+                .then(|| ScenePinBucketSignature::new(signature, perf.pinned_glyph_keys as usize))
+        });
 
         let pin_update_start = perf_enabled.then(Instant::now);
         self.atlas_runtime
@@ -103,6 +124,7 @@ impl TextSystem {
             append_pin_bucket(retain_mask, add_mask),
             append_pin_bucket(retain_color, add_color),
             append_pin_bucket(retain_subpixel, add_subpixel),
+            next_signature,
         );
         if let Some(start) = pin_update_start {
             perf.pin_bucket_update += start.elapsed();

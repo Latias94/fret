@@ -433,6 +433,7 @@ pub struct RenderPerfSnapshot {
     pub prepare_text_pin_bucket_update_us: u64,
     pub prepare_text_flush_uploads_us: u64,
     pub prepare_text_scene_text_blobs: u64,
+    pub prepare_text_fast_scene_bucket_reuses: u64,
     pub prepare_text_pinned_glyph_keys: u64,
     pub prepare_text_prewarm_glyph_keys: u64,
     pub prepare_text_retained_glyph_keys: u64,
@@ -790,6 +791,7 @@ pub(super) struct RenderPerfStats {
     pub(super) prepare_text_pin_bucket_update: Duration,
     pub(super) prepare_text_flush_uploads: Duration,
     pub(super) prepare_text_scene_text_blobs: u64,
+    pub(super) prepare_text_fast_scene_bucket_reuses: u64,
     pub(super) prepare_text_pinned_glyph_keys: u64,
     pub(super) prepare_text_prewarm_glyph_keys: u64,
     pub(super) prepare_text_retained_glyph_keys: u64,
@@ -985,6 +987,10 @@ impl RenderPerfStats {
         self.prepare_text_scene_text_blobs = self
             .prepare_text_scene_text_blobs
             .saturating_add(perf.scene_text_blobs);
+        if perf.fast_scene_bucket_reused {
+            self.prepare_text_fast_scene_bucket_reuses =
+                self.prepare_text_fast_scene_bucket_reuses.saturating_add(1);
+        }
         self.prepare_text_pinned_glyph_keys = self
             .prepare_text_pinned_glyph_keys
             .saturating_add(perf.pinned_glyph_keys);

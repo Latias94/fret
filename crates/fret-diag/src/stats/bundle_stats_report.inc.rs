@@ -561,6 +561,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_prepare_text_pin_bucket_update_us: u64,
     pub(super) renderer_prepare_text_flush_uploads_us: u64,
     pub(super) renderer_prepare_text_scene_text_blobs: u64,
+    pub(super) renderer_prepare_text_fast_scene_bucket_reuses: u64,
     pub(super) renderer_prepare_text_pinned_glyph_keys: u64,
     pub(super) renderer_prepare_text_prewarm_glyph_keys: u64,
     pub(super) renderer_prepare_text_retained_glyph_keys: u64,
@@ -3170,6 +3171,7 @@ impl BundleStatsReport {
                     || row.renderer_prepare_text_pin_bucket_update_us > 0
                     || row.renderer_prepare_text_flush_uploads_us > 0
                     || row.renderer_prepare_text_scene_text_blobs > 0
+                    || row.renderer_prepare_text_fast_scene_bucket_reuses > 0
                     || row.renderer_prepare_text_pinned_glyph_keys > 0
                 {
                     line.push_str(&format!(
@@ -3181,8 +3183,9 @@ impl BundleStatsReport {
                         row.renderer_prepare_text_flush_uploads_us,
                     ));
                     line.push_str(&format!(
-                        " renderer.text_prepare.counts(blobs/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}",
+                        " renderer.text_prepare.counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}/{}",
                         row.renderer_prepare_text_scene_text_blobs,
+                        row.renderer_prepare_text_fast_scene_bucket_reuses,
                         row.renderer_prepare_text_pinned_glyph_keys,
                         row.renderer_prepare_text_prewarm_glyph_keys,
                         row.renderer_prepare_text_retained_glyph_keys,
@@ -3786,6 +3789,7 @@ impl BundleStatsReport {
                     || row.renderer_prepare_text_pin_bucket_update_us > 0
                     || row.renderer_prepare_text_flush_uploads_us > 0
                     || row.renderer_prepare_text_scene_text_blobs > 0
+                    || row.renderer_prepare_text_fast_scene_bucket_reuses > 0
                     || row.renderer_prepare_text_pinned_glyph_keys > 0
                 {
                     line.push_str(&format!(
@@ -3797,8 +3801,9 @@ impl BundleStatsReport {
                         row.renderer_prepare_text_flush_uploads_us,
                     ));
                     line.push_str(&format!(
-                        " renderer.text_prepare.counts(blobs/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}",
+                        " renderer.text_prepare.counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}/{}",
                         row.renderer_prepare_text_scene_text_blobs,
+                        row.renderer_prepare_text_fast_scene_bucket_reuses,
                         row.renderer_prepare_text_pinned_glyph_keys,
                         row.renderer_prepare_text_prewarm_glyph_keys,
                         row.renderer_prepare_text_retained_glyph_keys,
@@ -6777,6 +6782,10 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_scene_text_blobs".to_string(),
                     Value::from(row.renderer_prepare_text_scene_text_blobs),
+                );
+                obj.insert(
+                    "renderer_prepare_text_fast_scene_bucket_reuses".to_string(),
+                    Value::from(row.renderer_prepare_text_fast_scene_bucket_reuses),
                 );
                 obj.insert(
                     "renderer_prepare_text_pinned_glyph_keys".to_string(),

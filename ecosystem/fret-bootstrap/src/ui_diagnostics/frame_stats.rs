@@ -508,6 +508,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_prepare_text_scene_text_blobs: u64,
     #[serde(default)]
+    pub renderer_prepare_text_fast_scene_bucket_reuses: u64,
+    #[serde(default)]
     pub renderer_prepare_text_pinned_glyph_keys: u64,
     #[serde(default)]
     pub renderer_prepare_text_prewarm_glyph_keys: u64,
@@ -1309,6 +1311,7 @@ impl UiFrameStatsV1 {
             renderer_prepare_text_pin_bucket_update_us: 0,
             renderer_prepare_text_flush_uploads_us: 0,
             renderer_prepare_text_scene_text_blobs: 0,
+            renderer_prepare_text_fast_scene_bucket_reuses: 0,
             renderer_prepare_text_pinned_glyph_keys: 0,
             renderer_prepare_text_prewarm_glyph_keys: 0,
             renderer_prepare_text_retained_glyph_keys: 0,
@@ -1555,6 +1558,8 @@ impl UiFrameStatsV1 {
             sample.perf.prepare_text_pin_bucket_update_us;
         self.renderer_prepare_text_flush_uploads_us = sample.perf.prepare_text_flush_uploads_us;
         self.renderer_prepare_text_scene_text_blobs = sample.perf.prepare_text_scene_text_blobs;
+        self.renderer_prepare_text_fast_scene_bucket_reuses =
+            sample.perf.prepare_text_fast_scene_bucket_reuses;
         self.renderer_prepare_text_pinned_glyph_keys = sample.perf.prepare_text_pinned_glyph_keys;
         self.renderer_prepare_text_prewarm_glyph_keys = sample.perf.prepare_text_prewarm_glyph_keys;
         self.renderer_prepare_text_retained_glyph_keys =

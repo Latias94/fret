@@ -814,6 +814,10 @@ pub(crate) const RENDERER_PREPARE_TEXT_SCENE_TEXT_BLOBS: PerfKey = count_key(
     "renderer_prepare_text_scene_text_blobs",
     PerfKeyAggregate::Max,
 );
+pub(crate) const RENDERER_PREPARE_TEXT_FAST_SCENE_BUCKET_REUSES: PerfKey = count_key(
+    "renderer_prepare_text_fast_scene_bucket_reuses",
+    PerfKeyAggregate::Max,
+);
 pub(crate) const RENDERER_PREPARE_TEXT_PINNED_GLYPH_KEYS: PerfKey = count_key(
     "renderer_prepare_text_pinned_glyph_keys",
     PerfKeyAggregate::Max,
@@ -1263,6 +1267,7 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     RENDERER_PREPARE_TEXT_PIN_BUCKET_UPDATE_US,
     RENDERER_PREPARE_TEXT_FLUSH_UPLOADS_US,
     RENDERER_PREPARE_TEXT_SCENE_TEXT_BLOBS,
+    RENDERER_PREPARE_TEXT_FAST_SCENE_BUCKET_REUSES,
     RENDERER_PREPARE_TEXT_PINNED_GLYPH_KEYS,
     RENDERER_PREPARE_TEXT_RETAINED_GLYPH_KEYS,
     RENDERER_PREPARE_TEXT_ADDED_GLYPH_KEYS,

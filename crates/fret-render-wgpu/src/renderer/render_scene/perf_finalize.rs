@@ -471,6 +471,7 @@ impl Renderer {
                 as u64,
             prepare_text_flush_uploads_us: frame_perf.prepare_text_flush_uploads.as_micros() as u64,
             prepare_text_scene_text_blobs: frame_perf.prepare_text_scene_text_blobs,
+            prepare_text_fast_scene_bucket_reuses: frame_perf.prepare_text_fast_scene_bucket_reuses,
             prepare_text_pinned_glyph_keys: frame_perf.prepare_text_pinned_glyph_keys,
             prepare_text_prewarm_glyph_keys: frame_perf.prepare_text_prewarm_glyph_keys,
             prepare_text_retained_glyph_keys: frame_perf.prepare_text_retained_glyph_keys,

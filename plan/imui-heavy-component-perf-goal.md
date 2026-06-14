@@ -305,22 +305,58 @@ popover overlay root solve tail.
   app-owned command surfaces, while the Gallery closed-dialog fix is the actual perf win for this
   combobox gate.
 
+## 2026-06-15 Eighth Slice Findings
+
+- Investigated the residual renderer tail after the closed command-palette slice. The latest green
+  baseline bundle still had renderer text preparation around `418-582us`, mostly
+  `collect_pin_keys` and `bucket_delta`, even when UI paint had no text re-shaping and paint cache
+  was replaying stable subtrees.
+- Added a renderer-level retained text pin bucket fast path in `fret-render-wgpu`. Each swapchain
+  ring bucket records the exact visible `TextBlobId` sequence after a successful full pin pass. If
+  the same bucket sees the exact same live text blob sequence again, it skips glyph-bucket rebuild,
+  bucket delta, prewarm, and pin ref-count updates for that frame.
+- The fast path is intentionally conservative:
+  - it stores an exact `TextBlobId` list rather than a hash-only signature,
+  - atlas reset clears bucket signatures,
+  - missing/evicted text blobs disable reuse,
+  - incomplete prewarm does not record a reusable signature,
+  - scene changes fall back to the original full path.
+- Added diagnostics visibility through
+  `renderer_prepare_text_fast_scene_bucket_reuses`, including `fret-diag stats` top-row output as
+  `renderer.text_prepare.counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)`.
+- Focused validation passed:
+  `cargo test -p fret-render-wgpu --lib prepare_for_scene --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-diag --lib renderer_prepare_text --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-render-wgpu --profile dev-fast -j 1`,
+  `cargo check -p fret-bootstrap --profile dev-fast -j 1`,
+  and `cargo check -p fret-diag --profile dev-fast -j 1`.
+- The correct combobox dev-fast perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-text-pin-bucket-reuse-vc/1781457750260/bundle.schema2.json`.
+  Top frame was `10103us` with `layout=5943us`, `solve=1155us`, `prepaint=629us`,
+  `paint=3531us`, `dispatch=0us`, `hit_test=49us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `cache.replayed_ops=203`.
+- Compared with the previous accepted bundle
+  `target/fret-diag/gate-combobox-filter-select-devfast-command-palette-closed-vc/1781455378046/bundle.schema2.json`,
+  the top frame moved from `11197us` to `10103us`, total considered time moved from `43755us` to
+  `40004us`, and renderer text p95/max moved from `582us` to `446us`.
+- The fast path does not hit the slowest filter/select mutation frames (`fast_reuse=0`) because
+  their visible text blob sequence changes. It does hit stable frames (`fast_reuse=1`), reducing
+  their text prepare path to roughly `12-16us`.
+- Current decision: keep this slice as a shared renderer infrastructure win, but do not treat it as
+  the final answer for the dense combobox path. The remaining worst frames are still dominated by
+  popover/root layout request/apply plus renderer upload/finish/encode work and command availability
+  tails around focus/text paste routing.
+
 ## Next Verification
 
-1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual
-   `ui-app-driver,diagnostics` feature set.
-2. Run `cargo fmt -p fret-ui -p fret-bootstrap`. Done.
-3. Run `cargo check -p fret-ui -j 1`. Done.
-4. Run focused `fret-ui` semantics tests for dirty gate, relations, active descendant, and virtual
-   list collection metadata. Done.
-5. Re-run the current combobox dev-fast perf gate and compare the newest bundle with
-   `diag stats --sort time --top 6`. Done; rerun passed with zero threshold failures.
-6. Run final diff and focused verification before commit.
-7. Investigate whether app-level gallery commands should be excluded from unrelated heavy-component
-   runtime snapshots through a command-surface/group mechanism instead of per-component micro
-   caching.
-8. Before committing the seventh slice, run `git diff --check` and re-run the focused
-   action-availability test after the documentation update.
+1. Commit the renderer text pin bucket reuse slice after final `git status` and focused validation.
+2. Investigate why mutation frames still rebuild the full text bucket (`fast_reuse=0`) and whether
+   a glyph-set delta keyed by changed `TextBlobId`s can avoid full `GlyphKeyBuckets` reconstruction
+   without weakening atlas pin correctness.
+3. Revisit the popover/root layout request/apply tail (`request_build phase2 compute ~= 0.9ms`,
+   roots apply up to `0.96ms`) with node-level layout profiling.
+4. Re-check command availability tail after the paste/focus command hotspots (`~457-560us`) to
+   decide whether a command surface/group mechanism is now worth designing.
 
 ## Open Questions
 

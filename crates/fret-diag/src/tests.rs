@@ -3685,6 +3685,7 @@ fn bundle_stats_reports_renderer_prepare_text_subphases() {
                             "renderer_prepare_text_pin_bucket_update_us": 6,
                             "renderer_prepare_text_flush_uploads_us": 2,
                             "renderer_prepare_text_scene_text_blobs": 8,
+                            "renderer_prepare_text_fast_scene_bucket_reuses": 1,
                             "renderer_prepare_text_pinned_glyph_keys": 40,
                             "renderer_prepare_text_prewarm_glyph_keys": 2,
                             "renderer_prepare_text_retained_glyph_keys": 38,
@@ -3706,6 +3707,7 @@ fn bundle_stats_reports_renderer_prepare_text_subphases() {
                             "renderer_prepare_text_pin_bucket_update_us": 10,
                             "renderer_prepare_text_flush_uploads_us": 6,
                             "renderer_prepare_text_scene_text_blobs": 9,
+                            "renderer_prepare_text_fast_scene_bucket_reuses": 2,
                             "renderer_prepare_text_pinned_glyph_keys": 44,
                             "renderer_prepare_text_prewarm_glyph_keys": 4,
                             "renderer_prepare_text_retained_glyph_keys": 40,
@@ -3732,6 +3734,10 @@ fn bundle_stats_reports_renderer_prepare_text_subphases() {
     assert_eq!(report.max_renderer_prepare_text_pin_bucket_update_us, 10);
     assert_eq!(report.max_renderer_prepare_text_flush_uploads_us, 6);
     assert_eq!(report.p95_renderer_prepare_text_collect_pin_keys_us, 7);
+    assert_eq!(
+        report.top[0].renderer_prepare_text_fast_scene_bucket_reuses,
+        2
+    );
     assert_eq!(report.top[0].renderer_prepare_text_pinned_glyph_keys, 44);
 
     let json = report.to_json();
@@ -3744,6 +3750,11 @@ fn bundle_stats_reports_renderer_prepare_text_subphases() {
         json.pointer("/top/0/renderer_prepare_text_removed_glyph_keys")
             .and_then(|v| v.as_u64()),
         Some(3)
+    );
+    assert_eq!(
+        json.pointer("/top/0/renderer_prepare_text_fast_scene_bucket_reuses")
+            .and_then(|v| v.as_u64()),
+        Some(2)
     );
 }
 

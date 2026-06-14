@@ -405,6 +405,47 @@ fn prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs() {
 }
 
 #[test]
+fn prepare_for_scene_reuses_unchanged_ring_bucket_signature() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let (blob_a, _) = text.prepare("stable pin cache a", &style, TextConstraints::default());
+    let (blob_b, _) = text.prepare("stable pin cache b", &style, TextConstraints::default());
+    let scene_a = scene_with_text(blob_a);
+    let scene_ab = scene_with_texts(&[blob_a, blob_b]);
+
+    let initial = text.prepare_for_scene_with_perf(&scene_a, 0, true);
+    assert!(
+        !initial.fast_scene_bucket_reused,
+        "initial bucket fill must run the full pin path"
+    );
+    assert!(
+        initial.pinned_glyph_keys > 0,
+        "test setup should produce visible glyph pins"
+    );
+
+    let reused = text.prepare_for_scene_with_perf(&scene_a, 3, true);
+    assert!(
+        reused.fast_scene_bucket_reused,
+        "same ring bucket and same text scene should skip bucket diffing"
+    );
+    assert_eq!(reused.scene_text_blobs, 1);
+    assert_eq!(reused.pinned_glyph_keys, initial.pinned_glyph_keys);
+    assert_eq!(reused.added_glyph_keys, 0);
+    assert_eq!(reused.removed_glyph_keys, 0);
+
+    let changed = text.prepare_for_scene_with_perf(&scene_ab, 6, true);
+    assert!(
+        !changed.fast_scene_bucket_reused,
+        "changed text scene must fall back to the full pin path"
+    );
+    assert_eq!(changed.scene_text_blobs, 2);
+}
+
+#[test]
 fn text_locale_changes_font_stack_key() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);

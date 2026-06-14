@@ -1975,6 +1975,7 @@ mod service_tests {
         perf.encode_scene_us = 42;
         perf.prepare_text_collect_pin_keys_us = 5;
         perf.prepare_text_prewarm_us = 6;
+        perf.prepare_text_fast_scene_bucket_reuses = 2;
         perf.prepare_text_pinned_glyph_keys = 77;
         perf.instance_bytes = 2048;
         perf.encode_scene_text_ops = 17;
@@ -1999,6 +2000,7 @@ mod service_tests {
         assert_eq!(stats.renderer_encode_scene_us, 42);
         assert_eq!(stats.renderer_prepare_text_collect_pin_keys_us, 5);
         assert_eq!(stats.renderer_prepare_text_prewarm_us, 6);
+        assert_eq!(stats.renderer_prepare_text_fast_scene_bucket_reuses, 2);
         assert_eq!(stats.renderer_prepare_text_pinned_glyph_keys, 77);
         assert_eq!(stats.renderer_instance_bytes, 2048);
         assert_eq!(stats.renderer_encode_scene_text_ops, 17);

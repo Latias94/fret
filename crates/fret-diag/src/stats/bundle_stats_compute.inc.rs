@@ -869,6 +869,10 @@ fn bundle_stats_from_json_with_options_and_filter(
                 .and_then(|m| m.get("renderer_prepare_text_scene_text_blobs"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_prepare_text_fast_scene_bucket_reuses = stats
+                .and_then(|m| m.get("renderer_prepare_text_fast_scene_bucket_reuses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_prepare_text_pinned_glyph_keys = stats
                 .and_then(|m| m.get("renderer_prepare_text_pinned_glyph_keys"))
                 .and_then(|v| v.as_u64())
@@ -2719,6 +2723,7 @@ fn bundle_stats_from_json_with_options_and_filter(
                 renderer_prepare_text_pin_bucket_update_us,
                 renderer_prepare_text_flush_uploads_us,
                 renderer_prepare_text_scene_text_blobs,
+                renderer_prepare_text_fast_scene_bucket_reuses,
                 renderer_prepare_text_pinned_glyph_keys,
                 renderer_prepare_text_prewarm_glyph_keys,
                 renderer_prepare_text_retained_glyph_keys,
