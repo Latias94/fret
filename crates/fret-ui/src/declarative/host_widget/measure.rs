@@ -1366,9 +1366,16 @@ impl ElementHostWidget {
             align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
-        (cx.observe_model)(props.model.id(), Invalidation::Layout);
-        let text = cx.app.models().get_cloned(&props.model).unwrap_or_default();
-        let measure_text = if text.is_empty() { "M" } else { text.as_str() };
+        let text_change_invalidation = super::text_input_text_change_invalidation(&props);
+        if text_change_invalidation == Invalidation::Layout {
+            (cx.observe_model)(props.model.id(), Invalidation::Layout);
+        }
+        let text = (text_change_invalidation == Invalidation::Layout)
+            .then(|| cx.app.models().get_cloned(&props.model).unwrap_or_default());
+        let measure_text = text
+            .as_deref()
+            .filter(|text| !text.is_empty())
+            .unwrap_or("M");
         let metrics = cx
             .services
             .text()

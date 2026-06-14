@@ -34,6 +34,20 @@ fn interactive_resize_text_width_cache_entries() -> usize {
     crate::runtime_config::ui_runtime_config().interactive_resize_text_width_cache_entries
 }
 
+fn text_input_text_change_invalidation(props: &crate::element::TextInputProps) -> Invalidation {
+    if matches!(props.layout.size.height, Length::Px(_)) {
+        Invalidation::Paint
+    } else {
+        Invalidation::Layout
+    }
+}
+
+pub(crate) fn text_input_props_text_change_invalidation(
+    props: &crate::element::TextInputProps,
+) -> Invalidation {
+    text_input_text_change_invalidation(props)
+}
+
 #[derive(Debug, Clone)]
 struct CachedPreparedTextByWidth {
     width: Px,
@@ -493,6 +507,7 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
                     debug_assert!(false, "text input must be initialized");
                     return false;
                 };
+                let text_change_invalidation = text_input_text_change_invalidation(&props);
                 input.set_enabled(props.enabled);
                 input.set_focusable(props.focusable);
                 input.set_read_only(props.read_only);
@@ -501,6 +516,7 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
                 input.set_insert_filter(props.insert_filter);
+                input.set_text_change_invalidation(text_change_invalidation);
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
                 <crate::text_input::BoundTextInput as Widget<H>>::command(input, cx, command)

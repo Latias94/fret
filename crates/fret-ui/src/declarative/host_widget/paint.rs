@@ -1709,6 +1709,7 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                let text_change_invalidation = super::text_input_text_change_invalidation(&props);
                 input.set_read_only(props.read_only);
                 input.set_focus_ring_always_paint(props.focus_ring_always_paint);
                 input.set_chrome_style(props.chrome);
@@ -1716,6 +1717,7 @@ impl ElementHostWidget {
                 input.set_placeholder(props.placeholder);
                 input.set_obscure_text(props.obscure_text);
                 input.set_insert_filter(props.insert_filter);
+                input.set_text_change_invalidation(text_change_invalidation);
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
                 input.paint(cx);

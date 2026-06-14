@@ -89,6 +89,14 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(false)
     }
 
+    #[cfg(test)]
+    pub(crate) fn node_paint_invalidated(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .map(|n| n.invalidation.paint)
+            .unwrap_or(false)
+    }
+
     pub(crate) fn node_measured_size(&self, node: NodeId) -> Option<Size> {
         self.nodes.get(node).map(|n| n.measured_size)
     }

@@ -8,6 +8,7 @@ pub(crate) mod taffy_layout;
 pub(crate) use frame::{ElementInstance, element_record_for_node};
 #[cfg(feature = "diagnostics")]
 pub use frame::{LiveTestIdMatch, live_test_id_matches_for_window};
+pub(crate) use host_widget::text_input_props_text_change_invalidation;
 pub(crate) use mount::node_contains_in_window_frame;
 pub(crate) use mount::node_for_element_in_window_frame;
 pub(crate) use mount::with_window_frame;

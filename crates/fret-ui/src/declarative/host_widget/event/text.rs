@@ -23,6 +23,7 @@ pub(super) fn handle_text_input<H: UiHost>(
         debug_assert!(false, "text input must be initialized");
         return;
     };
+    let text_change_invalidation = super::super::text_input_text_change_invalidation(&props);
     input.set_enabled(props.enabled);
     input.set_focusable(props.focusable);
     input.set_read_only(props.read_only);
@@ -31,6 +32,7 @@ pub(super) fn handle_text_input<H: UiHost>(
     input.set_placeholder(props.placeholder);
     input.set_obscure_text(props.obscure_text);
     input.set_insert_filter(props.insert_filter);
+    input.set_text_change_invalidation(text_change_invalidation);
     input.set_submit_command(props.submit_command);
     input.set_cancel_command(props.cancel_command);
     input.event(cx, event);

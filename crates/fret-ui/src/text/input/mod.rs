@@ -6,7 +6,7 @@ mod widget;
 
 use fret_core::{Point, Px, Rect, SemanticsRole, TextMetrics, TextStyle};
 
-use crate::TextInputStyle;
+use crate::{Invalidation, TextInputStyle};
 
 pub use bound::BoundTextInput;
 
@@ -78,6 +78,7 @@ pub struct TextInput {
     preedit_metrics: Option<TextMetrics>,
     caret_stops: Vec<(usize, Px)>,
     pending_release: Vec<fret_core::TextBlobId>,
+    text_change_invalidation: Invalidation,
     prepared_scale_factor_bits: Option<u32>,
     last_font_stack_key: Option<u64>,
     last_bounds: Rect,

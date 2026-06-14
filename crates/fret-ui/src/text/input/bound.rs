@@ -12,6 +12,7 @@ pub struct BoundTextInput {
     model: Model<String>,
     last_revision: Option<u64>,
     dirty_since_sync: bool,
+    text_change_invalidation: Invalidation,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
     enabled: bool,
@@ -25,6 +26,7 @@ impl BoundTextInput {
             model,
             last_revision: None,
             dirty_since_sync: false,
+            text_change_invalidation: Invalidation::Layout,
             submit_command: None,
             cancel_command: None,
             enabled: true,
@@ -41,6 +43,11 @@ impl BoundTextInput {
         self.model = model;
         self.last_revision = None;
         self.dirty_since_sync = false;
+    }
+
+    pub fn set_text_change_invalidation(&mut self, invalidation: Invalidation) {
+        self.text_change_invalidation = invalidation;
+        self.input.set_text_change_invalidation(invalidation);
     }
 
     pub fn with_submit_command(mut self, command: CommandId) -> Self {
@@ -167,6 +174,14 @@ impl BoundTextInput {
             self.last_revision = app.models().revision(&self.model);
         }
     }
+
+    fn invalidate_after_text_change<C: super::cx::TextInputUiCx>(&self, cx: &mut C) {
+        cx.invalidate_self(self.text_change_invalidation);
+        if self.text_change_invalidation != Invalidation::Paint {
+            cx.invalidate_self(Invalidation::Paint);
+        }
+        cx.request_redraw();
+    }
 }
 
 impl<H: UiHost> Widget<H> for BoundTextInput {
@@ -281,9 +296,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         if handled && self.input.text() != before {
             self.dirty_since_sync = true;
             self.maybe_update_model(cx.app);
-            cx.invalidate_self(Invalidation::Layout);
-            cx.invalidate_self(Invalidation::Paint);
-            cx.request_redraw();
+            self.invalidate_after_text_change(cx);
         }
         handled
     }
@@ -398,21 +411,26 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         if self.input.text() != before {
             self.dirty_since_sync = true;
             self.maybe_update_model(cx.app);
-            cx.invalidate_self(Invalidation::Layout);
-            cx.invalidate_self(Invalidation::Paint);
-            cx.request_redraw();
+            self.invalidate_after_text_change(cx);
         }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        cx.observe_model(&self.model, Invalidation::Layout);
-        cx.observe_model(&self.model, Invalidation::Paint);
+        cx.observe_model(&self.model, self.text_change_invalidation);
+        if self.text_change_invalidation != Invalidation::Paint {
+            cx.observe_model(&self.model, Invalidation::Paint);
+        }
         let force = cx.focus != Some(cx.node) || !self.dirty_since_sync;
         self.sync_from_model(cx.app, force);
         self.input.layout(cx)
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        if self.text_change_invalidation == Invalidation::Paint {
+            cx.observe_model(&self.model, Invalidation::Paint);
+        }
+        let force = cx.focus != Some(cx.node) || !self.dirty_since_sync;
+        self.sync_from_model(cx.app, force);
         self.input.paint(cx);
     }
 }

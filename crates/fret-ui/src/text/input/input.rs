@@ -53,6 +53,7 @@ impl TextInput {
             preedit_metrics: None,
             caret_stops: Vec::new(),
             pending_release: Vec::new(),
+            text_change_invalidation: Invalidation::Layout,
             prepared_scale_factor_bits: None,
             last_font_stack_key: None,
             last_bounds: Rect::default(),
@@ -103,6 +104,10 @@ impl TextInput {
 
     pub fn set_insert_filter(&mut self, filter: Option<TextInputInsertFilter>) {
         self.insert_filter = filter;
+    }
+
+    pub fn set_text_change_invalidation(&mut self, invalidation: Invalidation) {
+        self.text_change_invalidation = invalidation;
     }
 
     pub(super) fn filter_insert_text(&self, text: &str) -> String {
@@ -449,7 +454,10 @@ impl TextInput {
             if delta.release_text_blobs {
                 self.mark_text_blobs_dirty();
             }
-            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(self.text_change_invalidation);
+            if self.text_change_invalidation != Invalidation::Paint {
+                cx.invalidate_self(Invalidation::Paint);
+            }
         } else if delta.invalidate_paint {
             cx.invalidate_self(Invalidation::Paint);
         }

@@ -137,10 +137,16 @@ impl<H: UiHost> UiTree<H> {
         };
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
+        let mut text_input_invalidation = Invalidation::Layout;
+
         if let Some(window) = self.window
             && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
         {
             let element = record.element;
+            if let crate::declarative::ElementInstance::TextInput(props) = &record.instance {
+                text_input_invalidation =
+                    crate::declarative::text_input_props_text_change_invalidation(props);
+            }
             if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance {
                 let ctx = TextInputRegionPlatformCtx {
                     window,
@@ -173,7 +179,7 @@ impl<H: UiHost> UiTree<H> {
             w.platform_text_input_replace_text_in_range_utf16(&mut cx, range, text)
         });
         if changed {
-            self.invalidate(focus, Invalidation::Layout);
+            self.invalidate(focus, text_input_invalidation);
             self.request_redraw_coalesced(app);
         }
         changed
@@ -197,10 +203,16 @@ impl<H: UiHost> UiTree<H> {
         };
         let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
 
+        let mut text_input_invalidation = Invalidation::Layout;
+
         if let Some(window) = self.window
             && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
         {
             let element = record.element;
+            if let crate::declarative::ElementInstance::TextInput(props) = &record.instance {
+                text_input_invalidation =
+                    crate::declarative::text_input_props_text_change_invalidation(props);
+            }
             if let crate::declarative::ElementInstance::TextInputRegion(props) = record.instance {
                 let ctx = TextInputRegionPlatformCtx {
                     window,
@@ -235,7 +247,7 @@ impl<H: UiHost> UiTree<H> {
             )
         });
         if changed {
-            self.invalidate(focus, Invalidation::Layout);
+            self.invalidate(focus, text_input_invalidation);
             self.request_redraw_coalesced(app);
         }
         changed

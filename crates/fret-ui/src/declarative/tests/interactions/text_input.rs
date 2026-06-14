@@ -326,6 +326,103 @@ fn text_input_text_input_event_updates_model() {
 }
 
 #[test]
+fn fixed_height_text_input_model_change_invalidates_paint_only() {
+    let mut app = TestHost::new();
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "fixed-height-text-input-model-change-paint-only",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(40.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let input_node = ui.children(root)[0];
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.test_clear_node_invalidations(input_node);
+
+    let _ = model.update(&mut app, |value, _cx| value.push_str("hello"));
+    let changed = app.take_changed_models();
+    assert!(changed.contains(&model.id()));
+
+    assert!(ui.propagate_model_changes(&mut app, &changed));
+    assert!(
+        !ui.node_layout_invalidated(input_node),
+        "fixed-height text input text changes should not dirty layout"
+    );
+    assert!(
+        ui.node_paint_invalidated(input_node),
+        "fixed-height text input text changes must still repaint"
+    );
+}
+
+#[test]
+fn auto_height_text_input_model_change_keeps_layout_invalidation() {
+    let mut app = TestHost::new();
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "auto-height-text-input-model-change-layout",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let input_node = ui.children(root)[0];
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.test_clear_node_invalidations(input_node);
+
+    let _ = model.update(&mut app, |value, _cx| value.push_str("hello"));
+    let changed = app.take_changed_models();
+    assert!(changed.contains(&model.id()));
+
+    assert!(ui.propagate_model_changes(&mut app, &changed));
+    assert!(
+        ui.node_layout_invalidated(input_node),
+        "auto-height text input text changes must keep layout invalidation"
+    );
+    assert!(
+        ui.node_paint_invalidated(input_node),
+        "auto-height text input text changes must repaint"
+    );
+}
+
+#[test]
 fn text_input_read_only_blocks_mutation_but_allows_selection_copy() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());

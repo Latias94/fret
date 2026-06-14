@@ -158,6 +158,37 @@ popover overlay root solve tail.
 - Current decision: keep this slice as a low-risk mechanism optimization, but move the next
   investigation to paint cache root reuse during the combobox filter/select path.
 
+## 2026-06-14 Fourth Slice Findings
+
+- Fixed-height declarative `TextInput` now treats text content changes as paint-only. The runtime
+  still keeps auto-height inputs layout-sensitive, because their measured size may depend on the
+  current text.
+- The policy is derived from `TextInputProps.layout.size.height`: `Length::Px(_)` uses
+  `Invalidation::Paint`, and non-fixed height keeps `Invalidation::Layout`. This applies through
+  the declarative event/layout/paint/command paths, model observation, and platform text replacement
+  APIs.
+- `measure_text_input` no longer reads or layout-observes the model for fixed-height inputs. It uses
+  a stable `"M"` line-metric probe for the fixed-height case, which avoids turning command-search
+  query changes into layout work.
+- Focused tests cover the contract:
+  `fixed_height_text_input_model_change_invalidates_paint_only` and
+  `auto_height_text_input_model_change_keeps_layout_invalidation`.
+- A first combobox perf probe was invalid as performance evidence because it omitted
+  `FRET_UI_GALLERY_VIEW_CACHE=1` and `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`. Direct JSON-script
+  `diag perf` targets do not receive the suite-name auto-env defaults, so the overlay root reported
+  `reuse_reason = view_cache_disabled` and produced a misleading `18602us` top frame.
+- The correct gate command includes the view-cache env vars plus the prewarm/prelude scripts used
+  by the checked-in baseline. That run passed with `failures=[]`:
+  `target/fret-diag/gate-combobox-filter-select-devfast-fixed-textinput-paint-vc/1781446249173/bundle.schema2.json`.
+- Correct-gate top frame after the fixed-height input slice:
+  `total=10000us`, `layout=5743us`, `solve=945us`, `paint=3628us`,
+  `paint.cache_misses=0`, `cache.reused=1`, `cache.replayed_ops=203`,
+  `pointer_move_max_dispatch=775us`, and `pointer_move_max_hit_test=114us`.
+- Current residual hotspot is no longer the search `TextInput` model observation path. The worst
+  frame still includes popover `DismissibleLayer` layout solve and retained paint/renderer work,
+  so the next optimization should target overlay/list cache boundaries or command-availability tail
+  only if a fresh profile makes them hot again.
+
 ## Next Verification
 
 1. Add focused unit coverage for active `wait_until` semantics demand. Done with the actual
