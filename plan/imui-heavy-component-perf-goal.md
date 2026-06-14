@@ -552,6 +552,30 @@ popover overlay root solve tail.
   component-ecosystem optimization: expose an existing mechanism knob at the recipe surface and let
   the CommandPalette strategy avoid unnecessary focus/animation/semantics wrapper nodes.
 
+## 2026-06-15 Full-Row Bounded Probe Follow-up
+
+- Aligned the non-virtualized `CommandPalette` full-row listbox path with the virtualized path by
+  disabling unbounded scroll viewport probing. Command/listbox surfaces already receive explicit
+  strategy sizing and max-height constraints, so the shrink-wrap intrinsic probe is unnecessary for
+  this recipe path.
+- Added `command_palette_full_rows_use_bounded_scroll_viewport_probe` to lock this strategy at the
+  element-tree level. The test deliberately avoids timing assertions; perf gates remain responsible
+  for measuring whether the policy matters on a given scenario.
+- Focused validation passed:
+  `cargo test -p fret-ui-shadcn --lib command_palette --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib combobox --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-shadcn --profile dev-fast -j 1`, and
+  `cargo fmt -p fret-ui-shadcn`.
+- The corrected combobox gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-full-row-bounded-probe/1781469475271/bundle.schema2.json`.
+  Top frame was `9831us` with `layout=5837us`, `layout.engine_solve=1089us`,
+  `paint=3383us`, `dispatch=0us`, `hit_test=47us`, `paint.cache_misses=0`,
+  `cache.reused=1`, and `contained_relayouts=1`.
+- Decision: keep this as a small strategy-consistency cleanup, not as a claimed major win. It keeps
+  the current green band stable and removes another avoidable listbox fixed-cost path. The dominant
+  residual work is still contained overlay relayout, command-availability publication breadth, and
+  renderer upload/finish/text tail.
+
 ## Next Verification
 
 1. Revisit the contained popover `ViewCache` relayout solve tail now that parent-root request/apply

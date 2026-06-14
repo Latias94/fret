@@ -3568,6 +3568,7 @@ impl CommandPalette {
                 ])
                 .scroll_handle(scroll_handle.clone())
                 .viewport_focus_ring(false)
+                .viewport_probe_unbounded(false)
                 .refine_layout(scroll_layout.clone());
                 if let Some(test_id) = list_viewport_test_id.clone() {
                     scroll_area = scroll_area.viewport_test_id(test_id);
@@ -4596,6 +4597,13 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text_element(child, needle)),
         }
+    }
+
+    fn any_scroll_probe_unbounded(el: &AnyElement) -> Option<bool> {
+        if let fret_ui::element::ElementKind::Scroll(props) = &el.kind {
+            return Some(props.probe_unbounded);
+        }
+        el.children.iter().find_map(any_scroll_probe_unbounded)
     }
 
     fn bounds() -> Rect {
@@ -5848,6 +5856,56 @@ mod tests {
         assert!(
             range.count == 250,
             "virtual range count should still describe the full filtered item set"
+        );
+    }
+
+    #[test]
+    fn command_palette_full_rows_use_bounded_scroll_viewport_probe() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(640.0)),
+        );
+        let observed_probe = RefCell::new(None);
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-full-row-bounded-scroll",
+            |cx| {
+                let element = CommandPalette::new(
+                    query.clone(),
+                    [
+                        CommandItem::new("Alpha"),
+                        CommandItem::new("Beta"),
+                        CommandItem::new("Gamma"),
+                    ],
+                )
+                .list_viewport_test_id("cmdk-full-row-viewport")
+                .into_element(cx);
+                *observed_probe.borrow_mut() = any_scroll_probe_unbounded(&element);
+                vec![element]
+            },
+        );
+        ui.set_root(root);
+
+        assert_eq!(
+            *observed_probe.borrow(),
+            Some(false),
+            "full-row command listboxes have explicit strategy sizing and should skip unbounded viewport probing"
         );
     }
 
