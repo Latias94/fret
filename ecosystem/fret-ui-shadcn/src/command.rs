@@ -17,7 +17,7 @@ use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableKeyActivation, PressableProps, RovingFlexProps, RovingFocusProps,
-    RowProps, SemanticsDecoration, SizeStyle, TextInputProps, VirtualListKeyCacheMode,
+    RowProps, SemanticsDecoration, SizeStyle, StackProps, TextInputProps, VirtualListKeyCacheMode,
     VirtualListOptions,
 };
 use fret_ui::elements::GlobalElementId;
@@ -2039,6 +2039,61 @@ fn command_palette_can_virtualize_items(
             .all(|item| item.as_ref().is_some_and(|item| item.children.is_empty()))
 }
 
+fn command_palette_static_single_item(render_rows: &[CommandPaletteRenderRow]) -> Option<usize> {
+    match render_rows {
+        [CommandPaletteRenderRow::Item(idx)] => Some(*idx),
+        _ => None,
+    }
+}
+
+fn command_palette_list_body<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    rows: Vec<AnyElement>,
+    group_pad_x: Px,
+    group_pad_y: Px,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.min_height = Some(Length::Px(Px(0.0)));
+                layout
+            },
+            direction: fret_core::Axis::Vertical,
+            gap: Px(0.0).into(),
+            padding: Edges {
+                top: group_pad_y,
+                right: group_pad_x,
+                bottom: group_pad_y,
+                left: group_pad_x,
+            }
+            .into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+            ..Default::default()
+        },
+        move |_cx| rows,
+    )
+}
+
+fn command_palette_static_list_surface<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &ThemeSnapshot,
+    layout: LayoutRefinement,
+    body: AnyElement,
+) -> AnyElement {
+    let mut layout = decl_style::layout_style(theme, layout);
+    if matches!(layout.size.width, Length::Auto) {
+        layout.size.width = Length::Fill;
+    }
+    layout.size.min_width.get_or_insert(Length::Px(Px(0.0)));
+    layout.size.min_height.get_or_insert(Length::Px(Px(0.0)));
+
+    cx.stack_props(StackProps { layout }, move |_cx| vec![body])
+}
+
 #[allow(clippy::too_many_arguments)]
 fn command_palette_render_item_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -3409,30 +3464,8 @@ impl CommandPalette {
                     },
                 );
 
-                let list_body = cx.flex(
-                    FlexProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.min_height = Some(Length::Px(Px(0.0)));
-                            layout
-                        },
-                        direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0).into(),
-                        padding: Edges {
-                            top: group_pad_y,
-                            right: group_pad_x,
-                            bottom: group_pad_y,
-                            left: group_pad_x,
-                        }
-                        .into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Stretch,
-                        wrap: false,
-                        ..Default::default()
-                    },
-                    move |_cx| vec![virtual_list],
-                );
+                let list_body =
+                    command_palette_list_body(cx, vec![virtual_list], group_pad_x, group_pad_y);
 
                 let mut scroll_area = ScrollArea::new(vec![list_body])
                     .scroll_handle(scroll_handle.base_handle().clone())
@@ -3445,7 +3478,8 @@ impl CommandPalette {
                 }
                 scroll_area.into_element(cx)
             } else {
-                let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+                let use_static_single_item =
+                    command_palette_static_single_item(&render_rows).is_some();
                 let active_row_for_full = active_row_element.clone();
                 let rows: Vec<AnyElement> = render_rows
                     .into_iter()
@@ -3541,52 +3575,47 @@ impl CommandPalette {
                     })
                     .collect();
 
-                let mut scroll_area = ScrollArea::new(vec![
-                    cx.flex(
-                        FlexProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.min_height = Some(Length::Px(Px(0.0)));
-                                layout
-                            },
-                            direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0).into(),
-                            padding: Edges {
-                                top: group_pad_y,
-                                right: group_pad_x,
-                                bottom: group_pad_y,
-                                left: group_pad_x,
-                            }
-                            .into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                            ..Default::default()
-                        },
-                        move |_cx| rows,
-                    ),
-                ])
-                .scroll_handle(scroll_handle.clone())
-                .show_scrollbar(false)
-                .viewport_focus_ring(false)
-                .viewport_probe_unbounded(false)
-                .refine_layout(scroll_layout.clone());
-                if let Some(test_id) = list_viewport_test_id.clone() {
-                    scroll_area = scroll_area.viewport_test_id(test_id);
-                }
-                let scroll_area = scroll_area.into_element(cx);
-
-                if let Some(active_row_element) = active_row_element.get() {
-                    let _ = active_desc::scroll_active_element_into_view_y(
+                if use_static_single_item {
+                    let mut list_body =
+                        command_palette_list_body(cx, rows, group_pad_x, group_pad_y);
+                    if let Some(test_id) = list_viewport_test_id.clone() {
+                        list_body = list_body.test_id(test_id);
+                    }
+                    command_palette_static_list_surface(
                         cx,
-                        &scroll_handle,
-                        scroll_area.id,
-                        active_row_element,
-                    );
-                }
+                        &theme,
+                        scroll_layout.clone(),
+                        list_body,
+                    )
+                } else {
+                    let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
+                    let mut scroll_area = ScrollArea::new(vec![command_palette_list_body(
+                        cx,
+                        rows,
+                        group_pad_x,
+                        group_pad_y,
+                    )])
+                    .scroll_handle(scroll_handle.clone())
+                    .show_scrollbar(false)
+                    .viewport_focus_ring(false)
+                    .viewport_probe_unbounded(false)
+                    .refine_layout(scroll_layout.clone());
+                    if let Some(test_id) = list_viewport_test_id.clone() {
+                        scroll_area = scroll_area.viewport_test_id(test_id);
+                    }
+                    let scroll_area = scroll_area.into_element(cx);
 
-                scroll_area
+                    if let Some(active_row_element) = active_row_element.get() {
+                        let _ = active_desc::scroll_active_element_into_view_y(
+                            cx,
+                            &scroll_handle,
+                            scroll_area.id,
+                            active_row_element,
+                        );
+                    }
+
+                    scroll_area
+                }
             };
 
             if let Some(cell) = list_id_out_cell.as_ref() {
@@ -5955,6 +5984,7 @@ mod tests {
             Size::new(Px(420.0), Px(640.0)),
         );
         let scroll_parent_child_count = RefCell::new(None);
+        let scroll_count = RefCell::new(None);
         let scrollbar_count = RefCell::new(None);
         let hover_region_count = RefCell::new(None);
 
@@ -5983,6 +6013,9 @@ mod tests {
                 *scroll_parent_child_count.borrow_mut() =
                     parent_of_direct_child_test_id(&element, "cmdk-list-viewport")
                         .map(|parent| parent.children.len());
+                *scroll_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
+                    matches!(kind, fret_ui::element::ElementKind::Scroll(_))
+                }));
                 *scrollbar_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
                     matches!(kind, fret_ui::element::ElementKind::Scrollbar(_))
                 }));
@@ -6000,6 +6033,11 @@ mod tests {
             "command listbox scroll viewport should be the only child in its ScrollArea stack"
         );
         assert_eq!(
+            *scroll_count.borrow(),
+            Some(1),
+            "multi-row command listboxes should keep the scroll viewport"
+        );
+        assert_eq!(
             *scrollbar_count.borrow(),
             Some(0),
             "command listboxes keep focus in the input and should not mount hidden scrollbar primitives"
@@ -6008,6 +6046,171 @@ mod tests {
             *hover_region_count.borrow(),
             Some(0),
             "command listboxes do not use hover-gated scrollbar chrome"
+        );
+    }
+
+    #[test]
+    fn command_palette_single_item_full_rows_use_static_list_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::from("gam"));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(640.0)),
+        );
+        let static_parent_child_count = RefCell::new(None);
+        let scroll_count = RefCell::new(None);
+        let scrollbar_count = RefCell::new(None);
+        let hover_region_count = RefCell::new(None);
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-single-static-listbox",
+            |cx| {
+                let element = CommandPalette::new(
+                    query.clone(),
+                    [
+                        CommandItem::new("Alpha"),
+                        CommandItem::new("Beta"),
+                        CommandItem::new("Gamma"),
+                    ],
+                )
+                .list_viewport_test_id("cmdk-single-viewport")
+                .into_element(cx);
+                *static_parent_child_count.borrow_mut() =
+                    parent_of_direct_child_test_id(&element, "cmdk-single-viewport")
+                        .map(|parent| parent.children.len());
+                *scroll_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
+                    matches!(kind, fret_ui::element::ElementKind::Scroll(_))
+                }));
+                *scrollbar_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
+                    matches!(kind, fret_ui::element::ElementKind::Scrollbar(_))
+                }));
+                *hover_region_count.borrow_mut() = Some(count_element_kind(&element, |kind| {
+                    matches!(kind, fret_ui::element::ElementKind::HoverRegion(_))
+                }));
+                vec![element]
+            },
+        );
+        ui.set_root(root);
+
+        assert_eq!(
+            *static_parent_child_count.borrow(),
+            Some(1),
+            "single-result command listboxes should keep a single static list body"
+        );
+        assert_eq!(
+            *scroll_count.borrow(),
+            Some(0),
+            "single-result command listboxes should skip ScrollArea and Scroll fixed cost"
+        );
+        assert_eq!(
+            *scrollbar_count.borrow(),
+            Some(0),
+            "single-result command listboxes should not mount hidden scrollbar primitives"
+        );
+        assert_eq!(
+            *hover_region_count.borrow(),
+            Some(0),
+            "single-result command listboxes do not need hover-gated scrollbar chrome"
+        );
+    }
+
+    #[test]
+    fn command_palette_single_item_static_list_surface_preserves_active_descendant_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::from("gam"));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query.clone(),
+            build_items(),
+        );
+        let input_node = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input_node));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query,
+            build_items(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("combobox input node");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let options: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListBoxOption)
+            .collect();
+
+        assert!(
+            input.controls.contains(&list.id),
+            "input should keep aria-controls-style ownership of the static listbox"
+        );
+        assert!(
+            list.labelled_by.contains(&input.id),
+            "static listbox should still be labelled by the input"
+        );
+        assert_eq!(
+            options.len(),
+            1,
+            "filtered single-result list should expose one option"
+        );
+        assert_eq!(options[0].label.as_deref(), Some("Gamma"));
+        assert_eq!(
+            input.active_descendant,
+            Some(options[0].id),
+            "input active_descendant should point at the static single option"
+        );
+        assert!(
+            options[0].flags.selected,
+            "auto-highlighted static option should stay selected"
         );
     }
 

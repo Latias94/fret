@@ -673,6 +673,46 @@ popover overlay root solve tail.
   require hidden wrappers for every scroll surface. The remaining strict-120Hz gap is now dominated
   by contained overlay relayout solve, the core `Scroll` layout cost, and renderer upload/finish.
 
+## 2026-06-15 Fifteenth Slice Findings
+
+- Added a narrow static listbox surface for non-virtualized `CommandPalette` full-row results when
+  filtering produces exactly one `Item` row. The static surface keeps the same outer list sizing
+  contract as the viewport-only `ScrollArea` stack (`width: fill`, `min-width: 0`, `min-height: 0`,
+  plus caller `refine_scroll_layout(...)` sizing), but skips `Scroll`, scroll handles, focus-ring
+  wrappers, hidden scrollbar chrome, and scroll-to-active work.
+- Kept the strategy intentionally narrow:
+  grouped rows, headings, separators, loading rows, empty states, and multi-row results still use
+  the existing full-row `ScrollArea` path; large plain item sets still use virtualization. The
+  static path only applies to the one-row filtered state that was showing avoidable fixed scroll
+  cost in the combobox gate.
+- Added structure and semantics tests:
+  `command_palette_single_item_full_rows_use_static_list_surface` proves the single-row path mounts
+  no `Scroll`, `Scrollbar`, or `HoverRegion`; `command_palette_listboxes_use_scrollbarless_viewport_chrome`
+  now also proves multi-row listboxes still mount one `Scroll`; and
+  `command_palette_single_item_static_list_surface_preserves_active_descendant_semantics` proves
+  the input still controls the listbox and its `active_descendant` points at the selected option.
+- Validation passed:
+  `cargo test -p fret-ui-shadcn --lib command_palette --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo test -p fret-ui-shadcn --lib combobox --profile dev-fast -j 1 -- --test-threads=1`,
+  `cargo check -p fret-ui-shadcn --profile dev-fast -j 1`,
+  `cargo check -p fret-ui-gallery --profile dev-fast -j 1`,
+  `cargo fmt -p fret-ui-shadcn`, and `git diff --check`.
+- The corrected combobox dev-fast perf gate passed:
+  `target/fret-diag/gate-combobox-filter-select-devfast-single-item-static-listbox/1781477402294/bundle.schema2.json`.
+  Top frame was `9808us` with `layout=5560us`, `layout.engine_solve=954us`,
+  `prepaint=654us`, `paint=3594us`, `dispatch=0us`, `hit_test=44us`,
+  `paint.cache_misses=0`, `cache.reused=1`, and `contained_relayouts=1`.
+- `diag stats` confirmed the remaining tail is no longer the single-row scroll surface:
+  `layout.nodes=31`, renderer p95/max `upload=688us`, `finish=1541us`, `encode=867us`,
+  `text=200us`, and command availability stayed bounded at
+  `widget_count/collect_us/eval_us=4/29/105` on the top frame. The strict 120Hz gap remains
+  distributed across contained overlay relayout, paint traversal, and renderer upload/finish.
+- Current decision: keep this slice. It is a component-policy optimization, not a core
+  architecture rewrite. It reinforces the current architecture call: shadcn-style nesting is not
+  inherently the blocker; avoidable fixed-cost recipe surfaces are. Continue optimizing where the
+  gate shows unnecessary mechanism costs, and reserve a `ViewCache`/layout-engine rethink for a
+  stronger root-only dirty-cause contract.
+
 ## Open Questions
 
 - Should `ActiveScript` store the active wait predicate in `WaitUntilState` to avoid re-reading the
