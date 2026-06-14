@@ -43,6 +43,9 @@ Use stable suffixes in baseline filenames:
 - `windows-rtx4090`: primary Windows GPU workstation profile.
 - `macos-m4` / `macos-m4pro`: Apple Silicon local profiles.
 - `windows-local`, `web-local`: broader smoke profiles where hardware-specific precision is not intended.
+- Baselines may include an explicit build-profile segment such as `dev-fast` when the contract is intentionally tied to
+  a non-release binary, for example `*.dev-fast.windows-rtx4090.v1.json`. Treat these as workstream regression gates,
+  not formal release performance contracts, unless the owning workstream explicitly says otherwise.
 - `linux-local`: Linux-local evidence profile. Smoke-only exports may exist here while runner bring-up is in progress,
   but do not infer formal Linux contract coverage from them or from the Windows/macOS baselines. Add a checked-in
   Linux contract baseline and owner profile only when a real Linux runner exists.

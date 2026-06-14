@@ -41,6 +41,7 @@ The working question is not "does the UI function at all". The question is wheth
 - The first virtualized `CommandPalette` implementation had one important regression: the internal `ScrollArea` still used unbounded viewport probing, so the virtual list could see the full `8000px` content extent as its viewport and materialize a full-window range despite the outer max-height contract.
 - The bounded-viewport follow-up is recipe-local: `CommandPalette` now opts its internal virtualized `ScrollArea` out of unbounded viewport probing, while leaving global `ScrollArea` behavior unchanged.
 - The latest bounded-viewport evidence shows the virtual list is now actually bounded: `viewport=272px`, `window_range=0..8`, `count=250`, with the filtered item model still describing the full result set.
+- The first checked-in combobox long-list baseline is intentionally a `dev-fast` workflow gate, not a formal release 120Hz contract. The repeat=3 seed measured p50/p95/max total around `12671/12869/12869us`, so it protects against returning to the prior 20ms-100ms row-materialization failures while the remaining tail is still above a strict 120Hz target.
 - After row virtualization and command availability pruning, the remaining combobox long-list tail is now dominated by root/layout apply breadth. The newest scroll profile shows `layout=17672us`, `layout_roots_apply_time_us=11805`, `layout_engine_solve_time_us=3824`, `layout_clean_geometry_apply_nodes=628`, `layout_clean_geometry_apply_fallback_layouts=20`, `invalidation_walk_calls=11`, and `invalidation_walk_nodes=396`.
 - The popup listbox itself is no longer the main layout bottleneck. The expensive scroll profile is the main page viewport (`ui-gallery-content-viewport`), not `ui-gallery-combobox-long-list-listbox`: `total_us=11244`, `solve_barrier_us=8320`, `layout_children_corrected_content_us=1207`, `corrected_content_relayout=true`, `direct_children_layout_invalidated=true`, and `descendant_subtree_layout_dirty=true`.
 - The concrete trigger in the current combobox long-list gallery snippet is the `Query: ...` state text under the combobox. It reads the query model and rerenders on every typed character. Because declarative text diffs currently treat any text content change as `Layout`, that tiny status label invalidates the surrounding main scroll content and pulls the whole page viewport into a costly corrected-content relayout.
@@ -71,6 +72,7 @@ The working question is not "does the UI function at all". The question is wheth
 - Do not preserve compatibility when a cleaner seam is obviously better, unless a current consumer proves the old shape is still needed.
 - Deepen `select` by extracting the state/placement/render seams first, then reassess whether any adjacent heavy recipe needs the same cut.
 - Keep the public `Select` builder as a thin facade over narrower internal modules; the goal is locality and simpler change points, not a bigger single file.
+- Keep `docs/workstreams/perf-baselines/ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json` as a workstream-local regression gate until a fresh release `fret-ui-gallery` binary can be built and seeded. Do not add it to the formal Zed smoothness contract matrix as a release-level baseline.
 
 ## Implementation Units
 
@@ -289,6 +291,33 @@ The working question is not "does the UI function at all". The question is wheth
 - `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-viewcache-after-combobox-optout --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VIEW_CACHE_CONTENT=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
 - `cargo test -p fret-ui-gallery --lib combobox_opts_out_of_whole_page_content_cache -j 1` timed out during Windows test-target compilation without a test assertion result.
 
+### U9. Add a dev-fast combobox long-list perf gate
+**Goal:** Preserve the post-virtualization combobox long-list state as a reproducible regression gate while keeping the formal release contract separate.
+
+**Files:**
+- `docs/workstreams/perf-baselines/ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`
+- `docs/workstreams/perf-baselines/README.md`
+- `docs/plans/2026-06-14-001-imui-heavy-component-perf-architecture-audit-plan.md`
+- `docs/plans/2026-06-14-002-imui-heavy-component-perf-progress-log.md`
+
+**Design decisions:**
+- Include the build profile in the baseline filename because the measured binary is `target\dev-fast\fret-ui-gallery.exe`, not a current release binary.
+- Use this gate to catch regressions back to full-list materialization, unbounded virtual-list viewport probing, or broad page-cache layout invalidation.
+- Do not use this gate as proof that combobox long-list interaction has reached the 120Hz target. The current repeat=3 seed still has `top_total_time_us` around `12.9ms`.
+- Keep `threshold_surface=ui`; renderer micro-timings remain attribution evidence until a renderer-specific contract is chosen.
+
+**Evidence target:**
+- Baseline seed: `target/fret-diag/baseline-combobox-filter-select-devfast-windows-rtx4090-v1/1781425937868/bundle.schema2.json`.
+- Seed numbers: p50/p95/max total `12671/12869/12869us`, layout `7762/8074/8074us`, solve `893/1157/1157us`, paint p95 `4290us`.
+- Validation gate: `target/fret-diag/gate-combobox-filter-select-devfast-windows-rtx4090-v1/check.perf_thresholds.json` with `failures=[]`.
+- Gate worst bundle: `target/fret-diag/gate-combobox-filter-select-devfast-windows-rtx4090-v1/1781426027088/bundle.schema2.json`, worst `total=12666us`, `layout=8072us`, `solve=1155us`, `paint=3953us`.
+- `diag stats` reports `script_capture_skipped=1`; the worst frame is application work, not the capture-bundle artifact.
+
+**Verification:**
+- `python -m json.tool docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\gate-combobox-filter-select-devfast-windows-rtx4090-v1 --repeat 1 --warmup-frames 5 --prewarm-script tools\diag-scripts\_prelude\tooling-suite-prewarm-fonts.json --prelude-script tools\diag-scripts\_prelude\tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
+- `target\debug\fretboard-dev.exe diag stats target\fret-diag\gate-combobox-filter-select-devfast-windows-rtx4090-v1\1781426027088\bundle.schema2.json --sort time --top 5`
+
 ## Progress Log
 - 2026-06-14: user-reported failures include stack overflow in `imui_action_basics`, missing theme token `surface` in `imui_plot_basics`, and height jitter in `imui_editor_controls_basics`.
 - 2026-06-14: local inspection showed `select` is the largest recipe surface and a strong candidate for the first deepening slice.
@@ -386,6 +415,8 @@ The working question is not "does the UI function at all". The question is wheth
 - 2026-06-14: `CommandPalette` virtualized rows now force the internal `ScrollArea` to use bounded viewport probing. The focused dev-fast test passes and guards that a 250-item command list keeps `viewport <= max_h`, `content_extent > viewport`, and a small visible window instead of rematerializing the full item set.
 - 2026-06-14: dev-fast combobox perf after bounded virtual viewport passed with worst frame `total=9591us`, `layout=4436us`, `layout.engine_solve=829us`, `paint=4417us`, `roots.apply=516us`, and `script_capture_skipped=1`; evidence bundle `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-bounded-viewport/1781424587044/bundle.schema2.json`.
 - 2026-06-14: structured bundle extraction confirms the virtual command list records `viewport=272px`, `window_range=0..8`, `overscan=8`, and `count=250`. The remaining tail is no longer a 250-row materialization problem.
+- 2026-06-14: added a checked-in `dev-fast` combobox long-list perf baseline at `docs/workstreams/perf-baselines/ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`. The seed run measured p50/p95/max total `12671/12869/12869us` and the reverse gate passed with `failures=[]`.
+- 2026-06-14: the `dev-fast` gate is intentionally a regression guard, not the final 120Hz answer. The next optimization target should use the gated evidence to narrow layout burst, paint/text preparation, renderer finish, or command availability tails rather than restart broad component rewrites.
 
 ## Open Questions
 - How much of the cost is unavoidable component composition, and how much is avoidable shell depth?
@@ -398,6 +429,7 @@ The working question is not "does the UI function at all". The question is wheth
 - Should `fret-ui-shadcn::typography` expose a named one-line muted helper, or should examples keep using explicit `TextProps` when they need a stable status-label contract?
 - Should rich/selectable text content changes get a future non-layout path with explicit span-boundary and selection-hit-test gates, or remain layout-affecting until a broader text surface refactor?
 - Should the next sub-120Hz push target paint/text preparation and renderer finish/encode tails, or first add a perf gate around this now-acceptable combobox probe so future recipe changes do not re-open the row-materialization regression?
+- Should the formal release baseline wait for a fresh `target\release\fret-ui-gallery.exe`, or should the workstream add a helper that can build a release gallery binary with a longer timeout and then seed the Windows RTX4090 contract?
 
 ## Sources
 - `docs/architecture.md`

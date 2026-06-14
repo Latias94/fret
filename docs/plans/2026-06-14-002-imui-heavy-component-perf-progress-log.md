@@ -38,6 +38,13 @@ active heavy-component performance goal. It complements the main plan rather tha
 - Virtual-list telemetry now shows the long command list as `viewport=272px`, `window_range=0..8`,
   `overscan=8`, and `count=250`; the list model still describes all items, but layout only pays for
   the visible virtual window.
+- The current checked-in combobox gate is
+  `docs/workstreams/perf-baselines/ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`.
+  It was seeded from the latest `target\dev-fast\fret-ui-gallery.exe`, not from the stale release
+  binary. Seed p50/p95/max total is `12671/12869/12869us`; the reverse gate passed with
+  `failures=[]`.
+- This is still above the strict 120Hz target. Treat the gate as a regression guard for the fixed
+  failure classes, not as closeout evidence for general-app component parity with GPUI/Zed.
 
 ## Decisions
 
@@ -92,6 +99,18 @@ The fix stays local: virtualized command rows set `viewport_probe_unbounded(fals
 `ScrollArea`. That keeps ordinary `ScrollArea` behavior unchanged and avoids pushing a policy
 decision into `fret-ui`.
 
+### D5. Name dev-fast baselines explicitly
+
+The available release `fret-ui-gallery.exe` was built before the latest command/combobox fixes, and
+a fresh release build had already exceeded the local time budget. Using that binary would seed a
+misleading contract from stale code.
+
+The checked-in combobox baseline therefore includes `dev-fast` in its filename and stays out of the
+formal Zed smoothness contract matrix. It is valid for the active workstream's quick regression loop:
+it should catch unbounded virtual-list viewport probing, full-list row materialization, and broad
+whole-page cache invalidation. A release Windows RTX4090 baseline remains a separate follow-up once a
+fresh release gallery binary is available.
+
 ## Current Architecture Read
 
 The current evidence argues against a single framework-level rewrite as the next move. The large
@@ -109,16 +128,17 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 
 ## Next Work
 
-1. Add a durable threshold/gate for the now-acceptable combobox long-list probe before broadening to
-   another heavy component.
+1. Continue optimizing the combobox long-list tail; the dev-fast gate is a floor, not the target.
 2. Use `diag stats --sort cpu_cycles --top 30` and `--sort time` on each newest bundle before
    changing code again.
 3. Treat stats output without `script_capture_skipped` support as stale for scripted capture bundles.
-4. If paint/text preparation dominates, inspect static text/code-block/icon preparation and paint
+4. If layout remains above budget, focus on popup/overlay solve and scroll-area geometry first; the
+   main-page corrected-content relayout and full-list materialization failures are already fixed.
+5. If paint/text preparation dominates, inspect static text/code-block/icon preparation and paint
    cache key churn before changing layout code.
-5. If renderer finish/encode dominates with low CPU signal, treat it as scheduling/renderer tail
+6. If renderer finish/encode dominates with low CPU signal, treat it as scheduling/renderer tail
    rather than a component tree problem until a trace proves otherwise.
-6. Keep `CommandPalette`, `Combobox`, `DataTable` toolbar recipes, `Sidebar`, and carousel-heavy
+7. Keep `CommandPalette`, `Combobox`, `DataTable` toolbar recipes, `Sidebar`, and carousel-heavy
    examples as the next heavy-component candidates. Avoid widening to every shadcn recipe until one
    candidate produces a reproducible tail.
 
@@ -140,3 +160,15 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 - `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\imui-heavy-perf-probes-combobox-devfast-bounded-viewport --repeat 1 --warmup-frames 2 --timeout-ms 240000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=combobox --launch -- target\dev-fast\fret-ui-gallery.exe`
   passed with worst frame `total=9591us`; evidence bundle
   `target/fret-diag/imui-heavy-perf-probes-combobox-devfast-bounded-viewport/1781424587044/bundle.schema2.json`.
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\baseline-combobox-filter-select-devfast-windows-rtx4090-v1 --repeat 3 --warmup-frames 5 --prewarm-script tools\diag-scripts\_prelude\tooling-suite-prewarm-fonts.json --prelude-script tools\diag-scripts\_prelude\tooling-suite-prelude-reset-diagnostics.json --perf-baseline-out docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json --perf-baseline-headroom-pct 20 --perf-baseline-threshold-surface ui --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  passed and wrote the dev-fast baseline. Seed p50/p95/max total/layout/solve is
+  `12671/12869/12869us`, `7762/8074/8074us`, and `893/1157/1157us`.
+- `target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\perf\ui-gallery-combobox-filter-select-steady.json --dir target\fret-diag\gate-combobox-filter-select-devfast-windows-rtx4090-v1 --repeat 1 --warmup-frames 5 --prewarm-script tools\diag-scripts\_prelude\tooling-suite-prewarm-fonts.json --prelude-script tools\diag-scripts\_prelude\tooling-suite-prelude-reset-diagnostics.json --perf-baseline docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_START_PAGE=combobox --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  passed; `target/fret-diag/gate-combobox-filter-select-devfast-windows-rtx4090-v1/check.perf_thresholds.json`
+  has `failures=[]`.
+- `target\debug\fretboard-dev.exe diag stats target\fret-diag\gate-combobox-filter-select-devfast-windows-rtx4090-v1\1781426027088\bundle.schema2.json --sort time --top 5`
+  reports `script_capture_skipped=1` and worst frame `total=12666us`, `layout=8072us`,
+  `layout.engine_solve=1155us`, `paint=3953us`, `renderer.finish=1511us`, and
+  `renderer.encode=800us`.
+- `python -m json.tool docs\workstreams\perf-baselines\ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`
+  passed.
