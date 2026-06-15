@@ -122,6 +122,40 @@ Perf read:
 - Next evidence step is to run the fresh data-table layout-node repro below and compare the same
   counters against the baseline bundle.
 
+## 2026-06-15 ScrollContentTransform Flow Subtree Contract
+
+Owner:
+
+- The shared horizontal transform table path moved default unpinned body rows away from one
+  horizontal `Scroll` per row, but its row descendants still rely on the layout engine flow builder
+  seeing `ScrollContentTransform` as a normal wrapper.
+- Without that flow recursion, table pixels can recover through widget-local fallback solves, but
+  dense `Flex -> cell container` rows pay extra per-row layout work and the fallback-free contract
+  is false.
+
+Change:
+
+- `crates/fret-ui/src/layout/engine/flow.rs` now includes
+  `ElementInstance::ScrollContentTransform(_)` in the wrapper/pass-through flow lists.
+- `crates/fret-ui/src/declarative/tests/layout/scroll.rs` adds
+  `scroll_content_transform_solves_flow_descendants_without_widget_fallback`, which builds the
+  table-like shape `ScrollContentTransform -> Flex -> fixed cell containers` and requires zero
+  `layout_engine_widget_fallback_solves`.
+
+Focused gates passed:
+
+```powershell
+cargo nextest run --cargo-profile dev-fast -p fret-ui scroll_content_transform_moves_children_without_owning_scroll_extent scroll_content_transform_solves_flow_descendants_without_widget_fallback --no-fail-fast --no-capture
+$env:FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES='1'; cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_pointer_select_does_not_shift_row_bounds --no-fail-fast --no-capture
+```
+
+Interpretation:
+
+- This is a mechanism-layer performance correctness fix, not a table-local geometry workaround.
+- It does not replace a future fixed-track/row geometry primitive if node profiles still show row
+  `Flex` as the next material owner, but it removes the accidental widget-local fallback solves from
+  the current shared-row-transform table path.
+
 ## First Repro Commands
 
 Existing bundle attribution:

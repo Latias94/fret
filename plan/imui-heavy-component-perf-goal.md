@@ -1069,3 +1069,72 @@ popover overlay root solve tail.
   next optimization back to table row/cell fixed-geometry layout policy and root-apply breadth.
   Repeated row `Flex` nodes around `108-111us self` remain the visible node-profile owner after the
   per-row `Scroll` removal.
+
+## 2026-06-15 Twenty-Seventh Slice Attempt - Absolute Cell Strip Rejected
+
+- Tested a table-local `table_virtualized` body experiment that changed the ordinary single-center,
+  fixed-height, non-`optimize_paint_order` row cells from a horizontal flex row into absolute
+  fixed-geometry cells.
+- The experiment compiled, but the existing alignment gate failed:
+  `table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height`
+  reported `header_x=220.00px cell_x=0.00px` for the `status` column.
+- Focused cleanup confirmed the current mainline shape remains correct:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_pointer_select_does_not_shift_row_bounds --no-fail-fast --no-capture`
+  passed after reverting the experiment.
+- Interpretation: the visual/runtime bounds path can keep body cells aligned through
+  `ScrollContentTransform`, but a component-local absolute child strip does not leave the same
+  reliable Taffy sidecar geometry for table-owned test-id anchors. That makes it unsafe as a
+  straight component optimization because diagnostics, alignment gates, and app automation depend on
+  those anchors.
+- Decision: do not land component-local absolute cells. If fixed-geometry table rows remain the
+  right target, the next viable approach should be either a mechanism-level "fixed strip/grid"
+  primitive whose layout engine and sidecar geometry are first-class, or a narrower row/cell
+  simplification that keeps cells in normal flow.
+
+## 2026-06-15 Twenty-Eighth Slice Direction - Fixed Geometry Owner
+
+- A read-only architecture review reached the same conclusion as the failed experiment: table
+  policy already knows fixed column tracks, but `fret-ui` layout owns the geometry seam that feeds
+  Taffy sidecars, hit testing, semantics bounds, and diagnostics.
+- Do not treat `ScrollContentTransform` or component-local absolute placement as substitutes for
+  layout bounds. They can make the pixels move, but they are not sufficient when table-owned
+  `test_id` anchors must report stable `abs_rect` geometry.
+- If fixed row/column placement is still the main optimization target, the deep module should be a
+  `fret-ui` mechanism primitive such as `FixedTrackStrip`, with a small interface:
+  layout style, horizontal axis in v1, fixed track widths, gap, and real layout children. Table can
+  adapt column widths into that primitive, but the primitive must write child bounds as first-class
+  layout output.
+- The safer interim component slice is to reduce cell-internal wrappers while keeping row/cell
+  flow placement unchanged. That means preserving the row `Flex` and cell container sidecar anchors,
+  and only removing content wrappers when alignment, hoisted test ids, selection, hit testing, and
+  semantics stay covered by the focused table gates.
+
+## 2026-06-15 Twenty-Ninth Slice - Scroll Transform Flow Subtree Contract
+
+- Found a smaller mechanism bug while validating the rejected fixed-cell experiment: the new
+  `ScrollContentTransform` primitive moved pixels and hit testing correctly, but the layout engine
+  flow builder did not treat it as a wrapper whose descendants should be included in the same flow
+  subtree.
+- Failure evidence with `FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES=1`: the focused table gates
+  failed with `layout engine fallback solve (flex)` because row `Flex -> cell container`
+  descendants under `ScrollContentTransform` had no engine child rects. The existing table pixels
+  could still recover through widget-local fallback solves, but dense rows then paid extra per-row
+  layout work and the no-fallback contract was false.
+- Implemented the mechanism fix in `crates/fret-ui/src/layout/engine/flow.rs`: add
+  `ElementInstance::ScrollContentTransform(_)` to the wrapper/pass-through flow lists so it recurses
+  like `VisualTransform`, `RenderTransform`, and related children-only transform wrappers.
+- Added a focused regression test:
+  `scroll_content_transform_solves_flow_descendants_without_widget_fallback`. It builds the table-like
+  shape `ScrollContentTransform -> Flex -> fixed cell containers`, requires zero
+  `layout_engine_widget_fallback_solves`, and checks cell x positions still come from normal flow
+  geometry.
+- Validation so far:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui scroll_content_transform_moves_children_without_owning_scroll_extent scroll_content_transform_solves_flow_descendants_without_widget_fallback --no-fail-fast --no-capture`
+  passed.
+- The table hot-path no-fallback gate also passed:
+  `$env:FRET_LAYOUT_FORBID_WIDGET_FALLBACK_SOLVES='1'; cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_pointer_select_does_not_shift_row_bounds --no-fail-fast --no-capture`.
+  This confirms the existing shared horizontal transform table path no longer depends on
+  widget-local row `Flex` fallback solves.
+- Decision: keep this as a `fret-ui` mechanism-layer performance correctness fix. It does not
+  replace the later `FixedTrackStrip`/fixed-geometry-owner direction, but it removes avoidable
+  widget-local fallback solves from the existing shared row-transform table path.

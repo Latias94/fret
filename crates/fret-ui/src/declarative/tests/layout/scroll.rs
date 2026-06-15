@@ -8380,3 +8380,90 @@ fn scroll_content_transform_moves_children_without_owning_scroll_extent() {
         "hit testing must follow the children transform"
     );
 }
+
+#[test]
+fn scroll_content_transform_solves_flow_descendants_without_widget_fallback() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(32.0)),
+    );
+    let mut text = FakeTextService::default();
+    let handle = crate::scroll::ScrollHandle::default();
+    handle.set_viewport_size(bounds.size);
+    handle.set_content_size(Size::new(Px(300.0), Px(32.0)));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-content-transform-flow-descendants",
+        {
+            let handle = handle.clone();
+            move |cx| {
+                let mut wrapper = crate::element::ScrollContentTransformProps::default();
+                wrapper.axis = crate::element::ScrollAxis::X;
+                wrapper.scroll_handle = handle.clone();
+                wrapper.layout.size.width = Length::Fill;
+                wrapper.layout.size.height = Length::Fill;
+                wrapper.layout.overflow = crate::element::Overflow::Clip;
+
+                vec![cx.scroll_content_transform(wrapper, |cx| {
+                    let mut row = crate::element::FlexProps::default();
+                    row.layout.size.width = Length::Px(Px(300.0));
+                    row.layout.size.height = Length::Fill;
+                    row.gap = crate::element::SpacingLength::Px(Px(0.0));
+
+                    vec![cx.flex(row, |cx| {
+                        let mut first = crate::element::ContainerProps::default();
+                        first.layout.size.width = Length::Px(Px(80.0));
+                        first.layout.size.height = Length::Fill;
+
+                        let mut second = crate::element::ContainerProps::default();
+                        second.layout.size.width = Length::Px(Px(120.0));
+                        second.layout.size.height = Length::Fill;
+
+                        let mut third = crate::element::ContainerProps::default();
+                        third.layout.size.width = Length::Px(Px(100.0));
+                        third.layout.size.height = Length::Fill;
+
+                        vec![
+                            cx.container(first, |_cx| Vec::new()),
+                            cx.container(second, |_cx| Vec::new()),
+                            cx.container(third, |_cx| Vec::new()),
+                        ]
+                    })]
+                })]
+            }
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_widget_fallback_solves,
+        0,
+        "ScrollContentTransform must be part of the flow subtree so dense row/cell layouts do not fall back to widget-local solves"
+    );
+
+    let transform_node = ui.children(root)[0];
+    let row_node = ui.children(transform_node)[0];
+    let row_bounds = ui.debug_node_bounds(row_node).expect("row bounds");
+    assert!((row_bounds.size.width.0 - 300.0).abs() <= 0.01);
+
+    let cells = ui.children(row_node);
+    assert_eq!(cells.len(), 3);
+    let first = ui.debug_node_bounds(cells[0]).expect("first cell bounds");
+    let second = ui.debug_node_bounds(cells[1]).expect("second cell bounds");
+    let third = ui.debug_node_bounds(cells[2]).expect("third cell bounds");
+    assert!((first.origin.x.0 - row_bounds.origin.x.0).abs() <= 0.01);
+    assert!((second.origin.x.0 - (row_bounds.origin.x.0 + 80.0)).abs() <= 0.01);
+    assert!((third.origin.x.0 - (row_bounds.origin.x.0 + 200.0)).abs() <= 0.01);
+}
