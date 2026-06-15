@@ -301,6 +301,128 @@ fn view_cache_contained_relayout_does_not_force_next_frame_rerender() {
 }
 
 #[test]
+fn view_cache_layout_dirty_expansion_reaches_clean_nested_cache_root_descendants() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    for id in [outer, inner] {
+        ui.set_node_view_cache_flags(id, true, true, true);
+        ui.nodes[id].bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+        );
+        ui.nodes[id].measured_size = ui.nodes[id].bounds.size;
+    }
+
+    for id in [root, outer, inner, leaf] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.test_set_layout_invalidation(outer, true);
+
+    ui.expand_view_cache_layout_invalidations_if_needed();
+
+    assert!(ui.nodes[outer].invalidation.layout);
+    assert!(ui.nodes[inner].invalidation.layout);
+    assert!(
+        ui.nodes[leaf].invalidation.layout,
+        "layout dirty expansion must pass through clean nested cache roots so cached descendant geometry can be refreshed"
+    );
+}
+
+#[test]
+fn view_cache_layout_dirty_expansion_keeps_dirty_nested_cache_root() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    for id in [outer, inner] {
+        ui.set_node_view_cache_flags(id, true, true, true);
+        ui.nodes[id].bounds = Rect::new(
+            Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+        );
+        ui.nodes[id].measured_size = ui.nodes[id].bounds.size;
+    }
+
+    for id in [root, outer, inner, leaf] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.test_set_layout_invalidation(inner, true);
+    ui.test_set_layout_invalidation(outer, true);
+
+    ui.expand_view_cache_layout_invalidations_if_needed();
+
+    assert!(ui.nodes[outer].invalidation.layout);
+    assert!(ui.nodes[inner].invalidation.layout);
+    assert!(
+        ui.nodes[leaf].invalidation.layout,
+        "dirty nested cache roots must still expand into descendants"
+    );
+}
+
+#[test]
+fn view_cache_layout_dirty_expansion_does_not_prune_non_contained_nested_cache_root() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    ui.set_node_view_cache_flags(outer, true, true, true);
+    ui.set_node_view_cache_flags(inner, true, false, true);
+
+    for id in [root, outer, inner, leaf] {
+        ui.test_clear_node_invalidations(id);
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.test_set_layout_invalidation(outer, true);
+    ui.expand_view_cache_layout_invalidations_if_needed();
+
+    assert!(ui.nodes[outer].invalidation.layout);
+    assert!(ui.nodes[inner].invalidation.layout);
+    assert!(
+        ui.nodes[leaf].invalidation.layout,
+        "non-contained nested cache roots should still receive layout dirtiness"
+    );
+}
+
+#[test]
 fn detached_dirty_view_cache_root_is_pruned_before_layout_followups() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();

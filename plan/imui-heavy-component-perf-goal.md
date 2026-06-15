@@ -872,6 +872,40 @@ popover overlay root solve tail.
   it is not yet claimed as a user-visible perf win until a stable data-table or inspector probe is
   rerun.
 
+## 2026-06-15 Twenty-Third Slice Semantics Translation Correctness
+
+- Investigated a possible view-cache layout dirty expansion shortcut: stop walking into a clean
+  nested cache root when an outer contained cache root was dirty. That shortcut is unsafe. A clean
+  nested cache root may still need descendant geometry refreshed when the cached subtree moves, so
+  pruning it can leave hit-test or semantics bounds stale.
+- Kept layout dirty expansion conservative and added regression tests proving dirty expansion must
+  pass through clean nested cache roots, dirty nested cache roots, and non-contained nested roots.
+- Found a separate correctness bug in incremental semantics snapshot reuse. A clean subtree was
+  reused only from `subtree_semantics_dirty_count == 0`; it did not compare the current semantic
+  root bounds with the previous snapshot root bounds. When a cache-hit subtree moved, reused
+  descendants could keep their old absolute bounds.
+- Fixed the reuse contract in `crates/fret-ui/src/tree/ui_tree_semantics.rs`:
+  identical parent/bounds reuse the previous range unchanged, origin-only movement with the same
+  size translates the reused range, and other root-bound changes rebuild the subtree.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui semantics_snapshot_rebuilds_clean_descendants_when_dirty_ancestor_transform_changes semantics_snapshot_reuses_clean_subtrees_between_dirty_refreshes --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui tree::tests::view_cache --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_ --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui semantics_snapshot_ --no-fail-fast --no-capture`,
+  `cargo fmt -p fret-ui`, `cargo check -p fret-ui --profile dev-fast -j 1`, and
+  `git diff --check`.
+- The stable data-table view-cache torture gate passed:
+  `target/release/fretboard-dev.exe diag suite ui-gallery-data-table-view-cache-torture --dir target/fret-diag/vlist-view-cache-semantics-translate-v1 --session-auto --timeout-ms 900000 --ai-packet --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+  Evidence is in
+  `target/fret-diag/vlist-view-cache-semantics-translate-v1/sessions/1781497567429-36420/suite.summary.json`.
+- The final data-table bundle remained layout-dominant rather than semantics-dominant:
+  `total=14432us`, `layout=13507us`, `layout.engine_solve=3969us`, `layout.nodes=813`, and
+  `paint=751us`.
+- Decision: do not optimize by pruning nested view-cache layout dirty expansion. The next
+  performance lane should target the data-table/view-cache layout root apply and row/cell layout
+  policy, not stale geometry shortcuts.
+
 ## Next Verification
 
 1. Use `tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json` and

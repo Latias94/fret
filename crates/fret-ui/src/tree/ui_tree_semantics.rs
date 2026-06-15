@@ -259,20 +259,6 @@ impl<H: UiHost> UiTree<H> {
                     stack.push((root, Transform2D::IDENTITY, false));
                     let mut scratch_children = self.take_scratch_semantics_children();
                     while let Some((id, before, ancestor_rebuilt)) = stack.pop() {
-                        if can_reuse_previous_snapshot
-                            && !ancestor_rebuilt
-                            && self
-                                .nodes
-                                .get(id)
-                                .is_some_and(|entry| entry.subtree_semantics_dirty_count == 0)
-                            && let (Some(previous_nodes), Some(previous_ranges)) =
-                                (previous_nodes, previous_ranges.as_ref())
-                            && let Some((start, end)) = previous_ranges.get(&id).copied()
-                        {
-                            nodes.extend(previous_nodes[start..end].iter().cloned());
-                            continue;
-                        }
-
                         if !visited.insert(id) {
                             if crate::strict_runtime::strict_runtime_enabled() {
                                 panic!(
@@ -293,6 +279,7 @@ impl<H: UiHost> UiTree<H> {
                             traverse_children,
                             before_child,
                             node_semantics_dirty,
+                            subtree_semantics_dirty_count,
                         ) = {
                             let Some(node) = self.nodes.get(id) else {
                                 continue;
@@ -389,8 +376,44 @@ impl<H: UiHost> UiTree<H> {
                                 traverse_children,
                                 before_child,
                                 node.semantics_dirty,
+                                node.subtree_semantics_dirty_count,
                             )
                         };
+
+                        let mut node_geometry_changed = false;
+                        if can_reuse_previous_snapshot
+                            && !ancestor_rebuilt
+                            && subtree_semantics_dirty_count == 0
+                            && let (Some(previous_nodes), Some(previous_ranges)) =
+                                (previous_nodes, previous_ranges.as_ref())
+                            && let Some((start, end)) = previous_ranges.get(&id).copied()
+                            && let Some(previous_root) = previous_nodes.get(start)
+                        {
+                            if previous_root.parent == parent && previous_root.bounds == bounds {
+                                nodes.extend(previous_nodes[start..end].iter().cloned());
+                                continue;
+                            }
+
+                            if previous_root.parent == parent
+                                && previous_root.bounds.size == bounds.size
+                            {
+                                let dx = bounds.origin.x - previous_root.bounds.origin.x;
+                                let dy = bounds.origin.y - previous_root.bounds.origin.y;
+                                for previous in &previous_nodes[start..end] {
+                                    let mut reused = previous.clone();
+                                    reused.bounds.origin = Point::new(
+                                        reused.bounds.origin.x + dx,
+                                        reused.bounds.origin.y + dy,
+                                    );
+                                    nodes.push(reused);
+                                }
+                                continue;
+                            }
+
+                            if previous_root.bounds != bounds {
+                                node_geometry_changed = true;
+                            }
+                        }
 
                         let mut role = if Some(id) == base_root {
                             SemanticsRole::Window
@@ -525,7 +548,7 @@ impl<H: UiHost> UiTree<H> {
                         if traverse_children {
                             // Preserve a stable-ish order: visit children in declared order.
                             let descendant_ancestor_rebuilt =
-                                ancestor_rebuilt || node_semantics_dirty;
+                                ancestor_rebuilt || node_semantics_dirty || node_geometry_changed;
                             for &child in scratch_children.iter().rev() {
                                 stack.push((child, before_child, descendant_ancestor_rebuilt));
                             }
