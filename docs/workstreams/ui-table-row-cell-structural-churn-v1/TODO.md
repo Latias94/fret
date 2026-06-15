@@ -21,6 +21,8 @@ Last updated: 2026-06-15
 - [x] Add or adjust a focused unit test if row identity, row selection, focus, or semantics could
       regress.
 - [x] Keep shadcn recipe behavior unchanged unless attribution moves to recipe-owned controls.
+- [x] Remove retained row-local duplicate keyboard handler registration after proving nested focus
+      still bubbles table navigation keys to the retained list root.
 
 ## M2 - Perf Evidence
 
@@ -36,6 +38,8 @@ Last updated: 2026-06-15
 - [x] Record bundle paths and interpretation in `EVIDENCE_AND_GATES.md`.
 - [x] Decide whether a checked-in formal baseline is justified. Default: no baseline changes from
       local noisy evidence.
+- [x] Re-run the retained-only filter-shrink script after the key-hook prune and record that the
+      retained frame stayed in the same performance band as the shared-transform evidence.
 
 ## M3 - Closeout Or Split
 

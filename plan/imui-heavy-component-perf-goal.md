@@ -1178,3 +1178,33 @@ popover overlay root solve tail.
   primitive or a narrower retained/root-apply attribution pass. The component-local absolute-cell
   experiment remains rejected because it breaks first-class sidecar geometry for test ids and
   diagnostics.
+
+## 2026-06-15 Thirty-First Slice - Retained Row Key Hook Prune
+
+- Found one remaining retained-table structural duplication after the shared row-transform slice:
+  every retained row visual root registered the same table keyboard navigation handler, while the
+  retained list root already registered that handler once.
+- Removed the per-row `key_on_key_down_for` registration from
+  `retained_table_render_row_visuals`. Keyboard navigation is now owned by the retained list root,
+  and focused descendants continue to bubble key events to that root.
+- Added `table_virtualized_retained_nested_focus_bubbles_keyboard_to_list`, which focuses a nested
+  row child pressable, dispatches `ArrowDown`, and verifies the table list's active descendant moves
+  to the next row. This protects the exact behavior that could regress when deleting the row-local
+  hook.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast --no-capture`
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast --no-capture`.
+- Retained-only perf repro after this cleanup:
+  `target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Evidence bundle:
+  `target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only/1781536422863/bundle.json`.
+  `diag stats --sort cpu_cycles --top 10` reported `total=11391us`, `layout=10522us`,
+  `layout.engine_solve=6524us`, `layout.root apply=9373us`, and `layout.nodes=646`.
+- Interpretation: keep this as a structural cleanup and behavior guard, not as a claimed new
+  material perf win. The numbers stay in the same band as the prior retained shared-transform
+  evidence (`11715/10831/6599us`, `nodes=646`), which is the right result for removing duplicate
+  event registrations rather than row layout structure.
+- A view-cache-enabled variant also passed, but it produced a different measurement surface
+  (`contained_relayout=1` and cache-key mismatch) and is not used as the apples-to-apples evidence
+  for this slice.

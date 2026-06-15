@@ -33,13 +33,15 @@
     }
   ],
   "repro": {
-    "summary": "Start from the general-app data-table view-cache/filter shrink bundle and compare it with the virtual-list torture bundle; use layout node profiling for row/cell solve attribution. Current retained evidence compares the retained data-table script before and after replacing row-local horizontal Scroll owners with shared ScrollContentTransform rows.",
+    "summary": "Start from the general-app data-table view-cache/filter shrink bundle and compare it with the virtual-list torture bundle; use layout node profiling for row/cell solve attribution. Current retained evidence compares the retained data-table script before and after replacing row-local horizontal Scroll owners with shared ScrollContentTransform rows, then verifies that pruning duplicate per-row retained keyboard handlers keeps the same retained-only performance band.",
     "commands": [
       "target/release/fretboard-dev.exe diag stats target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/1781333281689/bundle.schema2.json --sort cpu_cycles --top 30",
       "target/release/fretboard-dev.exe diag stats target/fret-general-app-perf/virtual-list-torture-steady-r3/1781332244223/bundle.schema2.json --sort cpu_cycles --top 30",
       "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/ui-table-row-cell-structural-churn-v1-data-table-r3 --launch -- target/release/fret-ui-gallery.exe",
       "target/release/fretboard-dev.exe diag stats target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json --sort cpu_cycles --top 30",
-      "target/release/fretboard-dev.exe diag stats target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json --sort cpu_cycles --top 30"
+      "target/release/fretboard-dev.exe diag stats target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json --sort cpu_cycles --top 30",
+      "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness",
+      "target/release/fretboard-dev.exe diag stats target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only/1781536422863/bundle.json --sort cpu_cycles --top 10"
     ]
   },
   "gates": [
@@ -50,6 +52,10 @@
     {
       "name": "retained-shared-horizontal-transform",
       "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast --no-capture"
+    },
+    {
+      "name": "retained-keyboard-bubble",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_nested_focus_bubbles_keyboard_to_list --no-fail-fast --no-capture"
     },
     {
       "name": "shadcn-data-table-correctness",
@@ -82,6 +88,7 @@
     "target/fret-general-app-perf/virtual-list-torture-steady-r3/layout.perf.summary.v1.json",
     "target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
     "target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
+    "target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only/1781536422863/bundle.json",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
     "ecosystem/fret-ui-shadcn/src/data_table.rs",
     "crates/fret-ui/src/elements/cx.rs"

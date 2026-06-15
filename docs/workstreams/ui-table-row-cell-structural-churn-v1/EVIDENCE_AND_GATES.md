@@ -212,6 +212,55 @@ Interpretation:
   target retained root apply, VirtualList reconciliation, or a first-class fixed-track layout
   primitive rather than adding more row-local scroll special cases.
 
+## 2026-06-15 Retained Row Key Hook Prune
+
+Owner:
+
+- After row-local horizontal `Scroll` ownership was removed, retained rows still registered the same
+  keyboard navigation handler on every row visual root.
+- The retained list root already registers that handler once, so per-row registrations were
+  duplicate policy plumbing rather than independent row behavior.
+
+Change:
+
+- `retained_table_render_row_visuals` no longer accepts or registers the table key handler.
+- `table_virtualized_retained_v0` keeps the single `key_on_key_down_for` registration on the list
+  root.
+- `table_virtualized_retained_nested_focus_bubbles_keyboard_to_list` focuses a nested retained row
+  pressable, dispatches `ArrowDown`, and verifies the key event bubbles to the list root by checking
+  the next row active descendant.
+
+Focused gates passed:
+
+```powershell
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast --no-capture
+cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast --no-capture
+```
+
+Retained-only repro:
+
+```powershell
+target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\vlist-retained-row-key-hook-prune-v3-retained-only --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness
+target\release\fretboard-dev.exe diag stats target\fret-diag\vlist-retained-row-key-hook-prune-v3-retained-only\1781536422863\bundle.json --sort cpu_cycles --top 10
+```
+
+Stats:
+
+- Bundle:
+  `target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only/1781536422863/bundle.json`
+- Worst retained frame: `total=11391us`, `layout=10522us`,
+  `layout.engine_solve=6524us`, `layout.root apply=9373us`, `layout.nodes=646`.
+- Prior retained shared-transform comparison point: `total=11715us`, `layout=10831us`,
+  `layout.engine_solve=6599us`, `layout.root apply=9541us`, `layout.nodes=646`.
+
+Interpretation:
+
+- Keep this slice as structural cleanup and behavior protection, not as a new material perf claim.
+- The important invariant is that keyboard policy now has one retained list owner, while nested row
+  descendants still bubble navigation keys to that owner.
+- A view-cache-enabled variant also passed, but because it introduced `contained_relayout=1` and a
+  cache-key mismatch, it is not used as apples-to-apples retained-only evidence for this slice.
+
 ## First Repro Commands
 
 Existing bundle attribution:

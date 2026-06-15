@@ -53,6 +53,8 @@ Landed slice:
   horizontal scroll owner instead of one horizontal `Scroll` per row.
 - The retained single-center body path now uses the same shared-X structure: one body
   `WheelRegion`, per-row `ScrollContentTransform`, and no row-local horizontal `Scroll`.
+- Retained rows no longer register duplicate per-row keyboard handlers; the retained list root owns
+  the single key navigation handler, and a nested-focus regression test proves bubbling still works.
 - Pinned-column layouts, grouped rows, and shadcn recipes keep the existing structural path.
 
 ## M2 - Before/After Perf Read
@@ -75,6 +77,9 @@ Current retained comparison:
   `layout.engine_solve=13231us`, `layout.root apply=20407us`, `layout.nodes=810`
   to `total=11715us`, `layout=10831us`, `layout.engine_solve=6599us`,
   `layout.root apply=9541us`, `layout.nodes=646`.
+- Follow-up retained key-hook prune stayed in the same band on the retained-only script:
+  `total=11391us`, `layout=10522us`, `layout.engine_solve=6524us`,
+  `layout.root apply=9373us`, `layout.nodes=646`.
 
 ## M3 - Closeout Or Follow-On Split
 
@@ -89,6 +94,6 @@ Done criteria:
 Current decision:
 
 - Keep this lane active for the next attribution pass, but do not keep optimizing row-local scroll
-  wrappers unless a fresh profile makes them hot again.
+  wrappers or row-local keyboard plumbing unless a fresh profile makes them hot again.
 - The likely next implementation owner is either retained/root-apply breadth or a mechanism-level
   fixed-track layout primitive that owns child sidecar geometry directly.

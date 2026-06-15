@@ -381,7 +381,6 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
     border: Color,
     cell_px: Px,
     cell_py: Px,
-    key_handler: fret_ui::action::OnKeyDown,
     columns: Arc<[ColumnDef<TData>]>,
     col_widths: Arc<[Px]>,
     cell_at: Arc<CellAt<H, TData>>,
@@ -391,8 +390,6 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
     right_col_indices: Arc<[usize]>,
     scroll_x: ScrollHandle,
 ) -> AnyElement {
-    cx.key_on_key_down_for(cx.root_id(), key_handler);
-
     cx.container(
         ContainerProps {
             background: bg,
@@ -3933,6 +3930,222 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_retained_nested_focus_bubbles_keyboard_to_list() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+        let focused_child: Rc<Cell<Option<fret_ui::GlobalElementId>>> = Rc::new(Cell::new(None));
+
+        let data: Arc<[u32]> = Arc::from(vec![0u32, 1u32, 2u32]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![
+            {
+                let mut col = ColumnDef::new("name");
+                col.size = 180.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("actions");
+                col.size = 80.0;
+                col
+            },
+        ]);
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: false,
+            pointer_row_selection: false,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            let focused_child = focused_child.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        move |cx: &mut dyn ElementContextAccess<'_, App>,
+                              col: &ColumnDef<u32>,
+                              row: &u32| {
+                            let cx = cx.elements();
+                            match col.id.as_ref() {
+                                "name" => crate::ui::text(format!("Row {row}")).into_element(cx),
+                                "actions" if *row == 0 => {
+                                    let focused_child = focused_child.clone();
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            focusable: true,
+                                            layout: LayoutStyle {
+                                                size: fret_ui::element::SizeStyle {
+                                                    width: Length::Px(Px(24.0)),
+                                                    height: Length::Px(Px(24.0)),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                test_id: Some(Arc::<str>::from(
+                                                    "table-retained-focused-child",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            focused_child.set(Some(id));
+                                            vec![cx.spacer(SpacerProps::default())]
+                                        },
+                                    )
+                                }
+                                "actions" => cx.text("-"),
+                                _ => cx.text("?"),
+                            }
+                        },
+                    ),
+                    TableDebugIds {
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-keyboard-row-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        let pump =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frames: usize| {
+                for _ in 0..frames {
+                    let root = render(ui, app, services);
+                    ui.set_root(root);
+                    ui.request_semantics_snapshot();
+                    ui.layout_all(app, services, bounds, 1.0);
+                    let mut scene = fret_core::Scene::default();
+                    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+                }
+            };
+
+        let row_center = |snap: &fret_core::SemanticsSnapshot, row_index: usize| {
+            let id = format!("table-retained-keyboard-row-{row_index}");
+            let bounds = snap
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(id.as_str()))
+                .map(|node| node.bounds)
+                .unwrap_or_else(|| panic!("expected row semantics node `{id}`"));
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+            )
+        };
+
+        pump(&mut ui, &mut app, &mut services, 2);
+
+        let child_element = focused_child
+            .get()
+            .expect("expected retained nested focusable child element");
+        let child_node = fret_ui::elements::node_for_element(&mut app, window, child_element)
+            .expect("expected retained nested focusable child node");
+        ui.set_focus(Some(child_node));
+
+        let initial_snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial table render");
+        let click_pos = row_center(initial_snap, 0);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        pump(&mut ui, &mut app, &mut services, 2);
+
+        ui.set_focus(Some(child_node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        pump(&mut ui, &mut app, &mut services, 2);
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after arrow navigation");
+        let row = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("table-retained-keyboard-row-1"))
+            .expect("expected active row 1 semantics node");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|node| node.role == SemanticsRole::List)
+            .expect("expected table list semantics node");
+
+        assert_eq!(
+            list.active_descendant,
+            Some(row.id),
+            "expected retained table keyboard navigation to bubble from focused child to list"
+        );
+    }
+
+    #[test]
     fn table_active_descendant_semantics_resolves_from_declarative_active_row_relation() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -5564,7 +5777,7 @@ where
             let active_element_for_row_builder = active_element.clone();
             let anchor_index_for_row_builder = anchor_index.clone();
 
-            move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
+            move |focus_target: GlobalElementId| {
                 let active_index_for_row = active_index_for_row_builder.clone();
                 let active_element_for_row = active_element_for_row_builder.clone();
                 let anchor_index_for_row = anchor_index_for_row_builder.clone();
@@ -5591,7 +5804,6 @@ where
                     let columns_for_row = Arc::clone(&visible_columns);
                     let col_widths_for_row = col_widths.clone();
                     let cell_at_for_row = Arc::clone(&cell_at);
-                    let key_handler_for_row = key_handler.clone();
                     let focus_target_for_row = focus_target;
                     let row_cell_test_id_prefix = debug_row_test_id_prefix.clone();
                     let left_col_indices_for_row = left_col_indices.clone();
@@ -5627,7 +5839,6 @@ where
                                 border,
                                 cell_px,
                                 cell_py,
-                                key_handler_for_row.clone(),
                                 columns_for_row.clone(),
                                 col_widths_for_row.clone(),
                                 cell_at_for_row.clone(),
@@ -5967,7 +6178,7 @@ where
             });
 
             cx.key_on_key_down_for(list_id, key_handler.clone());
-            let row = row_builder(key_handler, list_id);
+            let row = row_builder(list_id);
 
             {
                 let typeahead = typeahead.clone();
