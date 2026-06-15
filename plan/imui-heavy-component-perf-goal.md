@@ -1033,3 +1033,39 @@ popover overlay root solve tail.
 - Next target remains `layout.root apply` / dirty-root application attribution and table row/cell
   layout policy. More scroll extent probing is now lower leverage unless future profiles show it
   becoming hot again.
+
+## 2026-06-15 Twenty-Sixth Slice Findings
+
+- Added a conservative absolute-layout fast path in `fret-ui`: absolute children with definite
+  placement bounds now skip the earlier `layout_in_probe` pass, and fixed-pixel absolute children
+  without min/max size constraints or fractional insets can contribute a static parent envelope
+  without `measure_in`.
+- The envelope fast path is intentionally narrower than the bounds fast path. It only accepts
+  explicit pixel width and height, no extra size constraints, and non-fractional insets. This avoids
+  changing shrink-wrap behavior for measured content, fractional insets, text-driven sizes, or
+  constrained children.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui absolute_definite_bounds_resolve_without_measured_size absolute_dual_insets_resolve_without_measured_size absolute_auto_axis_still_requires_probe_measurement absolute_definite_envelope_uses_explicit_size_without_child_measurement absolute_fraction_inset_envelope_still_requires_measurement absolute_constrained_size_envelope_still_requires_measurement container_absolute_inset_positions_child container_absolute_negative_inset_offsets_outside_parent --no-fail-fast --no-capture`,
+  `cargo check -p fret-ui --tests --profile dev-fast -j 1`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height table_virtualized_pointer_select_does_not_shift_row_bounds --no-fail-fast --no-capture`,
+  `cargo fmt -p fret-ui`, and `git diff --check`.
+- The stable data-table view-cache torture suite passed with layout node profiling:
+  `target/release/fretboard-dev.exe diag suite ui-gallery-data-table-view-cache-torture --dir target/fret-diag/vlist-view-cache-absolute-definite-v1 --session-auto --timeout-ms 900000 --ai-packet --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+  Evidence is in
+  `target/fret-diag/vlist-view-cache-absolute-definite-v1/sessions/1781519025052-133900/suite.summary.json`
+  and
+  `target/fret-diag/vlist-view-cache-absolute-definite-v1/sessions/1781519025052-133900/1781519700240-ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change/bundle.schema2.json`.
+- `diag stats` stayed in the same band as the prior shared-row-transform run:
+  `total=13569us`, `layout=12437us`, `layout.engine_solve=7011us`,
+  `layout.root apply=10967us`, and command availability stayed tiny at
+  `widget_count/collect_us/eval_us=4/8/14`. The previous comparable bundle was
+  `total=13260us`, `layout=12236us`, `layout.engine_solve=6965us`, and
+  `layout.root apply=10839us`.
+- Node counts moved slightly in the intended direction (`layout.nodes=843` vs `847` on the
+  comparable worst frame), but this is not a material 120Hz improvement. Treat this as a safe
+  low-level cleanup that removes avoidable work for fixed absolute overlay/control chrome, not as
+  the current primary data-table answer.
+- Decision: keep this slice because it is narrowly gated and correctness-preserving, but move the
+  next optimization back to table row/cell fixed-geometry layout policy and root-apply breadth.
+  Repeated row `Flex` nodes around `108-111us self` remain the visible node-profile owner after the
+  per-row `Scroll` removal.

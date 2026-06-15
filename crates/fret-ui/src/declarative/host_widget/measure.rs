@@ -2,7 +2,9 @@ use super::super::frame::ordered_flex_children;
 use super::super::frame::{
     ElementInstance, element_record_for_node, layout_direction_for_node, layout_style_for_node,
 };
-use super::super::layout_helpers::absolute_child_envelope_size;
+use super::super::layout_helpers::{
+    absolute_child_envelope_size, absolute_child_envelope_size_if_definite,
+};
 use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::element::SizeStyle;
@@ -769,8 +771,12 @@ impl ElementHostWidget {
                     if style.position != crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.measure_in(child, abs_constraints);
-                    let required = absolute_child_envelope_size(child_size, style.inset);
+                    let required =
+                        absolute_child_envelope_size_if_definite(style.inset, style.size)
+                            .unwrap_or_else(|| {
+                                let child_size = cx.measure_in(child, abs_constraints);
+                                absolute_child_envelope_size(child_size, style.inset)
+                            });
 
                     if absolute_only || envelope_width {
                         max_child.width = Px(max_child.width.0.max(required.width.0));
@@ -806,11 +812,14 @@ impl ElementHostWidget {
         let mut max_child = Size::new(Px(0.0), Px(0.0));
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
-            let child_size = cx.measure_in(child, child_constraints);
             let child_size = if child_style.position == crate::element::PositionStyle::Absolute {
-                absolute_child_envelope_size(child_size, child_style.inset)
+                absolute_child_envelope_size_if_definite(child_style.inset, child_style.size)
+                    .unwrap_or_else(|| {
+                        let child_size = cx.measure_in(child, child_constraints);
+                        absolute_child_envelope_size(child_size, child_style.inset)
+                    })
             } else {
-                child_size
+                cx.measure_in(child, child_constraints)
             };
             max_child.width = Px(max_child.width.0.max(child_size.width.0));
             max_child.height = Px(max_child.height.0.max(child_size.height.0));

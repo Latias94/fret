@@ -1782,9 +1782,12 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
             probe_constraints.available.height = AvailableSpace::MaxContent;
         }
         let mut desired = Size::new(Px(0.0), Px(0.0));
-        for (child, inset, _size) in absolute.iter().copied() {
-            let child_size = cx.measure_in(child, probe_constraints);
-            let required = absolute_child_envelope_size(child_size, inset);
+        for (child, inset, size) in absolute.iter().copied() {
+            let required =
+                absolute_child_envelope_size_if_definite(inset, size).unwrap_or_else(|| {
+                    let child_size = cx.measure_in(child, probe_constraints);
+                    absolute_child_envelope_size(child_size, inset)
+                });
             desired.width = Px(desired.width.0.max(required.width.0));
             desired.height = Px(desired.height.0.max(required.height.0));
         }
@@ -1806,9 +1809,11 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
         probe_constraints.available.height = AvailableSpace::MaxContent;
     }
 
-    for (child, inset, _size) in absolute.iter().copied() {
-        let child_size = cx.measure_in(child, probe_constraints);
-        let required = absolute_child_envelope_size(child_size, inset);
+    for (child, inset, size) in absolute.iter().copied() {
+        let required = absolute_child_envelope_size_if_definite(inset, size).unwrap_or_else(|| {
+            let child_size = cx.measure_in(child, probe_constraints);
+            absolute_child_envelope_size(child_size, inset)
+        });
         desired.width = Px(desired.width.0.max(required.width.0));
         desired.height = Px(desired.height.0.max(required.height.0));
     }

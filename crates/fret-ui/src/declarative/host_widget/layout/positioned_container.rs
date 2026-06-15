@@ -1,9 +1,9 @@
 use super::super::ElementHostWidget;
 use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::{
-    PositionedLayoutStyle, absolute_child_envelope_size, clamp_to_constraints,
-    clamp_to_constraints_with_overflow_context, layout_absolute_child_with_probe_bounds,
-    layout_positioned_child, positioned_layout_style,
+    PositionedLayoutStyle, absolute_child_envelope_size, absolute_child_envelope_size_if_definite,
+    clamp_to_constraints, clamp_to_constraints_with_overflow_context,
+    layout_absolute_child_with_probe_bounds, layout_positioned_child, positioned_layout_style,
 };
 use crate::declarative::prelude::*;
 use crate::layout_constraints::AvailableSpace;
@@ -30,11 +30,15 @@ impl ElementHostWidget {
         }
         let mut max_child = Size::new(Px(0.0), Px(0.0));
         let mut non_absolute_sizes: Vec<(NodeId, Size)> = Vec::new();
-        let mut absolute_children: Vec<(NodeId, crate::element::InsetStyle)> = Vec::new();
+        let mut absolute_children: Vec<(
+            NodeId,
+            crate::element::InsetStyle,
+            crate::element::SizeStyle,
+        )> = Vec::new();
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             if child_style.position == crate::element::PositionStyle::Absolute {
-                absolute_children.push((child, child_style.inset));
+                absolute_children.push((child, child_style.inset, child_style.size));
                 continue;
             }
             let child_size = cx.measure_in(child, child_measure_constraints);
@@ -58,9 +62,12 @@ impl ElementHostWidget {
                 abs_constraints.available.height = AvailableSpace::MaxContent;
             }
 
-            for (child, inset) in absolute_children.iter().copied() {
-                let child_size = cx.measure_in(child, abs_constraints);
-                let required = absolute_child_envelope_size(child_size, inset);
+            for (child, inset, size) in absolute_children.iter().copied() {
+                let required = absolute_child_envelope_size_if_definite(inset, size)
+                    .unwrap_or_else(|| {
+                        let child_size = cx.measure_in(child, abs_constraints);
+                        absolute_child_envelope_size(child_size, inset)
+                    });
 
                 if envelope_width {
                     max_child.width = Px(max_child.width.0.max(required.width.0));
@@ -165,12 +172,14 @@ impl ElementHostWidget {
 
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
-            let child_size = cx.measure_in(child, child_measure_constraints);
-
             let required = if child_style.position == crate::element::PositionStyle::Absolute {
-                absolute_child_envelope_size(child_size, child_style.inset)
+                absolute_child_envelope_size_if_definite(child_style.inset, child_style.size)
+                    .unwrap_or_else(|| {
+                        let child_size = cx.measure_in(child, child_measure_constraints);
+                        absolute_child_envelope_size(child_size, child_style.inset)
+                    })
             } else {
-                child_size
+                cx.measure_in(child, child_measure_constraints)
             };
 
             max_child.width = Px(max_child.width.0.max(required.width.0));
