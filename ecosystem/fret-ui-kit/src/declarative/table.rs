@@ -288,6 +288,30 @@ fn table_wrap_horizontal_scroll<H: UiHost>(
     }
 }
 
+fn table_wrap_horizontal_transform<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    scroll_handle: ScrollHandle,
+    known_content_width: Px,
+    row: AnyElement,
+) -> AnyElement {
+    let mut content_shell = ContainerProps::default();
+    content_shell.layout.size.width = Length::Px(known_content_width);
+    content_shell.layout.size.min_width = Some(Length::Px(known_content_width));
+    content_shell.layout.size.max_width = Some(Length::Px(known_content_width));
+    content_shell.layout.size.height = Length::Fill;
+    content_shell.layout.flex.shrink = 0.0;
+
+    let mut transform = fret_ui::element::ScrollContentTransformProps::default();
+    transform.axis = ScrollAxis::X;
+    transform.scroll_handle = scroll_handle;
+    transform.layout = table_scroll_fill_layout();
+    transform.layout.overflow = Overflow::Clip;
+
+    cx.scroll_content_transform(transform, |cx| {
+        vec![cx.container(content_shell, |_| vec![row])]
+    })
+}
+
 fn table_known_content_width_for_indices(col_widths: &[Px], col_indices: &[usize]) -> Px {
     col_indices.iter().fold(Px(0.0), |acc, col_idx| {
         Px(acc.0 + col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)).0)
@@ -1416,6 +1440,21 @@ mod tests {
             .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
     }
 
+    fn subtree_declarative_kind_count(
+        ui: &UiTree<App>,
+        app: &mut App,
+        window: AppWindowId,
+        root: fret_core::NodeId,
+        kind: &'static str,
+    ) -> usize {
+        let here = usize::from(ui.debug_declarative_instance_kind(app, window, root) == Some(kind));
+        here + ui
+            .debug_node_children(root)
+            .into_iter()
+            .map(|child| subtree_declarative_kind_count(ui, app, window, child, kind))
+            .sum::<usize>()
+    }
+
     fn capture_layout_sidecar(
         ui: &UiTree<App>,
         app: &mut App,
@@ -2039,15 +2078,17 @@ mod tests {
 
         // VirtualList computes the visible window based on viewport metrics populated during layout,
         // so it takes two frames for the first set of rows to mount.
-        let mut root = fret_core::NodeId::default();
+        let mut root = None;
         for _ in 0..2 {
-            root = render(&mut ui, &mut app, &mut services);
-            ui.set_root(root);
+            let frame_root = render(&mut ui, &mut app, &mut services);
+            root = Some(frame_root);
+            ui.set_root(frame_root);
             ui.request_semantics_snapshot();
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
             let mut scene = fret_core::Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         }
+        let root = root.expect("expected a rendered table root");
 
         let snap = ui
             .semantics_snapshot()
@@ -2108,6 +2149,169 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn table_virtualized_unpinned_body_uses_shared_horizontal_transform() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32];
+        let columns = vec![
+            {
+                let mut col = ColumnDef::new("name");
+                col.size = 180.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("status");
+                col.size = 160.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("cpu");
+                col.size = 140.0;
+                col
+            },
+        ];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(260.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            row_height: Some(Px(36.0)),
+            header_height: Some(Px(36.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, col, _sort| [cx.text(col.id.as_ref())],
+                    |cx, row, col| [cx.text(format!("{}-{}", col.id.as_ref(), row.index))],
+                    None,
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-unpinned-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-unpinned-row-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let row_node = semantics_node_id_by_test_id(&ui, "table-unpinned-row-0");
+        assert_eq!(
+            subtree_declarative_kind_count(&ui, &mut app, window, row_node, "Scroll"),
+            0,
+            "single-center body rows should not own per-row horizontal Scroll viewports"
+        );
+        assert_eq!(
+            subtree_declarative_kind_count(
+                &ui,
+                &mut app,
+                window,
+                row_node,
+                "ScrollContentTransform",
+            ),
+            1,
+            "single-center body rows should follow the shared horizontal scroll handle"
+        );
+
+        let before_header_node = semantics_node_id_by_test_id(&ui, "table-unpinned-header-status");
+        let before_cell_node =
+            semantics_node_id_by_test_id(&ui, "table-unpinned-row-0-cell-status");
+        let before_header = ui
+            .debug_node_visual_bounds(before_header_node)
+            .expect("header visual bounds before scroll");
+        let before_cell = ui
+            .debug_node_visual_bounds(before_cell_node)
+            .expect("cell visual bounds before scroll");
+        assert!(
+            (before_cell.origin.x.0 - before_header.origin.x.0).abs() <= 0.5,
+            "header and row should start aligned before scroll: header={before_header:?} cell={before_cell:?}"
+        );
+
+        let wheel_pos = Point::new(Px(80.0), Px(72.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: wheel_pos,
+                delta: Point::new(Px(-90.0), Px(0.0)),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let after_header_node = semantics_node_id_by_test_id(&ui, "table-unpinned-header-status");
+        let after_cell_node = semantics_node_id_by_test_id(&ui, "table-unpinned-row-0-cell-status");
+        let after_header = ui
+            .debug_node_visual_bounds(after_header_node)
+            .expect("header visual bounds after scroll");
+        let after_cell = ui
+            .debug_node_visual_bounds(after_cell_node)
+            .expect("cell visual bounds after scroll");
+        assert!(
+            after_header.origin.x.0 < before_header.origin.x.0 - 1.0,
+            "expected header to move left after horizontal wheel: before={before_header:?} after={after_header:?}"
+        );
+        assert!(
+            (after_cell.origin.x.0 - after_header.origin.x.0).abs() <= 0.5,
+            "row transform should stay aligned with the shared header scroll: header={after_header:?} cell={after_cell:?}"
+        );
     }
 
     #[test]
@@ -7449,7 +7653,7 @@ where
                                     };
 
                                     let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
-                                    let body = cx.virtual_list_keyed_with_layout(
+                                    let body_list = cx.virtual_list_keyed_with_layout(
                                         {
                                             let mut layout = LayoutStyle::default();
                                             layout.size.width = Length::Fill;
@@ -8659,10 +8863,21 @@ where
                                                                 center_cols.len(),
                                                                 right_cols.len(),
                                                             ) {
-                                                                out.push(render_row_group(
+                                                                let known_content_width =
+                                                                    table_known_content_width_for_columns(
+                                                                        &column_width_by_id,
+                                                                        &center_cols,
+                                                                    );
+                                                                let row = render_row_group(
                                                                     cx,
                                                                     &center_cols,
-                                                                    Some(scroll_x.clone()),
+                                                                    None,
+                                                                );
+                                                                out.push(table_wrap_horizontal_transform(
+                                                                    cx,
+                                                                    scroll_x.clone(),
+                                                                    known_content_width,
+                                                                    row,
                                                                 ));
                                                             } else {
                                                                 out.push(ui::h_row(|cx| {
@@ -8745,6 +8960,20 @@ where
                                             )
                                         },
                                     );
+                                    let body = if table_has_single_center_group(
+                                        left_cols.len(),
+                                        center_cols.len(),
+                                        right_cols.len(),
+                                    ) {
+                                        let mut wheel = fret_ui::element::WheelRegionProps::default();
+                                        wheel.axis = ScrollAxis::X;
+                                        wheel.scroll_handle = scroll_x.clone();
+                                        wheel.layout = table_scroll_fill_layout();
+                                        wheel.layout.overflow = Overflow::Clip;
+                                        cx.wheel_region(wheel, |_| vec![body_list])
+                                    } else {
+                                        body_list
+                                    };
 
                                     if profile {
                                         tracing::info!(

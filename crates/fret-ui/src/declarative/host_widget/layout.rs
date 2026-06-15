@@ -85,6 +85,7 @@ impl ElementHostWidget {
             ElementInstance::VisualTransform(_) => false,
             ElementInstance::RenderTransform(_) => false,
             ElementInstance::FractionalRenderTransform(_) => false,
+            ElementInstance::ScrollContentTransform(_) => false,
             ElementInstance::Anchored(_) => false,
             ElementInstance::Spinner(_) => false,
             _ => true,
@@ -112,6 +113,7 @@ impl ElementHostWidget {
             ElementInstance::VisualTransform(_) => true,
             ElementInstance::RenderTransform(_) => true,
             ElementInstance::FractionalRenderTransform(_) => true,
+            ElementInstance::ScrollContentTransform(_) => true,
             ElementInstance::Anchored(_) => true,
             ElementInstance::Spinner(_) => false,
             _ => true,
@@ -176,6 +178,9 @@ impl ElementHostWidget {
             ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::RenderTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::FractionalRenderTransform(p) => {
+                matches!(p.layout.overflow, Overflow::Clip)
+            }
+            ElementInstance::ScrollContentTransform(p) => {
                 matches!(p.layout.overflow, Overflow::Clip)
             }
             ElementInstance::Anchored(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -1680,6 +1685,25 @@ impl ElementHostWidget {
                     return size;
                 }
                 self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ScrollContentTransform(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    self.scroll_child_transform = Some(super::ScrollChildTransform {
+                        handle: props.scroll_handle,
+                        axis: props.axis,
+                    });
+                    return size;
+                }
+                let size = self.layout_positioned_container_impl(cx, window, props.layout);
+                self.scroll_child_transform = Some(super::ScrollChildTransform {
+                    handle: props.scroll_handle,
+                    axis: props.axis,
+                });
+                size
             }
             ElementInstance::Scroll(props) => self.layout_scroll_impl(cx, window, props),
             ElementInstance::Scrollbar(props) => self.layout_scrollbar_impl(cx, props),

@@ -318,6 +318,12 @@ pub enum ElementKind {
     /// Unlike `Scroll`, this element does not translate its children; it only mutates the provided
     /// `ScrollHandle` and invalidates an optional target.
     WheelRegion(WheelRegionProps),
+    /// A transform-only scroll content wrapper bound to an existing `ScrollHandle`.
+    ///
+    /// Unlike `Scroll`, this element does not own viewport extent, wheel handling, or accessibility
+    /// viewport semantics. It only applies the handle's offset as a children-only render/input
+    /// transform.
+    ScrollContentTransform(ScrollContentTransformProps),
     Scroll(ScrollProps),
     Scrollbar(ScrollbarProps),
 }
@@ -2573,6 +2579,27 @@ impl Default for WheelRegionProps {
     }
 }
 
+/// A lightweight wrapper that makes children follow an existing scroll handle's offset.
+///
+/// This is a mechanism-layer primitive for component policies that already have a shared scroll
+/// owner and only need additional content subtrees to stay aligned with that owner.
+#[derive(Debug, Clone)]
+pub struct ScrollContentTransformProps {
+    pub layout: LayoutStyle,
+    pub axis: ScrollAxis,
+    pub scroll_handle: crate::scroll::ScrollHandle,
+}
+
+impl Default for ScrollContentTransformProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            axis: ScrollAxis::Y,
+            scroll_handle: crate::scroll::ScrollHandle::default(),
+        }
+    }
+}
+
 impl TextProps {
     pub fn new(text: impl Into<std::sync::Arc<str>>) -> Self {
         Self {
@@ -3244,6 +3271,12 @@ impl IntoElement for SvgImageProps {
 impl IntoElement for ScrollProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::Scroll(self), Vec::new())
+    }
+}
+
+impl IntoElement for ScrollContentTransformProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::ScrollContentTransform(self), Vec::new())
     }
 }
 

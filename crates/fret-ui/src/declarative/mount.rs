@@ -1699,6 +1699,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
         ElementKind::HoverRegion(p) => ElementInstance::HoverRegion(p),
         ElementKind::WheelRegion(p) => ElementInstance::WheelRegion(p),
+        ElementKind::ScrollContentTransform(p) => ElementInstance::ScrollContentTransform(p),
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
         ElementKind::Scrollbar(p) => ElementInstance::Scrollbar(p),
     };
@@ -2598,6 +2599,10 @@ fn paint_passthrough_for_instance(
             props.layout,
             inherited_foreground,
         )),
+        ElementInstance::ScrollContentTransform(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
         ElementInstance::Scroll(props) => Some(paint_passthrough_for_layout(
             props.layout,
             inherited_foreground,
@@ -2818,6 +2823,18 @@ fn declarative_instance_change_mask(
                 || a.intrinsic_measure_mode != b.intrinsic_measure_mode
                 || a.windowed_paint != b.windowed_paint
                 || a.probe_unbounded != b.probe_unbounded
+            {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (
+            ElementInstance::ScrollContentTransform(a),
+            ElementInstance::ScrollContentTransform(b),
+        ) => {
+            if a.axis != b.axis
+                || a.scroll_handle.binding_key() != b.scroll_handle.binding_key()
+                || a.layout != b.layout
             {
                 layout_changed = true;
                 paint_changed = true;
@@ -3677,6 +3694,13 @@ fn collect_scroll_handle_bindings(
             }
         }
         ElementInstance::WheelRegion(props) => {
+            out.push(crate::declarative::frame::ScrollHandleBinding {
+                handle_key: props.scroll_handle.binding_key(),
+                element,
+                handle: props.scroll_handle.clone(),
+            });
+        }
+        ElementInstance::ScrollContentTransform(props) => {
             out.push(crate::declarative::frame::ScrollHandleBinding {
                 handle_key: props.scroll_handle.binding_key(),
                 element,

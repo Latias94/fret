@@ -4039,6 +4039,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn scroll_content_transform<I>(
+        &mut self,
+        props: crate::element::ScrollContentTransformProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::ScrollContentTransform(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn scroll<I>(&mut self, props: ScrollProps, f: impl FnOnce(&mut Self) -> I) -> AnyElement
     where
         I: IntoIterator<Item = AnyElement>,

@@ -52,6 +52,7 @@ impl ElementHostWidget {
             | ElementInstance::ViewCache(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::SvgImage(_)
+            | ElementInstance::ScrollContentTransform(_)
             | ElementInstance::WheelRegion(_) => SemanticsHookKind::None,
         }
     }
@@ -477,6 +478,7 @@ impl ElementHostWidget {
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::FocusTraversalGate(_)
             | ElementInstance::RovingFlex(_)
+            | ElementInstance::ScrollContentTransform(_)
             | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }

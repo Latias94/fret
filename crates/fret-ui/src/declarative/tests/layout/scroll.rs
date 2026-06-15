@@ -8274,3 +8274,109 @@ fn scroll_rounds_scrollable_extent_up_to_next_pixel() {
         handle.offset().y
     );
 }
+
+#[test]
+fn scroll_content_transform_moves_children_without_owning_scroll_extent() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let handle = crate::scroll::ScrollHandle::default();
+    handle.set_viewport_size(Size::new(Px(120.0), Px(40.0)));
+    handle.set_content_size(Size::new(Px(300.0), Px(40.0)));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-content-transform",
+        {
+            let handle = handle.clone();
+            move |cx| {
+                let mut wrapper = crate::element::ScrollContentTransformProps::default();
+                wrapper.axis = crate::element::ScrollAxis::X;
+                wrapper.scroll_handle = handle.clone();
+                wrapper.layout.size.width = Length::Fill;
+                wrapper.layout.size.height = Length::Fill;
+                wrapper.layout.overflow = crate::element::Overflow::Clip;
+                wrapper.layout.position = crate::element::PositionStyle::Relative;
+
+                vec![cx.scroll_content_transform(wrapper, |cx| {
+                    let mut pressable = crate::element::PressableProps::default();
+                    pressable.layout.position = crate::element::PositionStyle::Absolute;
+                    pressable.layout.inset.left = crate::element::InsetEdge::Px(Px(140.0));
+                    pressable.layout.inset.top = crate::element::InsetEdge::Px(Px(0.0));
+                    pressable.layout.size.width = Length::Px(Px(20.0));
+                    pressable.layout.size.height = Length::Px(Px(20.0));
+
+                    vec![cx.pressable(pressable, |_cx, _st| Vec::new())]
+                })]
+            }
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let transform_node = ui.children(root)[0];
+    let pressable_node = ui.children(transform_node)[0];
+    let before_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable layout bounds");
+    assert!(
+        before_bounds.origin.x.0 > bounds.size.width.0,
+        "test setup expects the child to start outside the wrapper viewport: {before_bounds:?}"
+    );
+    assert_eq!(
+        ui.debug_node_children_render_transform(transform_node),
+        None,
+        "zero scroll offset should not add a children transform"
+    );
+    assert_ne!(
+        ui.debug_hit_test(Point::new(Px(50.0), Px(10.0))).hit,
+        Some(pressable_node),
+        "before scrolling, the offscreen child should not be hit inside the viewport"
+    );
+
+    handle.scroll_to_offset(Point::new(Px(120.0), Px(0.0)));
+
+    assert_eq!(
+        handle.viewport_size(),
+        Size::new(Px(120.0), Px(40.0)),
+        "ScrollContentTransform must not rewrite viewport size"
+    );
+    assert_eq!(
+        handle.content_size(),
+        Size::new(Px(300.0), Px(40.0)),
+        "ScrollContentTransform must not rewrite content size"
+    );
+
+    let transform = ui
+        .debug_node_children_render_transform(transform_node)
+        .expect("children transform after scroll offset");
+    assert_eq!(
+        transform,
+        Transform2D::translation(Point::new(Px(-120.0), Px(0.0)))
+    );
+
+    let after_visual = ui
+        .debug_node_visual_bounds(pressable_node)
+        .expect("pressable visual bounds");
+    assert!(
+        (after_visual.origin.x.0 - (before_bounds.origin.x.0 - 120.0)).abs() <= 0.01,
+        "expected child visual x to follow the scroll offset: before={before_bounds:?} after={after_visual:?}"
+    );
+    assert_eq!(
+        ui.debug_hit_test(Point::new(Px(25.0), Px(10.0))).hit,
+        Some(pressable_node),
+        "hit testing must follow the children transform"
+    );
+}

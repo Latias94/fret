@@ -976,3 +976,60 @@ popover overlay root solve tail.
 - Should command availability snapshots evaluate every registered widget command for a window, or
   should apps expose command surfaces/groups so unrelated command families do not tax dense
   component interactions?
+
+## 2026-06-15 Twenty-Fifth Slice Plan
+
+- New evidence from the known-scroll-extent rerun says the current blocker is no longer scroll
+  extent discovery alone. The worst view-cache torture frame is dominated by `layout.root apply`
+  and `layout.engine_solve`, while per-row horizontal `Scroll` nodes remain as a repeated baseline
+  cost.
+- Hypothesis: the ordinary `table_virtualized` common path still models a single unpinned table as
+  "one horizontal scroll viewport per visible row". That is structurally too expensive for dense
+  shadcn/data-table surfaces because header/body share the same horizontal offset and fixed column
+  widths are already known.
+- Slice boundary: first optimize only the single center-column group path
+  (`left_cols == 0 && center_cols > 0 && right_cols == 0`). Pinned columns and mixed groups keep the
+  old per-group structure until a separate alignment gate proves an outer-scroll representation for
+  pinned sections.
+- Intended shape: keep one shared `ScrollHandle`, keep header/body horizontal alignment, preserve
+  row pressable semantics and cell debug ids, but remove the repeated row-level horizontal `Scroll`
+  wrappers from the unpinned body path. If the layout engine needs a definite content width, add a
+  fixed-width content shell around header/body rather than forcing every row to be a scroll viewport.
+- Gates for this slice: focused table tests around overflow/alignment/selection first, then
+  `ui-gallery-data-table-view-cache-torture` with node profiling if the compile and correctness
+  gates pass.
+
+## 2026-06-15 Twenty-Fifth Slice Findings
+
+- Added `ScrollContentTransform` as a `fret-ui` mechanism primitive. It reads an existing
+  `ScrollHandle` offset and applies a children-only render/input transform, but it does not own
+  viewport/content extent, does not handle wheel input, and does not publish scroll semantics.
+- Updated the ordinary unpinned `table_virtualized` body path to replace each row's horizontal
+  `Scroll` wrapper with `ScrollContentTransform` plus a fixed-width content shell. The table header
+  keeps the single real horizontal `Scroll` owner, and the body gets one shared X-axis
+  `WheelRegion` so rows continue to follow the same `ScrollHandle`.
+- Kept pinned/mixed/grouped and retained-table paths unchanged in this slice. That avoids changing
+  sticky-column semantics or grouped paint order without a separate alignment gate.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui scroll_content_transform_moves_children_without_owning_scroll_extent --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height table_virtualized_pointer_select_does_not_shift_row_bounds --no-fail-fast --no-capture`,
+  `cargo check -p fret-ui-kit --tests --profile dev-fast -j 1`,
+  `cargo check -p fret-ui --tests --profile dev-fast -j 1`,
+  `cargo fmt -p fret-ui -p fret-ui-kit`, and `git diff --check`.
+- The stable data-table view-cache torture suite with layout node profiling passed:
+  `target/release/fretboard-dev.exe diag suite ui-gallery-data-table-view-cache-torture --dir target/fret-diag/vlist-view-cache-shared-row-xform-v1 --session-auto --timeout-ms 900000 --ai-packet --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+  Evidence is in
+  `target/fret-diag/vlist-view-cache-shared-row-xform-v1/sessions/1781511962931-133156/suite.summary.json`
+  and
+  `target/fret-diag/vlist-view-cache-shared-row-xform-v1/sessions/1781511962931-133156/1781512647087/bundle.schema2.json`.
+- `diag stats` on the final bundle: `total=13260us`, `layout=12236us`,
+  `layout.engine_solve=6965us`, `layout.root apply=10839us`, and command availability stayed small
+  at roughly `widget_count/collect_us/eval_us=4/9/12`.
+- The node-profile shape changed in the intended direction: row-level top nodes now show `Flex` for
+  `ui-gallery-data-table-row-123xx` at about `104-106us self`, replacing the previous repeated
+  row-level horizontal `Scroll` entries around `172-178us self / 205-210us total`.
+- Decision: keep this slice. It removes a structurally unnecessary per-row horizontal scroll
+  viewport from the common unpinned table body and preserves shared header/body alignment.
+- Next target remains `layout.root apply` / dirty-root application attribution and table row/cell
+  layout policy. More scroll extent probing is now lower leverage unless future profiles show it
+  becoming hot again.

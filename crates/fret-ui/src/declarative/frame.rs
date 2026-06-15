@@ -82,6 +82,7 @@ pub(crate) enum ElementInstance {
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
     WheelRegion(crate::element::WheelRegionProps),
+    ScrollContentTransform(crate::element::ScrollContentTransformProps),
     Scroll(crate::element::ScrollProps),
     Scrollbar(crate::element::ScrollbarProps),
 }
@@ -135,6 +136,7 @@ impl ElementInstance {
             Self::Spinner(_) => "Spinner",
             Self::HoverRegion(_) => "HoverRegion",
             Self::WheelRegion(_) => "WheelRegion",
+            Self::ScrollContentTransform(_) => "ScrollContentTransform",
             Self::Scroll(_) => "Scroll",
             Self::Scrollbar(_) => "Scrollbar",
         }
@@ -595,6 +597,7 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
         ElementInstance::Spinner(p) => p.layout,
         ElementInstance::HoverRegion(p) => p.layout,
         ElementInstance::WheelRegion(p) => p.layout,
+        ElementInstance::ScrollContentTransform(p) => p.layout,
         ElementInstance::Scroll(p) => p.layout,
         ElementInstance::Scrollbar(p) => p.layout,
     }

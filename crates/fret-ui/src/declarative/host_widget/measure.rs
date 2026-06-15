@@ -635,6 +635,9 @@ impl ElementHostWidget {
             ElementInstance::WheelRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::ScrollContentTransform(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::DismissibleLayer(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
