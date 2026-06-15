@@ -1138,3 +1138,43 @@ popover overlay root solve tail.
 - Decision: keep this as a `fret-ui` mechanism-layer performance correctness fix. It does not
   replace the later `FixedTrackStrip`/fixed-geometry-owner direction, but it removes avoidable
   widget-local fallback solves from the existing shared row-transform table path.
+
+## 2026-06-15 Thirtieth Slice - Retained Table Shared Row Transform
+
+- Corrected the retained-table repro surface after one invalid comparison: the non-retained script
+  asserts `apply_mode=non_retained_rerender`, while the retained data-table path must use
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json`
+  and expects `apply_mode=retained_reconcile`.
+- Baseline retained evidence before this slice:
+  `target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`.
+  The worst retained frame was `total=24856us`, `layout=23060us`,
+  `layout.engine_solve=13231us`, `layout.root apply=20407us`, and `layout.nodes=810`.
+- Updated `table_virtualized_retained_v0` to match the already-optimized non-retained single-center
+  table shape. The retained unpinned body now uses one shared X-axis `WheelRegion` plus per-row
+  `ScrollContentTransform` wrappers instead of one horizontal `Scroll` owner per visible row. Pinned
+  and mixed column groups keep the previous structure.
+- Added `table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform`, which proves:
+  retained body rows no longer contain row-local `Scroll` nodes, each row contains exactly one
+  `ScrollContentTransform`, and header/body cell visual bounds stay aligned after horizontal wheel
+  input.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width table_virtualized_retained_pointer_row_selection_policy_list_like table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled table_virtualized_retained_selected_semantics_follow_windowed_row_selection table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast --no-capture`,
+  and `cargo fmt -p fret-ui-kit`.
+- Correct retained repro after the change passed:
+  `target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`.
+  `diag stats --sort cpu_cycles --top 30` reported `total=11715us`, `layout=10831us`,
+  `layout.engine_solve=6599us`, `layout.root apply=9541us`, and `layout.nodes=646`.
+- Before/after interpretation: the retained worst frame moved from above the 120Hz budget
+  (`24856us`) to near the budget (`11715us`) on the same retained script. Layout time dropped by
+  roughly `12.2ms`, root apply by roughly `10.9ms`, engine solve by roughly `6.6ms`, and the row
+  node count dropped by `164`. Node-profile logs also stopped showing row-level horizontal `Scroll`
+  entries as top owners; the remaining owner is retained list/root application rather than per-row
+  scroll viewport duplication.
+- Decision: keep this slice. It confirms the high-level architecture point: dense shadcn-style
+  tables should not model every visible row as a scroll viewport when fixed column widths and a
+  shared header/body horizontal offset are already known.
+- Next target: after this commit, continue with either a `FixedTrackStrip`/fixed-track layout
+  primitive or a narrower retained/root-apply attribution pass. The component-local absolute-cell
+  experiment remains rejected because it breaks first-class sidecar geometry for test ids and
+  diagnostics.

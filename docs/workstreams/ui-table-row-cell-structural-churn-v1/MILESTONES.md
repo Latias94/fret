@@ -1,11 +1,11 @@
 # Milestones: UI Table Row/Cell Structural Churn v1
 
 Status: Active
-Last updated: 2026-06-13
+Last updated: 2026-06-15
 
 ## M0 - Baseline Attribution
 
-Status: In progress; first implementation owner classified from the existing worst-bundle evidence.
+Status: Completed for the current retained/shared-transform evidence set.
 
 Done criteria:
 
@@ -23,10 +23,13 @@ Current evidence:
   default non-retained data-table column group structure. The unpinned path had no left/right
   columns but still built empty left/right groups and an outer grouping row around the center
   group.
+- Current retained owner:
+  the retained single-center body path still modeled each visible row as a horizontal `Scroll`
+  viewport even though the header and body share one horizontal scroll handle.
 
 ## M1 - First Reversible Table-Local Slice
 
-Status: First slice landed; before/after perf read pending.
+Status: Completed for non-retained and retained single-center table paths.
 
 Done criteria:
 
@@ -46,12 +49,15 @@ Landed slice:
 
 - `ecosystem/fret-ui-kit/src/declarative/table.rs` now renders the center group directly when
   `left_len == 0 && center_len > 0 && right_len == 0`.
-- Pinned-column layouts, grouped rows, retained table rendering, and shadcn recipes keep the
-  existing structural path.
+- The non-retained single-center body path uses per-row `ScrollContentTransform` plus one shared
+  horizontal scroll owner instead of one horizontal `Scroll` per row.
+- The retained single-center body path now uses the same shared-X structure: one body
+  `WheelRegion`, per-row `ScrollContentTransform`, and no row-local horizontal `Scroll`.
+- Pinned-column layouts, grouped rows, and shadcn recipes keep the existing structural path.
 
 ## M2 - Before/After Perf Read
 
-Status: Pending.
+Status: Completed for the retained data-table comparison.
 
 Done criteria:
 
@@ -59,12 +65,30 @@ Done criteria:
 - `EVIDENCE_AND_GATES.md` records before/after p50/p95/max and the worst-bundle attribution.
 - The interpretation separates real row membership work from avoidable structural churn.
 
+Current retained comparison:
+
+- Before bundle:
+  `target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`
+- After bundle:
+  `target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`
+- Worst frame moved from `total=24856us`, `layout=23060us`,
+  `layout.engine_solve=13231us`, `layout.root apply=20407us`, `layout.nodes=810`
+  to `total=11715us`, `layout=10831us`, `layout.engine_solve=6599us`,
+  `layout.root apply=9541us`, `layout.nodes=646`.
+
 ## M3 - Closeout Or Follow-On Split
 
-Status: Pending.
+Status: In progress; current owner is narrower than the original row-scroll issue.
 
 Done criteria:
 
 - The lane either closes with a measured improvement / no-change verdict, or splits a narrower
   follow-on when the owner moves outside table row/cell structure.
 - `WORKSTREAM.json` state and catalog entries remain valid.
+
+Current decision:
+
+- Keep this lane active for the next attribution pass, but do not keep optimizing row-local scroll
+  wrappers unless a fresh profile makes them hot again.
+- The likely next implementation owner is either retained/root-apply breadth or a mechanism-level
+  fixed-track layout primitive that owns child sidecar geometry directly.

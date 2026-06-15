@@ -3,7 +3,7 @@
   "slug": "ui-table-row-cell-structural-churn-v1",
   "title": "UI Table Row/Cell Structural Churn v1",
   "status": "active",
-  "updated": "2026-06-13",
+  "updated": "2026-06-15",
   "scope_kind": "execution",
   "problem": "General-app and shadcn-heavy perf probes show data-table and virtual-list frames are still layout-dominant after the prior data-table dirty-breadth lane closed. This lane owns the narrower follow-on: reduce or prove the remaining row/cell structural churn inside the contained fret-ui-kit table subtree without reopening page-cache, input chrome, renderer, or broad runtime invalidation scope.",
   "authoritative_docs": [
@@ -33,17 +33,23 @@
     }
   ],
   "repro": {
-    "summary": "Start from the general-app data-table view-cache/filter shrink bundle and compare it with the virtual-list torture bundle; use layout node profiling for row/cell solve attribution before changing table rendering.",
+    "summary": "Start from the general-app data-table view-cache/filter shrink bundle and compare it with the virtual-list torture bundle; use layout node profiling for row/cell solve attribution. Current retained evidence compares the retained data-table script before and after replacing row-local horizontal Scroll owners with shared ScrollContentTransform rows.",
     "commands": [
       "target/release/fretboard-dev.exe diag stats target/fret-general-app-perf/data-table-view-cache-filter-shrink-r3/1781333281689/bundle.schema2.json --sort cpu_cycles --top 30",
       "target/release/fretboard-dev.exe diag stats target/fret-general-app-perf/virtual-list-torture-steady-r3/1781332244223/bundle.schema2.json --sort cpu_cycles --top 30",
-      "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/ui-table-row-cell-structural-churn-v1-data-table-r3 --launch -- target/release/fret-ui-gallery.exe"
+      "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/ui-table-row-cell-structural-churn-v1-data-table-r3 --launch -- target/release/fret-ui-gallery.exe",
+      "target/release/fretboard-dev.exe diag stats target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json --sort cpu_cycles --top 30",
+      "target/release/fretboard-dev.exe diag stats target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json --sort cpu_cycles --top 30"
     ]
   },
   "gates": [
     {
       "name": "table-row-cell-correctness",
       "command": "cargo nextest run -p fret-ui-kit table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast"
+    },
+    {
+      "name": "retained-shared-horizontal-transform",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast --no-capture"
     },
     {
       "name": "shadcn-data-table-correctness",
@@ -74,6 +80,8 @@
     "target/fret-general-app-perf/virtual-list-torture-steady-r3/regression.summary.json",
     "target/fret-general-app-perf/virtual-list-torture-steady-r3/1781332244223/bundle.schema2.json",
     "target/fret-general-app-perf/virtual-list-torture-steady-r3/layout.perf.summary.v1.json",
+    "target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
+    "target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
     "ecosystem/fret-ui-shadcn/src/data_table.rs",
     "crates/fret-ui/src/elements/cx.rs"

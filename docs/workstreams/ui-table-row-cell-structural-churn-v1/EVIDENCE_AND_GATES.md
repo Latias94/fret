@@ -1,7 +1,7 @@
 # Evidence And Gates: UI Table Row/Cell Structural Churn v1
 
 Status: Active
-Last updated: 2026-06-13
+Last updated: 2026-06-15
 
 ## Baseline Sources
 
@@ -156,6 +156,62 @@ Interpretation:
   `Flex` as the next material owner, but it removes the accidental widget-local fallback solves from
   the current shared-row-transform table path.
 
+## 2026-06-15 Retained Table Shared Horizontal Transform
+
+Owner:
+
+- The non-retained single-center table path already used a shared horizontal scroll owner plus row
+  `ScrollContentTransform` wrappers.
+- The retained table body still created one horizontal `Scroll` per visible row in the same
+  single-center column shape, which made retained data-table frames layout/root-apply dominated.
+
+Change:
+
+- `ecosystem/fret-ui-kit/src/declarative/table.rs` now uses the same shared-X structure in
+  `table_virtualized_retained_v0` for the unpinned single-center body path:
+  retained rows use `ScrollContentTransform`, and the retained body list is wrapped in one shared
+  X-axis `WheelRegion`.
+- Pinned and mixed column groups stay on the previous per-group scroll structure until a separate
+  alignment/perf gate proves a safer representation.
+- `table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform` proves retained body
+  rows contain no row-local horizontal `Scroll`, contain exactly one `ScrollContentTransform`, and
+  keep header/body visual bounds aligned after horizontal wheel input.
+
+Focused gates passed:
+
+```powershell
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast --no-capture
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width table_virtualized_retained_pointer_row_selection_policy_list_like table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled table_virtualized_retained_selected_semantics_follow_windowed_row_selection table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast --no-capture
+cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast --no-capture
+cargo fmt -p fret-ui-kit
+```
+
+Retained repro:
+
+```powershell
+target\release\fretboard-dev.exe diag stats target\fret-diag\vlist-retained-filter-shrink-correct-script-v1\sessions\1781528832521-146560\1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change\bundle.schema2.json --sort cpu_cycles --top 30
+target\release\fretboard-dev.exe diag stats target\fret-diag\vlist-retained-shared-row-xform-v1\sessions\1781530321751-126564\1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change\bundle.schema2.json --sort cpu_cycles --top 30
+```
+
+Before/after stats:
+
+- Before:
+  `target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`
+- Before worst retained frame: `total=24856us`, `layout=23060us`,
+  `layout.engine_solve=13231us`, `layout.root apply=20407us`, `layout.nodes=810`.
+- After:
+  `target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`
+- After worst retained frame: `total=11715us`, `layout=10831us`,
+  `layout.engine_solve=6599us`, `layout.root apply=9541us`, `layout.nodes=646`.
+
+Interpretation:
+
+- This is a material retained-path win on the correct retained script: the worst frame moved from
+  well over budget to close to a 120Hz frame budget, with layout/root-apply/solve all roughly halved.
+- Row-level horizontal `Scroll` nodes are no longer the retained body hotspot. Remaining work should
+  target retained root apply, VirtualList reconciliation, or a first-class fixed-track layout
+  primitive rather than adding more row-local scroll special cases.
+
 ## First Repro Commands
 
 Existing bundle attribution:
@@ -193,6 +249,7 @@ target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-ta
 ```powershell
 cargo nextest run -p fret-ui-kit table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast
 cargo nextest run -p fret-ui-shadcn retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast --no-capture
 ```
 
 ## Mechanism And Boundary Gates
