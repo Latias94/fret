@@ -737,6 +737,153 @@ popover overlay root solve tail.
 - The next obvious follow-up is not more semantics reuse. The remaining dense-component tail is now
   back where the earlier evidence pointed: overlay root solve/apply and renderer upload/finish.
 
+## 2026-06-15 Seventeenth Slice Findings
+
+- The runtime `Popover` path in `ecosystem/fret-ui-shadcn/src/popover.rs` still mounted
+  `radix_popover::popover_dialog_wrapper(...)` around `PopoverContent`, and that wrapper was the
+  remaining dialog-shaped `Semantics` hotspot in the combobox/popover path.
+- Attempted to collapse the common popover trigger-controls target onto the existing
+  `PopoverContent` root instead of a separate dialog wrapper, and changed `PopoverContent` itself
+  to carry `SemanticsRole::Dialog` directly.
+- The experiment was later rolled back after the combobox perf gate regressed, so this is a
+  negative result rather than a landed optimization.
+- Keep this as a recorded dead end: the next safe slice should start from the current wrapper-based
+  shape and only move if a smaller, better-attributed overlay or command path appears.
+
+## 2026-06-15 Seventeenth Slice Reversal
+
+- The first attempt to collapse the popover dialog wrapper onto the `PopoverContent` root regressed
+  the combobox perf gate badly: `top_total_time_us` rose to `20701us` and
+  `top_layout_engine_solve_time_us` rose to `2049us`.
+- The bad run also showed `window_runtime_snapshot.command_availability` and `focus_repair` tails
+  rising on the same frame, which means the wrapper change was not a harmless structural trim.
+- The popover code was reverted to the wrapper-based shape. Keep this as negative evidence: the
+  `Dialog`-role root is not the next safe optimization lever on this path.
+- Next direction should return to a lower-risk overlay/mechanism target or a command/layout path
+  with clearer attribution, rather than trying to merge the popover semantic root again.
+
+## 2026-06-15 Eighteenth Slice Diagnosis
+
+- The failed popover-root experiment is not a clean framework signal by itself. On the bad run,
+  the frame still spent most of its time in layout and paint, with renderer tail cost remaining
+  visible: `layout=11539us`, `paint=8039us`, `renderer.finish=3724us`, `renderer.upload=585us`.
+- The same run showed `window_runtime_snapshot.focus_repair=908us` and
+  `window_runtime_snapshot.command_availability=410us`, but the command set was still tiny
+  (`widget_count=4`). That makes command publication a real cost, not the dominant one.
+- `repair_focus_node_from_focused_element_if_needed(...)` is already gated to final layout passes,
+  and `revalidate_focus_for_dispatch_snapshot(...)` is a bounded reachability check. The hotspot
+  is the repeated authoritative snapshot boundary around the overlay, not an obviously shallow
+  focus algorithm.
+- `publish_window_command_action_availability_snapshot_for_command_set(...)` is also already
+  filtered and signature-cached. Its remaining cost matters, but the current evidence does not
+  justify treating it as the main blocker for 120Hz on dense component surfaces.
+- The stable recurring tail is renderer-side: `finish`, `upload`, and `text_prepare` remain the
+  visible p95/max costs even on the better rerun. That points back to surface complexity and text
+  churn rather than a single renderer bug.
+- Keep the current wrapper-based popover shape. Do not revisit the dialog-root merge.
+- The next verification should stay on a lower-risk component/recipe candidate or a heavier probe
+  with clearer text/upload attribution before touching core focus or command machinery again.
+
+## 2026-06-15 Nineteenth Slice Probe Triage
+
+- Ran four more probe surfaces: `data-table`, `virtual-list`, `inspector`, and `code-editor`.
+- `ce-data-table-probe` is not yet a stable perf gate. It failed at step 27 on the row-selection
+  assertion after clicking `ui-gallery-data-table-row-0`, so the bundle is useful for diagnosis but
+  not for a durable perf comparison until that assertion path is stabilized or replaced.
+- The collected profiles still show the important shape:
+  - `ce-data-table-probe`: `total=8353us`, `layout=7725us`, `paint=492us`,
+    `command_availability=2422us`, `widget_count=4`.
+  - `ce-virtual-list-probe`: `total=7345us`, `layout=6866us`, `solve=1896us`, `prepaint=87us`,
+    `paint=392us`, `dispatch=145us`, `hit_test=17us`.
+  - `ce-inspector-probe`: `total=4936us`, `layout=4270us`, `solve=1350us`, `prepaint=189us`,
+    `paint=477us`, `dispatch=149us`, `hit_test=15us`.
+  - `ce-code-editor-probe`: `total=789us`, `layout=125us`, `prepaint=399us`, `paint=265us`,
+    `dispatch=0us`, `hit_test=0us`.
+- The conclusion is still the same at a broader sample set: there is no single "shadcn nesting tax"
+  to remove. The heavier table and inspector surfaces are still layout-dominant, command
+  availability can become a visible secondary cost, and the current code-editor probe is too light
+  to stand in for a real heavy editor path.
+- Next action is to prefer the stable retained / view-cache data-table scripts already in the repo
+  and treat the current `ce-data-table-probe` as a diagnosis-only artifact until its step-27
+  selection assertion is stabilized or removed. The next optimization target should come from a
+  probe that is both dense and repeatable.
+
+## 2026-06-15 Twentieth Slice Stable Probe Selection
+
+- Kept `ce-data-table-probe` in diagnosis-only mode. The step-27 row-selection assertion still
+  makes it too fragile to serve as a durable gate.
+- The stable next probes are the retained/view-cache data-table suites and the inspector torture
+  suite, because they are dense enough to keep layout-dominant evidence while still being repeatable
+  across runs.
+- The collected profiles still separate the heavy surfaces from the light one: `ce-data-table-probe`
+  at `8353us`, `ce-virtual-list-probe` at `7345us`, `ce-inspector-probe` at `4936us`, and
+  `ce-code-editor-probe` at `789us`. The last one is too light to stand in for a real heavy editor
+  path.
+- The strongest remaining leverage point is still the table row/cell policy plus the
+  `VirtualList` retained reconciliation seam, with `ecosystem/fret-ui-kit/src/declarative/table.rs`
+  as the likely next focus and `window-command-availability-snapshot-v2` remaining secondary.
+- The broader architecture conclusion has not changed: there is no single shadcn nesting tax to
+  remove. The optimization path is component- and surface-specific, and the probe choice matters as
+  much as the code change.
+
+## 2026-06-15 Twenty-First Slice Architecture Split
+
+- A focused architecture review of `table.rs` found that the data-table row/cell layer is still a
+  wide adapter rather than the deepest seam. It owns sorting, grouping, pinning, selection, debug
+  ids, paint order, grid lines, measured rows, and keep-alive policy in one broad surface.
+- The higher-leverage next seam is `VirtualList` retained reconciliation: mount-time keep-alive /
+  attach-detach / reuse logic, element `items_revision` / key-cache adapters, and the prepaint
+  window-shift classifier. That seam crosses table, list, inspector, and editor-grade surfaces.
+- Do not spend the next slice on local table knobs such as grid-line switches, paint-order flags,
+  wrapper test-id plumbing, or header/body wrapper symmetry unless a stable probe makes one of them
+  a primary owner. These knobs may clean code, but they do not deepen the architecture boundary.
+- `focus_repair` and `command_availability` are now treated as an independent runtime owner named
+  `Dispatch Snapshot`. Data-table, inspector, and virtual-list surfaces amplify this cost, but the
+  owner is the window runtime snapshot path, not the component surface.
+- The performance tracks for the next work should therefore be separated as:
+  layout / virtual-list reconciliation, dispatch snapshot, and renderer tail. This prevents every
+  heavy-surface spike from being misattributed to "shadcn nesting" or to data-table row/cell shape.
+
+## 2026-06-15 Twenty-Second Slice Retained Reconcile Fast Path
+
+- Implemented the first mechanism-layer follow-up in `crates/fret-ui/src/declarative/mount.rs`.
+- Retained `VirtualList` reconcile no longer constructs the desired-key `HashSet` when
+  `keep_alive == 0`; that set only exists to identify detached rows for the keep-alive pool.
+- Added a conservative ordered-overlap fast path for contiguous retained windows. When the current
+  and desired visible windows overlap in the same index/key order, preserved children are copied by
+  slice position instead of using the generic `existing_by_key` map.
+- The fast path deliberately rejects non-contiguous windows so custom range extractors, sticky rows,
+  anchor rows, or reorders stay on the generic keyed reconcile path.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui retained_virtual_list_ordered_overlap mechanism_harness_retained_virtual_list_reconcile_matches_oracles --no-fail-fast --no-capture`,
+  `cargo fmt -p fret-ui`, and `git diff --check`.
+- Extended focused validation also passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui retained_virtual_list_ --no-fail-fast --no-capture`
+  covered the retained reconcile harness plus retained VirtualList view-cache, prefetch, keep-alive,
+  and viewport-authority tests.
+- Runtime correctness gate passed:
+  `target/release/fretboard-dev.exe diag suite ui-gallery-data-table-retained ... --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  passed 12/12 scripts with evidence in
+  `target/fret-diag/vlist-retained-fastpath-v1-cargo/suite.summary.json`.
+- The first attempted prebuilt-exe suite failed before launch because the diagnostics preflight
+  could not prove required gallery cargo features from a prebuilt binary; it was not a runtime or
+  code failure.
+- This slice should reduce allocation/hash work in the common retained scroll-window shift path, but
+  it is not yet claimed as a user-visible perf win until a stable data-table or inspector probe is
+  rerun.
+
+## Next Verification
+
+1. Use `tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json` and
+   `tools/diag-scripts/suites/ui-gallery-data-table-view-cache-torture/suite.json` as the main
+   repeatable gates.
+2. Keep `ce-data-table-probe` as diagnosis-only until the row-selection assertion is stabilized or
+   replaced.
+3. Continue the `VirtualList` retained reconciliation / prepaint follow-up first if stable
+   data-table or inspector probes keep showing layout-dominant tails.
+4. Revisit `window-command-availability-snapshot-v2` as the `Dispatch Snapshot` lane only if stable
+   probes show command publication or focus repair moving from secondary cost to primary blocker.
+
 ## Open Questions
 
 - Should `ActiveScript` store the active wait predicate in `WaitUntilState` to avoid re-reading the

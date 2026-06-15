@@ -2184,22 +2184,31 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         let prev_items_len = props.visible_items.len();
         let next_items_len = desired_items.len();
         let keep_alive_budget = props.keep_alive;
-        let desired_keys: HashSet<crate::ItemKey> =
-            desired_items.iter().map(|item| item.key).collect();
+        let desired_keys = (keep_alive_budget > 0).then(|| {
+            desired_items
+                .iter()
+                .map(|item| item.key)
+                .collect::<HashSet<crate::ItemKey>>()
+        });
 
         let mut existing_by_key: HashMap<crate::ItemKey, NodeId> = HashMap::new();
         let mut detached_by_key: Vec<(crate::ItemKey, NodeId)> = Vec::new();
-        {
-            let current_children = ui.children(node);
+        let current_children = ui.children(node);
+        let ordered_overlap = retained_virtual_list_ordered_overlap(
+            &props.visible_items,
+            &desired_items,
+            &current_children,
+        );
+        if ordered_overlap.is_none() {
             for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
                 existing_by_key.insert(item.key, child);
             }
+        }
 
-            if keep_alive_budget > 0 {
-                for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
-                    if !desired_keys.contains(&item.key) {
-                        detached_by_key.push((item.key, child));
-                    }
+        if let Some(desired_keys) = desired_keys.as_ref() {
+            for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
+                if !desired_keys.contains(&item.key) {
+                    detached_by_key.push((item.key, child));
                 }
             }
         }
@@ -2219,8 +2228,13 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         let mut kept_alive: u32 = 0;
         let mut evicted_keep_alive: u32 = 0;
         let mut next_children: Vec<NodeId> = Vec::with_capacity(desired_items.len());
-        for item in &desired_items {
-            if let Some(existing) = existing_by_key.get(&item.key).copied() {
+        for (desired_index, item) in desired_items.iter().enumerate() {
+            if let Some(existing) = ordered_overlap
+                .and_then(|overlap| {
+                    overlap.existing_child_for_desired_index(desired_index, &current_children)
+                })
+                .or_else(|| existing_by_key.get(&item.key).copied())
+            {
                 next_children.push(existing);
                 preserved = preserved.saturating_add(1);
                 continue;
@@ -2367,6 +2381,86 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             },
         );
     }
+}
+
+#[derive(Clone, Copy)]
+struct RetainedVirtualListOrderedOverlap {
+    desired_start: usize,
+    current_start: usize,
+    len: usize,
+}
+
+impl RetainedVirtualListOrderedOverlap {
+    fn existing_child_for_desired_index(
+        self,
+        desired_index: usize,
+        current_children: &[NodeId],
+    ) -> Option<NodeId> {
+        if desired_index < self.desired_start {
+            return None;
+        }
+        let offset = desired_index - self.desired_start;
+        if offset >= self.len {
+            return None;
+        }
+        current_children.get(self.current_start + offset).copied()
+    }
+}
+
+fn retained_virtual_list_ordered_overlap(
+    current_items: &[crate::virtual_list::VirtualItem],
+    desired_items: &[crate::virtual_list::VirtualItem],
+    current_children: &[NodeId],
+) -> Option<RetainedVirtualListOrderedOverlap> {
+    if current_items.is_empty()
+        || desired_items.is_empty()
+        || current_items.len() != current_children.len()
+    {
+        return None;
+    }
+
+    if !virtual_items_are_contiguous(current_items) || !virtual_items_are_contiguous(desired_items)
+    {
+        return None;
+    }
+
+    let current_first = current_items.first()?.index;
+    let current_last = current_items.last()?.index;
+    let desired_first = desired_items.first()?.index;
+    let desired_last = desired_items.last()?.index;
+
+    if desired_last < current_first || current_last < desired_first {
+        return None;
+    }
+
+    let overlap_first = current_first.max(desired_first);
+    let overlap_last = current_last.min(desired_last);
+    let current_start = overlap_first.saturating_sub(current_first);
+    let desired_start = overlap_first.saturating_sub(desired_first);
+    let mut len = 0usize;
+    while current_start + len < current_items.len()
+        && desired_start + len < desired_items.len()
+        && current_items[current_start + len].index == desired_items[desired_start + len].index
+        && current_items[current_start + len].key == desired_items[desired_start + len].key
+    {
+        len += 1;
+    }
+
+    if len == 0 || current_items[current_start + len - 1].index != overlap_last {
+        return None;
+    }
+
+    Some(RetainedVirtualListOrderedOverlap {
+        desired_start,
+        current_start,
+        len,
+    })
+}
+
+fn virtual_items_are_contiguous(items: &[crate::virtual_list::VirtualItem]) -> bool {
+    items
+        .windows(2)
+        .all(|pair| pair[1].index == pair[0].index.saturating_add(1))
 }
 
 const INVALIDATION_HIT_TEST: u8 = 1 << 0;
@@ -3103,6 +3197,68 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             false
         }
+    }
+
+    fn virtual_item(index: usize, key: crate::ItemKey) -> crate::virtual_list::VirtualItem {
+        crate::virtual_list::VirtualItem {
+            key,
+            index,
+            start: Px(index as f32 * 10.0),
+            end: Px(index as f32 * 10.0 + 10.0),
+            size: Px(10.0),
+        }
+    }
+
+    #[test]
+    fn retained_virtual_list_ordered_overlap_reuses_contiguous_window_shift() {
+        let current = vec![
+            virtual_item(10, 10),
+            virtual_item(11, 11),
+            virtual_item(12, 12),
+            virtual_item(13, 13),
+        ];
+        let desired = vec![
+            virtual_item(12, 12),
+            virtual_item(13, 13),
+            virtual_item(14, 14),
+            virtual_item(15, 15),
+        ];
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let children = (0..4)
+            .map(|_| ui.create_node(TestWidget))
+            .collect::<Vec<_>>();
+
+        let overlap = retained_virtual_list_ordered_overlap(&current, &desired, &children)
+            .expect("expected contiguous shifted windows to use ordered overlap");
+
+        assert_eq!(
+            overlap.existing_child_for_desired_index(0, &children),
+            Some(children[2])
+        );
+        assert_eq!(
+            overlap.existing_child_for_desired_index(1, &children),
+            Some(children[3])
+        );
+        assert_eq!(overlap.existing_child_for_desired_index(2, &children), None);
+    }
+
+    #[test]
+    fn retained_virtual_list_ordered_overlap_rejects_non_contiguous_windows() {
+        let current = vec![
+            virtual_item(10, 10),
+            virtual_item(12, 12),
+            virtual_item(13, 13),
+        ];
+        let desired = vec![virtual_item(12, 12), virtual_item(13, 13)];
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let children = (0..3)
+            .map(|_| ui.create_node(TestWidget))
+            .collect::<Vec<_>>();
+
+        assert!(
+            retained_virtual_list_ordered_overlap(&current, &desired, &children).is_none(),
+            "custom range extractors with holes must stay on the generic keyed reconcile path"
+        );
     }
 
     #[test]
