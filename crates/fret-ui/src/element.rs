@@ -2907,6 +2907,13 @@ pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
+    /// Optional author-provided scrollable content extent for surfaces whose content size is known
+    /// from policy-level data (for example fixed-width table columns).
+    ///
+    /// When set, `Scroll` skips the expensive unbounded child measurement used to discover the
+    /// scroll range, but still lays out, clips, transforms, hit-tests, and synchronizes the
+    /// provided scroll handle as a normal scroll viewport.
+    pub known_content_size: Option<Size>,
     pub intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
     /// When true, the scroll subtree's paint output depends on the scroll offset in a
     /// windowed/virtualized way (e.g. a single `Canvas` that only paints the visible range).
@@ -2935,6 +2942,7 @@ impl Default for ScrollProps {
             layout,
             axis: ScrollAxis::Y,
             scroll_handle: None,
+            known_content_size: None,
             intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
             windowed_paint: false,
             probe_unbounded: true,

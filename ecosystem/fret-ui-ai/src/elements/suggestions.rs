@@ -83,6 +83,7 @@ impl Suggestions {
                 layout: scroll_layout,
                 axis: ScrollAxis::X,
                 scroll_handle: Some(handle),
+                known_content_size: None,
                 windowed_paint: false,
                 probe_unbounded: true,
                 intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,

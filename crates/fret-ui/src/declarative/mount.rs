@@ -2809,6 +2809,20 @@ fn declarative_instance_change_mask(
                 layout_changed = true;
             }
         }
+        (ElementInstance::Scroll(a), ElementInstance::Scroll(b)) => {
+            let a_handle = a.scroll_handle.as_ref().map(|handle| handle.binding_key());
+            let b_handle = b.scroll_handle.as_ref().map(|handle| handle.binding_key());
+            if a.axis != b.axis
+                || a_handle != b_handle
+                || a.known_content_size != b.known_content_size
+                || a.intrinsic_measure_mode != b.intrinsic_measure_mode
+                || a.windowed_paint != b.windowed_paint
+                || a.probe_unbounded != b.probe_unbounded
+            {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
         (ElementInstance::ManagedSurface(_), ElementInstance::ManagedSurface(_)) => {
             // Managed surface hooks are opaque element-state closures. They can capture host policy
             // inputs that are not represented in `ManagedSurfaceProps`, so each declarative render

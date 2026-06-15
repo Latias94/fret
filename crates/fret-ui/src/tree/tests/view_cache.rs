@@ -978,6 +978,7 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_paint_dirty_without_rerende
                         layout: crate::element::LayoutStyle::default(),
                         axis: crate::element::ScrollAxis::Y,
                         scroll_handle: Some(scroll_handle.clone()),
+                        known_content_size: None,
                         intrinsic_measure_mode: crate::element::ScrollIntrinsicMeasureMode::Content,
                         windowed_paint: true,
                         probe_unbounded: true,
@@ -1082,6 +1083,7 @@ fn view_cache_scroll_windowed_paint_revision_only_bump_after_internal_offset_upd
                         layout: crate::element::LayoutStyle::default(),
                         axis: crate::element::ScrollAxis::Y,
                         scroll_handle: Some(scroll_handle.clone()),
+                        known_content_size: None,
                         intrinsic_measure_mode: crate::element::ScrollIntrinsicMeasureMode::Content,
                         windowed_paint: true,
                         probe_unbounded: true,
@@ -1406,6 +1408,7 @@ fn view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings() {
                             layout: crate::element::LayoutStyle::default(),
                             axis: crate::element::ScrollAxis::Y,
                             scroll_handle: Some(scroll_handle.clone()),
+                            known_content_size: None,
                             intrinsic_measure_mode:
                                 crate::element::ScrollIntrinsicMeasureMode::Content,
                             windowed_paint: true,

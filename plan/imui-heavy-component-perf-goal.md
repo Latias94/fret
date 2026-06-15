@@ -906,6 +906,50 @@ popover overlay root solve tail.
   performance lane should target the data-table/view-cache layout root apply and row/cell layout
   policy, not stale geometry shortcuts.
 
+## 2026-06-15 Twenty-Fourth Slice Known Scroll Extents
+
+- Followed the data-table view-cache torture node-profile evidence: the worst frame contained many
+  per-row horizontal `Scroll` nodes around `ui-gallery-data-table-row-123xx`, each spending roughly
+  `~200us` self to rediscover content extents even though the table strategy already knows fixed
+  column widths.
+- Added `ScrollProps::known_content_size` as a mechanism-layer contract. When set, `Scroll` treats
+  the supplied extent as authoritative for the scroll axis, skips unbounded child extent probing and
+  post-layout overflow rediscovery, but still lays out children, clips, transforms, hit-tests, and
+  synchronizes the scroll handle.
+- Kept policy ownership in `fret-ui-kit`: declarative table center-column horizontal scroll wrappers
+  now pass the summed center-column width. Generic shadcn `ScrollArea`, AI suggestions, and tests use
+  `known_content_size: None` so auto-size scroll surfaces keep their old content-probing behavior.
+- Focused validation passed:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui scroll_known_content_size_skips_extent_probe_but_updates_handle_extent --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui scroll_known_content_size_ scroll_intrinsic_content_mode_measures_children scroll_intrinsic_viewport_mode_skips_children --no-fail-fast --no-capture`,
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui tree::tests::view_cache --no-fail-fast --no-capture`,
+  `cargo check -p fret-ui-shadcn --tests --profile dev-fast -j 1`,
+  `cargo check -p fret-ui-ai --tests --profile dev-fast -j 1`,
+  `cargo check -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness -j 1`,
+  `cargo fmt -p fret-ui -p fret-ui-kit -p fret-ui-shadcn -p fret-ui-ai`, and `git diff --check`.
+- A broad `cargo check --workspace --all-targets --profile dev-fast -j 1` was run after most fixes.
+  It progressed through the workspace and failed only on a test-only `ScrollProps` initializer in
+  `ecosystem/fret-ui-ai/src/elements/checkpoint.rs`; that initializer was fixed and rechecked with
+  `cargo check -p fret-ui-ai --tests --profile dev-fast -j 1`.
+- The stable data-table view-cache torture gate passed:
+  `target/release/fretboard-dev.exe diag suite ui-gallery-data-table-view-cache-torture --dir target/fret-diag/vlist-view-cache-known-scroll-extent-v1-rerun --session-auto --timeout-ms 900000 --ai-packet --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+  Evidence is in
+  `target/fret-diag/vlist-view-cache-known-scroll-extent-v1-rerun/sessions/1781503051796-66032/suite.summary.json`.
+- `diag stats` on that bundle stayed layout/root-apply dominated:
+  `total=14564us`, `layout=13519us`, `layout.engine_solve=6772us`, `layout.root apply=11209us`,
+  `layout.nodes=813`, `paint=851us`, and command availability stayed small at
+  `widget_count/collect_us/eval_us=4/7/13`.
+- A node-profile rerun also passed:
+  `target/fret-diag/vlist-view-cache-known-scroll-extent-node-profile-v1/sessions/1781503961156-129796/suite.summary.json`.
+  The row-level horizontal `Scroll` nodes still appear in the top list around
+  `172-178us self / 205-210us total`; this confirms the mechanism removes extent discovery
+  duplication without eliminating the remaining per-row scroll layout baseline.
+- Decision: keep this slice because it moves known table geometry out of repeated Scroll probing and
+  records the policy/mechanism boundary cleanly. Do not keep grinding this path as the next main
+  performance lever. The next serious target is `layout.root apply` / dirty-root application for the
+  table view-cache torture frame, followed by row/cell layout policy if root apply attribution points
+  back to the table layer.
+
 ## Next Verification
 
 1. Use `tools/diag-scripts/suites/ui-gallery-data-table-retained/suite.json` and
@@ -913,8 +957,9 @@ popover overlay root solve tail.
    repeatable gates.
 2. Keep `ce-data-table-probe` as diagnosis-only until the row-selection assertion is stabilized or
    replaced.
-3. Continue the `VirtualList` retained reconciliation / prepaint follow-up first if stable
-   data-table or inspector probes keep showing layout-dominant tails.
+3. Prioritize `layout.root apply` / dirty-root application attribution for
+   `ui-gallery-data-table-view-cache-torture`; only return to per-row `Scroll` if node profiles show
+   it growing beyond the current `~170-180us self` baseline.
 4. Revisit `window-command-availability-snapshot-v2` as the `Dispatch Snapshot` lane only if stable
    probes show command publication or focus repair moving from secondary cost to primary blocker.
 

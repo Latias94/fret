@@ -567,6 +567,7 @@ mod tests {
                 layout,
                 axis: fret_ui::element::ScrollAxis::Y,
                 scroll_handle: Some(scroll_handle),
+                known_content_size: None,
                 intrinsic_measure_mode: fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                 windowed_paint: false,
                 probe_unbounded: true,

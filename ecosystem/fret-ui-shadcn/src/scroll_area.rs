@@ -685,6 +685,7 @@ fn scroll_area_viewport_element<H: UiHost>(
             layout: scroll_layout,
             axis,
             scroll_handle: Some(handle),
+            known_content_size: None,
             windowed_paint: false,
             probe_unbounded: viewport_probe_unbounded,
             intrinsic_measure_mode,

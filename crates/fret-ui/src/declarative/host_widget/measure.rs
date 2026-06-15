@@ -1517,6 +1517,13 @@ impl ElementHostWidget {
             );
         }
 
+        let known_content_size = props
+            .known_content_size
+            .map(|size| Size::new(Px(size.width.0.max(0.0)), Px(size.height.0.max(0.0))));
+        if let Some(known_content_size) = known_content_size {
+            return clamp_to_constraints_in_measure(known_content_size, props.layout, constraints);
+        }
+
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
             LayoutSize::new(

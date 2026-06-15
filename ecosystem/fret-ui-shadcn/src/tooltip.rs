@@ -4204,6 +4204,7 @@ mod tests {
                                     },
                                     axis: fret_ui::element::ScrollAxis::Y,
                                     scroll_handle: Some(scroll_handle.clone()),
+                                    known_content_size: None,
                                     intrinsic_measure_mode:
                                         fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                                     windowed_paint: false,
@@ -4449,6 +4450,7 @@ mod tests {
                                             },
                                             axis: fret_ui::element::ScrollAxis::Y,
                                             scroll_handle: Some(scroll_with_trigger_handle.clone()),
+                                            known_content_size: None,
                                             intrinsic_measure_mode:
                                                 fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                                             windowed_paint: false,
@@ -4520,6 +4522,7 @@ mod tests {
                                             },
                                             axis: fret_ui::element::ScrollAxis::Y,
                                             scroll_handle: Some(other_scroll_handle.clone()),
+                                            known_content_size: None,
                                             intrinsic_measure_mode:
                                                 fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                                             windowed_paint: false,

@@ -259,6 +259,96 @@ fn scroll_intrinsic_content_mode_measures_children() {
 }
 
 #[test]
+fn scroll_known_content_size_skips_extent_probe_but_updates_handle_extent() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    struct MeasureCountingLayoutNode {
+        size: Size,
+        measure_count: Arc<AtomicUsize>,
+        layout_count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureCountingLayoutNode {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measure_count.fetch_add(1, Ordering::SeqCst);
+            self.size
+        }
+
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            self.layout_count.fetch_add(1, Ordering::SeqCst);
+            self.size
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let measure_count = Arc::new(AtomicUsize::new(0));
+    let layout_count = Arc::new(AtomicUsize::new(0));
+    let child = ui.create_node(MeasureCountingLayoutNode {
+        size: Size::new(Px(360.0), Px(40.0)),
+        measure_count: measure_count.clone(),
+        layout_count: layout_count.clone(),
+    });
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-known-content-size",
+        {
+            let scroll_handle = scroll_handle.clone();
+            move |cx| {
+                let mut scroll = crate::element::ScrollProps::default();
+                scroll.axis = crate::element::ScrollAxis::X;
+                scroll.layout.size.width = Length::Fill;
+                scroll.layout.size.height = Length::Fill;
+                scroll.scroll_handle = Some(scroll_handle.clone());
+                scroll.known_content_size = Some(Size::new(Px(360.0), Px(40.0)));
+
+                vec![cx.scroll(scroll, |_cx| Vec::new())]
+            }
+        },
+    );
+    ui.set_root(root);
+    let scroll_node = ui.children(root)[0];
+    ui.set_children(scroll_node, vec![child]);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        measure_count.load(Ordering::SeqCst) <= 1,
+        "known-content scroll should avoid repeated extent-probe measurement; layout may still measure once, got {}",
+        measure_count.load(Ordering::SeqCst)
+    );
+    assert_eq!(
+        layout_count.load(Ordering::SeqCst),
+        1,
+        "known-content scroll should still lay out its child subtree"
+    );
+    assert_eq!(
+        scroll_handle.viewport_size(),
+        Size::new(Px(120.0), Px(40.0))
+    );
+    assert_eq!(scroll_handle.content_size(), Size::new(Px(360.0), Px(40.0)));
+}
+
+#[test]
 fn absolute_interactivity_gate_preserves_scrollbar_track_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

@@ -404,6 +404,7 @@ fn register_scroll_surface(
                 layout: crate::element::LayoutStyle::default(),
                 axis: crate::element::ScrollAxis::Y,
                 scroll_handle: Some(handle.base_handle()),
+                known_content_size: None,
                 intrinsic_measure_mode: crate::element::ScrollIntrinsicMeasureMode::Content,
                 windowed_paint: *windowed_paint,
                 probe_unbounded: true,

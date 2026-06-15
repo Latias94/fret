@@ -1,4 +1,4 @@
-use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
+use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole, Size as CoreSize};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
@@ -269,6 +269,7 @@ fn table_fixed_column_clip_fill_layout(col_w: Px) -> LayoutStyle {
 fn table_wrap_horizontal_scroll<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     scroll_handle: Option<ScrollHandle>,
+    known_content_width: Option<Px>,
     row: AnyElement,
 ) -> AnyElement {
     if let Some(scroll_handle) = scroll_handle {
@@ -276,6 +277,7 @@ fn table_wrap_horizontal_scroll<H: UiHost>(
             ScrollProps {
                 axis: ScrollAxis::X,
                 scroll_handle: Some(scroll_handle),
+                known_content_size: known_content_width.map(|width| CoreSize::new(width, Px(0.0))),
                 layout: table_scroll_fill_layout(),
                 ..Default::default()
             },
@@ -284,6 +286,25 @@ fn table_wrap_horizontal_scroll<H: UiHost>(
     } else {
         row
     }
+}
+
+fn table_known_content_width_for_indices(col_widths: &[Px], col_indices: &[usize]) -> Px {
+    col_indices.iter().fold(Px(0.0), |acc, col_idx| {
+        Px(acc.0 + col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)).0)
+    })
+}
+
+fn table_known_content_width_for_columns<TData>(
+    column_width_by_id: &std::collections::HashMap<ColumnId, Px>,
+    cols: &[&ColumnDef<TData>],
+) -> Px {
+    cols.iter().fold(Px(0.0), |acc, col| {
+        let col_w = column_width_by_id
+            .get(&col.id)
+            .copied()
+            .unwrap_or(Px(col.size));
+        Px(acc.0 + col_w.0)
+    })
 }
 
 fn table_has_single_center_group(left_len: usize, center_len: usize, right_len: usize) -> bool {
@@ -365,6 +386,9 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                     let row_cell_test_id_prefix = row_cell_test_id_prefix.clone();
                     let data = data.clone();
                     let props = props.clone();
+                    let known_content_width = scroll_x_for_group
+                        .as_ref()
+                        .map(|_| table_known_content_width_for_indices(&col_widths, col_indices));
 
                     let row = ui::h_row(move |cx| {
                         let original = &data[data_index];
@@ -425,7 +449,7 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                     .items_center()
                     .into_element(cx);
 
-                    table_wrap_horizontal_scroll(cx, scroll_x_for_group, row)
+                    table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
                 };
 
             let left = render_row_group(cx, left_col_indices.as_ref(), None);
@@ -4793,6 +4817,9 @@ where
                         let state = state.clone();
                         let enable_sorting = props.enable_sorting;
                         let data = data_for_header.clone();
+                        let known_content_width = scroll_x_for_group.as_ref().map(|_| {
+                            table_known_content_width_for_indices(&col_widths, &col_indices)
+                        });
 
                         let row = ui::h_row(move |cx| {
                             col_indices
@@ -5020,7 +5047,7 @@ where
                         .items_center()
                         .into_element(cx);
 
-                        table_wrap_horizontal_scroll(cx, scroll_x_for_group, row)
+                        table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
                     };
 
                 vec![ui::h_row(|cx| {
@@ -7295,10 +7322,19 @@ where
                                                         .into_element(cx);
 
                                                             if let Some(scroll_x) = scroll_x {
+                                                                let known_content_width =
+                                                                    table_known_content_width_for_columns(
+                                                                        &column_width_by_id,
+                                                                        cols,
+                                                                    );
                                                                 cx.scroll(
                                                                     ScrollProps {
                                                                         axis: ScrollAxis::X,
                                                                         scroll_handle: Some(scroll_x),
+                                                                        known_content_size: Some(CoreSize::new(
+                                                                            known_content_width,
+                                                                            Px(0.0),
+                                                                        )),
                                                                         layout: LayoutStyle {
                                                                             size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Fill,
@@ -7928,10 +7964,19 @@ where
                                                                                 if let Some(scroll_x) =
                                                                                     scroll_x
                                                                                 {
+                                                                                    let known_content_width =
+                                                                                        table_known_content_width_for_columns(
+                                                                                            &column_width_by_id,
+                                                                                            cols,
+                                                                                        );
                                                                                     cx.scroll(
                                                                                         ScrollProps {
                                                                                             axis: ScrollAxis::X,
                                                                                             scroll_handle: Some(scroll_x),
+                                                                                            known_content_size: Some(CoreSize::new(
+                                                                                                known_content_width,
+                                                                                                Px(0.0),
+                                                                                            )),
                                                                                             layout: LayoutStyle {
                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                     width: Length::Fill,
@@ -8593,8 +8638,19 @@ where
                                                                         .into_element(cx)
                                                                     };
 
+                                                                    let known_content_width = scroll_x
+                                                                        .as_ref()
+                                                                        .map(|_| {
+                                                                            table_known_content_width_for_columns(
+                                                                                &column_width_by_id,
+                                                                                cols,
+                                                                            )
+                                                                        });
                                                                     table_wrap_horizontal_scroll(
-                                                                        cx, scroll_x, row,
+                                                                        cx,
+                                                                        scroll_x,
+                                                                        known_content_width,
+                                                                        row,
                                                                     )
                                                                 };
 

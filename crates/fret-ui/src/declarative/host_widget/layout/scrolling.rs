@@ -1877,6 +1877,9 @@ impl ElementHostWidget {
 
         let probe_decision_started = profile_cfg.is_some().then(Instant::now);
         let frame_id = cx.app.frame_id();
+        let known_content_size = props
+            .known_content_size
+            .map(|size| Size::new(Px(size.width.0.max(0.0)), Px(size.height.0.max(0.0))));
         let retained_measured_max_child = resolve_retained_measured_max_child(cx);
         let last_max_child = crate::elements::with_element_state(
             &mut *cx.app,
@@ -1892,6 +1895,7 @@ impl ElementHostWidget {
             },
         );
         let wants_unbounded_probe = props.probe_unbounded
+            && known_content_size.is_none()
             && (props.axis.scroll_x() || props.axis.scroll_y())
             && !post_layout_extents_mode
             && !is_probe_layout;
@@ -1992,8 +1996,9 @@ impl ElementHostWidget {
         // default; rely on post-layout observed overflow to grow extents. When correctness is at
         // risk (e.g. the user is already at the scroll edge), we still fall back to an unbounded
         // probe for that frame.
-        let probe_unbounded_for_measure =
-            props.probe_unbounded && (!post_layout_extents_mode || must_probe_for_growing_extent);
+        let probe_unbounded_for_measure = known_content_size.is_none()
+            && props.probe_unbounded
+            && (!post_layout_extents_mode || must_probe_for_growing_extent);
 
         let child_constraints =
             scroll_measure_child_constraints(props.axis, probe_unbounded_for_measure, available);
@@ -2057,7 +2062,21 @@ impl ElementHostWidget {
         // content size after shrink (e.g. filtering a nav list), so we later apply an observed
         // post-layout shrink clamp when possible.
         let mut needs_authoritative_cache_commit_from_same_frame_probe = false;
-        let max_child = if must_probe_for_growing_extent {
+        let max_child = if let Some(known_content_size) = known_content_size {
+            commit_scroll_authoritative_extent(
+                &mut *cx.app,
+                window,
+                self.element,
+                ScrollAuthoritativeExtentCommit {
+                    max_child: known_content_size,
+                    intrinsic_cache_key: None,
+                    probe_cache_key: None,
+                    clear_pending_invalidation_probe: true,
+                    clear_pending_extent_probe: true,
+                },
+            );
+            known_content_size
+        } else if must_probe_for_growing_extent {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
             for &child in cx.children {
@@ -2195,7 +2214,13 @@ impl ElementHostWidget {
         const ROUND_EPSILON: f32 = 0.001;
         let trust_live_edge_probe_shrink =
             pending_extent_probe || (cx.children.len() == 1 && direct_children_layout_invalidated);
-        let content_w = if props.axis.scroll_x() && probe_unbounded_for_measure {
+        let content_w = if let Some(known_content_size) = known_content_size
+            && props.axis.scroll_x()
+        {
+            Px((known_content_size.width.0.max(0.0) - ROUND_EPSILON)
+                .ceil()
+                .max(desired.width.0.max(0.0)))
+        } else if props.axis.scroll_x() && probe_unbounded_for_measure {
             let measured = Px((max_child.width.0.max(0.0) - ROUND_EPSILON).ceil().max(0.0));
             if post_layout_extents_mode {
                 if trust_live_edge_probe_shrink {
@@ -2227,7 +2252,13 @@ impl ElementHostWidget {
         } else {
             desired.width
         };
-        let content_h = if props.axis.scroll_y() && probe_unbounded_for_measure {
+        let content_h = if let Some(known_content_size) = known_content_size
+            && props.axis.scroll_y()
+        {
+            Px((known_content_size.height.0.max(0.0) - ROUND_EPSILON)
+                .ceil()
+                .max(desired.height.0.max(0.0)))
+        } else if props.axis.scroll_y() && probe_unbounded_for_measure {
             let measured = Px((max_child.height.0.max(0.0) - ROUND_EPSILON)
                 .ceil()
                 .max(0.0));
@@ -2550,7 +2581,7 @@ impl ElementHostWidget {
             child_layout_profile.merge_from(&child_layout_first_pass_profile);
         });
 
-        if !is_probe_layout {
+        if !is_probe_layout && known_content_size.is_none() {
             let mut relayout_with_updated_content_bounds = false;
             let mut authoritative_observation_cleared_pending = false;
             let mut authoritative_observation_committed_this_pass = false;
