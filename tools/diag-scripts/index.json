@@ -8412,6 +8412,38 @@
       ]
     },
     {
+      "id": "ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained"
+      ],
+      "tags": [
+        "data_table",
+        "dev_only",
+        "direct_start",
+        "gallery_dev",
+        "mechanism_harness",
+        "retained",
+        "shadcn",
+        "torture",
+        "ui_gallery",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "app:fret-ui-gallery",
+        "feature:gallery-dev",
+        "page:data_table_torture",
+        "Run with env: FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 and FRET_UI_GALLERY_START_PAGE=data_table_torture.",
+        "Starts directly on the DataTable torture page to avoid navigation-search prelude instability."
+      ]
+    },
+    {
       "id": "ui-gallery-data-table-retained-global-filter",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-global-filter.json",
       "required_capabilities": [

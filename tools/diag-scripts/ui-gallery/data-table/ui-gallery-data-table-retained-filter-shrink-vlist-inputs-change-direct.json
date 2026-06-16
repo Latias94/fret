@@ -1,0 +1,183 @@
+{
+  "meta": {
+    "name": "ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct",
+    "required_launch_features": [
+      "gallery-dev"
+    ],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "data_table",
+      "retained",
+      "torture",
+      "gallery_dev",
+      "dev_only",
+      "mechanism_harness",
+      "virtual_list",
+      "direct_start"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_DATA_TABLE_RETAINED": "1",
+      "FRET_UI_GALLERY_START_PAGE": "data_table_torture"
+    },
+    "target_hints": [
+      "app:fret-ui-gallery",
+      "feature:gallery-dev",
+      "page:data_table_torture",
+      "Run with `cargo run -p fret-ui-gallery --features gallery-dev`.",
+      "Starts directly on the DataTable torture page to avoid navigation-search prelude instability."
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "key": "escape",
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-torture-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-torture-reset-state",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-data-table-torture-reset-state",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "name": "GlobalFilter: <none>",
+          "role": "text"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-row-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-data-table-row-0",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "mouse",
+      "target": {
+        "id": "ui-gallery-data-table-torture-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "change_kind": "hit_test_only",
+        "kind": "scroll_handle_changes_matching_ge",
+        "min": 1,
+        "offset_changed": true,
+        "offset_y_min": 720.0,
+        "prev_offset_y_max": 0.0,
+        "upgraded_to_layout_bindings_min": 1
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "clear_before_type": true,
+      "target": {
+        "id": "ui-gallery-data-table-torture-toolbar-global-filter-input",
+        "kind": "test_id"
+      },
+      "text": "Process 123",
+      "type": "type_text_into"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "name": "GlobalFilter: Process 123",
+          "role": "text"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "apply_mode": "retained_reconcile",
+        "kind": "virtual_list_windows_matching_ge",
+        "min": 1,
+        "reason": "inputs_change",
+        "source": "layout"
+      },
+      "type": "assert"
+    },
+    {
+      "label": "ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct",
+      "type": "capture_bundle"
+    }
+  ]
+}

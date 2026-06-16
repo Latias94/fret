@@ -385,3 +385,23 @@ table recipe behavior unchanged while still reducing wrapper breadth in the hot 
 - The m6 perf run failed before selecting the DataTable torture page: the timeout bundle had the
   nav search field populated but no `ui-gallery-nav-data-table-torture` test id. Do not compare the
   timeout bundle against m5 as retained table performance evidence.
+
+### 2026-06-16 Direct-Start Text Slot Remeasure
+
+- Added the direct-start script
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json`
+  and indexed it under `ui-gallery-data-table-retained`.
+- The script declares `required_launch_features=["gallery-dev"]` and uses
+  `FRET_UI_GALLERY_START_PAGE=data_table_torture`, so it avoids the unstable nav-search prelude
+  while still running the same retained DataTable filter/input-change scenario.
+- Valid bundle:
+  `target/fret-diag/retained-vlist-root-apply-m6-text-slot-direct-v4/1781627048872/bundle.schema2.json`.
+- `diag stats --sort cpu_cycles --top 8` reported:
+  - `top_total_time_us=8934`
+  - `top_layout_time_us=8015`
+  - `top_layout_engine_solve_time_us=4618`
+  - `layout.root apply=6720`
+  - `layout.nodes=417`
+- This is a small positive move from m5 (`9278` / `8669` / `5977` / `7897` / `417`), but it does
+  not change the architectural conclusion. The hot frame remains a real retained DataTable
+  dirty-subtree frame owned by the parent `Scroll` / retained `VirtualList` apply path.

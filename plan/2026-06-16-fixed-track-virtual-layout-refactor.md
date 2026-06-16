@@ -90,6 +90,20 @@ Perf note:
 - The timeout bundle did show post-change steady nav/content frames around `3.2ms total /
   2.9ms layout`, but those frames are not the target retained table workload and should not be
   compared against m5.
+- Added a direct-start retained DataTable perf script:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json`.
+  It starts with `FRET_UI_GALLERY_START_PAGE=data_table_torture` and declares
+  `required_launch_features=["gallery-dev"]`, avoiding the sidebar search/filter prelude that
+  made the prior m6 capture non-actionable.
+- Valid direct m6 bundle:
+  `target/fret-diag/retained-vlist-root-apply-m6-text-slot-direct-v4/1781627048872/bundle.schema2.json`.
+  `diag stats --sort cpu_cycles --top 8` reported `top_total_time_us=8934`,
+  `top_layout_time_us=8015`, `top_layout_engine_solve_time_us=4618`,
+  `layout.root apply=6720`, and `layout.nodes=417`.
+- Interpretation: the inherited fixed text-slot slice is a small positive movement over m5
+  (`9278` / `8669` / `5977` / `7897` / `417`), but the hot frame is still a retained
+  DataTable input-change frame dominated by parent `Scroll` / retained `VirtualList` root apply.
+  Continue with fixed-track/dense retained table contract work rather than more text-cell cleanup.
 
 ### 2026-06-16 Clean Child-Layout Skip
 
