@@ -5341,6 +5341,84 @@ pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
 where
     TData: 'static,
 {
+    table_virtualized_retained_v0_impl(
+        cx,
+        data,
+        columns,
+        state,
+        vertical_scroll,
+        items_revision,
+        row_key_at,
+        typeahead_label_at,
+        props,
+        header_label,
+        header_accessory_at,
+        cell_at,
+        None,
+        debug_ids,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+#[track_caller]
+pub fn table_virtualized_retained_v0_with_output<H: UiHost + 'static, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: Arc<[TData]>,
+    columns: Arc<[ColumnDef<TData>]>,
+    state: impl IntoTableStateModel,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: Arc<RowKeyAt<TData>>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
+    props: TableViewProps,
+    header_label: Arc<HeaderLabelAt<TData>>,
+    header_accessory_at: Option<Arc<HeaderAccessoryAt<H, TData>>>,
+    cell_at: Arc<CellAt<H, TData>>,
+    output: Option<Model<TableViewOutput>>,
+    debug_ids: TableDebugIds,
+) -> AnyElement
+where
+    TData: 'static,
+{
+    table_virtualized_retained_v0_impl(
+        cx,
+        data,
+        columns,
+        state,
+        vertical_scroll,
+        items_revision,
+        row_key_at,
+        typeahead_label_at,
+        props,
+        header_label,
+        header_accessory_at,
+        cell_at,
+        output,
+        debug_ids,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+#[track_caller]
+fn table_virtualized_retained_v0_impl<H: UiHost + 'static, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: Arc<[TData]>,
+    columns: Arc<[ColumnDef<TData>]>,
+    state: impl IntoTableStateModel,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: Arc<RowKeyAt<TData>>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
+    props: TableViewProps,
+    header_label: Arc<HeaderLabelAt<TData>>,
+    header_accessory_at: Option<Arc<HeaderAccessoryAt<H, TData>>>,
+    cell_at: Arc<CellAt<H, TData>>,
+    output: Option<Model<TableViewOutput>>,
+    debug_ids: TableDebugIds,
+) -> AnyElement
+where
+    TData: 'static,
+{
     let state = state.into_table_state_model();
     let TableDebugIds {
         header_row_test_id: debug_header_row_test_id,
@@ -5494,6 +5572,17 @@ where
         if bounds.page_index != state_value.pagination.page_index {
             let _ = cx.app.models_mut().update(&state, |st| {
                 st.pagination.page_index = bounds.page_index;
+            });
+        }
+        if let Some(out) = output.clone() {
+            let next = TableViewOutput {
+                filtered_row_count: total_rows,
+                pagination: bounds,
+            };
+            let _ = cx.app.models_mut().update(&out, |v| {
+                if *v != next {
+                    *v = next;
+                }
             });
         }
 

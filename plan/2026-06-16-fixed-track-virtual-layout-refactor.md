@@ -332,7 +332,7 @@ Interpretation:
 - Implemented the window-shift architecture decision in `fret-ui-shadcn::DataTable`:
   - Added `DataTableVirtualizationStrategy::{Auto, Declarative, Retained}` plus
     `DataTable::virtualization_strategy(...)`.
-  - `DataTable::into_element(...)` now routes `Auto` fixed-row tables with no `TableViewOutput` to
+  - `DataTable::into_element(...)` now routes `Auto` fixed-row tables without `TableViewOutput` to
     `into_element_retained(...)`.
   - Measured rows and `TableViewOutput` still use the declarative path until retained output parity
     is implemented.
@@ -374,5 +374,37 @@ Interpretation:
     view-cache window-shift architecture (`m5` frame 27 was `8158us` layout, `810` layout nodes,
     and `non_retained_rerender`).
   - The new default is below the 120Hz frame budget on the scripted run. Remaining work should focus
-    on parity gaps before widening retained defaults further: `TableViewOutput`, measured rows, and
-    custom header-cell replacement.
+    on parity gaps before widening retained defaults further.
+
+### 2026-06-17 Retained DataTable Output Parity
+
+- Closed the first retained default parity gap after the default strategy flip:
+  - Added `table_virtualized_retained_v0_with_output(...)` in `fret-ui-kit`.
+  - The existing `table_virtualized_retained_v0(...)` remains as a no-output compatibility wrapper.
+  - The retained flat row-order path now writes `TableViewOutput { filtered_row_count, pagination }`
+    after the same pagination clamp used to choose visible entries.
+  - `fret-ui-shadcn::DataTable::into_element_retained(...)` now forwards its `output_model(...)`,
+    and `DataTable::into_element(...)` no longer treats `output.is_some()` as a reason to fall back to
+    the declarative path for fixed rows.
+- Added `data_table_default_fixed_rows_with_output_still_use_retained_host`, which verifies:
+  - `output_model(...)` writes the expected filtered count and pagination bounds.
+  - The default fixed-row `DataTable` path does not record non-retained virtual-list window-shift
+    rerenders when output is present.
+- Focused validation passed:
+  - `rustfmt --edition 2024 --check ecosystem/fret-ui-kit/src/declarative/table.rs ecosystem/fret-ui-shadcn/src/data_table.rs`
+  - `cargo check -p fret-ui-kit --lib`
+  - `cargo check -p fret-ui-shadcn --lib`
+  - `cargo check -p fret-ui-kit --tests`
+  - `cargo check -p fret-ui-shadcn --tests`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_with_output_still_use_retained_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --profile dev-fast -- --nocapture`
+- Perf rerun after this parity slice:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\data-table-view-cache-direct-m7-output-retained-pass --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- Evidence bundle:
+  `target/fret-diag/data-table-view-cache-direct-m7-output-retained-pass/1781643939197/bundle.json`.
+- Result:
+  - The script passed.
+  - `diag perf --sort cpu_cycles` reported `top_total_time_us=1663`,
+    `top_layout_time_us=660`, and `top_layout_engine_solve_time_us=0`.
+- Remaining retained default gaps are now narrower: measured rows and custom header-cell replacement.
