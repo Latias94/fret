@@ -162,3 +162,34 @@ Interpretation:
   stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff --no-run` both timed out
   before producing pass/fail output. A later retry happened with no active Rust build processes,
   so treat this as a `fret-ui` test-binary build blocker to investigate separately.
+
+### 2026-06-17 Retained Row Fixed-Track ManagedSurface
+
+- Replaced the retained fixed-row single-group cell strip from a row-local `h_row`/Flex layout with
+  a `ManagedSurface` fixed-track owner.
+- The new helper keeps the existing cell containers, padding, borders, renderer output, test ids,
+  semantics, and hit-test bounds. It only replaces row-internal column placement with direct
+  known-width geometry.
+- This keeps policy in `fret-ui-kit` while using the existing `fret-ui` mechanism primitive for
+  first-class child bounds; it avoids the earlier rejected absolute-cell shortcut that broke
+  sidecar/test-id geometry.
+- Focused validation:
+  - `cargo fmt -p fret-ui-kit --check`
+  - `cargo check -p fret-ui-kit --lib`
+  - `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_selected_rows_keep_background_wrapper table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast --no-capture`
+- Perf rerun:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\retained-vlist-row-managed-surface-m7-v1 --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- Evidence bundle:
+  `target/fret-diag/retained-vlist-row-managed-surface-m7-v1/1781634040521/bundle.json`.
+- `diag perf` reported `top_total_time_us=2564`, `top_layout_time_us=1693`,
+  `top_layout_engine_solve_time_us=392`, `layout.root apply=1082`, and `layout.nodes=66`.
+  The previous direct m6 evidence was `8934` / `8015` / `4618` / `6720` / `417`.
+- Bounded bundle triage confirms the same retained filter-shrink scenario still occurred on frame
+  26: `window_shift_reason=inputs_change`, `window_shift_kind=escape`, `items_len=111`,
+  `prev_count=50000`, `count=111`.
+- Interpretation: this is the first material 120Hz-level result for the retained DataTable
+  torture path. The optimization validates the architectural direction: dense fixed-track
+  components should expose deterministic geometry to the runtime instead of paying a generic
+  Flex solve per visible row. The next deeper slice can either move more cell content into a
+  direct dense paint path, or generalize this fixed-track owner into a reusable table/list
+  primitive once more callers need it.

@@ -383,6 +383,60 @@ fn table_row_cell_test_id(
     prefix.map(|prefix| Arc::<str>::from(format!("{prefix}{row}-cell-{col}")))
 }
 
+fn retained_table_fixed_row_group<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    col_widths: Arc<[Px]>,
+    col_indices: Vec<usize>,
+    cells: Vec<AnyElement>,
+) -> AnyElement {
+    let mut surface = fret_ui::element::ManagedSurfaceProps::default();
+    surface.layout.size.width = Length::Px(table_known_content_width_for_indices(
+        &col_widths,
+        col_indices.as_slice(),
+    ));
+    surface.layout.size.min_width = Some(surface.layout.size.width);
+    surface.layout.size.max_width = Some(surface.layout.size.width);
+    surface.layout.size.height = Length::Fill;
+    surface.layout.flex.shrink = 0.0;
+
+    cx.managed_surface(
+        surface,
+        {
+            let col_widths = col_widths.clone();
+            let col_indices = col_indices.clone();
+            move |cx| {
+                let mut x = cx.bounds().origin.x;
+                let y = cx.bounds().origin.y;
+                let h = cx.bounds().size.height;
+                let mut hit_rects = Vec::with_capacity(cx.children().len());
+                let children = cx.children().to_vec();
+
+                for (child, col_idx) in children.into_iter().zip(col_indices.iter().copied()) {
+                    let w = col_widths.get(col_idx).copied().unwrap_or(Px(0.0));
+                    let rect = fret_core::Rect::new(
+                        fret_core::Point::new(x, y),
+                        fret_core::Size::new(w, h),
+                    );
+                    cx.layout_child(child, rect);
+                    hit_rects.push(rect);
+                    x = Px(x.0 + w.0);
+                }
+
+                cx.set_hit_test_rects(hit_rects);
+            }
+        },
+        move |cx| {
+            let children = cx.children().to_vec();
+            for child in children {
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint_child(child, bounds);
+                }
+            }
+        },
+        move |_cx| cells,
+    )
+}
+
 #[allow(clippy::too_many_arguments)]
 fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -418,14 +472,15 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
             .as_ref()
             .map(|_| table_known_content_width_for_indices(&col_widths, col_indices));
 
-        let row = ui::h_row(move |cx| {
+        let cells = {
             let original = &data[data_index];
 
             col_indices
                 .iter()
+                .copied()
                 .map(|col_idx| {
-                    let col = &columns[*col_idx];
-                    let col_w = col_widths[*col_idx];
+                    let col = &columns[col_idx];
+                    let col_w = col_widths[col_idx];
                     let cell = (cell_at)(cx, col, original);
 
                     let cell_test_id = table_row_cell_test_id(
@@ -464,12 +519,17 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                     }
                 })
                 .collect::<Vec<_>>()
-        })
-        .gap(Space::N0)
-        .justify_start()
-        .items_center();
+        };
 
-        let row = row.into_element(cx);
+        let row = if matches!(props.row_measure_mode, TableRowMeasureMode::Fixed) {
+            retained_table_fixed_row_group(cx, col_widths.clone(), col_indices.to_vec(), cells)
+        } else {
+            ui::h_row(move |_cx| cells)
+                .gap(Space::N0)
+                .justify_start()
+                .items_center()
+                .into_element(cx)
+        };
         table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
     };
 
@@ -1732,7 +1792,7 @@ mod tests {
             ui.debug_declarative_instance_kind(&mut app, window, row_node),
             Some("Pressable")
         );
-        only_child_with_kind(&ui, &mut app, window, row_node, "ScrollContentTransform");
+        only_child_with_kind(&ui, &mut app, window, row_node, "ManagedSurface");
     }
 
     #[test]
@@ -1771,7 +1831,7 @@ mod tests {
             Some("Pressable")
         );
         let background = only_child_with_kind(&ui, &mut app, window, row_node, "Container");
-        only_child_with_kind(&ui, &mut app, window, background, "ScrollContentTransform");
+        only_child_with_kind(&ui, &mut app, window, background, "ManagedSurface");
     }
 
     #[test]
