@@ -140,3 +140,25 @@ Interpretation:
   retained `VirtualList` plus parent `Scroll`.
 - Continue with a deeper fixed-track / dense retained table contract instead of adding more generic
   wrapper cleanup.
+
+### 2026-06-17 Declarative Invalidation Detail Attribution
+
+- The valid direct m6 bundle still showed 132 layout invalidation walks rooted at
+  `text_table_cell` paths, but the existing diagnostics labeled those walks as generic
+  `other/unknown`. That made it impossible to tell whether the remaining hot frame was still a
+  text-content fallback or a broader retained-window remount/reconcile effect.
+- Added `UiDebugInvalidationDetail::DeclarativeInstanceChanged` and routed declarative pending
+  invalidations through `invalidate_with_source_and_detail`.
+- Text content changes now mark a separate diagnostic bit, so both paint-only and layout-affecting
+  text updates are reported as `declarative_text_content_changed`; other declarative instance
+  changes are reported as `declarative_instance_changed`.
+- Added focused assertions to the text-content diff tests so diagnostic attribution cannot silently
+  regress back to `unknown`.
+- Validation:
+  - `cargo fmt -p fret-ui --check`
+  - `cargo check -p fret-ui --lib`
+  - `git diff --check -- crates/fret-ui/src/declarative/mount.rs crates/fret-ui/src/tree/debug/invalidation.rs crates/fret-ui/src/declarative/tests/text_cache.rs`
+- Focused `nextest` compile/run and `cargo test -p fret-ui --lib
+  stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff --no-run` both timed out
+  before producing pass/fail output. A later retry happened with no active Rust build processes,
+  so treat this as a `fret-ui` test-binary build blocker to investigate separately.

@@ -2484,6 +2484,7 @@ const INVALIDATION_HIT_TEST: u8 = 1 << 0;
 const INVALIDATION_LAYOUT: u8 = 1 << 1;
 const INVALIDATION_PAINT: u8 = 1 << 2;
 const INVALIDATION_SEMANTICS: u8 = 1 << 3;
+const INVALIDATION_TEXT_CONTENT: u8 = 1 << 4;
 
 fn paint_passthrough_for_layout(
     layout: LayoutStyle,
@@ -2771,6 +2772,7 @@ fn declarative_instance_change_mask(
                 paint_changed = true;
             }
             if a.text != b.text {
+                semantics_changed = true;
                 let theme = (*theme).clone();
                 let previous_style = a.resolved_text_style_with_inherited(
                     theme.clone(),
@@ -2794,7 +2796,6 @@ fn declarative_instance_change_mask(
                     b.ink_overflow,
                 ) {
                     paint_changed = true;
-                    semantics_changed = true;
                 } else {
                     layout_changed = true;
                     paint_changed = true;
@@ -2888,6 +2889,14 @@ fn declarative_instance_change_mask(
     if semantics_changed && !layout_changed {
         mask |= INVALIDATION_SEMANTICS;
     }
+    if semantics_changed
+        && matches!(
+            (previous, next),
+            (ElementInstance::Text(a), ElementInstance::Text(b)) if a.text != b.text
+        )
+    {
+        mask |= INVALIDATION_TEXT_CONTENT;
+    }
     mask
 }
 
@@ -2954,29 +2963,40 @@ fn virtual_list_layout_inputs_changed(
 
 fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut HashMap<NodeId, u8>) {
     for (node, mask) in pending.drain() {
+        let detail = if (mask & INVALIDATION_TEXT_CONTENT) != 0 {
+            UiDebugInvalidationDetail::DeclarativeTextContentChanged
+        } else {
+            UiDebugInvalidationDetail::DeclarativeInstanceChanged
+        };
         if (mask & INVALIDATION_HIT_TEST) != 0 {
-            ui.invalidate(node, Invalidation::HitTest);
+            ui.invalidate_with_source_and_detail(
+                node,
+                Invalidation::HitTest,
+                UiDebugInvalidationSource::Other,
+                detail,
+            );
         }
         if (mask & INVALIDATION_LAYOUT) != 0 {
-            ui.invalidate(node, Invalidation::Layout);
+            ui.invalidate_with_source_and_detail(
+                node,
+                Invalidation::Layout,
+                UiDebugInvalidationSource::Other,
+                detail,
+            );
         }
         if (mask & INVALIDATION_PAINT) != 0 {
-            if (mask & INVALIDATION_SEMANTICS) != 0 {
-                ui.invalidate_with_source_and_detail(
-                    node,
-                    Invalidation::Paint,
-                    UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::DeclarativeTextContentChanged,
-                );
-            } else {
-                ui.invalidate(node, Invalidation::Paint);
-            }
+            ui.invalidate_with_source_and_detail(
+                node,
+                Invalidation::Paint,
+                UiDebugInvalidationSource::Other,
+                detail,
+            );
         } else if (mask & INVALIDATION_SEMANTICS) != 0 {
             ui.invalidate_with_source_and_detail(
                 node,
                 Invalidation::Paint,
                 UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::DeclarativeTextContentChanged,
+                detail,
             );
         }
     }

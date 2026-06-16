@@ -1,4 +1,5 @@
 use super::*;
+use crate::tree::UiDebugInvalidationDetail;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
@@ -214,6 +215,13 @@ fn stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff() {
         "single-line clipped text content changes should invalidate paint without forcing layout"
     );
     assert!(
+        ui.debug_invalidation_walks().iter().any(|w| {
+            w.inv == Invalidation::Paint
+                && w.detail == UiDebugInvalidationDetail::DeclarativeTextContentChanged
+        }),
+        "paint-only text content changes should keep a diagnostic invalidation detail"
+    );
+    assert!(
         ui.request_semantics_snapshot_if_dirty(),
         "text content changes should mark semantics dirty even when layout is skipped"
     );
@@ -336,6 +344,13 @@ fn wrapped_text_content_changes_still_invalidate_layout_in_declarative_diff() {
     assert!(
         ui.debug_stats().layout_nodes_performed > 0,
         "wrapped text content changes must keep invalidating layout because height can change"
+    );
+    assert!(
+        ui.debug_invalidation_walks().iter().any(|w| {
+            w.inv == Invalidation::Layout
+                && w.detail == UiDebugInvalidationDetail::DeclarativeTextContentChanged
+        }),
+        "layout-affecting text content changes should keep a diagnostic invalidation detail"
     );
 }
 

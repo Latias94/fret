@@ -95,6 +95,7 @@ pub enum UiDebugInvalidationDetail {
     FocusVisiblePolicy,
     InputModalityPolicy,
     AnimationFrameRequest,
+    DeclarativeInstanceChanged,
     DeclarativeTextContentChanged,
 }
 
@@ -152,6 +153,7 @@ impl UiDebugInvalidationDetail {
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
             Self::InputModalityPolicy => Some("input_modality_policy"),
             Self::AnimationFrameRequest => Some("animation_frame_request"),
+            Self::DeclarativeInstanceChanged => Some("declarative_instance_changed"),
             Self::DeclarativeTextContentChanged => Some("declarative_text_content_changed"),
         }
     }
