@@ -173,7 +173,8 @@ pub(crate) fn content_view(
                 .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
-                );
+                )
+                .viewport_probe_unbounded(false);
             #[cfg(not(feature = "gallery-dev"))]
             let scroll = shadcn::ScrollArea::new([preview_panel])
                 .scroll_handle(scroll_handle)
@@ -188,7 +189,8 @@ pub(crate) fn content_view(
                 .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
-                );
+                )
+                .viewport_probe_unbounded(false);
             #[cfg(feature = "gallery-dev")]
             if selected == PAGE_VIRTUAL_LIST_TORTURE {
                 scroll =

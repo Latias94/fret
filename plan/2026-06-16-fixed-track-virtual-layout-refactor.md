@@ -535,3 +535,52 @@ Interpretation:
     `cache.reused=1`.
   - This brings the measured-row filter-shrink path below the 120Hz frame budget while preserving
     the configured overscan via the follow-up catch-up frame.
+
+### 2026-06-17 Code View Scroll Steady-State Split
+
+- Heavy-component scan initially flagged
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-hit-changes.json`
+  with a `~32ms` / later `~19ms` worst frame. Node and scroll profiles showed that the top frame
+  was the page navigation/mount frame, not a wheel frame:
+  - The existing script clicks `ui-gallery-nav-code-view-torture`, waits for the page, then later
+    moves the pointer and wheels.
+  - Worst frame `10`/tick `10` happened immediately after navigation. Actual wheel events in the
+    captured bundle were frames `38`, `42`, `46`, `50`, `54`, and `58`.
+  - In the wheel frames, layout was effectively zero or sub-millisecond; the interaction itself was
+    not the heavy path.
+- Added a steady-state perf script:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json`.
+  It navigates to `code_view_torture`, waits for the page to settle, calls `reset_diagnostics`,
+  then performs the wheel sequence and captures the bundle. This keeps future perf triage from
+  mixing page-mount cost into scroll-smoothness numbers.
+- Applied a gallery shell policy optimization in `apps/fret-ui-gallery/src/ui/content.rs`:
+  the outer `ui-gallery-content-viewport` now forwards
+  `.viewport_probe_unbounded(false)` in addition to
+  `ScrollIntrinsicMeasureMode::Viewport`. The page shell is a fixed viewport; heavy preview pages
+  own their inner scroll/virtualization ranges, so the outer shell should not perform an unbounded
+  content probe on every page transition.
+- Evidence:
+  - Before the shell policy adjustment, code-view navigation/mount evidence in
+    `target/fret-diag/code-view-wheel-m2-scroll-profile/1781651275568/bundle.json` showed
+    `top_total_time_us=19849` and the content viewport scroll profile spent
+    `measure_children_us=17745` on frame `10`.
+  - After `.viewport_probe_unbounded(false)`,
+    `target/fret-diag/code-view-wheel-m4-content-scroll-bounded-probe/1781653123371/bundle.json`
+    reported `top_total_time_us=16732`. This is an improvement, but still a mount/navigation cost,
+    not a steady wheel cost.
+  - The new steady-state script passed with
+    `target/fret-diag/code-view-wheel-steady-m1/1781653337573/bundle.schema2.json`:
+    `top_total_time_us=3537`, `top_layout_time_us=3187`, and
+    `top_layout_engine_solve_time_us=1611`.
+- Decision:
+  - Treat code-view steady scrolling as currently below the 120Hz budget.
+  - Keep the shell policy change because it removes an unnecessary outer scroll content probe for
+    heavy preview pages.
+  - Track code-view/page navigation as a separate mount-time optimization lane. Do not use the old
+    `wheel-scroll-hit-changes` script alone as a steady-scroll perf gate.
+- Focused validation:
+  - `cargo fmt -p fret-ui-gallery`
+  - `cargo check -p fret-ui-gallery --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness --profile dev-fast`
+  - `cargo test -p fret-ui scroll_post_layout_edge_revalidation_reuses_previous_extent_for_deep_scan --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui scroll_post_layout_shrink_revalidation_clamps_stale_extent_after_content_contracts --profile dev-fast -- --nocapture`
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
