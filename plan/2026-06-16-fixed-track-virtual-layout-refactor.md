@@ -292,3 +292,37 @@ Interpretation:
   fixed table subtree. The next slice should target why the view-cache window shift still performs
   full root application (`layout_nodes_performed=810`, `layout_invalidations_count=735`) instead of
   treating fixed-row text changes and window-shift geometry as bounded row updates.
+
+### 2026-06-17 Window-Shift Architecture Decision
+
+- Follow-up triage of the m5 frame 27 bundle showed the remaining hot path is not another
+  row/cell wrapper issue:
+  - `virtual_list_window_shift_kind=escape`
+  - `window_shift_reason=inputs_change`
+  - `window_shift_apply_mode=non_retained_rerender`
+  - `prev_window_range.count=50000`, `window_range.count=111`, while start/end stayed at `22..34`.
+- Runtime check:
+  - The view-cache root is already `layout_dependency=contained_when_bounds_known`.
+  - Generic contained view-cache descendant layout invalidations already have a mark-seen /
+    contained-relayout path in `fret-ui`; a temporary focused test confirmed that this simple case
+    does not need window-root rebuild.
+  - The slow gallery frame instead goes through the virtual-list prepaint policy in
+    `crates/fret-ui/src/tree/prepaint/virtual_list.rs`: when view-cache is active and no retained
+    host exists, every non-`None` window shift schedules `mark_nearest_view_cache_root_needs_rerender`.
+    Classification records this as `NonRetainedRerender`.
+- Decision:
+  - Do not chase this by weakening view-cache/root-scheduler rules. Those rules protect generic
+    cache-root geometry correctness and nested cache-root replay.
+  - For heavy shadcn tables, non-retained view-cache is the wrong steady-state architecture. It can
+    be acceptable for small lists, but a 50k-row DataTable filter path needs retained/windowed host
+    semantics so item-count/window changes reconcile row hosts instead of remounting and applying the
+    full visible table subtree.
+- Next refactor candidate:
+  - Promote retained DataTable from harness-only API to the default fixed-row `DataTable` strategy,
+    or add an explicit `DataTableVirtualizationStrategy` with retained as the default for fixed rows.
+  - Keep a non-retained escape hatch for measured/experimental cases only if retained parity gaps
+    remain.
+  - Before flipping the default, audit retained gaps against normal `DataTable`:
+    column resizing is currently disabled in the retained wrapper; column actions, sorting,
+    visibility, pinning commands, row selection, debug ids, header ids, and row text styling already
+    have retained-path coverage or tests.
