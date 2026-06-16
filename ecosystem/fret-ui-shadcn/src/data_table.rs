@@ -567,7 +567,7 @@ impl DataTable {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost, TData>(
+    pub fn into_element<H: UiHost + 'static, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
@@ -608,7 +608,7 @@ impl DataTable {
     /// Return `Some(Vec<AnyElement>)` to fully replace the default header content for that column.
     /// Return `None` to fall back to the default (label + sort indicator + optional column menu).
     #[track_caller]
-    pub fn into_element_with_header_cell<H: UiHost, TData>(
+    pub fn into_element_with_header_cell<H: UiHost + 'static, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
@@ -642,7 +642,7 @@ impl DataTable {
         )
     }
 
-    fn into_element_with_header_cell_opt<H: UiHost, TData>(
+    fn into_element_with_header_cell_opt<H: UiHost + 'static, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,

@@ -193,3 +193,52 @@ Interpretation:
   Flex solve per visible row. The next deeper slice can either move more cell content into a
   direct dense paint path, or generalize this fixed-track owner into a reusable table/list
   primitive once more callers need it.
+
+### 2026-06-17 Non-Retained View-Cache Row Geometry
+
+- Added a direct-start view-cache DataTable perf script:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json`.
+  It starts on `data_table_torture` with `FRET_UI_GALLERY_VIEW_CACHE=1`, avoiding the same
+  navigation-search prelude instability that previously made some table captures non-actionable.
+- Baseline evidence bundle:
+  `target/fret-diag/data-table-view-cache-direct-m2/1781634607902/bundle.json`.
+- Bounded triage confirmed the hot frame is the same filter-shrink scenario:
+  `frame=27`, `window_shift_reason=inputs_change`, `window_shift_apply_mode=non_retained_rerender`,
+  `window_shift_kind=escape`, `items_len=111`, `prev_count=50000`, `count=111`.
+- Baseline `diag stats --sort cpu_cycles --top 8` reported `top_total_time_us=12941`,
+  `top_layout_time_us=11387`, `top_layout_engine_solve_time_us=6023`, `layout.root apply=8814`,
+  and `layout.nodes=843`.
+- The layout perf sidecar attributed the hot solve to the normal non-retained body row path:
+  a `Pressable` root under `ecosystem/fret-ui-kit/src/declarative/table.rs:8983`, with
+  `subtree_nodes=726` and `measure_calls=792`.
+- Refactor slice: generalized the retained fixed-row `ManagedSurface` helper into
+  `table_fixed_row_group(...)`, then reused it for the normal non-retained fixed body row
+  single-strip path. `Pressable`, row semantics, cell containers, padding, clipping, test ids,
+  and shared horizontal scroll transform are retained; only the known-width cell strip placement
+  moves from row-local Flex to deterministic geometry.
+- Public DataTable helpers now require `H: UiHost + 'static` because `ManagedSurface` stores
+  element-local layout/paint hooks. This is an intentional heavy-component API tradeoff rather than
+  a runtime-layer policy leak.
+- Focused validation passed:
+  - `rustfmt --edition 2024 --check ecosystem/fret-ui-kit/src/declarative/table.rs ecosystem/fret-ui-shadcn/src/data_table.rs ecosystem/fret-ui-shadcn/src/ui_builder_ext/data.rs`
+  - `cargo check -p fret-ui-kit --lib`
+  - `cargo check -p fret-ui-shadcn --lib`
+  - `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_plain_rows_omit_background_wrapper --no-fail-fast --no-capture`
+- The first m3 perf attempt spent several minutes rebuilding `fret_ui_gallery` and then left only
+  a waiting `fretboard-dev` process with no `ready.touch`, script result, or bundle. That process
+  was cleaned up because it was this slice's stale diagnostics launcher and had no child process.
+- Valid rerun:
+  `target/fret-diag/data-table-view-cache-direct-m4-managed-row/1781636557298/bundle.json`.
+- `diag stats --sort cpu_cycles --top 5` reported `top_total_time_us=10594`,
+  `top_layout_time_us=8774`, `top_layout_engine_solve_time_us=985`, `layout.root apply=6945`,
+  and `layout.nodes=810`.
+- Bounded bundle triage confirmed the same non-retained filter-shrink scenario still occurred on
+  frame 27: `window_shift_reason=inputs_change`, `window_shift_apply_mode=non_retained_rerender`,
+  `window_shift_kind=escape`, `items_len=111`, `prev_count=50000`, `count=111`.
+- The hot layout solve itself moved from `6023us` / `792 measure_calls` / `subtree_nodes=726` to
+  `985us` / top solve `33 measure_calls` / `subtree_nodes=165`. This proves the deterministic
+  row geometry slice removed the row-local fixed-column Flex solve.
+- The remaining miss is now different: `layout.root apply=6945`, `inv.calls=271`, and
+  `inv.nodes=4613` dominate the frame. The next non-retained view-cache optimization should target
+  invalidation/root-apply churn during full `non_retained_rerender` window shifts, not more
+  row-internal column placement.

@@ -76,7 +76,7 @@ impl DataGridElementUiBuilderExt for UiBuilder<DataGridElement> {
 
 pub trait DataTableUiBuilderExt {
     #[allow(clippy::too_many_arguments)]
-    fn into_element<H: UiHost, TData, TCell>(
+    fn into_element<H: UiHost + 'static, TData, TCell>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,
@@ -94,7 +94,7 @@ pub trait DataTableUiBuilderExt {
 
 impl DataTableUiBuilderExt for UiBuilder<DataTable> {
     #[allow(clippy::too_many_arguments)]
-    fn into_element<H: UiHost, TData, TCell>(
+    fn into_element<H: UiHost + 'static, TData, TCell>(
         self,
         cx: &mut ElementContext<'_, H>,
         data: Arc<[TData]>,

@@ -383,17 +383,14 @@ fn table_row_cell_test_id(
     prefix.map(|prefix| Arc::<str>::from(format!("{prefix}{row}-cell-{col}")))
 }
 
-fn retained_table_fixed_row_group<H: UiHost + 'static>(
+fn table_fixed_row_group<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
-    col_widths: Arc<[Px]>,
-    col_indices: Vec<usize>,
+    col_widths: Vec<Px>,
     cells: Vec<AnyElement>,
 ) -> AnyElement {
     let mut surface = fret_ui::element::ManagedSurfaceProps::default();
-    surface.layout.size.width = Length::Px(table_known_content_width_for_indices(
-        &col_widths,
-        col_indices.as_slice(),
-    ));
+    surface.layout.size.width =
+        Length::Px(col_widths.iter().fold(Px(0.0), |acc, w| Px(acc.0 + w.0)));
     surface.layout.size.min_width = Some(surface.layout.size.width);
     surface.layout.size.max_width = Some(surface.layout.size.width);
     surface.layout.size.height = Length::Fill;
@@ -403,7 +400,6 @@ fn retained_table_fixed_row_group<H: UiHost + 'static>(
         surface,
         {
             let col_widths = col_widths.clone();
-            let col_indices = col_indices.clone();
             move |cx| {
                 let mut x = cx.bounds().origin.x;
                 let y = cx.bounds().origin.y;
@@ -411,8 +407,8 @@ fn retained_table_fixed_row_group<H: UiHost + 'static>(
                 let mut hit_rects = Vec::with_capacity(cx.children().len());
                 let children = cx.children().to_vec();
 
-                for (child, col_idx) in children.into_iter().zip(col_indices.iter().copied()) {
-                    let w = col_widths.get(col_idx).copied().unwrap_or(Px(0.0));
+                for (idx, child) in children.into_iter().enumerate() {
+                    let w = col_widths.get(idx).copied().unwrap_or(Px(0.0));
                     let rect = fret_core::Rect::new(
                         fret_core::Point::new(x, y),
                         fret_core::Size::new(w, h),
@@ -435,6 +431,19 @@ fn retained_table_fixed_row_group<H: UiHost + 'static>(
         },
         move |_cx| cells,
     )
+}
+
+fn retained_table_fixed_row_group<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    col_widths: Arc<[Px]>,
+    col_indices: Vec<usize>,
+    cells: Vec<AnyElement>,
+) -> AnyElement {
+    let row_widths = col_indices
+        .iter()
+        .map(|col_idx| col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)))
+        .collect::<Vec<_>>();
+    table_fixed_row_group(cx, row_widths, cells)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2451,6 +2460,11 @@ mod tests {
         }
 
         let row_node = semantics_node_id_by_test_id(&ui, "table-unpinned-row-0");
+        assert_eq!(
+            subtree_declarative_kind_count(&ui, &mut app, window, row_node, "ManagedSurface"),
+            1,
+            "fixed body rows should use deterministic geometry instead of a per-row flex solve"
+        );
         assert_eq!(
             subtree_declarative_kind_count(&ui, &mut app, window, row_node, "Scroll"),
             0,
@@ -5194,7 +5208,7 @@ impl Default for TableKeyboardNavState {
 
 #[allow(clippy::too_many_arguments)]
 #[track_caller]
-pub fn table_virtualized<H: UiHost, TData, IHeader, TH, ICell, TC>(
+pub fn table_virtualized<H: UiHost + 'static, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -5245,7 +5259,7 @@ where
 /// `copy_text_at` receives the data index for the selected/active leaf row.
 #[allow(clippy::too_many_arguments)]
 #[track_caller]
-pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, TH, ICell, TC>(
+pub fn table_virtualized_copyable<H: UiHost + 'static, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -6528,7 +6542,7 @@ where
 
 #[allow(clippy::too_many_arguments)]
 #[track_caller]
-fn table_virtualized_impl<H: UiHost, TData, IHeader, TH, ICell, TC>(
+fn table_virtualized_impl<H: UiHost + 'static, TData, IHeader, TH, ICell, TC>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -9392,13 +9406,19 @@ where
                                                                             },
                                                                         )
                                                                     } else {
-                                                                        ui::h_row(|cx| {
-                                                                                    cols.iter()
-                                                                                        .map(|col| {
-                                                                                            let col_w = column_width_by_id
-                                                                                                .get(&col.id)
-                                                                                                .copied()
-                                                                                                .unwrap_or(Px(col.size));
+                                                                        let col_widths: Vec<Px> = cols
+                                                                            .iter()
+                                                                            .map(|col| {
+                                                                                column_width_by_id
+                                                                                    .get(&col.id)
+                                                                                    .copied()
+                                                                                    .unwrap_or(Px(col.size))
+                                                                            })
+                                                                            .collect();
+                                                                        let cells = cols
+                                                                            .iter()
+                                                                            .zip(col_widths.iter().copied())
+                                                                            .map(|(col, col_w)| {
                                                                                             let hoisted_test_id =
                                                                                                 Rc::new(RefCell::new(None));
                                                                                             let hoisted_test_id_for_cell =
@@ -9476,13 +9496,9 @@ where
                                                                                             } else {
                                                                                                 cell
                                                                                             }
-                                                                                    })
-                                                                                    .collect::<Vec<_>>()
-                                                                        })
-                                                                        .gap(Space::N0)
-                                                                        .justify_start()
-                                                                        .items_center()
-                                                                        .into_element(cx)
+                                                                            })
+                                                                            .collect::<Vec<_>>();
+                                                                        table_fixed_row_group(cx, col_widths, cells)
                                                                     };
 
                                                                     let known_content_width = scroll_x
