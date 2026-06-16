@@ -167,17 +167,15 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "role_and_name",
-          "name": "GlobalFilter: Process 123",
-          "role": "text"
+          "id": "ui-gallery-data-table-torture-global-filter",
+          "kind": "test_id"
         }
       },
       "type": "assert"
     },
     {
       "predicate": {
-        "apply_mode": "non_retained_rerender",
-        "invalidation_detail": "scroll_handle_inputs_change_window_update",
+        "apply_mode": "retained_reconcile",
         "kind": "virtual_list_windows_matching_ge",
         "min": 1,
         "reason": "inputs_change",

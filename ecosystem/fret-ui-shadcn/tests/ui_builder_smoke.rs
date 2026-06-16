@@ -35,7 +35,7 @@ use fret_ui_shadcn::raw::{
 use time::{Date, OffsetDateTime};
 
 #[allow(dead_code, unused_variables)]
-fn ui_builder_overlay_roots_compile<H: UiHost>(
+fn ui_builder_overlay_roots_compile<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     dialog_open: Model<bool>,
     popover_open: Model<bool>,

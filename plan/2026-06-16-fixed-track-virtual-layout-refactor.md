@@ -326,3 +326,53 @@ Interpretation:
     column resizing is currently disabled in the retained wrapper; column actions, sorting,
     visibility, pinning commands, row selection, debug ids, header ids, and row text styling already
     have retained-path coverage or tests.
+
+### 2026-06-17 Default Fixed-Row DataTable Retained Strategy
+
+- Implemented the window-shift architecture decision in `fret-ui-shadcn::DataTable`:
+  - Added `DataTableVirtualizationStrategy::{Auto, Declarative, Retained}` plus
+    `DataTable::virtualization_strategy(...)`.
+  - `DataTable::into_element(...)` now routes `Auto` fixed-row tables with no `TableViewOutput` to
+    `into_element_retained(...)`.
+  - Measured rows and `TableViewOutput` still use the declarative path until retained output parity
+    is implemented.
+  - The facade now re-exports `DataTableVirtualizationStrategy` so app code can opt back into
+    `Declarative` for compatibility investigations.
+- The UI builder smoke test now explicitly bounds its generic host as `H: UiHost + 'static`, matching
+  the existing DataTable surface requirement.
+- Updated the default view-cache filter-shrink diag script from the old non-retained architecture
+  assertion to the new retained default:
+  - The script now waits on the stable
+    `ui-gallery-data-table-torture-global-filter` test id rather than a role/name text match.
+  - The virtual-list assertion now expects `apply_mode=retained_reconcile`,
+    `reason=inputs_change`, and `source=layout`.
+- Focused validation passed:
+  - `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/data_table.rs ecosystem/fret-ui-shadcn/src/lib.rs ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
+  - `cargo check -p fret-ui-shadcn --lib`
+  - `cargo check -p fret-ui-shadcn --tests`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_surfaces_keep_narrow_table_state_bridges --profile dev-fast -- --nocapture`
+- `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn data_table_default_fixed_rows_use_retained_virtual_list_host ...`
+  was not usable as a focused gate on this machine because nextest enumerated the unrelated
+  `extras_relative_time_auto_update` integration binary and hit Windows `os error 740`
+  ("requested operation requires elevation"). The equivalent library tests and `cargo check --tests`
+  passed.
+- Perf rerun:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\data-table-view-cache-direct-m6-default-retained-strategy-pass --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- Evidence bundle:
+  `target/fret-diag/data-table-view-cache-direct-m6-default-retained-strategy-pass/1781642365402/bundle.schema2.json`.
+- Result:
+  - The script passed and recorded the expected `retained_reconcile` layout window shift.
+  - `diag perf --sort cpu_cycles` reported `top_total_time_us=1763`,
+    `top_layout_time_us=745`, and `top_layout_engine_solve_time_us=0` for the CPU-cycle top frame.
+  - The same filter-shrink frame observed during the earlier failed pre-script-update run recorded
+    `window_shift_reason=inputs_change`, `window_shift_apply_mode=retained_reconcile`,
+    `layout_time_us=4342`, `layout_engine_solve_time_us=628`, and `layout.nodes=424`.
+- Interpretation:
+  - The default `DataTable` fixed-row path is no longer the pathological non-retained
+    view-cache window-shift architecture (`m5` frame 27 was `8158us` layout, `810` layout nodes,
+    and `non_retained_rerender`).
+  - The new default is below the 120Hz frame budget on the scripted run. Remaining work should focus
+    on parity gaps before widening retained defaults further: `TableViewOutput`, measured rows, and
+    custom header-cell replacement.

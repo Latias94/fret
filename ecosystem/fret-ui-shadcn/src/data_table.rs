@@ -157,6 +157,24 @@ fn parse_column_action(command: &str) -> Option<(ColumnAction, &str)> {
     Some((action, column_id))
 }
 
+/// Chooses the virtualization host used by [`DataTable::into_element`].
+///
+/// `Auto` keeps the public recipe ergonomic while allowing the component to choose the lower-cost
+/// retained host for fixed-row business tables. Use `Declarative` when validating the legacy
+/// pure declarative path or when a custom integration depends on `TableViewOutput`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataTableVirtualizationStrategy {
+    Auto,
+    Declarative,
+    Retained,
+}
+
+impl Default for DataTableVirtualizationStrategy {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
 fn wire_column_actions_command_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     state: Model<TableState>,
@@ -322,6 +340,7 @@ pub struct DataTable {
     layout: LayoutRefinement,
     debug_ids: TableDebugIds,
     output: Option<Model<TableViewOutput>>,
+    virtualization_strategy: DataTableVirtualizationStrategy,
 }
 
 impl Default for DataTable {
@@ -340,6 +359,7 @@ impl Default for DataTable {
             layout: LayoutRefinement::default(),
             debug_ids: TableDebugIds::default(),
             output: None,
+            virtualization_strategy: DataTableVirtualizationStrategy::default(),
         }
     }
 }
@@ -434,12 +454,18 @@ impl DataTable {
         self
     }
 
-    /// A retained-host variant of [`Self::into_element`] that enables composable body rows under
-    /// cache-root reuse (virt-003 / ADR 0177).
+    /// Selects the virtualization host used by [`Self::into_element`].
+    pub fn virtualization_strategy(mut self, strategy: DataTableVirtualizationStrategy) -> Self {
+        self.virtualization_strategy = strategy;
+        self
+    }
+
+    /// A retained-host variant of [`Self::into_element`] for callers that need an explicit
+    /// retained body surface.
     ///
     /// Notes (v0):
     /// - supports fixed-height and measured (variable-height) rows
-    /// - intended for perf/correctness harnesses; API stability is not guaranteed
+    /// - custom header-cell replacement and `TableViewOutput` still use the declarative path
     #[track_caller]
     pub fn into_element_retained<H: UiHost + 'static, TData>(
         self,
@@ -470,6 +496,7 @@ impl DataTable {
             layout,
             debug_ids,
             output: _output,
+            virtualization_strategy: _virtualization_strategy,
         } = self;
 
         let theme = Theme::global(&*cx.app).snapshot();
@@ -581,26 +608,46 @@ impl DataTable {
     where
         TData: 'static,
     {
+        let use_retained = match self.virtualization_strategy {
+            DataTableVirtualizationStrategy::Auto | DataTableVirtualizationStrategy::Retained => {
+                !self.measure_rows && self.output.is_none()
+            }
+            DataTableVirtualizationStrategy::Declarative => false,
+        };
+
         let state = state.into_table_state_model();
-        self.into_element_with_header_cell_opt(
-            cx,
-            data,
-            data_revision,
-            state,
-            columns,
-            get_row_key,
-            header_label,
-            None::<
-                Arc<
-                    dyn Fn(
-                        &mut ElementContext<'_, H>,
-                        &ColumnDef<TData>,
-                        Option<bool>,
-                    ) -> Option<Vec<AnyElement>>,
+        if use_retained {
+            self.into_element_retained(
+                cx,
+                data,
+                data_revision,
+                state,
+                columns,
+                get_row_key,
+                header_label,
+                cell_at,
+            )
+        } else {
+            self.into_element_with_header_cell_opt(
+                cx,
+                data,
+                data_revision,
+                state,
+                columns,
+                get_row_key,
+                header_label,
+                None::<
+                    Arc<
+                        dyn Fn(
+                            &mut ElementContext<'_, H>,
+                            &ColumnDef<TData>,
+                            Option<bool>,
+                        ) -> Option<Vec<AnyElement>>,
+                    >,
                 >,
-            >,
-            cell_at,
-        )
+                cell_at,
+            )
+        }
     }
 
     /// Like [`Self::into_element`], but allows overriding header cell rendering for specific columns.
@@ -679,6 +726,7 @@ impl DataTable {
             layout,
             debug_ids,
             output,
+            virtualization_strategy: _virtualization_strategy,
         } = self;
 
         let theme = Theme::global(&*cx.app).snapshot();
@@ -1454,6 +1502,64 @@ mod tests {
             "expected first body row to sit below the fixed header; header={:?} row={:?}",
             header.bounds,
             row0.bounds
+        );
+    }
+
+    #[test]
+    fn data_table_default_fixed_rows_use_retained_virtual_list_host() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = FakeServices;
+        let state = app.models_mut().insert({
+            let mut state = TableState::default();
+            state.pagination.page_size = 2;
+            state
+        });
+        let data = demo_data();
+        let columns = demo_columns();
+
+        for _ in 0..2 {
+            render_data_table_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                state.clone(),
+                data.clone(),
+                columns.clone(),
+            );
+            assert_eq!(
+                ui.debug_stats().virtual_list_window_shifts_non_retained,
+                0,
+                "fixed-row DataTable default should not require non-retained window-shift rerenders"
+            );
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after default data-table render");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("data-table-row-1")),
+            "expected fixed-row DataTable default path to keep virtualized row debug anchors mounted"
         );
     }
 

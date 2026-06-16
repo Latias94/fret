@@ -2593,6 +2593,10 @@ fn data_table_surfaces_keep_narrow_table_state_bridges() {
         LIB_RS.contains("pub use fret_ui_kit::declarative::table::IntoTableStateModel;"),
         "facade should re-export the dedicated table-state bridge so the LocalState-first path stays discoverable"
     );
+    assert!(
+        LIB_RS.contains("pub use crate::data_table::{DataTable, DataTableVirtualizationStrategy};"),
+        "facade should expose the DataTable virtualization strategy so apps can opt back into declarative rendering when needed"
+    );
 
     for (label, source, required_markers, forbidden_markers) in [
         (
@@ -2601,15 +2605,17 @@ fn data_table_surfaces_keep_narrow_table_state_bridges() {
             &[
                 "debug_ids: TableDebugIds,",
                 "pub fn debug_ids(mut self, debug_ids: TableDebugIds) -> Self {",
+                "pub enum DataTableVirtualizationStrategy",
+                "pub fn virtualization_strategy(mut self, strategy: DataTableVirtualizationStrategy) -> Self {",
                 "pub fn into_element_retained<H: UiHost + 'static, TData>(",
-                "pub fn into_element<H: UiHost, TData>(",
-                "pub fn into_element_with_header_cell<H: UiHost, TData>(",
+                "pub fn into_element<H: UiHost + 'static, TData>(",
+                "pub fn into_element_with_header_cell<H: UiHost + 'static, TData>(",
                 "state: impl IntoTableStateModel,",
             ][..],
             &[
                 "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
-                "pub fn into_element<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
-                "pub fn into_element_with_header_cell<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
+                "pub fn into_element<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
+                "pub fn into_element_with_header_cell<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>,",
                 "debug_header_cell_test_id_prefix: Option<Arc<str>>",
                 "debug_row_test_id_prefix: Option<Arc<str>>",
             ][..],
@@ -2642,10 +2648,10 @@ fn data_table_surfaces_keep_narrow_table_state_bridges() {
             "ui_builder_ext/data.rs",
             UI_BUILDER_EXT_DATA_RS,
             &[
-                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
+                "fn into_element<H: UiHost + 'static, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: impl IntoTableStateModel, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> TCell + 'static, ) -> AnyElement where TData: 'static, TCell: IntoUiElement<H>;",
             ][..],
             &[
-                "fn into_element<H: UiHost, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>,",
+                "fn into_element<H: UiHost + 'static, TData, TCell>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>,",
             ][..],
         ),
     ] {
