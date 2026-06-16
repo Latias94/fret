@@ -94,6 +94,26 @@ pub struct UiScrollLayoutProfileV1 {
     #[serde(default)]
     pub layout_children_first_pass_us: u64,
     #[serde(default)]
+    pub layout_child_first_pass_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_layout_invalidated_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_subtree_dirty_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_clean_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_performed_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_skipped_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_bounds_changed_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_bounds_size_changed_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_input_mismatch_roots: u32,
+    #[serde(default)]
+    pub layout_child_first_pass_input_size_mismatch_roots: u32,
+    #[serde(default)]
     pub layout_child_first_pass_nodes_visited: u32,
     #[serde(default)]
     pub layout_child_first_pass_nodes_performed: u32,
@@ -113,6 +133,26 @@ pub struct UiScrollLayoutProfileV1 {
     pub layout_child_corrected_content_max_us: u64,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub layout_child_corrected_content_kind_profiles: Vec<UiScrollLayoutKindProfileV1>,
+    #[serde(default)]
+    pub layout_child_roots: u32,
+    #[serde(default)]
+    pub layout_child_layout_invalidated_roots: u32,
+    #[serde(default)]
+    pub layout_child_subtree_dirty_roots: u32,
+    #[serde(default)]
+    pub layout_child_clean_roots: u32,
+    #[serde(default)]
+    pub layout_child_performed_roots: u32,
+    #[serde(default)]
+    pub layout_child_skipped_roots: u32,
+    #[serde(default)]
+    pub layout_child_bounds_changed_roots: u32,
+    #[serde(default)]
+    pub layout_child_bounds_size_changed_roots: u32,
+    #[serde(default)]
+    pub layout_child_input_mismatch_roots: u32,
+    #[serde(default)]
+    pub layout_child_input_size_mismatch_roots: u32,
     pub layout_child_nodes_visited: u32,
     pub layout_child_nodes_performed: u32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -169,6 +209,23 @@ impl UiScrollLayoutProfileV1 {
             solve_barrier_us: profile.solve_barrier_us,
             layout_children_us: profile.layout_children_us,
             layout_children_first_pass_us: profile.layout_children_first_pass_us,
+            layout_child_first_pass_roots: profile.layout_child_first_pass_roots,
+            layout_child_first_pass_layout_invalidated_roots: profile
+                .layout_child_first_pass_layout_invalidated_roots,
+            layout_child_first_pass_subtree_dirty_roots: profile
+                .layout_child_first_pass_subtree_dirty_roots,
+            layout_child_first_pass_clean_roots: profile.layout_child_first_pass_clean_roots,
+            layout_child_first_pass_performed_roots: profile
+                .layout_child_first_pass_performed_roots,
+            layout_child_first_pass_skipped_roots: profile.layout_child_first_pass_skipped_roots,
+            layout_child_first_pass_bounds_changed_roots: profile
+                .layout_child_first_pass_bounds_changed_roots,
+            layout_child_first_pass_bounds_size_changed_roots: profile
+                .layout_child_first_pass_bounds_size_changed_roots,
+            layout_child_first_pass_input_mismatch_roots: profile
+                .layout_child_first_pass_input_mismatch_roots,
+            layout_child_first_pass_input_size_mismatch_roots: profile
+                .layout_child_first_pass_input_size_mismatch_roots,
             layout_child_first_pass_nodes_visited: profile.layout_child_first_pass_nodes_visited,
             layout_child_first_pass_nodes_performed:
                 profile.layout_child_first_pass_nodes_performed,
@@ -190,6 +247,16 @@ impl UiScrollLayoutProfileV1 {
                 .iter()
                 .map(UiScrollLayoutKindProfileV1::from_profile)
                 .collect(),
+            layout_child_roots: profile.layout_child_roots,
+            layout_child_layout_invalidated_roots: profile.layout_child_layout_invalidated_roots,
+            layout_child_subtree_dirty_roots: profile.layout_child_subtree_dirty_roots,
+            layout_child_clean_roots: profile.layout_child_clean_roots,
+            layout_child_performed_roots: profile.layout_child_performed_roots,
+            layout_child_skipped_roots: profile.layout_child_skipped_roots,
+            layout_child_bounds_changed_roots: profile.layout_child_bounds_changed_roots,
+            layout_child_bounds_size_changed_roots: profile.layout_child_bounds_size_changed_roots,
+            layout_child_input_mismatch_roots: profile.layout_child_input_mismatch_roots,
+            layout_child_input_size_mismatch_roots: profile.layout_child_input_size_mismatch_roots,
             layout_child_nodes_visited: profile.layout_child_nodes_visited,
             layout_child_nodes_performed: profile.layout_child_nodes_performed,
             layout_child_kind_profiles: profile

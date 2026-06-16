@@ -259,3 +259,19 @@ table recipe behavior unchanged while still reducing wrapper breadth in the hot 
   important conclusion is negative: recipe-level wrapper pruning is not enough to reach the 120Hz
   target for dense shadcn-style tables. The next meaningful work should design a dense retained
   fixed-row/list primitive or a deeper fixed-height `VirtualList` child-layout fast path.
+
+### 2026-06-16 Scroll Telemetry Expansion
+
+- Expanded the retained `VirtualList` scroll telemetry to report child-root counts and root-state
+  splits for first-pass and aggregate layout. The profile now distinguishes:
+  - total child roots,
+  - layout-invalidated roots,
+  - subtree-dirty roots,
+  - clean roots,
+  - performed vs skipped roots,
+  - bounds-change and input-bounds mismatch counts.
+- The same counters are now carried through `fret-ui`, `fret-bootstrap`, and `fret-diag`
+  bundle/triage output, so the next retained perf repro can answer whether the hot path is broad
+  because many roots are dirty or because the retained interface itself is still too opaque.
+- This does not change retained layout behavior yet. It is a diagnostics slice that makes the
+  next mechanism decision less guessy.

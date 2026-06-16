@@ -2288,6 +2288,13 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
     assert_eq!(
         scroll_profile_examples
             .first()
+            .and_then(|v| v.get("layout_child_first_pass_roots"))
+            .and_then(|v| v.as_u64()),
+        Some(1)
+    );
+    assert_eq!(
+        scroll_profile_examples
+            .first()
             .and_then(|v| v.get("layout_children_corrected_content_us"))
             .and_then(|v| v.as_u64()),
         Some(500)

@@ -41,6 +41,16 @@ fn scroll_layout_profile_config() -> Option<&'static ScrollLayoutProfileConfig> 
 
 #[derive(Debug, Default, Clone)]
 struct ScrollChildLayoutProfile {
+    roots: u32,
+    layout_invalidated_roots: u32,
+    subtree_dirty_roots: u32,
+    clean_roots: u32,
+    performed_roots: u32,
+    skipped_roots: u32,
+    bounds_changed_roots: u32,
+    bounds_size_changed_roots: u32,
+    input_mismatch_roots: u32,
+    input_size_mismatch_roots: u32,
     nodes_visited: u32,
     nodes_performed: u32,
     max_us: u64,
@@ -103,6 +113,37 @@ impl ScrollChildLayoutProfile {
         kind_profiles: Vec<UiDebugScrollLayoutKindProfile>,
     ) {
         let elapsed_us = Self::saturating_elapsed_us(elapsed);
+        self.roots = self.roots.saturating_add(1);
+        if invalidated {
+            self.layout_invalidated_roots = self.layout_invalidated_roots.saturating_add(1);
+        }
+        if subtree_dirty {
+            self.subtree_dirty_roots = self.subtree_dirty_roots.saturating_add(1);
+        }
+        if !invalidated && !subtree_dirty {
+            self.clean_roots = self.clean_roots.saturating_add(1);
+        }
+        if nodes_performed > 0 {
+            self.performed_roots = self.performed_roots.saturating_add(1);
+        } else {
+            self.skipped_roots = self.skipped_roots.saturating_add(1);
+        }
+        if let (Some(before), Some(after)) = (bounds_before, bounds_after) {
+            if before != after {
+                self.bounds_changed_roots = self.bounds_changed_roots.saturating_add(1);
+            }
+            if before.size != after.size {
+                self.bounds_size_changed_roots = self.bounds_size_changed_roots.saturating_add(1);
+            }
+        }
+        if let Some(before) = bounds_before {
+            if before != input_bounds {
+                self.input_mismatch_roots = self.input_mismatch_roots.saturating_add(1);
+            }
+            if before.size != input_bounds.size {
+                self.input_size_mismatch_roots = self.input_size_mismatch_roots.saturating_add(1);
+            }
+        }
         self.nodes_visited = self.nodes_visited.saturating_add(nodes_visited);
         self.nodes_performed = self.nodes_performed.saturating_add(nodes_performed);
         self.merge_kind_profiles(&kind_profiles);
@@ -121,6 +162,28 @@ impl ScrollChildLayoutProfile {
     }
 
     fn merge_from(&mut self, other: &Self) {
+        self.roots = self.roots.saturating_add(other.roots);
+        self.layout_invalidated_roots = self
+            .layout_invalidated_roots
+            .saturating_add(other.layout_invalidated_roots);
+        self.subtree_dirty_roots = self
+            .subtree_dirty_roots
+            .saturating_add(other.subtree_dirty_roots);
+        self.clean_roots = self.clean_roots.saturating_add(other.clean_roots);
+        self.performed_roots = self.performed_roots.saturating_add(other.performed_roots);
+        self.skipped_roots = self.skipped_roots.saturating_add(other.skipped_roots);
+        self.bounds_changed_roots = self
+            .bounds_changed_roots
+            .saturating_add(other.bounds_changed_roots);
+        self.bounds_size_changed_roots = self
+            .bounds_size_changed_roots
+            .saturating_add(other.bounds_size_changed_roots);
+        self.input_mismatch_roots = self
+            .input_mismatch_roots
+            .saturating_add(other.input_mismatch_roots);
+        self.input_size_mismatch_roots = self
+            .input_size_mismatch_roots
+            .saturating_add(other.input_size_mismatch_roots);
         self.nodes_visited = self.nodes_visited.saturating_add(other.nodes_visited);
         self.nodes_performed = self.nodes_performed.saturating_add(other.nodes_performed);
         self.merge_kind_profiles(&other.kind_profiles);
@@ -225,6 +288,16 @@ impl ScrollChildLayoutProfile {
             solve_barrier_us,
             layout_children_us,
             layout_children_first_pass_us: first_pass_us,
+            layout_child_first_pass_roots: first_pass.roots,
+            layout_child_first_pass_layout_invalidated_roots: first_pass.layout_invalidated_roots,
+            layout_child_first_pass_subtree_dirty_roots: first_pass.subtree_dirty_roots,
+            layout_child_first_pass_clean_roots: first_pass.clean_roots,
+            layout_child_first_pass_performed_roots: first_pass.performed_roots,
+            layout_child_first_pass_skipped_roots: first_pass.skipped_roots,
+            layout_child_first_pass_bounds_changed_roots: first_pass.bounds_changed_roots,
+            layout_child_first_pass_bounds_size_changed_roots: first_pass.bounds_size_changed_roots,
+            layout_child_first_pass_input_mismatch_roots: first_pass.input_mismatch_roots,
+            layout_child_first_pass_input_size_mismatch_roots: first_pass.input_size_mismatch_roots,
             layout_child_first_pass_nodes_visited: first_pass.nodes_visited,
             layout_child_first_pass_nodes_performed: first_pass.nodes_performed,
             layout_child_first_pass_max_us: first_pass.max_us,
@@ -235,6 +308,16 @@ impl ScrollChildLayoutProfile {
             layout_child_corrected_content_nodes_performed: corrected_content.nodes_performed,
             layout_child_corrected_content_max_us: corrected_content.max_us,
             layout_child_corrected_content_kind_profiles: corrected_content.kind_profiles,
+            layout_child_roots: self.roots,
+            layout_child_layout_invalidated_roots: self.layout_invalidated_roots,
+            layout_child_subtree_dirty_roots: self.subtree_dirty_roots,
+            layout_child_clean_roots: self.clean_roots,
+            layout_child_performed_roots: self.performed_roots,
+            layout_child_skipped_roots: self.skipped_roots,
+            layout_child_bounds_changed_roots: self.bounds_changed_roots,
+            layout_child_bounds_size_changed_roots: self.bounds_size_changed_roots,
+            layout_child_input_mismatch_roots: self.input_mismatch_roots,
+            layout_child_input_size_mismatch_roots: self.input_size_mismatch_roots,
             layout_child_nodes_visited: self.nodes_visited,
             layout_child_nodes_performed: self.nodes_performed,
             layout_child_kind_profiles: self.kind_profiles,
@@ -1228,6 +1311,14 @@ impl ElementHostWidget {
             fret_core::Axis::Horizontal => Px(size.width.0.max(0.0)),
         };
         let mut needs_redraw = false;
+        let profile_cfg = scroll_layout_profile_config();
+        let profile_started = profile_cfg.is_some().then(Instant::now);
+        let mut phase_profiles = ScrollLayoutPhaseProfiles::default();
+        let mut child_layout_profile = ScrollChildLayoutProfile::default();
+        let mut child_layout_first_pass_profile = ScrollChildLayoutProfile::default();
+        let child_layout_corrected_content_profile = ScrollChildLayoutProfile::default();
+        let mut t_solve_barrier: Duration = Duration::default();
+        let mut t_layout_children_first_pass: Duration = Duration::default();
 
         let cross_extent = match axis {
             fret_core::Axis::Vertical => size.width,
@@ -1543,18 +1634,63 @@ impl ElementHostWidget {
         }
 
         if !is_probe_layout {
+            let solve_started = profile_cfg.is_some().then(Instant::now);
             cx.solve_barrier_child_roots_if_needed(&layout_scratch.barrier_roots);
+            if let Some(started) = solve_started {
+                let elapsed = started.elapsed();
+                t_solve_barrier = elapsed;
+                phase_profiles.record("solve_barrier", elapsed);
+            }
         }
 
+        let layout_started = profile_cfg.is_some().then(Instant::now);
         for (child, child_bounds) in &layout_scratch.barrier_roots {
-            let _ = cx.layout_in(*child, *child_bounds);
+            if profile_cfg.is_some() {
+                let child_invalidated = cx.tree.node_layout_invalidated(*child);
+                let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(*child);
+                let child_subtree_dirty_count = cx.tree.node_subtree_layout_dirty_count(*child);
+                let child_bounds_before = cx.tree.node_bounds(*child);
+                let before = cx.tree.debug_stats();
+                cx.tree.begin_scroll_layout_kind_profile();
+                let child_started = Instant::now();
+                let _ = cx.layout_in(*child, *child_bounds);
+                let child_elapsed = child_started.elapsed();
+                let kind_profiles = cx.tree.end_scroll_layout_kind_profile();
+                let after = cx.tree.debug_stats();
+                let child_bounds_after = cx.tree.node_bounds(*child);
+                child_layout_first_pass_profile.record_child(
+                    *child,
+                    child_elapsed,
+                    child_invalidated,
+                    child_subtree_dirty,
+                    child_subtree_dirty_count,
+                    after
+                        .layout_nodes_visited
+                        .saturating_sub(before.layout_nodes_visited),
+                    after
+                        .layout_nodes_performed
+                        .saturating_sub(before.layout_nodes_performed),
+                    child_bounds_before,
+                    child_bounds_after,
+                    *child_bounds,
+                    kind_profiles,
+                );
+            } else {
+                let _ = cx.layout_in(*child, *child_bounds);
+            }
         }
+        if let Some(started) = layout_started {
+            t_layout_children_first_pass = started.elapsed();
+            phase_profiles.record("layout_children_first_pass", t_layout_children_first_pass);
+        }
+        child_layout_profile.merge_from(&child_layout_first_pass_profile);
 
         let window_range = if !is_probe_layout {
             metrics.visible_range(offset, viewport, props.overscan)
         } else {
             None
         };
+        let laid_out_child_count = layout_scratch.barrier_roots.len();
 
         crate::elements::with_element_state(
             &mut *cx.app,
@@ -1742,6 +1878,72 @@ impl ElementHostWidget {
         // duplicate the scheduling side effects.
         if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
             needs_redraw = true;
+        }
+
+        if let Some(cfg) = profile_cfg
+            && let Some(started) = profile_started
+        {
+            let total = started.elapsed();
+            if total >= cfg.min_elapsed {
+                let descendant_subtree_layout_dirty = child_layout_profile.subtree_dirty_roots > 0;
+                let element_path: Option<String> = {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        Some(crate::elements::with_window_state(
+                            &mut *cx.app,
+                            window,
+                            |st| {
+                                st.debug_path_for_element(self.element)
+                                    .unwrap_or_else(|| "<unknown>".to_string())
+                            },
+                        ))
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        None
+                    }
+                };
+
+                cx.tree
+                    .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                        node: cx.node,
+                        element: Some(self.element),
+                        test_id: None,
+                        axis: match axis {
+                            fret_core::Axis::Vertical => UiDebugScrollAxis::Y,
+                            fret_core::Axis::Horizontal => UiDebugScrollAxis::X,
+                        },
+                        offset: props.scroll_handle.offset(),
+                        viewport: Size::new(size.width, size.height),
+                        content: content_size,
+                        observed_extent: None,
+                        overflow_observation: None,
+                        layout_profile: Some(child_layout_profile.into_debug_profile(
+                            cx.pass_kind,
+                            false,
+                            laid_out_child_count,
+                            Size::new(Px(cx.available.width.0), Px(cx.available.height.0)),
+                            size,
+                            content_size,
+                            false,
+                            cx.tree.interactive_resize_active(),
+                            false,
+                            descendant_subtree_layout_dirty,
+                            false,
+                            phase_profiles.into_sorted(),
+                            0,
+                            t_solve_barrier.as_micros() as u64,
+                            t_layout_children_first_pass.as_micros() as u64,
+                            child_layout_first_pass_profile,
+                            0,
+                            child_layout_corrected_content_profile,
+                            0,
+                            false,
+                            total.as_micros() as u64,
+                            element_path,
+                        )),
+                    });
+            }
         }
 
         if needs_redraw && let Some(window) = cx.window {

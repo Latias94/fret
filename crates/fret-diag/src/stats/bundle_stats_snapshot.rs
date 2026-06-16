@@ -430,6 +430,65 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     .get("layout_children_first_pass_us")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0),
+                layout_child_first_pass_roots: p
+                    .get("layout_child_first_pass_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_first_pass_layout_invalidated_roots: p
+                    .get("layout_child_first_pass_layout_invalidated_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_subtree_dirty_roots: p
+                    .get("layout_child_first_pass_subtree_dirty_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_clean_roots: p
+                    .get("layout_child_first_pass_clean_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_performed_roots: p
+                    .get("layout_child_first_pass_performed_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_skipped_roots: p
+                    .get("layout_child_first_pass_skipped_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_bounds_changed_roots: p
+                    .get("layout_child_first_pass_bounds_changed_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_bounds_size_changed_roots: p
+                    .get("layout_child_first_pass_bounds_size_changed_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_input_mismatch_roots: p
+                    .get("layout_child_first_pass_input_mismatch_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_first_pass_input_size_mismatch_roots: p
+                    .get("layout_child_first_pass_input_size_mismatch_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
                 layout_child_first_pass_nodes_visited: p
                     .get("layout_child_first_pass_nodes_visited")
                     .and_then(|v| v.as_u64())
@@ -478,6 +537,59 @@ pub(super) fn snapshot_scroll_layout_profiles(
                     p,
                     "layout_child_corrected_content_kind_profiles",
                 ),
+                layout_child_roots: p
+                    .get("layout_child_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_layout_invalidated_roots: p
+                    .get("layout_child_layout_invalidated_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_subtree_dirty_roots: p
+                    .get("layout_child_subtree_dirty_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_clean_roots: p
+                    .get("layout_child_clean_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_performed_roots: p
+                    .get("layout_child_performed_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_skipped_roots: p
+                    .get("layout_child_skipped_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_bounds_changed_roots: p
+                    .get("layout_child_bounds_changed_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_bounds_size_changed_roots: p
+                    .get("layout_child_bounds_size_changed_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
+                layout_child_input_mismatch_roots: p
+                    .get("layout_child_input_mismatch_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32,
+                layout_child_input_size_mismatch_roots: p
+                    .get("layout_child_input_size_mismatch_roots")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64)
+                    as u32,
                 layout_child_nodes_visited: p
                     .get("layout_child_nodes_visited")
                     .and_then(|v| v.as_u64())

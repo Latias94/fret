@@ -40,6 +40,10 @@ historical records remain in:
   remaining hotspot is therefore traversal / subtree depth, not a missing measurement toggle.
 - The latest structural cleanup in the hot path removed pure test-id `Semantics` wrappers, but
   that is support evidence rather than the main perf win.
+- The retained `VirtualList` layout telemetry now carries explicit root / invalidation /
+  dirty-state counters for both first-pass and aggregate child layout, so the next profiling loop
+  can separate clean roots from subtree-dirty roots instead of treating every visible row as one
+  opaque bucket.
 - Next comparison should be against upstream `repo-ref/shadcn` and `repo-ref/base-ui` row/tree
   shape before deciding whether to flatten the row subtree further or split a narrower retained
   `VirtualList` follow-on.

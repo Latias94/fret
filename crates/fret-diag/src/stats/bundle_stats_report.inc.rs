@@ -1513,6 +1513,16 @@ pub(super) struct BundleStatsScrollLayoutProfile {
     pub(super) solve_barrier_us: u64,
     pub(super) layout_children_us: u64,
     pub(super) layout_children_first_pass_us: u64,
+    pub(super) layout_child_first_pass_roots: u32,
+    pub(super) layout_child_first_pass_layout_invalidated_roots: u32,
+    pub(super) layout_child_first_pass_subtree_dirty_roots: u32,
+    pub(super) layout_child_first_pass_clean_roots: u32,
+    pub(super) layout_child_first_pass_performed_roots: u32,
+    pub(super) layout_child_first_pass_skipped_roots: u32,
+    pub(super) layout_child_first_pass_bounds_changed_roots: u32,
+    pub(super) layout_child_first_pass_bounds_size_changed_roots: u32,
+    pub(super) layout_child_first_pass_input_mismatch_roots: u32,
+    pub(super) layout_child_first_pass_input_size_mismatch_roots: u32,
     pub(super) layout_child_first_pass_nodes_visited: u32,
     pub(super) layout_child_first_pass_nodes_performed: u32,
     pub(super) layout_child_first_pass_max_us: u64,
@@ -1524,6 +1534,16 @@ pub(super) struct BundleStatsScrollLayoutProfile {
     pub(super) layout_child_corrected_content_max_us: u64,
     pub(super) layout_child_corrected_content_kind_profiles:
         Vec<BundleStatsScrollLayoutKindProfile>,
+    pub(super) layout_child_roots: u32,
+    pub(super) layout_child_layout_invalidated_roots: u32,
+    pub(super) layout_child_subtree_dirty_roots: u32,
+    pub(super) layout_child_clean_roots: u32,
+    pub(super) layout_child_performed_roots: u32,
+    pub(super) layout_child_skipped_roots: u32,
+    pub(super) layout_child_bounds_changed_roots: u32,
+    pub(super) layout_child_bounds_size_changed_roots: u32,
+    pub(super) layout_child_input_mismatch_roots: u32,
+    pub(super) layout_child_input_size_mismatch_roots: u32,
     pub(super) layout_child_nodes_visited: u32,
     pub(super) layout_child_nodes_performed: u32,
     pub(super) layout_child_kind_profiles: Vec<BundleStatsScrollLayoutKindProfile>,
@@ -8219,6 +8239,46 @@ impl BundleStatsReport {
                             Value::from(p.layout_children_first_pass_us),
                         );
                         p_obj.insert(
+                            "layout_child_first_pass_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_layout_invalidated_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_layout_invalidated_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_subtree_dirty_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_subtree_dirty_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_clean_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_clean_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_performed_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_performed_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_skipped_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_skipped_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_bounds_changed_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_bounds_changed_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_bounds_size_changed_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_bounds_size_changed_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_input_mismatch_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_input_mismatch_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_first_pass_input_size_mismatch_roots".to_string(),
+                            Value::from(p.layout_child_first_pass_input_size_mismatch_roots),
+                        );
+                        p_obj.insert(
                             "layout_child_first_pass_nodes_visited".to_string(),
                             Value::from(p.layout_child_first_pass_nodes_visited),
                         );
@@ -8267,6 +8327,46 @@ impl BundleStatsReport {
                                     .map(scroll_layout_kind_profile_to_json)
                                     .collect(),
                             ),
+                        );
+                        p_obj.insert(
+                            "layout_child_roots".to_string(),
+                            Value::from(p.layout_child_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_layout_invalidated_roots".to_string(),
+                            Value::from(p.layout_child_layout_invalidated_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_subtree_dirty_roots".to_string(),
+                            Value::from(p.layout_child_subtree_dirty_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_clean_roots".to_string(),
+                            Value::from(p.layout_child_clean_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_performed_roots".to_string(),
+                            Value::from(p.layout_child_performed_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_skipped_roots".to_string(),
+                            Value::from(p.layout_child_skipped_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_bounds_changed_roots".to_string(),
+                            Value::from(p.layout_child_bounds_changed_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_bounds_size_changed_roots".to_string(),
+                            Value::from(p.layout_child_bounds_size_changed_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_input_mismatch_roots".to_string(),
+                            Value::from(p.layout_child_input_mismatch_roots),
+                        );
+                        p_obj.insert(
+                            "layout_child_input_size_mismatch_roots".to_string(),
+                            Value::from(p.layout_child_input_size_mismatch_roots),
                         );
                         p_obj.insert(
                             "layout_child_nodes_visited".to_string(),
