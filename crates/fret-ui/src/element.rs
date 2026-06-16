@@ -2927,6 +2927,7 @@ pub struct VirtualListState {
 pub(crate) struct VirtualListLayoutScratch {
     pub(crate) measured_updates: Vec<(NodeId, usize, Px)>,
     pub(crate) barrier_roots: Vec<(NodeId, Rect)>,
+    pub(crate) roots_needing_layout: Vec<(NodeId, Rect)>,
 }
 
 #[derive(Debug, Clone)]

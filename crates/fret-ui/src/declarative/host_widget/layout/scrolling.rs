@@ -161,6 +161,12 @@ impl ScrollChildLayoutProfile {
         }
     }
 
+    fn record_clean_skipped_root(&mut self) {
+        self.roots = self.roots.saturating_add(1);
+        self.clean_roots = self.clean_roots.saturating_add(1);
+        self.skipped_roots = self.skipped_roots.saturating_add(1);
+    }
+
     fn merge_from(&mut self, other: &Self) {
         self.roots = self.roots.saturating_add(other.roots);
         self.layout_invalidated_roots = self
@@ -1633,9 +1639,23 @@ impl ElementHostWidget {
             layout_scratch.barrier_roots.push((*child, child_bounds));
         }
 
+        layout_scratch.roots_needing_layout.clear();
+        layout_scratch
+            .roots_needing_layout
+            .reserve(layout_scratch.barrier_roots.len());
+        for &(child, child_bounds) in &layout_scratch.barrier_roots {
+            if cx.can_skip_layout_in(child, child_bounds) {
+                child_layout_first_pass_profile.record_clean_skipped_root();
+            } else {
+                layout_scratch
+                    .roots_needing_layout
+                    .push((child, child_bounds));
+            }
+        }
+
         if !is_probe_layout {
             let solve_started = profile_cfg.is_some().then(Instant::now);
-            cx.solve_barrier_child_roots_if_needed(&layout_scratch.barrier_roots);
+            cx.solve_barrier_child_roots_if_needed(&layout_scratch.roots_needing_layout);
             if let Some(started) = solve_started {
                 let elapsed = started.elapsed();
                 t_solve_barrier = elapsed;
@@ -1644,7 +1664,7 @@ impl ElementHostWidget {
         }
 
         let layout_started = profile_cfg.is_some().then(Instant::now);
-        for (child, child_bounds) in &layout_scratch.barrier_roots {
+        for (child, child_bounds) in &layout_scratch.roots_needing_layout {
             if profile_cfg.is_some() {
                 let child_invalidated = cx.tree.node_layout_invalidated(*child);
                 let child_subtree_dirty = cx.tree.node_subtree_layout_dirty(*child);
@@ -1653,6 +1673,8 @@ impl ElementHostWidget {
                 let before = cx.tree.debug_stats();
                 cx.tree.begin_scroll_layout_kind_profile();
                 let child_started = Instant::now();
+                #[cfg(test)]
+                crate::virtual_list::debug_record_virtual_list_layout_in_call();
                 let _ = cx.layout_in(*child, *child_bounds);
                 let child_elapsed = child_started.elapsed();
                 let kind_profiles = cx.tree.end_scroll_layout_kind_profile();
@@ -1676,6 +1698,8 @@ impl ElementHostWidget {
                     kind_profiles,
                 );
             } else {
+                #[cfg(test)]
+                crate::virtual_list::debug_record_virtual_list_layout_in_call();
                 let _ = cx.layout_in(*child, *child_bounds);
             }
         }

@@ -218,6 +218,27 @@ traversal shape, split a narrower follow-on instead of broadening this lane.
   - `top_layout_engine_solve_time_us=6595`
   - `layout.root apply=8546`
   - `layout.nodes=417`
+
+## Latest Fixed-Track Clean-Root Skip
+
+- Added a `VirtualList` child-root filter that reuses the tree's clean-root layout skip predicate
+  before solving barrier child roots or calling `layout_in`.
+- The implementation keeps full `barrier_roots` for virtual-list bookkeeping and diagnostics, but
+  uses a scratch `roots_needing_layout` list for actual solve/layout work.
+- Scroll child-layout telemetry now records clean skipped roots even when `VirtualList` skips before
+  entering `layout_in`.
+- New gate:
+  `retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame`.
+- Verified:
+  - `cargo fmt -p fret-ui --check`
+  - `cargo check -p fret-ui --lib`
+  - `cargo nextest run -p fret-ui retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame`
+  - `cargo nextest run -p fret-ui 'declarative::tests::virtual_list::retained'`
+- Interpretation: this removes avoidable child layout work on clean fixed retained windows. It does
+  not yet prove that the retained data-table filter-shrink hot frame will move, because the latest
+  bundle showed a genuinely dirty `VirtualList` subtree. The next step is a perf rerun; if that
+  remains dirty-subtree dominated, the lane should deepen the fixed-track/dense retained table
+  contract.
 - Interpretation: this is a small harness-noise reduction, not a change in owner. The next slice
   should remain on retained `VirtualList` mechanism depth or split a narrower fixed-height/fixed-
   track follow-on.

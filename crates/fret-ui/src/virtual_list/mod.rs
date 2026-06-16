@@ -7,6 +7,26 @@ use crate::scroll::ScrollStrategy;
 #[cfg(test)]
 use std::cell::Cell;
 
+#[cfg(test)]
+thread_local! {
+    static VIRTUAL_LIST_LAYOUT_IN_CALLS: Cell<usize> = const { Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn debug_reset_virtual_list_layout_in_calls() {
+    VIRTUAL_LIST_LAYOUT_IN_CALLS.with(|calls| calls.set(0));
+}
+
+#[cfg(test)]
+pub(crate) fn debug_record_virtual_list_layout_in_call() {
+    VIRTUAL_LIST_LAYOUT_IN_CALLS.with(|calls| calls.set(calls.get().saturating_add(1)));
+}
+
+#[cfg(test)]
+pub(crate) fn debug_virtual_list_layout_in_calls() -> usize {
+    VIRTUAL_LIST_LAYOUT_IN_CALLS.with(Cell::get)
+}
+
 const VIRTUALIZER_PX_SCALE: f32 = 64.0;
 
 fn px_to_units_u32(px: Px) -> u32 {

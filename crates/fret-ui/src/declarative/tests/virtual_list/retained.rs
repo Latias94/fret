@@ -1065,3 +1065,101 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         }
     });
 }
+
+#[test]
+fn retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_calls = Arc::new(AtomicUsize::new(0));
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_calls: Arc<AtomicUsize>,
+    ) -> AnyElement {
+        cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+            render_calls.fetch_add(1, Ordering::SeqCst);
+
+            let mut list_layout = crate::element::LayoutStyle::default();
+            list_layout.size.width = crate::element::Length::Fill;
+            list_layout.size.height = crate::element::Length::Fill;
+            list_layout.overflow = crate::element::Overflow::Clip;
+
+            let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
+                Arc::new(|i| i as crate::ItemKey);
+            let row: crate::windowed_surface_host::RetainedVirtualListRowFn<TestHost> =
+                Arc::new(|cx, _| {
+                    let mut style = crate::element::LayoutStyle::default();
+                    style.size.height = crate::element::Length::Px(Px(10.0));
+                    cx.container(
+                        crate::element::ContainerProps {
+                            layout: style,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("row")],
+                    )
+                });
+
+            vec![cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                100,
+                crate::element::VirtualListOptions::fixed(Px(10.0), 0),
+                scroll_handle,
+                key_at,
+                row,
+            )]
+        })
+    }
+
+    for _ in 0..5 {
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "retained-fixed-vlist-clean-layout-skip",
+            |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+    }
+
+    let calls_before = render_calls.load(Ordering::SeqCst);
+    crate::virtual_list::debug_reset_virtual_list_layout_in_calls();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-fixed-vlist-clean-layout-skip",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before,
+        "expected the view-cache root to be a cache hit on the steady frame"
+    );
+    assert_eq!(
+        crate::virtual_list::debug_virtual_list_layout_in_calls(),
+        0,
+        "expected fixed retained virtual list to skip clean child layout-in calls on the steady frame"
+    );
+}

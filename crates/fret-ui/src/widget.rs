@@ -689,6 +689,11 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         )
     }
 
+    pub(crate) fn can_skip_layout_in(&self, child: NodeId, bounds: Rect) -> bool {
+        self.pass_kind == LayoutPassKind::Final
+            && self.tree.can_skip_layout_for_root(child, bounds, false)
+    }
+
     pub fn layout_in_probe(&mut self, child: NodeId, bounds: Rect) -> Size {
         self.tree.layout_in_with_pass_kind(
             self.app,

@@ -103,7 +103,7 @@ impl<H: UiHost> UiTree<H> {
             .map(|idx| plans.swap_remove(idx).1)
     }
 
-    fn can_skip_layout_for_root(
+    pub(crate) fn can_skip_layout_for_root(
         &self,
         root: NodeId,
         bounds: Rect,
