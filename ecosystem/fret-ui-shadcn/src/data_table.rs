@@ -611,7 +611,7 @@ impl DataTable {
     {
         let use_retained = match self.virtualization_strategy {
             DataTableVirtualizationStrategy::Auto | DataTableVirtualizationStrategy::Retained => {
-                !self.measure_rows
+                true
             }
             DataTableVirtualizationStrategy::Declarative => false,
         };
@@ -1647,6 +1647,103 @@ mod tests {
         assert_eq!(out.pagination.page_count, 2);
         assert_eq!(out.pagination.page_start, 0);
         assert_eq!(out.pagination.page_end, 2);
+    }
+
+    #[test]
+    fn data_table_default_measured_rows_use_retained_virtual_list_host() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = FakeServices;
+        let state = app.models_mut().insert({
+            let mut state = TableState::default();
+            state.pagination.page_size = 2;
+            state
+        });
+        let data = demo_data();
+        let columns = demo_columns();
+
+        for _ in 0..2 {
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "data-table-measured",
+                |cx| {
+                    vec![
+                        DataTable::new()
+                            .row_height(Px(40.0))
+                            .header_height(Px(40.0))
+                            .measure_rows(true)
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
+                            .debug_ids(TableDebugIds {
+                                row_test_id_prefix: Some(Arc::<str>::from("data-table-row-")),
+                                ..Default::default()
+                            })
+                            .into_element(
+                                cx,
+                                data.clone(),
+                                1,
+                                state.clone(),
+                                columns.clone(),
+                                |_row, index, _parent| RowKey::from_index(index),
+                                |col| Arc::from(col.id.as_ref()),
+                                |cx, _col, row| {
+                                    if *row == 1 {
+                                        ui::v_stack(|cx| {
+                                            [
+                                                cx.text(format!("Row {row}")),
+                                                cx.text("extra measured line"),
+                                            ]
+                                        })
+                                        .into_element(cx)
+                                    } else {
+                                        cx.text(format!("Row {row}"))
+                                    }
+                                },
+                            ),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            assert_eq!(
+                ui.debug_stats().virtual_list_window_shifts_non_retained,
+                0,
+                "measured-row DataTable default should not require non-retained window-shift rerenders"
+            );
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after measured data-table render");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("data-table-row-1")),
+            "expected measured-row DataTable default path to keep virtualized row debug anchors mounted"
+        );
     }
 
     #[test]

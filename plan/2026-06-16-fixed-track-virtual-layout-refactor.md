@@ -408,3 +408,44 @@ Interpretation:
   - `diag perf --sort cpu_cycles` reported `top_total_time_us=1663`,
     `top_layout_time_us=660`, and `top_layout_engine_solve_time_us=0`.
 - Remaining retained default gaps are now narrower: measured rows and custom header-cell replacement.
+
+### 2026-06-17 Retained DataTable Measured Rows by Default
+
+- Closed the measured-row retained default gap:
+  - `fret-ui-shadcn::DataTable::into_element(...)` now routes both fixed-height and measured rows
+    through the retained host when `virtualization_strategy` is `Auto` or `Retained`.
+  - `Declarative` remains the explicit compatibility escape hatch.
+  - The lower `fret-ui-kit` retained table path already supported
+    `TableRowMeasureMode::Measured`; this slice only removes the shadcn wrapper's conservative
+    fallback.
+- Added `data_table_default_measured_rows_use_retained_virtual_list_host`, which renders a measured
+  row with an extra line and verifies the default path does not record non-retained virtual-list
+  window-shift rerenders.
+- Fixed the view-cache data-table filter-shrink diag scripts to use `pointer_kind="mouse"` for wheel
+  scrolling. The steps do not require touch semantics, and using `touch` caused filesystem transport
+  runs to fail preflight with missing `diag.pointer_kind_touch` before reaching the perf scenario.
+- Focused validation passed:
+  - `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/data_table.rs`
+  - `cargo check -p fret-ui-shadcn --lib`
+  - `cargo check -p fret-ui-shadcn --tests`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_measured_rows_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_with_output_still_use_retained_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-kit --lib table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width --profile dev-fast -- --nocapture`
+- First variable-height diag attempt:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\data-table-view-cache-direct-m8-measured-retained --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- The first attempt produced `script.result.json` with `reason_code=capability.missing` for
+  `diag.pointer_kind_touch`; no bundle was captured because the script preflight failed before UI
+  interaction.
+- Perf rerun after switching the script wheel input to mouse:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\data-table-view-cache-direct-m9-measured-retained-mouse --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- Evidence bundle:
+  `target/fret-diag/data-table-view-cache-direct-m9-measured-retained-mouse/1781645449975/bundle.json`.
+- Result:
+  - The script passed with the existing `retained_reconcile` assertion.
+  - `diag perf --sort cpu_cycles` reported `top_total_time_us=1948`,
+    `top_layout_time_us=826`, and `top_layout_engine_solve_time_us=0` for the CPU-cycle top frame.
+  - `diag stats` showed the filter-shrink frame at `total=8909us`, `layout=7524us`,
+    `layout.solve=1465us`, and `layout.nodes=463`; this is still under the 120Hz budget but remains
+    the next measured-row table hotspot to watch.
+- Remaining retained default gap: custom header-cell replacement still uses the declarative path.

@@ -119,7 +119,7 @@
     {
       "delta_x": 0.0,
       "delta_y": -720.0,
-      "pointer_kind": "touch",
+      "pointer_kind": "mouse",
       "target": {
         "id": "ui-gallery-data-table-torture-root",
         "kind": "test_id"
