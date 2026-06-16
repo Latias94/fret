@@ -16,6 +16,7 @@ pub(super) struct ColorEditRootLayoutArgs {
     pub(super) layout: LayoutStyle,
     pub(super) test_id: Option<Arc<str>>,
     pub(super) row_height: Px,
+    pub(super) control_height: Px,
 }
 
 pub(super) fn color_edit_root_layout<H: UiHost>(
@@ -29,6 +30,7 @@ pub(super) fn color_edit_root_layout<H: UiHost>(
         mut layout,
         test_id,
         row_height,
+        control_height,
     } = args;
 
     let error_msg = cx
@@ -43,7 +45,7 @@ pub(super) fn color_edit_root_layout<H: UiHost>(
     });
 
     if layout.size.min_height.is_none() {
-        layout.size.min_height = Some(Length::Px(row_height));
+        layout.size.min_height = Some(Length::Px(control_height));
     }
 
     let mut el = cx.flex(

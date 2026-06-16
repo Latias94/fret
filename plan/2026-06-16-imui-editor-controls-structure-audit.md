@@ -57,6 +57,32 @@ deepening pass.
   `group=240.00`, and `inspector=286.00` heights across smoke, exposure, click-stress, overlay,
   and roughness typing-active stages.
 
+## 2026-06-16 FretApp Theme Lifecycle and ColorEdit Height Note
+
+- A later cookbook run exposed a deeper startup-order issue: `FretApp::setup(...)` executed before
+  the desktop shadcn default install, so app setup could not reliably override the base
+  design-system theme. The fix stages desktop defaults into:
+  - base defaults before app setup (`fret_ui_shadcn::app::install`),
+  - runtime defaults after app setup (i18n, diagnostics, config/keymap defaults, assets, icons).
+- Window-metrics theme sync was a second lifecycle issue. On color-scheme or metrics changes, the
+  default shadcn middleware re-synced the host theme and wiped the installed editor dense preset.
+  With the `imui` feature, the middleware now replays the installed editor preset after the host
+  shadcn sync.
+- After the theme lifecycle fix, the main editor controls converged to 30px, but `ColorEdit`
+  remained 28px because it used the bare editor row height rather than the editor text-field frame
+  chrome outer height.
+- `ColorEdit` now derives its root/input minimum height from
+  `EditorStyle::frame_chrome_small().control_outer_height(...)`, matching `DragValue`, `Slider`, and
+  `AxisDragValue`.
+- Coverage now includes:
+  - `FretApp` setup-order tests for theme override and runtime keybinding defaults,
+  - shadcn auto-theme middleware replay coverage for the installed editor preset,
+  - and a `ColorEdit` element-tree height regression test.
+- Evidence after the change:
+  `target/fret-diag/cookbook-imui-editor-controls-color-edit-height-v1/sessions/1781577414581-54972/suite.summary.json`
+  passed all five editor-controls scripts. Smoke slices showed `exposure=30px`,
+  `roughness=30px`, `tint=30px`, `search=30px`, and `grid=192px`.
+
 ## Upstream shape comparison
 
 - `repo-ref/base-ui` keeps its composite list machinery shallow: `CompositeList` is a registry and

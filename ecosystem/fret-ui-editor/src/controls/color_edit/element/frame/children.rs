@@ -38,7 +38,7 @@ pub(super) struct ColorEditFrameChildrenArgs<'a> {
     pub(super) drag_drop_options: ColorEditDragDropOptions,
     pub(super) drag_threshold: Px,
     pub(super) test_ids: &'a ColorEditElementTestIds,
-    pub(super) row_height: Px,
+    pub(super) control_height: Px,
 }
 
 pub(super) fn color_edit_frame_children<H: UiHost>(
@@ -56,7 +56,7 @@ pub(super) fn color_edit_frame_children<H: UiHost>(
             enabled: args.control.options.enabled,
             focusable: args.control.options.focusable,
             test_id: args.test_ids.input.clone(),
-            row_height: args.row_height,
+            control_height: args.control_height,
         },
     );
 

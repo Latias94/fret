@@ -22,7 +22,7 @@ pub(super) struct ColorEditInputArgs {
     pub(super) enabled: bool,
     pub(super) focusable: bool,
     pub(super) test_id: Option<Arc<str>>,
-    pub(super) row_height: Px,
+    pub(super) control_height: Px,
 }
 
 pub(super) fn color_hex_input<H: UiHost>(
@@ -42,7 +42,7 @@ pub(super) fn color_hex_input<H: UiHost>(
         size: SizeStyle {
             width: Length::Fill,
             height: Length::Auto,
-            min_height: Some(Length::Px(args.row_height)),
+            min_height: Some(Length::Px(args.control_height)),
             ..Default::default()
         },
         ..Default::default()
@@ -115,7 +115,7 @@ pub(super) fn color_hex_input<H: UiHost>(
                 size: SizeStyle {
                     width: Length::Fill,
                     height: Length::Auto,
-                    min_height: Some(Length::Px(args.row_height)),
+                    min_height: Some(Length::Px(args.control_height)),
                     ..Default::default()
                 },
                 ..Default::default()

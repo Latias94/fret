@@ -39,7 +39,7 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
             drag_drop_options: setup.drag_drop_options,
             drag_threshold: setup.drag_threshold,
             test_ids: &setup.test_ids,
-            row_height: setup.row_height,
+            control_height: setup.control_height,
         },
     );
     let input = children.input;
@@ -92,6 +92,7 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
             layout: control.options.layout,
             test_id: control.options.test_id.clone(),
             row_height: setup.row_height,
+            control_height: setup.control_height,
         },
     )
 }

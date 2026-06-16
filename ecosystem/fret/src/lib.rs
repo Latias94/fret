@@ -440,6 +440,17 @@ pub struct Defaults {
     pub preload_icon_svgs: bool,
 }
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum DesktopDefaultsStage {
+    /// Base design-system defaults that app setup may intentionally refine.
+    Base,
+    /// Runtime defaults that need to observe app setup side effects such as command registration.
+    Runtime,
+    /// The full legacy default path for callers that do not need staged setup.
+    All,
+}
+
 impl Defaults {
     /// Recommended desktop-first “batteries included” defaults.
     pub const fn desktop_batteries() -> Self {
@@ -1529,6 +1540,35 @@ pub(crate) fn apply_desktop_defaults_with<D: fret_launch::WinitAppDriver + 'stat
     builder: fret_bootstrap::BootstrapBuilder<D>,
     defaults: Defaults,
 ) -> std::result::Result<fret_bootstrap::BootstrapBuilder<D>, fret_bootstrap::BootstrapError> {
+    apply_desktop_defaults_stage_with(builder, defaults, DesktopDefaultsStage::All)
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub(crate) fn apply_desktop_defaults_stage_with<D: fret_launch::WinitAppDriver + 'static>(
+    builder: fret_bootstrap::BootstrapBuilder<D>,
+    defaults: Defaults,
+    stage: DesktopDefaultsStage,
+) -> std::result::Result<fret_bootstrap::BootstrapBuilder<D>, fret_bootstrap::BootstrapError> {
+    let apply_base = matches!(
+        stage,
+        DesktopDefaultsStage::Base | DesktopDefaultsStage::All
+    );
+    let apply_runtime = matches!(
+        stage,
+        DesktopDefaultsStage::Runtime | DesktopDefaultsStage::All
+    );
+
+    #[cfg(feature = "shadcn")]
+    let builder = if apply_base && defaults.shadcn {
+        builder.install_app(fret_ui_shadcn::app::install)
+    } else {
+        builder
+    };
+
+    if !apply_runtime {
+        return Ok(builder);
+    }
+
     // Always ensure an i18n backend exists unless the app provides one.
     let builder = builder.init_app(fret_bootstrap::install_default_i18n_backend);
     let _ = defaults;
@@ -1549,13 +1589,6 @@ pub(crate) fn apply_desktop_defaults_with<D: fret_launch::WinitAppDriver + 'stat
 
     #[cfg(not(feature = "config-files"))]
     let builder = builder.with_command_default_keybindings();
-
-    #[cfg(feature = "shadcn")]
-    let builder = if defaults.shadcn {
-        builder.install_app(fret_ui_shadcn::app::install)
-    } else {
-        builder
-    };
 
     #[cfg(feature = "ui-assets")]
     let builder = if defaults.ui_assets {
@@ -1611,12 +1644,32 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
     let Some(config) = app.global::<fret_ui_shadcn::app::InstallConfig>().copied() else {
         return;
     };
-    let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
-        app,
-        window,
-        config.base_color,
-        config.scheme,
-    );
+
+    #[cfg(feature = "imui")]
+    {
+        let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
+            app,
+            changed,
+            |app| {
+                let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+                    app,
+                    window,
+                    config.base_color,
+                    config.scheme,
+                );
+            },
+        );
+    }
+
+    #[cfg(not(feature = "imui"))]
+    {
+        let _ = fret_ui_shadcn::advanced::sync_theme_from_environment(
+            app,
+            window,
+            config.base_color,
+            config.scheme,
+        );
+    }
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1637,8 +1690,14 @@ mod builder_surface_tests {
     use crate::{AppUi, Defaults, Error, Ui, WindowId};
     use fret_app::CreateWindowRequest;
     use fret_assets::{AssetBundleId, AssetRevision, FileAssetManifestResolver, StaticAssetEntry};
-    use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
-    use fret_runtime::{CommandId, FrameId, TickId};
+    use fret_core::{
+        AppWindowId, DockOp, Event, KeyCode, Modifiers, UiServices, ViewportInputEvent,
+    };
+    use fret_runtime::{
+        CommandId, CommandMeta, DefaultKeybinding, FrameId, InputContext, KeyChord, KeymapService,
+        Platform, PlatformCapabilities, PlatformFilter, TickId,
+    };
+    use fret_ui::Theme;
 
     fn install_bundle_fixture(_app: &mut App) {}
 
@@ -1660,6 +1719,39 @@ mod builder_surface_tests {
 
     fn install_bundle_step_b(_app: &mut App) {
         INSTALL_INTO_APP_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn install_dark_shadcn_theme(app: &mut App) {
+        crate::shadcn::themes::apply_shadcn_new_york(
+            app,
+            crate::shadcn::themes::ShadcnBaseColor::Slate,
+            crate::shadcn::themes::ShadcnColorScheme::Dark,
+        );
+    }
+
+    fn dark_shadcn_background() -> fret_core::Color {
+        let mut app = App::new();
+        install_dark_shadcn_theme(&mut app);
+        Theme::global(&app).color_token("background")
+    }
+
+    fn install_test_command_with_default_keybinding(app: &mut App) {
+        app.commands_mut().register(
+            CommandId::from("tests.fret_app_setup_order.command"),
+            CommandMeta::new("Setup order test command").with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::All,
+                    KeyChord::new(
+                        KeyCode::KeyK,
+                        Modifiers {
+                            ctrl: true,
+                            alt: true,
+                            ..Modifiers::default()
+                        },
+                    ),
+                ),
+            ]),
+        );
     }
 
     fn install(_app: &mut App, _services: &mut dyn UiServices) {}
@@ -2341,6 +2433,49 @@ mod builder_surface_tests {
     }
 
     #[test]
+    fn fret_app_setup_theme_runs_after_base_shadcn_defaults() {
+        let expected_background = dark_shadcn_background();
+        let _builder = FretApp::new("builder-view-setup-theme-order")
+            .setup(install_dark_shadcn_theme)
+            .view::<SmokeView>()
+            .expect("view should build")
+            .setup_with(|app| {
+                assert_eq!(
+                    Theme::global(app).color_token("background"),
+                    expected_background
+                );
+            });
+    }
+
+    #[test]
+    fn fret_app_runtime_defaults_still_observe_setup_registered_commands() {
+        let _builder = FretApp::new("builder-view-setup-command-order")
+            .setup(install_test_command_with_default_keybinding)
+            .view::<SmokeView>()
+            .expect("view should build")
+            .setup_with(|app| {
+                let ctx =
+                    InputContext::fallback(Platform::Windows, PlatformCapabilities::default());
+                let chord = KeyChord::new(
+                    KeyCode::KeyK,
+                    Modifiers {
+                        ctrl: true,
+                        alt: true,
+                        ..Modifiers::default()
+                    },
+                );
+                let command = app
+                    .global::<KeymapService>()
+                    .and_then(|svc| svc.keymap.resolve(&ctx, chord));
+
+                assert_eq!(
+                    command.as_ref().map(CommandId::as_str),
+                    Some("tests.fret_app_setup_order.command")
+                );
+            });
+    }
+
+    #[test]
     fn advanced_ui_app_with_hooks_smoke() {
         let _builder = crate::advanced::ui_app_with_hooks(
             "advanced-ui-app-hooks-smoke",
@@ -2460,6 +2595,44 @@ mod tests {
         );
 
         assert_eq!(Theme::global(&app).revision(), rev_after);
+    }
+
+    #[cfg(feature = "imui")]
+    #[test]
+    fn shadcn_auto_theme_middleware_replays_installed_editor_preset() {
+        let mut app = KernelApp::new();
+        shadcn::app::install(&mut app);
+        fret_ui_editor::theme::install_editor_theme_preset_v1(
+            &mut app,
+            fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense,
+        );
+
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(ColorScheme::Dark));
+        });
+
+        let mut ui = UiTree::<KernelApp>::default();
+        let mut state = ();
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_eq!(
+            Theme::global(&app)
+                .metric_by_key(fret_ui_editor::primitives::EditorTokenKeys::TEXT_FIELD_RADIUS),
+            Some(fret_core::Px(2.0))
+        );
+        assert_eq!(
+            Theme::global(&app)
+                .metric_by_key(fret_ui_editor::primitives::EditorTokenKeys::TEXT_FIELD_PADDING_Y),
+            Some(fret_core::Px(3.0))
+        );
     }
 
     #[test]

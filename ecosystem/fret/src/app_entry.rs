@@ -340,10 +340,17 @@ fn finish_builder<S: 'static>(
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     driver: UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {
-    let mut builder = fret_bootstrap::BootstrapBuilder::new(
+    let builder = fret_bootstrap::BootstrapBuilder::new(
         fret_app::App::new(),
         driver.into_inner().into_fn_driver(),
     );
+
+    let mut builder = crate::apply_desktop_defaults_stage_with(
+        builder,
+        defaults,
+        crate::DesktopDefaultsStage::Base,
+    )
+    .map_err(crate::BootstrapError::from)?;
 
     for f in setup_hooks {
         builder = builder.init_app(f);
@@ -352,8 +359,12 @@ fn finish_builder<S: 'static>(
         builder = builder.install(f);
     }
 
-    let builder = crate::apply_desktop_defaults_with(builder, defaults)
-        .map_err(crate::BootstrapError::from)?;
+    let builder = crate::apply_desktop_defaults_stage_with(
+        builder,
+        defaults,
+        crate::DesktopDefaultsStage::Runtime,
+    )
+    .map_err(crate::BootstrapError::from)?;
     let mut builder = UiAppBuilder::from_bootstrap(builder);
     builder = apply_main_window(root_name, main_window, builder);
     crate::apply_asset_mounts(builder, asset_mounts)

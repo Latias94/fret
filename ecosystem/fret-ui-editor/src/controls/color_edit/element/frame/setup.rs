@@ -4,7 +4,8 @@ use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
-use crate::primitives::{EditorDensity, EditorTokenKeys};
+use crate::primitives::EditorTokenKeys;
+use crate::primitives::style::EditorStyle;
 
 use super::super::super::ColorEdit;
 use super::super::super::ColorEditPopupRuntimeOptions;
@@ -31,6 +32,7 @@ pub(super) struct ColorEditFrameSetup {
     pub(super) draft: Model<String>,
     pub(super) error: Model<Option<Arc<str>>>,
     pub(super) row_height: Px,
+    pub(super) control_height: Px,
     pub(super) popup_padding: Px,
     pub(super) current: Color,
     pub(super) current_hex: Arc<str>,
@@ -56,13 +58,19 @@ pub(super) fn color_edit_frame_setup<H: UiHost>(
     let draft = draft_model(cx);
     let error = error_model(cx);
 
-    let (row_height, popup_padding) = {
+    let (row_height, control_height, popup_padding) = {
         let theme = Theme::global(&*cx.app);
-        let density = EditorDensity::resolve(theme);
+        let style = EditorStyle::resolve(theme);
         let popup_padding = theme
             .metric_by_key(EditorTokenKeys::COLOR_POPUP_PADDING)
             .unwrap_or(Px(8.0));
-        (density.row_height, popup_padding)
+        (
+            style.density.row_height,
+            style
+                .frame_chrome_small()
+                .control_outer_height(style.density.row_height),
+            popup_padding,
+        )
     };
 
     let current = cx
@@ -102,6 +110,7 @@ pub(super) fn color_edit_frame_setup<H: UiHost>(
         draft,
         error,
         row_height,
+        control_height,
         popup_padding,
         current,
         current_hex,

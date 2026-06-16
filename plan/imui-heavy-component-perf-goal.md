@@ -86,6 +86,27 @@ historical records remain in:
   passed. Extracted layout sidecars showed `grid`, `group`, and `inspector` heights unchanged
   across smoke, exposure, click-stress, overlay, and roughness typing-active states.
 
+## 2026-06-16 Editor-Controls Theme-Replay and ColorEdit Note
+
+- A further cookbook pass found that the measurement surface was still polluted by theme lifecycle
+  churn rather than only component layout. `FretApp` installed desktop shadcn defaults after
+  `.setup(...)`, and later window-metrics auto-sync could re-apply the host shadcn theme without
+  replaying the installed editor dense preset.
+- The `fret` app builder now stages desktop defaults so base design-system defaults run before app
+  setup, while runtime defaults still run after setup and can observe registered commands. With the
+  `imui` feature, shadcn auto-theme middleware also replays the installed editor preset after host
+  theme sync.
+- After that lifecycle fix, `ColorEdit` was the remaining inconsistent control at 28px. It now uses
+  the editor frame chrome outer-height contract instead of the bare row height, matching the numeric
+  editor controls.
+- Evidence:
+  `target/fret-diag/cookbook-imui-editor-controls-color-edit-height-v1/sessions/1781577414581-54972/suite.summary.json`
+  passed all five editor-controls scripts. Bounded smoke slices showed `exposure=30px`,
+  `roughness=30px`, `tint=30px`, `search=30px`, and `grid=192px`.
+- Interpretation: this was not a reason to rewrite `fret-ui` first. It was a framework app-start
+  lifecycle bug plus one component contract drift. Both are performance-relevant because height
+  churn and theme replays make 120Hz component measurements noisy and visibly unstable.
+
 ## Decisions
 
 ### D1. Continue mixed component plus mechanism optimization
