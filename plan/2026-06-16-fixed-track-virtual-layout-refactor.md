@@ -242,3 +242,53 @@ Interpretation:
   `inv.nodes=4613` dominate the frame. The next non-retained view-cache optimization should target
   invalidation/root-apply churn during full `non_retained_rerender` window shifts, not more
   row-internal column placement.
+
+### 2026-06-17 Dense Table Text Style Invalidation
+
+- Bounded m4 triage showed that the view-cache filter-shrink frame still paid a large invalidation
+  tax even after fixed-track row geometry:
+  - `frame=27`, `window_shift_reason=inputs_change`,
+    `window_shift_apply_mode=non_retained_rerender`, `items_len=111`.
+  - `layout_time_us=8774`, `layout_engine_solve_time_us=985`,
+    `layout_roots_apply_time_us=6945`.
+  - `invalidation_walk_calls=271`, `invalidation_walk_nodes=4613`,
+    `view_cache_invalidation_truncations=268`.
+  - Invalidation detail was dominated by `declarative_instance_changed`
+    (`267` walks / `4512` walked nodes). Earlier source-location triage anchored most of those
+    walks at dense table text cells.
+- Root cause: `text_table_cell(...)` and `text_table_cell_emphasis(...)` used the inherited
+  text-style cascade for their own fixed `text-sm` table styling. On data-window changes, those
+  leaf text elements carried a local inherited style refinement, so the runtime could not reduce
+  them to the existing fixed-height single-line text-content update path.
+- Refactor slice:
+  - Dense table text now stores the resolved compact `TextStyle` directly in `TextProps.style`.
+  - Emphasized table text uses the same explicit style with `FontWeight::MEDIUM`.
+  - The helpers still keep fixed single-line truncation (`wrap=None`, `overflow=Ellipsis`,
+    shrinkable zero-min layout), but no longer stamp `inherited_text_style`.
+  - General text helpers (`text_sm`, list row labels, compact paragraph text) intentionally keep
+    their inherited-style behavior; this slice is table-specific.
+- Focused validation passed:
+  - `rustfmt --edition 2024 --check ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - `cargo check -p fret-ui-kit --lib`
+  - `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_cell_text_uses_compact_single_line_truncation table_cell_emphasis_text_keeps_single_line_truncation_and_medium_weight --no-fail-fast --no-capture`
+  - `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_plain_rows_omit_background_wrapper table_cell_emphasis_text_keeps_single_line_truncation_and_medium_weight --no-fail-fast --no-capture`
+- Perf rerun:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\data-table-view-cache-direct-m5-inline-text-style --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- Evidence bundle:
+  `target/fret-diag/data-table-view-cache-direct-m5-inline-text-style/1781638279946/bundle.json`.
+- Important metric correction: the `diag perf --sort cpu_cycles` summary selected frame 29 as the
+  CPU-cycle top (`top_total_time_us=2284`), but the actual filter-shrink work remained on frame 27.
+  Do not compare m4 frame 27 against that frame-29 summary.
+- Same-scenario m5 frame 27 result:
+  - `layout_time_us=8158`, `layout_engine_solve_time_us=979`,
+    `layout_roots_apply_time_us=6332`.
+  - `invalidation_walk_calls=7`, `invalidation_walk_nodes=125`,
+    `view_cache_invalidation_truncations=4`.
+  - Remaining invalidation detail is small: `3` text-content walks, `3` instance-change walks,
+    and `1` structural children walk.
+- Interpretation: this removed the pathological per-cell inherited-style invalidation fanout
+  (`271/4613` -> `7/125` walks/nodes). It only modestly improved the same hot frame wall time
+  because root apply is still dominated by the non-retained view-cache rerender applying the 810-node
+  fixed table subtree. The next slice should target why the view-cache window shift still performs
+  full root application (`layout_nodes_performed=810`, `layout_invalidations_count=735`) instead of
+  treating fixed-row text changes and window-shift geometry as bounded row updates.

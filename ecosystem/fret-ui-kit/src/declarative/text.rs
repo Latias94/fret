@@ -74,10 +74,10 @@ pub(crate) fn text_chrome_title_refinement(theme: &Theme) -> TextStyleRefinement
     refinement
 }
 
-pub(crate) fn text_table_cell_emphasis_refinement(theme: &Theme) -> TextStyleRefinement {
-    let mut refinement = text_sm_refinement(theme);
-    refinement.weight = Some(FontWeight::MEDIUM);
-    refinement
+fn text_table_cell_emphasis_style(theme: &Theme) -> TextStyle {
+    let mut style = text_sm_style(theme);
+    style.weight = FontWeight::MEDIUM;
+    style
 }
 
 pub(crate) fn text_control_readout_tabular_refinement(theme: &Theme) -> TextStyleRefinement {
@@ -222,24 +222,18 @@ pub fn text_table_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let refinement = {
-        let theme = Theme::global(&*cx.app);
-        text_sm_refinement(theme)
-    };
+    let style = text_sm_style(Theme::global(&*cx.app));
 
-    ui_typography::scope_text_style(
-        cx.text_props(TextProps {
-            layout: fill_shrinkable_single_line_layout(),
-            text: text.into(),
-            style: None,
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: TextAlign::Start,
-            ink_overflow: TextInkOverflow::None,
-        }),
-        refinement,
-    )
+    cx.text_props(TextProps {
+        layout: fill_shrinkable_single_line_layout(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
+    })
 }
 
 /// Declarative text helper for emphasized dense table cells.
@@ -250,24 +244,18 @@ pub fn text_table_cell_emphasis<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let refinement = {
-        let theme = Theme::global(&*cx.app);
-        text_table_cell_emphasis_refinement(theme)
-    };
+    let style = text_table_cell_emphasis_style(Theme::global(&*cx.app));
 
-    ui_typography::scope_text_style(
-        cx.text_props(TextProps {
-            layout: fill_shrinkable_single_line_layout(),
-            text: text.into(),
-            style: None,
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-            align: TextAlign::Start,
-            ink_overflow: TextInkOverflow::None,
-        }),
-        refinement,
-    )
+    cx.text_props(TextProps {
+        layout: fill_shrinkable_single_line_layout(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
+    })
 }
 
 /// Declarative text helper for list and command-row labels.
@@ -1588,13 +1576,13 @@ mod tests {
             panic!("expected text_table_cell(...) to build a Text element");
         };
 
-        assert!(props.style.is_none());
+        assert_eq!(props.style, Some(text_sm_style(&theme)));
         assert!(props.color.is_none());
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+        assert!(el.inherited_text_style.is_none());
     }
 
     #[test]
@@ -1612,16 +1600,13 @@ mod tests {
             panic!("expected text_table_cell_emphasis(...) to build a Text element");
         };
 
-        assert!(props.style.is_none());
+        assert_eq!(props.style, Some(text_table_cell_emphasis_style(&theme)));
         assert!(props.color.is_none());
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert_eq!(
-            el.inherited_text_style,
-            Some(text_table_cell_emphasis_refinement(&theme))
-        );
+        assert!(el.inherited_text_style.is_none());
     }
 
     #[test]
