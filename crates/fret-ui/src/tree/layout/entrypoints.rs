@@ -103,6 +103,25 @@ impl<H: UiHost> UiTree<H> {
             .map(|idx| plans.swap_remove(idx).1)
     }
 
+    fn can_skip_layout_for_root(
+        &self,
+        root: NodeId,
+        bounds: Rect,
+        force_post_resize_rebuild: bool,
+    ) -> bool {
+        if force_post_resize_rebuild {
+            return false;
+        }
+
+        self.nodes.get(root).is_some_and(|node| {
+            node.bounds == bounds
+                && node.measured_size != Size::default()
+                && !node.invalidation.layout
+                && !node.invalidation.hit_test
+                && !self.node_subtree_layout_dirty(root)
+        })
+    }
+
     pub fn layout_all(
         &mut self,
         app: &mut H,
@@ -1305,16 +1324,12 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
-        if self.invalidated_layout_nodes == 0
-            && self.invalidated_hit_test_nodes == 0
-            && let Some(n) = self.nodes.get(root)
-            && !n.invalidation.layout
-            && !n.invalidation.hit_test
-            && n.bounds == bounds
-            && n.measured_size != Size::default()
-            && !force_post_resize_rebuild
-        {
-            return n.measured_size;
+        if self.can_skip_layout_for_root(root, bounds, force_post_resize_rebuild) {
+            return self
+                .nodes
+                .get(root)
+                .map(|n| n.measured_size)
+                .unwrap_or_default();
         }
 
         let mut viewport_cursor: usize = 0;
@@ -1382,16 +1397,12 @@ impl<H: UiHost> UiTree<H> {
                 UiDebugInvalidationDetail::InteractiveResizeFullRebuild,
             );
         }
-        if self.invalidated_layout_nodes == 0
-            && self.invalidated_hit_test_nodes == 0
-            && let Some(n) = self.nodes.get(root)
-            && !n.invalidation.layout
-            && !n.invalidation.hit_test
-            && n.bounds == bounds
-            && n.measured_size != Size::default()
-            && !force_post_resize_rebuild
-        {
-            return n.measured_size;
+        if self.can_skip_layout_for_root(root, bounds, force_post_resize_rebuild) {
+            return self
+                .nodes
+                .get(root)
+                .map(|n| n.measured_size)
+                .unwrap_or_default();
         }
 
         let mut viewport_cursor: usize = 0;

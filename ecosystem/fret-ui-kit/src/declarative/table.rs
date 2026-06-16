@@ -452,13 +452,7 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                                 );
 
                                 if let Some(test_id) = cell_test_id {
-                                    cx.semantics(
-                                        SemanticsProps {
-                                            test_id: Some(test_id),
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![cell],
-                                    )
+                                    cell.test_id(test_id)
                                 } else {
                                     cell
                                 }
@@ -1364,13 +1358,8 @@ mod tests {
         let cx = cx.elements();
         let label = format!("{}-{row}", col.id.as_ref());
         let test_id = Arc::<str>::from(format!("table-retained-capability-cell-{label}"));
-        cx.semantics(
-            SemanticsProps {
-                test_id: Some(test_id),
-                ..Default::default()
-            },
-            move |cx| vec![cx.text(label.clone())],
-        )
+        cx.text(label)
+            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
     }
 
     fn render_retained_table_for_row_layout(

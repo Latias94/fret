@@ -44,7 +44,7 @@ Last updated: 2026-06-15
 ## M3 - Closeout Or Split
 
 - [x] If the owner remains row/cell churn, complete a second small slice or record why not.
-- [ ] If the owner moves to VirtualList retained reconciliation, command availability, renderer
+- [x] If the owner moves to VirtualList retained reconciliation, command availability, renderer
       payload, or public runtime semantics, split a narrower follow-on.
 - [x] Update `WORKSTREAM.json`, `MILESTONES.md`, and `EVIDENCE_AND_GATES.md`.
 - [ ] Add `CLOSEOUT_AUDIT_YYYY-MM-DD.md` when the lane stops being active.

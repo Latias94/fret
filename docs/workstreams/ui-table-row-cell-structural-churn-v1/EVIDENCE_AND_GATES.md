@@ -261,6 +261,26 @@ Interpretation:
 - A view-cache-enabled variant also passed, but because it introduced `contained_relayout=1` and a
   cache-key mismatch, it is not used as apples-to-apples retained-only evidence for this slice.
 
+## 2026-06-15 Follow-On Split - Retained VirtualList Root Apply
+
+The latest retained node-profile evidence moves the active owner out of table row/cell structure:
+
+- Bundle:
+  `target/fret-diag/vlist-retained-post-key-hook-node-profile-v1/1781537495673/bundle.json`
+- Stats:
+  `total=13489us`, `layout=12062us`, `layout.engine_solve=7498us`,
+  `layout.root apply=10508us`, and `layout.nodes=646`.
+- Node profile:
+  retained `VirtualList` with `test_id=ui-gallery-data-table-torture-root` reported
+  `self_us=7421` and `total_us=9073`; the parent content `Scroll` reported `self_us=1114` and
+  `total_us=10404`.
+
+Decision:
+
+- Split `docs/workstreams/retained-virtual-list-root-apply-v1/`.
+- Keep this table lane for table-local row/cell evidence only. Do not keep shaving wrappers here
+  unless a fresh profile moves the owner back to `fret-ui-kit::table`.
+
 ## First Repro Commands
 
 Existing bundle attribution:

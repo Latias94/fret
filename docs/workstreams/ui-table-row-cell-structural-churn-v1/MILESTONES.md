@@ -83,7 +83,7 @@ Current retained comparison:
 
 ## M3 - Closeout Or Follow-On Split
 
-Status: In progress; current owner is narrower than the original row-scroll issue.
+Status: Follow-on split started; current owner is outside table row/cell structure.
 
 Done criteria:
 
@@ -93,7 +93,9 @@ Done criteria:
 
 Current decision:
 
-- Keep this lane active for the next attribution pass, but do not keep optimizing row-local scroll
-  wrappers or row-local keyboard plumbing unless a fresh profile makes them hot again.
-- The likely next implementation owner is either retained/root-apply breadth or a mechanism-level
-  fixed-track layout primitive that owns child sidecar geometry directly.
+- Do not keep optimizing row-local scroll wrappers or row-local keyboard plumbing unless a fresh
+  profile makes them hot again.
+- Start `retained-virtual-list-root-apply-v1` for retained/root-apply breadth because the latest
+  node profile attributes the owner to retained `VirtualList` and its parent `Scroll`.
+- A mechanism-level fixed-track layout primitive remains a possible later split if retained
+  root-apply attribution proves row geometry is the next owner.

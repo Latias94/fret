@@ -185,6 +185,17 @@ impl<H: UiHost> Widget<H> for CountingPaintWidget {
     }
 }
 
+struct CountingLayoutWidget {
+    layouts: Arc<AtomicUsize>,
+}
+
+impl<H: UiHost> Widget<H> for CountingLayoutWidget {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        self.layouts.fetch_add(1, Ordering::SeqCst);
+        cx.available
+    }
+}
+
 struct ClickCounter {
     clicks: Model<u32>,
 }

@@ -301,6 +301,69 @@ fn view_cache_contained_relayout_does_not_force_next_frame_rerender() {
 }
 
 #[test]
+fn layout_in_skips_clean_root_even_when_another_node_is_layout_dirty() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let clean_layouts = Arc::new(AtomicUsize::new(0));
+    let clean_root = ui.create_node(CountingLayoutWidget {
+        layouts: Arc::clone(&clean_layouts),
+    });
+    let dirty_node = ui.create_node(TestStack);
+
+    ui.set_root(clean_root);
+    ui.set_children(clean_root, Vec::new());
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(clean_layouts.load(Ordering::SeqCst), 1);
+
+    ui.test_clear_node_invalidations(clean_root);
+    ui.nodes[clean_root].bounds = bounds;
+    ui.nodes[clean_root].measured_size = bounds.size;
+
+    ui.invalidate(dirty_node, Invalidation::Layout);
+    let layout_visited_before = ui.debug_stats().layout_nodes_visited;
+    let size = ui.layout_in(&mut app, &mut services, clean_root, bounds, 1.0);
+
+    assert_eq!(size, bounds.size);
+    assert_eq!(
+        clean_layouts.load(Ordering::SeqCst),
+        1,
+        "expected the clean root to reuse its cached layout even when another node is dirty"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_nodes_visited,
+        layout_visited_before,
+        "expected the clean root to skip entering the layout engine"
+    );
+
+    ui.test_clear_node_invalidations(dirty_node);
+    ui.invalidate(dirty_node, Invalidation::HitTestOnly);
+    let hit_test_visited_before = ui.debug_stats().layout_nodes_visited;
+    let size = ui.layout_in(&mut app, &mut services, clean_root, bounds, 1.0);
+
+    assert_eq!(size, bounds.size);
+    assert_eq!(
+        clean_layouts.load(Ordering::SeqCst),
+        1,
+        "expected the clean root to reuse its cached layout even when another node only needs hit-test repair"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_nodes_visited,
+        hit_test_visited_before,
+        "expected a detached hit-test-only invalidation to stay out of the clean root fast path"
+    );
+}
+
+#[test]
 fn view_cache_layout_dirty_expansion_reaches_clean_nested_cache_root_descendants() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
