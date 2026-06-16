@@ -448,4 +448,44 @@ Interpretation:
   - `diag stats` showed the filter-shrink frame at `total=8909us`, `layout=7524us`,
     `layout.solve=1465us`, and `layout.nodes=463`; this is still under the 120Hz budget but remains
     the next measured-row table hotspot to watch.
-- Remaining retained default gap: custom header-cell replacement still uses the declarative path.
+- Remaining retained default gap before the next slice: custom header-cell replacement still used
+  the declarative path.
+
+### 2026-06-17 Retained DataTable Custom Header Cells
+
+- Closed the last known retained default parity gap in the shadcn `DataTable` wrapper:
+  - Added a retained table helper that accepts optional per-column header-cell replacement while
+    preserving the existing `header_label` and `header_accessory_at` helper surfaces.
+  - `DataTable::into_element_with_header_cell(...)` now follows
+    `DataTableVirtualizationStrategy`: `Auto` and `Retained` use the retained host; `Declarative`
+    remains the explicit compatibility path.
+  - Custom header-cell content is built inside the retained header content container, not in an
+    outer probe scope, so slot/local state in custom header controls stays attached to the right
+    element subtree.
+  - The retained path suppresses the default header accessory only for columns whose custom
+    header-cell callback returns `Some(...)`, matching the declarative replacement behavior.
+- Added `data_table_default_custom_header_cells_use_retained_virtual_list_host`, which verifies:
+  - `into_element_with_header_cell(...)` keeps the default path on retained virtualization.
+  - Custom header text remains present in semantics.
+  - Body row debug anchors stay mounted and no non-retained virtual-list window-shift rerenders are
+    recorded.
+- Focused validation passed:
+  - `rustfmt --edition 2024 ecosystem/fret-ui-kit/src/declarative/table.rs ecosystem/fret-ui-shadcn/src/data_table.rs`
+  - `cargo check -p fret-ui-kit --lib`
+  - `cargo check -p fret-ui-kit --tests`
+  - `cargo check -p fret-ui-shadcn --lib`
+  - `cargo check -p fret-ui-shadcn --tests`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_custom_header_cells_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_fixed_rows_with_output_still_use_retained_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-shadcn --lib data_table_default_measured_rows_use_retained_virtual_list_host --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui-kit --lib table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width --profile dev-fast -- --nocapture`
+- Perf regression attempt:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\data-table-view-cache-direct-m10-header-retained-regression --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- The perf rerun did not produce a bundle: after the release build completed, only
+  `script.json`/`script.touch` existed under
+  `target/fret-diag/data-table-view-cache-direct-m10-header-retained-regression`, no
+  `script.result.json` was written, and the orphaned `fretboard-dev.exe` launcher had no child
+  `cargo`/`fret-ui-gallery` process. The local launcher process was stopped to avoid leaving a hung
+  diagnostic session.

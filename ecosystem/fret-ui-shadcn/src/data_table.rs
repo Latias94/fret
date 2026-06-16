@@ -160,7 +160,7 @@ fn parse_column_action(command: &str) -> Option<(ColumnAction, &str)> {
 /// Chooses the virtualization host used by [`DataTable::into_element`].
 ///
 /// `Auto` keeps the public recipe ergonomic while allowing the component to choose the lower-cost
-/// retained host for fixed-row business tables. Use `Declarative` when validating the legacy
+/// retained host for business tables. Use `Declarative` when validating the legacy
 /// pure declarative path or when validating a custom integration against the legacy surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataTableVirtualizationStrategy {
@@ -465,7 +465,6 @@ impl DataTable {
     ///
     /// Notes (v0):
     /// - supports fixed-height and measured (variable-height) rows
-    /// - custom header-cell replacement still uses the declarative path
     #[track_caller]
     pub fn into_element_retained<H: UiHost + 'static, TData>(
         self,
@@ -476,6 +475,50 @@ impl DataTable {
         columns: impl Into<Arc<[ColumnDef<TData>]>>,
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
+        self.into_element_retained_with_header_cell_opt(
+            cx,
+            data,
+            data_revision,
+            state,
+            columns,
+            get_row_key,
+            header_label,
+            None::<
+                Arc<
+                    dyn for<'a> Fn(
+                        &mut dyn ElementContextAccess<'a, H>,
+                        &ColumnDef<TData>,
+                        Option<bool>,
+                    ) -> Option<Vec<AnyElement>>,
+                >,
+            >,
+            cell_at,
+        )
+    }
+
+    fn into_element_retained_with_header_cell_opt<H: UiHost + 'static, TData>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: impl IntoTableStateModel,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        header_cell_at: Option<
+            Arc<
+                dyn for<'a> Fn(
+                    &mut dyn ElementContextAccess<'a, H>,
+                    &ColumnDef<TData>,
+                    Option<bool>,
+                ) -> Option<Vec<AnyElement>>,
+            >,
+        >,
         cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
     ) -> AnyElement
     where
@@ -572,9 +615,10 @@ impl DataTable {
             view_props.optimize_grid_lines = true;
 
             let row_key_at = Arc::new(move |d: &TData, index: usize| (get_row_key)(d, index, None));
+            let header_cell_at = header_cell_at.clone();
 
             vec![
-                fret_ui_kit::declarative::table::table_virtualized_retained_v0_with_output(
+                fret_ui_kit::declarative::table::table_virtualized_retained_v0_with_header_cell_and_output(
                     cx,
                     data.clone(),
                     columns.clone(),
@@ -586,6 +630,7 @@ impl DataTable {
                     view_props,
                     header_label,
                     header_accessory_at,
+                    header_cell_at,
                     cell_at,
                     output.clone(),
                     debug_ids.clone(),
@@ -676,18 +721,47 @@ impl DataTable {
     where
         TData: 'static,
     {
+        let use_retained = match self.virtualization_strategy {
+            DataTableVirtualizationStrategy::Auto | DataTableVirtualizationStrategy::Retained => {
+                true
+            }
+            DataTableVirtualizationStrategy::Declarative => false,
+        };
+
         let state = state.into_table_state_model();
-        self.into_element_with_header_cell_opt(
-            cx,
-            data,
-            data_revision,
-            state,
-            columns,
-            get_row_key,
-            header_label,
-            Some(Arc::new(header_cell_at)),
-            cell_at,
-        )
+        if use_retained {
+            let header_cell_at_raw = Arc::new(header_cell_at);
+            let header_cell_at = Arc::new(
+                move |cx: &mut dyn ElementContextAccess<'_, H>,
+                      col: &ColumnDef<TData>,
+                      sort_state: Option<bool>| {
+                    header_cell_at_raw(cx.elements(), col, sort_state)
+                },
+            );
+            self.into_element_retained_with_header_cell_opt(
+                cx,
+                data,
+                data_revision,
+                state,
+                columns,
+                get_row_key,
+                header_label,
+                Some(header_cell_at),
+                cell_at,
+            )
+        } else {
+            self.into_element_with_header_cell_opt(
+                cx,
+                data,
+                data_revision,
+                state,
+                columns,
+                get_row_key,
+                header_label,
+                Some(Arc::new(header_cell_at)),
+                cell_at,
+            )
+        }
     }
 
     fn into_element_with_header_cell_opt<H: UiHost + 'static, TData>(
@@ -1743,6 +1817,109 @@ mod tests {
                 .iter()
                 .any(|node| node.test_id.as_deref() == Some("data-table-row-1")),
             "expected measured-row DataTable default path to keep virtualized row debug anchors mounted"
+        );
+    }
+
+    #[test]
+    fn data_table_default_custom_header_cells_use_retained_virtual_list_host() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+        let mut services = FakeServices;
+        let state = app.models_mut().insert({
+            let mut state = TableState::default();
+            state.pagination.page_size = 2;
+            state
+        });
+        let data = demo_data();
+        let columns = demo_columns();
+
+        for _ in 0..2 {
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "data-table-custom-header",
+                |cx| {
+                    vec![
+                        DataTable::new()
+                            .row_height(Px(40.0))
+                            .header_height(Px(40.0))
+                            .column_actions_menu(true)
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
+                            .debug_ids(TableDebugIds {
+                                header_cell_test_id_prefix: Some(Arc::<str>::from(
+                                    "data-table-header-",
+                                )),
+                                row_test_id_prefix: Some(Arc::<str>::from("data-table-row-")),
+                                ..Default::default()
+                            })
+                            .into_element_with_header_cell(
+                                cx,
+                                data.clone(),
+                                1,
+                                state.clone(),
+                                columns.clone(),
+                                |_row, index, _parent| RowKey::from_index(index),
+                                |col| Arc::from(col.id.as_ref()),
+                                |cx, col, _sort_state| {
+                                    if col.id.as_ref() == "name" {
+                                        Some(vec![cx.text("Custom name header")])
+                                    } else {
+                                        None
+                                    }
+                                },
+                                |cx, _col, row| cx.text(format!("Row {row}")),
+                            ),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            assert_eq!(
+                ui.debug_stats().virtual_list_window_shifts_non_retained,
+                0,
+                "custom header-cell DataTable default should not require non-retained window-shift rerenders"
+            );
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after custom-header data-table render");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("data-table-row-1")),
+            "expected custom-header DataTable default path to keep virtualized row debug anchors mounted"
+        );
+        assert!(
+            snap.nodes.iter().any(|node| {
+                node.label
+                    .as_deref()
+                    .is_some_and(|name| name.contains("Custom name header"))
+            }),
+            "expected custom header text to remain present in semantics"
         );
     }
 

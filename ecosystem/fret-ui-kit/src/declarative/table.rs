@@ -21,6 +21,11 @@ type TypeaheadLabelAt<TData> = dyn Fn(&TData, usize) -> Arc<str> + Send + Sync;
 type CopyTextAtFn = dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync;
 type RowKeyAt<TData> = dyn Fn(&TData, usize) -> RowKey;
 type HeaderLabelAt<TData> = dyn Fn(&ColumnDef<TData>) -> Arc<str>;
+type HeaderCellAt<H, TData> = dyn for<'a> Fn(
+    &mut dyn ElementContextAccess<'a, H>,
+    &ColumnDef<TData>,
+    Option<bool>,
+) -> Option<Vec<AnyElement>>;
 type HeaderAccessoryAt<H, TData> =
     dyn for<'a> Fn(&mut dyn ElementContextAccess<'a, H>, &ColumnDef<TData>) -> AnyElement;
 type CellAt<H, TData> =
@@ -5353,6 +5358,7 @@ where
         props,
         header_label,
         header_accessory_at,
+        None,
         cell_at,
         None,
         debug_ids,
@@ -5392,6 +5398,48 @@ where
         props,
         header_label,
         header_accessory_at,
+        None,
+        cell_at,
+        output,
+        debug_ids,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+#[track_caller]
+pub fn table_virtualized_retained_v0_with_header_cell_and_output<H: UiHost + 'static, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: Arc<[TData]>,
+    columns: Arc<[ColumnDef<TData>]>,
+    state: impl IntoTableStateModel,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: Arc<RowKeyAt<TData>>,
+    typeahead_label_at: Option<Arc<TypeaheadLabelAt<TData>>>,
+    props: TableViewProps,
+    header_label: Arc<HeaderLabelAt<TData>>,
+    header_accessory_at: Option<Arc<HeaderAccessoryAt<H, TData>>>,
+    header_cell_at: Option<Arc<HeaderCellAt<H, TData>>>,
+    cell_at: Arc<CellAt<H, TData>>,
+    output: Option<Model<TableViewOutput>>,
+    debug_ids: TableDebugIds,
+) -> AnyElement
+where
+    TData: 'static,
+{
+    table_virtualized_retained_v0_impl(
+        cx,
+        data,
+        columns,
+        state,
+        vertical_scroll,
+        items_revision,
+        row_key_at,
+        typeahead_label_at,
+        props,
+        header_label,
+        header_accessory_at,
+        header_cell_at,
         cell_at,
         output,
         debug_ids,
@@ -5412,6 +5460,7 @@ fn table_virtualized_retained_v0_impl<H: UiHost + 'static, TData>(
     props: TableViewProps,
     header_label: Arc<HeaderLabelAt<TData>>,
     header_accessory_at: Option<Arc<HeaderAccessoryAt<H, TData>>>,
+    header_cell_at: Option<Arc<HeaderCellAt<H, TData>>>,
     cell_at: Arc<CellAt<H, TData>>,
     output: Option<Model<TableViewOutput>>,
     debug_ids: TableDebugIds,
@@ -5736,6 +5785,7 @@ where
                         let col_widths = col_widths.clone();
                         let header_label = header_label.clone();
                         let header_accessory_at = header_accessory_at.clone();
+                        let header_cell_at = header_cell_at.clone();
                         let debug_header_cell_test_id_prefix =
                             debug_header_cell_test_id_prefix.clone();
                         let sorting = sorting.clone();
@@ -5758,6 +5808,7 @@ where
                                         let col_id = col.id.clone();
                                         let state = state.clone();
                                         let sorting_for_cell = sorting.clone();
+                                        let header_cell_at = header_cell_at.clone();
                                         let enabled = enable_sorting
                                             && col.enable_sorting
                                             && (col.sort_cmp.is_some() || col.sort_value.is_some());
@@ -5814,8 +5865,9 @@ where
                                                 ..Default::default()
                                             },
                                             move |cx| {
-                                                let accessory =
-                                                    header_accessory_at.as_ref().map(|f| f(cx, col));
+                                                let custom_header_used = Rc::new(Cell::new(false));
+                                                let custom_header_used_for_content =
+                                                    custom_header_used.clone();
                                                 let sort_action = cx.pressable(
                                                     PressableProps {
                                                         layout: {
@@ -5888,42 +5940,6 @@ where
                                                             );
                                                         }
 
-                                                        let header_text: Arc<str> = match sort_state
-                                                        {
-                                                            None => label.clone(),
-                                                            Some(desc) => {
-                                                                let order = if sorting_for_cell
-                                                                    .len()
-                                                                    > 1
-                                                                {
-                                                                    sorting_for_cell
-                                                                        .iter()
-                                                                        .position(|s| {
-                                                                            s.column.as_ref()
-                                                                                == col_id.as_ref()
-                                                                        })
-                                                                        .map(|v| v + 1)
-                                                                } else {
-                                                                    None
-                                                                };
-                                                                match order {
-                                                                    Some(order) => {
-                                                                        Arc::<str>::from(format!(
-                                                                            "{} {}{}",
-                                                                            label,
-                                                                            if desc { "▼" } else { "▲" },
-                                                                            order
-                                                                        ))
-                                                                    }
-                                                                    None => Arc::<str>::from(format!(
-                                                                        "{} {}",
-                                                                        label,
-                                                                        if desc { "▼" } else { "▲" }
-                                                                    )),
-                                                                }
-                                                            }
-                                                        };
-
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 padding: Edges::symmetric(
@@ -5941,15 +5957,55 @@ where
                                                                 },
                                                                 ..Default::default()
                                                             },
-                                                            move |_cx| {
-                                                                vec![table_cell_text(
-                                                                    _cx,
-                                                                    header_text.clone(),
-                                                                )]
+                                                            move |cx| {
+                                                                if let Some(header_cell_at) =
+                                                                    header_cell_at.as_ref()
+                                                                    && let Some(custom) =
+                                                                        header_cell_at(cx, col, sort_state)
+                                                                {
+                                                                    custom_header_used_for_content.set(true);
+                                                                    return custom;
+                                                                }
+
+                                                                let header_text: Arc<str> = match sort_state {
+                                                                    None => label.clone(),
+                                                                    Some(desc) => {
+                                                                        let order = if sorting_for_cell.len() > 1 {
+                                                                            sorting_for_cell
+                                                                                .iter()
+                                                                                .position(|s| {
+                                                                                    s.column.as_ref() == col_id.as_ref()
+                                                                                })
+                                                                                .map(|v| v + 1)
+                                                                        } else {
+                                                                            None
+                                                                        };
+                                                                        match order {
+                                                                            Some(order) => Arc::<str>::from(format!(
+                                                                                "{} {}{}",
+                                                                                label,
+                                                                                if desc { "▼" } else { "▲" },
+                                                                                order
+                                                                            )),
+                                                                            None => Arc::<str>::from(format!(
+                                                                                "{} {}",
+                                                                                label,
+                                                                                if desc { "▼" } else { "▲" }
+                                                                            )),
+                                                                        }
+                                                                    }
+                                                                };
+
+                                                                vec![table_cell_text(cx, header_text)]
                                                             },
                                                         )]
                                                     },
                                                 );
+                                                let accessory = if custom_header_used.get() {
+                                                    None
+                                                } else {
+                                                    header_accessory_at.as_ref().map(|f| f(cx, col))
+                                                };
 
                                                 match accessory {
                                                     None => vec![sort_action],
