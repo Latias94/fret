@@ -71,6 +71,21 @@ historical records remain in:
 - This reduces the chance of visible height jumps in dense editor controls without changing the
   component API surface or moving overlay/focus policy layers.
 
+## 2026-06-16 Editor-Controls Session-Height Note
+
+- Follow-up diagnostics proved the first slice was necessary but not sufficient: the editor-controls
+  suite passed, yet `roughness` typing-active still made the inspector grow.
+- The second slice normalized mode-switching numeric controls. `DragValue`, `Slider`, and
+  `AxisDragValue` now reserve the full editor frame outer height in their session shell instead of
+  only the text line height. `DragValue` and `Slider` typing branches also opt into small editor
+  `NumericInput` sizing.
+- This keeps scrub/slide and typing branches layout-compatible without pushing policy into
+  `fret-ui`.
+- Evidence:
+  `target/fret-diag/cookbook-imui-editor-controls-stable-session-height-v1/sessions/1781574024501-9052/suite.summary.json`
+  passed. Extracted layout sidecars showed `grid`, `group`, and `inspector` heights unchanged
+  across smoke, exposure, click-stress, overlay, and roughness typing-active states.
+
 ## Decisions
 
 ### D1. Continue mixed component plus mechanism optimization

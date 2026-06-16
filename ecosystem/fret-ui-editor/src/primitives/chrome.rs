@@ -32,6 +32,12 @@ pub(crate) struct ResolvedEditorFrameChrome {
     pub(crate) text_px: Px,
 }
 
+impl ResolvedEditorFrameChrome {
+    pub(crate) fn control_outer_height(self, line_height: Px) -> Px {
+        Px(line_height.0 + self.padding.top.0 + self.padding.bottom.0 + self.border_width.0 * 2.0)
+    }
+}
+
 pub(crate) fn resolve_editor_text_field_frame_chrome(
     theme: &Theme,
     size: Size,

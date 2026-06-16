@@ -16,6 +16,7 @@ use crate::primitives::numeric_text_entry::{
     NumericInputSelectionBehavior, NumericTextEntryFocusHandoffState,
     sync_numeric_text_entry_focus_handoff,
 };
+use fret_ui_kit::Size;
 
 pub(super) struct SliderTypingInputArgs<T> {
     pub(super) model: Model<T>,
@@ -76,6 +77,7 @@ where
         .focus_target(input_focus_target.clone())
         .options(NumericInputOptions {
             layout: input_layout,
+            size: Size::Small,
             enabled: enabled && typing,
             focusable: enabled && typing,
             prefix,

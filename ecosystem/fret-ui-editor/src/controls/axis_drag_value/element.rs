@@ -96,7 +96,7 @@ where
 
         let shell_layout = crate::controls::session_shell::session_shell_layout(
             self.options.layout,
-            density.row_height,
+            frame_chrome.control_outer_height(density.row_height),
         );
         let active_branch_layout = crate::controls::session_shell::session_branch_layout();
         let scrub_layout = if typing {

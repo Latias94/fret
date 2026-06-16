@@ -4,9 +4,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 
-pub(super) fn session_shell_layout(mut layout: LayoutStyle, row_height: Px) -> LayoutStyle {
+pub(super) fn session_shell_layout(mut layout: LayoutStyle, control_height: Px) -> LayoutStyle {
     if layout.size.min_height.is_none() {
-        layout.size.min_height = Some(Length::Px(row_height));
+        layout.size.min_height = Some(Length::Px(control_height));
     }
     if matches!(layout.size.width, Length::Auto) {
         layout.size.width = Length::Fill;
@@ -54,7 +54,7 @@ mod tests {
     use fret_ui::element::FlexItemStyle;
 
     #[test]
-    fn session_shell_layout_preserves_caller_flex_and_adds_row_min_height() {
+    fn session_shell_layout_preserves_caller_flex_and_adds_control_min_height() {
         let layout = LayoutStyle {
             size: SizeStyle {
                 width: Length::Auto,

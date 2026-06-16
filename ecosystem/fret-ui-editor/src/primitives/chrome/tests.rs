@@ -1,4 +1,7 @@
-use super::{resolve_editor_text_area_field_style, resolve_editor_text_field_style};
+use super::{
+    ResolvedEditorFrameChrome, resolve_editor_text_area_field_style,
+    resolve_editor_text_field_style,
+};
 use crate::primitives::EditorTokenKeys;
 use fret_app::App;
 use fret_core::{Color, Edges, Px, TextLineHeightPolicy, TextVerticalPlacement};
@@ -105,4 +108,25 @@ fn editor_text_field_style_keeps_legacy_component_text_field_fallback() {
     assert_eq!(chrome.background, Color::from_srgb_hex_rgb(0x14_1b_24));
     assert_eq!(chrome.padding.top, Size::Small.input_py(theme));
     assert_eq!(chrome.border, Edges::all(Px(1.0)));
+}
+
+#[test]
+fn resolved_editor_frame_chrome_reports_outer_control_height() {
+    let chrome = ResolvedEditorFrameChrome {
+        padding: Edges {
+            top: Px(3.0),
+            right: Px(5.0),
+            bottom: Px(4.0),
+            left: Px(5.0),
+        },
+        radius: Px(2.0),
+        border_width: Px(1.0),
+        bg: Color::from_srgb_hex_rgb(0x11_11_11),
+        border: Color::from_srgb_hex_rgb(0x22_22_22),
+        border_focus: Color::from_srgb_hex_rgb(0x33_33_33),
+        fg: Color::from_srgb_hex_rgb(0xee_ee_ee),
+        text_px: Px(12.0),
+    };
+
+    assert_eq!(chrome.control_outer_height(Px(22.0)), Px(31.0));
 }

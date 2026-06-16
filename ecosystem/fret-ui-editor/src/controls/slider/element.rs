@@ -87,8 +87,9 @@ where
         reset_slider_interaction(&mut st);
     }
 
+    let control_height = frame.control_outer_height(density.row_height);
     let shell_layout =
-        crate::controls::session_shell::session_shell_layout(options.layout, density.row_height);
+        crate::controls::session_shell::session_shell_layout(options.layout, control_height);
     let active_branch_layout = crate::controls::session_shell::session_branch_layout();
 
     let slider_layout = if typing {

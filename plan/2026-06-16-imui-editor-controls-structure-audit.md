@@ -39,6 +39,24 @@ deepening pass.
 - The visible-height jump remains a valid concern for explicit `Auto` callers, but it is now an
   opt-in policy rather than the grid default.
 
+## 2026-06-16 DragValue Height-Stability Note
+
+- Post-grid diagnostics showed the suite passed but `roughness` typing still increased
+  `grid/group/inspector` height by about 10px.
+- The root cause was not the property grid anymore. `DragValue` scrub mode reserved only the dense
+  editor line height, while the typing branch reused `NumericInput` chrome and measured as a taller
+  joined text field.
+- `ResolvedEditorFrameChrome::control_outer_height(...)` now gives session-switch controls a shared
+  outer-height contract: line height plus vertical padding plus border.
+- `DragValue`, `Slider`, and `AxisDragValue` session shells now reserve that outer chrome height.
+  `DragValue` and `Slider` typing branches also use `Size::Small` when they delegate to
+  `NumericInput`, matching the editor inspector lane instead of the generic input default.
+- Evidence after the change:
+  `target/fret-diag/cookbook-imui-editor-controls-stable-session-height-v1/sessions/1781574024501-9052/suite.summary.json`
+  passed all five editor-controls scripts. Layout sidecars showed stable `grid=201.33`,
+  `group=240.00`, and `inspector=286.00` heights across smoke, exposure, click-stress, overlay,
+  and roughness typing-active stages.
+
 ## Upstream shape comparison
 
 - `repo-ref/base-ui` keeps its composite list machinery shallow: `CompositeList` is a registry and

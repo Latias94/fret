@@ -62,9 +62,14 @@ where
     let suffix_test_id = derived_test_id(scrub_test_id.as_ref(), "suffix");
     let value_test_id = derived_test_id(scrub_test_id.as_ref(), "value");
 
-    let density = EditorStyle::resolve(Theme::global(&*cx.app)).density;
+    let control_height = {
+        let style = EditorStyle::resolve(Theme::global(&*cx.app));
+        style
+            .frame_chrome_small()
+            .control_outer_height(style.density.row_height)
+    };
     let shell_layout =
-        crate::controls::session_shell::session_shell_layout(options.layout, density.row_height);
+        crate::controls::session_shell::session_shell_layout(options.layout, control_height);
     let active_branch_layout = crate::controls::session_shell::session_branch_layout();
 
     let scrub_layout = if typing {

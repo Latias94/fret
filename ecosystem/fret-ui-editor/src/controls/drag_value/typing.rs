@@ -16,6 +16,7 @@ use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::{NumericValueConstraints, constrain_numeric_value};
+use fret_ui_kit::Size;
 
 pub(super) struct DragValueTypingInputArgs<T> {
     pub(super) model: Model<T>,
@@ -68,6 +69,7 @@ where
         .focus_target(input_focus_target.clone())
         .options(NumericInputOptions {
             layout: input_layout,
+            size: Size::Small,
             enabled: typing,
             focusable: typing,
             prefix,

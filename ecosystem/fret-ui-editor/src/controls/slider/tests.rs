@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use super::Slider;
 use crate::primitives::NumericPresentation;
+use crate::primitives::style::EditorStyle;
 use fret_app::App;
 use fret_core::{AppWindowId, Px, Rect};
+use fret_ui::Theme;
 use fret_ui::element::{AnyElement, ElementKind, Length};
 
 #[test]
@@ -40,10 +42,16 @@ fn slider_uses_stable_session_shell_for_slide_and_typing_branches() {
     };
     assert_eq!(shell.layout.size.width, Length::Fill);
     assert_eq!(shell.layout.size.height, Length::Auto);
-    assert!(matches!(
+    let expected_min_height = {
+        let style = EditorStyle::resolve(Theme::global(&app));
+        style
+            .frame_chrome_small()
+            .control_outer_height(style.density.row_height)
+    };
+    assert_eq!(
         shell.layout.size.min_height,
-        Some(Length::Px(Px(h))) if h > 0.0
-    ));
+        Some(Length::Px(expected_min_height))
+    );
     assert_eq!(shell.layout.flex.grow, 1.0);
     assert_eq!(shell.layout.flex.basis, Length::Px(Px(0.0)));
 
