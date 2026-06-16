@@ -239,6 +239,19 @@ traversal shape, split a narrower follow-on instead of broadening this lane.
   bundle showed a genuinely dirty `VirtualList` subtree. The next step is a perf rerun; if that
   remains dirty-subtree dominated, the lane should deepen the fixed-track/dense retained table
   contract.
-- Interpretation: this is a small harness-noise reduction, not a change in owner. The next slice
-  should remain on retained `VirtualList` mechanism depth or split a narrower fixed-height/fixed-
-  track follow-on.
+
+## Latest Clean-Root Skip Perf Rerun
+
+- Fresh perf bundle:
+  `target/fret-diag/retained-vlist-root-apply-m5-clean-root-skip-v1/1781600101441/bundle.schema2.json`
+- `diag stats --sort cpu_cycles --top 10` reported:
+  - `top_total_time_us=9278`
+  - `top_layout_time_us=8669`
+  - `top_layout_engine_solve_time_us=5977`
+  - `layout.root apply=7897`
+  - `layout.nodes=417`
+- Interpretation: this is a real but bounded improvement over the prior cell-anchor toggle bundle
+  (`9965` / `9328` / `6595` / `8546` / `417`). It confirms the clean-root filter is worth keeping,
+  but ownership still stays with retained `VirtualList` plus parent `Scroll`. The next slice should
+  deepen the fixed-height/fixed-track retained list/table contract instead of pruning another
+  generic wrapper.

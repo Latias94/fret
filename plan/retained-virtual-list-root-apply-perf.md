@@ -344,3 +344,25 @@ table recipe behavior unchanged while still reducing wrapper breadth in the hot 
   ownership away from retained `VirtualList` plus the parent `Scroll`. The cell-anchor toggle is
   worth keeping for torture harness noise reduction, but it is not the architectural fix. The next
   slice should stay on retained `VirtualList` mechanism depth or a narrower follow-on primitive.
+
+### 2026-06-16 Fixed-Track Clean-Root Skip
+
+- Added a clean child-root filter inside `layout_virtual_list_impl`.
+- The filter reuses `UiTree::can_skip_layout_for_root` through `LayoutCx::can_skip_layout_in`, keeps
+  full virtual-list barrier root bookkeeping, and solves/lays out only roots that are not clean.
+- Added focused gate:
+  `retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame`.
+- Focused retained gates passed:
+  `cargo nextest run -p fret-ui 'declarative::tests::virtual_list::retained'`.
+- Fresh perf bundle:
+  `target/fret-diag/retained-vlist-root-apply-m5-clean-root-skip-v1/1781600101441/bundle.schema2.json`.
+- `diag stats --sort cpu_cycles --top 10` reported:
+  - `top_total_time_us=9278`
+  - `top_layout_time_us=8669`
+  - `top_layout_engine_solve_time_us=5977`
+  - `layout.root apply=7897`
+  - `layout.nodes=417`
+- Interpretation: the clean-root skip moved the retained data-table repro modestly, but the
+  remaining hot frame is still retained `VirtualList` / parent `Scroll` with real dirty-subtree
+  work. This supports the fixed-track/dense retained table contract direction rather than more
+  generic wrapper cleanup.

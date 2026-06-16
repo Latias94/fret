@@ -38,8 +38,7 @@ Introduce a narrower fixed-track contract for retained virtualized surfaces:
    `layout_in` calls entirely.
 2. Done: add a child-root skip path that avoids relaying out roots when item bounds, child identity,
    and subtree dirty state are unchanged.
-3. Next: re-run the retained data-table perf script and update the retained virtual-list workstream
-   evidence.
+3. Done: re-run the retained data-table perf script and update the retained virtual-list evidence.
 
 ## Upstream References
 
@@ -81,5 +80,13 @@ Interpretation:
 - It is intentionally not claimed as the full answer for the retained data-table filter-shrink hot
   frame, because the latest perf evidence shows that frame is dominated by a real dirty subtree
   (`layout_child_max_subtree_dirty_count=460`).
-- The next slice still needs a perf rerun; if the data-table hot frame does not move, continue with
-  a deeper fixed-track / dense retained table contract instead of adding more generic wrappers.
+- The retained data-table perf rerun moved modestly:
+  `target/fret-diag/retained-vlist-root-apply-m5-clean-root-skip-v1/1781600101441/bundle.schema2.json`.
+  `diag stats --sort cpu_cycles --top 10` reported `top_total_time_us=9278`,
+  `top_layout_time_us=8669`, `top_layout_engine_solve_time_us=5977`,
+  `layout.root apply=7897`, and `layout.nodes=417`.
+- This is a real improvement over the prior cell-anchor toggle bundle
+  (`9965` / `9328` / `6595` / `8546` / `417`), but it does not move the owner away from
+  retained `VirtualList` plus parent `Scroll`.
+- Continue with a deeper fixed-track / dense retained table contract instead of adding more generic
+  wrapper cleanup.
