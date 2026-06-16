@@ -127,7 +127,7 @@ impl PropertyGridVirtualized {
                 value_max_width: Some(metrics.value_max_width),
                 status_slot_width: Some(metrics.status_slot_width),
                 reset_slot_width: Some(metrics.reset_slot_width),
-                variant: PropertyRowLayoutVariant::Auto,
+                variant: PropertyRowLayoutVariant::Row,
                 ..Default::default()
             };
 
@@ -203,7 +203,8 @@ impl PropertyGridVirtualizedRowCx {
         value: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         actions: impl FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
     ) -> AnyElement {
-        row.options(self.row_options())
-            .into_element(cx, label, value, actions)
+        let mut row = row;
+        row.options = row.options.with_grid_defaults(&self.row_options());
+        row.into_element(cx, label, value, actions)
     }
 }

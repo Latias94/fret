@@ -32,6 +32,45 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-16 Progress Note
+
+- The retained data-table lane has now moved past table-local row/cell duplication into retained
+  `VirtualList` first-pass child layout and root-apply attribution.
+- The latest code inspection says the fixed retained path still walks every visible child; the
+  remaining hotspot is therefore traversal / subtree depth, not a missing measurement toggle.
+- The latest structural cleanup in the hot path removed pure test-id `Semantics` wrappers, but
+  that is support evidence rather than the main perf win.
+- Next comparison should be against upstream `repo-ref/shadcn` and `repo-ref/base-ui` row/tree
+  shape before deciding whether to flatten the row subtree further or split a narrower retained
+  `VirtualList` follow-on.
+
+## 2026-06-16 Editor-Controls Note
+
+- Wrote `plan/2026-06-16-imui-editor-controls-structure-audit.md` to capture the current IMUI
+  structure read.
+- The strongest conclusion is that editor-controls are mostly a component-tree depth and
+  policy-coupling problem, not a runtime mechanism problem.
+- `PropertyRow` / `PropertyGrid` is the clearest next deepening seam, with
+  `PropertyRowLayoutVariant::Auto` the most obvious source of visible height jumps.
+- `DragValue` / `NumericInput` shell depth and popup-heavy surfaces such as `TextAssistField` and
+  `ColorEdit` are secondary follow-ons.
+- Overlay and focus policy should stay in `fret-ui-editor`; they are part of the component lane,
+  not a reason to push more logic into `fret-ui`.
+
+## 2026-06-16 Editor-Controls Implementation Note
+
+- Landed the first structural slice in `fret-ui-editor`:
+  `PropertyGrid` and `PropertyGridVirtualized` now default their shared row policy to
+  `PropertyRowLayoutVariant::Row` instead of implicit `Auto`.
+- Added `PropertyRowOptions::with_grid_defaults(...)` so grid callers can inherit shared metrics
+  without losing an explicit row variant.
+- Added tests covering:
+  - default grid row-context variant,
+  - row-options merge semantics,
+  - and the existing wrapped-row geometry stability path.
+- This reduces the chance of visible height jumps in dense editor controls without changing the
+  component API surface or moving overlay/focus policy layers.
+
 ## Decisions
 
 ### D1. Continue mixed component plus mechanism optimization

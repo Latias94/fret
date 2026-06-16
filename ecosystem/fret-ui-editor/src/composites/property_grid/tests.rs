@@ -34,7 +34,6 @@ fn property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout(
     let mut ui: UiTree<App> = UiTree::new();
     let window = AppWindowId::default();
     ui.set_window(window);
-
     let mut services = WrappingTextServices;
     let grid_id = Arc::new(Mutex::new(None::<GlobalElementId>));
     let first_row_id = Arc::new(Mutex::new(None::<GlobalElementId>));
@@ -182,4 +181,34 @@ fn property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout(
             <= grid_bounds.origin.y.0 + grid_bounds.size.height.0 + 0.5,
         "property grid should contain rows after a wrapping value row: grid={grid_bounds:?} trailing={trailing_bounds:?}"
     );
+}
+
+#[test]
+fn property_grid_row_context_defaults_to_row_variant() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let mut captured = None;
+    let _grid = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-grid-default-row-layout",
+        |cx| {
+            let grid = PropertyGrid::new()
+                .options(PropertyGridOptions {
+                    label_width: Some(Px(104.0)),
+                    column_gap: Some(Px(8.0)),
+                    row_gap: Some(Px(4.0)),
+                    test_id: Some(Arc::from("inspector.grid.default")),
+                    ..Default::default()
+                })
+                .into_element(cx, |_cx, rows| {
+                    captured = Some(rows.row_options().variant);
+                    Vec::new()
+                });
+            vec![grid]
+        },
+    );
+
+    assert_eq!(captured, Some(PropertyRowLayoutVariant::Row));
 }

@@ -48,3 +48,65 @@ impl Default for PropertyRowOptions {
         }
     }
 }
+
+impl PropertyRowOptions {
+    pub(crate) fn with_grid_defaults(mut self, defaults: &Self) -> Self {
+        if self.label_width.is_none() {
+            self.label_width = defaults.label_width;
+        }
+        if self.gap.is_none() {
+            self.gap = defaults.gap;
+        }
+        if self.trailing_gap.is_none() {
+            self.trailing_gap = defaults.trailing_gap;
+        }
+        if self.value_max_width.is_none() {
+            self.value_max_width = defaults.value_max_width;
+        }
+        if self.status_slot_width.is_none() {
+            self.status_slot_width = defaults.status_slot_width;
+        }
+        if self.reset_slot_width.is_none() {
+            self.reset_slot_width = defaults.reset_slot_width;
+        }
+        if self.auto_stack_below.is_none() {
+            self.auto_stack_below = defaults.auto_stack_below;
+        }
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PropertyRowLayoutVariant, PropertyRowOptions};
+    use fret_core::Px;
+
+    #[test]
+    fn with_grid_defaults_preserves_explicit_variant_and_fills_missing_values() {
+        let defaults = PropertyRowOptions {
+            label_width: Some(Px(104.0)),
+            gap: Some(Px(8.0)),
+            trailing_gap: Some(Px(4.0)),
+            value_max_width: Some(Px(240.0)),
+            status_slot_width: Some(Px(12.0)),
+            reset_slot_width: Some(Px(12.0)),
+            auto_stack_below: Some(Px(320.0)),
+            ..Default::default()
+        };
+        let row = PropertyRowOptions {
+            variant: PropertyRowLayoutVariant::Auto,
+            ..Default::default()
+        };
+
+        let merged = row.with_grid_defaults(&defaults);
+
+        assert_eq!(merged.variant, PropertyRowLayoutVariant::Auto);
+        assert_eq!(merged.label_width, defaults.label_width);
+        assert_eq!(merged.gap, defaults.gap);
+        assert_eq!(merged.trailing_gap, defaults.trailing_gap);
+        assert_eq!(merged.value_max_width, defaults.value_max_width);
+        assert_eq!(merged.status_slot_width, defaults.status_slot_width);
+        assert_eq!(merged.reset_slot_width, defaults.reset_slot_width);
+        assert_eq!(merged.auto_stack_below, defaults.auto_stack_below);
+    }
+}
