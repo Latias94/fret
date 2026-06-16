@@ -238,6 +238,56 @@ fn stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff() {
 }
 
 #[test]
+fn inherited_fixed_line_height_text_content_changes_are_paint_only_in_declarative_diff() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_inherited_stable_text_content_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "Ready",
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "expected the baseline tree to be clean before the inherited-style rerender"
+    );
+
+    app.advance_frame();
+    let root = render_inherited_stable_text_content_diff_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "Running",
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "fixed single-line text content changes should not force layout when the stable line box comes from inherited typography"
+    );
+}
+
+#[test]
 fn wrapped_text_content_changes_still_invalidate_layout_in_declarative_diff() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -351,6 +401,37 @@ fn render_stable_text_content_diff_root(
             plain_props.layout.size.height = Length::Px(Px(20.0));
 
             vec![cx.text_props(plain_props)]
+        },
+    )
+}
+
+fn render_inherited_stable_text_content_diff_root(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut FakeTextService,
+    window: AppWindowId,
+    bounds: Rect,
+    text: &'static str,
+) -> NodeId {
+    render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "inherited-text-content-diff",
+        move |cx| {
+            let mut inherited = fret_core::TextStyleRefinement::default();
+            inherited.line_height = Some(Px(18.0));
+            inherited.line_height_policy = Some(fret_core::TextLineHeightPolicy::FixedFromStyle);
+
+            let mut props = crate::element::TextProps::new(text);
+            props.wrap = fret_core::TextWrap::None;
+            props.overflow = fret_core::TextOverflow::Ellipsis;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+            vec![cx.text_props(props).inherit_text_style(inherited)]
         },
     )
 }

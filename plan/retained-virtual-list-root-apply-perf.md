@@ -366,3 +366,22 @@ table recipe behavior unchanged while still reducing wrapper breadth in the hot 
   remaining hot frame is still retained `VirtualList` / parent `Scroll` with real dirty-subtree
   work. This supports the fixed-track/dense retained table contract direction rather than more
   generic wrapper cleanup.
+
+### 2026-06-16 Inherited Fixed Text Slot
+
+- Added a mechanism-level fix for text-only invalidations: declarative diffing now resolves the
+  effective text style from theme + inherited typography before deciding whether nowrap
+  clip/ellipsis text can skip layout.
+- Updated table cell text helpers to fill the fixed column slot while retaining min-width zero,
+  nowrap, and ellipsis. This lets fixed-row/fixed-column table cells express stable text layout
+  without moving table policy into `fret-ui`.
+- Gates passed:
+  - `cargo fmt -p fret-ui -p fret-ui-kit --check`
+  - `cargo nextest run -p fret-ui inherited_fixed_line_height_text_content_changes_are_paint_only_in_declarative_diff stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff`
+  - `cargo nextest run -p fret-ui-kit retained_table_text_uses_shared_table_cell_role`
+  - `cargo build --release -p fretboard-dev -p fret-ui-gallery`
+- Attempted m6 bundle:
+  `target/fret-diag/retained-vlist-root-apply-m6-text-slot-v1`.
+- The m6 perf run failed before selecting the DataTable torture page: the timeout bundle had the
+  nav search field populated but no `ui-gallery-nav-data-table-torture` test id. Do not compare the
+  timeout bundle against m5 as retained table performance evidence.

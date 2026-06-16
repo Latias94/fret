@@ -817,6 +817,7 @@ mod tests {
         let ElementKind::Text(props) = &element.kind else {
             panic!("retained table text should be text");
         };
+        assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.wrap, TextWrap::None);

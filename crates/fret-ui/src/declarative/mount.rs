@@ -500,6 +500,7 @@ where
             let root_id = crate::elements::global_root(window, root_name);
             let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> =
                 Vec::new();
+            let theme = crate::Theme::global(&*app).snapshot();
 
             let seeded_root = window_state.node_entry(root_id).map(|e| e.node);
             let root_node = ui
@@ -585,6 +586,7 @@ where
                         child,
                         None,
                         1.0,
+                        &theme,
                         &mut scroll_bindings,
                         &mut pending_invalidations,
                     ));
@@ -607,6 +609,7 @@ where
                         frame_id,
                         window_state,
                         window_frame,
+                        &theme,
                         &mut scroll_bindings,
                         &mut pending_invalidations,
                         retained_virtual_lists,
@@ -1087,6 +1090,7 @@ where
             app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();
                 prepare_window_frame_for_frame(window_frame, frame_id);
+                let theme = crate::Theme::global(&*_app).snapshot();
 
                 let inserted = window_frame
                     .instances
@@ -1131,6 +1135,7 @@ where
                         child,
                         None,
                         1.0,
+                        &theme,
                         &mut scroll_bindings,
                         &mut pending_invalidations,
                     ));
@@ -1459,6 +1464,7 @@ fn mount_element<H: UiHost + 'static>(
     element: AnyElement,
     parent_inherited_text_style: Option<fret_core::TextStyleRefinement>,
     parent_effective_opacity: f32,
+    theme: &crate::ThemeSnapshot,
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
@@ -1728,7 +1734,13 @@ fn mount_element<H: UiHost + 'static>(
     let previous_inherited_text_style =
         previous_record.and_then(|r| r.inherited_text_style.as_ref());
     if !reuse_view_cache {
-        let mut mask = declarative_instance_change_mask(previous_instance, &instance);
+        let mut mask = declarative_instance_change_mask(
+            previous_instance,
+            previous_inherited_text_style,
+            &instance,
+            inherited_text_style.as_ref(),
+            theme,
+        );
         if previous_inherited_foreground != inherited_foreground {
             mask |= INVALIDATION_PAINT;
         }
@@ -1911,6 +1923,7 @@ fn mount_element<H: UiHost + 'static>(
                 child,
                 inherited_text_style.clone(),
                 effective_opacity,
+                theme,
                 scroll_bindings,
                 pending_invalidations,
             ));
@@ -1943,6 +1956,7 @@ fn mount_element<H: UiHost + 'static>(
                 child,
                 inherited_text_style.clone(),
                 effective_opacity,
+                theme,
                 scroll_bindings,
                 pending_invalidations,
             ));
@@ -1971,6 +1985,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
     frame_id: FrameId,
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &mut WindowFrame,
+    theme: &crate::ThemeSnapshot,
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
     elements: Vec<(
@@ -2275,6 +2290,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 child_element,
                 None,
                 1.0,
+                theme,
                 scroll_bindings,
                 pending_invalidations,
             );
@@ -2619,7 +2635,10 @@ fn paint_passthrough_for_instance(
 
 fn declarative_instance_change_mask(
     previous: Option<&ElementInstance>,
+    previous_inherited_text_style: Option<&fret_core::TextStyleRefinement>,
     next: &ElementInstance,
+    next_inherited_text_style: Option<&fret_core::TextStyleRefinement>,
+    theme: &crate::ThemeSnapshot,
 ) -> u8 {
     let Some(previous) = previous else {
         // Newly mounted nodes already start invalidated (layout/paint/hit-test) and structural
@@ -2752,16 +2771,23 @@ fn declarative_instance_change_mask(
                 paint_changed = true;
             }
             if a.text != b.text {
+                let theme = (*theme).clone();
+                let previous_style = a.resolved_text_style_with_inherited(
+                    theme.clone(),
+                    previous_inherited_text_style,
+                );
+                let next_style =
+                    b.resolved_text_style_with_inherited(theme, next_inherited_text_style);
                 if text_content_update_can_skip_layout(
                     &a.layout,
-                    a.style.as_ref(),
+                    &previous_style,
                     a.wrap,
                     a.overflow,
                     a.align,
                     a.ink_overflow,
                 ) && text_content_update_can_skip_layout(
                     &b.layout,
-                    b.style.as_ref(),
+                    &next_style,
                     b.wrap,
                     b.overflow,
                     b.align,
@@ -2867,7 +2893,7 @@ fn declarative_instance_change_mask(
 
 fn text_content_update_can_skip_layout(
     layout: &LayoutStyle,
-    style: Option<&fret_core::TextStyle>,
+    style: &fret_core::TextStyle,
     wrap: fret_core::TextWrap,
     overflow: fret_core::TextOverflow,
     align: fret_core::TextAlign,
@@ -2893,12 +2919,10 @@ fn text_content_update_can_skip_layout(
     }
 
     matches!(layout.size.height, crate::element::Length::Px(_))
-        || style.is_some_and(|style| {
-            matches!(
-                style.line_height_policy,
-                fret_core::TextLineHeightPolicy::FixedFromStyle
-            ) && (style.line_height.is_some() || style.line_height_em.is_some())
-        })
+        || matches!(
+            style.line_height_policy,
+            fret_core::TextLineHeightPolicy::FixedFromStyle
+        ) && (style.line_height.is_some() || style.line_height_em.is_some())
 }
 
 fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) -> bool {

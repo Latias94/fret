@@ -55,6 +55,42 @@ Introduce a narrower fixed-track contract for retained virtualized surfaces:
 
 ## Progress
 
+### 2026-06-16 Inherited Fixed Text Layout Skip
+
+- Root cause slice: dense retained table cells use ecosystem typography scopes to declare stable
+  control text, but the declarative text-content diff previously checked only `TextProps::style`.
+  That missed inherited fixed line-height policies and kept many single-line cell text updates on
+  the layout invalidation path.
+- Mechanism change: declarative text content invalidation now resolves the effective text style
+  from the current theme snapshot plus inherited typography before deciding whether a text-only
+  update can skip layout.
+- Policy-layer change: `text_table_cell` and `text_table_cell_emphasis` now fill their fixed column
+  slot while retaining `min-width: 0`, nowrap, and ellipsis semantics. This makes table-cell text
+  compatible with the mechanism-level fixed-width/fixed-line-box skip.
+- Added regression coverage:
+  `inherited_fixed_line_height_text_content_changes_are_paint_only_in_declarative_diff` and an
+  updated `retained_table_text_uses_shared_table_cell_role` assertion.
+
+Validation:
+
+- `cargo fmt -p fret-ui -p fret-ui-kit --check`
+- `cargo nextest run -p fret-ui inherited_fixed_line_height_text_content_changes_are_paint_only_in_declarative_diff stable_unwrapped_text_content_changes_are_paint_only_in_declarative_diff`
+- `cargo nextest run -p fret-ui-kit retained_table_text_uses_shared_table_cell_role`
+- `cargo build --release -p fretboard-dev -p fret-ui-gallery`
+
+Perf note:
+
+- Attempted fresh m6 capture under
+  `target/fret-diag/retained-vlist-root-apply-m6-text-slot-v1`.
+- The run failed before reaching the retained DataTable page:
+  step 6 waited for `ui-gallery-nav-data-table-torture`, while the failure bundle showed only
+  `ui-gallery-nav-search` and `ui-gallery-nav-scroll`. The search field had value length 19
+  (`datatable (torture)`), so this is a navigation/filter prelude failure, not valid DataTable
+  performance evidence.
+- The timeout bundle did show post-change steady nav/content frames around `3.2ms total /
+  2.9ms layout`, but those frames are not the target retained table workload and should not be
+  compared against m5.
+
 ### 2026-06-16 Clean Child-Layout Skip
 
 - Added `LayoutCx::can_skip_layout_in`, which reuses the existing `UiTree::can_skip_layout_for_root`

@@ -229,7 +229,7 @@ pub fn text_table_cell<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: shrinkable_single_line_layout(),
+            layout: fill_shrinkable_single_line_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -257,7 +257,7 @@ pub fn text_table_cell_emphasis<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: shrinkable_single_line_layout(),
+            layout: fill_shrinkable_single_line_layout(),
             text: text.into(),
             style: None,
             color: None,
