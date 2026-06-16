@@ -33,7 +33,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the retained data-table filter-shrink script with retained data-table mode, layout node profiling, and scroll layout profiling enabled; then inspect diag stats for retained VirtualList, Scroll, and child-layout phase attribution. The current owner is still the fixed-height retained VirtualList first-pass child layout path under post-layout root apply, but the latest code slice removed a pure test-id Semantics wrapper from retained table cell rendering and the mouse-wheel rerun now shows lower retained layout breadth.",
+    "summary": "Run the retained data-table filter-shrink script with retained data-table mode, layout node profiling, and scroll layout profiling enabled; then inspect diag stats for retained VirtualList, Scroll, and child-layout phase attribution. The current owner is still the fixed-height retained VirtualList first-pass child layout path under post-layout root apply, but the latest code slices removed a pure test-id Semantics wrapper from retained table cell rendering, hoisted the shared horizontal body transform, and the heavy torture preview now disables per-cell debug anchors while still showing the same retained VirtualList plus Scroll owner.",
     "commands": [
       "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/retained-vlist-root-apply-m0-scroll-profile-v1 --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness",
       "target/release/fretboard-dev.exe diag stats <bundle.json> --sort cpu_cycles --top 30"
@@ -77,6 +77,8 @@
         "target/fret-diag/retained-vlist-root-apply-scroll-profile-v1/1781539565855/bundle.schema2.json",
         "target/fret-diag/retained-vlist-root-apply-m1-root-local-skip-v1/1781549017090/bundle.json",
         "target/fret-diag/retained-vlist-root-apply-m2-cell-semantic-dewrapper-v2/1781578517352/bundle.schema2.json",
+        "target/fret-diag/1781592842180/bundle.json",
+        "target/fret-diag/1781594910783/bundle.schema2.json",
         "crates/fret-ui/src/declarative/mount.rs",
         "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
         "crates/fret-ui/src/tree/layout/entrypoints.rs",
@@ -93,7 +95,7 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or barrier relayout. Split a narrower follow-on if evidence says the row/cell tree itself is the dominant cost, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slice removed pure test-id semantics wrappers from retained table cells and the mouse-wheel rerun shows lower retained layout breadth, but the remaining owner is still retained VirtualList plus the parent Scroll rather than broad table-local wrapper code."
+    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or barrier relayout. Split a narrower follow-on if evidence says the row/cell tree itself is the dominant cost, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slices removed pure test-id semantics wrappers from retained table cells, hoisted the shared horizontal body transform, and disabled per-cell debug anchors in the torture preview; they lowered breadth a little, but the remaining owner is still retained VirtualList plus the parent Scroll rather than broad table-local wrapper code."
   },
   "follow_on_of": "ui-table-row-cell-structural-churn-v1"
 }

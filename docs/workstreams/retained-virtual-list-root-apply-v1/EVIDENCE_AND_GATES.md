@@ -261,6 +261,73 @@ Interpretation:
   data-table still needs a denser fixed-height list/table mechanism instead of relying only on
   recipe-level wrapper deletion.
 
+Scroll telemetry expansion:
+
+- The retained `VirtualList` scroll profile now carries child-root splits and root-state counters
+  through `fret-ui`, `fret-bootstrap`, and `fret-diag`.
+- Fresh evidence:
+  `target/fret-diag/retained-vlist-root-apply-m4-scroll-roots-v2/1781584457222/bundle.schema2.json`
+- The hottest scroll node reported:
+  - `layout_child_first_pass_roots=1`
+  - `layout_child_first_pass_layout_invalidated_roots=1`
+  - `layout_child_first_pass_subtree_dirty_roots=1`
+  - `layout_child_first_pass_performed_roots=1`
+  - `layout_child_first_pass_skipped_roots=0`
+  - `layout_child_first_pass_nodes_visited=473`
+  - `layout_child_first_pass_nodes_performed=460`
+  - `layout_child_max_subtree_dirty_count=460`
+- A secondary scroll node reported a broad but less interesting subtree:
+  - `layout_child_first_pass_roots=33`
+  - `layout_child_first_pass_layout_invalidated_roots=33`
+  - `layout_child_first_pass_subtree_dirty_roots=33`
+  - `layout_child_first_pass_performed_roots=33`
+  - `layout_child_first_pass_skipped_roots=0`
+  - `layout_child_first_pass_nodes_visited=429`
+  - `layout_child_first_pass_nodes_performed=429`
+- Interpretation: the telemetry expansion was worthwhile because it removes ambiguity, but it does
+  not expose a clean-root fast path worth pursuing first. The main retained `VirtualList` child
+  path still looks like a deep dirty subtree, so the next mechanism slice should keep aiming at
+  deeper fixed-height layout primitives or tighter barrier propagation, not more root skipping.
+
+## 2026-06-16 Cell-Anchor Toggle Follow-up
+
+- The heavy retained data-table torture preview now disables per-cell debug anchors via
+  `TableDebugIds::row_cell_test_ids = false`, while preserving row anchors for automation.
+- Rebuilt release binaries before remeasuring so the bundle reflects the latest preview change.
+- Fresh perf bundle:
+  `target/fret-diag/1781594910783/bundle.schema2.json`.
+- `diag stats --sort cpu_cycles --top 30` reported:
+  - `top_total_time_us=9965`
+  - `top_layout_time_us=9328`
+  - `top_layout_engine_solve_time_us=6595`
+  - `layout.root apply=8546`
+  - `layout.nodes=417`
+- Interpretation: this is a small harness-noise reduction, not an owner change. The hotspot still
+  lives in retained `VirtualList` plus the parent `Scroll`, so this evidence does not justify
+  widening the lane back into table-local wrapper cleanup.
+
+## 2026-06-16 Retained Body Hoist
+
+- Rebuilt the release binaries before remeasuring, so this bundle reflects the latest body-hoist
+  code.
+- The single-center retained table body now owns the shared horizontal transform at the body
+  wrapper.
+- Focused gate
+  `table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform`
+  passes and directly asserts the body shell.
+- Fresh perf bundle:
+  `target/fret-diag/1781592842180/bundle.json`.
+- `diag stats --sort cpu_cycles --top 30` reported:
+  - `top_total_time_us=10130`
+  - `top_layout_time_us=9468`
+  - `top_layout_engine_solve_time_us=6435`
+  - `layout.root apply=8595`
+  - `layout.nodes=417`
+- Interpretation: this is a measurable improvement over the prior row-background wrapper prune
+  bundle and the stale first-pass body-hoist run, but retained `VirtualList` plus the parent
+  `Scroll` still own the hotspot. The next slice should target a deeper fixed-height list/table
+  mechanism or barrier/root contract, not another small row-wrapper cleanup.
+
 ## Documentation Gates
 
 ```powershell

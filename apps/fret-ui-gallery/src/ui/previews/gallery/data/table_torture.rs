@@ -293,6 +293,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                             "ui-gallery-data-table-header-",
                         )),
                         row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                        row_cell_test_ids: false,
                         ..Default::default()
                     })
                     .into_element_retained(
@@ -347,6 +348,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                             "ui-gallery-data-table-header-",
                         )),
                         row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                        row_cell_test_ids: false,
                         ..Default::default()
                     })
                     .into_element(

@@ -370,6 +370,19 @@ fn table_wrapper_test_id(
     explicit.or_else(|| take_single_root_test_id(children))
 }
 
+fn table_row_cell_test_id(
+    enabled: bool,
+    prefix: Option<&Arc<str>>,
+    row: impl std::fmt::Display,
+    col: impl std::fmt::Display,
+) -> Option<Arc<str>> {
+    if !enabled {
+        return None;
+    }
+
+    prefix.map(|prefix| Arc::<str>::from(format!("{prefix}{row}-cell-{col}")))
+}
+
 #[allow(clippy::too_many_arguments)]
 fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -385,9 +398,11 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
     col_widths: Arc<[Px]>,
     cell_at: Arc<CellAt<H, TData>>,
     row_cell_test_id_prefix: Option<Arc<str>>,
+    row_cell_test_ids: bool,
     left_col_indices: Arc<[usize]>,
     center_col_indices: Arc<[usize]>,
     right_col_indices: Arc<[usize]>,
+    defer_horizontal_scroll_to_body: bool,
     scroll_x: ScrollHandle,
 ) -> AnyElement {
     let render_row_group = |cx: &mut ElementContext<'_, H>,
@@ -413,13 +428,12 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                     let col_w = col_widths[*col_idx];
                     let cell = (cell_at)(cx, col, original);
 
-                    let cell_test_id = row_cell_test_id_prefix.as_ref().map(|prefix| {
-                        Arc::<str>::from(format!(
-                            "{prefix}{row}-cell-{col}",
-                            row = row_key.0,
-                            col = col.id.as_ref()
-                        ))
-                    });
+                    let cell_test_id = table_row_cell_test_id(
+                        row_cell_test_ids,
+                        row_cell_test_id_prefix.as_ref(),
+                        row_key.0,
+                        col.id.as_ref(),
+                    );
 
                     let cell = cx.container(
                         ContainerProps {
@@ -464,10 +478,17 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
         center_col_indices.len(),
         right_col_indices.len(),
     ) {
-        let known_content_width =
-            table_known_content_width_for_indices(&col_widths, center_col_indices.as_ref());
         let center = render_row_group(cx, center_col_indices.as_ref(), None);
-        table_wrap_horizontal_transform(cx, scroll_x.clone(), known_content_width, center)
+        if defer_horizontal_scroll_to_body {
+            center
+        } else {
+            table_wrap_horizontal_transform(
+                cx,
+                scroll_x.clone(),
+                table_known_content_width_for_indices(&col_widths, center_col_indices.as_ref()),
+                center,
+            )
+        }
     } else {
         let left = render_row_group(cx, left_col_indices.as_ref(), None);
         let center = render_row_group(cx, center_col_indices.as_ref(), Some(scroll_x.clone()));
@@ -651,14 +672,33 @@ pub struct TableViewOutput {
 ///
 /// These ids are intended for scripted diagnostics and geometry assertions:
 /// - `header_row_test_id` targets the fixed header viewport row.
+/// - `body_test_id` targets the body viewport / wheel wrapper.
 /// - `header_cell_test_id_prefix` targets stable header-cell anchors for scripted diagnostics.
 ///   Sortable retained headers attach this id to the fill pressable so clicks hit the action owner.
 /// - `row_test_id_prefix` targets table-owned body row / cell layout wrappers.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct TableDebugIds {
     pub header_row_test_id: Option<Arc<str>>,
+    pub body_test_id: Option<Arc<str>>,
     pub header_cell_test_id_prefix: Option<Arc<str>>,
     pub row_test_id_prefix: Option<Arc<str>>,
+    /// When false, body row anchors remain available but per-cell body anchors are skipped.
+    ///
+    /// This is useful for perf harnesses that only need row-level automation targets and do
+    /// not want to pay per-cell test-id formatting cost.
+    pub row_cell_test_ids: bool,
+}
+
+impl Default for TableDebugIds {
+    fn default() -> Self {
+        Self {
+            header_row_test_id: None,
+            body_test_id: None,
+            header_cell_test_id_prefix: None,
+            row_test_id_prefix: None,
+            row_cell_test_ids: true,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -738,6 +778,10 @@ mod tests {
         assert!(
             SOURCE.contains("debug_ids: TableDebugIds,"),
             "table surfaces should accept a shared structured debug-id contract"
+        );
+        assert!(
+            SOURCE.contains("pub body_test_id: Option<Arc<str>>,"),
+            "table debug ids should expose an explicit body anchor"
         );
     }
 
@@ -2495,6 +2539,7 @@ mod tests {
                         },
                     ),
                     TableDebugIds {
+                        body_test_id: Some(Arc::<str>::from("table-retained-unpinned-body")),
                         header_cell_test_id_prefix: Some(Arc::<str>::from(
                             "table-retained-unpinned-header-",
                         )),
@@ -2514,7 +2559,24 @@ mod tests {
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         }
 
+        let body_node = semantics_node_id_by_test_id(&ui, "table-retained-unpinned-body");
         let row_node = semantics_node_id_by_test_id(&ui, "table-retained-unpinned-row-0");
+        assert_eq!(
+            subtree_declarative_kind_count(&ui, &mut app, window, body_node, "Scroll"),
+            0,
+            "single-center retained body wrapper should not own an extra viewport scroll shell"
+        );
+        assert_eq!(
+            subtree_declarative_kind_count(
+                &ui,
+                &mut app,
+                window,
+                body_node,
+                "ScrollContentTransform",
+            ),
+            1,
+            "single-center retained body wrapper should own the shared horizontal transform once"
+        );
         assert_eq!(
             subtree_declarative_kind_count(&ui, &mut app, window, row_node, "Scroll"),
             0,
@@ -2528,8 +2590,8 @@ mod tests {
                 row_node,
                 "ScrollContentTransform",
             ),
-            1,
-            "single-center retained body rows should follow the shared horizontal scroll handle"
+            0,
+            "single-center retained body rows should not own the shared horizontal transform after body hoisting"
         );
 
         let before_header_node =
@@ -3367,9 +3429,11 @@ mod tests {
                         },
                     ),
                     TableDebugIds {
+                        body_test_id: None,
                         header_row_test_id: Some(Arc::<str>::from("table-test-header-row")),
                         header_cell_test_id_prefix: Some(Arc::<str>::from("table-test-header-")),
                         row_test_id_prefix: Some(Arc::<str>::from("table-test-row-")),
+                        row_cell_test_ids: true,
                     },
                 )]
             })
@@ -5205,8 +5269,10 @@ where
     let state = state.into_table_state_model();
     let TableDebugIds {
         header_row_test_id: debug_header_row_test_id,
+        body_test_id: debug_body_test_id,
         header_cell_test_id_prefix: debug_header_cell_test_id_prefix,
         row_test_id_prefix: debug_row_test_id_prefix,
+        row_cell_test_ids: debug_row_cell_test_ids,
     } = debug_ids;
 
     #[derive(Debug, Clone, Copy)]
@@ -5932,9 +5998,11 @@ where
                                 col_widths_for_row.clone(),
                                 cell_at_for_row.clone(),
                                 row_cell_test_id_prefix.clone(),
+                                debug_row_cell_test_ids,
                                 left_col_indices_for_row.clone(),
                                 center_col_indices_for_row.clone(),
                                 right_col_indices_for_row.clone(),
+                                true,
                                 scroll_x_for_row.clone(),
                             )]
                         };
@@ -6321,9 +6389,27 @@ where
                                 wheel.scroll_handle = scroll_x.clone();
                                 wheel.layout = table_scroll_fill_layout();
                                 wheel.layout.overflow = Overflow::Clip;
-                                cx.wheel_region(wheel, |_| vec![body_list])
+                                let body = table_wrap_horizontal_transform(
+                                    cx,
+                                    scroll_x.clone(),
+                                    table_known_content_width_for_indices(
+                                        &col_widths,
+                                        center_col_indices.as_ref(),
+                                    ),
+                                    body_list,
+                                );
+                                let body = cx.wheel_region(wheel, |_| vec![body]);
+                                if let Some(test_id) = debug_body_test_id.clone() {
+                                    body.test_id(test_id)
+                                } else {
+                                    body
+                                }
                             } else {
-                                body_list
+                                if let Some(test_id) = debug_body_test_id.clone() {
+                                    body_list.test_id(test_id)
+                                } else {
+                                    body_list
+                                }
                             };
 
                             vec![header, body]
@@ -6411,8 +6497,10 @@ where
     let profile = std::env::var_os("FRET_TABLE_PROFILE").is_some();
     let TableDebugIds {
         header_row_test_id: debug_header_row_test_id,
+        body_test_id: _debug_body_test_id,
         header_cell_test_id_prefix: debug_header_cell_test_id_prefix,
         row_test_id_prefix: debug_row_test_id_prefix,
+        row_cell_test_ids: debug_row_cell_test_ids,
     } = debug_ids;
     let state_value = cx.watch_model(&state).layout().cloned_or_default();
 
@@ -9167,16 +9255,12 @@ where
                                                                                                             Rc::new(RefCell::new(None));
                                                                                                         let hoisted_test_id_for_cell =
                                                                                                             hoisted_test_id.clone();
-                                                                                                        let explicit_test_id =
-                                                                                                            debug_row_test_id_prefix
-                                                                                                                .as_ref()
-                                                                                                                .map(|prefix| {
-                                                                                                                    Arc::<str>::from(format!(
-                                                                                                                        "{prefix}{row}-cell-{col}",
-                                                                                                                        row = data_row.key.0,
-                                                                                                                        col = col.id.as_ref()
-                                                                                                                    ))
-                                                                                                                });
+                                                                                                        let explicit_test_id = table_row_cell_test_id(
+                                                                                                            debug_row_cell_test_ids,
+                                                                                                            debug_row_test_id_prefix.as_ref(),
+                                                                                                            data_row.key.0,
+                                                                                                            col.id.as_ref(),
+                                                                                                        );
                                                                                                         let cell =
                                                                                                             cx.container(
                                                                                                             ContainerProps {
@@ -9258,16 +9342,12 @@ where
                                                                                                 Rc::new(RefCell::new(None));
                                                                                             let hoisted_test_id_for_cell =
                                                                                                 hoisted_test_id.clone();
-                                                                                            let explicit_test_id =
-                                                                                                debug_row_test_id_prefix
-                                                                                                    .as_ref()
-                                                                                                    .map(|prefix| {
-                                                                                                        Arc::<str>::from(format!(
-                                                                                                            "{prefix}{row}-cell-{col}",
-                                                                                                            row = data_row.key.0,
-                                                                                                            col = col.id.as_ref()
-                                                                                                        ))
-                                                                                                    });
+                                                                                            let explicit_test_id = table_row_cell_test_id(
+                                                                                                debug_row_cell_test_ids,
+                                                                                                debug_row_test_id_prefix.as_ref(),
+                                                                                                data_row.key.0,
+                                                                                                col.id.as_ref(),
+                                                                                            );
                                                                                             let cell = cx.container(
                                                                                                 ContainerProps {
                                                                                                     padding: Edges::symmetric(

@@ -78,6 +78,11 @@ Current evidence:
 - This is a measurable improvement from the prior retained bundles, but the remaining owner is
   still retained `VirtualList` plus the parent `Scroll`. Continue this lane; do not move ownership
   back to broad table-local wrapper shaving without a new node profile that proves it.
+- Fresh scroll telemetry in
+  `target/fret-diag/retained-vlist-root-apply-m4-scroll-roots-v2/1781584457222/bundle.schema2.json`
+  shows the hot retained `VirtualList` child path is still one dirty subtree with deep performed
+  breadth, not a partially skippable mix of clean and dirty roots. That keeps the next slice in
+  mechanism depth / barrier propagation territory.
 
 ## M3 - Follow-on Decision
 
@@ -101,3 +106,38 @@ Done criteria:
 - Any next owner is split into a narrower lane instead of widening this one.
 - If the next evidence pass shows the table/row tree is the main cost, split a table-tree-depth
   follow-on instead of forcing more retained `VirtualList` cleanup.
+
+## M4 - Retained Body Hoist
+
+Status: Complete.
+
+Done criteria:
+
+- The retained single-center body owns the shared horizontal transform once.
+- The focused body-hoist gate passes.
+- A fresh perf bundle is captured against rebuilt release binaries.
+- The remaining hotspot is still retained `VirtualList` plus the parent `Scroll`, so the lane
+  keeps pointing at deeper mechanism work instead of row-wrapper shaving.
+
+Evidence:
+
+- `target/fret-diag/1781592842180/bundle.json`
+- `diag stats --sort cpu_cycles --top 30`: `top_total_time_us=10130`, `layout=9468`,
+  `layout.engine_solve=6435`, `layout.root apply=8595`, `layout.nodes=417`
+
+## M5 - Cell Anchor Toggle
+
+Status: Complete.
+
+Done criteria:
+
+- The heavy torture preview stops paying per-cell debug anchor formatting cost.
+- The retained data-table perf repro is rerun against rebuilt release binaries.
+- The hotspot remains retained `VirtualList` plus the parent `Scroll`, so the lane still points
+  at mechanism work rather than table-local wrapper cleanup.
+
+Evidence:
+
+- `target/fret-diag/1781594910783/bundle.schema2.json`
+- `diag stats --sort cpu_cycles --top 30`: `top_total_time_us=9965`, `layout=9328`,
+  `layout.engine_solve=6595`, `layout.root apply=8546`, `layout.nodes=417`

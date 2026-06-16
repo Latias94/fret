@@ -336,11 +336,13 @@ pub(in crate::ui) fn preview_table_retained_torture(
 
             // Keep retained table diagnostics on table-owned layout wrappers.
             let table_debug_ids = fret_ui_kit::declarative::table::TableDebugIds {
+                body_test_id: None,
                 header_row_test_id: Some(Arc::<str>::from("ui-gallery-table-retained-header-row")),
                 header_cell_test_id_prefix: Some(Arc::<str>::from(
                     "ui-gallery-table-retained-header-",
                 )),
                 row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+                row_cell_test_ids: false,
             };
 
             let table = fret_ui_kit::declarative::table::table_virtualized_retained_v0(

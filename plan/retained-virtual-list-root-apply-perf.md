@@ -275,3 +275,72 @@ table recipe behavior unchanged while still reducing wrapper breadth in the hot 
   because many roots are dirty or because the retained interface itself is still too opaque.
 - This does not change retained layout behavior yet. It is a diagnostics slice that makes the
   next mechanism decision less guessy.
+
+## 2026-06-16 Scroll Telemetry Expansion
+
+- Fresh `m4` evidence from
+  `target/fret-diag/retained-vlist-root-apply-m4-scroll-roots-v2/1781584457222/bundle.schema2.json`
+  shows the hot retained `VirtualList` child path is still one dirty subtree with deep performed
+  breadth, not a partially skippable mix of clean and dirty roots.
+- The hottest scroll node reported
+  `layout_child_first_pass_roots=1`,
+  `layout_child_first_pass_layout_invalidated_roots=1`,
+  `layout_child_first_pass_subtree_dirty_roots=1`,
+  `layout_child_first_pass_performed_roots=1`,
+  `layout_child_first_pass_skipped_roots=0`,
+  `layout_child_first_pass_bounds_changed_roots=0`,
+  `layout_child_first_pass_input_mismatch_roots=0`, and
+  `layout_child_first_pass_input_size_mismatch_roots=0`.
+- The same snapshot also reported
+  `layout_child_first_pass_nodes_visited=473`,
+  `layout_child_first_pass_nodes_performed=460`, and
+  `layout_child_max_subtree_dirty_count=460`.
+- A secondary scroll node showed a broad subtree too, but it was not the main owner:
+  `layout_child_first_pass_roots=33`,
+  `layout_child_first_pass_layout_invalidated_roots=33`,
+  `layout_child_first_pass_subtree_dirty_roots=33`,
+  `layout_child_first_pass_performed_roots=33`,
+  `layout_child_first_pass_skipped_roots=0`, with
+  `layout_child_first_pass_nodes_visited=429` and
+  `layout_child_first_pass_nodes_performed=429`.
+- Interpretation: the telemetry expansion removed ambiguity, but it does not expose an obvious
+  clean-root skip win. The next meaningful optimization should stay on mechanism depth or a tighter
+  barrier/root-apply contract.
+
+### 2026-06-16 Retained Body Hoist
+
+- The single-center retained table body now owns the shared horizontal transform at the body
+  wrapper, instead of letting each retained row keep that transform.
+- Added a `body_test_id` debug anchor to `TableDebugIds` so the retained body shell can be asserted
+  directly.
+- Focused gate:
+  `table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform`
+  passes and confirms the body wrapper owns the shared transform once.
+- Perf remeasurement:
+  `target/fret-diag/1781592842180/bundle.json`.
+- Observed top frame: `total=10130us`, `layout=9468us`,
+  `layout.engine_solve=6435us`, `layout.root apply=8595us`, `layout.nodes=417`.
+- Interpretation: this is a measurable improvement over the prior row-background wrapper prune
+  bundle and the stale first-pass body-hoist run, but the main owner is still retained
+  `VirtualList` plus the parent `Scroll`. The next meaningful work should target the retained
+  fixed-height list/table mechanism or barrier/root contract, not another small row-wrapper
+  cleanup.
+
+### 2026-06-16 Cell-Anchor Toggle Follow-up
+
+- The heavy retained data-table torture preview now disables per-cell debug anchors via
+  `TableDebugIds::row_cell_test_ids = false`, while keeping row anchors available for automation.
+- Rebuilt release binaries before remeasuring so this run reflects the latest table preview
+  change.
+- Fresh perf bundle:
+  `target/fret-diag/1781594910783/bundle.schema2.json`.
+- `diag stats --sort cpu_cycles --top 30` reported:
+  - `top_total_time_us=9965`
+  - `top_layout_time_us=9328`
+  - `top_layout_engine_solve_time_us=6595`
+  - `layout.root apply=8546`
+  - `layout.nodes=417`
+- Interpretation: this is a small follow-up gain over the body-hoist slice, but it does not move
+  ownership away from retained `VirtualList` plus the parent `Scroll`. The cell-anchor toggle is
+  worth keeping for torture harness noise reduction, but it is not the architectural fix. The next
+  slice should stay on retained `VirtualList` mechanism depth or a narrower follow-on primitive.

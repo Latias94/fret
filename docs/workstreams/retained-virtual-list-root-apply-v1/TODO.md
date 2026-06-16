@@ -36,6 +36,8 @@ Last updated: 2026-06-16
 - [ ] Compare the retained row subtree shape against upstream table/list references before the next
       mechanism slice.
 - [x] Decide whether the next slice should deepen `VirtualList` or flatten the row/cell tree.
+- [x] Disable per-cell debug anchors in the torture preview and verify the perf rerun stays
+      owned by retained `VirtualList` plus the parent `Scroll`.
 
 ## M3 - Closeout Or Next Split
 
