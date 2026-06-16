@@ -228,3 +228,34 @@ table recipe behavior unchanged while still reducing wrapper breadth in the hot 
   parent content `Scroll` as the relevant owners. Continue toward retained host/layout dirty
   propagation and barrier seams; do not re-expand the table wrapper cleanup unless a new profile
   proves table-local ownership again.
+
+### 2026-06-16 Row Background Wrapper Prune
+
+- Compared retained table row composition with shadcn/Base UI/ImGui references:
+  shadcn delegates table structure to native DOM table primitives, Base UI virtualized examples
+  delegate windowing to a virtualizer with estimated fixed row sizes, and ImGui dense tables rely on
+  clipper/fixed row constraints instead of a deep generic widget tree.
+- Applied a narrow Fret-side cleanup: retained table body rows now omit the row background
+  container when there is no hover, pressed, or selected background to paint.
+- Selected/active rows still keep the background wrapper, so full-row background geometry remains
+  stable.
+- Added structure gates for both shapes:
+  `table_virtualized_retained_plain_rows_omit_background_wrapper` and
+  `table_virtualized_retained_selected_rows_keep_background_wrapper`.
+- Focused retained table gates passed:
+  `table_virtualized_retained_plain_rows_omit_background_wrapper`,
+  `table_virtualized_retained_selected_rows_keep_background_wrapper`,
+  `table_virtualized_retained_fixed_rows_mount_as_clip_boundaries`,
+  `table_virtualized_retained_measured_rows_do_not_force_row_clip`,
+  `table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform`,
+  `table_virtualized_retained_nested_focus_bubbles_keyboard_to_list`,
+  `table_virtualized_retained_header_debug_ids_click_sort_actions`, and
+  `table_virtualized_retained_selected_semantics_follow_windowed_row_selection`.
+- Fresh bundle:
+  `target/fret-diag/retained-vlist-root-apply-m3-row-bg-wrapper-prune-v1/1781580973922/bundle.schema2.json`
+- `diag stats --sort cpu_cycles --top 30` reported `top_total_time_us=10531`, `layout=9604`,
+  `layout.engine_solve=6332`, `layout.root apply=8637`, and `layout.nodes=481`.
+- This is a small but real breadth reduction over the m2 `10607` / `9882` / `514` shape. The
+  important conclusion is negative: recipe-level wrapper pruning is not enough to reach the 120Hz
+  target for dense shadcn-style tables. The next meaningful work should design a dense retained
+  fixed-row/list primitive or a deeper fixed-height `VirtualList` child-layout fast path.

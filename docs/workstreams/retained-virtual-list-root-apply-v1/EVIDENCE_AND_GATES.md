@@ -226,6 +226,41 @@ Interpretation:
   layout/root-apply dominated, with retained `VirtualList` and the parent `Scroll` as the relevant
   owners.
 
+Row background wrapper prune slice:
+
+```powershell
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_selected_rows_keep_background_wrapper table_virtualized_retained_fixed_rows_mount_as_clip_boundaries table_virtualized_retained_measured_rows_do_not_force_row_clip table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_header_debug_ids_click_sort_actions table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture
+```
+
+Observed gate:
+
+- All 8 focused retained table tests passed.
+- Plain retained rows are gated to connect `Pressable -> ScrollContentTransform` directly.
+- Selected retained rows are gated to keep `Pressable -> Container -> ScrollContentTransform`, so
+  active-row background geometry remains stable.
+
+Perf repro:
+
+```powershell
+target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target\fret-diag\retained-vlist-root-apply-m3-row-bg-wrapper-prune-v1 --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness
+```
+
+Observed bundle:
+
+- `target/fret-diag/retained-vlist-root-apply-m3-row-bg-wrapper-prune-v1/1781580973922/bundle.schema2.json`
+- `top_total_time_us=10531`
+- `top_layout_time_us=9604`
+- `top_layout_engine_solve_time_us=6332`
+- `layout.root apply=8637`
+- `layout.nodes=481`
+
+Interpretation:
+
+- This is a valid row-subtree breadth reduction over the m2 `10607` / `9882` / `514` shape.
+- The gain is intentionally small and confirms the same architectural conclusion: retained
+  data-table still needs a denser fixed-height list/table mechanism instead of relying only on
+  recipe-level wrapper deletion.
+
 ## Documentation Gates
 
 ```powershell

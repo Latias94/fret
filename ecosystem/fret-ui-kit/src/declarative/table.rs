@@ -390,114 +390,109 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
     right_col_indices: Arc<[usize]>,
     scroll_x: ScrollHandle,
 ) -> AnyElement {
-    cx.container(
-        ContainerProps {
-            background: bg,
-            layout: retained_table_row_fill_layout(),
-            ..Default::default()
-        },
-        move |cx| {
-            let render_row_group =
-                |cx: &mut ElementContext<'_, H>,
-                 col_indices: &[usize],
-                 scroll_x_for_group: Option<ScrollHandle>| {
-                    let columns = columns.clone();
-                    let col_widths = col_widths.clone();
-                    let cell_at = cell_at.clone();
-                    let row_cell_test_id_prefix = row_cell_test_id_prefix.clone();
-                    let data = data.clone();
-                    let props = props.clone();
-                    let known_content_width = scroll_x_for_group
-                        .as_ref()
-                        .map(|_| table_known_content_width_for_indices(&col_widths, col_indices));
+    let render_row_group = |cx: &mut ElementContext<'_, H>,
+                            col_indices: &[usize],
+                            scroll_x_for_group: Option<ScrollHandle>| {
+        let columns = columns.clone();
+        let col_widths = col_widths.clone();
+        let cell_at = cell_at.clone();
+        let row_cell_test_id_prefix = row_cell_test_id_prefix.clone();
+        let data = data.clone();
+        let props = props.clone();
+        let known_content_width = scroll_x_for_group
+            .as_ref()
+            .map(|_| table_known_content_width_for_indices(&col_widths, col_indices));
 
-                    let row = ui::h_row(move |cx| {
-                        let original = &data[data_index];
+        let row = ui::h_row(move |cx| {
+            let original = &data[data_index];
 
-                        col_indices
-                            .iter()
-                            .map(|col_idx| {
-                                let col = &columns[*col_idx];
-                                let col_w = col_widths[*col_idx];
-                                let cell = (cell_at)(cx, col, original);
+            col_indices
+                .iter()
+                .map(|col_idx| {
+                    let col = &columns[*col_idx];
+                    let col_w = col_widths[*col_idx];
+                    let cell = (cell_at)(cx, col, original);
 
-                                let cell_test_id = row_cell_test_id_prefix.as_ref().map(|prefix| {
-                                    Arc::<str>::from(format!(
-                                        "{prefix}{row}-cell-{col}",
-                                        row = row_key.0,
-                                        col = col.id.as_ref()
-                                    ))
-                                });
+                    let cell_test_id = row_cell_test_id_prefix.as_ref().map(|prefix| {
+                        Arc::<str>::from(format!(
+                            "{prefix}{row}-cell-{col}",
+                            row = row_key.0,
+                            col = col.id.as_ref()
+                        ))
+                    });
 
-                                let cell = cx.container(
-                                    ContainerProps {
-                                        border: if props.optimize_grid_lines {
-                                            Edges::default()
-                                        } else {
-                                            Edges {
-                                                right: Px(1.0),
-                                                ..Default::default()
-                                            }
-                                        },
-                                        border_color: if props.optimize_grid_lines {
-                                            None
-                                        } else {
-                                            Some(border)
-                                        },
-                                        padding: Edges::symmetric(cell_px, cell_py).into(),
-                                        layout: table_fixed_column_layout(col_w),
-                                        ..Default::default()
-                                    },
-                                    move |_cx| vec![cell],
-                                );
-
-                                if let Some(test_id) = cell_test_id {
-                                    cell.test_id(test_id)
-                                } else {
-                                    cell
+                    let cell = cx.container(
+                        ContainerProps {
+                            border: if props.optimize_grid_lines {
+                                Edges::default()
+                            } else {
+                                Edges {
+                                    right: Px(1.0),
+                                    ..Default::default()
                                 }
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .gap(Space::N0)
-                    .justify_start()
-                    .items_center()
-                    .into_element(cx);
+                            },
+                            border_color: if props.optimize_grid_lines {
+                                None
+                            } else {
+                                Some(border)
+                            },
+                            padding: Edges::symmetric(cell_px, cell_py).into(),
+                            layout: table_fixed_column_layout(col_w),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![cell],
+                    );
 
-                    table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
-                };
+                    if let Some(test_id) = cell_test_id {
+                        cell.test_id(test_id)
+                    } else {
+                        cell
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .gap(Space::N0)
+        .justify_start()
+        .items_center();
 
-            if table_has_single_center_group(
-                left_col_indices.len(),
-                center_col_indices.len(),
-                right_col_indices.len(),
-            ) {
-                let known_content_width =
-                    table_known_content_width_for_indices(&col_widths, center_col_indices.as_ref());
-                let center = render_row_group(cx, center_col_indices.as_ref(), None);
-                vec![table_wrap_horizontal_transform(
-                    cx,
-                    scroll_x.clone(),
-                    known_content_width,
-                    center,
-                )]
-            } else {
-                let left = render_row_group(cx, left_col_indices.as_ref(), None);
-                let center =
-                    render_row_group(cx, center_col_indices.as_ref(), Some(scroll_x.clone()));
-                let right = render_row_group(cx, right_col_indices.as_ref(), None);
+        let row = row.into_element(cx);
+        table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
+    };
 
-                vec![
-                    ui::h_row(|_cx| [left, center, right])
-                        .gap(Space::N0)
-                        .justify_start()
-                        .items_stretch()
-                        .layout(LayoutRefinement::default().w_full())
-                        .into_element(cx),
-                ]
-            }
-        },
-    )
+    let row_content = if table_has_single_center_group(
+        left_col_indices.len(),
+        center_col_indices.len(),
+        right_col_indices.len(),
+    ) {
+        let known_content_width =
+            table_known_content_width_for_indices(&col_widths, center_col_indices.as_ref());
+        let center = render_row_group(cx, center_col_indices.as_ref(), None);
+        table_wrap_horizontal_transform(cx, scroll_x.clone(), known_content_width, center)
+    } else {
+        let left = render_row_group(cx, left_col_indices.as_ref(), None);
+        let center = render_row_group(cx, center_col_indices.as_ref(), Some(scroll_x.clone()));
+        let right = render_row_group(cx, right_col_indices.as_ref(), None);
+
+        ui::h_row(|_cx| [left, center, right])
+            .gap(Space::N0)
+            .justify_start()
+            .items_stretch()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+    };
+
+    if let Some(bg) = bg {
+        cx.container(
+            ContainerProps {
+                background: Some(bg),
+                layout: retained_table_row_fill_layout(),
+                ..Default::default()
+            },
+            move |_cx| vec![row_content],
+        )
+    } else {
+        row_content
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1369,9 +1364,13 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         measure_mode: TableRowMeasureMode,
+        selected_row: Option<RowKey>,
     ) {
         let mut state_value = TableState::default();
         state_value.pagination.page_size = 1;
+        if let Some(row) = selected_row {
+            state_value.row_selection.insert(row);
+        }
         let state = app.models_mut().insert(state_value);
 
         let data: Arc<[u32]> = Arc::from(vec![0u32]);
@@ -1456,6 +1455,28 @@ mod tests {
             .into_iter()
             .map(|child| subtree_declarative_kind_count(ui, app, window, child, kind))
             .sum::<usize>()
+    }
+
+    fn only_child_with_kind(
+        ui: &UiTree<App>,
+        app: &mut App,
+        window: AppWindowId,
+        node: fret_core::NodeId,
+        kind: &'static str,
+    ) -> fret_core::NodeId {
+        let children = ui.debug_node_children(node);
+        assert_eq!(
+            children.len(),
+            1,
+            "expected {kind} to be the only child of {node:?}, got {children:?}"
+        );
+        let child = children[0];
+        assert_eq!(
+            ui.debug_declarative_instance_kind(app, window, child),
+            Some(kind),
+            "unexpected child kind for {child:?}"
+        );
+        child
     }
 
     fn capture_layout_sidecar(
@@ -1567,6 +1588,7 @@ mod tests {
             window,
             bounds,
             TableRowMeasureMode::Fixed,
+            None,
         );
 
         let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
@@ -1614,6 +1636,7 @@ mod tests {
             window,
             bounds,
             TableRowMeasureMode::Measured,
+            None,
         );
 
         let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
@@ -1627,6 +1650,83 @@ mod tests {
             Some(false),
             "measured retained table row should keep overflow visible for runtime measurement"
         );
+    }
+
+    #[test]
+    fn table_virtualized_retained_plain_rows_omit_background_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        render_retained_table_for_row_layout(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            TableRowMeasureMode::Fixed,
+            None,
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        only_child_with_kind(&ui, &mut app, window, row_node, "ScrollContentTransform");
+    }
+
+    #[test]
+    fn table_virtualized_retained_selected_rows_keep_background_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        render_retained_table_for_row_layout(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            TableRowMeasureMode::Fixed,
+            Some(RowKey::from_index(0)),
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        let background = only_child_with_kind(&ui, &mut app, window, row_node, "Container");
+        only_child_with_kind(&ui, &mut app, window, background, "ScrollContentTransform");
     }
 
     #[test]

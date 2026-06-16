@@ -66,6 +66,30 @@ The authoritative lane docs live in:
   The owner still has not moved back to broad table-local code; retained `VirtualList` and parent
   `Scroll` remain the next optimization seam.
 
+## Latest Row Background Wrapper Prune
+
+- Retained table body rows now skip the row background container when the row has no hover,
+  pressed, or selected background.
+- Rows that need a full-row background still keep the wrapper, preserving selected/active row
+  geometry and paint semantics.
+- New structure gates:
+  - `table_virtualized_retained_plain_rows_omit_background_wrapper`
+  - `table_virtualized_retained_selected_rows_keep_background_wrapper`
+- Focused retained table gates still pass after the change.
+- Fresh evidence:
+  `target/fret-diag/retained-vlist-root-apply-m3-row-bg-wrapper-prune-v1/1781580973922/bundle.schema2.json`
+- `diag stats --sort cpu_cycles --top 30` reported:
+  - `top_total_time_us=10531`
+  - `top_layout_time_us=9604`
+  - `top_layout_engine_solve_time_us=6332`
+  - `layout.root apply=8637`
+  - `layout.nodes=481`
+- Interpretation: this slice is a valid narrow breadth reduction over the m2
+  `10607` / `9882` / `514` shape, but the movement is small. The remaining performance problem is
+  not explained by one more retained table wrapper. The next real architecture seam is still a
+  dense retained list/table layout contract or a deeper `VirtualList` fixed-height child-layout
+  fast path.
+
 ## Decisions
 
 - Keep the next optimization focused on retained `VirtualList` child layout and the
@@ -77,6 +101,10 @@ The authoritative lane docs live in:
 - Before the next slice, compare the retained row subtree shape against upstream
   `repo-ref/shadcn` and `repo-ref/base-ui` references so any flattening decision is
   evidence-led rather than style-led.
+- Treat row/cell wrapper deletion as supporting cleanup, not the long-term answer for ImGui-grade
+  dense surfaces. shadcn/Base UI rely on native DOM/table or virtualizer primitives, and ImGui
+  relies on clipper/fixed row constraints; Fret needs an equivalent dense primitive rather than
+  asking every component recipe to pay for a deep generic layout tree.
 - Use the compact `plan/2026-06-16-retained-virtual-list-root-apply-checkpoint.md`
   note as the daily status sink; keep the longer history in
   `plan/retained-virtual-list-root-apply-perf.md`.
@@ -87,6 +115,7 @@ The authoritative lane docs live in:
 - `target/fret-diag/retained-vlist-root-apply-m1-root-local-skip-v1/1781549017090/bundle.json`
 - `target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json`
 - `target/fret-diag/retained-vlist-root-apply-m2-cell-semantic-dewrapper-v2/1781578517352/bundle.schema2.json`
+- `target/fret-diag/retained-vlist-root-apply-m3-row-bg-wrapper-prune-v1/1781580973922/bundle.schema2.json`
 
 ## Repro
 
@@ -115,7 +144,7 @@ target\release\fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-ta
 ## Gates
 
 - `cargo nextest run --cargo-profile dev-fast -p fret-ui retained_virtual_list --no-fail-fast --no-capture`
-- `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast --no-capture`
+- `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_selected_rows_keep_background_wrapper table_virtualized_retained_fixed_rows_mount_as_clip_boundaries table_virtualized_retained_measured_rows_do_not_force_row_clip table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_header_debug_ids_click_sort_actions table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
 - `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast --no-capture`
 - `python -m json.tool docs/workstreams/retained-virtual-list-root-apply-v1/WORKSTREAM.json`
 - `python tools/check_workstream_catalog.py`
