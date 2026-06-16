@@ -4191,7 +4191,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 crate::element::VirtualListMeasureMode::Known => options.key_cache,
             };
 
-            let range = cx.root_state(VirtualListState::default, |state| {
+            struct VirtualListRangeSelection {
+                range: Option<crate::virtual_list::VirtualRange>,
+                deferred_overscan_catchup: bool,
+            }
+
+            let range_selection = cx.root_state(VirtualListState::default, |state| {
                 let axis = options.axis;
                 let (viewport, offset) = match axis {
                     fret_core::Axis::Vertical => (state.viewport_h, state.offset_y),
@@ -4206,8 +4211,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 let mut overscan_for_range = if scroll_handle.deferred_scroll_to_item().is_some() {
                     0
                 } else {
-                    options.overscan
+                    crate::virtual_list::overscan_for_items_change(
+                        options.measure_mode,
+                        state.items_revision,
+                        state.items_len,
+                        options.items_revision,
+                        len,
+                        options.overscan,
+                    )
                 };
+                let deferred_overscan_catchup =
+                    overscan_for_range < options.overscan && options.overscan > 0;
 
                 let prev_anchor = if viewport.0 > 0.0 && len > 0 {
                     state.metrics.visible_range(offset, viewport, 0).map(|r| {
@@ -4324,12 +4338,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 state.deferred_scroll_offset_hint = None;
 
                 let mut range = state.render_window_range.filter(|r| {
-                    r.count == len && r.overscan == options.overscan && r.start_index <= r.end_index
+                    r.count == len
+                        && r.overscan == overscan_for_range
+                        && r.start_index <= r.end_index
                 });
                 if range.is_none() {
                     range = state.window_range.filter(|r| {
                         r.count == len
-                            && r.overscan == options.overscan
+                            && r.overscan == overscan_for_range
                             && r.start_index <= r.end_index
                     });
                 }
@@ -4445,10 +4461,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 }
 
                 state.render_window_range = range;
-                range
+                VirtualListRangeSelection {
+                    range,
+                    deferred_overscan_catchup,
+                }
             });
 
-            let mut indices = range
+            if range_selection.deferred_overscan_catchup {
+                cx.request_frame();
+            }
+
+            let mut indices = range_selection
+                .range
                 .map(range_extractor)
                 .unwrap_or_default()
                 .into_iter()

@@ -446,8 +446,8 @@ Interpretation:
   - `diag perf --sort cpu_cycles` reported `top_total_time_us=1948`,
     `top_layout_time_us=826`, and `top_layout_engine_solve_time_us=0` for the CPU-cycle top frame.
   - `diag stats` showed the filter-shrink frame at `total=8909us`, `layout=7524us`,
-    `layout.solve=1465us`, and `layout.nodes=463`; this is still under the 120Hz budget but remains
-    the next measured-row table hotspot to watch.
+    `layout.solve=1465us`, and `layout.nodes=463`; this is slightly above the 120Hz frame budget
+    (~8333us) and remains the next measured-row table hotspot to watch.
 - Remaining retained default gap before the next slice: custom header-cell replacement still used
   the declarative path.
 
@@ -489,3 +489,49 @@ Interpretation:
   `script.result.json` was written, and the orphaned `fretboard-dev.exe` launcher had no child
   `cargo`/`fret-ui-gallery` process. The local launcher process was stopped to avoid leaving a hung
   diagnostic session.
+
+### 2026-06-17 Measured Row Overscan Burst Scheduling
+
+- Follow-up `diag stats` on the m9 measured-row bundle showed the old `non_retained_rerender`
+  architecture was no longer the cause. The retained measured-row filter-shrink frame was dominated
+  by retained row-root attach/solve breadth:
+  - `total=8909us`, `layout=7524us`, `layout.solve=1465us`, `layout.nodes=463`.
+  - The top layout-engine solve included a row batch root with `batch_roots=33`,
+    `subtree_nodes=369`, `solve_time_us=1058`, and `reason=first_solve`.
+  - The view-cache root was reused; the remaining spike came from rebuilding a measured visible
+    window with gallery overscan `10` after the filter shrank the item set.
+- Added a gallery-only diagnostic knob:
+  `FRET_UI_GALLERY_DATA_TABLE_OVERSCAN`, defaulting to the existing torture-page value `10`. This
+  lets future perf runs compare overscan sensitivity without changing the shadcn table API or
+  default component behavior.
+- Added a mechanism-level `fret-ui::virtual_list::overscan_for_items_change(...)` policy:
+  measured virtual lists render the true visible window first when `items_revision` or item count
+  changes, then request one follow-up frame so the configured overscan catches up. Fixed and known
+  height lists keep their requested overscan immediately.
+- Rationale:
+  - This matches the existing large-scroll-jump policy in `ElementContext::virtual_list...`: avoid
+    attaching/solving a large off-screen row window in the same input frame.
+  - It keeps the component contract intact. shadcn-style tables can still request overscan `10`,
+    but filter/input-change frames prioritize visible correctness and 120Hz latency before
+    prefetch quality.
+- Focused validation passed:
+  - `cargo test -p fret-ui overscan_for_items_change --profile dev-fast -- --nocapture`
+  - `cargo test -p fret-ui mechanism_harness_retained_virtual_list_reconcile_matches_oracles --profile dev-fast -- --nocapture`
+  - `cargo check -p fret-ui-gallery --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+- Release perf validation is still pending. A release gallery rebuild was started because the
+  existing `target/release/fret-ui-gallery.exe` predated this slice; the first `cargo build
+  -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+  exceeded the 10-minute shell timeout and was still compiling. Do not treat the missing m11 bundle
+  as a runtime result.
+- The release build finished shortly after that timeout, and the focused perf rerun passed:
+  `target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --timeout-ms 240000 --dir target\fret-diag\data-table-view-cache-direct-m12-measured-overscan-burst-policy --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_START_PAGE=data_table_torture --env FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort time --top 8 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Evidence bundle:
+  `target/fret-diag/data-table-view-cache-direct-m12-measured-overscan-burst-policy/1781650392981/bundle.schema2.json`.
+- Result:
+  - `diag perf --sort time` reported `top_total_time_us=7605`,
+    `top_layout_time_us=6245`, and `top_layout_engine_solve_time_us=1343`.
+  - `diag stats --sort time --top 5` confirmed p95/max `total=7605us`,
+    `layout=6245us`, `layout.engine_solve=1343us`, `layout.nodes=471`, and
+    `cache.reused=1`.
+  - This brings the measured-row filter-shrink path below the 120Hz frame budget while preserving
+    the configured overscan via the follow-up catch-up frame.

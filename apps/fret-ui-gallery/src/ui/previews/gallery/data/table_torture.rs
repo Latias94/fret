@@ -22,6 +22,10 @@ pub(in crate::ui) fn preview_data_table_torture(
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
+    let overscan: usize = std::env::var("FRET_UI_GALLERY_DATA_TABLE_OVERSCAN")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10);
 
     #[derive(Debug, Clone)]
     struct Row {
@@ -280,7 +284,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                 if keep_alive > 0 {
                     t = t.keep_alive(keep_alive);
                 }
-                t.overscan(10)
+                t.overscan(overscan)
                     .row_height(Px(32.0))
                     .measure_rows(variable_height)
                     .column_actions_menu(true)
@@ -335,7 +339,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                 if keep_alive > 0 {
                     t = t.keep_alive(keep_alive);
                 }
-                t.overscan(10)
+                t.overscan(overscan)
                     .row_height(Px(32.0))
                     .measure_rows(variable_height)
                     .column_actions_menu(true)

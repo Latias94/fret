@@ -246,6 +246,24 @@ pub(crate) fn virtual_list_needs_visible_range_refresh(
     desired_start < mounted_start || desired_end > mounted_end
 }
 
+pub(crate) fn overscan_for_items_change(
+    measure_mode: VirtualListMeasureMode,
+    prev_items_revision: u64,
+    prev_items_len: usize,
+    next_items_revision: u64,
+    next_items_len: usize,
+    requested_overscan: usize,
+) -> usize {
+    if measure_mode == VirtualListMeasureMode::Measured
+        && requested_overscan > 0
+        && (prev_items_revision != next_items_revision || prev_items_len != next_items_len)
+    {
+        0
+    } else {
+        requested_overscan
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct VirtualListMetrics {
     estimate: Px,
@@ -856,6 +874,36 @@ mod tests {
         };
         // Expanded is 2..=6, which exceeds the mounted span 0..=4.
         assert!(virtual_list_needs_visible_range_refresh(&mounted, desired));
+    }
+
+    #[test]
+    fn overscan_for_items_change_skips_measured_data_change_bursts() {
+        assert_eq!(
+            overscan_for_items_change(VirtualListMeasureMode::Measured, 1, 50_000, 2, 4321, 10),
+            0,
+            "measured virtual lists should render the visible window first after input changes"
+        );
+        assert_eq!(
+            overscan_for_items_change(VirtualListMeasureMode::Measured, 2, 50_000, 2, 4321, 10),
+            0,
+            "measured virtual lists should also treat filtered length changes as bursty"
+        );
+    }
+
+    #[test]
+    fn overscan_for_items_change_preserves_steady_state_and_fixed_lists() {
+        assert_eq!(
+            overscan_for_items_change(VirtualListMeasureMode::Measured, 2, 4321, 2, 4321, 10),
+            10
+        );
+        assert_eq!(
+            overscan_for_items_change(VirtualListMeasureMode::Fixed, 1, 50_000, 2, 4321, 10),
+            10
+        );
+        assert_eq!(
+            overscan_for_items_change(VirtualListMeasureMode::Measured, 1, 50_000, 2, 4321, 0),
+            0
+        );
     }
 
     #[test]
