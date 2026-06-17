@@ -1308,6 +1308,11 @@ popover overlay root solve tail.
     (`m14`: `total=68351us`, `layout=68087us`, `solve=66633us`), so that path was reverted.
   - Hard-coding a gallery page-level extent hint before fixing single-axis cross-axis semantics was
     also worse (`m15`: `total=28413us`, `layout=28185us`, `solve=27041us`) and was reverted.
+  - A bounded `Viewport` + `probe_unbounded=false` first-frame seed experiment passed a narrow
+    scroll test but failed the release mount profile (`m16`:
+    `target/fret-diag/code-view-mount-m16-bounded-viewport-seed/1781668998093/bundle.json`,
+    `total=21142us`, `layout=20925us`, `solve=19534us`). This reintroduced a layout-solve spike,
+    so the code and test were removed instead of committed.
   - A direct-start code-view mount run was invalid because the script reset diagnostics after the
     page was already loaded; it is not used as evidence.
 - Best valid current comparison after removing the outer unbounded probe experiment remains
@@ -1318,4 +1323,4 @@ popover overlay root solve tail.
 - Current decision: keep the extent-hint APIs and the core first-frame post-layout seed, but do not
   claim code-view mount is solved. The next material target is a bounded page-scroll contract or a
   shell-structure refactor for fixed viewport pages, not another generic "make all scrolls
-  post-layout authoritative" rewrite.
+  post-layout authoritative" or "seed every bounded viewport scroll" rewrite.
