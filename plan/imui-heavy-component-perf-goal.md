@@ -111,6 +111,39 @@ historical records remain in:
   lifecycle bug plus one component contract drift. Both are performance-relevant because height
   churn and theme replays make 120Hz component measurements noisy and visibly unstable.
 
+## 2026-06-17 Code-View Wrapped Text Measure Cache Note
+
+- The code-view torture mount lane exposed a runtime-level text measurement seam rather than a
+  shadcn component-local wrapper problem.
+- m19 evidence:
+  `target/fret-diag/code-view-mount-m19-layout-profile/1781672024298/bundle.schema2.json` had
+  `top_total_time_us=21508`, `layout_time_us=21295`, and
+  `layout_engine_solve_time_us=20073`. The worst solve measured the same wrapped `Text` node
+  repeatedly with zero measure-cache hits; one text node accounted for about `18485us`.
+- A rejected scroll extent attempt had already shown that skipping child measurement without a
+  compatible reuse path can move the cost into `solve_barrier`. The correct seam was therefore not a
+  broad Scroll rewrite, but a text-level cache keyed by stable text/layout-shaping inputs plus wrap
+  max width.
+- `fret-ui` now keeps a small per-node multi-entry wrapped text measurement cache and reads it before
+  calling the text shaping/prepare path. The cache key includes text, resolved style, wrap, overflow,
+  align, scale, font-stack key, ink-overflow policy, and the wrapped max width.
+- Validation:
+  - `cargo test -p fret-ui --profile dev-fast text_wrapped_measure_cache -- --nocapture`
+  - `cargo check -p fret-ui --profile dev-fast`
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev`
+  - m21:
+    `target/fret-diag/code-view-mount-m21-text-measure-cache-gallery-dev/1781674968783/bundle.schema2.json`
+- m21 result: `top_total_time_us=17098`, `layout_time_us=16873`,
+  `layout_engine_solve_time_us=692`. This removes the m19 text-measure solve spike, but the total
+  frame is still over a strict 120Hz budget because `layout_roots_time_us=16087` is now the dominant
+  cost.
+- Diagnostic caution: this perf script requires `fret-ui-gallery` built with `--features
+  gallery-dev`. A default release gallery binary omits `code_view_torture`, causing the script to
+  time out at the nav-result wait step and producing invalid performance evidence.
+- Next target: attribute the remaining root-apply cost. The current hotspot is no longer repeated
+  text shaping; it is dirty subtree application/root layout work after navigation into the torture
+  page.
+
 ## Decisions
 
 ### D1. Continue mixed component plus mechanism optimization

@@ -4,6 +4,8 @@ use fret_core::{
     TextSlant, TextSpan, TextStyle, TextStyleRefinement, TextWrap,
 };
 
+use crate::element::TextInkOverflow;
+
 pub(crate) fn default_text_style(theme: ThemeSnapshot) -> TextStyle {
     let size = theme
         .metric_by_key("font.size")
@@ -76,6 +78,7 @@ pub(crate) fn text_wrapped_measure_fingerprint_plain(
     wrap: TextWrap,
     overflow: TextOverflow,
     align: TextAlign,
+    ink_overflow: TextInkOverflow,
     scale_factor: f32,
     font_stack_key: u64,
 ) -> u64 {
@@ -87,6 +90,7 @@ pub(crate) fn text_wrapped_measure_fingerprint_plain(
     state = mix_text_wrap(state, wrap);
     state = mix_text_overflow(state, overflow);
     state = mix_text_align(state, align);
+    state = mix_text_ink_overflow(state, ink_overflow);
     state = mix_text_style(state, resolved_style);
     state
 }
@@ -341,6 +345,16 @@ fn mix_text_align(state: u64, align: TextAlign) -> u64 {
             TextAlign::Start => 1,
             TextAlign::Center => 2,
             TextAlign::End => 3,
+        },
+    )
+}
+
+fn mix_text_ink_overflow(state: u64, ink_overflow: TextInkOverflow) -> u64 {
+    mix_u64(
+        state,
+        match ink_overflow {
+            TextInkOverflow::None => 1,
+            TextInkOverflow::AutoPad => 2,
         },
     )
 }

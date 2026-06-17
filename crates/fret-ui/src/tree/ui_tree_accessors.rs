@@ -108,19 +108,34 @@ impl<H: UiHost> UiTree<H> {
         })
     }
 
-    pub(crate) fn node_text_wrapped_measure_cache(
+    pub(crate) fn node_text_wrapped_measure_cache_for(
         &self,
         node: NodeId,
-    ) -> Option<(u64, Option<Px>, Size, Size)> {
-        self.nodes.get(node).and_then(|n| {
-            n.text_wrapped_measure_cache.map(|cache| {
+        fingerprint: u64,
+        constraints_max_width: Option<Px>,
+    ) -> Option<(Size, Size)> {
+        self.nodes
+            .get(node)
+            .and_then(|n| n.text_wrapped_measure_cache.as_ref())
+            .and_then(|cache| cache.get(fingerprint, constraints_max_width))
+            .map(|cache| (cache.measured_size, cache.clamped_size))
+    }
+
+    pub(crate) fn node_latest_text_wrapped_measure_cache(
+        &self,
+        node: NodeId,
+        fingerprint: u64,
+    ) -> Option<(Option<Px>, Size, Size)> {
+        self.nodes
+            .get(node)
+            .and_then(|n| n.text_wrapped_measure_cache.as_ref())
+            .and_then(|cache| cache.latest_for_fingerprint(fingerprint))
+            .map(|cache| {
                 (
-                    cache.fingerprint,
                     cache.constraints_max_width,
                     cache.measured_size,
                     cache.clamped_size,
                 )
             })
-        })
     }
 }

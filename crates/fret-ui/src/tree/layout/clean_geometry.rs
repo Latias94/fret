@@ -1628,6 +1628,7 @@ impl<H: UiHost> UiTree<H> {
                                     props.wrap,
                                     props.overflow,
                                     props.align,
+                                    props.ink_overflow,
                                     scale_factor,
                                     font_stack_key,
                                 );
@@ -1791,8 +1792,8 @@ impl<H: UiHost> UiTree<H> {
         element_kind: &'static str,
         fingerprint: u64,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
-        let Some((cached_fingerprint, constraints_max_width, measured_size, clamped_size)) =
-            self.node_text_wrapped_measure_cache(node)
+        let Some((constraints_max_width, measured_size, clamped_size)) =
+            self.node_latest_text_wrapped_measure_cache(node, fingerprint)
         else {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::TextReflow,
@@ -1801,14 +1802,6 @@ impl<H: UiHost> UiTree<H> {
             .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
             .at_node(node));
         };
-        if fingerprint != cached_fingerprint {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
-            .at_node(node));
-        }
 
         let next_max_width = match instance {
             crate::declarative::frame::ElementInstance::Text(props) => {

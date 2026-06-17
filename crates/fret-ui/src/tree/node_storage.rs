@@ -101,6 +101,54 @@ pub(super) struct TextWrappedMeasureCache {
     pub(super) clamped_size: Size,
 }
 
+#[derive(Debug, Default, Clone)]
+pub(super) struct TextWrappedMeasureCaches {
+    entries: Vec<TextWrappedMeasureCache>,
+}
+
+impl TextWrappedMeasureCaches {
+    const MAX_ENTRIES: usize = 8;
+
+    pub(super) fn get(
+        &self,
+        fingerprint: u64,
+        constraints_max_width: Option<Px>,
+    ) -> Option<TextWrappedMeasureCache> {
+        self.entries.iter().rev().copied().find(|cache| {
+            cache.fingerprint == fingerprint && cache.constraints_max_width == constraints_max_width
+        })
+    }
+
+    pub(super) fn latest_for_fingerprint(
+        &self,
+        fingerprint: u64,
+    ) -> Option<TextWrappedMeasureCache> {
+        self.entries
+            .iter()
+            .rev()
+            .copied()
+            .find(|cache| cache.fingerprint == fingerprint)
+    }
+
+    pub(super) fn insert(&mut self, entry: TextWrappedMeasureCache) {
+        self.entries
+            .retain(|cache| cache.fingerprint == entry.fingerprint);
+
+        if let Some(index) = self
+            .entries
+            .iter()
+            .position(|cache| cache.constraints_max_width == entry.constraints_max_width)
+        {
+            self.entries.remove(index);
+        }
+
+        if self.entries.len() >= Self::MAX_ENTRIES {
+            self.entries.remove(0);
+        }
+        self.entries.push(entry);
+    }
+}
+
 pub(super) struct Node<H: UiHost> {
     pub(super) widget: Option<Box<dyn Widget<H>>>,
     pub(super) element: Option<GlobalElementId>,
@@ -115,7 +163,7 @@ pub(super) struct Node<H: UiHost> {
     pub(super) paint_passthrough: Option<NodePaintPassthrough>,
     pub(super) measure_cache: Option<NodeMeasureCache>,
     pub(super) text_wrap_none_measure_cache: Option<TextWrapNoneMeasureCache>,
-    pub(super) text_wrapped_measure_cache: Option<TextWrappedMeasureCache>,
+    pub(super) text_wrapped_measure_cache: Option<TextWrappedMeasureCaches>,
     pub(super) invalidation: InvalidationFlags,
     pub(super) semantics_dirty: bool,
     pub(super) subtree_semantics_dirty_count: u32,
@@ -128,6 +176,77 @@ pub(super) struct Node<H: UiHost> {
     pub(super) view_cache: ViewCacheFlags,
     pub(super) view_cache_needs_rerender: bool,
     pub(super) text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn wrapped_cache_entry(fingerprint: u64, width: f32, height: f32) -> TextWrappedMeasureCache {
+        TextWrappedMeasureCache {
+            fingerprint,
+            constraints_max_width: Some(Px(width)),
+            measured_size: Size::new(Px(width), Px(height)),
+            clamped_size: Size::new(Px(width), Px(height)),
+        }
+    }
+
+    #[test]
+    fn text_wrapped_measure_cache_keeps_multiple_widths_for_same_fingerprint() {
+        let mut caches = TextWrappedMeasureCaches::default();
+        caches.insert(wrapped_cache_entry(7, 100.0, 20.0));
+        caches.insert(wrapped_cache_entry(7, 200.0, 30.0));
+
+        assert_eq!(
+            caches
+                .get(7, Some(Px(100.0)))
+                .map(|entry| entry.measured_size.height),
+            Some(Px(20.0))
+        );
+        assert_eq!(
+            caches
+                .get(7, Some(Px(200.0)))
+                .map(|entry| entry.measured_size.height),
+            Some(Px(30.0))
+        );
+    }
+
+    #[test]
+    fn text_wrapped_measure_cache_replaces_width_and_evicts_oldest() {
+        let mut caches = TextWrappedMeasureCaches::default();
+        caches.insert(wrapped_cache_entry(7, 100.0, 20.0));
+        caches.insert(wrapped_cache_entry(7, 100.0, 24.0));
+
+        assert_eq!(caches.entries.len(), 1);
+        assert_eq!(
+            caches
+                .get(7, Some(Px(100.0)))
+                .map(|entry| entry.measured_size.height),
+            Some(Px(24.0))
+        );
+
+        for index in 0..TextWrappedMeasureCaches::MAX_ENTRIES {
+            caches.insert(wrapped_cache_entry(7, 200.0 + index as f32, 40.0));
+        }
+
+        assert_eq!(caches.entries.len(), TextWrappedMeasureCaches::MAX_ENTRIES);
+        assert!(caches.get(7, Some(Px(100.0))).is_none());
+    }
+
+    #[test]
+    fn text_wrapped_measure_cache_drops_stale_fingerprints() {
+        let mut caches = TextWrappedMeasureCaches::default();
+        caches.insert(wrapped_cache_entry(7, 100.0, 20.0));
+        caches.insert(wrapped_cache_entry(8, 100.0, 30.0));
+
+        assert!(caches.get(7, Some(Px(100.0))).is_none());
+        assert_eq!(
+            caches
+                .latest_for_fingerprint(8)
+                .map(|entry| entry.measured_size.height),
+            Some(Px(30.0))
+        );
+    }
 }
 
 #[derive(Debug, Clone)]
