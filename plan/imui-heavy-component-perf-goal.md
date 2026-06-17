@@ -1520,3 +1520,11 @@ popover overlay root solve tail.
   barrier-root solve during page navigation/remount, likely by avoiding unnecessary keyed remount
   work or by giving barrier roots a reusable flow subtree contract when the shell bounds and child
   structure are stable.
+- Rejected follow-up: keeping the outer content `ScrollArea` identity stable while keying only the
+  per-page scroll handle/reset state. The hypothesis was that reusing the scroll root would avoid a
+  cold barrier solve. m35 disproved it:
+  `target/fret-diag/code-view-mount-m35-stable-content-scroll/1781694818290/bundle.json` reported
+  `top_total_time_us=24291`; scroll profiling showed the new fixed content root at
+  `solve_barrier=22505us`, `measure_children=4us`, and `layout_children=333us`. The code was
+  removed. The remaining problem is therefore the page content root's cold layout-engine solve, not
+  just the outer `cx.keyed(...)` wrapper.
