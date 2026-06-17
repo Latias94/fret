@@ -1369,3 +1369,53 @@ popover overlay root solve tail.
   claim code-view mount is solved. The next material target is a bounded page-scroll contract or a
   shell-structure refactor for fixed viewport pages, not another generic "make all scrolls
   post-layout authoritative" or "seed every bounded viewport scroll" rewrite.
+
+## 2026-06-17 Fixed Shell + No-Wrap Text Measurement Cache Slice
+
+- Continued the same code-view torture mount lane after m23/m24/m26 attribution. The important
+  split is now clear:
+  - fixed-size passthrough shells can avoid probing children during standalone measurement;
+  - no-wrap text nodes already had a node cache for clean-geometry resize proofs, but measurement
+    did not read that cache before calling the text service.
+- Implemented a conservative fixed-shell measurement fast path in
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`: if both axes are resolvable from known
+  constraints, fixed pixels, fill, or fraction under definite availability, `measure_passthrough_box`
+  can return the clamped size without walking children. Final layout still visits children and owns
+  their geometry.
+- Added `fixed_passthrough_stack_measure_skips_child_subtree` to prove direct measurement skips a
+  counted child subtree, while `layout_all` still lays the child out.
+- m24 evidence showed this is correct but not the main code-view mount win:
+  `target/fret-diag/code-view-mount-m24-fixed-passthrough-measure/1781679309823/bundle.schema2.json`.
+  The content viewport's measured phase moved from roughly `21248us` in m23 to `19492us` in m24,
+  but the same outer scroll still owned the mount frame.
+- m26 node profiling then identified the remaining hot self-time as a short no-wrap text label at
+  `ecosystem/fret-code-view/src/code_block.rs:903` (`TextWrap::None`, `TextOverflow::Clip`,
+  `TextAlign::Start`). That was not shadcn component nesting; it was repeated text measurement
+  through an existing cache-write-only path.
+- Added a no-wrap measurement cache read path for plain text, styled text, and selectable text. The
+  fast path is intentionally limited to `TextWrap::None + TextOverflow::Clip + TextAlign::Start`;
+  `Ellipsis` and non-start alignment keep the existing text-service path because they can
+  materialize or align against `max_width`.
+- Added `nowrap_text_measurement_reuses_node_cache_for_same_fingerprint`, which measures the same
+  no-wrap text node twice and verifies the second measurement does not call the text service again;
+  changing the text fingerprint correctly misses the cache.
+- Focused validation passed:
+  `cargo test -p fret-ui --profile dev-fast nowrap_text_measurement_reuses_node_cache_for_same_fingerprint -- --nocapture`,
+  `cargo test -p fret-ui --profile dev-fast fixed_passthrough_stack_measure_skips_child_subtree -- --nocapture`,
+  `cargo check -p fret-ui --profile dev-fast`, and `cargo fmt -p fret-ui`.
+- Release gallery rebuilt successfully after the command timeout completed in the background:
+  `target/release/fret-ui-gallery.exe` was updated at `2026-06-17 15:27:14`.
+- m27 perf run with the normal profile passed but was noisy:
+  `target/fret-diag/code-view-mount-m27-nowrap-cache/1781681293501/bundle.json` reported
+  `top_total_time_us=32069`, `top_layout_time_us=31815`, `top_layout_engine_solve_time_us=673`,
+  and `top_frame_id=13`.
+- m28 with node profiling gave the more useful attribution:
+  `target/fret-diag/code-view-mount-m28-measure-node-profile/1781681458423/bundle.schema2.json`
+  reported `top_total_time_us=10613`, `top_layout_time_us=10398`, and `top_frame_id=13`.
+  The previous `code_block.rs:903` Text self-time no longer appears in the top node-profile rows.
+  The visible owners are now the outer content `Scroll` and the code-view `VirtualList` mount path
+  (`VirtualList` self around `3240us`, total around `5682us` in the profiled run).
+- Decision: keep both mechanism-layer optimizations because they remove real repeated work and have
+  focused tests. The next material optimization target is not more shadcn wrapper flattening; it is
+  the remaining mount-time scroll/virtual-list negotiation, likely a bounded page-scroll contract or
+  a virtual-list mount policy that avoids unnecessary first-frame extent/child layout work.

@@ -1,6 +1,77 @@
 use super::*;
 
 #[test]
+fn nowrap_text_measurement_reuses_node_cache_for_same_fingerprint() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "nowrap-text-measure-cache",
+        |cx| {
+            let mut props = crate::element::TextProps::new("rust");
+            props.wrap = fret_core::TextWrap::None;
+            props.overflow = fret_core::TextOverflow::Clip;
+            props.align = fret_core::TextAlign::Start;
+            vec![cx.text_props(props)]
+        },
+    );
+    ui.set_root(root);
+    let text_node = ui.children(root)[0];
+
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let first = ui.measure_in(&mut app, &mut text, text_node, constraints, 1.0);
+    assert_eq!(text.prepare_calls, 1);
+
+    let second = ui.measure_in(&mut app, &mut text, text_node, constraints, 1.0);
+    assert_eq!(second, first);
+    assert_eq!(
+        text.prepare_calls, 1,
+        "same-node nowrap text measurement should reuse the node cache"
+    );
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "nowrap-text-measure-cache",
+        |cx| {
+            let mut props = crate::element::TextProps::new("rustfmt");
+            props.wrap = fret_core::TextWrap::None;
+            props.overflow = fret_core::TextOverflow::Clip;
+            props.align = fret_core::TextAlign::Start;
+            vec![cx.text_props(props)]
+        },
+    );
+    ui.set_root(root);
+    let text_node = ui.children(root)[0];
+    let _ = ui.measure_in(&mut app, &mut text, text_node, constraints, 1.0);
+    assert_eq!(
+        text.prepare_calls, 2,
+        "changed nowrap text fingerprint should miss the node cache"
+    );
+}
+
+#[test]
 fn text_word_wrap_uses_near_zero_wrap_width_under_min_content_constraints() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 

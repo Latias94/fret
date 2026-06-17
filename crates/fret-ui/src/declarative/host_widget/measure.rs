@@ -364,6 +364,26 @@ fn normalize_text_measure_constraints(
     constraints
 }
 
+fn cached_text_wrap_none_measure<H: UiHost>(
+    cx: &mut MeasureCx<'_, H>,
+    fingerprint: Option<u64>,
+    layout: LayoutStyle,
+    layout_constraints: LayoutConstraints,
+) -> Option<Size> {
+    let fingerprint = fingerprint?;
+    let (cached_fingerprint, measured_size) = cx.tree.node_text_wrap_none_measure_cache(cx.node)?;
+    if cached_fingerprint != fingerprint {
+        return None;
+    }
+
+    cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
+    Some(clamp_to_constraints_in_measure(
+        measured_size,
+        layout,
+        layout_constraints,
+    ))
+}
+
 fn normalize_auto_layout_intrinsic_constraints(
     mut constraints: LayoutConstraints,
     size: SizeStyle,
@@ -389,6 +409,48 @@ fn normalize_auto_layout_intrinsic_constraints(
     }
 
     constraints
+}
+
+fn resolved_axis_without_children(
+    known: Option<Px>,
+    available: AvailableSpace,
+    length: Length,
+) -> Option<Px> {
+    if let Some(known) = known {
+        return Some(Px(known.0.max(0.0)));
+    }
+
+    match length {
+        Length::Px(px) => Some(Px(px.0.max(0.0))),
+        Length::Fill => available.definite().map(|px| Px(px.0.max(0.0))),
+        Length::Fraction(f) => available.definite().map(|px| {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            Px((px.0 * f).max(0.0))
+        }),
+        Length::Auto => None,
+    }
+}
+
+fn resolved_measure_size_without_children(
+    constraints: LayoutConstraints,
+    layout: LayoutStyle,
+) -> Option<Size> {
+    let width = resolved_axis_without_children(
+        constraints.known.width,
+        constraints.available.width,
+        layout.size.width,
+    )?;
+    let height = resolved_axis_without_children(
+        constraints.known.height,
+        constraints.available.height,
+        layout.size.height,
+    )?;
+
+    Some(clamp_to_constraints_in_measure(
+        Size::new(width, height),
+        layout,
+        constraints,
+    ))
 }
 
 fn child_available_axis_for_layout(
@@ -724,6 +786,10 @@ impl ElementHostWidget {
     ) -> Size {
         let measure_constraints =
             normalize_auto_layout_intrinsic_constraints(cx.constraints, layout.size);
+        if let Some(size) = resolved_measure_size_without_children(measure_constraints, layout) {
+            return size;
+        }
+
         let child_available = child_available_for_layout(measure_constraints, layout, 0.0, 0.0);
         let child_constraints =
             LayoutConstraints::new(LayoutSize::new(None, None), child_available);
@@ -1087,6 +1153,27 @@ impl ElementHostWidget {
             .global::<fret_runtime::TextFontStackKey>()
             .map(|k| k.0)
             .unwrap_or(0);
+        let wrap_none_cache_fingerprint = (props.wrap == TextWrap::None
+            && props.overflow == fret_core::TextOverflow::Clip
+            && props.align == fret_core::TextAlign::Start)
+            .then(|| {
+                crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                    &props.text,
+                    &style,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                )
+            });
+        if let Some(clamped) = cached_text_wrap_none_measure(
+            cx,
+            wrap_none_cache_fingerprint,
+            props.layout,
+            layout_constraints,
+        ) {
+            return clamped;
+        }
         let wrapped_cache_fingerprint = (props.wrap == TextWrap::Word
             && props.overflow == fret_core::TextOverflow::Clip
             && props.align == fret_core::TextAlign::Start)
@@ -1147,14 +1234,16 @@ impl ElementHostWidget {
 
         if props.wrap == TextWrap::None {
             cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
-            let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
-                &props.text,
-                &style,
-                props.overflow,
-                props.align,
-                cx.scale_factor,
-                font_stack_key,
-            );
+            let fingerprint = wrap_none_cache_fingerprint.unwrap_or_else(|| {
+                crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                    &props.text,
+                    &style,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                )
+            });
             let cached_size = if props.overflow == fret_core::TextOverflow::Ellipsis {
                 (clamped.height == metrics.size.height)
                     .then_some(Size::new(Px(0.0), metrics.size.height))
@@ -1230,6 +1319,27 @@ impl ElementHostWidget {
             .global::<fret_runtime::TextFontStackKey>()
             .map(|k| k.0)
             .unwrap_or(0);
+        let wrap_none_cache_fingerprint = (props.wrap == TextWrap::None
+            && props.overflow == fret_core::TextOverflow::Clip
+            && props.align == fret_core::TextAlign::Start)
+            .then(|| {
+                crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    &style,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                )
+            });
+        if let Some(clamped) = cached_text_wrap_none_measure(
+            cx,
+            wrap_none_cache_fingerprint,
+            props.layout,
+            layout_constraints,
+        ) {
+            return clamped;
+        }
         let (metrics, measured_size) = if props.wrap == TextWrap::None {
             let metrics = cx.services.text().measure(&input, text_constraints);
             (metrics, metrics.size)
@@ -1256,14 +1366,16 @@ impl ElementHostWidget {
 
         if props.wrap == TextWrap::None {
             cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
-            let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
-                &props.rich,
-                &style,
-                props.overflow,
-                props.align,
-                cx.scale_factor,
-                font_stack_key,
-            );
+            let fingerprint = wrap_none_cache_fingerprint.unwrap_or_else(|| {
+                crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    &style,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                )
+            });
             let cached_size = if props.overflow == fret_core::TextOverflow::Ellipsis {
                 (clamped.height == metrics.size.height)
                     .then_some(Size::new(Px(0.0), metrics.size.height))
@@ -1329,6 +1441,27 @@ impl ElementHostWidget {
             .global::<fret_runtime::TextFontStackKey>()
             .map(|k| k.0)
             .unwrap_or(0);
+        let wrap_none_cache_fingerprint = (props.wrap == TextWrap::None
+            && props.overflow == fret_core::TextOverflow::Clip
+            && props.align == fret_core::TextAlign::Start)
+            .then(|| {
+                crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    &style,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                )
+            });
+        if let Some(clamped) = cached_text_wrap_none_measure(
+            cx,
+            wrap_none_cache_fingerprint,
+            props.layout,
+            layout_constraints,
+        ) {
+            return clamped;
+        }
         let (metrics, measured_size) = if props.wrap == TextWrap::None {
             let metrics = cx.services.text().measure(&input, text_constraints);
             (metrics, metrics.size)
@@ -1355,14 +1488,16 @@ impl ElementHostWidget {
 
         if props.wrap == TextWrap::None {
             cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
-            let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
-                &props.rich,
-                &style,
-                props.overflow,
-                props.align,
-                cx.scale_factor,
-                font_stack_key,
-            );
+            let fingerprint = wrap_none_cache_fingerprint.unwrap_or_else(|| {
+                crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    &style,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                )
+            });
             let cached_size = if props.overflow == fret_core::TextOverflow::Ellipsis {
                 (clamped.height == metrics.size.height)
                     .then_some(Size::new(Px(0.0), metrics.size.height))

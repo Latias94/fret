@@ -349,6 +349,86 @@ fn scroll_known_content_size_skips_extent_probe_but_updates_handle_extent() {
 }
 
 #[test]
+fn fixed_passthrough_stack_measure_skips_child_subtree() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    struct CountingMeasureLeaf {
+        measure_count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountingMeasureLeaf {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measure_count.fetch_add(1, Ordering::SeqCst);
+            Size::new(Px(640.0), Px(480.0))
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let measure_count = Arc::new(AtomicUsize::new(0));
+    let leaf = ui.create_node(CountingMeasureLeaf {
+        measure_count: measure_count.clone(),
+    });
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fixed-passthrough-stack-measure",
+        |cx| {
+            let mut layout = crate::element::LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(Px(96.0));
+            vec![cx.stack_props(crate::element::StackProps { layout }, |_cx| Vec::new())]
+        },
+    );
+    ui.set_root(root);
+    let stack_node = ui.children(root)[0];
+    ui.set_children(stack_node, vec![leaf]);
+
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(320.0)),
+            AvailableSpace::MaxContent,
+        ),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, stack_node, constraints, 1.0);
+    assert_eq!(measured, Size::new(Px(320.0), Px(96.0)));
+    assert_eq!(
+        measure_count.load(Ordering::SeqCst),
+        0,
+        "a passthrough shell with fully resolved measurement size should not measure its child subtree"
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        measure_count.load(Ordering::SeqCst) > 0,
+        "final layout must still visit the child subtree"
+    );
+}
+
+#[test]
 fn scroll_known_content_size_keeps_cross_axis_viewport_for_single_axis_scroll() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
