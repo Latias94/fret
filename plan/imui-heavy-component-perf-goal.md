@@ -1419,3 +1419,39 @@ popover overlay root solve tail.
   focused tests. The next material optimization target is not more shadcn wrapper flattening; it is
   the remaining mount-time scroll/virtual-list negotiation, likely a bounded page-scroll contract or
   a virtual-list mount policy that avoids unnecessary first-frame extent/child layout work.
+
+## 2026-06-17 Code-View Windowed Line Flattening Slice
+
+- Followed the m28 node profile into the code-view mount path. After the no-wrap text cache slice,
+  the previous short language-label text hotspot no longer appeared; remaining owners were the
+  outer content `Scroll` and the code-view `VirtualList`.
+- Flattened windowed code-view rows by folding line number text and separator spacing into the
+  same `AttributedText` as the code line. This removes the per-visible-line gutter container,
+  separate line-number text node, and horizontal row wrapper while preserving line-number color as
+  muted foreground.
+- Updated the monospace known-content width estimate to account for the folded line-number prefix.
+- Added `windowed_line_numbers_are_folded_into_single_rich_line` to lock the new row shape at the
+  rich-text boundary.
+- Focused validation passed:
+  `cargo test -p fret-code-view --profile dev-fast windowed_line_numbers_are_folded_into_single_rich_line -- --nocapture`,
+  `cargo test -p fret-code-view --profile dev-fast code_block_wrap_grapheme_and_selection_smoke -- --nocapture`,
+  `cargo test -p fret-code-view --profile dev-fast code_block_hover_does_not_trigger_declarative_layout_invalidations -- --nocapture`,
+  `cargo check -p fret-code-view --profile dev-fast`, and `cargo fmt -p fret-code-view`.
+- m29 evidence after rebuilding release gallery:
+  `target/fret-diag/code-view-mount-m29-windowed-line-inline/1781684171577/bundle.schema2.json`.
+  The run reported `top_total_time_us=25023`, `top_layout_time_us=24787`,
+  `top_layout_engine_solve_time_us=641`, and `top_frame_id=13`.
+  Node profiling showed the worst frame still owned by `ui-gallery-content-viewport`
+  (`Scroll` self around `23244us`) with `measure_children=22819us`; the next code-view frame showed
+  `ui-gallery-code-view-root` `VirtualList` self around `1321us`, total around `3298us`.
+- Interpretation: keep the line flattening as a structural reduction for code-view rows, but do not
+  claim it solves the mount hitch. It confirms the larger point that row-local wrapper reduction
+  helps only after the page-level scroll negotiation is addressed.
+- Rejected experiment: a narrow `fret-ui` bounded-viewport scroll shortcut that skipped the
+  pre-layout extent measure for `ScrollIntrinsicMeasureMode::Viewport + probe_unbounded=false`.
+  A focused unit test could prove the intended local behavior, but the release profile regressed:
+  `target/fret-diag/code-view-mount-m30-scroll-shortcircuit/1781686289287/bundle.json` reported
+  `top_total_time_us=39772`, `top_layout_time_us=39532`, and `top_frame_id=13`; node profiling put
+  `ui-gallery-content-viewport` at roughly `37895us` self. The code and test were removed instead
+  of being kept. This reinforces that the next fix should be a stronger page/shell extent contract
+  or a targeted scroll state contract, not a generic bounded-viewport shortcut.

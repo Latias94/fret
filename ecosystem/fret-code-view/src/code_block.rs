@@ -1190,6 +1190,8 @@ fn overlay_chrome<H: UiHost>(
     cx.opacity_props(OpacityProps { layout, opacity }, |_cx| vec![child])
 }
 
+const WINDOWED_LINE_NUMBER_SEPARATOR: &str = "  ";
+
 fn build_code_block_line_rich(
     row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
@@ -1201,6 +1203,29 @@ fn build_code_block_line_rich(
     };
     let mut text = String::new();
     let mut spans: Vec<TextSpan> = Vec::new();
+
+    if prepared.show_line_numbers {
+        let number = line_number_text(prepared, line_i);
+        text.push_str(number.as_ref());
+        spans.push(TextSpan {
+            len: number.len(),
+            shaping: code_shaping.clone(),
+            paint: TextPaintStyle {
+                fg: Some(row_theme.muted_fg),
+                ..Default::default()
+            },
+        });
+
+        text.push_str(WINDOWED_LINE_NUMBER_SEPARATOR);
+        spans.push(TextSpan {
+            len: WINDOWED_LINE_NUMBER_SEPARATOR.len(),
+            shaping: code_shaping.clone(),
+            paint: TextPaintStyle {
+                fg: Some(row_theme.muted_fg),
+                ..Default::default()
+            },
+        });
+    }
 
     for seg in &line.segments {
         if seg.text.is_empty() {
@@ -1224,7 +1249,6 @@ fn build_code_block_line_rich(
 fn estimate_monospace_content_width_px(
     prepared: &crate::prepare::PreparedCodeBlock,
     row_theme: &CodeBlockLineRowTheme,
-    row_gap: Px,
     scrollbar_x_right_inset: Px,
 ) -> Px {
     // `ScrollProps::known_content_size` is only used as scroll extent metadata. A conservative
@@ -1232,8 +1256,9 @@ fn estimate_monospace_content_width_px(
     let char_advance = Px((row_theme.mono_size.0 * 0.7).max(1.0));
     let code_width = Px(char_advance.0 * prepared.max_line_columns.max(1) as f32);
     let gutter_width = if prepared.show_line_numbers {
-        let number_width = Px(char_advance.0 * prepared.line_number_width.max(1) as f32);
-        Px(number_width.0 + row_gap.0 + 1.0)
+        let number_and_separator_columns =
+            prepared.line_number_width.max(1) + WINDOWED_LINE_NUMBER_SEPARATOR.len();
+        Px(char_advance.0 * number_and_separator_columns as f32)
     } else {
         Px(0.0)
     };
@@ -1320,7 +1345,6 @@ struct CodeBlockLineRowTheme {
     mono_line_height: Px,
     fg: fret_core::Color,
     muted_fg: fret_core::Color,
-    border: fret_core::Color,
     syntax_colors: HashMap<&'static str, Option<fret_core::Color>>,
 }
 
@@ -1338,7 +1362,6 @@ impl CodeBlockLineRowTheme {
             mono_line_height: theme.metric_token("metric.font.mono_line_height"),
             fg: theme.color_token("foreground"),
             muted_fg: theme.color_token("muted-foreground"),
-            border: theme.color_token("border"),
             syntax_colors,
         }
     }
@@ -1351,8 +1374,6 @@ impl CodeBlockLineRowTheme {
 fn render_code_block_line_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     row_theme: &CodeBlockLineRowTheme,
-    prepared: &crate::prepare::PreparedCodeBlock,
-    line_i: usize,
     rich: AttributedText,
 ) -> AnyElement {
     let text_style = typography::as_control_text(TextStyle {
@@ -1380,66 +1401,7 @@ fn render_code_block_line_row<H: UiHost>(
         ink_overflow: TextInkOverflow::None,
     });
 
-    if !prepared.show_line_numbers {
-        return code;
-    }
-
-    let number = line_number_text(prepared, line_i);
-
-    let number_style = typography::as_control_text(TextStyle {
-        font: FontId::monospace(),
-        size: row_theme.mono_size,
-        weight: FontWeight::NORMAL,
-        slant: Default::default(),
-        line_height: Some(row_theme.mono_line_height),
-        letter_spacing_em: None,
-        ..Default::default()
-    });
-
-    let number = cx.text_props(TextProps {
-        layout: {
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Auto;
-            layout
-        },
-        text: number,
-        style: Some(number_style),
-        color: Some(row_theme.muted_fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: TextInkOverflow::None,
-    });
-
-    let gutter = cx.container(
-        ContainerProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Auto;
-                layout.size.height = Length::Auto;
-                layout
-            },
-            padding: Edges::all(Px(0.0)).into(),
-            background: None,
-            shadow: None,
-            border: Edges {
-                top: Px(0.0),
-                right: Px(1.0),
-                bottom: Px(0.0),
-                left: Px(0.0),
-            },
-            border_color: Some(row_theme.border),
-            corner_radii: fret_core::Corners::all(Px(0.0)),
-            ..Default::default()
-        },
-        |_cx| vec![number],
-    );
-
-    ui::h_row(|_cx| vec![gutter, code])
-        .gap(Space::N2)
-        .items(Items::Center)
-        .layout(LayoutRefinement::default())
-        .into_element(cx)
+    code
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1479,12 +1441,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
     let row_theme = Arc::new(CodeBlockLineRowTheme::new(theme, prepared.as_ref()));
-    let row_gap = MetricRef::space(Space::N2).resolve(theme);
     let known_content_size = fret_core::Size::new(
         estimate_monospace_content_width_px(
             prepared.as_ref(),
             row_theme.as_ref(),
-            row_gap,
             scrollbar_x_right_inset,
         ),
         Px(row_h.0 * len.max(1) as f32),
@@ -1523,13 +1483,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 i,
                 max_cache_entries,
             );
-            render_code_block_line_row(
-                cx,
-                row_theme_for_rows.as_ref(),
-                prepared_for_rows.as_ref(),
-                i,
-                rich,
-            )
+            render_code_block_line_row(cx, row_theme_for_rows.as_ref(), rich)
         },
     );
 
@@ -1919,6 +1873,41 @@ mod tests {
             text_wrap_for_code_block_wrap(CodeBlockWrap::Grapheme),
             TextWrap::Grapheme
         );
+    }
+
+    #[test]
+    fn windowed_line_numbers_are_folded_into_single_rich_line() {
+        let mut prepared = crate::prepare::PreparedCodeBlock {
+            show_line_numbers: true,
+            line_number_width: 3,
+            ..Default::default()
+        };
+        prepared.lines.push(crate::prepare::PreparedLine {
+            segments: vec![crate::prepare::PreparedSegment {
+                text: Arc::<str>::from("let value = 1;"),
+                highlight: None,
+            }],
+        });
+
+        let row_theme = CodeBlockLineRowTheme {
+            mono_size: Px(10.0),
+            mono_line_height: Px(14.0),
+            fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
+            syntax_colors: HashMap::new(),
+        };
+
+        let rich =
+            build_code_block_line_rich(&row_theme, &prepared, 0, &TextShapingStyle::default());
+
+        assert_eq!(rich.text.as_ref(), "  1  let value = 1;");
+        assert_eq!(rich.spans.len(), 3);
+        assert_eq!(rich.spans[0].len, 3);
+        assert_eq!(rich.spans[1].len, WINDOWED_LINE_NUMBER_SEPARATOR.len());
+        assert_eq!("let value = 1;".len(), rich.spans[2].len);
+        assert_eq!(rich.spans[0].paint.fg, Some(row_theme.muted_fg));
+        assert_eq!(rich.spans[1].paint.fg, Some(row_theme.muted_fg));
+        assert_eq!(rich.spans[2].paint.fg, None);
     }
 
     #[test]
