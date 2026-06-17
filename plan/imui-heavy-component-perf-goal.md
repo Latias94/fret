@@ -1608,3 +1608,14 @@ popover overlay root solve tail.
   `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-overlay-focus-cycle.json`
   passed with `--features cookbook-imui,cookbook-diag`, producing
   `target/fret-diag/cookbook-imui-editor-controls-overlay-focus-cycle-after-fixes/1781720992543-cookbook-imui-editor-controls-overlay-focus-cycle`.
+- Strengthened the cookbook smoke script with an initial `not_exists` assertion for
+  `cookbook.imui_editor_controls.assist.list` after the seeded `"ca"` query has rendered. This
+  turns the old first-frame anchored-overlay jump into a script-level regression gate instead of a
+  purely visual/manual observation.
+- Follow-up diagnostics passed:
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-basics-smoke.json`
+  produced
+  `target/fret-diag/cookbook-imui-editor-controls-smoke-overlay-initial-contract/1781721214216-cookbook-imui-editor-controls-basics-smoke`;
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json`
+  produced
+  `target/fret-diag/cookbook-imui-editor-controls-click-stress-after-fixes/1781721259147-cookbook-imui-editor-controls-click-stress`.
