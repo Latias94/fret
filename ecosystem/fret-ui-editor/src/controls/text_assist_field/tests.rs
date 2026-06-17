@@ -1,6 +1,6 @@
 use super::{
     TextAssistFieldSurface, should_clear_text_assist_dismissal_on_focus_gain,
-    should_render_inline_empty_label, text_assist_max_content_height,
+    should_render_inline_empty_label, text_assist_field_expanded, text_assist_max_content_height,
 };
 use fret_core::Px;
 
@@ -26,6 +26,31 @@ fn anchored_overlay_defaults_to_capped_content_height() {
     let max_height =
         text_assist_max_content_height(TextAssistFieldSurface::AnchoredOverlay, None, Px(28.0));
     assert_eq!(max_height, Some(Px(178.0)));
+}
+
+#[test]
+fn anchored_overlay_requires_input_focus_before_expanding() {
+    assert!(text_assist_field_expanded(
+        TextAssistFieldSurface::Inline,
+        "ca",
+        "",
+        2,
+        false,
+    ));
+    assert!(!text_assist_field_expanded(
+        TextAssistFieldSurface::AnchoredOverlay,
+        "ca",
+        "",
+        2,
+        false,
+    ));
+    assert!(text_assist_field_expanded(
+        TextAssistFieldSurface::AnchoredOverlay,
+        "ca",
+        "",
+        2,
+        true,
+    ));
 }
 
 #[test]

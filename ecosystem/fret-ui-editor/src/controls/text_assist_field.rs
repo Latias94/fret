@@ -21,6 +21,7 @@ mod panel;
 mod tests;
 
 use fret_core::Px;
+use fret_ui_kit::headless::text_assist::input_owned_text_assist_expanded;
 
 use crate::primitives::popup_list::editor_popup_list_default_max_content_height;
 
@@ -46,6 +47,20 @@ fn text_assist_max_content_height(
         matches!(surface, TextAssistFieldSurface::AnchoredOverlay)
             .then(|| editor_popup_list_default_max_content_height(row_height))
     })
+}
+
+fn text_assist_field_expanded(
+    surface: TextAssistFieldSurface,
+    query: &str,
+    dismissed_query: &str,
+    visible_count: usize,
+    input_focused: bool,
+) -> bool {
+    let query_expanded = input_owned_text_assist_expanded(query, dismissed_query, visible_count);
+    match surface {
+        TextAssistFieldSurface::Inline => query_expanded,
+        TextAssistFieldSurface::AnchoredOverlay => input_focused && query_expanded,
+    }
 }
 
 fn should_clear_text_assist_dismissal_on_focus_gain(

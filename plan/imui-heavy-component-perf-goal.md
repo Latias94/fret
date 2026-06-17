@@ -1565,3 +1565,25 @@ popover overlay root solve tail.
   giving the scroll/layout boundary an authoritative content extent before the first final solve,
   while preserving the `Viewport` intrinsic-measure guard that prevents deep measurement of large
   component trees.
+
+## 2026-06-18 Editor Controls Stability Slice
+
+- Re-opened the `imui_editor_controls_basics` height-jump report through the editor composite code
+  path instead of assuming `PropertyRowLayoutVariant::Auto` was still the grid default. Current
+  `PropertyGrid` and `PropertyGridVirtualized` both inject `PropertyRowLayoutVariant::Row` into
+  row defaults; `Auto` remains a risk for opt-in responsive rows, but it is not the default cause
+  for this cookbook example.
+- The concrete first-frame instability was the Asset row: the example seeds the text-assist query
+  with `"ca"` and uses `TextAssistFieldSurface::AnchoredOverlay`. The old text-assist recipe
+  expanded whenever the input-owned query state had matches, even if the input did not have focus.
+  That means the popup requested itself on app open and then re-negotiated placement after anchor
+  bounds became available, which matches the visible "menu appears after open" jump.
+- Changed the recipe policy so inline assist keeps the existing query-driven expansion, while
+  anchored overlay assist requires input focus before expansion. This keeps popup policy in
+  `fret-ui-editor` and avoids pushing dismiss/focus strategy into `fret-ui`.
+- Remaining row-height concern: editor row baselines (`editor.density.row_height`) and framed
+  control outer heights (`text field padding + border + row line-height`) are still separate
+  concepts. `DragValue` already uses a `session_shell` with the resolved control outer height, while
+  several joined-input paths still rely on `Auto`/`min_height`. The next structural slice should
+  introduce a shared editor inline-control extent helper so `PropertyRow`, `NumericInput`,
+  `DragValue`, `TextField`, and popup triggers agree on fixed row envelopes.

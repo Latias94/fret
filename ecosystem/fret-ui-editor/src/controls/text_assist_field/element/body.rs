@@ -10,8 +10,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::headless::text_assist::{
-    active_match_index, controller_with_active_item_id, input_owned_text_assist_expanded,
-    input_owned_text_assist_semantics,
+    active_match_index, controller_with_active_item_id, input_owned_text_assist_semantics,
 };
 
 use super::super::empty::render_text_assist_inline_empty_label;
@@ -20,6 +19,7 @@ use super::super::overlay::{overlay_open_model, request_text_assist_overlay};
 use super::super::panel::render_text_assist_panel;
 use super::super::{
     should_clear_text_assist_dismissal_on_focus_gain, should_render_inline_empty_label,
+    text_assist_field_expanded,
 };
 use super::TextAssistField;
 use super::keyboard::{TextAssistFieldKeyboardInput, install_text_assist_field_key_handler};
@@ -69,9 +69,18 @@ impl TextAssistField {
         } else {
             controller.visible().len()
         };
-        let expanded = input_owned_text_assist_expanded(&query, &dismissed_query, visible_count);
         let overlay_open = overlay_open_model(cx);
         let input_focused = cx.local_model(|| false);
+        let was_input_focused = cx
+            .get_model_copied(&input_focused, Invalidation::Paint)
+            .unwrap_or(false);
+        let expanded = text_assist_field_expanded(
+            options.surface,
+            &query,
+            &dismissed_query,
+            visible_count,
+            was_input_focused,
+        );
         let prev_overlay_open = cx
             .get_model_copied(&overlay_open, Invalidation::Layout)
             .unwrap_or(false);
@@ -127,9 +136,6 @@ impl TextAssistField {
         let is_input_focused = input_id_out
             .get()
             .is_some_and(|input_id| cx.is_focused_element(input_id));
-        let was_input_focused = cx
-            .get_model_copied(&input_focused, Invalidation::Paint)
-            .unwrap_or(false);
         if should_clear_text_assist_dismissal_on_focus_gain(
             &query,
             &dismissed_query,
@@ -146,6 +152,7 @@ impl TextAssistField {
             let _ = cx.app.models_mut().update(&input_focused, |value| {
                 *value = is_input_focused;
             });
+            cx.app.request_redraw(cx.window);
         }
 
         let mut inline_panel = None;
