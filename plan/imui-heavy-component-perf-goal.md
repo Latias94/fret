@@ -1587,3 +1587,17 @@ popover overlay root solve tail.
   several joined-input paths still rely on `Auto`/`min_height`. The next structural slice should
   introduce a shared editor inline-control extent helper so `PropertyRow`, `NumericInput`,
   `DragValue`, `TextField`, and popup triggers agree on fixed row envelopes.
+
+## 2026-06-18 Editor Inline Control Size Slice
+
+- Added a row-height contract test that renders a real `PropertyGrid` with `NumericInput`,
+  `DragValue`, and `TextAssistField` rows. Before the fix, the test failed with
+  `NumericInput` at `34px` and `DragValue` at `32px` under the default test theme, matching the
+  reported "Exposure vs Roughness" visual mismatch.
+- Root cause: `NumericInputOptions::default()` used `fret-ui-kit::Size::default()` (`Medium`),
+  while editor-owned dense controls around it (`TextField`, `MiniSearchBox`, `DragValue`) use
+  `Size::Small`. This was a policy-layer default mismatch, not a `PropertyGrid` layout bug.
+- Fixed `NumericInputOptions` to default to `Size::Small` and pinned the behavior with
+  `numeric_input_defaults_to_small_editor_control_size`.
+- Result: the common editor-control row-height test now passes, giving the cookbook inspector a
+  consistent row envelope for Exposure, Roughness, and Asset rows.

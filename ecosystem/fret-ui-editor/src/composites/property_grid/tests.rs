@@ -4,9 +4,15 @@ use fret_app::App;
 use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{UiTree, declarative};
+use fret_ui_kit::headless::text_assist::TextAssistItem;
 
 use super::{PropertyGrid, PropertyGridOptions};
 use crate::composites::property_row::{PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions};
+use crate::controls::{
+    DragValue, DragValueOptions, NumericInput, NumericInputOptions, TextAssistField,
+    TextAssistFieldOptions, TextAssistFieldSurface, TextFieldOptions,
+};
+use crate::primitives::NumericPresentation;
 use crate::primitives::readout::{
     editor_inline_error_text_props, editor_validation_message_text_props,
 };
@@ -211,4 +217,150 @@ fn property_grid_row_context_defaults_to_row_variant() {
     );
 
     assert_eq!(captured, Some(PropertyRowLayoutVariant::Row));
+}
+
+#[test]
+fn property_grid_keeps_common_editor_controls_on_same_row_height() {
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let mut services = WrappingTextServices;
+
+    let exposure = app.models_mut().insert(1.25f64);
+    let roughness = app.models_mut().insert(0.42f64);
+    let query = app.models_mut().insert(String::from("ca"));
+    let dismissed_query = app.models_mut().insert(String::new());
+    let active_item = app.models_mut().insert(None::<Arc<str>>);
+    let items: Arc<[TextAssistItem]> = vec![
+        TextAssistItem::new("camera", "Camera"),
+        TextAssistItem::new("canvas", "Canvas"),
+    ]
+    .into();
+
+    let numeric_row_id = Arc::new(Mutex::new(None::<GlobalElementId>));
+    let drag_row_id = Arc::new(Mutex::new(None::<GlobalElementId>));
+    let assist_row_id = Arc::new(Mutex::new(None::<GlobalElementId>));
+
+    let numeric_row_id_for_render = Arc::clone(&numeric_row_id);
+    let drag_row_id_for_render = Arc::clone(&drag_row_id);
+    let assist_row_id_for_render = Arc::clone(&assist_row_id);
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(240.0)),
+        ),
+        "property-grid-editor-control-row-heights",
+        move |cx| {
+            let exposure_presentation =
+                NumericPresentation::<f64>::fixed_decimals(2).with_chrome_suffix(" EV");
+            let roughness_presentation = NumericPresentation::<f64>::percent_0_1(0);
+            let items = items.clone();
+
+            let grid = PropertyGrid::new()
+                .options(PropertyGridOptions {
+                    label_width: Some(Px(120.0)),
+                    column_gap: Some(Px(6.0)),
+                    row_gap: Some(Px(4.0)),
+                    ..Default::default()
+                })
+                .into_element(cx, move |cx, rows| {
+                    let numeric = rows.row(
+                        cx,
+                        |cx| rows.label_text(cx, "Exposure"),
+                        |cx| {
+                            NumericInput::from_presentation(exposure.clone(), exposure_presentation)
+                                .options(NumericInputOptions {
+                                    id_source: Some(Arc::from("test.exposure")),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                    );
+                    *numeric_row_id_for_render.lock().unwrap() = Some(numeric.id);
+
+                    let drag = rows.row(
+                        cx,
+                        |cx| rows.label_text(cx, "Roughness"),
+                        |cx| {
+                            DragValue::from_presentation(roughness.clone(), roughness_presentation)
+                                .options(DragValueOptions {
+                                    id_source: Some(Arc::from("test.roughness")),
+                                    ..Default::default()
+                                })
+                                .into_element(cx)
+                        },
+                    );
+                    *drag_row_id_for_render.lock().unwrap() = Some(drag.id);
+
+                    let assist = rows.row(
+                        cx,
+                        |cx| rows.label_text(cx, "Asset"),
+                        |cx| {
+                            TextAssistField::new(
+                                query.clone(),
+                                dismissed_query.clone(),
+                                active_item.clone(),
+                                items.clone(),
+                            )
+                            .options(TextAssistFieldOptions {
+                                field: TextFieldOptions {
+                                    id_source: Some(Arc::from("test.asset")),
+                                    ..Default::default()
+                                },
+                                surface: TextAssistFieldSurface::AnchoredOverlay,
+                                ..Default::default()
+                            })
+                            .into_element(cx)
+                        },
+                    );
+                    *assist_row_id_for_render.lock().unwrap() = Some(assist.id);
+
+                    vec![numeric, drag, assist]
+                });
+            vec![grid]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(
+        &mut app,
+        &mut services,
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(240.0)),
+        ),
+        1.0,
+    );
+
+    let numeric_bounds = current_bounds(
+        &mut app,
+        window,
+        lock_id(&numeric_row_id, "numeric row"),
+        "numeric row",
+    );
+    let drag_bounds = current_bounds(
+        &mut app,
+        window,
+        lock_id(&drag_row_id, "drag row"),
+        "drag row",
+    );
+    let assist_bounds = current_bounds(
+        &mut app,
+        window,
+        lock_id(&assist_row_id, "assist row"),
+        "assist row",
+    );
+
+    assert!(
+        (numeric_bounds.size.height.0 - drag_bounds.size.height.0).abs() <= 0.5,
+        "numeric and drag rows should share row height: numeric={numeric_bounds:?} drag={drag_bounds:?}"
+    );
+    assert!(
+        (numeric_bounds.size.height.0 - assist_bounds.size.height.0).abs() <= 0.5,
+        "numeric and assist rows should share row height: numeric={numeric_bounds:?} assist={assist_bounds:?}"
+    );
 }

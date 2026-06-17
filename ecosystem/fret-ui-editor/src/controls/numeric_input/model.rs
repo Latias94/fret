@@ -42,7 +42,7 @@ impl Default for NumericInputOptions {
                 },
                 ..Default::default()
             },
-            size: Size::default(),
+            size: Size::Small,
             placeholder: None,
             prefix: None,
             suffix: None,
