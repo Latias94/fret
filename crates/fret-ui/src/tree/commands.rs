@@ -1070,39 +1070,13 @@ impl<H: UiHost> UiTree<H> {
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut node_id = start;
         loop {
-            let may_handle = if let Some(cache) = publication_cache.as_mut() {
-                self.declarative_node_may_handle_command_availability(
-                    app,
-                    node_id,
-                    command,
-                    Some(&mut **cache),
-                )
-            } else {
-                self.declarative_node_may_handle_command_availability(app, node_id, command, None)
-            };
-            if !may_handle {
-                node_id = match self.nodes.get(node_id).and_then(|n| n.parent) {
-                    Some(parent) => parent,
-                    None => break,
-                };
-                continue;
-            }
-
-            let (availability, parent) = self.with_widget_mut(node_id, |widget, tree| {
-                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                let window = tree.window;
-                let focus = tree.focus;
-                let mut cx = CommandAvailabilityCx {
-                    app,
-                    tree: &*tree,
-                    node: node_id,
-                    window,
-                    input_ctx: input_ctx.clone(),
-                    focus,
-                };
-                (widget.command_availability(&mut cx, command), parent)
-            });
-
+            let (availability, parent) = self.command_availability_at_node(
+                app,
+                input_ctx,
+                node_id,
+                command,
+                publication_cache.as_deref_mut(),
+            );
             match availability {
                 CommandAvailability::Available | CommandAvailability::Blocked => {
                     return (availability, Some(node_id));
@@ -1117,6 +1091,46 @@ impl<H: UiHost> UiTree<H> {
         }
 
         (CommandAvailability::NotHandled, None)
+    }
+
+    fn command_availability_at_node(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        node_id: NodeId,
+        command: &CommandId,
+        mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        let parent = self.nodes.get(node_id).and_then(|n| n.parent);
+        let may_handle = if let Some(cache) = publication_cache.as_mut() {
+            self.declarative_node_may_handle_command_availability(
+                app,
+                node_id,
+                command,
+                Some(&mut **cache),
+            )
+        } else {
+            self.declarative_node_may_handle_command_availability(app, node_id, command, None)
+        };
+        if !may_handle {
+            return (CommandAvailability::NotHandled, parent);
+        }
+
+        let availability = self.with_widget_mut(node_id, |widget, tree| {
+            let window = tree.window;
+            let focus = tree.focus;
+            let mut cx = CommandAvailabilityCx {
+                app,
+                tree: &*tree,
+                node: node_id,
+                window,
+                input_ctx: input_ctx.clone(),
+                focus,
+            };
+            widget.command_availability(&mut cx, command)
+        });
+
+        (availability, parent)
     }
 
     fn declarative_node_may_handle_command_availability(
@@ -1294,18 +1308,14 @@ impl<H: UiHost> UiTree<H> {
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut stack = vec![root];
-        let mut nodes = Vec::new();
         while let Some(node) = stack.pop() {
-            nodes.push(node);
             if let Some(entry) = self.nodes.get(node) {
                 for &child in entry.children.iter().rev() {
                     stack.push(child);
                 }
             }
-        }
 
-        for node in nodes {
-            let (availability, resolved_node) = self.command_availability_from_node(
+            let (availability, _) = self.command_availability_at_node(
                 app,
                 input_ctx,
                 node,
@@ -1314,7 +1324,7 @@ impl<H: UiHost> UiTree<H> {
             );
             match availability {
                 CommandAvailability::Available => {
-                    return (availability, resolved_node.or(Some(node)));
+                    return (availability, Some(node));
                 }
                 CommandAvailability::Blocked => return (availability, None),
                 CommandAvailability::NotHandled => {}

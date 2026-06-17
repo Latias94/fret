@@ -1644,3 +1644,23 @@ popover overlay root solve tail.
   issue surfaced by the same stats is command availability fallback in no-focus states, where
   subtree fallback checks can consume multiple milliseconds in component-heavy windows; that is a
   better next infrastructure slice.
+
+## 2026-06-18 Command Availability Fallback Refactor
+
+- Root cause: `UiTree::publish_window_command_action_availability_snapshot_for_command_set` still
+  used a per-node parent-chain bubble inside no-focus subtree fallback. On a deep tree this turns a
+  subtree scan into `nodes * depth` work even though the semantic query is only “does any node in
+  this subtree handle this command?”
+- Implementation: split node-level availability into a private `command_availability_at_node`
+  helper, then changed subtree fallback to do a single DFS over candidate nodes and query each node
+  once per command.
+- Regression coverage:
+  - `action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback`
+  - `action_availability_no_focus_subtree_fallback_scans_each_node_once_per_command`
+  - full `command_availability` / `window_command_action_availability_snapshot` nextest slice
+- Expected impact: reduce the no-focus command-availability tail inside heavy windows, especially
+  on cold-open / first-discovery surfaces where command palette and menu gating previously paid for
+  repeated ancestor bubbling.
+- Perf recheck is still running in release mode; compile time dominated the first pass, so the next
+  step is to reuse the warmed build artifacts and compare the same data-table retained script after
+  the process finishes.

@@ -57,6 +57,9 @@ struct CommandAvailabilityQueryCount {
     count: u32,
 }
 
+#[derive(Debug, Default)]
+struct BlockingAvailabilityNode;
+
 impl<H: UiHost> Widget<H> for CountingAvailabilityNode {
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
         true
@@ -102,6 +105,27 @@ impl<H: UiHost> Widget<H> for CountingAllAvailabilityNode {
         );
         if command.as_str() == "test.available" {
             return crate::widget::CommandAvailability::Available;
+        }
+        crate::widget::CommandAvailability::NotHandled
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+impl<H: UiHost> Widget<H> for BlockingAvailabilityNode {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
+    fn command_availability(
+        &self,
+        _cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> crate::widget::CommandAvailability {
+        if command.as_str() == "test.available" {
+            return crate::widget::CommandAvailability::Blocked;
         }
         crate::widget::CommandAvailability::NotHandled
     }
@@ -1276,6 +1300,105 @@ fn action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback() {
     assert_eq!(
         svc.available(window, &CommandId::from("test.available")),
         Some(true)
+    );
+}
+
+#[test]
+fn action_availability_no_focus_subtree_fallback_scans_each_node_once_per_command() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let commands = [
+        CommandId::from("test.first_unhandled"),
+        CommandId::from("test.second_unhandled"),
+        CommandId::from("test.third_unhandled"),
+    ];
+    for command in &commands {
+        app.register_command(command.clone(), widget_command_meta(command.as_str()));
+    }
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+    let mut parent = root;
+    let depth = 6usize;
+    for _ in 0..depth {
+        let child = ui.create_node(CountingAllAvailabilityNode);
+        ui.add_child(parent, child);
+        parent = child;
+    }
+    ui.set_focus(None);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        query_count,
+        (depth * commands.len()) as u32,
+        "no-focus subtree fallback should be a single DFS over candidate nodes, not a per-node parent-chain bubble"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    for command in commands {
+        assert_eq!(svc.available(window, &command), Some(false));
+    }
+}
+
+#[test]
+fn action_availability_no_focus_subtree_fallback_honors_ancestor_blocking() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let blocker = ui.create_node(BlockingAvailabilityNode);
+    let descendant = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, blocker);
+    ui.add_child(blocker, descendant);
+    ui.set_focus(None);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        query_count, 0,
+        "ancestor blocked nodes should stop the no-focus subtree fallback before descending further"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(false)
     );
 }
 
