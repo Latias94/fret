@@ -1313,6 +1313,18 @@ popover overlay root solve tail.
     `target/fret-diag/code-view-mount-m16-bounded-viewport-seed/1781668998093/bundle.json`,
     `total=21142us`, `layout=20925us`, `solve=19534us`). This reintroduced a layout-solve spike,
     so the code and test were removed instead of committed.
+  - After widening Scroll layout profiling to record slow total layout time, `m17` showed the
+    remaining outer content viewport cost directly:
+    `target/fret-diag/code-view-mount-m17-scroll-profile/1781670432100/bundle.schema2.json`.
+    The worst frame stayed around `total=23945us`, but the Scroll phase profile identified
+    `measure_children=21890us`, `solve_barrier=305us`, and `layout_children=443us` on
+    `ui-gallery-content-viewport`. The retained/windowed code-view subtree was not the primary
+    owner of that frame.
+  - A naive gallery page-level `viewport_known_content_size(Size(0, 702))` hint removed the outer
+    `measure_children` cost but shifted the frame into a much worse barrier solve (`m18`:
+    `target/fret-diag/code-view-mount-m18-page-known-extent/1781671303027/bundle.schema2.json`,
+    `total=67663us`, `layout=67449us`, `solve=65858us`). This proves fixed page extent metadata
+    needs a stronger shell contract than just seeding final content height on the existing scroll.
   - A direct-start code-view mount run was invalid because the script reset diagnostics after the
     page was already loaded; it is not used as evidence.
 - Best valid current comparison after removing the outer unbounded probe experiment remains

@@ -2670,7 +2670,7 @@ impl ElementHostWidget {
                 && let Some(started) = profile_started
             {
                 let total = started.elapsed();
-                if total >= cfg.min_elapsed && t_measure_children >= cfg.min_self_measure {
+                if total >= cfg.min_elapsed || t_measure_children >= cfg.min_self_measure {
                     let element_path: Option<String> = {
                         #[cfg(feature = "diagnostics")]
                         {
@@ -3352,7 +3352,7 @@ impl ElementHostWidget {
             && let Some(started) = profile_started
         {
             let total = started.elapsed();
-            if total >= cfg.min_elapsed && t_measure_children >= cfg.min_self_measure {
+            if total >= cfg.min_elapsed || t_measure_children >= cfg.min_self_measure {
                 let element_path: Option<String> = {
                     #[cfg(feature = "diagnostics")]
                     {
