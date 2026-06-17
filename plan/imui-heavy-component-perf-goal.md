@@ -1601,3 +1601,10 @@ popover overlay root solve tail.
   `numeric_input_defaults_to_small_editor_control_size`.
 - Result: the common editor-control row-height test now passes, giving the cookbook inspector a
   consistent row envelope for Exposure, Roughness, and Asset rows.
+- Validation:
+  `cargo nextest run -p fret-ui-editor numeric_input property_grid text_assist_field --cargo-profile dev-fast`
+  passed 18 focused tests; `cargo check -p fret-cookbook --example imui_editor_controls_basics
+  --features cookbook-imui --profile dev-fast` passed; the existing overlay/focus diag script
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-overlay-focus-cycle.json`
+  passed with `--features cookbook-imui,cookbook-diag`, producing
+  `target/fret-diag/cookbook-imui-editor-controls-overlay-focus-cycle-after-fixes/1781720992543-cookbook-imui-editor-controls-overlay-focus-cycle`.
