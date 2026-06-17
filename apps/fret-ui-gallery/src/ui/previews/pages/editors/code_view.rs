@@ -78,9 +78,19 @@ pub(in crate::ui) fn preview_code_view_torture(
             .test_id("ui-gallery-code-view-root"),
     );
 
-    let page = doc_layout::wrap_preview_page(cx, None, "Code view", vec![header, block]);
+    let page = ui::v_flex(move |_cx| vec![header, block])
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(Px(980.0))
+                .mx_auto(),
+        )
+        .gap(Space::N4)
+        .items_start()
+        .into_element(cx);
 
-    vec![page.into_element(cx)]
+    vec![page]
 }
 
 pub(in crate::ui) fn code_editor_mvp_source() -> String {

@@ -429,6 +429,57 @@ fn fixed_passthrough_stack_measure_skips_child_subtree() {
 }
 
 #[test]
+fn bounded_viewport_scroll_measure_stops_at_fixed_height_shell() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "bounded-viewport-scroll-fixed-shell-measure",
+        |cx| {
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Fill;
+            scroll.layout.size.height = Length::Fill;
+            scroll.probe_unbounded = false;
+            scroll.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Viewport;
+
+            vec![cx.scroll(scroll, |cx| {
+                let mut layout = crate::element::LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Px(Px(96.0));
+                layout.overflow = crate::element::Overflow::Clip;
+                vec![cx.stack_props(crate::element::StackProps { layout }, |cx| {
+                    vec![cx.text("deep child")]
+                })]
+            })]
+        },
+    );
+    ui.set_root(root);
+    let scroll_node = ui.children(root)[0];
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "bounded viewport scroll should not measure its fixed-height direct child before final layout"
+    );
+}
+
+#[test]
 fn scroll_known_content_size_keeps_cross_axis_viewport_for_single_axis_scroll() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

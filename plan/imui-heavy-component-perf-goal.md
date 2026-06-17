@@ -1455,3 +1455,25 @@ popover overlay root solve tail.
   `ui-gallery-content-viewport` at roughly `37895us` self. The code and test were removed instead
   of being kept. This reinforces that the next fix should be a stronger page/shell extent contract
   or a targeted scroll state contract, not a generic bounded-viewport shortcut.
+
+## 2026-06-17 Code-View Torture Harness Scaffold Slimming
+
+- After m30 was rejected, re-queried the m29 bundle with a bounded script instead of opening raw
+  JSON. The worst frame was still `ui-gallery-content-viewport`, but the important split was:
+  outer `Scroll` `measure_children=22819us`, while the code-view `VirtualList` frame itself was
+  about `3289us` total with 33 `StyledText` children. That means the current perf script was
+  dominated by measuring the docs/gallery scaffold around the code-view, not only by code-view rows.
+- Added `bounded_viewport_scroll_measure_stops_at_fixed_height_shell` in `fret-ui` to pin an
+  important existing boundary: a `Viewport + probe_unbounded=false` scroll does not measure through
+  a fixed-height direct child shell. This prevents us from re-chasing the already rejected generic
+  Scroll shortcut and documents why the remaining m29 cost is page scaffold measurement.
+- Flattened the `code_view_torture` gallery preview path by replacing `wrap_preview_page` /
+  `DocSection` with a direct full-width vertical harness layout. The stable
+  `ui-gallery-code-view-root` anchor stays on the code block, and the page-level
+  `ui-gallery-page-code-view-torture` anchor still comes from the outer gallery content shell.
+- Interpretation: this is a diagnostics harness cleanup, not a framework-wide performance claim.
+  It should make future code-view mount profiles less polluted by docs scaffold wrappers, so the
+  next real optimization can target the remaining code-view/VirtualList cost directly.
+- Focused validation passed:
+  `cargo test -p fret-ui --profile dev-fast bounded_viewport_scroll_measure_stops_at_fixed_height_shell -- --nocapture`,
+  `cargo check -p fret-ui-gallery --profile dev-fast`, and `cargo fmt -p fret-ui -p fret-ui-gallery`.
