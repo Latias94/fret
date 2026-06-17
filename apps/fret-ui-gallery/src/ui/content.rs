@@ -2,6 +2,9 @@ use super::*;
 use fret::AppComponentCx;
 use fret_ui_kit::declarative::text as decl_text;
 
+#[cfg(feature = "gallery-dev")]
+const CODE_VIEW_TORTURE_PREVIEW_HEIGHT: Px = Px(674.0);
+
 pub(crate) fn content_view(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -118,6 +121,12 @@ pub(crate) fn content_view(
     let preview_panel_content = page_preview(cx, theme, selected, models);
     let mut preview_semantics_layout = fret_ui::element::LayoutStyle::default();
     preview_semantics_layout.size.width = fret_ui::element::Length::Fill;
+    #[cfg(feature = "gallery-dev")]
+    if selected == PAGE_CODE_VIEW_TORTURE {
+        preview_semantics_layout.size.height =
+            fret_ui::element::Length::Px(CODE_VIEW_TORTURE_PREVIEW_HEIGHT);
+        preview_semantics_layout.overflow = fret_ui::element::Overflow::Clip;
+    }
     let preview_panel = cx.semantics(
         fret_ui::element::SemanticsProps {
             layout: preview_semantics_layout,

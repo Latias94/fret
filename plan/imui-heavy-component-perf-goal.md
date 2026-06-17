@@ -1477,3 +1477,46 @@ popover overlay root solve tail.
 - Focused validation passed:
   `cargo test -p fret-ui --profile dev-fast bounded_viewport_scroll_measure_stops_at_fixed_height_shell -- --nocapture`,
   `cargo check -p fret-ui-gallery --profile dev-fast`, and `cargo fmt -p fret-ui -p fret-ui-gallery`.
+
+## 2026-06-17 Code-View Torture Content-Shell Boundary Slice
+
+- Re-ran the code-view torture mount script after fixing the diagnostics target selection. The
+  script must run against a `fret-ui-gallery` binary built with `--features gallery-dev`; otherwise
+  `code_view_torture` is filtered out at compile time and the search field can be correct while the
+  target nav item never exists.
+- Hardened all code-view torture perf scripts by replacing keyboard-driven search clearing with
+  `set_text_value` and replacing the nav click with `click_stable`. The previous `Ctrl+A` path
+  depended on command availability and made the perf setup flaky before the measured interaction.
+- m31, after rebuilding `fret-ui-gallery --release --features gallery-dev`, proved the remaining
+  mount hitch was the outer gallery content scroll measuring through the code-view page:
+  `target/fret-diag/code-view-mount-m31-slim-harness-gallery-dev/1781690617407/bundle.json`
+  reported `top_total_time_us=47958`, `top_layout_time_us=47598`, and
+  `layout_roots_apply_time_us=46360`. Scroll profiling on `ui-gallery-content-viewport` showed
+  `measure_children=44408us`, `solve_barrier=452us`, and `content_h=674`.
+- Added a gallery-dev-only fixed semantics boundary around the code-view torture preview content.
+  This is intentionally a diagnostics harness contract: the page has a known fixed visual envelope,
+  so the outer gallery scroll should not rediscover the large document height by measuring through
+  the page shell.
+- m32 confirmed the fixed shell removed the deep measurement cost:
+  `target/fret-diag/code-view-mount-m32-fixed-page-boundary/1781691900933/bundle.json` reported
+  `top_total_time_us=20215`, `top_layout_time_us=19940`, and
+  `layout_roots_apply_time_us=19220`. The same scroll node showed
+  `measure_children=3us`, but `solve_barrier=18210us`, so the next owner became barrier-root solve.
+- Rejected experiment: adding `viewport_known_content_size(Size(0, 674))` to the outer gallery
+  scroll for this page. m33 disabled post-layout extent mode and kept `measure_children=0`, but it
+  exposed a worse cold barrier solve:
+  `target/fret-diag/code-view-mount-m33-known-content-size/1781692854401/bundle.json` reported
+  `top_total_time_us=27996`, `top_layout_time_us=27731`, and
+  `layout.engine_solve=26666`. The hot scroll node had `probe_unbounded=false`,
+  `content_h=674`, `solve_barrier=26283us`, and only `layout_children=320us`. The code was removed.
+- Final kept shape, m34:
+  `target/fret-diag/code-view-mount-m34-fixed-boundary-final/1781693865678/bundle.schema2.json`
+  reported `top_total_time_us=9496`, `top_layout_time_us=9271`,
+  `layout.engine_solve=7966`, and `layout.root apply=8548`. Scroll profiling still shows a
+  navigation/mount barrier solve on the fixed content shell (`solve_barrier` around `7653us` on the
+  new content scroll root), but the earlier 44ms deep measurement is gone.
+- Decision: keep the fixed shell boundary and script hardening. Do not keep the naive
+  `known_content_size` hint on the outer gallery scroll. The next material target is the cold
+  barrier-root solve during page navigation/remount, likely by avoiding unnecessary keyed remount
+  work or by giving barrier roots a reusable flow subtree contract when the shell bounds and child
+  structure are stable.
