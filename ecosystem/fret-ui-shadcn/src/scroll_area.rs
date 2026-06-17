@@ -60,6 +60,7 @@ pub struct ScrollAreaViewport {
     children: Vec<AnyElement>,
     axis: ScrollAxis,
     probe_unbounded: bool,
+    known_content_size: Option<fret_core::Size>,
     viewport_test_id: Option<Arc<str>>,
     viewport_focus_test_id: Option<Arc<str>>,
     focus_ring: bool,
@@ -74,6 +75,7 @@ impl ScrollAreaViewport {
             children,
             axis: ScrollAxis::Y,
             probe_unbounded: true,
+            known_content_size: None,
             viewport_test_id: None,
             viewport_focus_test_id: None,
             focus_ring: true,
@@ -89,6 +91,11 @@ impl ScrollAreaViewport {
 
     pub fn probe_unbounded(mut self, probe_unbounded: bool) -> Self {
         self.probe_unbounded = probe_unbounded;
+        self
+    }
+
+    pub fn known_content_size(mut self, size: fret_core::Size) -> Self {
+        self.known_content_size = Some(size);
         self
     }
 
@@ -292,6 +299,7 @@ impl ScrollAreaRoot {
                 children: viewport_children,
                 axis: viewport_axis,
                 probe_unbounded: viewport_probe_unbounded,
+                known_content_size: viewport_known_content_size,
                 viewport_test_id,
                 viewport_focus_test_id,
                 focus_ring: viewport_focus_ring,
@@ -364,6 +372,7 @@ impl ScrollAreaRoot {
                     handle.clone(),
                     scroll_layout,
                     viewport_probe_unbounded,
+                    viewport_known_content_size,
                     intrinsic_measure_mode,
                     viewport_test_id,
                     viewport_focus_test_id,
@@ -613,6 +622,7 @@ fn scroll_area_stack_element<H: UiHost>(
         children: viewport_children,
         axis,
         probe_unbounded: viewport_probe_unbounded,
+        known_content_size: viewport_known_content_size,
         viewport_test_id,
         viewport_focus_test_id,
         focus_ring: viewport_focus_ring,
@@ -655,6 +665,7 @@ fn scroll_area_stack_element<H: UiHost>(
             handle.clone(),
             scroll_layout,
             viewport_probe_unbounded,
+            viewport_known_content_size,
             intrinsic_measure_mode,
             viewport_test_id,
             viewport_focus_test_id,
@@ -674,6 +685,7 @@ fn scroll_area_viewport_element<H: UiHost>(
     handle: ScrollHandle,
     scroll_layout: LayoutStyle,
     viewport_probe_unbounded: bool,
+    viewport_known_content_size: Option<fret_core::Size>,
     intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
     viewport_test_id: Option<Arc<str>>,
     viewport_focus_test_id: Option<Arc<str>>,
@@ -685,7 +697,7 @@ fn scroll_area_viewport_element<H: UiHost>(
             layout: scroll_layout,
             axis,
             scroll_handle: Some(handle),
-            known_content_size: None,
+            known_content_size: viewport_known_content_size,
             windowed_paint: false,
             probe_unbounded: viewport_probe_unbounded,
             intrinsic_measure_mode,
@@ -796,6 +808,7 @@ pub struct ScrollArea {
     viewport_focus_ring: bool,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
     viewport_probe_unbounded: Option<bool>,
+    viewport_known_content_size: Option<fret_core::Size>,
 }
 
 impl ScrollArea {
@@ -816,6 +829,7 @@ impl ScrollArea {
             viewport_focus_ring: true,
             viewport_intrinsic_measure_mode: None,
             viewport_probe_unbounded: None,
+            viewport_known_content_size: None,
         }
     }
 
@@ -836,6 +850,7 @@ impl ScrollArea {
             viewport_focus_ring: true,
             viewport_intrinsic_measure_mode: None,
             viewport_probe_unbounded: None,
+            viewport_known_content_size: None,
             _phantom: PhantomData,
         }
     }
@@ -899,6 +914,11 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_known_content_size(mut self, size: fret_core::Size) -> Self {
+        self.viewport_known_content_size = Some(size);
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut viewport = ScrollAreaViewport::new(self.children)
@@ -915,6 +935,9 @@ impl ScrollArea {
         }
         if let Some(probe_unbounded) = self.viewport_probe_unbounded {
             viewport = viewport.probe_unbounded(probe_unbounded);
+        }
+        if let Some(size) = self.viewport_known_content_size {
+            viewport = viewport.known_content_size(size);
         }
 
         let mut root = ScrollAreaRoot::new(viewport)
@@ -967,6 +990,7 @@ pub struct ScrollAreaBuild<H, B> {
     viewport_focus_ring: bool,
     viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
     viewport_probe_unbounded: Option<bool>,
+    viewport_known_content_size: Option<fret_core::Size>,
     _phantom: PhantomData<fn() -> H>,
 }
 
@@ -1029,6 +1053,11 @@ where
         self
     }
 
+    pub fn viewport_known_content_size(mut self, size: fret_core::Size) -> Self {
+        self.viewport_known_content_size = Some(size);
+        self
+    }
+
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = collect_built_scroll_area_children(
@@ -1057,6 +1086,9 @@ where
         }
         if let Some(probe_unbounded) = self.viewport_probe_unbounded {
             area = area.viewport_probe_unbounded(probe_unbounded);
+        }
+        if let Some(size) = self.viewport_known_content_size {
+            area = area.viewport_known_content_size(size);
         }
 
         area.into_element(cx)
@@ -1137,6 +1169,13 @@ mod tests {
             return Some(props.probe_unbounded);
         }
         el.children.iter().find_map(any_scroll_probe_unbounded)
+    }
+
+    fn any_scroll_known_content_size(el: &AnyElement) -> Option<Size> {
+        if let ElementKind::Scroll(props) = &el.kind {
+            return props.known_content_size;
+        }
+        el.children.iter().find_map(any_scroll_known_content_size)
     }
 
     fn count_element_kind(el: &AnyElement, f: impl Fn(&ElementKind) -> bool + Copy) -> usize {
@@ -1276,6 +1315,29 @@ mod tests {
     }
 
     #[test]
+    fn scroll_area_compact_surface_forwards_known_content_size() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let content_size = Size::new(Px(240.0), Px(720.0));
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::new([ui::text("Row").into_element(cx)])
+                .viewport_known_content_size(content_size)
+                .into_element(cx)
+        });
+
+        assert_eq!(
+            any_scroll_known_content_size(&element),
+            Some(content_size),
+            "expected ScrollArea::new to forward viewport_known_content_size"
+        );
+    }
+
+    #[test]
     fn scroll_area_build_surface_forwards_viewport_probe_unbounded() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1298,6 +1360,33 @@ mod tests {
             any_scroll_probe_unbounded(&element),
             Some(false),
             "expected ScrollArea::build to forward viewport_probe_unbounded(false)"
+        );
+    }
+
+    #[test]
+    fn scroll_area_build_surface_forwards_known_content_size() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let content_size = Size::new(Px(240.0), Px(720.0));
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ScrollArea::build(|cx, out| {
+                use fret_ui_kit::ui::UiElementSinkExt as _;
+
+                out.push_ui(cx, ui::text("Row"));
+            })
+            .viewport_known_content_size(content_size)
+            .into_element(cx)
+        });
+
+        assert_eq!(
+            any_scroll_known_content_size(&element),
+            Some(content_size),
+            "expected ScrollArea::build to forward viewport_known_content_size"
         );
     }
 

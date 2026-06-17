@@ -630,3 +630,45 @@ Interpretation:
   - `cargo test -p fret-code-view --profile dev-fast -- --nocapture`
   - `cargo check -p fret-ui-gallery --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness --profile dev-fast`
   - `cargo build -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+
+### 2026-06-17 Code View Scroll Extent Hints
+
+- Follow-up profiling showed the retained/windowed code-view rows were no longer the obvious owner
+  in valid mount captures. The heavy frame still attached to the outer
+  `ui-gallery-content-viewport` `Scroll`, with the expensive work moving between
+  `measure_children`, layout solve, and scroll self/extent reconciliation depending on the
+  experiment.
+- Accepted mechanism change:
+  - Definite post-layout scroll surfaces can seed their first-frame extent from the viewport when
+    there is no previous content extent, then let the bounded post-layout overflow observer promote
+    child bounds in the same frame.
+  - The live edge/growth path still falls back to explicit measurement when correctness requires
+    it. The accepted code does not broaden post-layout extents to every definite scroll.
+  - `known_content_size` now owns only the scroll axis for single-axis scrolls. Cross-axis extent is
+    kept from the viewport, so callers can provide cheap height-only or width-only metadata.
+- Accepted component/API change:
+  - `fret-code-view` records `max_line_columns` during preparation and uses it to estimate the
+    windowed code block's horizontal content extent without measuring the longest line on mount.
+  - `fret-ui-shadcn::ScrollArea` exposes `viewport_known_content_size(...)` on both compact and
+    build surfaces and forwards it to `ScrollProps`.
+- Rejected experiments:
+  - Removing the `props.probe_unbounded` guard from post-layout extent mode made the valid mount
+    path much worse (`m14`: `total=68351us`, `layout=68087us`, `solve=66633us`), so the guard stays.
+  - A page-level hard-coded extent hint was also worse before the single-axis fix (`m15`:
+    `total=28413us`, `layout=28185us`, `solve=27041us`) and was reverted rather than hidden behind
+    gallery policy.
+- Current evidence:
+  - Best valid post-experiment mount bundle:
+    `target/fret-diag/code-view-mount-m13-no-outer-unbounded/1781664429284/bundle.json`.
+  - `diag perf` reported `top_total_time_us=22269`, `top_layout_time_us=22049`, and
+    `top_layout_engine_solve_time_us=608`.
+  - Interpretation: engine solve is no longer the largest visible number in this comparison, but
+    the outer scroll/page shell still spends around `22ms` on the mount frame. The retained
+    code-view inner list is not the only problem.
+- Decision:
+  - Keep the extent-hint and first-frame seed work because it gives heavy components a narrow,
+    testable way to provide deterministic geometry to the runtime.
+  - Do not promote broad "post-layout extents for all definite scrolls" into the core contract.
+  - The next optimization lane should either define a bounded fixed-page scroll contract or refactor
+    the gallery/page shell so heavy previews do not require a deep outer scroll reconciliation on
+    page mount.

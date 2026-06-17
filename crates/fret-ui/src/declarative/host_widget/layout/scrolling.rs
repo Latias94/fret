@@ -2218,13 +2218,17 @@ impl ElementHostWidget {
         let must_probe_for_growing_extent = pending_extent_probe
             || (at_scroll_extent_edge
                 && (children_layout_invalidated || defer_state.pending_invalidation_probe));
+        let previous_content = handle.content_size();
+        let previous_content_known = non_default_size(previous_content).is_some();
+        let must_probe_via_measure_for_growing_extent =
+            must_probe_for_growing_extent && (!post_layout_extents_mode || previous_content_known);
         // On the authoritative post-layout extents path, avoid measuring children under MaxContent constraints by
         // default; rely on post-layout observed overflow to grow extents. When correctness is at
         // risk (e.g. the user is already at the scroll edge), we still fall back to an unbounded
         // probe for that frame.
         let probe_unbounded_for_measure = known_content_size.is_none()
             && props.probe_unbounded
-            && (!post_layout_extents_mode || must_probe_for_growing_extent);
+            && (!post_layout_extents_mode || must_probe_via_measure_for_growing_extent);
 
         let child_constraints =
             scroll_measure_child_constraints(props.axis, probe_unbounded_for_measure, available);
@@ -2241,15 +2245,14 @@ impl ElementHostWidget {
         );
         let intrinsic_cached_max_child = probe_seed.intrinsic_cached_max_child;
         let mut cached_max_child = probe_seed.cached_max_child;
-        let previous_content = handle.content_size();
 
-        if must_probe_for_growing_extent {
+        if must_probe_via_measure_for_growing_extent {
             cached_max_child = None;
         }
 
         let can_reuse_known_post_layout_extent = post_layout_extents_mode
             && !must_probe_for_growing_extent
-            && non_default_size(previous_content).is_some()
+            && previous_content_known
             && !matches!(props.layout.size.width, Length::Auto)
             && !matches!(props.layout.size.height, Length::Auto);
 
@@ -2289,20 +2292,29 @@ impl ElementHostWidget {
         // post-layout shrink clamp when possible.
         let mut needs_authoritative_cache_commit_from_same_frame_probe = false;
         let max_child = if let Some(known_content_size) = known_content_size {
+            let max_child = match props.axis {
+                crate::element::ScrollAxis::X => {
+                    Size::new(known_content_size.width, available.height)
+                }
+                crate::element::ScrollAxis::Y => {
+                    Size::new(available.width, known_content_size.height)
+                }
+                crate::element::ScrollAxis::Both => known_content_size,
+            };
             commit_scroll_authoritative_extent(
                 &mut *cx.app,
                 window,
                 self.element,
                 ScrollAuthoritativeExtentCommit {
-                    max_child: known_content_size,
+                    max_child,
                     intrinsic_cache_key: None,
                     probe_cache_key: None,
                     clear_pending_invalidation_probe: true,
                     clear_pending_extent_probe: true,
                 },
             );
-            known_content_size
-        } else if must_probe_for_growing_extent {
+            max_child
+        } else if must_probe_via_measure_for_growing_extent {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
             for &child in cx.children {
@@ -2386,6 +2398,13 @@ impl ElementHostWidget {
             // authoritative extent exists, reuse it and let the post-layout overflow observer
             // reconcile any grow/shrink drift after the child subtree lays out.
             previous_content
+        } else if post_layout_extents_mode && !previous_content_known {
+            // First definite layout for a post-layout scroll surface has no established scroll
+            // extent yet, so `offset == max_offset == 0` should not force an expensive unbounded
+            // measurement. Seed the content extent from the viewport-sized pass; the bounded
+            // overflow observer below will promote the freshly laid-out child bounds to an
+            // authoritative extent in the same frame.
+            available
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -2638,7 +2657,7 @@ impl ElementHostWidget {
             cx,
             &props,
             pending_extent_probe,
-            must_probe_for_growing_extent,
+            must_probe_via_measure_for_growing_extent,
             force_barrier_child_root_relayout,
             children_layout_invalidated,
             post_layout_extents_mode,
@@ -2841,11 +2860,12 @@ impl ElementHostWidget {
                         || (props.axis.scroll_y() && content_h.0 > desired.height.0 + 0.5)));
             let post_layout_authoritative_scan = post_layout_extents_mode
                 && children_layout_invalidated
-                && !must_probe_for_growing_extent;
-            let deep_scan_allowed =
-                (at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent)
-                    || shrink_validation_enabled
-                    || post_layout_authoritative_scan;
+                && !must_probe_via_measure_for_growing_extent;
+            let deep_scan_allowed = (at_scroll_extent_edge
+                && extent_may_be_stale
+                && !must_probe_via_measure_for_growing_extent)
+                || shrink_validation_enabled
+                || post_layout_authoritative_scan;
             let overflow_observation_started = profile_cfg.is_some().then(Instant::now);
             let (observed, observation) = observe_scroll_overflow_extents(
                 &mut tree,

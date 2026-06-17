@@ -1221,6 +1221,26 @@ fn build_code_block_line_rich(
     AttributedText::new(Arc::<str>::from(text), spans)
 }
 
+fn estimate_monospace_content_width_px(
+    prepared: &crate::prepare::PreparedCodeBlock,
+    row_theme: &CodeBlockLineRowTheme,
+    row_gap: Px,
+    scrollbar_x_right_inset: Px,
+) -> Px {
+    // `ScrollProps::known_content_size` is only used as scroll extent metadata. A conservative
+    // monospace estimate avoids an unbounded text measurement of the longest line on mount.
+    let char_advance = Px((row_theme.mono_size.0 * 0.7).max(1.0));
+    let code_width = Px(char_advance.0 * prepared.max_line_columns.max(1) as f32);
+    let gutter_width = if prepared.show_line_numbers {
+        let number_width = Px(char_advance.0 * prepared.line_number_width.max(1) as f32);
+        Px(number_width.0 + row_gap.0 + 1.0)
+    } else {
+        Px(0.0)
+    };
+
+    Px(code_width.0 + gutter_width.0 + scrollbar_x_right_inset.0)
+}
+
 #[derive(Default)]
 struct CodeBlockWindowedLineRichCache {
     theme_revision: u64,
@@ -1459,6 +1479,16 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
     let row_theme = Arc::new(CodeBlockLineRowTheme::new(theme, prepared.as_ref()));
+    let row_gap = MetricRef::space(Space::N2).resolve(theme);
+    let known_content_size = fret_core::Size::new(
+        estimate_monospace_content_width_px(
+            prepared.as_ref(),
+            row_theme.as_ref(),
+            row_gap,
+            scrollbar_x_right_inset,
+        ),
+        Px(row_h.0 * len.max(1) as f32),
+    );
     let row_theme_for_rows = Arc::clone(&row_theme);
     let line_rich_cache_for_rows = line_rich_cache.clone();
     let max_cache_entries = (overscan.max(1)).saturating_mul(16).max(256);
@@ -1519,6 +1549,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
             layout: scroll_x_layout,
             axis: ScrollAxis::X,
             scroll_handle: Some(scroll_x_handle.clone()),
+            known_content_size: Some(known_content_size),
             probe_unbounded: true,
             ..Default::default()
         },

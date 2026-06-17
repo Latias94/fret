@@ -84,6 +84,7 @@ pub(crate) struct PreparedCodeBlock {
     pub(crate) revision: u64,
     pub(crate) show_line_numbers: bool,
     pub(crate) line_number_width: usize,
+    pub(crate) max_line_columns: usize,
     pub(crate) syntax_highlights: Vec<&'static str>,
     pub(crate) lines: Vec<PreparedLine>,
 }
@@ -109,6 +110,11 @@ fn prepare_code_block(
     let mut lines = split_lines(code);
     let line_number_width = line_number_width(lines.len());
 
+    let max_line_columns = lines
+        .iter()
+        .map(|line| estimated_line_columns(line.text))
+        .max()
+        .unwrap_or(0);
     let mut prepared_lines = Vec::with_capacity(lines.len());
     let mut syntax_highlights: Vec<&'static str> = Vec::new();
     let mut span_i = 0usize;
@@ -189,9 +195,24 @@ fn prepare_code_block(
         revision,
         show_line_numbers,
         line_number_width,
+        max_line_columns,
         syntax_highlights,
         lines: prepared_lines,
     }
+}
+
+fn estimated_line_columns(text: &str) -> usize {
+    text.chars()
+        .map(|ch| {
+            if ch == '\t' {
+                4
+            } else if ch.is_ascii() {
+                1
+            } else {
+                2
+            }
+        })
+        .sum()
 }
 
 fn plain_prepared_line(line_text: &str) -> PreparedLine {
@@ -445,5 +466,21 @@ mod tests {
         assert_eq!(prepared.lines[0].segments[0].text.as_ref(), "fn main() {}");
         assert_eq!(prepared.lines[0].segments[0].highlight, None);
         assert!(prepared.syntax_highlights.is_empty());
+    }
+
+    #[test]
+    fn prepare_records_max_line_columns_for_windowed_extent_estimates() {
+        let mut state = CodeBlockPreparedState::default();
+        state.prepare(
+            "a\nlet wide = 12345;\n\t中\n",
+            Some("rust"),
+            true,
+            CodeBlockPrepareMode::LineIndexed,
+        );
+
+        assert_eq!(
+            state.prepared.max_line_columns,
+            "let wide = 12345;".chars().count()
+        );
     }
 }

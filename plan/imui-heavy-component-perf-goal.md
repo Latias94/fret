@@ -1287,3 +1287,35 @@ popover overlay root solve tail.
 - A view-cache-enabled variant also passed, but it produced a different measurement surface
   (`contained_relayout=1` and cache-key mismatch) and is not used as the apples-to-apples evidence
   for this slice.
+
+## 2026-06-17 Code-View Scroll Extent Hint Slice
+
+- Continued the heavy-component lane with the code-view torture mount path. The important finding
+  is that steady wheel scrolling is not the current owner; the valid mount evidence still points at
+  the outer gallery content `Scroll` and page-mount extent negotiation.
+- Added a narrow scroll-extent hint path instead of broad component flattening:
+  - `fret-code-view` now records `PreparedCodeBlock::max_line_columns` during preparation.
+  - Windowed code blocks estimate a monospace content width and pass it as
+    `ScrollProps::known_content_size` for the inner horizontal scroll.
+  - `fret-ui-shadcn::ScrollArea` forwards `viewport_known_content_size(...)` through both compact
+    and build surfaces so heavy recipes can provide extent metadata without dropping to raw
+    `fret-ui`.
+  - `fret-ui` treats single-axis `known_content_size` as authoritative only on the scroll axis; the
+    cross axis remains the viewport extent. This lets a Y-scroll caller pass `Size(0, height)`
+    without collapsing the width.
+- Rejected experiments:
+  - Broadly enabling post-layout extents for all definite Y scrolls made mount cost worse
+    (`m14`: `total=68351us`, `layout=68087us`, `solve=66633us`), so that path was reverted.
+  - Hard-coding a gallery page-level extent hint before fixing single-axis cross-axis semantics was
+    also worse (`m15`: `total=28413us`, `layout=28185us`, `solve=27041us`) and was reverted.
+  - A direct-start code-view mount run was invalid because the script reset diagnostics after the
+    page was already loaded; it is not used as evidence.
+- Best valid current comparison after removing the outer unbounded probe experiment remains
+  `m13`: `target/fret-diag/code-view-mount-m13-no-outer-unbounded/1781664429284/bundle.json`,
+  with `top_total_time_us=22269`, `top_layout_time_us=22049`, and
+  `layout_engine_solve_time_us=608`. This lowered engine solve but did not remove the outer scroll
+  self/extent cost.
+- Current decision: keep the extent-hint APIs and the core first-frame post-layout seed, but do not
+  claim code-view mount is solved. The next material target is a bounded page-scroll contract or a
+  shell-structure refactor for fixed viewport pages, not another generic "make all scrolls
+  post-layout authoritative" rewrite.

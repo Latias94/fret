@@ -349,6 +349,51 @@ fn scroll_known_content_size_skips_extent_probe_but_updates_handle_extent() {
 }
 
 #[test]
+fn scroll_known_content_size_keeps_cross_axis_viewport_for_single_axis_scroll() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-known-content-size-cross-axis",
+        {
+            let scroll_handle = scroll_handle.clone();
+            move |cx| {
+                let mut scroll = crate::element::ScrollProps::default();
+                scroll.axis = crate::element::ScrollAxis::Y;
+                scroll.layout.size.width = Length::Fill;
+                scroll.layout.size.height = Length::Fill;
+                scroll.scroll_handle = Some(scroll_handle.clone());
+                scroll.known_content_size = Some(Size::new(Px(0.0), Px(260.0)));
+
+                vec![cx.scroll(scroll, |_cx| Vec::new())]
+            }
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        scroll_handle.content_size(),
+        Size::new(Px(120.0), Px(260.0)),
+        "single-axis known content must not collapse the cross-axis viewport extent"
+    );
+}
+
+#[test]
 fn absolute_interactivity_gate_preserves_scrollbar_track_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -483,22 +528,39 @@ fn scroll_post_layout_reuses_known_extent_for_invalidated_definite_surface_witho
         atomic::{AtomicUsize, Ordering},
     };
 
-    struct MeasureCountingLayoutNode {
+    struct FixedLeaf {
         size: Size,
-        measure_count: Arc<AtomicUsize>,
     }
 
-    impl<H: UiHost> Widget<H> for MeasureCountingLayoutNode {
-        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
-            self.measure_count.fetch_add(1, Ordering::SeqCst);
-            self.size
-        }
-
+    impl<H: UiHost> Widget<H> for FixedLeaf {
         fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
             self.size
         }
 
         fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    struct MeasureCountingWrapper {
+        child: NodeId,
+        child_size: Size,
+        measure_count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for MeasureCountingWrapper {
+        fn measure(&mut self, _cx: &mut crate::widget::MeasureCx<'_, H>) -> Size {
+            self.measure_count.fetch_add(1, Ordering::SeqCst);
+            self.child_size
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child_rect = Rect::new(cx.bounds.origin, self.child_size);
+            let _ = cx.layout_in(self.child, child_rect);
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            cx.paint(self.child, Rect::new(cx.bounds.origin, self.child_size));
+        }
     }
 
     let mut app = TestHost::new();
@@ -514,10 +576,15 @@ fn scroll_post_layout_reuses_known_extent_for_invalidated_definite_surface_witho
     let mut text = FakeTextService::default();
     let scroll_handle = crate::scroll::ScrollHandle::default();
     let measure_count = Arc::new(AtomicUsize::new(0));
-    let child = ui.create_node(MeasureCountingLayoutNode {
+    let leaf = ui.create_node(FixedLeaf {
         size: Size::new(Px(200.0), Px(240.0)),
+    });
+    let child = ui.create_node(MeasureCountingWrapper {
+        child: leaf,
+        child_size: Size::new(Px(200.0), Px(240.0)),
         measure_count: measure_count.clone(),
     });
+    ui.set_children(child, vec![leaf]);
 
     let root0 = render_root(
         &mut ui,
@@ -552,15 +619,16 @@ fn scroll_post_layout_reuses_known_extent_for_invalidated_definite_surface_witho
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
     let measure_calls_before = measure_count.load(Ordering::SeqCst);
-    assert!(
-        measure_calls_before > 0,
-        "expected the first frame to measure the child subtree"
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll_node),
+        0,
+        "expected the first definite post-layout scroll frame to establish extents from child bounds without an unbounded scroll extent probe"
     );
 
     let content_before = scroll_handle.content_size();
     assert!(
-        content_before.height.0 > 0.0,
-        "expected the first frame to establish a non-zero scroll extent"
+        (content_before.height.0 - 240.0).abs() <= 0.5,
+        "expected the first frame to establish the child extent from post-layout bounds: {content_before:?}"
     );
 
     ui.test_set_layout_invalidation(scroll_node, true);
