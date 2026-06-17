@@ -261,6 +261,9 @@ mod tests {
         assert!(page_content_cache_contain_layout_when_bounds_known(
             PAGE_TABLE_RETAINED_TORTURE
         ));
+        assert!(page_content_cache_contain_layout_when_bounds_known(
+            PAGE_INSPECTOR_TORTURE
+        ));
     }
 }
 
@@ -898,7 +901,8 @@ pub(crate) fn page_content_cache_contain_layout_when_bounds_known(id: &str) -> b
         PAGE_CODE_EDITOR_MVP
         | PAGE_CODE_EDITOR_TORTURE
         | PAGE_DATA_TABLE_TORTURE
-        | PAGE_TABLE_RETAINED_TORTURE => true,
+        | PAGE_TABLE_RETAINED_TORTURE
+        | PAGE_INSPECTOR_TORTURE => true,
         _ => false,
     }
 }

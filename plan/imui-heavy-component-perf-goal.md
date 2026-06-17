@@ -1683,3 +1683,24 @@ popover overlay root solve tail.
 - Working conclusion: the next optimization slice should target the inspector / layout-root / view
   reconstruction boundary, not command dispatch. The goal is to reduce first-solve and root-phase
   churn on heavy component trees before trying to shave smaller tail costs.
+
+## 2026-06-18 Inspector Page Boundary Note
+
+- The latest follow-up kept the work scoped to the page shell instead of the component runtime.
+  `PAGE_INSPECTOR_TORTURE` now participates in
+  `page_content_cache_contain_layout_when_bounds_known(...)`, which matches the existing
+  editor-grade torture pages that already rely on contained layout boundaries.
+- This is meant to reduce parent-shell layout churn around the inspector scroll viewport and page
+  wrapper, not to mask row-level bugs or move policy into `fret-ui`.
+- Verification result:
+  `target/fret-diag/inspector-torture-page-boundary-recheck-direct/1781731029795/bundle.schema2.json`
+  now shows `top_total_time_us=5243` and `layout.root_phases roots(total/apply)=3965/3965`, versus
+  the earlier baseline
+  `target/fret-diag/inspector-torture-scroll-baseline/1781725601194/bundle.schema2.json`
+  with `top_total_time_us=29985` and `roots(total/apply)=18707/18705`.
+- The remaining hot path is still the page shell / scroll viewport / content wrapper chain, but the
+  first-pass root cost dropped enough that this no longer looks like a runtime-mechanism rewrite
+  candidate first.
+- Note: `tools/diag-scripts/suites/ui-gallery-inspector-torture/suite.json` is still a legacy
+  schema-1 suite manifest. Tool-launched `--launch` runs should use the promoted v2 script
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json` directly.
