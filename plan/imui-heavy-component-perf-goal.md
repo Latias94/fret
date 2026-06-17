@@ -1535,3 +1535,33 @@ popover overlay root solve tail.
   reported `top_total_time_us=33756`, with the outer content scroll back at
   `measure_children=30892us`. The fixed `Semantics` wrapper is currently acting as the measurement
   boundary; removing it reopens the original deep-measure path. The code was removed.
+- Rejected follow-up: teaching `Scroll` to seed its initial content extent from the current bounded
+  child measurement when `probe_unbounded=false`. Two variants were tested and removed:
+  m37 required the direct child to advertise a fixed `Length::Px` extent, but the condition did not
+  hit the actual `ScrollArea` child path; m38 trusted any current bounded measurement and regressed
+  the cold solve. Evidence:
+  `target/fret-diag/code-view-mount-m37-bounded-fixed-scroll-extent/1781716134933/bundle.schema2.json`
+  still showed the fixed page root solved first at `752x524` and then again at `752x674`
+  (`solve_barrier=7285us`, `corrected_content_relayout=true`), while
+  `target/fret-diag/code-view-mount-m38-current-bounded-measure-extent/1781717293191/bundle.schema2.json`
+  worsened to `top_total_time_us=19438` with the same `752x524 -> 752x674` double solve.
+- m39 used the existing `FRET_DEBUG_SCROLL_EXTENT_PROBE=1` logging:
+  `target/fret-diag/code-view-mount-m39-scroll-extent-debug/1781717415556/bundle.schema2.json`.
+  The log showed the outer gallery scroll repeatedly growing from `content=(752,524)` to observed
+  `672/674` after layout. This proves the 674 extent is discovered by post-layout overflow
+  observation, not by the current bounded measure pass. The next viable target is therefore the
+  measure path between `ScrollArea` and the fixed `ui-gallery-page-preview` shell, not another
+  content-extent seeding branch.
+- Rejected follow-up: skipping `solve_barrier_child_root_if_needed` for a fixed-size `Semantics`
+  shell and relying on the later widget-local `layout_in` path. m40 proved this is the wrong
+  mechanism:
+  `target/fret-diag/code-view-mount-m40-skip-fixed-semantics-barrier-solve/1781719036747/bundle.schema2.json`
+  reduced the worst-frame `layout.engine_solve` to roughly `526us`, but total/layout regressed to
+  `top_total_time_us=28437` / `top_layout_time_us=28210`. The cost moved into repeated widget
+  measure/layout (`measure_children=710us`, `layout_children=937us`, large `layout_roots_apply`),
+  and the scroll still corrected from viewport height to content height. The code was removed.
+- Mechanism conclusion after m37-m40: the remaining issue is not "skip Taffy" and not "seed from
+  bounded measure". The correct optimization must avoid the first wrong-size barrier solve by
+  giving the scroll/layout boundary an authoritative content extent before the first final solve,
+  while preserving the `Viewport` intrinsic-measure guard that prevents deep measurement of large
+  component trees.
