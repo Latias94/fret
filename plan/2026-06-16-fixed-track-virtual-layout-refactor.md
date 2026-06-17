@@ -584,3 +584,49 @@ Interpretation:
   - `cargo test -p fret-ui scroll_post_layout_edge_revalidation_reuses_previous_extent_for_deep_scan --profile dev-fast -- --nocapture`
   - `cargo test -p fret-ui scroll_post_layout_shrink_revalidation_clamps_stale_extent_after_content_contracts --profile dev-fast -- --nocapture`
   - `cargo build -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+
+### 2026-06-17 Code View Mount-Time Highlight Policy
+
+- Added a separate mount-time perf repro:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json`.
+  It resets diagnostics immediately before selecting `code_view_torture`, then captures the first
+  settled mount frames. This keeps page-mount cost separate from steady wheel scrolling.
+- Baseline evidence from the new script:
+  `target/fret-diag/code-view-mount-m1/1781653661239/bundle.schema2.json` reported
+  `top_total_time_us=28671`, `top_layout_time_us=28448`, and
+  `top_layout_engine_solve_time_us=625`.
+  Scroll profiling showed the outer gallery content viewport spent most of the frame inside
+  `measure_children`, while layout solve itself was sub-millisecond. The heavy child was the
+  `code_view.rs` / `code_block.rs` preview subtree.
+- A rejected experiment tried to highlight visible lines synchronously in the retained/windowed
+  row callback. That made mount tail latency worse (`m5` reached `136260us`) because many small
+  Tree-sitter highlight calls are a poor layout-frame strategy.
+- Implemented a conservative component-level policy knob instead:
+  `CodeBlockWindowedHighlightMode` with default `Full` and explicit `PlainIndexed`.
+  - `Full` preserves current code-block syntax highlighting behavior by preparing the full source.
+  - `PlainIndexed` builds an indexed plain-text line model for very large/synthetic surfaces where
+    first-frame latency is more important than syntax color parity.
+  - The UI gallery torture page opts into `PlainIndexed`; normal code block callers keep the
+    highlighted default.
+- Also removed an unconditional full-code clone when the copy button is disabled.
+- Final evidence after the explicit plain-indexed torture-page policy:
+  `target/fret-diag/code-view-mount-m7-explicit-plain-indexed/1781657735950/bundle.schema2.json`
+  reported mount repeat stats of `p50=21455us`, `max=26571us`, `layout p50=21238us`, and
+  `layout.engine_solve p50=611us`.
+- Steady-scroll validation remained within the 120Hz budget:
+  `target/fret-diag/code-view-wheel-steady-m3-explicit-plain-indexed/1781657750283/bundle.json`
+  reported `top_total_time_us=7613`, `top_layout_time_us=6964`, and
+  `top_layout_engine_solve_time_us=3397`.
+- Decision:
+  - Keep the explicit policy knob because it makes the performance/visual tradeoff visible and
+    local to the large torture page instead of silently degrading component defaults.
+  - Do not claim code-view mount is solved. The best repeat mount result is materially better than
+    the first isolated baseline, but still above the 120Hz budget.
+  - The next optimization lane should target the remaining outer Scroll/page-mount measurement
+    path, or introduce async/incremental syntax highlighting so large code blocks can preserve
+    syntax color without blocking first layout.
+- Focused validation:
+  - `cargo fmt -p fret-code-view -p fret-ui-gallery`
+  - `cargo test -p fret-code-view --profile dev-fast -- --nocapture`
+  - `cargo check -p fret-ui-gallery --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness --profile dev-fast`
+  - `cargo build -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`

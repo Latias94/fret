@@ -59,7 +59,10 @@ pub(in crate::ui) fn preview_code_view_torture(
         .show_scrollbar_y(true)
         .max_height(Px(420.0));
     let block = if windowed {
-        block.windowed(code_view::CodeBlockWindowedOptions::default())
+        block.windowed(
+            code_view::CodeBlockWindowedOptions::default()
+                .highlight_mode(code_view::CodeBlockWindowedHighlightMode::PlainIndexed),
+        )
     } else {
         block
     };

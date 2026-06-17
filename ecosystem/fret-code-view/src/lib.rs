@@ -16,8 +16,8 @@ mod syntax;
 
 pub use code_block::{
     CodeBlock, CodeBlockCopyButtonPlacement, CodeBlockHeaderBackground, CodeBlockHeaderSlots,
-    CodeBlockUiOptions, CodeBlockWindowedOptions, CodeBlockWrap, code_block,
-    code_block_non_windowed, code_block_windowed, code_block_with, code_block_with_header_slots,
-    code_block_with_header_slots_non_windowed, code_block_with_header_slots_windowed,
-    code_block_with_non_windowed, code_block_with_windowed,
+    CodeBlockUiOptions, CodeBlockWindowedHighlightMode, CodeBlockWindowedOptions, CodeBlockWrap,
+    code_block, code_block_non_windowed, code_block_windowed, code_block_with,
+    code_block_with_header_slots, code_block_with_header_slots_non_windowed,
+    code_block_with_header_slots_windowed, code_block_with_non_windowed, code_block_with_windowed,
 };

@@ -10,8 +10,14 @@ pub(crate) struct CodeBlockPreparedState {
 }
 
 impl CodeBlockPreparedState {
-    pub(crate) fn prepare(&mut self, code: &str, language: Option<&str>, show_line_numbers: bool) {
-        let key = CodeBlockKey::new(code, language, show_line_numbers);
+    pub(crate) fn prepare(
+        &mut self,
+        code: &str,
+        language: Option<&str>,
+        show_line_numbers: bool,
+        mode: CodeBlockPrepareMode,
+    ) {
+        let key = CodeBlockKey::new(code, language, show_line_numbers, mode);
         if self.key == key {
             return;
         }
@@ -21,6 +27,7 @@ impl CodeBlockPreparedState {
             language,
             show_line_numbers,
             key.revision(),
+            mode,
         ));
     }
 }
@@ -32,10 +39,16 @@ struct CodeBlockKey {
     language_hash: u64,
     language_len: usize,
     show_line_numbers: bool,
+    mode: CodeBlockPrepareMode,
 }
 
 impl CodeBlockKey {
-    fn new(code: &str, language: Option<&str>, show_line_numbers: bool) -> Self {
+    fn new(
+        code: &str,
+        language: Option<&str>,
+        show_line_numbers: bool,
+        mode: CodeBlockPrepareMode,
+    ) -> Self {
         let language = language.unwrap_or("");
         Self {
             code_hash: hash_value(code),
@@ -43,6 +56,7 @@ impl CodeBlockKey {
             language_hash: hash_value(language),
             language_len: language.len(),
             show_line_numbers,
+            mode,
         }
     }
 
@@ -53,8 +67,16 @@ impl CodeBlockKey {
         self.language_hash.hash(&mut h);
         self.language_len.hash(&mut h);
         self.show_line_numbers.hash(&mut h);
+        self.mode.hash(&mut h);
         h.finish()
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub(crate) enum CodeBlockPrepareMode {
+    #[default]
+    Full,
+    LineIndexed,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -62,7 +84,7 @@ pub(crate) struct PreparedCodeBlock {
     pub(crate) revision: u64,
     pub(crate) show_line_numbers: bool,
     pub(crate) line_number_width: usize,
-    pub(crate) line_numbers: Vec<Arc<str>>,
+    pub(crate) syntax_highlights: Vec<&'static str>,
     pub(crate) lines: Vec<PreparedLine>,
 }
 
@@ -82,22 +104,35 @@ fn prepare_code_block(
     language: Option<&str>,
     show_line_numbers: bool,
     revision: u64,
+    mode: CodeBlockPrepareMode,
 ) -> PreparedCodeBlock {
-    let spans = match language {
-        Some(language) => fret_syntax::highlight(code, language).unwrap_or_default(),
-        None => Vec::new(),
-    };
-    let spans = normalize_spans_to_char_boundaries(code, spans);
-
     let mut lines = split_lines(code);
     let line_number_width = line_number_width(lines.len());
 
     let mut prepared_lines = Vec::with_capacity(lines.len());
+    let mut syntax_highlights: Vec<&'static str> = Vec::new();
     let mut span_i = 0usize;
+
+    let spans = if mode == CodeBlockPrepareMode::Full {
+        match language {
+            Some(language) => normalize_spans_to_char_boundaries(
+                code,
+                fret_syntax::highlight(code, language).unwrap_or_default(),
+            ),
+            None => Vec::new(),
+        }
+    } else {
+        Vec::new()
+    };
 
     for line in &mut lines {
         let line_text = line.text;
         let global_range = line.range.clone();
+
+        if mode == CodeBlockPrepareMode::LineIndexed {
+            prepared_lines.push(plain_prepared_line(line_text));
+            continue;
+        }
 
         while span_i < spans.len() && spans[span_i].range.end <= global_range.start {
             span_i += 1;
@@ -120,6 +155,11 @@ fn prepare_code_block(
             }
             let rel = start - global_range.start;
             let rel_end = end - global_range.start;
+            if let Some(highlight) = span.highlight
+                && !syntax_highlights.contains(&highlight)
+            {
+                syntax_highlights.push(highlight);
+            }
             segments.push((safe_slice(line_text, rel, rel_end), span.highlight));
             cursor = end;
             j += 1;
@@ -149,17 +189,17 @@ fn prepare_code_block(
         revision,
         show_line_numbers,
         line_number_width,
-        line_numbers: if show_line_numbers {
-            (0..prepared_lines.len())
-                .map(|i| {
-                    let n = i + 1;
-                    Arc::<str>::from(format!("{n:>width$}", n = n, width = line_number_width))
-                })
-                .collect()
-        } else {
-            Vec::new()
-        },
+        syntax_highlights,
         lines: prepared_lines,
+    }
+}
+
+fn plain_prepared_line(line_text: &str) -> PreparedLine {
+    PreparedLine {
+        segments: vec![PreparedSegment {
+            text: Arc::<str>::from(line_text),
+            highlight: None,
+        }],
     }
 }
 
@@ -341,11 +381,21 @@ mod tests {
     #[test]
     fn prepared_state_is_idempotent_for_identical_inputs() {
         let mut state = CodeBlockPreparedState::default();
-        state.prepare("fn main() {}", Some("rust"), true);
+        state.prepare(
+            "fn main() {}",
+            Some("rust"),
+            true,
+            CodeBlockPrepareMode::Full,
+        );
         let first = state.prepared.clone();
         let first_revision = first.revision;
 
-        state.prepare("fn main() {}", Some("rust"), true);
+        state.prepare(
+            "fn main() {}",
+            Some("rust"),
+            true,
+            CodeBlockPrepareMode::Full,
+        );
 
         assert!(
             Arc::ptr_eq(&state.prepared, &first),
@@ -357,15 +407,43 @@ mod tests {
     #[test]
     fn prepared_state_rebuilds_when_inputs_change() {
         let mut state = CodeBlockPreparedState::default();
-        state.prepare("fn main() {}", Some("rust"), true);
+        state.prepare(
+            "fn main() {}",
+            Some("rust"),
+            true,
+            CodeBlockPrepareMode::Full,
+        );
         let first = state.prepared.clone();
 
-        state.prepare("fn main() {}", Some("rust"), false);
+        state.prepare(
+            "fn main() {}",
+            Some("rust"),
+            false,
+            CodeBlockPrepareMode::Full,
+        );
 
         assert!(
             !Arc::ptr_eq(&state.prepared, &first),
             "changed code block inputs must rebuild prepared state"
         );
         assert_ne!(state.prepared.revision, first.revision);
+    }
+
+    #[test]
+    fn line_indexed_prepare_keeps_plain_line_index_for_windowed_rows() {
+        let mut state = CodeBlockPreparedState::default();
+        state.prepare(
+            "fn main() {}\nlet x = 1;",
+            Some("rust"),
+            true,
+            CodeBlockPrepareMode::LineIndexed,
+        );
+
+        let prepared = state.prepared;
+        assert_eq!(prepared.lines.len(), 2);
+        assert_eq!(prepared.lines[0].segments.len(), 1);
+        assert_eq!(prepared.lines[0].segments[0].text.as_ref(), "fn main() {}");
+        assert_eq!(prepared.lines[0].segments[0].highlight, None);
+        assert!(prepared.syntax_highlights.is_empty());
     }
 }

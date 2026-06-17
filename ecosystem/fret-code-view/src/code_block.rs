@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, VecDeque},
     rc::Rc,
     sync::Arc,
 };
@@ -24,7 +24,7 @@ use fret_ui_kit::{
 };
 
 use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
-use crate::prepare::CodeBlockPreparedState;
+use crate::prepare::{CodeBlockPrepareMode, CodeBlockPreparedState};
 use crate::syntax::syntax_color;
 
 #[derive(Default)]
@@ -106,6 +106,18 @@ fn build_line_numbers(prepared: &crate::prepare::PreparedCodeBlock) -> Arc<str> 
     })
 }
 
+fn line_number_text(prepared: &crate::prepare::PreparedCodeBlock, line_i: usize) -> Arc<str> {
+    if !prepared.show_line_numbers || line_i >= prepared.lines.len() {
+        return Arc::<str>::from("");
+    }
+    let n = line_i + 1;
+    Arc::<str>::from(format!(
+        "{n:>width$}",
+        n = n,
+        width = prepared.line_number_width
+    ))
+}
+
 #[track_caller]
 fn resolve_code_block_cached_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -177,11 +189,18 @@ pub enum CodeBlockHeaderBackground {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CodeBlockWindowedOptions {
     pub overscan: usize,
+    pub highlight_mode: CodeBlockWindowedHighlightMode,
 }
 
 impl CodeBlockWindowedOptions {
     pub fn overscan(mut self, overscan: usize) -> Self {
         self.overscan = overscan.max(1);
+        self
+    }
+
+    /// Controls how syntax highlighting is prepared for the retained/windowed renderer.
+    pub fn highlight_mode(mut self, mode: CodeBlockWindowedHighlightMode) -> Self {
+        self.highlight_mode = mode;
         self
     }
 
@@ -193,8 +212,24 @@ impl CodeBlockWindowedOptions {
 
 impl Default for CodeBlockWindowedOptions {
     fn default() -> Self {
-        Self { overscan: 6 }
+        Self {
+            overscan: 6,
+            highlight_mode: CodeBlockWindowedHighlightMode::Full,
+        }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CodeBlockWindowedHighlightMode {
+    /// Preserve syntax highlighting by preparing the full source before mounting the windowed list.
+    #[default]
+    Full,
+    /// Skip full-source highlighting and keep an indexed plain-text line model.
+    ///
+    /// This is intended for very large or synthetic code surfaces where first-frame latency is more
+    /// important than syntax color parity. A future async/incremental highlighter should replace
+    /// this escape hatch for editor-grade surfaces.
+    PlainIndexed,
 }
 
 #[derive(Debug)]
@@ -635,6 +670,10 @@ pub fn code_block_with_header_slots_windowed<H: UiHost + 'static>(
     windowed: CodeBlockWindowedOptions,
 ) -> AnyElement {
     let windowed = windowed.normalized();
+    let prepare_mode = match windowed.highlight_mode {
+        CodeBlockWindowedHighlightMode::Full => CodeBlockPrepareMode::Full,
+        CodeBlockWindowedHighlightMode::PlainIndexed => CodeBlockPrepareMode::LineIndexed,
+    };
     code_block_with_header_slots_impl(
         cx,
         code,
@@ -642,6 +681,7 @@ pub fn code_block_with_header_slots_windowed<H: UiHost + 'static>(
         show_line_numbers,
         options,
         header,
+        prepare_mode,
         move |cx, theme, prepared, options| {
             render_code_block_body(cx, theme, prepared, options, windowed)
         },
@@ -664,6 +704,7 @@ pub fn code_block_with_header_slots_non_windowed<H: UiHost>(
         show_line_numbers,
         options,
         header,
+        CodeBlockPrepareMode::Full,
         |cx, theme, prepared, options| {
             render_code_block_body_non_windowed(
                 cx,
@@ -690,6 +731,7 @@ fn code_block_with_header_slots_impl<H: UiHost, F>(
     show_line_numbers: bool,
     options: CodeBlockUiOptions,
     mut header: CodeBlockHeaderSlots,
+    prepare_mode: CodeBlockPrepareMode,
     render_body: F,
 ) -> AnyElement
 where
@@ -722,11 +764,13 @@ where
 
     let language = language.map(str::trim).filter(|s| !s.is_empty());
     let prepared = cx.slot_state(CodeBlockPreparedState::default, |st| {
-        st.prepare(code, language, show_line_numbers);
+        st.prepare(code, language, show_line_numbers, prepare_mode);
         st.prepared.clone()
     });
 
-    let code = Arc::<str>::from(code.to_string());
+    let copy_code = options
+        .show_copy_button
+        .then(|| Arc::<str>::from(code.to_string()));
     let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
 
     cx.container(props, |cx| {
@@ -764,7 +808,10 @@ where
                         {
                             Some(CopyButtonInHeader {
                                 feedback: feedback.clone(),
-                                code: code.clone(),
+                                code: copy_code
+                                    .as_ref()
+                                    .cloned()
+                                    .unwrap_or_else(|| Arc::<str>::from("")),
                                 visible: copy_visible,
                             })
                         } else {
@@ -793,8 +840,9 @@ where
             let mut out = vec![content];
             if options.show_copy_button
                 && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay
+                && let Some(code) = copy_code.clone()
             {
-                let el = render_copy_button_overlay(cx, &theme, feedback.clone(), code.clone());
+                let el = render_copy_button_overlay(cx, &theme, feedback.clone(), code);
                 out.push(cx.opacity(if copy_visible { 1.0 } else { 0.0 }, |_cx| vec![el]));
             }
             out
@@ -1151,7 +1199,6 @@ fn build_code_block_line_rich(
     let Some(line) = prepared.lines.get(line_i) else {
         return AttributedText::new(Arc::<str>::from(""), Arc::<[TextSpan]>::from([]));
     };
-
     let mut text = String::new();
     let mut spans: Vec<TextSpan> = Vec::new();
 
@@ -1259,17 +1306,10 @@ struct CodeBlockLineRowTheme {
 
 impl CodeBlockLineRowTheme {
     fn new(theme: &Theme, prepared: &crate::prepare::PreparedCodeBlock) -> Self {
-        let mut unique_highlights: HashSet<&'static str> = HashSet::new();
-        for line in &prepared.lines {
-            for segment in &line.segments {
-                if let Some(highlight) = segment.highlight {
-                    unique_highlights.insert(highlight);
-                }
-            }
-        }
-
-        let syntax_colors = unique_highlights
-            .into_iter()
+        let syntax_colors = prepared
+            .syntax_highlights
+            .iter()
+            .copied()
             .map(|highlight| (highlight, syntax_color(theme, highlight)))
             .collect::<HashMap<_, _>>();
 
@@ -1324,11 +1364,7 @@ fn render_code_block_line_row<H: UiHost>(
         return code;
     }
 
-    let number = prepared
-        .line_numbers
-        .get(line_i)
-        .cloned()
-        .unwrap_or_else(|| Arc::<str>::from(""));
+    let number = line_number_text(prepared, line_i);
 
     let number_style = typography::as_control_text(TextStyle {
         font: FontId::monospace(),
@@ -1876,6 +1912,8 @@ mod tests {
     fn code_block_windowed_lane_keeps_explicit_static_host_boundary() {
         for marker in [
             "pub struct CodeBlockWindowedOptions {",
+            "pub enum CodeBlockWindowedHighlightMode {",
+            "pub fn highlight_mode(mut self, mode: CodeBlockWindowedHighlightMode) -> Self {",
             "pub fn windowed(mut self, options: CodeBlockWindowedOptions) -> Self {",
             "pub fn into_element_windowed<H: UiHost + 'static>(",
             "pub fn code_block_windowed<H: UiHost + 'static>(",
