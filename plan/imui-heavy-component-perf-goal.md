@@ -1619,3 +1619,28 @@ popover overlay root solve tail.
   `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json`
   produced
   `target/fret-diag/cookbook-imui-editor-controls-click-stress-after-fixes/1781721259147-cookbook-imui-editor-controls-click-stress`.
+
+## 2026-06-18 Data Table Retained/View-Cache Baseline
+
+- Switched from the cookbook IMUI example to the `ui-gallery/data-table` retained/view-cache
+  torture scripts to test a heavier shadcn-style application surface. Used the direct-start filter
+  scripts so navigation search does not pollute the measured interaction.
+- Retained baseline:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json`
+  with release `fret-ui-gallery --features "gallery-ai gallery-chart gallery-dev
+  gallery-web-ime-harness"` produced
+  `target/fret-diag/data-table-retained-filter-direct-m01-baseline/1781722336374/bundle.json`.
+  Worst frame: `top_total_time_us=5456`, `top_layout_time_us=4365`, `top_paint_time_us=804`,
+  `layout.engine_solve=447`. This is inside the 120Hz frame budget.
+- View-cache baseline:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change-direct.json`
+  produced
+  `target/fret-diag/data-table-view-cache-filter-direct-m01-baseline/1781722407012/bundle.schema2.json`.
+  Worst frame: `top_total_time_us=5958`, `top_layout_time_us=4504`, `top_paint_time_us=1233`,
+  `layout.engine_solve=486`. View-cache is slightly slower on this input-change slice but still
+  within budget.
+- Decision: do not refactor the data-table component path from this evidence alone. The retained
+  and view-cache direct filter interactions are not the severe 120Hz blocker. The more general
+  issue surfaced by the same stats is command availability fallback in no-focus states, where
+  subtree fallback checks can consume multiple milliseconds in component-heavy windows; that is a
+  better next infrastructure slice.
