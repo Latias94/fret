@@ -41,7 +41,11 @@ where
     Value: FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     Actions: FnOnce(&mut ElementContext<'_, H>) -> Option<AnyElement>,
 {
-    let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
+    let bounds = if matches!(options.variant, PropertyRowLayoutVariant::Auto) {
+        cx.layout_query_bounds(cx.root_id(), Invalidation::Layout)
+    } else {
+        None
+    };
 
     let has_reset_slot = reset.as_ref().is_some_and(|reset| reset.options.enabled);
 

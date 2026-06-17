@@ -1664,3 +1664,22 @@ popover overlay root solve tail.
 - Perf recheck is still running in release mode; compile time dominated the first pass, so the next
   step is to reuse the warmed build artifacts and compare the same data-table retained script after
   the process finishes.
+
+## 2026-06-18 Inspector Torture Baseline
+
+- Moved away from the data-table and command-availability slices and ran a heavier inspector
+  torture surface to probe a more realistic editor-style workload.
+- Baseline run:
+  `tools/diag-scripts/suites/ui-gallery-inspector-torture/suite.json`
+  produced `target/fret-diag/inspector-torture-scroll-baseline/1781725601194/bundle.schema2.json`.
+  Worst frame `top_total_time_us=3138`; command availability is no longer the dominant tail here.
+- Keep-alive variant:
+  `tools/diag-scripts/suites/ui-gallery-inspector-torture-keep-alive/suite.json`
+  produced `target/fret-diag/inspector-torture-bounce-keep-alive-baseline/1781725682291/bundle.json`.
+  Worst frame `top_total_time_us=3907`; the extra keep-alive step did not remove the cost class.
+- Shared hotspot shape across both bundles: `layout.root_phases` dominates the expensive frames,
+  with `layout.engine_solve` and renderer tail work (`finish`, `ensure`, `record`, `text_prepare`)
+  visible behind it. Command availability is present but secondary.
+- Working conclusion: the next optimization slice should target the inspector / layout-root / view
+  reconstruction boundary, not command dispatch. The goal is to reduce first-solve and root-phase
+  churn on heavy component trees before trying to shave smaller tail costs.

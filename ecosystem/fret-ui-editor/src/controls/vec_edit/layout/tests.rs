@@ -22,3 +22,15 @@ fn vec_edit_auto_variant_stacks_only_below_threshold() {
         VecEditLayoutVariant::Row
     );
 }
+
+#[test]
+fn vec_edit_non_auto_variants_do_not_depend_on_bounds() {
+    assert_eq!(
+        resolve_vec_edit_variant(VecEditLayoutVariant::Row, Some(Px(1.0)), Px(120.0)),
+        VecEditLayoutVariant::Row
+    );
+    assert_eq!(
+        resolve_vec_edit_variant(VecEditLayoutVariant::Column, None, Px(120.0)),
+        VecEditLayoutVariant::Column
+    );
+}

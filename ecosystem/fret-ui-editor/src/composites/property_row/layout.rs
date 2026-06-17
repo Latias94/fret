@@ -149,6 +149,22 @@ mod tests {
     }
 
     #[test]
+    fn property_row_non_auto_variants_ignore_bounds() {
+        assert_eq!(
+            resolve_property_row_layout_variant(
+                PropertyRowLayoutVariant::Row,
+                Some(bounds(Px(1.0))),
+                Px(520.0),
+            ),
+            PropertyRowLayoutVariant::Row
+        );
+        assert_eq!(
+            resolve_property_row_layout_variant(PropertyRowLayoutVariant::Column, None, Px(520.0)),
+            PropertyRowLayoutVariant::Column
+        );
+    }
+
+    #[test]
     fn property_row_resolved_layout_preserves_minimum_affordance_slots() {
         let app = App::new();
         let options = PropertyRowOptions {

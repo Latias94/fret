@@ -34,7 +34,11 @@ pub(super) fn resolve_vec_edit_layout_plan<H: UiHost>(
     options: &VecEditOptions,
     axis_count: usize,
 ) -> VecEditLayoutPlan {
-    let bounds = cx.layout_query_bounds(cx.root_id(), Invalidation::Layout);
+    let bounds = if matches!(options.variant, VecEditLayoutVariant::Auto) {
+        cx.layout_query_bounds(cx.root_id(), Invalidation::Layout)
+    } else {
+        None
+    };
     let (axis_colors, default_auto_below, axis_min_width) = {
         let theme = Theme::global(&*cx.app);
         let style = EditorStyle::resolve(theme);

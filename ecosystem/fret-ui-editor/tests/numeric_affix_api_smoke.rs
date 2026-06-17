@@ -196,6 +196,10 @@ fn numeric_affix_option_defaults_are_empty() {
     let vec_edit = VecEditOptions::default();
     assert!(vec_edit.prefix.is_none());
     assert!(vec_edit.suffix.is_none());
+    assert_eq!(
+        vec_edit.variant,
+        fret_ui_editor::controls::VecEditLayoutVariant::Row
+    );
 
     let transform = TransformEditOptions::default();
     assert!(transform.position_prefix.is_none());

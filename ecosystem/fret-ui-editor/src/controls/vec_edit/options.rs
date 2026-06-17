@@ -33,7 +33,7 @@ impl Default for VecEditOptions {
             prefix: None,
             suffix: None,
             id_source: None,
-            variant: VecEditLayoutVariant::Auto,
+            variant: VecEditLayoutVariant::Row,
             gap: Px(6.0),
             axis_gap: Px(4.0),
             auto_stack_below: None,
