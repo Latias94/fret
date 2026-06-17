@@ -1528,3 +1528,10 @@ popover overlay root solve tail.
   `solve_barrier=22505us`, `measure_children=4us`, and `layout_children=333us`. The code was
   removed. The remaining problem is therefore the page content root's cold layout-engine solve, not
   just the outer `cx.keyed(...)` wrapper.
+- Rejected follow-up: replacing the outer `ui-gallery-page-preview` layout `Semantics` wrapper with
+  layout-transparent `attach_semantics` on the code-view page root while moving the fixed
+  height/clip to that page root. m36 regressed hard:
+  `target/fret-diag/code-view-mount-m36-preview-attach-semantics/1781714021153/bundle.json`
+  reported `top_total_time_us=33756`, with the outer content scroll back at
+  `measure_children=30892us`. The fixed `Semantics` wrapper is currently acting as the measurement
+  boundary; removing it reopens the original deep-measure path. The code was removed.
