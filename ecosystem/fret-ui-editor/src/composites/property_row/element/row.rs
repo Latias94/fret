@@ -56,6 +56,8 @@ where
         actions_el,
     } = options;
 
+    let has_trailing_slots = has_reset_slot || actions_el.is_some();
+
     cx.flex(
         FlexProps {
             layout,
@@ -92,6 +94,34 @@ where
                 |cx| vec![label(cx)],
             );
 
+            let value = mark_property_row_value_slot(cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            min_height: Some(Length::Px(density.row_height)),
+                            max_width: Some(Length::Px(value_max_w)),
+                            ..Default::default()
+                        },
+                        flex: FlexItemStyle {
+                            order: 0,
+                            grow: 1.0,
+                            shrink: 1.0,
+                            basis: Length::Px(Px(0.0)),
+                            align_self: None,
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |cx| vec![value(cx)],
+            ));
+
+            if !has_trailing_slots {
+                return vec![label, value];
+            }
+
             let body = cx.flex(
                 FlexProps {
                     layout: LayoutStyle {
@@ -118,30 +148,6 @@ where
                     wrap: false,
                 },
                 move |cx| {
-                    let value = mark_property_row_value_slot(cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    min_height: Some(Length::Px(density.row_height)),
-                                    max_width: Some(Length::Px(value_max_w)),
-                                    ..Default::default()
-                                },
-                                flex: FlexItemStyle {
-                                    order: 0,
-                                    grow: 1.0,
-                                    shrink: 1.0,
-                                    basis: Length::Px(Px(0.0)),
-                                    align_self: None,
-                                },
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        |cx| vec![value(cx)],
-                    ));
-
                     let mut out = vec![value];
 
                     if has_reset_slot {

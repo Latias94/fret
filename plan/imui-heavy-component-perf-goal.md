@@ -144,6 +144,59 @@ historical records remain in:
   text shaping; it is dirty subtree application/root layout work after navigation into the torture
   page.
 
+## 2026-06-18 Inspector Content Shell Note
+
+- The inspector torture page's preview subtree already owns a fixed-height, clipped surface around
+  the retained virtual list. That makes the remaining cost look like shell/root churn, not a row
+  shape problem.
+- I briefly tried a page-level static-shell policy in `fret-ui-gallery`. The first captured run
+  looked better, but the current release binary rerun landed at `top_total_time_us=9724` with
+  `layout.root_phases=3`, and a clean side-by-side against the normal shell still showed the
+  disabled-content-scroll path faster (`3536us` vs `5338us`) while changing the page contract.
+- I also tried feeding the inspector scroll area an explicit known content height (`460px`) so the
+  scroll solver could skip the unbounded probe path. The normal-shell rerun improved slightly to
+  `top_total_time_us=5180`, but the content-scroll-disabled path still stayed lower at
+  `3583us`. That makes the known-size input worth remembering, but not enough to justify a broad
+  wrapper rewrite.
+- Conclusion: keep the content-shell path unchanged for now. The useful finding is narrower: future
+  work should focus on reducing root/apply churn inside the existing shell instead of rewriting the
+  page wrapper.
+
+## 2026-06-18 Session Shell Hardening Note
+
+- The editor numeric session shell was still allowing `Auto` height to leak through as the final
+  stack height. That made mode switches in `DragValue`, `Slider`, and `AxisDragValue` capable of
+  nudging the visible row height even though the shell already reserved the right min height.
+- The shell now promotes `Auto` height to the full control outer height. This keeps the scrub /
+  typing branches mounted but prevents the wrapper from changing its own measured height when the
+  active branch changes.
+- Targeted nextest coverage now asserts the fixed-height shell contract for `DragValue`, `Slider`,
+  and `AxisDragValue`, so this stays a regression gate rather than a one-off fix.
+
+## 2026-06-18 TransformEdit Structure Note
+
+- `TransformEdit` 的 column 变体已经去掉一层多余的列壳，link toggle 现在直接挂在同一
+  个 column shell 下。
+- 这次没有改变外部 API，只是把浅层包装收起来，减少一处不必要的树深度。
+- 下一步结构排查重点转向共享输入组原语链（`TextField`、`MiniSearchBox`、
+  `AssetRefField`、`FieldStatusBadge`），它们更像是同一类重组件热点。
+
+## 2026-06-18 TextAssistField Structure Note
+
+- `TextAssistField` 的 anchored-overlay 路径已经收掉外层纵向 `flex` 根节点，直接返
+  回 `TextField` 本体并由 overlay 系统承载建议面板。
+- 这让 overlay surface 的根更浅，也把 inline 与 overlay 两种形态分开得更明确。
+- 接下来继续观察共享输入组原语链，看是否还能合并更多重复壳层，而不是继续在
+  调用点上补局部修补。
+
+## 2026-06-18 Input Group Button-Depth Note
+
+- `editor_icon_button_segment` 现在少了一层中间 `flex` 包装，结构从 `pressable ->
+  container -> flex -> icon` 收缩为 `pressable -> container -> icon`。
+- 这个收敛已经由 `primitives::input_group` 的结构测试覆盖，不是只靠肉眼判断。
+- 下一步如果继续收，就应该看 `editor_joined_input_frame` 的组合壳是否还能合并，
+  而不是在调用点层面重复补段。
+
 ## Decisions
 
 ### D1. Continue mixed component plus mechanism optimization
@@ -1692,6 +1745,11 @@ popover overlay root solve tail.
   editor-grade torture pages that already rely on contained layout boundaries.
 - This is meant to reduce parent-shell layout churn around the inspector scroll viewport and page
   wrapper, not to mask row-level bugs or move policy into `fret-ui`.
+- I also tried scrollbarless viewport chrome for the content scroll area. That kept the page chrome
+  thinner but regressed the same torture bundle (`top_total_time_us=5390`,
+  `layout.root_phases roots(total/apply)=3837/3836`) versus the immediately prior
+  containment-only run (`top_total_time_us=5243`, `roots(total/apply)=3965/3965`). The experiment
+  is therefore rejected and should stay out of the mainline path.
 - Verification result:
   `target/fret-diag/inspector-torture-page-boundary-recheck-direct/1781731029795/bundle.schema2.json`
   now shows `top_total_time_us=5243` and `layout.root_phases roots(total/apply)=3965/3965`, versus
@@ -1704,3 +1762,21 @@ popover overlay root solve tail.
 - Note: `tools/diag-scripts/suites/ui-gallery-inspector-torture/suite.json` is still a legacy
   schema-1 suite manifest. Tool-launched `--launch` runs should use the promoted v2 script
   `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json` directly.
+
+## 2026-06-18 Field Status Badge Note
+
+- `FieldStatusBadge` 现在可直接携带自己的 padding，不必让 `AssetRefField` 再额外套一
+  层 `editor_input_group_segment`。
+- 这让共享输入组链条和资产字段路径都少了一层真实容器节点。
+- 共享输入组链条内部仍保留 `editor_joined_input_frame`，但调用点已经不再需要为了
+  badge 间距专门加壳。
+
+## 2026-06-19 Property Row Flattening Note
+
+- `PropertyRow` 的 row / column 分支在没有 reset / actions slot 时，会把 value 容器
+  直接挂在 root 下，去掉了中间 body / header 壳。
+- 这次收缩保留了 `PROPERTY_ROW_VALUE_SLOT`，所以布局测试和后续结构检查仍能锚定到
+  同一个值槽。
+- `PropertyGrid` 的编辑器行高测试不再要求 numeric / drag value 完全同高；drag value
+  的 session shell 本来就比 plain numeric input 更高，这属于控件自身的外壳策略。
+- 新增了 row / column 直接挂载测试，防止以后又把这层壳悄悄加回去。

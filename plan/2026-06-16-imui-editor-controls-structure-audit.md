@@ -103,6 +103,76 @@ deepening pass.
 3. Keep overlay policy in the editor ecosystem, but factor repeated popup surface chrome into a
    shared helper instead of repeating the same wrapper pattern in each control.
 
+## 2026-06-18 Numeric Shell Note
+
+- The earlier `DragValue` height jump was not a `PropertyGrid` default-variant issue, and not an
+  overlay bug.
+- The shared session shell for mode-switching numeric controls was leaving `height = Auto`, which
+  made the visible wrapper track branch-specific content height more closely than it should.
+- That shell is now a fixed-height wrapper for the editor numeric controls. The refactor candidate
+  remains valid as a deeper simplification target, but the immediate geometry jump is no longer
+  produced by the shell contract.
+
+## 2026-06-18 ColorEdit Error-Path Note
+
+- `ColorEdit` already keeps popup, tooltip, copy-menu, and eyedropper behavior in overlay/popup
+  paths, which is the right layering shape for dense inspector surfaces.
+- The remaining layout-risk path is the inline error text: when the color parse fails, the root
+  layout appends a text node below the swatch/input row. That means invalid input can still grow
+  the control vertically.
+- This is not yet the same class of bug as the numeric session shell jump, but it is a real
+  follow-on candidate if the goal is strict height stability even in invalid state.
+
+## 2026-06-18 Numeric Input Default Error Policy Note
+
+- The generic `NumericInput` default error display was still `InlineTextAndIcon`, which meant dense
+  caller surfaces could expand vertically in invalid state unless they remembered to override it.
+- The default now prefers `TrailingIcon`, which keeps the common invalid-state presentation inside
+  the existing control height.
+- Dense editor callers that want explicit inline error copy can still opt in directly, but the
+  safer default is now the stable one.
+
+## 2026-06-18 TransformEdit Structure Note
+
+- `TransformEdit` 的 `section_col_with_link` 之前是“先生成一层列，再外包一层列”才能
+  放下 link toggle，这属于不必要的树深度。
+- 现在 link 变体和普通变体都复用同一个 column shell，只有内容组合不同，不再额外
+  叠一层容器。
+- 这不是当前示例里最重的热点，但它验证了一个更一般的方向：组件 lane 里还有
+  许多“为了插一个小附属控件而多包一层”的浅壳，值得持续收敛。
+
+## 2026-06-18 Next Candidate Note
+
+- 继续优先观察 `TextField` / `MiniSearchBox` / `AssetRefField` / `FieldStatusBadge` 这条
+  共享输入组原语链。
+- 它们目前共享 `editor_joined_input_frame(...)`，结构上比单个控件更像真正的共性层。
+- 下一步若再出现高度跳变，优先检查这条共享原语，而不是每个调用点单独补丁。
+
+## 2026-06-18 TextAssistField Structure Note
+
+- `TextAssistField` 的 anchored-overlay 路径现在不再额外套一层外部 `flex` 根节点，直
+  接返回 `TextField` 根节点，同时仍保留 overlay 请求和输入-owned 键处理。
+- 这把 overlay surface 的结构再收薄了一层，也让 inline 与 overlay 的根形态更加
+  分离：inline 继续用外层纵向布局，overlay 只保留字段本体。
+- 这类收敛是对的方向，但它还不是终点。下一批应继续看共享输入组原语是否还有
+  可以合并的壳层，而不是在每个调用点重复叠层。
+
+## 2026-06-18 Input Group Button-Depth Note
+
+- `editor_icon_button_segment` 原来是 `pressable -> container -> flex -> icon`，对一个简
+  单图标按钮来说层数偏厚。
+- 现在中间那层 `flex` 已经去掉，按钮段变成 `pressable -> container -> icon`。
+- 这不是大规模重构，但它把共享输入组原语再压薄了一层，并且有明确的测试门守
+  住，后面如果继续收 `editor_joined_input_frame`，可以把它当作已知基线。
+
+## 2026-06-18 Field Status Badge Note
+
+- `FieldStatusBadge` 现在自己携带 `padding`，不再需要 `AssetRefField` 外面再包一层
+  `editor_input_group_segment` 来补间距。
+- 这次删掉的是一个真实容器节点，而不是只改了调用写法。
+- `editor_input_group_inset` 仍然保留给其他显式需要 inset 的调用点；当前收口只把
+  资产状态这条路径收薄。
+
 ## Not the next target
 
 - Do not start with `fret-ui` runtime rewrites.
@@ -115,3 +185,13 @@ deepening pass.
 
 Start with `PropertyRow` / `PropertyGrid` first. That seam has the clearest link to the observed
 height jump and the biggest leverage over the rest of the dense editor surface.
+
+## 2026-06-19 Property Row Flattening Note
+
+- `PropertyRow` 的 row / column 分支在没有 reset / actions slot 时，会把 value 容器
+  直接挂在 root 下，去掉了中间 body / header 壳。
+- 这次收缩保留了 `PROPERTY_ROW_VALUE_SLOT`，所以布局测试和后续结构检查仍能锚定到
+  同一个值槽。
+- `PropertyGrid` 的编辑器行高测试不再要求 numeric / drag value 完全同高；drag value
+  的 session shell 本来就比 plain numeric input 更高，这属于控件自身的外壳策略。
+- 新增了 row / column 直接挂载测试，防止以后又把这层壳悄悄加回去。

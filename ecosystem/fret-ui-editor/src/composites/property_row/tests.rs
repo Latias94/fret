@@ -76,6 +76,108 @@ fn row_value_slot_keeps_overflow_visible_for_wrapping_value_children() {
 }
 
 #[test]
+fn row_without_trailing_slots_keeps_value_container_directly_under_root() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let row = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-row-flat-layout",
+        |cx| {
+            PropertyRow::new()
+                .options(PropertyRowOptions {
+                    variant: PropertyRowLayoutVariant::Row,
+                    test_id: Some(Arc::from("inspector.exposure")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |cx| property_row_label_text(cx, "Exposure"),
+                    |cx| cx.text("0.50"),
+                    |_cx| None,
+                )
+        },
+    );
+
+    let ElementKind::Flex(_) = &row.kind else {
+        panic!(
+            "property row root should remain a flex container, got {:?}",
+            row.kind
+        );
+    };
+    assert_eq!(
+        row.children.len(),
+        2,
+        "row without trailing slots should only keep label and value children"
+    );
+    assert!(
+        matches!(row.children[0].kind, ElementKind::Container(_)),
+        "first child should be the fixed-width label container"
+    );
+    assert!(
+        matches!(row.children[1].kind, ElementKind::Container(_)),
+        "second child should be the value container directly under the root"
+    );
+    assert_eq!(
+        row.children[1].component_slot.as_deref(),
+        Some(PROPERTY_ROW_VALUE_SLOT),
+        "value container should stay the direct slot root when no trailing affordances are present"
+    );
+}
+
+#[test]
+fn column_without_trailing_slots_keeps_value_container_directly_under_root() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let row = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-row-flat-column-layout",
+        |cx| {
+            PropertyRow::new()
+                .options(PropertyRowOptions {
+                    variant: PropertyRowLayoutVariant::Column,
+                    test_id: Some(Arc::from("inspector.exposure")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |cx| property_row_label_text(cx, "Exposure"),
+                    |cx| cx.text("0.50"),
+                    |_cx| None,
+                )
+        },
+    );
+
+    let ElementKind::Flex(_) = &row.kind else {
+        panic!(
+            "property row root should remain a flex container, got {:?}",
+            row.kind
+        );
+    };
+    assert_eq!(
+        row.children.len(),
+        2,
+        "column row without trailing slots should only keep label and value children"
+    );
+    assert!(
+        matches!(row.children[0].kind, ElementKind::Container(_)),
+        "first child should be the fixed-width label container"
+    );
+    assert!(
+        matches!(row.children[1].kind, ElementKind::Container(_)),
+        "second child should be the value container directly under the root"
+    );
+    assert_eq!(
+        row.children[1].component_slot.as_deref(),
+        Some(PROPERTY_ROW_VALUE_SLOT),
+        "value container should stay the direct slot root when no trailing affordances are present"
+    );
+}
+
+#[test]
 fn row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();

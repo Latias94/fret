@@ -54,6 +54,49 @@ where
 
     let header_gap = trailing_gap;
     let stack_gap = Px(density.padding_y.0.max(4.0));
+    let has_trailing_slots = has_reset_slot || actions_el.is_some();
+
+    let label = cx.container(
+        ContainerProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Px(density.row_height),
+                    min_height: Some(Length::Px(density.row_height)),
+                    max_height: Some(Length::Px(density.row_height)),
+                    ..Default::default()
+                },
+                flex: FlexItemStyle {
+                    order: 0,
+                    grow: 1.0,
+                    shrink: 1.0,
+                    basis: Length::Px(Px(0.0)),
+                    align_self: None,
+                },
+                overflow: Overflow::Clip,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        |cx| vec![label(cx)],
+    );
+
+    let value = mark_property_row_value_slot(cx.container(
+        ContainerProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    min_height: Some(Length::Px(density.row_height)),
+                    max_width: Some(Length::Px(value_max_w)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        |cx| vec![value(cx)],
+    ));
 
     cx.flex(
         FlexProps {
@@ -66,6 +109,10 @@ where
             wrap: false,
         },
         move |cx| {
+            if !has_trailing_slots {
+                return vec![label, value];
+            }
+
             let header = cx.flex(
                 FlexProps {
                     layout: LayoutStyle {
@@ -85,31 +132,6 @@ where
                     wrap: false,
                 },
                 move |cx| {
-                    let label = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Px(density.row_height),
-                                    min_height: Some(Length::Px(density.row_height)),
-                                    max_height: Some(Length::Px(density.row_height)),
-                                    ..Default::default()
-                                },
-                                flex: FlexItemStyle {
-                                    order: 0,
-                                    grow: 1.0,
-                                    shrink: 1.0,
-                                    basis: Length::Px(Px(0.0)),
-                                    align_self: None,
-                                },
-                                overflow: Overflow::Clip,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        |cx| vec![label(cx)],
-                    );
-
                     let mut out = vec![label];
 
                     if has_reset_slot {
@@ -143,23 +165,6 @@ where
                     out
                 },
             );
-
-            let value = mark_property_row_value_slot(cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            min_height: Some(Length::Px(density.row_height)),
-                            max_width: Some(Length::Px(value_max_w)),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                |cx| vec![value(cx)],
-            ));
 
             vec![header, value]
         },
