@@ -6,9 +6,20 @@ use super::{TextAssistFieldOptions, TextAssistFieldSurface};
 fn text_assist_field_defaults_to_unbuffered_field_policy() {
     let options = TextAssistFieldOptions::default();
     assert!(!options.field.buffered);
-    assert!(matches!(options.surface, TextAssistFieldSurface::Inline));
+    assert!(matches!(
+        options.surface,
+        TextAssistFieldSurface::AnchoredOverlay
+    ));
     assert_eq!(options.list_label.as_ref(), "Suggestions");
     assert_eq!(options.empty_label.as_ref(), "No matches");
+}
+
+#[test]
+fn text_assist_field_surface_defaults_to_overlay() {
+    assert!(matches!(
+        TextAssistFieldSurface::default(),
+        TextAssistFieldSurface::AnchoredOverlay
+    ));
 }
 
 #[test]

@@ -18,8 +18,8 @@ pub type OnTextAssistFieldAccept =
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TextAssistFieldSurface {
-    #[default]
     Inline,
+    #[default]
     AnchoredOverlay,
 }
 
@@ -52,7 +52,7 @@ impl Default for TextAssistFieldOptions {
         };
         Self {
             field,
-            surface: TextAssistFieldSurface::Inline,
+            surface: TextAssistFieldSurface::AnchoredOverlay,
             list_label: Arc::from("Suggestions"),
             empty_label: Arc::from("No matches"),
             key_options: InputOwnedTextAssistKeyOptions::default(),

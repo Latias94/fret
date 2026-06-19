@@ -50,7 +50,7 @@ impl Default for NumericInputOptions {
             test_id: None,
             enabled: true,
             focusable: true,
-            error_display: NumericInputErrorDisplay::InlineTextAndIcon,
+            error_display: NumericInputErrorDisplay::TrailingIcon,
             selection_behavior: NumericInputSelectionBehavior::ReplaceAllOnFocus,
         }
     }

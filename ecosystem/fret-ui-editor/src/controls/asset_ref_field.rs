@@ -17,7 +17,7 @@ use crate::controls::field_status::{FieldStatus, FieldStatusBadge};
 use crate::primitives::colors::{editor_foreground, editor_muted_foreground};
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_icon_button_segment,
-    editor_icon_segment, editor_input_group_segment, editor_input_value_text,
+    editor_icon_segment, editor_input_value_text,
     editor_joined_input_frame_segments_with_overrides,
 };
 use crate::primitives::style::EditorStyle;
@@ -207,20 +207,20 @@ impl AssetRefField {
             move |cx| {
                 let mut segments = Vec::new();
                 if let Some(status) = status.clone() {
-                    let badge = FieldStatusBadge::new(status).into_element(cx);
-                    segments.push(editor_input_group_segment(
-                        cx,
-                        LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Auto,
-                                height: Length::Fill,
+                    let badge = FieldStatusBadge::new(status)
+                        .options(crate::controls::field_status::FieldStatusBadgeOptions {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Auto,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        Edges::symmetric(Px(4.0), Px(0.0)),
-                        badge,
-                    ));
+                            padding: Edges::symmetric(Px(4.0), Px(0.0)),
+                        })
+                        .into_element(cx);
+                    segments.push(badge);
                 }
                 if let Some(action) = choose.clone() {
                     segments.push(asset_ref_action_segment(

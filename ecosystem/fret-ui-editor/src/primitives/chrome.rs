@@ -57,7 +57,6 @@ pub(crate) fn resolve_editor_text_field_frame_chrome(
 }
 
 pub(crate) fn joined_text_input_style(mut chrome: TextInputStyle) -> TextInputStyle {
-    chrome.padding = Edges::all(Px(0.0));
     chrome.border = Edges::all(Px(0.0));
     chrome.corner_radii = Corners::all(Px(0.0));
     chrome.background = Color {

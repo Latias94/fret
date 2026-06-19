@@ -41,6 +41,7 @@ impl FieldStatus {
 #[derive(Debug, Clone)]
 pub struct FieldStatusBadgeOptions {
     pub layout: LayoutStyle,
+    pub padding: Edges,
 }
 
 impl Default for FieldStatusBadgeOptions {
@@ -54,6 +55,7 @@ impl Default for FieldStatusBadgeOptions {
                 },
                 ..Default::default()
             },
+            padding: Edges::symmetric(Px(5.0), Px(0.0)),
         }
     }
 }
@@ -89,7 +91,7 @@ impl FieldStatusBadge {
         cx.container(
             ContainerProps {
                 layout: self.options.layout,
-                padding: Edges::symmetric(Px(5.0), Px(0.0)).into(),
+                padding: self.options.padding.into(),
                 background: Some(bg),
                 border: Edges::all(Px(1.0)),
                 border_color: Some(border),

@@ -54,14 +54,14 @@ fn axis_drag_value_uses_stable_session_shell_for_scrub_and_typing_branches() {
     let ElementKind::Stack(shell) = &element.kind else {
         panic!("axis drag value should mount scrub/typing branches in a stack shell");
     };
-    assert_eq!(shell.layout.size.width, Length::Fill);
-    assert_eq!(shell.layout.size.height, Length::Auto);
     let expected_min_height = {
         let style = EditorStyle::resolve(Theme::global(&app));
         style
             .frame_chrome_small()
             .control_outer_height(style.density.row_height)
     };
+    assert_eq!(shell.layout.size.width, Length::Fill);
+    assert_eq!(shell.layout.size.height, Length::Px(expected_min_height));
     assert_eq!(
         shell.layout.size.min_height,
         Some(Length::Px(expected_min_height))

@@ -1,11 +1,11 @@
 use super::{
-    ResolvedEditorFrameChrome, resolve_editor_text_area_field_style,
+    ResolvedEditorFrameChrome, joined_text_input_style, resolve_editor_text_area_field_style,
     resolve_editor_text_field_style,
 };
 use crate::primitives::EditorTokenKeys;
 use fret_app::App;
 use fret_core::{Color, Edges, Px, TextLineHeightPolicy, TextVerticalPlacement};
-use fret_ui::{Theme, ThemeConfig};
+use fret_ui::{TextInputStyle, Theme, ThemeConfig};
 use fret_ui_kit::{ChromeRefinement, Size};
 
 #[test]
@@ -87,6 +87,19 @@ fn editor_text_field_style_prefers_editor_tokens_over_legacy_component_tokens() 
         resolve_editor_text_field_style(theme, Size::Small, &ChromeRefinement::default());
 
     assert_eq!(chrome.background, Color::from_srgb_hex_rgb(0x14_1b_24));
+}
+
+#[test]
+fn joined_text_input_style_keeps_inner_padding_but_removes_frame_chrome() {
+    let chrome = joined_text_input_style(TextInputStyle::default());
+
+    assert_eq!(chrome.padding.top, Px(6.0));
+    assert_eq!(chrome.padding.bottom, Px(6.0));
+    assert_eq!(chrome.padding.left, Px(8.0));
+    assert_eq!(chrome.padding.right, Px(8.0));
+    assert_eq!(chrome.border, Edges::all(Px(0.0)));
+    assert_eq!(chrome.corner_radii, fret_core::Corners::all(Px(0.0)));
+    assert_eq!(chrome.focus_ring, None);
 }
 
 #[test]

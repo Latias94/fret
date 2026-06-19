@@ -11,6 +11,9 @@ pub(super) fn session_shell_layout(mut layout: LayoutStyle, control_height: Px) 
     if matches!(layout.size.width, Length::Auto) {
         layout.size.width = Length::Fill;
     }
+    if matches!(layout.size.height, Length::Auto) {
+        layout.size.height = Length::Px(control_height);
+    }
     layout
 }
 
@@ -72,7 +75,7 @@ mod tests {
         let resolved = session_shell_layout(layout, Px(24.0));
 
         assert_eq!(resolved.size.width, Length::Fill);
-        assert_eq!(resolved.size.height, Length::Auto);
+        assert_eq!(resolved.size.height, Length::Px(Px(24.0)));
         assert_eq!(resolved.size.min_height, Some(Length::Px(Px(24.0))));
         assert_eq!(resolved.flex.grow, 1.0);
         assert_eq!(resolved.flex.basis, Length::Px(Px(0.0)));
@@ -92,6 +95,7 @@ mod tests {
         let resolved = session_shell_layout(layout, Px(24.0));
 
         assert_eq!(resolved.size.width, Length::Px(Px(64.0)));
+        assert_eq!(resolved.size.height, Length::Px(Px(24.0)));
         assert_eq!(resolved.size.min_height, Some(Length::Px(Px(32.0))));
     }
 

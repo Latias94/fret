@@ -185,6 +185,22 @@ impl TextAssistField {
             }
         }
 
+        if matches!(options.surface, TextAssistFieldSurface::AnchoredOverlay) {
+            install_text_assist_field_key_handler(
+                cx,
+                field.id,
+                TextAssistFieldKeyboardInput {
+                    items,
+                    query_model,
+                    dismissed_query_model,
+                    active_item_id_model,
+                    key_options: options.key_options,
+                    on_accept,
+                },
+            );
+            return field;
+        }
+
         let show_inline_empty_label =
             should_render_inline_empty_label(options.surface, &query, visible_count);
         let empty_label = options.empty_label.clone();

@@ -218,3 +218,14 @@ height jump and the biggest leverage over the rest of the dense editor surface.
   chrome 高度。
 - 错误态也被收敛成 sibling 结构：`row + error`，而不是把 error 再塞回 row 里面。
 - 回归测试已经补上并通过，覆盖了稳定 chrome 高度和错误态 row 形状两条边界。
+
+## 2026-06-19 NumericInput Layout Propagation Note
+
+- `NumericInput` 之前把 `options.layout` 只用在 inline error 外壳，joined field 根本没有吃
+  到这层布局参数。
+- 这会让 `DragValue` / `Slider` 传入的 hidden session layout 失效，非 typing 状态的分支
+  依然保持可布局形状。
+- 现在 joined field root 直接消费 `options.layout`，这样 session shell 的 hidden branch
+  才能真正成为零尺寸/绝对定位的隐藏分支。
+- 相关回归测试已经改成穿透事件壳检查稳定 shell，并验证 `drag_value` / `slider`
+  的 focused nextest slice 通过。

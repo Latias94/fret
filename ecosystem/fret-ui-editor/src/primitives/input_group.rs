@@ -9,10 +9,8 @@ pub(crate) use frame::{
     editor_input_group_frame_with_overrides,
 };
 mod joined;
-#[allow(unused_imports)]
 pub(crate) use joined::{
-    EditorJoinedInputContents, editor_joined_input_frame,
-    editor_joined_input_frame_segments_with_overrides, editor_joined_input_frame_with_overrides,
+    editor_joined_input_frame, editor_joined_input_frame_segments_with_overrides,
 };
 
 mod segments;

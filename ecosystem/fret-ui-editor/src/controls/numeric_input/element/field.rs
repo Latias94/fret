@@ -6,7 +6,7 @@ use fret_core::TextStyle;
 use fret_runtime::Model;
 use fret_ui::TextInputStyle;
 use fret_ui::element::AnyElement;
-use fret_ui::element::{LayoutStyle, Length, SizeStyle};
+use fret_ui::element::LayoutStyle;
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
 
 use crate::primitives::EditorDensity;
@@ -28,6 +28,7 @@ use super::error::numeric_input_trailing_error_icon;
 use super::input::{NumericInputTextEntryArgs, numeric_input_text_entry};
 
 pub(super) struct NumericInputFieldArgs<T> {
+    pub(super) layout: LayoutStyle,
     pub(super) model: Model<T>,
     pub(super) draft: Model<String>,
     pub(super) error_for_field: Model<Option<Arc<str>>>,
@@ -69,6 +70,7 @@ where
     H: UiHost,
 {
     let NumericInputFieldArgs {
+        layout,
         model,
         draft,
         error_for_field,
@@ -103,14 +105,7 @@ where
 
     editor_joined_input_frame_segments_with_overrides(
         cx,
-        LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
+        layout,
         density,
         frame_chrome,
         enabled_for_paint,

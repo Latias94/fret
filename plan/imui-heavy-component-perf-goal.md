@@ -1806,3 +1806,11 @@ popover overlay root solve tail.
   里真正能继续削的，往往是默认路径上的空壳，而不是 runtime substrate。
 - 回归已过：`cargo fmt -p fret-ui-editor --check`、`cargo check -p fret-ui-editor`、
   `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`。
+
+## 2026-06-19 NumericInput Layout Propagation Note
+
+- `DragValue` / `Slider` 的稳定 session shell 问题不是单纯测试噪声，而是
+  `NumericInput` 没把外层 layout 传进 joined field root。
+- 结果是 hidden typing 分支即便被呼叫侧标成 zero-sized，也没法真的隐藏到布局树里。
+- 现在这层 layout 直通了，`drag_value` / `slider` 的 session shell 验证回归通过，
+  表明这条优化应该记作结构修正，而不是简单的测试松绑。

@@ -88,6 +88,7 @@ where
     let field = numeric_input_field(
         cx,
         NumericInputFieldArgs {
+            layout: options.layout,
             model,
             draft: draft.clone(),
             error_for_field: error_for_field.clone(),
