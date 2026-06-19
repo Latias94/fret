@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -684,7 +685,7 @@ impl NavigationMenuLink {
             element
         }
 
-        let mut element = cx.pressable_with_id_props(move |cx, st, link_id| {
+        let mut element = control_chrome_pressable_with_id_props(cx, move |cx, st, link_id| {
             let modifier_state: Arc<std::sync::Mutex<ModifierState>> = cx.state_for(
                 link_id,
                 || Arc::new(std::sync::Mutex::new(ModifierState::default())),
@@ -808,7 +809,7 @@ impl NavigationMenuLink {
                 })
                 .collect();
 
-            let mut base_props = decl_style::container_props(
+            let mut chrome = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default()
                     // Upstream base-maia: `rounded-xl p-3`.
@@ -817,17 +818,18 @@ impl NavigationMenuLink {
                     .merge(chrome.clone()),
                 LayoutRefinement::default().w_full().min_w_0(),
             );
-            base_props.background = bg;
+            chrome.background = bg;
 
-            let content = cx.container(base_props, move |_cx| styled);
-            let content = if disabled {
-                cx.opacity(0.5, move |_cx| vec![content])
-            } else {
-                content
-            };
-
-            (pressable, vec![content])
+            (pressable, chrome, move |_cx| styled)
         });
+
+        if disabled {
+            let content = element
+                .children
+                .pop()
+                .expect("expected navigation menu link chrome child");
+            element.children = vec![cx.opacity(0.5, move |_cx| vec![content])];
+        }
 
         if let Some(href) = href_for_semantics {
             element = element.attach_semantics(SemanticsDecoration::default().value(href));
@@ -3940,6 +3942,61 @@ mod tests {
         assert_eq!(props.wrap, fret_core::TextWrap::None);
         assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
         assert!(text.inherited_text_style.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_link_uses_control_chrome_with_derived_chrome_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            NavigationMenuLink::new(model.clone(), [cx.text("Docs")])
+                .test_id("navigation-menu-link-shell")
+                .href("https://example.com/docs")
+                .into_element(cx)
+        });
+
+        let ElementKind::Pressable(props) = &element.kind else {
+            panic!("expected navigation menu link root to be a pressable");
+        };
+        assert_eq!(props.layout.overflow, fret_ui::element::Overflow::Visible);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Auto);
+        assert_eq!(
+            props.a11y.test_id.as_deref(),
+            Some("navigation-menu-link-shell")
+        );
+        assert_eq!(props.a11y.role, Some(SemanticsRole::Link));
+
+        let chrome = element
+            .children
+            .first()
+            .expect("expected navigation menu link chrome child");
+        let ElementKind::Container(props) = &chrome.kind else {
+            panic!("expected navigation menu link chrome to be a container");
+        };
+        assert_eq!(props.layout.overflow, fret_ui::element::Overflow::Clip);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Auto);
+        assert_eq!(
+            chrome
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("navigation-menu-link-shell.chrome")
+        );
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.value.as_deref()),
+            Some("https://example.com/docs")
+        );
     }
 
     #[test]
