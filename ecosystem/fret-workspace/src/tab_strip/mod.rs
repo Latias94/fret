@@ -14,15 +14,16 @@ use fret_ui::action::{
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, HitTestGateProps, HoverRegionProps,
-    InsetEdge, InternalDragRegionProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
-    PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SemanticsProps, TextInkOverflow, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, HitTestGateProps, InsetEdge,
+    InternalDragRegionProps, LayoutStyle, Length, MainAlign, PointerRegionProps, PositionStyle,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
+    SemanticsProps, TextInkOverflow, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_headless::tab_strip_overflow_menu::OverflowMenuActivePolicy;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::dnd as ui_dnd;
 
 use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
@@ -775,9 +776,6 @@ impl WorkspaceTabStrip {
                                                             tab_id.as_ref()
                                                         ))
                                                     });
-                                                let tab_chrome_test_id = tab_test_id
-                                                    .as_ref()
-                                                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                                                 let tab_preview_test_id = tab_test_id
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.preview")));
@@ -788,8 +786,10 @@ impl WorkspaceTabStrip {
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.dirty")));
                                                 let tab_layout = workspace_tab_item_layout();
-                                                let tab_element = cx.pressable_with_id(
-                                                    PressableProps {
+                                                let tab_element = control_chrome_pressable_with_id_props(
+                                                    cx,
+                                                    |cx, press_state, element_id| {
+                                                        let pressable = PressableProps {
                                                         layout: tab_layout,
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Tab),
@@ -802,8 +802,7 @@ impl WorkspaceTabStrip {
                                                         },
                                                         focusable: is_roving_focusable,
                                                         ..Default::default()
-                                                    },
-                                                    |cx, press_state, element_id| {
+                                                        };
                                                         tab_elements
                                                             .borrow_mut()
                                                             .push((tab_id.clone(), element_id));
@@ -1604,42 +1603,51 @@ impl WorkspaceTabStrip {
                                                             }
                                                         };
 
-                                                        let chrome = cx.hover_region(
-                                                            HoverRegionProps {
-                                                                layout: fill_layout(),
+                                                        let chrome = ContainerProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.height =
+                                                                    Length::Fill;
+                                                                layout.size.width =
+                                                                    Length::Auto;
+                                                                layout
                                                             },
-                                                            |cx, _hovered| {
-                                                                let mut chrome = cx.container(
-                                                                    ContainerProps {
-                                                                        layout: {
-                                                                            let mut layout =
-                                                                                LayoutStyle::default();
-                                                                            layout.size.height =
-                                                                                Length::Fill;
-                                                                            layout.size.width =
-                                                                                Length::Auto;
-                                                                            layout
-                                                                        },
-                                                                        padding: Edges {
-                                                                            left: Px(10.0),
-                                                                            right: TAB_CHROME_PAD_RIGHT,
-                                                                            top: Px(4.0),
-                                                                            bottom: Px(4.0),
-                                                                        }
-                                                                        .into(),
-                                                                        background: bg,
-                                                                        border: indicator_border,
-                                                                        border_color: indicator_border_color,
-                                                                        corner_radii: Corners::all(Px(
-                                                                            tab_radius.0.max(0.0),
-                                                                        )),
-                                                                        ..Default::default()
-                                                                    },
-                                                                    |cx| {
-                                                                        let mut out = Vec::new();
+                                                            padding: Edges {
+                                                                left: Px(10.0),
+                                                                right: TAB_CHROME_PAD_RIGHT,
+                                                                top: Px(4.0),
+                                                                bottom: Px(4.0),
+                                                            }
+                                                            .into(),
+                                                            background: bg,
+                                                            border: indicator_border,
+                                                            border_color: indicator_border_color,
+                                                            corner_radii: Corners::all(Px(
+                                                                tab_radius.0.max(0.0),
+                                                            )),
+                                                            ..Default::default()
+                                                        };
+                                                        let content_drag_model = drag_model.clone();
+                                                        let content_pane_activate_cmd =
+                                                            pane_activate_cmd_for_activate.clone();
+                                                        let content_dnd = dnd.clone();
+                                                        let content_label = label.clone();
+                                                        let content_tab_close_command =
+                                                            tab_close_command.clone();
+                                                        let content_tab_test_id = tab_test_id.clone();
+                                                        let content_tab_preview_test_id =
+                                                            tab_preview_test_id.clone();
+                                                        let content_tab_pinned_test_id =
+                                                            tab_pinned_test_id.clone();
+                                                        let content_tab_dirty_test_id =
+                                                            tab_dirty_test_id.clone();
+                                                        let content_text_style = text_style.clone();
+                                                        let content = move |cx: &mut ElementContext<'_, H>| {
+                                                            let mut out = Vec::new();
                                                                 if tab_preview
                                                                     && let Some(test_id) =
-                                                                        tab_preview_test_id.clone()
+                                                                        content_tab_preview_test_id.clone()
                                                                     {
                                                                         let mut layout =
                                                                             LayoutStyle::default();
@@ -1676,7 +1684,7 @@ impl WorkspaceTabStrip {
                                                                     }
                                                                 if tab_pinned
                                                                     && let Some(test_id) =
-                                                                        tab_pinned_test_id.clone()
+                                                                        content_tab_pinned_test_id.clone()
                                                                     {
                                                                         let mut layout =
                                                                             LayoutStyle::default();
@@ -1713,7 +1721,7 @@ impl WorkspaceTabStrip {
                                                                     }
                                                                 if tab_dirty
                                                                     && let Some(test_id) =
-                                                                        tab_dirty_test_id.clone()
+                                                                        content_tab_dirty_test_id.clone()
                                                                     {
                                                                         let mut layout =
                                                                             LayoutStyle::default();
@@ -1776,9 +1784,9 @@ impl WorkspaceTabStrip {
 
                                                                         let show_close = show_close_button;
                                                                         let has_trailing_slot =
-                                                                            tab_close_command.is_some()
+                                                                            content_tab_close_command.is_some()
                                                                                 || tab_dirty;
-                                                                        let tab_close_test_id = tab_test_id
+                                                                        let tab_close_test_id = content_tab_test_id
                                                                             .as_ref()
                                                                             .map(|id| Arc::<str>::from(format!("{id}.close")));
 
@@ -1795,15 +1803,15 @@ impl WorkspaceTabStrip {
                                                                                     layout.flex.shrink = 1.0;
                                                                                     layout
                                                                                 },
-                                                                                text: label,
+                                                                                text: content_label.clone(),
                                                                                 style: Some({
                                                                                     if tab_preview {
                                                                                         let mut style =
-                                                                                            text_style.clone();
+                                                                                            content_text_style.clone();
                                                                                         style.slant = TextSlant::Italic;
                                                                                         style
                                                                                     } else {
-                                                                                        text_style.clone()
+                                                                                        content_text_style.clone()
                                                                                     }
                                                                                 }),
                                                                                 color: Some(tab_fg),
@@ -1817,25 +1825,25 @@ impl WorkspaceTabStrip {
                                                                         if has_trailing_slot {
                                                                             if show_close
                                                                                 && let Some(close_cmd) =
-                                                                                    tab_close_command.clone()
+                                                                                    content_tab_close_command.clone()
                                                                             {
                                                                                 let on_down =
                                                                                     tab_close_pointer_down_handler(
-                                                                                        drag_model.clone(),
-                                                                                        pane_activate_cmd_for_activate
+                                                                                        content_drag_model.clone(),
+                                                                                        content_pane_activate_cmd
                                                                                             .clone(),
                                                                                         close_cmd,
-                                                                                        dnd.clone(),
+                                                                                        content_dnd.clone(),
                                                                                         dnd_scope,
                                                                                     );
                                                                                 let on_up =
                                                                                     tab_pointer_up_handler(
-                                                                                        drag_model.clone(),
+                                                                                        content_drag_model.clone(),
                                                                                     );
                                                                                 children.push(tab_close_button(
                                                                                     cx,
                                                                                     hover_bg,
-                                                                                    text_style.clone(),
+                                                                                    content_text_style.clone(),
                                                                                     tab_fg,
                                                                                     tab_close_test_id.clone(),
                                                                                     on_down,
@@ -1845,7 +1853,7 @@ impl WorkspaceTabStrip {
                                                                                 children.push(tab_dirty_indicator(
                                                                                     cx,
                                                                                     dirty_fg,
-                                                                                    text_style.clone(),
+                                                                                    content_text_style.clone(),
                                                                                 ));
                                                                             } else {
                                                                                 children.push(
@@ -1860,18 +1868,9 @@ impl WorkspaceTabStrip {
                                                                     },
                                                                 ));
 
-                                                                out
-                                                                    },
-                                                                );
-                                                                if let Some(test_id) =
-                                                                    tab_chrome_test_id.clone()
-                                                                {
-                                                                    chrome = chrome.test_id(test_id);
-                                                                }
-                                                                vec![chrome]
-                                                            },
-                                                        );
-                                                        vec![chrome]
+                                                            out
+                                                        };
+                                                        (pressable, chrome, content)
                                                     },
                                                 );
 
@@ -3157,7 +3156,11 @@ impl WorkspaceTabStrip {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::{PointerId, Rect, Size};
+    use fret_app::App;
+    use fret_core::{AppWindowId, PointerId, Rect, Size};
+    use fret_ui::Theme;
+    use fret_ui::element::{AnyElement, ElementKind};
+    use fret_ui::elements::with_element_cx;
 
     #[test]
     fn workspace_tab_item_layout_keeps_tab_width_out_of_flex_shrink() {
@@ -3170,6 +3173,78 @@ mod tests {
             layout.flex.shrink, 0.0,
             "workspace tabs live in a horizontal scroll row; the text child owns ellipsis, while the tab item itself must not join row shrink distribution"
         );
+    }
+
+    fn find_pressable_element_with_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        if let ElementKind::Pressable(props) = &el.kind
+            && props.a11y.test_id.as_deref() == Some(test_id)
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_pressable_element_with_test_id(child, test_id))
+    }
+
+    fn find_semantics_element_with_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        if el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_semantics_element_with_test_id(child, test_id))
+    }
+
+    #[test]
+    fn workspace_tab_strip_derives_chrome_semantics_for_tab_visuals() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&fret_ui::ThemeConfig {
+                name: "Test".to_string(),
+                ..Default::default()
+            });
+        });
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(320.0), Px(48.0)));
+        let tab = WorkspaceTab::new("alpha", "Alpha", "workspace.tab.alpha");
+        let strip = WorkspaceTabStrip::new_optional(Some(Arc::from("alpha")))
+            .tabs([tab])
+            .test_id_root("workspace-tabs")
+            .tab_test_id_prefix("workspace-tab");
+
+        let el = with_element_cx(&mut app, window, bounds, "workspace-tab-strip-test", |cx| {
+            strip.into_element(cx)
+        });
+
+        let tab_el = find_pressable_element_with_test_id(&el, "workspace-tab-alpha")
+            .expect("expected tab pressable semantics");
+        match &tab_el.kind {
+            ElementKind::Pressable(_) => {}
+            other => panic!("expected pressable tab root, got {other:?}"),
+        }
+
+        let chrome_el = find_semantics_element_with_test_id(&el, "workspace-tab-alpha.chrome")
+            .expect("expected derived chrome semantics");
+        let ElementKind::Container(ContainerProps { layout, .. }) = &chrome_el.kind else {
+            panic!("expected chrome to be a container child");
+        };
+        assert_eq!(layout.size.width, Length::Auto);
+        assert_eq!(layout.size.height, Length::Fill);
+        assert_eq!(layout.overflow, fret_ui::element::Overflow::Clip);
     }
 
     #[test]

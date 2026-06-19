@@ -1814,3 +1814,16 @@ popover overlay root solve tail.
 - 结果是 hidden typing 分支即便被呼叫侧标成 zero-sized，也没法真的隐藏到布局树里。
 - 现在这层 layout 直通了，`drag_value` / `slider` 的 session shell 验证回归通过，
   表明这条优化应该记作结构修正，而不是简单的测试松绑。
+
+## 2026-06-19 Workspace TabStrip Chrome Normalization Note
+
+- `WorkspaceTabStrip` 的 tab root 现在改用 `control_chrome_pressable_with_id_props`，不再
+  手写外层 `Pressable -> hover_region -> container` 壳。
+- 这次迁移把 tab root 的 chrome test id 统一成 `<tab-id>.chrome`，并保留了 tab
+  pressable 的原始语义与事件处理。
+- 结构测试已经补上并通过，覆盖：
+  - tab root 仍是 pressable；
+  - derived chrome semantics 仍存在；
+  - tab strip 的 layout contract 仍保持 `width = Auto` / `height = Fill`。
+- 这个结果说明 workspace tab strip 这类重组件的关键问题之一不是功能缺失，而是
+  chrome 壳是否被 canonical helper 统一化，避免局部 ad hoc 壳层继续漂移。
