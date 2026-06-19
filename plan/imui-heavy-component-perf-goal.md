@@ -1780,3 +1780,29 @@ popover overlay root solve tail.
 - `PropertyGrid` 的编辑器行高测试不再要求 numeric / drag value 完全同高；drag value
   的 session shell 本来就比 plain numeric input 更高，这属于控件自身的外壳策略。
 - 新增了 row / column 直接挂载测试，防止以后又把这层壳悄悄加回去。
+
+## 2026-06-19 NumericInput Root Shell Note
+
+- `NumericInput` 的默认路径现在不再强制包一层纵向 `Flex` 壳；无 inline error 时会
+  直接返回 joined field root。
+- 只有启用 inline error 文本时，才会重新包回纵向 shell，以便把字段和错误文本堆叠。
+- 新增了 root shell 和 inline error helper 的回归测试，边界已经收紧。
+
+## 2026-06-19 Joined Input Frame Note
+
+- `editor_joined_input_frame` 现在在没有 leading / trailing segments 时，不再生成中间
+  row 壳，直接把 input 作为 joined frame 内容。
+- 只有当存在任一附属 segment 时，才会回退到 `editor_input_group_row`。
+- 这把收口扩展到了共享输入原语层，因此 `TextField` / `MiniSearchBox` / `NumericInput`
+  都能直接受益，而不是每个控件单独压壳。
+
+## 2026-06-19 ColorEdit Shell Flattening Note
+
+- `ColorEdit` 这次确认了一个更具体的结论：常态路径可以直接落在主 row 上，没必要
+  为了 error-less 状态再挂一层纵向外壳。
+- 如果有 parse error，才切到 `row + error` 的 sibling 结构，这样不会把错误提示又塞
+  回主 row 里。
+- 这类收口和前面的 `NumericInput` / `TextField` / `MiniSearchBox` 一样，说明重组件
+  里真正能继续削的，往往是默认路径上的空壳，而不是 runtime substrate。
+- 回归已过：`cargo fmt -p fret-ui-editor --check`、`cargo check -p fret-ui-editor`、
+  `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`。

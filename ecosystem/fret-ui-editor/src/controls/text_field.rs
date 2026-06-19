@@ -7,6 +7,8 @@
 
 mod buffered;
 mod element;
+#[cfg(test)]
+mod tests;
 
 use std::cell::Cell;
 use std::rc::Rc;

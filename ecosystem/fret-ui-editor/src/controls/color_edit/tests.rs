@@ -7,6 +7,7 @@ use fret_ui::Theme;
 use fret_ui::element::{AnyElement, ElementKind, Length};
 
 use super::drag_drop::apply_color_drop_payload;
+use super::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
 use super::model::{
     ColorNumericInputMode, HsvColor, HueWheelDragTarget, color_from_rgb_preserving_alpha,
     color_numeric_input_modes, format_hex, hsv_from_color, hsv_numeric_text,
@@ -25,6 +26,7 @@ use super::popup::tooltip::color_tooltip_lines;
 use super::*;
 use crate::primitives::EditorDensity;
 use crate::primitives::style::EditorStyle;
+use fret_ui::element::LayoutStyle;
 
 mod affordances;
 mod drag_drop;
@@ -87,22 +89,65 @@ fn color_edit_uses_stable_editor_chrome_height() {
         root.layout.size.min_height,
         Some(Length::Px(expected_min_height))
     );
-    assert_eq!(element.children.len(), 1);
+    assert_eq!(element.children.len(), 2);
 
-    let row = &element.children[0];
-    let ElementKind::Flex(_) = &row.kind else {
-        panic!("color edit root child should be the swatch/input row");
-    };
-    assert_eq!(row.children.len(), 2);
-
-    let swatch_layout = element_layout(&row.children[0], "swatch");
+    let swatch_layout = element_layout(&element.children[0], "swatch");
     assert_eq!(swatch_layout.size.height, Length::Px(density.hit_thickness));
     assert_eq!(swatch_layout.size.width, Length::Px(density.hit_thickness));
 
     assert!(
-        descendant_has_min_height(&row.children[1], "input", expected_min_height),
+        descendant_has_min_height(&element.children[1], "input", expected_min_height),
         "color edit input branch should reserve the full editor chrome height"
     );
+}
+
+#[test]
+fn color_edit_error_state_keeps_the_same_row_shape() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let _model = app
+        .models_mut()
+        .insert(Color::from_srgb_hex_rgb(0x33_66_99));
+    let error = app.models_mut().insert(Some(Arc::from("Invalid color")));
+    let theme = Theme::global(&app);
+    let density = EditorDensity::resolve(theme);
+    let row_height = density.row_height;
+    let control_height = EditorStyle::resolve(theme)
+        .frame_chrome_small()
+        .control_outer_height(row_height);
+    let element = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        Rect::default(),
+        "color-edit-error-height",
+        |cx| {
+            let swatch = cx.spacer(Default::default());
+            let input = cx.spacer(Default::default());
+            color_edit_root_layout(
+                cx,
+                ColorEditRootLayoutArgs {
+                    swatch,
+                    input,
+                    error,
+                    layout: LayoutStyle::default(),
+                    test_id: Some(Arc::from("color-edit-error-height")),
+                    row_height,
+                    control_height,
+                },
+            )
+        },
+    );
+
+    let ElementKind::Flex(root) = &element.kind else {
+        panic!("color edit root should be a flex layout");
+    };
+    assert_eq!(
+        root.layout.size.min_height,
+        Some(Length::Px(control_height))
+    );
+    assert_eq!(element.children.len(), 2);
+    assert_eq!(element.children[0].children.len(), 2);
+    assert_eq!(element.children[1].children.len(), 1);
 }
 
 fn descendant_has_min_height(element: &AnyElement, label: &str, expected: fret_core::Px) -> bool {

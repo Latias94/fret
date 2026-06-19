@@ -195,3 +195,26 @@ height jump and the biggest leverage over the rest of the dense editor surface.
 - `PropertyGrid` 的编辑器行高测试不再要求 numeric / drag value 完全同高；drag value
   的 session shell 本来就比 plain numeric input 更高，这属于控件自身的外壳策略。
 - 新增了 row / column 直接挂载测试，防止以后又把这层壳悄悄加回去。
+
+## 2026-06-19 NumericInput Root Shell Note
+
+- `NumericInput` 的默认路径现在不再强制包一层纵向 `Flex` 壳；无 inline error 时会
+  直接返回 joined field root。
+- 只有启用 inline error 文本时，才会重新包回纵向 shell，以便把字段和错误文本堆叠。
+- 新增了 root shell 和 inline error helper 的回归测试，边界已经收紧。
+
+## 2026-06-19 Joined Input Frame Note
+
+- `editor_joined_input_frame` 现在在没有 leading / trailing segments 时，不再生成中间
+  row 壳，直接把 input 作为 joined frame 内容。
+- 只有当存在任一附属 segment 时，才会回退到 `editor_input_group_row`。
+- 这把收口扩展到了共享输入原语层，因此 `TextField` / `MiniSearchBox` / `NumericInput`
+  都能直接受益，而不是每个控件单独压壳。
+
+## 2026-06-19 ColorEdit Row Shell Note
+
+- `ColorEdit` 的默认路径现在直接返回主横向 row，不再额外包一层纵向 shell。
+- 行高约束没有丢：`min_height` 现在落在主 row 上，所以无 error 时仍然保留编辑器
+  chrome 高度。
+- 错误态也被收敛成 sibling 结构：`row + error`，而不是把 error 再塞回 row 里面。
+- 回归测试已经补上并通过，覆盖了稳定 chrome 高度和错误态 row 形状两条边界。

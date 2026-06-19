@@ -13,7 +13,7 @@ use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 
 use super::{
     EditorInputGroupFrameOverrides, editor_input_group_divider,
-    editor_input_group_frame_with_overrides, editor_input_group_inset, editor_input_group_row,
+    editor_input_group_frame_with_overrides, editor_input_group_row,
 };
 
 #[derive(Debug, Default)]
@@ -22,7 +22,8 @@ struct JoinedInputPointerState {
     last_pointer_type: Option<fret_core::PointerType>,
 }
 
-pub(crate) struct EditorJoinedInputContents {
+#[derive(Debug)]
+struct EditorJoinedInputContents {
     pub(crate) root: AnyElement,
     pub(crate) focus_id: fret_ui::GlobalElementId,
 }
@@ -82,31 +83,35 @@ pub(crate) fn editor_joined_input_frame_segments_with_overrides<H: UiHost>(
         frame_test_id,
         frame_overrides,
         move |cx| {
-            let divider = chrome.border;
             let mut segments = build_leading_segments(cx);
             let input = build_input(cx);
             let focus_id = input.id;
-            let input = editor_input_group_inset(cx, chrome.padding, input);
+            let trailing_segments = build_trailing_segments(cx);
 
-            if !segments.is_empty() {
-                segments.push(editor_input_group_divider(cx, divider));
-            }
-            segments.push(input);
+            let root = if segments.is_empty() && trailing_segments.is_empty() {
+                input
+            } else {
+                let divider = chrome.border;
 
-            for seg in build_trailing_segments(cx) {
-                segments.push(editor_input_group_divider(cx, divider));
-                segments.push(seg);
-            }
+                if !segments.is_empty() {
+                    segments.push(editor_input_group_divider(cx, divider));
+                }
+                segments.push(input);
 
-            EditorJoinedInputContents {
-                root: editor_input_group_row(cx, Px(0.0), segments),
-                focus_id,
-            }
+                for seg in trailing_segments {
+                    segments.push(editor_input_group_divider(cx, divider));
+                    segments.push(seg);
+                }
+
+                editor_input_group_row(cx, Px(0.0), segments)
+            };
+
+            EditorJoinedInputContents { root, focus_id }
         },
     )
 }
 
-pub(crate) fn editor_joined_input_frame_with_overrides<H: UiHost>(
+fn editor_joined_input_frame_with_overrides<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutStyle,
     density: EditorDensity,

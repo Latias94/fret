@@ -124,7 +124,6 @@ where
     let error_msg = cx
         .get_model_cloned(&error, Invalidation::Paint)
         .unwrap_or(None);
-
     let error_el = numeric_input_inline_error(
         cx,
         error_display,
@@ -133,27 +132,25 @@ where
         text_style,
     );
 
-    let mut layout = options.layout;
-    if layout.size.min_height.is_none() {
-        layout.size.min_height = Some(Length::Px(density.row_height));
-    }
+    if let Some(error) = error_el {
+        let mut layout = options.layout;
+        if layout.size.min_height.is_none() {
+            layout.size.min_height = Some(Length::Px(density.row_height));
+        }
 
-    cx.flex(
-        FlexProps {
-            layout,
-            direction: Axis::Vertical,
-            gap: SpacingLength::Px(Px(4.0)),
-            padding: Edges::all(Px(0.0)).into(),
-            justify: MainAlign::Start,
-            align: CrossAlign::Start,
-            wrap: false,
-        },
-        move |_cx| {
-            let mut out = vec![field];
-            if let Some(error) = error_el {
-                out.push(error);
-            }
-            out
-        },
-    )
+        cx.flex(
+            FlexProps {
+                layout,
+                direction: Axis::Vertical,
+                gap: SpacingLength::Px(Px(4.0)),
+                padding: Edges::all(Px(0.0)).into(),
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                wrap: false,
+            },
+            move |_cx| vec![field, error],
+        )
+    } else {
+        field
+    }
 }

@@ -82,3 +82,38 @@ pub(super) fn numeric_input_inline_error<H: UiHost>(
     }
     Some(error)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Rect};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements::with_element_cx;
+
+    #[test]
+    fn inline_error_text_is_only_rendered_when_requested() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let element = with_element_cx(
+            &mut app,
+            window,
+            Rect::default(),
+            "numeric-input-inline-error",
+            |cx| {
+                numeric_input_inline_error(
+                    cx,
+                    NumericInputErrorDisplay::InlineTextAndIcon,
+                    Some(Arc::from("bad input")),
+                    None,
+                    TextStyle::default(),
+                )
+            },
+        );
+
+        let Some(element) = element else {
+            panic!("inline error text should be rendered when explicitly requested");
+        };
+        assert!(matches!(element.kind, ElementKind::Text(_)));
+    }
+}

@@ -177,3 +177,6 @@ impl MiniSearchBox {
         )
     }
 }
+
+#[cfg(test)]
+mod tests;
