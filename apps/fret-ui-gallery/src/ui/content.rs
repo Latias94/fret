@@ -236,34 +236,28 @@ pub(crate) fn content_view(
             .test_id(page_test_id),
     );
 
-    cx.named("ui_gallery.content_view_root", |cx| {
-        let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
-        let chrome = ChromeRefinement {
-            padding: Some(
-                fret_ui_kit::declarative::window_insets_padding_refinement_or_zero(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    base_padding,
-                ),
+    let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
+    let chrome = ChromeRefinement {
+        padding: Some(
+            fret_ui_kit::declarative::window_insets_padding_refinement_or_zero(
+                cx,
+                fret_ui::Invalidation::Layout,
+                base_padding,
             ),
-            background: Some(ColorRef::Color(theme.color_token("background"))),
-            ..ChromeRefinement::default()
-        };
+        ),
+        background: Some(ColorRef::Color(theme.color_token("background"))),
+        ..ChromeRefinement::default()
+    };
 
-        cx.container(
-            decl_style::container_props(
-                theme,
-                chrome,
-                LayoutRefinement::default().w_full().h_full(),
-            ),
-            |_cx| [content],
-        )
-        .attach_semantics(
-            fret_ui::element::SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id(Arc::from("ui-gallery-content-shell")),
-        )
-    })
+    cx.container(
+        decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full().h_full()),
+        |_cx| [content],
+    )
+    .attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id(Arc::from("ui-gallery-content-shell")),
+    )
 }
 
 fn page_preview(

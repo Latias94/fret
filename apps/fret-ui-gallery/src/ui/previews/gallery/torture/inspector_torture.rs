@@ -87,14 +87,14 @@ pub(in crate::ui) fn preview_inspector_torture(
     let accent_color = theme.color_token("accent");
     let muted_color = theme.color_token("muted");
     let background_color = theme.color_token("background");
+    let selected_row_value = cx
+        .get_model_copied(&selected_row, Invalidation::Paint)
+        .flatten();
     let row = move |cx: &mut AppComponentCx<'_>, index: usize| {
         let zebra = (index % 2) == 0;
         let depth = (index % 8) as f32;
         let indent_px = Px(depth * 12.0);
 
-        let selected_row_value = cx
-            .get_model_copied(&selected_row, Invalidation::Paint)
-            .flatten();
         let is_selected = selected_row_value == Some(index);
         let selected_row_for_activate = selected_row.clone();
         let on_select_row: fret_ui::action::OnActivate =
@@ -135,7 +135,7 @@ pub(in crate::ui) fn preview_inspector_torture(
                     background_color
                 };
 
-                let row_content = ui::h_flex(|_cx| vec![name, value])
+                let row_content = ui::h_flex(|_cx| [name, value])
                     .bg(ColorRef::Color(if st.pressed {
                         accent_color
                     } else {
@@ -157,7 +157,7 @@ pub(in crate::ui) fn preview_inspector_torture(
                     .items_center()
                     .into_element(cx);
 
-                vec![row_content]
+                [row_content]
             },
         );
 

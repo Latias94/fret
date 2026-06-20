@@ -1323,7 +1323,20 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
 fn gallery_inspector_torture_keeps_selected_row_model_on_paint_invalidation() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/torture/inspector_torture.rs",
-        &["get_model_copied(&selected_row,Invalidation::Paint)"],
+        &[
+            "letselected_row_value=cx.get_model_copied(&selected_row,Invalidation::Paint).flatten();",
+        ],
+    );
+
+    let selected_row_read = normalized
+        .find("letselected_row_value=cx.get_model_copied(&selected_row,Invalidation::Paint).flatten();")
+        .expect("inspector_torture selected-row model read");
+    let row_closure = normalized
+        .find("letrow=move|cx:&mutAppComponentCx<'_>,index:usize|{")
+        .expect("inspector_torture row closure");
+    assert!(
+        selected_row_read < row_closure,
+        "inspector_torture selected-row model should be read before the row closure so the retained list does not pay per-row model reads"
     );
 
     assert!(
@@ -1342,13 +1355,13 @@ fn gallery_inspector_torture_keeps_row_shell_shrunk() {
             "letmuted_color=theme.color_token(\"muted\")",
             "letbackground_color=theme.color_token(\"background\")",
             "letrow_padding_left=Px(indent_px.0+row_gap_px.0*2.0)",
-            "letrow_content=ui::h_flex(|_cx|vec![name,value])",
+            "letrow_content=ui::h_flex(|_cx|[name,value])",
             ".bg(ColorRef::Color(",
             ".paddings(Edges4::trbl(",
             ".layout(",
             ".gap(Space::N2)",
             ".items_center()",
-            "vec![row_content]",
+            "[row_content]",
         ],
     );
 
@@ -1437,8 +1450,8 @@ fn gallery_content_shell_keeps_page_semantics_on_the_landed_content_root() {
     );
 
     assert!(
-        !normalized.contains("let page_root = cx.semantics("),
-        "gallery content shell should not regress to a dedicated page-root semantics wrapper",
+        !normalized.contains("cx.named(\"ui_gallery.content_view_root\""),
+        "gallery content shell should not regress to a dedicated named content-view root",
     );
 }
 

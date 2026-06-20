@@ -2226,3 +2226,25 @@ popover overlay root solve tail.
 - Conclusion: the `content_root` prune is not a good next step. Keep the current shell shape and
   look for a different evidence-backed cut in `apps/fret-ui-gallery/src/ui/content.rs` or a
   narrower retained-list seam only if a future bundle moves the owner.
+
+## 2026-06-21 Inspector Content Shell Prune Note
+
+- The `ui_gallery.content_view_root` named wrapper is now gone from
+  `apps/fret-ui-gallery/src/ui/content.rs`, so the page shell keeps only the actual content
+  container and semantics stamp.
+- The retained inspector row slice also kept the earlier row-local cleanup:
+  `selected_row` is read once before the row closure, and the row builder now uses array-backed
+  child returns instead of `Vec`.
+- Validation passed with `cargo fmt --all`, `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews --test inspector_perf_surface --no-fail-fast`, and
+  `git diff --check`.
+- Perf rerun:
+  `target/fret-diag/inspector-direct-entry-content-shell-prune-v1/1781988478054/bundle.schema2.json`
+  landed at `p50 total/layout/solve/prepaint/paint = 2655/2123/903/208/324us` and
+  `p95 = 2738/2178/911/211/349us`.
+- Diff against the prior `inspector-direct-entry-short-shell-v3` bundle showed a small but real
+  win: `p95 total` down `5.3%`, `p95 layout` down `7.6%`, while `layout.roots` is still the main
+  owner and `layout.engine_solve` stayed roughly flat.
+- Conclusion: this is a useful reduction, but the page shell is still not fully cleared. The next
+  slice should stay on the inspector content shell / viewport boundary instead of reopening the row
+  micro-optimizations first.
