@@ -496,6 +496,8 @@ fn test_pointer_up(
         pointer_type: PointerType::Mouse,
         down_hit_pressable_target: None,
         down_hit_pressable_target_in_descendant_subtree: false,
+        down_hit_is_text_input: false,
+        down_hit_is_pressable: false,
     }
 }
 

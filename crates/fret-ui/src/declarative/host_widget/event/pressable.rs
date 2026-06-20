@@ -15,6 +15,7 @@ struct PressablePressTracking {
     pointer_id: Option<fret_core::PointerId>,
     down_position: Option<Point>,
     down_hit_is_text_input: bool,
+    down_hit_is_pressable: bool,
     down_hit_pressable_target: Option<crate::GlobalElementId>,
     down_hit_pressable_target_in_descendant_subtree: bool,
 }
@@ -525,6 +526,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         st.pointer_id = Some(*pointer_id);
                         st.down_position = Some(*position);
                         st.down_hit_is_text_input = cx.pointer_hit_is_text_input;
+                        st.down_hit_is_pressable = cx.pointer_hit_is_pressable;
                         st.down_hit_pressable_target = cx.pointer_hit_pressable_target;
                         st.down_hit_pressable_target_in_descendant_subtree =
                             cx.pointer_hit_pressable_target_in_descendant_subtree;
@@ -551,6 +553,37 @@ pub(super) fn handle_pressable<H: UiHost>(
                     |hooks| hooks.on_pointer_up.clone(),
                 );
 
+                let (
+                    down_pointer_id,
+                    down_position,
+                    down_hit_is_text_input,
+                    down_hit_is_pressable,
+                    down_hit_pressable_target,
+                    down_hit_pressable_target_in_descendant_subtree,
+                ) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    PressablePressTracking::default,
+                    |st| {
+                        let out = (
+                            st.pointer_id,
+                            st.down_position,
+                            st.down_hit_is_text_input,
+                            st.down_hit_is_pressable,
+                            st.down_hit_pressable_target,
+                            st.down_hit_pressable_target_in_descendant_subtree,
+                        );
+                        st.pointer_id = None;
+                        st.down_position = None;
+                        st.down_hit_is_text_input = false;
+                        st.down_hit_is_pressable = false;
+                        st.down_hit_pressable_target = None;
+                        st.down_hit_pressable_target_in_descendant_subtree = false;
+                        out
+                    },
+                );
+
                 let mut skip_activate = false;
                 if let Some(h) = hook.clone() {
                     let up = action::PointerUpCx {
@@ -569,21 +602,10 @@ pub(super) fn handle_pressable<H: UiHost>(
                         is_click: *is_click,
                         click_count: *click_count,
                         pointer_type: *pointer_type,
-                        down_hit_pressable_target: crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            this.element,
-                            PressablePressTracking::default,
-                            |st| st.down_hit_pressable_target,
-                        ),
-                        down_hit_pressable_target_in_descendant_subtree:
-                            crate::elements::with_element_state(
-                                &mut *cx.app,
-                                window,
-                                this.element,
-                                PressablePressTracking::default,
-                                |st| st.down_hit_pressable_target_in_descendant_subtree,
-                            ),
+                        down_hit_pressable_target,
+                        down_hit_pressable_target_in_descendant_subtree,
+                        down_hit_is_text_input,
+                        down_hit_is_pressable,
                     };
 
                     let mut host = PressablePointerHookHost {
@@ -625,21 +647,6 @@ pub(super) fn handle_pressable<H: UiHost>(
 
                 let pressed =
                     crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
-
-                let (down_pointer_id, down_position, down_hit_is_text_input) =
-                    crate::elements::with_element_state(
-                        &mut *cx.app,
-                        window,
-                        this.element,
-                        PressablePressTracking::default,
-                        |st| {
-                            let out = (st.pointer_id, st.down_position, st.down_hit_is_text_input);
-                            st.pointer_id = None;
-                            st.down_position = None;
-                            st.down_hit_is_text_input = false;
-                            out
-                        },
-                    );
 
                 cx.release_pointer_capture();
                 if let Some(prev_node) =
@@ -748,6 +755,10 @@ pub(super) fn handle_pressable<H: UiHost>(
                 |st| {
                     st.pointer_id = None;
                     st.down_position = None;
+                    st.down_hit_is_text_input = false;
+                    st.down_hit_is_pressable = false;
+                    st.down_hit_pressable_target = None;
+                    st.down_hit_pressable_target_in_descendant_subtree = false;
                 },
             );
             if cx.captured == Some(cx.node) {

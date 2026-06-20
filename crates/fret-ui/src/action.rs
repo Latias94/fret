@@ -334,6 +334,10 @@ pub struct PointerUpCx {
     /// `true` when `down_hit_pressable_target` was a strict descendant of the current action
     /// target on pointer down.
     pub down_hit_pressable_target_in_descendant_subtree: bool,
+    /// `true` when the pointer-down hit a text input subtree.
+    pub down_hit_is_text_input: bool,
+    /// `true` when the pointer-down hit a pressable subtree.
+    pub down_hit_is_pressable: bool,
 }
 
 /// Key down payload for component-owned key handlers.

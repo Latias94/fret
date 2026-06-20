@@ -7,11 +7,14 @@ use fret_runtime::WindowCommandAvailabilityService;
 use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
-    SpacerProps,
+    AnyElement, LayoutStyle, Length, PointerRegionProps, SemanticsProps, SpacerProps,
 };
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
+use fret_workspace::commands::{
+    CMD_WORKSPACE_PANE_FOCUS_CONTENT, CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP,
+    CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS,
+};
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
@@ -266,52 +269,59 @@ fn render_root_contents(
         &frame.selected_page,
         frame.content_models.as_ref(),
     );
-    let content = cx.pressable(
-        PressableProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout.size.height = Length::Fill;
-                layout.size.min_width = Some(Length::Px(Px(0.0)));
-                layout.size.min_height = Some(Length::Px(Px(0.0)));
-                layout.flex.grow = 1.0;
-                layout.flex.shrink = 1.0;
-                layout.flex.basis = Length::Px(Px(0.0));
-                layout
-            },
-            enabled: true,
-            focusable: true,
-            a11y: PressableA11y {
-                role: Some(SemanticsRole::TextField),
-                label: Some(Arc::from("UI gallery workspace content")),
+    let content = {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        layout.size.min_width = Some(Length::Px(Px(0.0)));
+        layout.size.min_height = Some(Length::Px(Px(0.0)));
+        layout.flex.grow = 1.0;
+        layout.flex.shrink = 1.0;
+        layout.flex.basis = Length::Px(Px(0.0));
+
+        let content = content;
+        let content_anchor = cx.semantics(
+            SemanticsProps {
+                layout,
+                role: SemanticsRole::Generic,
                 test_id: Some(Arc::from("ui-gallery-workspace-content")),
+                focusable: true,
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        move |cx, _state| {
-            vec![cx.container(
-                ContainerProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
-                        layout.size.min_width = Some(Length::Px(Px(0.0)));
-                        layout.size.min_height = Some(Length::Px(Px(0.0)));
-                        layout.flex.grow = 1.0;
-                        layout.flex.shrink = 1.0;
-                        layout.flex.basis = Length::Px(Px(0.0));
-                        layout
-                    },
-                    ..Default::default()
-                },
-                |_cx| [content],
-            )]
-        },
-    );
-    let content =
-        WorkspacePaneContentFocusTarget::new(super::UI_GALLERY_WORKSPACE_PANE_ID, content)
-            .into_element(cx);
+            move |cx| {
+                let anchor = cx.root_id();
+                let mut pointer = PointerRegionProps::default();
+                pointer.layout = layout;
+                vec![cx.pointer_region(pointer, move |cx| {
+                    cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, down| {
+                        if down.button != fret_core::MouseButton::Left
+                            || down.hit_is_text_input
+                            || down.hit_is_pressable
+                        {
+                            return false;
+                        }
+                        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                        false
+                    }));
+                    cx.pointer_region_on_pointer_up(Arc::new(move |host, _cx, up| {
+                        if up.button != fret_core::MouseButton::Left
+                            || !up.is_click
+                            || up.down_hit_is_text_input
+                            || up.down_hit_pressable_target_in_descendant_subtree
+                        {
+                            return false;
+                        }
+                        host.request_focus(anchor);
+                        false
+                    }));
+                    vec![content]
+                })]
+            },
+        );
+
+        WorkspacePaneContentFocusTarget::new(super::UI_GALLERY_WORKSPACE_PANE_ID, content_anchor)
+            .into_element(cx)
+    };
 
     let show_tab_strip = cx
         .get_model_copied(&frame.chrome_show_workspace_tab_strip, Invalidation::Layout)
@@ -1426,6 +1436,105 @@ mod tests {
         );
         assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_LAYOUT));
         assert_eq!(routed_page.as_ref(), PAGE_LAYOUT);
+    }
+
+    #[test]
+    fn workspace_focus_content_command_returns_to_workspace_content_anchor() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+        let _ = rendered
+            .app
+            .models_mut()
+            .update(&rendered.state.chrome_show_workspace_tab_strip, |v| {
+                *v = true
+            });
+        render_gallery_frame(&mut rendered);
+
+        let selected_page = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after gallery render");
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after gallery render");
+        let content = node_by_test_id(snapshot, "ui-gallery-workspace-content").id;
+        let active_tab = node_by_test_id(
+            snapshot,
+            &format!("ui-gallery-workspace-tab-{}", selected_page.as_ref()),
+        )
+        .id;
+
+        rendered.state.ui.set_focus(Some(active_tab));
+        render_gallery_frame(&mut rendered);
+
+        dispatch_command(
+            &mut rendered,
+            fret_workspace::commands::CMD_WORKSPACE_PANE_FOCUS_CONTENT,
+        );
+        render_gallery_frame(&mut rendered);
+
+        assert_eq!(
+            rendered.state.ui.focus(),
+            Some(content),
+            "expected workspace focus_content to restore focus to the content anchor"
+        );
+    }
+
+    #[test]
+    fn workspace_toggle_tab_strip_focus_returns_to_workspace_content_anchor() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+        let _ = rendered
+            .app
+            .models_mut()
+            .update(&rendered.state.chrome_show_workspace_tab_strip, |v| {
+                *v = true
+            });
+        render_gallery_frame(&mut rendered);
+
+        let selected_page = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after gallery render");
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after gallery render");
+        let content = node_by_test_id(snapshot, "ui-gallery-workspace-content").id;
+        let active_tab = node_by_test_id(
+            snapshot,
+            &format!("ui-gallery-workspace-tab-{}", selected_page.as_ref()),
+        )
+        .id;
+
+        rendered.state.ui.set_focus(Some(content));
+        render_gallery_frame(&mut rendered);
+
+        dispatch_command(
+            &mut rendered,
+            fret_workspace::commands::CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS,
+        );
+        render_gallery_frame(&mut rendered);
+        assert_eq!(
+            rendered.state.ui.focus(),
+            Some(active_tab),
+            "expected workspace toggle_tab_strip_focus to move focus into the tab strip"
+        );
+
+        dispatch_command(
+            &mut rendered,
+            fret_workspace::commands::CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS,
+        );
+        render_gallery_frame(&mut rendered);
+
+        assert_eq!(
+            rendered.state.ui.focus(),
+            Some(content),
+            "expected workspace toggle_tab_strip_focus to return focus to the content anchor"
+        );
     }
 
     fn scroll_gallery_page_to_bottom(

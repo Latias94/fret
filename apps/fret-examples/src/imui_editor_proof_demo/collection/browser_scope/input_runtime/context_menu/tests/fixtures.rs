@@ -25,5 +25,7 @@ pub(super) fn pointer_up(
         pointer_type: PointerType::Mouse,
         down_hit_pressable_target,
         down_hit_pressable_target_in_descendant_subtree,
+        down_hit_is_text_input: false,
+        down_hit_is_pressable: false,
     }
 }

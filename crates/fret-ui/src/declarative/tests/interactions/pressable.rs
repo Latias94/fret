@@ -664,6 +664,85 @@ fn pressable_focus_activation_hook_can_restore_focus_after_keyboard_activation()
 }
 
 #[test]
+fn pressable_pointer_up_payload_preserves_hit_is_pressable_from_pointer_down() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(48.0)));
+    let mut services = FakeTextService::default();
+    let seen = std::rc::Rc::new(std::cell::Cell::new(false));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-pointer-up-hit-is-pressable",
+        |cx| {
+            let seen = seen.clone();
+            vec![cx.pressable(
+                crate::element::PressableProps::default(),
+                move |cx, _state| {
+                    let seen = seen.clone();
+                    cx.pressable_on_pointer_up(Arc::new(
+                        move |_host: &mut dyn crate::action::UiPointerActionHost,
+                              _acx: crate::action::ActionCx,
+                              up: crate::action::PointerUpCx| {
+                            seen.set(up.down_hit_is_pressable);
+                            crate::action::PressablePointerUpResult::Continue
+                        },
+                    ));
+                    vec![cx.text("button")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let button_node = ui.children(root)[0];
+    let button_bounds = ui.debug_node_bounds(button_node).expect("button bounds");
+    let position = Point::new(
+        Px(button_bounds.origin.x.0 + 1.0),
+        Px(button_bounds.origin.y.0 + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        seen.get(),
+        "expected pressable pointer-up payload to preserve down-hit pressable classification"
+    );
+}
+
+#[test]
 fn pressable_clipboard_write_completed_hook_handles_matching_success_token() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

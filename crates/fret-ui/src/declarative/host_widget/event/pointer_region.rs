@@ -576,7 +576,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     window,
                     this.element,
                     crate::element::PointerRegionState::default,
-                    |state| state.last_down.and_then(|d| d.hit_pressable_target),
+                    |state| state.last_down.and_then(|down| down.hit_pressable_target),
                 ),
                 down_hit_pressable_target_in_descendant_subtree:
                     crate::elements::with_element_state(
@@ -587,9 +587,23 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                         |state| {
                             state
                                 .last_down
-                                .is_some_and(|d| d.hit_pressable_target_in_descendant_subtree)
+                                .is_some_and(|down| down.hit_pressable_target_in_descendant_subtree)
                         },
                     ),
+                down_hit_is_text_input: crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::PointerRegionState::default,
+                    |state| state.last_down.is_some_and(|down| down.hit_is_text_input),
+                ),
+                down_hit_is_pressable: crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::PointerRegionState::default,
+                    |state| state.last_down.is_some_and(|down| down.hit_is_pressable),
+                ),
             };
 
             if let Some(h) = hook {
