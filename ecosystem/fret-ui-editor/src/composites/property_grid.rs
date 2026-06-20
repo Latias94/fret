@@ -95,6 +95,15 @@ impl PropertyGrid {
             row_options: row_opts,
         };
 
+        let row_elements = rows(cx, row_cx);
+        // A single-row grid with default outer layout does not need an extra vertical shell.
+        if row_elements.len() == 1
+            && self.options.test_id.is_none()
+            && self.options.layout == PropertyGridOptions::default().layout
+        {
+            return row_elements.into_iter().next().unwrap();
+        }
+
         let mut root = cx.flex(
             FlexProps {
                 layout: self.options.layout,
@@ -105,7 +114,7 @@ impl PropertyGrid {
                 align: CrossAlign::Stretch,
                 wrap: false,
             },
-            move |cx| rows(cx, row_cx),
+            move |_cx| row_elements,
         );
 
         if let Some(test_id) = self.options.test_id.as_ref() {

@@ -203,6 +203,22 @@ impl TextAssistField {
 
         let show_inline_empty_label =
             should_render_inline_empty_label(options.surface, &query, visible_count);
+        if inline_panel.is_none() && !show_inline_empty_label {
+            install_text_assist_field_key_handler(
+                cx,
+                field.id,
+                TextAssistFieldKeyboardInput {
+                    items,
+                    query_model,
+                    dismissed_query_model,
+                    active_item_id_model,
+                    key_options: options.key_options,
+                    on_accept,
+                },
+            );
+            return field;
+        }
+
         let empty_label = options.empty_label.clone();
         let empty_test_id = options.empty_test_id.clone();
         let root = cx.flex(

@@ -1,4 +1,6 @@
 mod field;
+#[cfg(test)]
+mod tests;
 
 use std::sync::Arc;
 
@@ -37,6 +39,7 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
 ) -> AnyElement {
     let rgb = rgb_numeric_text(current, show_alpha);
     let hsv = hsv_numeric_text(current);
+    let modes = color_numeric_input_modes(numeric_inputs);
     let error_msg = cx
         .get_model_cloned(&error, Invalidation::Paint)
         .unwrap_or(None);
@@ -59,6 +62,37 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
     let rgb_test_id = derived_test_id(test_id.as_ref(), ColorNumericInputMode::Rgb.test_suffix());
     let hsv_test_id = derived_test_id(test_id.as_ref(), ColorNumericInputMode::Hsv.test_suffix());
 
+    let mut items = Vec::with_capacity(modes.len() + error_msg.is_some() as usize);
+    for mode in modes {
+        let (draft, display_text, test_id) = match *mode {
+            ColorNumericInputMode::Rgb => (rgb_draft.clone(), rgb.clone(), rgb_test_id.clone()),
+            ColorNumericInputMode::Hsv => (hsv_draft.clone(), hsv.clone(), hsv_test_id.clone()),
+        };
+        items.push(color_numeric_input_field(
+            cx,
+            *mode,
+            model.clone(),
+            hex_draft.clone(),
+            draft,
+            error.clone(),
+            display_text,
+            show_alpha,
+            enabled,
+            chrome.clone(),
+            text_style.clone(),
+            error_msg.is_some(),
+            test_id,
+        ));
+    }
+
+    if error_msg.is_none() && items.len() == 1 {
+        let mut input = items.pop().expect("single numeric input should exist");
+        if let Some(test_id) = test_id.as_ref() {
+            input = input.test_id(test_id.clone());
+        }
+        return input;
+    }
+
     let mut inputs = cx.flex(
         FlexProps {
             layout: LayoutStyle {
@@ -77,32 +111,7 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            let mut out = Vec::new();
-            for mode in color_numeric_input_modes(numeric_inputs) {
-                let (draft, display_text, test_id) = match *mode {
-                    ColorNumericInputMode::Rgb => {
-                        (rgb_draft.clone(), rgb.clone(), rgb_test_id.clone())
-                    }
-                    ColorNumericInputMode::Hsv => {
-                        (hsv_draft.clone(), hsv.clone(), hsv_test_id.clone())
-                    }
-                };
-                out.push(color_numeric_input_field(
-                    cx,
-                    *mode,
-                    model.clone(),
-                    hex_draft.clone(),
-                    draft,
-                    error.clone(),
-                    display_text,
-                    show_alpha,
-                    enabled,
-                    chrome.clone(),
-                    text_style.clone(),
-                    error_msg.is_some(),
-                    test_id,
-                ));
-            }
+            let mut out = items;
             if let Some(msg) = error_msg.clone() {
                 out.push(color_numeric_error_line(cx, msg, error_color, row_height));
             }

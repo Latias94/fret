@@ -71,13 +71,13 @@ fn drag_value_scrub_frame_uses_single_frame_padding_layer() {
         Some(Length::Px(density.row_height))
     );
 
-    let ElementKind::Flex(row) = &el.children[0].kind else {
-        panic!("expected scrub frame child to be an input-group row");
+    let ElementKind::Container(value_segment) = &el.children[0].kind else {
+        panic!("expected scrub frame child to mount the single value segment directly");
     };
-    assert_eq!(row.layout.size.height, Length::Fill);
+    assert_eq!(value_segment.layout.size.height, Length::Fill);
 
-    let ElementKind::Container(value_segment) = &el.children[0].children[0].kind else {
-        panic!("expected value to be wrapped by a padded input segment");
+    let ElementKind::Text(_) = &el.children[0].children[0].kind else {
+        panic!("expected the value segment to mount the text directly");
     };
     assert_eq!(value_segment.padding, chrome.padding.into());
 }

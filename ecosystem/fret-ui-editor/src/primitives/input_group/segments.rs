@@ -68,6 +68,11 @@ pub(crate) fn editor_input_group_row<H: UiHost>(
     gap: Px,
     children: Vec<AnyElement>,
 ) -> AnyElement {
+    let mut children = children;
+    if children.len() == 1 {
+        return children.pop().unwrap();
+    }
+
     cx.flex(
         FlexProps {
             layout: LayoutStyle {

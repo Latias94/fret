@@ -2,6 +2,9 @@ mod button;
 mod picker;
 mod thumbnail;
 
+#[cfg(test)]
+mod tests;
+
 use std::sync::Arc;
 
 use fret_core::{Axis, Color, Edges, Px, SemanticsRole};
@@ -37,6 +40,39 @@ pub(super) fn color_picker_options<H: UiHost>(
     let picker_test_id = derived_test_id(test_id.as_ref(), "picker");
     let alpha_test_id = derived_test_id(test_id.as_ref(), "alpha-bar");
 
+    let mut options = Vec::with_capacity(2);
+    if popup_options.picker != ColorEditPopupPicker::Hidden {
+        options.push(picker_options_row(
+            cx,
+            current,
+            runtime_options,
+            runtime_model.clone(),
+            enabled,
+            density.row_height,
+            picker_test_id.clone(),
+        ));
+    }
+    if show_alpha {
+        options.push(alpha_bar_option(
+            cx,
+            runtime_options,
+            runtime_model.clone(),
+            enabled,
+            density.row_height,
+            alpha_test_id.clone(),
+        ));
+    }
+
+    if options.len() == 1 {
+        let mut option = options
+            .pop()
+            .expect("single color edit popup option should exist");
+        if let Some(test_id) = test_id.clone() {
+            option = option.test_id(test_id);
+        }
+        return option;
+    }
+
     let mut options = cx.flex(
         FlexProps {
             layout: LayoutStyle {
@@ -54,31 +90,7 @@ pub(super) fn color_picker_options<H: UiHost>(
             align: CrossAlign::Stretch,
             wrap: false,
         },
-        move |cx| {
-            let mut out = Vec::new();
-            if popup_options.picker != ColorEditPopupPicker::Hidden {
-                out.push(picker_options_row(
-                    cx,
-                    current,
-                    runtime_options,
-                    runtime_model.clone(),
-                    enabled,
-                    density.row_height,
-                    picker_test_id.clone(),
-                ));
-            }
-            if show_alpha {
-                out.push(alpha_bar_option(
-                    cx,
-                    runtime_options,
-                    runtime_model.clone(),
-                    enabled,
-                    density.row_height,
-                    alpha_test_id.clone(),
-                ));
-            }
-            out
-        },
+        move |_cx| options,
     );
 
     if let Some(test_id) = test_id {

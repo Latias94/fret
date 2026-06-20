@@ -3,9 +3,7 @@ use std::sync::Arc;
 use fret_core::{Color, KeyCode, Px};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
-use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, PointerRegionProps, SizeStyle, TextInputProps,
-};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, Size};
 
@@ -109,27 +107,5 @@ pub(super) fn color_hex_input<H: UiHost>(
         }),
     );
 
-    cx.pointer_region(
-        PointerRegionProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Auto,
-                    min_height: Some(Length::Px(args.control_height)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            enabled: args.enabled && args.focusable,
-            capture_phase_pointer_moves: false,
-        },
-        move |cx| {
-            cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
-                host.request_focus(input_id);
-                host.request_redraw(action_cx.window);
-                false
-            }));
-            vec![input]
-        },
-    )
+    input
 }

@@ -35,6 +35,63 @@ fn lock_id(id: &Arc<Mutex<Option<GlobalElementId>>>, label: &str) -> GlobalEleme
 }
 
 #[test]
+fn property_grid_with_single_row_returns_the_row_directly() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+
+    let grid = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-grid-single-row",
+        |cx| {
+            PropertyGrid::new()
+                .options(PropertyGridOptions {
+                    label_width: Some(Px(104.0)),
+                    column_gap: Some(Px(8.0)),
+                    row_gap: Some(Px(4.0)),
+                    ..Default::default()
+                })
+                .into_element(cx, |cx, rows| {
+                    vec![rows.row(
+                        cx,
+                        |cx| rows.label_text(cx, "Exposure"),
+                        |cx| cx.text("0.50"),
+                    )]
+                })
+        },
+    );
+
+    let fret_ui::element::ElementKind::Flex(props) = &grid.kind else {
+        panic!("single-row property grid should return the row itself, not a wrapper shell");
+    };
+    assert_eq!(
+        props.direction,
+        fret_core::Axis::Horizontal,
+        "single-row property grid should return the horizontal property row directly"
+    );
+    assert_eq!(
+        grid.children.len(),
+        2,
+        "single-row property grid should expose the row's label and value children directly"
+    );
+    assert!(
+        matches!(
+            grid.children[0].kind,
+            fret_ui::element::ElementKind::Container(_)
+        ),
+        "first child should be the label container from the row"
+    );
+    assert!(
+        matches!(
+            grid.children[1].kind,
+            fret_ui::element::ElementKind::Container(_)
+        ),
+        "second child should be the value container from the row"
+    );
+}
+
+#[test]
 fn property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();

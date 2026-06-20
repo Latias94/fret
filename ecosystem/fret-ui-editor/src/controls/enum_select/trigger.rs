@@ -4,8 +4,8 @@ use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
+    PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::primitives::combobox as kit_combobox;
@@ -18,6 +18,9 @@ use crate::primitives::input_group::{
     editor_input_group_row, editor_input_value_text,
 };
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
+
+#[cfg(test)]
+mod tests;
 
 pub(super) struct EnumSelectTriggerArgs {
     pub(super) layout: LayoutStyle,
@@ -132,52 +135,50 @@ pub(super) fn enum_select_trigger<H: UiHost>(
 
                     let sep = editor_input_group_divider(cx, divider);
 
-                    let caret = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Px(density.hit_thickness),
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            padding: Edges::all(Px(0.0)).into(),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(0.0)),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![editor_icon_with(
-                                        cx,
-                                        density,
-                                        caret_icon,
-                                        Some(Px(12.0)),
-                                        Some(fret_ui_kit::ColorRef::Color(visuals.icon)),
-                                    )]
-                                },
-                            )]
-                        },
+                    let caret = enum_select_trigger_caret(
+                        cx,
+                        density,
+                        caret_icon,
+                        fret_ui_kit::ColorRef::Color(visuals.icon),
                     );
 
                     vec![editor_input_group_row(cx, Px(0.0), vec![text, sep, caret])]
                 },
+            )]
+        },
+    )
+}
+
+fn enum_select_trigger_caret<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    caret_icon: fret_icons::IconId,
+    caret_color: fret_ui_kit::ColorRef,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Px(density.hit_thickness),
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: Axis::Horizontal,
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |cx| {
+            vec![editor_icon_with(
+                cx,
+                density,
+                caret_icon,
+                Some(Px(12.0)),
+                Some(caret_color),
             )]
         },
     )

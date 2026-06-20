@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
-use fret_ui::element::ElementKind;
+use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::elements::with_element_cx;
 use fret_ui_kit::headless::text_assist::TextAssistItem;
 
@@ -14,6 +14,41 @@ use super::{
 
 const TEXT_ASSIST_BODY_RS: &str = include_str!("element/body.rs");
 const TEXT_ASSIST_OVERLAY_RS: &str = include_str!("overlay.rs");
+
+fn render_text_assist_field(
+    surface: TextAssistFieldSurface,
+    query_value: &str,
+    items: Arc<[TextAssistItem]>,
+) -> AnyElement {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let query = app.models_mut().insert(query_value.to_string());
+    let dismissed_query = app.models_mut().insert(String::new());
+    let active_item_id = app.models_mut().insert(None::<Arc<str>>);
+
+    with_element_cx(
+        &mut app,
+        window,
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        ),
+        "text-assist-field",
+        |cx| {
+            TextAssistField::new(
+                query.clone(),
+                dismissed_query.clone(),
+                active_item_id.clone(),
+                items.clone(),
+            )
+            .options(TextAssistFieldOptions {
+                surface,
+                ..Default::default()
+            })
+            .into_element(cx)
+        },
+    )
+}
 
 #[test]
 fn empty_label_is_inline_only() {
@@ -71,54 +106,32 @@ fn anchored_overlay_never_falls_back_to_inline_layout_flow() {
 }
 
 #[test]
-fn anchored_overlay_surface_returns_the_field_root() {
-    let mut app = App::new();
-    let window = AppWindowId::default();
-    let query = app.models_mut().insert(String::new());
-    let dismissed_query = app.models_mut().insert(String::new());
-    let active_item_id = app.models_mut().insert(None::<Arc<str>>);
+fn inline_surface_without_panel_or_empty_label_returns_the_field_root() {
     let items: Arc<[TextAssistItem]> = Vec::new().into();
 
-    let inline = with_element_cx(
-        &mut app,
-        window,
-        Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(320.0), Px(120.0)),
-        ),
-        "text-assist-inline",
-        |cx| {
-            TextAssistField::new(
-                query.clone(),
-                dismissed_query.clone(),
-                active_item_id.clone(),
-                items.clone(),
-            )
-            .options(TextAssistFieldOptions {
-                surface: TextAssistFieldSurface::Inline,
-                ..Default::default()
-            })
-            .into_element(cx)
-        },
-    );
+    let inline = render_text_assist_field(TextAssistFieldSurface::Inline, "", items);
 
-    let overlay = with_element_cx(
-        &mut app,
-        window,
-        Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(320.0), Px(120.0)),
-        ),
-        "text-assist-overlay",
-        |cx| {
-            TextAssistField::new(query, dismissed_query, active_item_id, items)
-                .options(TextAssistFieldOptions::default())
-                .into_element(cx)
-        },
-    );
+    assert!(!matches!(inline.kind, ElementKind::Flex(_)));
+}
+
+#[test]
+fn anchored_overlay_surface_without_panel_or_empty_label_returns_the_field_root() {
+    let items: Arc<[TextAssistItem]> = Vec::new().into();
+
+    let overlay = render_text_assist_field(TextAssistFieldSurface::AnchoredOverlay, "", items);
+
+    assert!(!matches!(overlay.kind, ElementKind::Flex(_)));
+}
+
+#[test]
+fn inline_surface_with_empty_label_keeps_the_shell_visible() {
+    let items: Arc<[TextAssistItem]> = Vec::new().into();
+
+    let inline = render_text_assist_field(TextAssistFieldSurface::Inline, "cube", items);
 
     assert!(matches!(inline.kind, ElementKind::Flex(_)));
-    assert!(!matches!(overlay.kind, ElementKind::Flex(_)));
+    assert_eq!(inline.children.len(), 2);
+    assert!(matches!(inline.children[1].kind, ElementKind::Text(_)));
 }
 
 #[test]

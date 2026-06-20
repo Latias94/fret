@@ -99,6 +99,10 @@ fn color_edit_uses_stable_editor_chrome_height() {
         descendant_has_min_height(&element.children[1], "input", expected_min_height),
         "color edit input branch should reserve the full editor chrome height"
     );
+    assert!(
+        matches!(element.children[1].kind, ElementKind::TextInput(_)),
+        "color edit input branch should mount the text input directly without an extra pointer shell"
+    );
 }
 
 #[test]
@@ -165,7 +169,6 @@ fn descendant_has_min_height(element: &AnyElement, label: &str, expected: fret_c
 fn element_layout<'a>(element: &'a AnyElement, label: &str) -> &'a fret_ui::element::LayoutStyle {
     match &element.kind {
         ElementKind::Flex(props) => &props.layout,
-        ElementKind::PointerRegion(props) => &props.layout,
         ElementKind::Pressable(props) => &props.layout,
         ElementKind::TextInput(props) => &props.layout,
         other => panic!("{label} should expose layout props, got {other:?}"),

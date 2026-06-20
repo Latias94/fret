@@ -7,7 +7,9 @@ use fret_ui::elements;
 
 use super::editor_input_value_text;
 use super::joined::{editor_joined_input_frame, editor_joined_input_frame_segments_with_overrides};
-use super::segments::{editor_clear_button_segment, editor_icon_button_segment};
+use super::segments::{
+    editor_clear_button_segment, editor_icon_button_segment, editor_input_group_row,
+};
 use crate::primitives::EditorDensity;
 use crate::primitives::style::EditorStyle;
 use fret_ui::Theme;
@@ -76,6 +78,20 @@ fn editor_icon_button_segment_has_no_inner_flex_shell() {
     assert_eq!(el.children.len(), 1);
     assert!(!matches!(el.children[0].kind, ElementKind::Flex(_)));
     assert!(matches!(el.children[0].kind, ElementKind::Container(_)));
+}
+
+#[test]
+fn editor_input_group_row_with_single_child_returns_the_child_directly() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+        let value = cx.text("Value");
+        editor_input_group_row(cx, Px(0.0), vec![value])
+    });
+
+    assert!(matches!(el.kind, ElementKind::Text(_)));
+    assert!(el.children.is_empty());
 }
 
 #[test]
