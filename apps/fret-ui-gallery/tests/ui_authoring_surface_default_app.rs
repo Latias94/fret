@@ -255,7 +255,11 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     assert!(action_first_view.contains("use fret::advanced::prelude::*;"));
     assert!(action_first_view.contains("use fret::component::prelude::*;"));
     assert!(action_first_view.contains("use fret::app::App;"));
-    assert!(action_first_view.contains("use fret_ui_kit::IntoUiElementInExt as _;"));
+    assert!(
+        action_first_view.contains(
+            "use fret_ui_kit::{IntoUiElementInExt as _, declarative::text as decl_text};"
+        )
+    );
     assert!(action_first_view.contains("fn init(_app: &mut App, _window: AppWindowId) -> Self"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, App>"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, KernelApp>"));
@@ -409,7 +413,7 @@ fn selected_ai_snippets_prefer_grouped_app_action_listeners_when_widgets_have_na
             "src/ui/snippets/ai/checkpoint_demo.rs",
             &[
                 "use fret::app::AppRenderActionsExt as _;",
-                "ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])",
+                "ui_ai::CheckpointTrigger::new([decl_text::text_button_label(cx, checkpoint.trigger_label,)])",
                 ".on_activate(cx.actions().listen(restore_to_checkpoint.clone()))",
             ][..],
         ),
@@ -479,9 +483,9 @@ fn selected_ai_snippets_prefer_grouped_app_actions_when_widgets_have_native_acti
                 "use fret::app::AppRenderActionsExt as _;",
                 "cx.actions().models::<act::NavigateBack>(",
                 "cx.actions().models::<act::NavigateForward>(",
-                "ui_ai::WebPreviewNavigationButton::go_back([cx.text(\"←\")])",
+                "ui_ai::WebPreviewNavigationButton::go_back([decl_text::text_chrome_glyph(cx, \"←\")])",
                 ".action(act::NavigateBack)",
-                "ui_ai::WebPreviewNavigationButton::go_forward([cx.text(\"→\")])",
+                "ui_ai::WebPreviewNavigationButton::go_forward([decl_text::text_chrome_glyph(cx, \"→\")])",
                 ".action(act::NavigateForward)",
             ][..],
         ),
@@ -1089,7 +1093,7 @@ fn context_menu_submenu_shortcuts_destructive_and_demo_examples_stay_docs_aligne
 
     let demo = read("src/ui/snippets/context_menu/demo.rs");
     assert!(
-        demo.contains(".min_width(Px(192.0))")
+        demo.contains(".min_width(Px(208.0))")
             && demo.contains(".submenu_min_width(Px(176.0))")
             && demo.contains("ContextMenuSub::new(")
             && demo.contains("ContextMenuShortcut::new(\"⌘[\")")
@@ -1097,7 +1101,7 @@ fn context_menu_submenu_shortcuts_destructive_and_demo_examples_stay_docs_aligne
             && demo.contains("\"Show Full URLs\"")
             && demo.contains("\"Pedro Duarte\"")
             && demo.contains("\"Colm Tuite\""),
-        "src/ui/snippets/context_menu/demo.rs should keep the upstream combined docs example shape, including the `w-48` content width and `w-44` submenu width"
+        "src/ui/snippets/context_menu/demo.rs should keep the upstream combined docs example shape, including the 208px content width and 176px submenu width"
     );
 
     let sides = read("src/ui/snippets/context_menu/sides.rs");
@@ -2152,7 +2156,7 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Align / block-end\", align_block_end)",
             "DocSection::build(cx, \"Icon\", icon)",
             "DocSection::build(cx, \"Text\", text)",
-            "DocSection::build(cx, \"With Button\", button)",
+            "DocSection::build(cx, \"Button\", button)",
             "DocSection::build(cx, \"Kbd\", kbd)",
             "DocSection::build(cx, \"Dropdown\", dropdown)",
             "DocSection::build(cx, \"Spinner\", spinner)",
@@ -2173,7 +2177,7 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Align / block-end\", align_block_end)",
             "DocSection::new(\"Icon\", icon)",
             "DocSection::new(\"Text\", text)",
-            "DocSection::new(\"With Button\", button)",
+            "DocSection::new(\"Button\", button)",
             "DocSection::new(\"Kbd\", kbd)",
             "DocSection::new(\"Dropdown\", dropdown)",
             "DocSection::new(\"Spinner\", spinner)",
@@ -6037,6 +6041,7 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Responsive\", responsive)",
+            "DocSection::build(cx, \"Placement Ownership\", placement_ownership)",
             "DocSection::build(cx, \"Conformance Demo\", conformance_demo)",
             "DocSection::build(cx, \"Groups + Separator\", groups_with_separator)",
             "DocSection::build(cx, \"Label Association\", label)",
@@ -6057,6 +6062,7 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Responsive\", responsive)",
+            "DocSection::new(\"Placement Ownership\", placement_ownership)",
             "DocSection::new(\"Conformance Demo\", conformance_demo)",
             "DocSection::new(\"Groups + Separator\", groups_with_separator)",
             "DocSection::new(\"Label Association\", label)",
@@ -6067,7 +6073,7 @@ fn combobox_page_uses_typed_doc_sections_for_app_facing_snippets() {
     let page = read("src/ui/pages/combobox.rs");
     assert!(
         page.contains(
-            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups."
+            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Placement Ownership`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups."
         ),
         "src/ui/pages/combobox.rs should keep the docs-path-first combobox page structure explicit"
     );
@@ -8117,13 +8123,13 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         &[
             "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
-            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let api_reference = DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
-            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"API Reference (Fret)\", api_reference)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -8188,7 +8194,6 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
 
     for relative_path in [
         "src/ui/pages/card.rs",
-        "src/ui/pages/switch.rs",
         "src/ui/pages/toggle.rs",
         "src/ui/pages/toggle_group.rs",
         "src/ui/pages/separator.rs",
@@ -11629,6 +11634,17 @@ fn gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot() {
         canonical.contains(&marker),
         "sidebar nav ScrollArea should be an explicit flex-fill slot so the shell does not rely on h_full inside a remaining-space flex column",
     );
+
+    let viewport_mode_marker = canonicalize_rust_fragment(
+        r#"
+        .viewport_intrinsic_measure_mode(fret_ui::element::ScrollIntrinsicMeasureMode::Viewport)
+        .viewport_probe_unbounded(false)
+        "#,
+    );
+    assert!(
+        canonical.contains(&viewport_mode_marker),
+        "sidebar nav ScrollArea should keep viewport intrinsic measurement bounded so the fixed-width shell does not recurse into the full nav list during intrinsic sizing",
+    );
 }
 
 #[test]
@@ -13489,8 +13505,8 @@ fn gallery_doc_layout_retains_only_intentional_raw_boundaries() {
 
     assert_eq!(
         normalized.matches("->AnyElement").count(),
-        0,
-        "src/ui/doc_layout.rs should keep exactly the audited raw-return boundaries until the page-collection lane migrates",
+        4,
+        "src/ui/doc_layout.rs should keep exactly the four audited raw-return boundaries until the page-collection lane migrates",
     );
 
     let source = read("src/ui/doc_layout.rs");

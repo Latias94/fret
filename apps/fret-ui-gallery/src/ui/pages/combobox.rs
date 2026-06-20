@@ -148,6 +148,7 @@ pub(super) fn preview_combobox(
         .description(
             "Large-list follow-up for scroll ownership and future virtualization invariants.",
         )
+        .no_shell()
         .code_rust_from_file_region(snippets::long_list::SOURCE, "example");
     let notes = doc_layout::notes_block([
         "Base UI lifecycle parity already covers `onValueChange`, `onOpenChange`, reason-aware open changes, and transition-complete callbacks.",
@@ -163,7 +164,7 @@ pub(super) fn preview_combobox(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
+            "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Placement Ownership`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
         ),
         vec![
             basic,

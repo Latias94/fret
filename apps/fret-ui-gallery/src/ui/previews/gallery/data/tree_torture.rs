@@ -1,5 +1,6 @@
 use super::super::super::super::*;
-use fret::{AppComponentCx, app::AppRenderActionsExt};
+use fret::AppComponentCx;
+use fret::app::AppRenderActionsExt as _;
 
 const DYNAMIC_DISABLED_TREE_ROW_ID: u64 = 2_000_000;
 

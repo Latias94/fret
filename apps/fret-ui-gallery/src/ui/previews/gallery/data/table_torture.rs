@@ -1,5 +1,6 @@
 use super::super::super::super::*;
-use fret::{AppComponentCx, app::AppRenderActionsExt};
+use fret::AppComponentCx;
+use fret::app::AppRenderActionsExt;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 
 fn data_table_torture_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement

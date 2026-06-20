@@ -15,7 +15,7 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
         "`ComboboxContent::width_px(...)` is separate from `ComboboxTrigger::width_px(...)`",
         "docs/public-surface drift rather than a `fret-ui` mechanism bug",
         "No extra generic root `children(...)` / `compose()` / `asChild` API is warranted here",
-        "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
+        "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top preview into `Basic` and skipping `Installation`: `Basic`, `Usage`, `Custom Items`, `Multiple Selection`, `Clear Button`, `Groups`, `Invalid`, `Disabled`, `Auto Highlight`, `Popup`, `Input Group`, `RTL`, and `API Reference`. `Responsive`, `Placement Ownership`, `Long Text`, `RTL Long Text`, `Conformance Demo`, `Groups + Separator`, `Label Association`, and `Long List` stay as explicit Fret follow-ups.",
         ".test_id_prefix(\"ui-gallery-combobox-usage\")",
         ".test_id_prefix(\"ui-gallery-combobox-api-reference\")",
         ".test_id_prefix(\"ui-gallery-combobox-label\")",
@@ -45,6 +45,7 @@ fn combobox_page_documents_source_axes_and_children_api_decision() {
             rtl,
             api_reference,
             responsive,
+            placement_ownership,
             long_text,
             rtl_long_text,
             conformance_demo,
@@ -200,6 +201,28 @@ fn combobox_follow_up_long_list_keeps_width_on_the_caller_lane() {
     assert!(
         !long_list.contains(".width_px(Px(320.0))"),
         "combobox long-list follow-up should not force a fixed-width trigger that can overflow a narrow docs column",
+    );
+}
+
+#[test]
+fn combobox_follow_up_long_list_stays_unshelled_in_docs_page() {
+    let source = include_str!("../src/ui/pages/combobox.rs");
+    let normalized = normalize_ws(source);
+
+    assert!(
+        normalized.contains(
+            &normalize_ws(
+                r#"
+                let long_list = DocSection::build(cx, "Long List", long_list)
+                    .description(
+                        "Large-list follow-up for scroll ownership and future virtualization invariants.",
+                    )
+                    .no_shell()
+                    .code_rust_from_file_region(snippets::long_list::SOURCE, "example");
+                "#,
+            )
+        ),
+        "combobox long-list follow-up should stay unshelled so the docs page does not add an extra preview/card wrapper around the heavy list surface",
     );
 }
 

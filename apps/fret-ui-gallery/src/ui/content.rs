@@ -4,6 +4,8 @@ use fret_ui_kit::declarative::text as decl_text;
 
 #[cfg(feature = "gallery-dev")]
 const CODE_VIEW_TORTURE_PREVIEW_HEIGHT: Px = Px(674.0);
+#[cfg(feature = "gallery-dev")]
+const INSPECTOR_TORTURE_PREVIEW_HEIGHT: Px = Px(460.0);
 
 pub(crate) fn content_view(
     cx: &mut AppComponentCx<'_>,
@@ -121,6 +123,12 @@ pub(crate) fn content_view(
             fret_ui::element::Length::Px(CODE_VIEW_TORTURE_PREVIEW_HEIGHT);
         preview_semantics_layout.overflow = fret_ui::element::Overflow::Clip;
     }
+    #[cfg(feature = "gallery-dev")]
+    if selected == PAGE_INSPECTOR_TORTURE {
+        preview_semantics_layout.size.height =
+            fret_ui::element::Length::Px(INSPECTOR_TORTURE_PREVIEW_HEIGHT);
+        preview_semantics_layout.overflow = fret_ui::element::Overflow::Clip;
+    }
     let preview_panel = cx.semantics(
         fret_ui::element::SemanticsProps {
             layout: preview_semantics_layout,
@@ -131,7 +139,14 @@ pub(crate) fn content_view(
         |_cx| [preview_panel_content],
     );
 
-    let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
+    #[cfg(feature = "gallery-dev")]
+    let disable_content_scroll_for_inspector = selected == PAGE_INSPECTOR_TORTURE;
+    #[cfg(not(feature = "gallery-dev"))]
+    let disable_content_scroll_for_inspector = false;
+
+    let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0
+        || disable_content_scroll_for_inspector
+    {
         // When content scroll is disabled, keep the header and page body in one static stack.
         ui::v_flex(|_cx| [header, preview_panel])
             .layout(LayoutRefinement::default().w_full())
@@ -178,6 +193,10 @@ pub(crate) fn content_view(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
                 )
                 .viewport_probe_unbounded(false);
+            #[cfg(feature = "gallery-dev")]
+            if selected == PAGE_CODE_VIEW_TORTURE {
+                scroll = scroll.viewport_focus_ring(false);
+            }
             #[cfg(not(feature = "gallery-dev"))]
             let scroll = shadcn::ScrollArea::new([preview_panel])
                 .scroll_handle(scroll_handle)
@@ -224,18 +243,24 @@ pub(crate) fn content_view(
             background: Some(ColorRef::Color(theme.color_token("background"))),
             ..ChromeRefinement::default()
         };
-        let page_root_content = cx.container(
-            decl_style::container_props(
-                theme,
-                chrome,
-                LayoutRefinement::default().w_full().h_full(),
-            ),
-            |_cx| [content],
-        );
-
         let mut semantics_fill_layout = fret_ui::element::LayoutStyle::default();
         semantics_fill_layout.size.width = fret_ui::element::Length::Fill;
         semantics_fill_layout.size.height = fret_ui::element::Length::Fill;
+
+        let page_root_content = cx
+            .container(
+                decl_style::container_props(
+                    theme,
+                    chrome,
+                    LayoutRefinement::default().w_full().h_full(),
+                ),
+                |_cx| [content],
+            )
+            .attach_semantics(
+                fret_ui::element::SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id(Arc::from("ui-gallery-content-shell")),
+            );
 
         let page_root = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -247,15 +272,7 @@ pub(crate) fn content_view(
             |_cx| [page_root_content],
         );
 
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                layout: semantics_fill_layout,
-                role: fret_core::SemanticsRole::Group,
-                test_id: Some(Arc::from("ui-gallery-content-shell")),
-                ..Default::default()
-            },
-            |_cx| [page_root],
-        )
+        page_root
     })
 }
 

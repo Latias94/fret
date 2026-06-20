@@ -617,7 +617,7 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
             "pub(super) fn dropdown(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
             "pub(super) fn context_menu(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
             "pub(super) fn context_menu_edge(_cx: &mut AppComponentCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
-            "pub(super) fn underlay(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
+            "pub(super) fn underlay(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
             "pub(super) fn tooltip(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             "pub(super) fn hover_card(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
             "pub(super) fn popover(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
@@ -632,6 +632,12 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
         widgets_normalized.matches("->implUiChild+use<>").count(),
         13,
         "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep the typed widget-helper inventory",
+    );
+    assert!(
+        widgets_normalized.contains(
+            "fnoverlay_scroll_row_text<T>(cx:&mutAppComponentCx<'_>,text:T)->implUiChild+use<T>"
+        ),
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep the typed scroll-row helper inventory"
     );
     assert_eq!(
         widgets_normalized.matches("->AnyElement").count(),
@@ -1314,6 +1320,131 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
 }
 
 #[test]
+fn gallery_inspector_torture_keeps_selected_row_model_on_paint_invalidation() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &["get_model_copied(&selected_row,Invalidation::Paint)"],
+    );
+
+    assert!(
+        !normalized.contains("get_model_copied(&selected_row,Invalidation::Layout)"),
+        "inspector_torture selected-row model should stay on paint invalidation because it only affects selection chrome and semantics"
+    );
+}
+
+#[test]
+fn gallery_inspector_torture_keeps_row_shell_shrunk() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &[
+            "letrow_gap_px=MetricRef::space(Space::N2).resolve(theme)",
+            "letaccent_color=theme.color_token(\"accent\")",
+            "letmuted_color=theme.color_token(\"muted\")",
+            "letbackground_color=theme.color_token(\"background\")",
+            "letrow_padding_left=Px(indent_px.0+row_gap_px.0*2.0)",
+            "letrow_content=ui::h_flex(|_cx|vec![name,value])",
+            ".bg(ColorRef::Color(",
+            ".paddings(Edges4::trbl(",
+            ".layout(",
+            ".gap(Space::N2)",
+            ".items_center()",
+            "vec![row_content]",
+        ],
+    );
+
+    for forbidden in [
+        "letspacer=cx.spacer(",
+        "vec![cx.container(row_props,|cx|{",
+        "ui::h_flex(|_cx|vec![spacer,name,value])",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "inspector_torture row shell should stay shrunk without the older spacer/container wrappers: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_code_view_torture_keeps_page_preview_fixed_height_shell() {
+    let source = read_path(&manifest_path("src/ui/content.rs"));
+
+    assert!(
+        source.contains("selected == PAGE_CODE_VIEW_TORTURE"),
+        "code_view_torture should keep the fixed preview shell",
+    );
+    assert!(
+        source.contains("CODE_VIEW_TORTURE_PREVIEW_HEIGHT"),
+        "code_view_torture should keep the existing fixed preview height constant",
+    );
+    assert!(
+        source.contains("preview_semantics_layout.overflow = fret_ui::element::Overflow::Clip;"),
+        "code_view_torture should keep the clipped fixed preview shell",
+    );
+    assert!(
+        source.contains("scroll = scroll.viewport_focus_ring(false);"),
+        "code_view_torture should keep the viewport focus ring wrapper disabled on the torture surface",
+    );
+}
+
+#[test]
+fn gallery_inspector_torture_keeps_its_own_fixed_preview_shell() {
+    let source = read_path(&manifest_path("src/ui/content.rs"));
+
+    assert!(
+        source.contains("selected == PAGE_INSPECTOR_TORTURE"),
+        "inspector_torture should keep its own fixed preview shell",
+    );
+    assert!(
+        source.contains("INSPECTOR_TORTURE_PREVIEW_HEIGHT"),
+        "inspector_torture should keep its own fixed preview height constant",
+    );
+    assert!(
+        source.contains("preview_semantics_layout.overflow = fret_ui::element::Overflow::Clip;"),
+        "inspector_torture should keep the clipped fixed preview shell",
+    );
+}
+
+#[test]
+fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &[
+            "letoverscan=8",
+            "VirtualListOptions::known(row_height,overscan,move|_index|row_height)",
+            ".keep_alive(keep_alive)",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("letoverscan=12"),
+        "inspector_torture should stay on the tighter overscan budget so the retained window does not grow wider than needed"
+    );
+}
+
+#[test]
+fn gallery_content_shell_keeps_page_root_semantics_on_the_existing_container() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/content.rs",
+        &[
+            "page_root_content = cx.container(",
+            ".attach_semantics(",
+            "SemanticsDecoration::default()",
+            ".role(fret_core::SemanticsRole::Group)",
+            ".test_id(Arc::from(\"ui-gallery-content-shell\"))",
+            "let page_root = cx.semantics(",
+            "test_id: Some(page_test_id)",
+        ],
+    );
+
+    assert!(
+        !normalized.contains(
+            "cx.semantics(fret_ui::element::SemanticsProps{layout:semantics_fill_layout,role:fret_core::SemanticsRole::Group,test_id:Some(Arc::from(\"ui-gallery-content-shell\")),..Default::default()},|_cx|[page_root],)"
+        ),
+        "gallery content shell should not regress to a dedicated wrapper semantics node",
+    );
+}
+
+#[test]
 fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/pages/harness/virtual_list_torture.rs",
@@ -1444,14 +1575,14 @@ fn gallery_overlay_status_text_uses_control_readout_roles() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/flags.rs",
         &[
-            "fnoverlay_status_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fnoverlay_status_text<T>(cx:&mutAppComponentCx<'_>,text:T)->implUiChild+use<T>",
             "doc_layout::control_readout_text(cx,text)",
             "overlay_status_text(cx,text).test_id(\"ui-gallery-overlay-last-action\")",
-            "overlay_status_text(cx,\"Popoverdismissed\")",
+            "overlay_status_text(cx,\"Popoverdismissed\").test_id(\"ui-gallery-popover-dismissed\")",
             "overlay_status_text(cx,\"Dialogopen\").test_id(\"ui-gallery-dialog-open\")",
-            "overlay_status_text(cx,\"Dialog(Glass)open\")",
-            "overlay_status_text(cx,\"Underlayactivated\")",
-            "overlay_status_text(cx,\"AlertDialogopen\")",
+            "overlay_status_text(cx,\"Dialog(Glass)open\").test_id(\"ui-gallery-dialog-glass-open\")",
+            "overlay_status_text(cx,\"Underlayactivated\").test_id(\"ui-gallery-overlay-underlay-activated\")",
+            "overlay_status_text(cx,\"AlertDialogopen\").test_id(\"ui-gallery-alert-dialog-open\")",
         ],
     );
 
@@ -1488,7 +1619,7 @@ fn gallery_overlay_scroll_rows_use_list_row_roles() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/widgets.rs",
         &[
-            "fnoverlay_scroll_row_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fnoverlay_scroll_row_text<T>(cx:&mutAppComponentCx<'_>,text:T)->implUiChild+use<T>",
             "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
             "overlay_scroll_row_text(cx,format!(\"Scrollablecontentline{}\",i+1))",
             "overlay_scroll_row_text(cx,format!(\"Sheetbodyline{}\",i+1))",

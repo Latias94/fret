@@ -256,6 +256,9 @@ mod tests {
             PAGE_CODE_EDITOR_TORTURE
         ));
         assert!(page_content_cache_contain_layout_when_bounds_known(
+            PAGE_CODE_VIEW_TORTURE
+        ));
+        assert!(page_content_cache_contain_layout_when_bounds_known(
             PAGE_DATA_TABLE_TORTURE
         ));
         assert!(page_content_cache_contain_layout_when_bounds_known(
@@ -900,6 +903,7 @@ pub(crate) fn page_content_cache_contain_layout_when_bounds_known(id: &str) -> b
         #[cfg(feature = "gallery-dev")]
         PAGE_CODE_EDITOR_MVP
         | PAGE_CODE_EDITOR_TORTURE
+        | PAGE_CODE_VIEW_TORTURE
         | PAGE_DATA_TABLE_TORTURE
         | PAGE_TABLE_RETAINED_TORTURE
         | PAGE_INSPECTOR_TORTURE => true,

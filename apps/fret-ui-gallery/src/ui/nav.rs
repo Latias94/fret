@@ -239,6 +239,9 @@ pub(crate) fn sidebar_view(
         let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
             nav_body
         } else {
+            // This sidebar already lives inside a fixed-width, fixed-height shell. Keep the
+            // scroll viewport from recursively measuring the full nav list during intrinsic
+            // sizing.
             shadcn::ScrollArea::new([nav_body])
                 .refine_layout(
                     LayoutRefinement::default()
@@ -249,6 +252,10 @@ pub(crate) fn sidebar_view(
                         .min_h_0(),
                 )
                 .scroll_handle(nav_scroll_handle.clone())
+                .viewport_intrinsic_measure_mode(
+                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+                )
+                .viewport_probe_unbounded(false)
                 .into_element(cx)
         };
         nav_scroll.test_id("ui-gallery-nav-scroll")

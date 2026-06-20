@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-code-view-torture-mount-direct-entry",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui-gallery",
+      "perf",
+      "code-view",
+      "mount",
+      "direct-entry",
+      "steady"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "code_view_torture"
+    },
+    "target_hints": [
+      "Starts directly on the code_view_torture page so nav search and page-switch transitions do not dominate the probe.",
+      "Captures the direct-entry mount shape after the gallery chrome and font state settle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-code-view-torture" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "font_catalog_populated" },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "system_font_rescan_idle" },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "text_font_stack_key_stable", "stable_frames": 120 },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-view-torture-mount-direct-entry"
+    }
+  ]
+}

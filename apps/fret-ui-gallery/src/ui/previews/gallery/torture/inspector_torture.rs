@@ -57,7 +57,9 @@ pub(in crate::ui) fn preview_inspector_torture(
         .unwrap_or(50_000)
         .clamp(16, 200_000);
     let row_height = Px(28.0);
-    let overscan = 12;
+    // Keep the retained window tight on the inspector torture surface so we do not pay for a
+    // much wider offscreen row buffer than the direct-entry probe needs.
+    let overscan = 8;
     let keep_alive: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
@@ -81,14 +83,17 @@ pub(in crate::ui) fn preview_inspector_torture(
         fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height)
             .keep_alive(keep_alive);
 
-    let theme = theme.clone();
+    let row_gap_px = MetricRef::space(Space::N2).resolve(theme);
+    let accent_color = theme.color_token("accent");
+    let muted_color = theme.color_token("muted");
+    let background_color = theme.color_token("background");
     let row = move |cx: &mut AppComponentCx<'_>, index: usize| {
         let zebra = (index % 2) == 0;
         let depth = (index % 8) as f32;
         let indent_px = Px(depth * 12.0);
 
         let selected_row_value = cx
-            .get_model_copied(&selected_row, Invalidation::Layout)
+            .get_model_copied(&selected_row, Invalidation::Paint)
             .flatten();
         let is_selected = selected_row_value == Some(index);
         let selected_row_for_activate = selected_row.clone();
@@ -104,22 +109,7 @@ pub(in crate::ui) fn preview_inspector_torture(
             .test_id(inspector_row_label_test_id(index));
         let value = inspector_row_value_text(cx, format!("value {index}"))
             .test_id(inspector_row_value_test_id(index));
-        let row_theme = theme.clone();
-
-        let spacer = cx.container(
-            fret_ui::element::ContainerProps {
-                layout: fret_ui::element::LayoutStyle {
-                    size: fret_ui::element::SizeStyle {
-                        width: fret_ui::element::Length::Px(indent_px),
-                        height: fret_ui::element::Length::Fill,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            |_cx| Vec::new(),
-        );
+        let row_padding_left = Px(indent_px.0 + row_gap_px.0 * 2.0);
 
         let row = cx.pressable(
             PressableProps {
@@ -137,38 +127,37 @@ pub(in crate::ui) fn preview_inspector_torture(
             move |cx, st| {
                 cx.pressable_add_on_activate(on_select_row.clone());
 
-                let background = if is_selected {
-                    row_theme.color_token("accent")
+                let row_background = if is_selected {
+                    accent_color
                 } else if zebra {
-                    row_theme.color_token("muted")
+                    muted_color
                 } else {
-                    row_theme.color_token("background")
+                    background_color
                 };
 
-                let mut row_props = decl_style::container_props(
-                    &row_theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(if st.pressed {
-                            row_theme.color_token("accent")
-                        } else {
-                            background
-                        }))
-                        .p(Space::N2),
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(row_height)),
-                );
-                row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+                let row_content = ui::h_flex(|_cx| vec![name, value])
+                    .bg(ColorRef::Color(if st.pressed {
+                        accent_color
+                    } else {
+                        row_background
+                    }))
+                    .overflow_hidden()
+                    .paddings(Edges4::trbl(
+                        MetricRef::space(Space::N2),
+                        MetricRef::space(Space::N2),
+                        MetricRef::space(Space::N2),
+                        MetricRef::Px(row_padding_left),
+                    ))
+                    .layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(row_height)),
+                    )
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx);
 
-                vec![cx.container(row_props, |cx| {
-                    vec![
-                        ui::h_flex(|_cx| vec![spacer, name, value])
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .gap(Space::N2)
-                            .items_center()
-                            .into_element(cx),
-                    ]
-                })]
+                vec![row_content]
             },
         );
 
@@ -183,7 +172,6 @@ pub(in crate::ui) fn preview_inspector_torture(
         |i| i as fret_ui::ItemKey,
         row,
     );
-
     let list = list.attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::List)

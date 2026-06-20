@@ -867,6 +867,49 @@ mod tests {
         );
     }
 
+    #[test]
+    fn gallery_combobox_long_list_section_focus_keeps_long_list_trigger_present() {
+        let _section_guard = EnvVarGuard::set(ENV_UI_GALLERY_START_SECTION, "docsec-long-list-content");
+        let rendered = render_gallery_page_with_bounds(
+            PAGE_COMBOBOX,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(1280.0), Px(720.0)),
+            ),
+        );
+
+        let trigger = visual_bounds_by_test_id_if_present(
+            &rendered,
+            "ui-gallery-combobox-long-list-trigger",
+        );
+        if let Some(trigger) = trigger {
+            assert!(
+                trigger.size.width.0 > 0.0 && trigger.size.height.0 > 0.0,
+                "expected focused long-list section trigger to render with non-zero bounds: trigger={trigger:?}"
+            );
+            return;
+        }
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after focused combobox render");
+        let matching_test_ids = snapshot
+            .nodes
+            .iter()
+            .filter_map(|node| node.test_id.as_ref())
+            .filter(|test_id| {
+                test_id.contains("long-list") || test_id.contains("docsec-long-list")
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        panic!(
+            "expected focused long-list section to keep the combobox trigger in semantics: matching_test_ids={matching_test_ids:?}"
+        );
+    }
+
     #[derive(Debug, Clone, Copy)]
     struct WebGeometryRect {
         x: f32,

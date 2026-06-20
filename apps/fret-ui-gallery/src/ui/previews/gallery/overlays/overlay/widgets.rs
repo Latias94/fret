@@ -5,7 +5,7 @@ use fret::UiChild;
 use super::OverlayModels;
 use fret_core::Color;
 
-fn overlay_scroll_row_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+fn overlay_scroll_row_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T>
 where
     T: Into<Arc<str>>,
 {
@@ -634,7 +634,7 @@ pub(super) fn portal_geometry(
         );
 
     let items = (1..=48)
-        .map(|i| overlay_scroll_row_text(cx, format!("Scroll item {i:02}")))
+        .map(|i| overlay_scroll_row_text(cx, format!("Scroll item {i:02}")).into_element(cx))
         .collect::<Vec<_>>();
 
     let body = ui::v_stack(|_cx| {

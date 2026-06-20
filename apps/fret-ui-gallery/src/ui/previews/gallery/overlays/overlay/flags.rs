@@ -4,7 +4,7 @@ use fret::UiChild;
 
 use super::OverlayModels;
 
-fn overlay_status_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+fn overlay_status_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> impl UiChild + use<T>
 where
     T: Into<Arc<str>>,
 {
@@ -36,7 +36,8 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
         if last.as_ref() == "popover:dismissed" {
             Some(
                 overlay_status_text(cx, "Popover dismissed")
-                    .test_id("ui-gallery-popover-dismissed"),
+                    .test_id("ui-gallery-popover-dismissed")
+                    .into_element(cx),
             )
         } else {
             None
@@ -48,7 +49,11 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .get_model_copied(&models.dialog_open, Invalidation::Layout)
             .unwrap_or(false);
         if open {
-            Some(overlay_status_text(cx, "Dialog open").test_id("ui-gallery-dialog-open"))
+            Some(
+                overlay_status_text(cx, "Dialog open")
+                    .test_id("ui-gallery-dialog-open")
+                    .into_element(cx),
+            )
         } else {
             None
         }
@@ -61,7 +66,8 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
         if open {
             Some(
                 overlay_status_text(cx, "Dialog (Glass) open")
-                    .test_id("ui-gallery-dialog-glass-open"),
+                    .test_id("ui-gallery-dialog-glass-open")
+                    .into_element(cx),
             )
         } else {
             None
@@ -75,7 +81,8 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
         if activated {
             Some(
                 overlay_status_text(cx, "Underlay activated")
-                    .test_id("ui-gallery-overlay-underlay-activated"),
+                    .test_id("ui-gallery-overlay-underlay-activated")
+                    .into_element(cx),
             )
         } else {
             None
@@ -88,7 +95,9 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .unwrap_or(false);
         if open {
             Some(
-                overlay_status_text(cx, "AlertDialog open").test_id("ui-gallery-alert-dialog-open"),
+                overlay_status_text(cx, "AlertDialog open")
+                    .test_id("ui-gallery-alert-dialog-open")
+                    .into_element(cx),
             )
         } else {
             None

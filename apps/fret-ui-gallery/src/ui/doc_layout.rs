@@ -226,11 +226,19 @@ fn focus_doc_sections(sections: Vec<DocSection>) -> Vec<DocSection> {
     sections
         .into_iter()
         .filter(|section| {
+            let derived_test_id_prefix = section.code.as_ref().and_then(|_| {
+                section.test_id_prefix.clone().or_else(|| {
+                    Some(auto_tabs_test_id_prefix(
+                        section.title,
+                        section.title_test_id,
+                    ))
+                })
+            });
             doc_section_matches_focus(
                 section.title,
                 section.title_test_id,
                 section.root_test_id.as_deref(),
-                section.test_id_prefix.as_deref(),
+                derived_test_id_prefix.as_deref(),
                 &focus_filters,
             )
         })
@@ -265,8 +273,13 @@ fn doc_section_matches_focus(
                 .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
             || root_test_id
                 .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
-            || test_id_prefix
-                .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
+            || test_id_prefix.is_some_and(|candidate| {
+                section_focus_candidate_matches(filter, candidate)
+                    || section_focus_candidate_matches(filter, &format!("{candidate}-title"))
+                    || section_focus_candidate_matches(filter, &format!("{candidate}-description"))
+                    || section_focus_candidate_matches(filter, &format!("{candidate}-content"))
+                    || section_focus_candidate_matches(filter, &format!("{candidate}-tabs"))
+            })
     })
 }
 
@@ -839,6 +852,19 @@ mod tests {
             Some("ui-gallery-combobox-usage-title"),
             None,
             Some("ui-gallery-combobox-usage"),
+            &filters
+        ));
+    }
+
+    #[test]
+    fn doc_section_focus_matches_derived_content_anchor_from_auto_prefix() {
+        let filters = vec!["docsec-long-list-content".to_string()];
+
+        assert!(doc_section_matches_focus(
+            "Long List",
+            None,
+            None,
+            Some("docsec-long-list"),
             &filters
         ));
     }
