@@ -2268,3 +2268,18 @@ popover overlay root solve tail.
 - Conclusion: this is a useful reduction, but the page shell is still not fully cleared. The next
   slice should stay on the inspector content shell / viewport boundary instead of reopening the row
   micro-optimizations first.
+
+## 2026-06-21 Inspector Direct-Entry Scroll Handle Split Rejection Note
+
+- I tried splitting the keyed outer wrapper around the content scroll area in
+  `apps/fret-ui-gallery/src/ui/content.rs` so the per-page scroll handle reset path became direct.
+- That cut was rejected. The refreshed perf bundle
+  `target/fret-diag/inspector-direct-entry-scroll-handle-split-v1/1781990899082/bundle.schema2.json`
+  regressed from the prior `inspector-direct-entry-content-shell-prune-v2` bundle
+  `target/fret-diag/inspector-direct-entry-content-shell-prune-v2/1781989941783/bundle.schema2.json`
+  on the key p95 band:
+  `total/layout/solve/prepaint/paint = 2308/1785/897/212/344` -> `2584/1987/913/220/358`.
+- `layout.root_phases.roots(total/apply)` did not improve either, so the split did not shift the
+  dominant owner out of the outer content viewport / shell path.
+- Conclusion: keep this as a negative slice and do not continue down the direct scroll-handle split
+  path. The next cut needs a different owner shift, not another page-key scope tweak.
