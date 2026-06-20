@@ -1435,6 +1435,24 @@ fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
 }
 
 #[test]
+fn gallery_inspector_torture_returns_the_retained_list_directly() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &["letlist=list.attach_semantics(", "vec![list]"],
+    );
+
+    assert!(
+        !normalized.contains("cx.cached_subtree_with("),
+        "inspector_torture should not reintroduce an extra cached subtree wrapper around the retained list",
+    );
+    assert!(
+        !normalized
+            .contains("CachedSubtreeProps::default().contain_layout_when_bounds_known(true)"),
+        "inspector_torture should let the retained virtual list own the direct boundary instead of wrapping it in a second cached subtree",
+    );
+}
+
+#[test]
 fn gallery_content_shell_keeps_page_semantics_on_the_landed_content_root() {
     let normalized = assert_normalized_markers_present(
         "src/ui/content.rs",

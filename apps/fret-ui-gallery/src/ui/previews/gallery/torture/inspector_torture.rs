@@ -178,8 +178,5 @@ pub(in crate::ui) fn preview_inspector_torture(
             .test_id("ui-gallery-inspector-root"),
     );
 
-    vec![cx.cached_subtree_with(
-        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
-        |_cx| vec![list],
-    )]
+    vec![list]
 }

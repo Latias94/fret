@@ -2158,6 +2158,26 @@ popover overlay root solve tail.
 - Next step: keep trimming the outer content shell only if the next bundle moves the owner or drops
   root-apply meaningfully; do not reopen row-local inspector work first.
 
+## 2026-06-21 Inspector Retained-List Boundary Prune Note
+
+- `preview_inspector_torture` now returns the retained inspector list directly instead of wrapping
+  it in an extra `cached_subtree_with(...contain_layout_when_bounds_known(true))` shell.
+- Regression coverage now locks the direct-return boundary so the retained list stays the page
+  body and the extra cached subtree wrapper does not come back.
+- Validation passed:
+  - `cargo fmt --all`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test inspector_perf_surface --test ui_authoring_surface_content_shell --no-fail-fast`
+- Latest perf evidence:
+  - `target/fret-diag/inspector-direct-entry-content-shell-prune-v2/1781989941783/bundle.schema2.json`
+  - `p50 total/layout/solve/prepaint/paint = 1935/1431/776/180/300`
+  - `p95 total/layout/solve/prepaint/paint = 2308/1785/897/212/344`
+- Comparison against the prior bundle:
+  - `p95 total` dropped from `2383us` to `2308us`
+  - `p95 layout` dropped from `1818us` to `1785us`
+  - `layout.root_phases.roots(total/apply)` dropped from `1359/1359` to `1280/1280`
+- Interpretation: this is a real but modest reduction, and the remaining owner is still the outer
+  content viewport / shell contract rather than the inspector retained list itself.
+
 ## 2026-06-20 Inspector Direct-Entry Nav Scroll Intrinsic-Mode Note
 
 - The direct-entry inspector rerun now points the visible hot node at the fixed-width sidebar
