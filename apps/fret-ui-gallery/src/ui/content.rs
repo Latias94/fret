@@ -106,16 +106,10 @@ pub(crate) fn content_view(
     .items_stretch()
     .into_element(cx);
 
-    let mut header_semantics_layout = fret_ui::element::LayoutStyle::default();
-    header_semantics_layout.size.width = fret_ui::element::Length::Fill;
-    let header = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            layout: header_semantics_layout,
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::from("ui-gallery-content-header")),
-            ..Default::default()
-        },
-        |_cx| [header_content],
+    let header = header_content.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id(Arc::from("ui-gallery-content-header")),
     );
 
     let preview_panel_content = page_preview(cx, theme, selected, models);
