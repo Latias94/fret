@@ -136,7 +136,7 @@ pub(crate) fn content_view(
             test_id: Some(Arc::from("ui-gallery-page-preview")),
             ..Default::default()
         },
-        |_cx| [preview_panel_content],
+        move |_cx| preview_panel_content,
     );
 
     #[cfg(feature = "gallery-dev")]
@@ -230,6 +230,12 @@ pub(crate) fn content_view(
             .into_element(cx)
     };
 
+    let content = content.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id(page_test_id),
+    );
+
     cx.named("ui_gallery.content_view_root", |cx| {
         let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
         let chrome = ChromeRefinement {
@@ -243,36 +249,20 @@ pub(crate) fn content_view(
             background: Some(ColorRef::Color(theme.color_token("background"))),
             ..ChromeRefinement::default()
         };
-        let mut semantics_fill_layout = fret_ui::element::LayoutStyle::default();
-        semantics_fill_layout.size.width = fret_ui::element::Length::Fill;
-        semantics_fill_layout.size.height = fret_ui::element::Length::Fill;
 
-        let page_root_content = cx
-            .container(
-                decl_style::container_props(
-                    theme,
-                    chrome,
-                    LayoutRefinement::default().w_full().h_full(),
-                ),
-                |_cx| [content],
-            )
-            .attach_semantics(
-                fret_ui::element::SemanticsDecoration::default()
-                    .role(fret_core::SemanticsRole::Group)
-                    .test_id(Arc::from("ui-gallery-content-shell")),
-            );
-
-        let page_root = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                layout: semantics_fill_layout,
-                role: fret_core::SemanticsRole::Group,
-                test_id: Some(page_test_id),
-                ..Default::default()
-            },
-            |_cx| [page_root_content],
-        );
-
-        page_root
+        cx.container(
+            decl_style::container_props(
+                theme,
+                chrome,
+                LayoutRefinement::default().w_full().h_full(),
+            ),
+            |_cx| [content],
+        )
+        .attach_semantics(
+            fret_ui::element::SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id(Arc::from("ui-gallery-content-shell")),
+        )
     })
 }
 
@@ -281,7 +271,7 @@ fn page_preview(
     theme: &Theme,
     selected: &str,
     models: &UiGalleryModels,
-) -> AnyElement {
+) -> Vec<AnyElement> {
     let motion_preset = models.motion_preset.clone();
     let motion_preset_open = models.motion_preset_open.clone();
     let view_cache_enabled = models.view_cache_enabled.clone();
@@ -354,11 +344,6 @@ fn page_preview(
     #[cfg(feature = "gallery-dev")]
     let markdown_link_gate_last_activation = models.markdown_link_gate_last_activation.clone();
 
-    #[cfg(feature = "gallery-dev")]
-    if selected == PAGE_INSPECTOR_TORTURE {
-        return preview_inspector_torture(cx, theme);
-    }
-
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
         PAGE_MOTION_PRESETS => preview_motion_presets(cx, motion_preset, motion_preset_open),
@@ -392,6 +377,8 @@ fn page_preview(
         PAGE_UI_KIT_LIST_TORTURE => preview_ui_kit_list_torture(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
+        #[cfg(feature = "gallery-dev")]
+        PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
             cx,
@@ -764,21 +751,23 @@ fn page_preview(
         _ => preview_intro(cx, theme),
     };
 
-    shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Preview").into_element(cx),
-            shadcn::CardDescription::new("Interactive preview for validating behaviors.")
-                .into_element(cx),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-preview-card-header"),
-        shadcn::CardContent::new(body)
+    vec![
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Preview").into_element(cx),
+                shadcn::CardDescription::new("Interactive preview for validating behaviors.")
+                    .into_element(cx),
+            ])
             .into_element(cx)
-            .test_id("ui-gallery-preview-card-content"),
-    ])
-    .refine_layout(LayoutRefinement::default().w_full())
-    .into_element(cx)
-    .test_id("ui-gallery-preview-card")
+            .test_id("ui-gallery-preview-card-header"),
+            shadcn::CardContent::new(body)
+                .into_element(cx)
+                .test_id("ui-gallery-preview-card-content"),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+        .test_id("ui-gallery-preview-card"),
+    ]
 }
 
 fn preview_ai_unwired(cx: &mut AppComponentCx<'_>, _theme: &Theme, id: &str) -> Vec<AnyElement> {

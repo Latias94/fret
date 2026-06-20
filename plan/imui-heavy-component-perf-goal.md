@@ -2138,6 +2138,26 @@ popover overlay root solve tail.
   regressed to `2700us`, so the change was reverted and the retained direct return is the only
   short-shell win.
 
+## 2026-06-20 Inspector Direct-Entry Preview Boundary Tightening Note
+
+- The gallery content shell now keeps `page_preview` on the explicit `Vec<AnyElement>` boundary
+  instead of collapsing inspector direct-entry back into a single landed preview element.
+- `content.rs` now routes `PAGE_INSPECTOR_TORTURE` through the shared preview match arm and feeds
+  the preview panel directly from the vector boundary, while `preview_inspector_torture` keeps
+  returning the retained inspector list as `Vec<AnyElement>`.
+- Validation passed:
+  - `cargo fmt --all`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_content_shell --test ui_authoring_surface_internal_previews --no-fail-fast`
+- Perf rerun:
+  - `target/fret-diag/inspector-direct-entry-short-shell-v3/1781974142000/bundle.schema2.json`
+  - `p50 total/layout/solve/prepaint/paint = 2545/2034/879/186/316`
+  - `p95 = 2724/2188/941/221/344`
+- `diag stats` on the same bundle still points at the outer `ui-gallery-content-viewport` /
+  content-shell path as the dominant owner, with `layout.root_phases roots(total/apply)=1306/1305`
+  on the hottest frame. This is a boundary-tightening slice, not an owner-shift yet.
+- Next step: keep trimming the outer content shell only if the next bundle moves the owner or drops
+  root-apply meaningfully; do not reopen row-local inspector work first.
+
 ## 2026-06-20 Inspector Direct-Entry Nav Scroll Intrinsic-Mode Note
 
 - The direct-entry inspector rerun now points the visible hot node at the fixed-width sidebar

@@ -1422,25 +1422,23 @@ fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
 }
 
 #[test]
-fn gallery_content_shell_keeps_page_root_semantics_on_the_existing_container() {
+fn gallery_content_shell_keeps_page_semantics_on_the_landed_content_root() {
     let normalized = assert_normalized_markers_present(
         "src/ui/content.rs",
         &[
-            "page_root_content = cx.container(",
-            ".attach_semantics(",
+            "let content = content.attach_semantics(",
             "SemanticsDecoration::default()",
             ".role(fret_core::SemanticsRole::Group)",
+            ".test_id(page_test_id)",
+            "cx.container(",
+            ".attach_semantics(",
             ".test_id(Arc::from(\"ui-gallery-content-shell\"))",
-            "let page_root = cx.semantics(",
-            "test_id: Some(page_test_id)",
         ],
     );
 
     assert!(
-        !normalized.contains(
-            "cx.semantics(fret_ui::element::SemanticsProps{layout:semantics_fill_layout,role:fret_core::SemanticsRole::Group,test_id:Some(Arc::from(\"ui-gallery-content-shell\")),..Default::default()},|_cx|[page_root],)"
-        ),
-        "gallery content shell should not regress to a dedicated wrapper semantics node",
+        !normalized.contains("let page_root = cx.semantics("),
+        "gallery content shell should not regress to a dedicated page-root semantics wrapper",
     );
 }
 

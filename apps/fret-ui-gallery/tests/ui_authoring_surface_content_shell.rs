@@ -50,3 +50,28 @@ fn gallery_content_header_keeps_semantics_on_the_existing_header_root() {
         "gallery content header should not regress to a dedicated wrapper semantics node",
     );
 }
+
+#[test]
+fn gallery_content_preview_panel_keeps_page_preview_as_a_vec_anyelement_boundary() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/content.rs",
+        &[
+            "let preview_panel_content = page_preview(cx, theme, selected, models);",
+            "let preview_panel = cx.semantics(",
+            "move |_cx| preview_panel_content",
+            "fn page_preview(",
+            ") -> Vec<AnyElement>",
+            "vec![shadcn::Card::new(vec![",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("return preview_inspector_torture(cx, theme)"),
+        "gallery content preview panel should not regress to an inspector-specific single-element return path",
+    );
+    assert!(
+        normalized.contains("PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx,theme),")
+            || normalized.contains("PAGE_INSPECTOR_TORTURE=>preview_inspector_torture(cx,theme),"),
+        "gallery content preview panel should still route inspector_torture through the shared preview boundary",
+    );
+}
