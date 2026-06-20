@@ -1768,16 +1768,27 @@ popover overlay root solve tail.
 - Implementation: split node-level availability into a private `command_availability_at_node`
   helper, then changed subtree fallback to do a single DFS over candidate nodes and query each node
   once per command.
+- Follow-up refinement: cache subtree-interest summaries within one publication so repeated widget
+  commands can reuse the same no-focus pruning metadata instead of rebuilding the subtree interest
+  tree for every command.
 - Regression coverage:
   - `action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback`
   - `action_availability_no_focus_subtree_fallback_scans_each_node_once_per_command`
+  - `action_availability_no_focus_subtree_fallback_reuses_subtree_interest_across_commands`
   - full `command_availability` / `window_command_action_availability_snapshot` nextest slice
 - Expected impact: reduce the no-focus command-availability tail inside heavy windows, especially
   on cold-open / first-discovery surfaces where command palette and menu gating previously paid for
   repeated ancestor bubbling.
-- Perf recheck is still running in release mode; compile time dominated the first pass, so the next
-  step is to reuse the warmed build artifacts and compare the same data-table retained script after
-  the process finishes.
+- Direct-entry inspector probe after the refinement:
+  `target/fret-diag/inspector-direct-entry-no-focus-interest-cache/1781965593621/bundle.schema2.json`
+  with `window_runtime_snapshot.command_availability(widget_count/collect_us/eval_us)=4/3/1250`
+  on the hottest frame and the top `subtree_no_focus_fallback` sample around `581-646us`.
+- Verification completed on the warmed build path and the current direct-entry inspector probe:
+  `cargo fmt --all --check`, `cargo check -p fret-ui -j 1`, and
+  `cargo nextest run -p fret-ui window_command_action_availability_snapshot --no-fail-fast` all
+  passed, and the direct-entry inspector bundle above confirms the no-focus subtree fallback still
+  carries the same hotspot class while now reusing subtree-interest summaries within each
+  publication.
 
 ## 2026-06-18 Inspector Torture Baseline
 

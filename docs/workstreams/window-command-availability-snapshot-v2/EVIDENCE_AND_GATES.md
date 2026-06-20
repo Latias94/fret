@@ -82,6 +82,14 @@ Latest command-availability attribution:
 - The latest bundle has no frame with more than one `focus_traversal_snapshot` hotspot.
 - No frame with command availability publication >=500us was missing hotspots.
 
+Direct-entry no-focus subtree-interest cache evidence:
+
+- `target/fret-diag/inspector-direct-entry-no-focus-interest-cache/1781965593621/bundle.schema2.json`
+- Hot frame `window_runtime_snapshot.command_availability(widget_count/collect_us/eval_us)=4/3/1250`
+- Hotspot samples still center on `edit.copy@subtree_no_focus_fallback` around `581-646us`, while the
+  new subtree-interest reuse coverage proves the same publication can reuse pruning metadata across
+  multiple widget commands.
+
 Expected JSON path:
 
 - `/top/*/command_availability_hotspots/*/command`
@@ -133,6 +141,16 @@ Latest result: 14 passed. This includes
 `action_availability_snapshot_uses_explicit_action_route_fallback_root`, which proves explicit
 action-route fallback roots still publish availability with focus present and that the debug hotspot
 start node is the same resolved fallback root used by availability traversal.
+
+Focused no-focus subtree-interest reuse coverage:
+
+```bash
+cargo nextest run -p fret-ui \
+  action_availability_no_focus_subtree_fallback_reuses_subtree_interest_across_commands \
+  --no-fail-fast
+```
+
+Latest result: 1 passed.
 
 Focused migrated parser and registry gates:
 

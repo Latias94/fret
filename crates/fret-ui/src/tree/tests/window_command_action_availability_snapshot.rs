@@ -68,6 +68,9 @@ struct CommandAvailabilityQueryCount {
 }
 
 #[derive(Debug, Default)]
+struct CountingNoFocusInterestNode;
+
+#[derive(Debug, Default)]
 struct BlockingAvailabilityNode;
 
 impl<H: UiHost> Widget<H> for CountingAvailabilityNode {
@@ -114,6 +117,33 @@ impl<H: UiHost> Widget<H> for CountingAllAvailabilityNode {
             },
         );
         if command.as_str() == "test.available" {
+            return crate::widget::CommandAvailability::Available;
+        }
+        crate::widget::CommandAvailability::NotHandled
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+impl<H: UiHost> Widget<H> for CountingNoFocusInterestNode {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> crate::widget::CommandAvailability {
+        if command.as_str() == "test.available" {
+            cx.app.with_global_mut_untracked(
+                CommandAvailabilityQueryCount::default,
+                |counter, _app| {
+                    counter.count = counter.count.saturating_add(1);
+                },
+            );
             return crate::widget::CommandAvailability::Available;
         }
         crate::widget::CommandAvailability::NotHandled
@@ -1364,6 +1394,111 @@ fn action_availability_no_focus_subtree_fallback_scans_each_node_once_per_comman
     for command in commands {
         assert_eq!(svc.available(window, &command), Some(false));
     }
+}
+
+#[test]
+fn action_availability_no_focus_subtree_fallback_reuses_subtree_interest_across_commands() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let commands = [
+        CommandId::from("test.first_unhandled"),
+        CommandId::from("test.second_unhandled"),
+    ];
+    for command in &commands {
+        app.register_command(command.clone(), widget_command_meta(command.as_str()));
+    }
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+    let mut parent = root;
+    let depth = 4usize;
+    for _ in 0..depth {
+        let child = ui.create_node(CountingNoFocusInterestNode);
+        ui.add_child(parent, child);
+        parent = child;
+    }
+    ui.set_focus(None);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    crate::tree::reset_command_availability_subtree_interest_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert_eq!(
+        crate::tree::take_command_availability_subtree_interest_probe_count(),
+        (depth + 1) as usize,
+        "subtree interest should be computed once per node in the fallback subtree"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    for command in commands {
+        assert_eq!(svc.available(window, &command), Some(false));
+    }
+}
+
+#[test]
+fn action_availability_no_focus_subtree_fallback_skips_focus_bound_edit_commands() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let commands = [
+        CommandId::from("edit.copy"),
+        CommandId::from("text.copy"),
+        CommandId::from("test.available"),
+    ];
+    for command in &commands {
+        app.register_command(command.clone(), widget_command_meta(command.as_str()));
+    }
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(CountingAllAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, child);
+    ui.set_focus(None);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        query_count, 1,
+        "no-focus subtree fallback should skip focus-bound text/edit commands but keep custom widget command discovery"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("edit.copy")),
+        Some(false)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("text.copy")),
+        Some(false)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
 }
 
 #[test]

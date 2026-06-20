@@ -78,7 +78,10 @@ impl DeclarativeCommandAvailabilityInterest {
                     "text.select_all" | "edit.select_all" | "text.copy" | "edit.copy"
                 ))
             || (self.focus_traversal && matches!(command_name, "focus.next" | "focus.previous"))
-            || self.commands.iter().any(|id| id == command)
+            || self
+                .commands
+                .binary_search_by(|id| id.as_str().cmp(command_name))
+                .is_ok()
     }
 
     fn matches_for_route(
@@ -95,7 +98,10 @@ impl DeclarativeCommandAvailabilityInterest {
 
                 let command_name = command.as_str();
                 (self.focus_traversal && matches!(command_name, "focus.next" | "focus.previous"))
-                    || self.commands.iter().any(|id| id == command)
+                    || self
+                        .commands
+                        .binary_search_by(|id| id.as_str().cmp(command_name))
+                        .is_ok()
             }
         }
     }
@@ -130,6 +136,7 @@ impl From<crate::action::CommandAvailabilityInterest> for DeclarativeCommandAvai
 #[derive(Debug, Default)]
 struct CommandAvailabilityPublicationCache {
     declarative_interest: HashMap<NodeId, DeclarativeCommandAvailabilityInterest>,
+    subtree_interest: HashMap<NodeId, DeclarativeCommandAvailabilityInterest>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,9 +145,58 @@ enum CommandAvailabilityInterestRoute {
     NoFocusSubtreeFallback,
 }
 
+fn command_is_focus_bound_text_edit(command: &CommandId) -> bool {
+    let name = command.as_str();
+    name.starts_with("text.") || name.starts_with("edit.")
+}
+
 impl<H: UiHost> UiTree<H> {
     pub(crate) fn layout_active(&self) -> bool {
         self.layout_call_depth > 0
+    }
+
+    fn populate_subtree_command_availability_interest_cache(
+        &mut self,
+        app: &mut H,
+        root: NodeId,
+        publication_cache: &mut CommandAvailabilityPublicationCache,
+    ) {
+        let frame_id = app.frame_id();
+        let mut stack: Vec<(NodeId, bool)> = vec![(root, false)];
+        while let Some((node, visited)) = stack.pop() {
+            if visited {
+                #[cfg(test)]
+                super::record_command_availability_subtree_interest_probe();
+
+                let mut interest =
+                    self.declarative_node_command_availability_interest_cached(app, frame_id, node);
+                if let Some(entry) = self.nodes.get(node) {
+                    for &child in &entry.children {
+                        if let Some(child_interest) =
+                            publication_cache.subtree_interest.get(&child).cloned()
+                        {
+                            interest = interest.union(child_interest);
+                            if interest.all {
+                                break;
+                            }
+                        }
+                    }
+                }
+                publication_cache.subtree_interest.insert(node, interest);
+                continue;
+            }
+
+            if publication_cache.subtree_interest.contains_key(&node) {
+                continue;
+            }
+
+            stack.push((node, true));
+            if let Some(entry) = self.nodes.get(node) {
+                for &child in entry.children.iter().rev() {
+                    stack.push((child, false));
+                }
+            }
+        }
     }
 
     pub(crate) fn defer_declarative_window_snapshot_commit(&mut self, root: NodeId) {
@@ -1377,11 +1433,39 @@ impl<H: UiHost> UiTree<H> {
         route: CommandAvailabilityInterestRoute,
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
+        let no_focus_interest = if route == CommandAvailabilityInterestRoute::NoFocusSubtreeFallback
+        {
+            if let Some(cache) = publication_cache.as_deref_mut() {
+                self.populate_subtree_command_availability_interest_cache(app, root, cache);
+                cache.subtree_interest.get(&root).cloned()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(interest) = &no_focus_interest
+            && !interest.matches_for_route(command, route)
+        {
+            return (CommandAvailability::NotHandled, None);
+        }
+
         let mut stack = vec![root];
         while let Some(node) = stack.pop() {
             if let Some(entry) = self.nodes.get(node) {
                 for &child in entry.children.iter().rev() {
-                    stack.push(child);
+                    let child_matches = if no_focus_interest.is_some() {
+                        publication_cache
+                            .as_deref()
+                            .and_then(|cache| cache.subtree_interest.get(&child))
+                            .is_some_and(|interest| interest.matches_for_route(command, route))
+                    } else {
+                        true
+                    };
+                    if child_matches {
+                        stack.push(child);
+                    }
                 }
             }
 
@@ -1807,6 +1891,7 @@ impl<H: UiHost> UiTree<H> {
                     if availability == CommandAvailability::NotHandled
                         && focus.is_none()
                         && barrier_root.is_none()
+                        && !command_is_focus_bound_text_edit(&id)
                     {
                         availability = self
                             .timed_no_focus_command_availability_in_subtree(
