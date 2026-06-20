@@ -1779,16 +1779,17 @@ popover overlay root solve tail.
 - Expected impact: reduce the no-focus command-availability tail inside heavy windows, especially
   on cold-open / first-discovery surfaces where command palette and menu gating previously paid for
   repeated ancestor bubbling.
-- Direct-entry inspector probe after the refinement:
-  `target/fret-diag/inspector-direct-entry-no-focus-interest-cache/1781965593621/bundle.schema2.json`
-  with `window_runtime_snapshot.command_availability(widget_count/collect_us/eval_us)=4/3/1250`
-  on the hottest frame and the top `subtree_no_focus_fallback` sample around `581-646us`.
-- Verification completed on the warmed build path and the current direct-entry inspector probe:
-  `cargo fmt --all --check`, `cargo check -p fret-ui -j 1`, and
-  `cargo nextest run -p fret-ui window_command_action_availability_snapshot --no-fail-fast` all
-  passed, and the direct-entry inspector bundle above confirms the no-focus subtree fallback still
-  carries the same hotspot class while now reusing subtree-interest summaries within each
-  publication.
+- Direct-entry inspector rerun after the refinement:
+  `target/fret-diag/inspector-direct-entry-no-focus-interest-cache-rerun/1781969841415/bundle.json`
+  and `.bundle.schema2.json`.
+- The rerun’s top `window_runtime_snapshot.command_availability` frame is down to
+  `widget_count/collect_us/eval_us=4/3/28`, and the `subtree_no_focus_fallback` hotspot class is
+  absent from the rerun stats bundle.
+- Verification completed on the warmed build path and the rerun probe:
+  `cargo fmt --all --check`, `cargo check -p fret-ui -j 1`,
+  `cargo nextest run -p fret-ui window_command_action_availability_snapshot --no-fail-fast`, and
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-no-focus-interest-cache-rerun --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  all passed.
 
 ## 2026-06-18 Inspector Torture Baseline
 

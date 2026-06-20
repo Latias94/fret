@@ -1,7 +1,7 @@
 # Window Command Availability Snapshot v2
 
 Status: Active
-Last updated: 2026-05-16
+Last updated: 2026-06-20
 
 ## Problem
 
@@ -112,6 +112,14 @@ label diagnostics. The route resolves the explicit fallback roots once, evaluate
 that same resolved node stream, and reuses the first live fallback root as the hotspot start node.
 This keeps route attribution faithful to the work being timed while avoiding duplicate
 `ElementRuntime` fallback-root collection and live-node resolution in diagnostics-enabled builds.
+
+## No-Focus Subtree Fallback
+
+The no-focus, no-barrier subtree fallback exists for first-open discovery of custom widget commands.
+It does not make focus-bound `text.*` / `edit.*` commands available by scanning arbitrary unfocused
+text surfaces. Those commands must be answered by the focused/default route or explicit action-route
+fallback roots. This keeps editor/clipboard commands from turning first-open command publication
+into full-window subtree traversal.
 
 ## Current Evidence
 

@@ -1,7 +1,7 @@
 # TODO
 
 Status: Active
-Last updated: 2026-05-16
+Last updated: 2026-06-20
 
 ## Current Slice
 
@@ -33,6 +33,9 @@ Last updated: 2026-05-16
   `action_availability_snapshot_uses_explicit_action_route_fallback_root`.
 - [x] Audit repeated `focus_traversal_snapshot` publication within one frame; the latest evidence
   shows the redundant repeated 99-105us samples are removed by the frame-level cache.
+- [x] Skip focus-bound `text.*` / `edit.*` commands in no-focus subtree fallback after explicit
+  action-route fallback roots fail; focused coverage:
+  `action_availability_no_focus_subtree_fallback_skips_focus_bound_edit_commands`.
 - [x] Cache subtree-interest summaries for no-focus subtree fallback within one publication so
   repeated widget commands can reuse subtree pruning metadata; focused coverage:
   `action_availability_no_focus_subtree_fallback_reuses_subtree_interest_across_commands`.
