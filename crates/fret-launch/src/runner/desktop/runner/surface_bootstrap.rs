@@ -1,8 +1,5 @@
 use super::*;
 
-#[cfg(target_os = "macos")]
-use objc2_metal::MTLDevice as _;
-
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn handle_can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.app.with_global_mut(

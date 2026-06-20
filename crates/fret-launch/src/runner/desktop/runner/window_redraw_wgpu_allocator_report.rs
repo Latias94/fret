@@ -38,6 +38,8 @@ pub(super) fn maybe_record_window_redraw_wgpu_allocator_report(
     let report = context.device.generate_allocator_report();
     #[cfg(target_os = "macos")]
     let metal_current_allocated_size_bytes = unsafe {
+        use objc2_metal::MTLDevice as _;
+
         context
             .device
             .as_hal::<wgpu::hal::api::Metal>()
