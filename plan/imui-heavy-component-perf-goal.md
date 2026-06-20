@@ -197,6 +197,62 @@ historical records remain in:
 - 下一步如果继续收，就应该看 `editor_joined_input_frame` 的组合壳是否还能合并，
   而不是在调用点层面重复补段。
 
+## 2026-06-19 Editor-Controls Shell Shrink Note
+
+- `PropertyGrid` 现在在“单行 + 默认外层布局 + 无 `test_id`”时直接返回那一行，
+  不再额外套一层纵向 shell。
+- `editor_input_group_row` 现在在只有一个 child 时直接返回该 child，避免在单元素
+  路径上保留无意义的 row 容器。
+- `ColorEdit` 输入分支现在直接挂 `TextInput`，移除了外层 `PointerRegion` 壳。
+- `ColorEdit` popup 的 numeric/options 现在会先组装 items，再在“只有一个可见项且
+  没有 `test_id`”时直接返回该项。
+- `EnumSelect` trigger 的 caret 现在直接用居中 `Flex` 承载 `SvgIcon`，去掉了只为
+  单个图标服务的外层 `Container`。
+- 这一刀继续保留了 `test_id` 路径和多子节点路径的诊断锚点，没有把 policy 往
+  `fret-ui` 挪。
+- 验证：`cargo nextest run -p fret-ui-editor -j 1 --no-fail-fast`，以及
+  `cargo nextest run -p fret-ui-editor enum_select --no-fail-fast`。
+- 下一步继续盯剩余的 editor-controls 多子节点链，优先看
+  `TextField`、`MiniSearchBox`、`AssetRefField`、`FieldStatusBadge` 这类还保留明显
+  组合壳的重表面。
+
+## 2026-06-19 TextAssistField Inline Shell Shrink Note
+
+- `TextAssistField` now returns `TextField` directly on the inline path when there is no
+  `inline_panel` and no `empty_label`, instead of adding an extra vertical `Flex` wrapper.
+- This keeps the inline empty state on the shortest tree while leaving the empty-label case
+  responsible for preserving the shell.
+- The regression tests now lock three boundaries: inline direct return, overlay direct return, and
+  inline empty-label shell preservation.
+- Validation: `cargo fmt --all --check`, and
+  `cargo nextest run -p fret-ui-editor inline_surface_without_panel_or_empty_label_returns_the_field_root anchored_overlay_surface_without_panel_or_empty_label_returns_the_field_root inline_surface_with_empty_label_keeps_the_shell_visible --no-fail-fast`.
+
+## 2026-06-20 Editor-Controls Shell Review Note
+
+- The editor-controls shell-shrink batch is consistent with the shell-shrink direction:
+  `PropertyGrid`, `ColorEdit`, `DragValue`, `EnumSelect`, `TextAssistField`, and
+  `editor_input_group_row` each now have targeted structural coverage.
+- `MiniSearchBox` is already thin enough that further shell removal would likely land in
+  `editor_joined_input_frame`, not in the control itself.
+- `AssetRefField` still carries a meaningful multi-action shell because it composes value text,
+  status badge, and optional action segments; it is a better candidate for a future bounded slice
+  than for a forced one-line shrink.
+- Validation for the batch passed with
+  `cargo fmt --all --check` and
+  `cargo nextest run -p fret-ui-editor property_grid color_edit drag_value enum_select text_assist_field input_group --no-fail-fast`.
+
+## 2026-06-20 ColorEdit Popup Options Direct-Return Note
+
+- `color_edit::popup::options::color_picker_options` now returns the single visible option directly
+  even when a popup-level `test_id` is present, so the popup no longer keeps an extra vertical shell
+  for the one-option case.
+- `test_id` is preserved as a layout-transparent semantic anchor on the returned option, so
+  diagnostics and UI automation can still locate the node without paying for a wrapper.
+- Regression coverage now locks both the plain direct-return path and the `test_id`-decorated
+  direct-return path.
+- Validation: `cargo fmt --all --check`, and
+  `cargo nextest run -p fret-ui-editor color_edit::popup::options --no-fail-fast`.
+
 ## Decisions
 
 ### D1. Continue mixed component plus mechanism optimization
@@ -1827,3 +1883,288 @@ popover overlay root solve tail.
   - tab strip 的 layout contract 仍保持 `width = Auto` / `height = Fill`。
 - 这个结果说明 workspace tab strip 这类重组件的关键问题之一不是功能缺失，而是
   chrome 壳是否被 canonical helper 统一化，避免局部 ad hoc 壳层继续漂移。
+
+## 2026-06-20 Focused Combobox Long-List Repro Refresh Note
+
+- Re-validated the focused `Long List` diagnostics path against the current mainline code instead of
+  relying on the earlier failed launched run.
+- Current launched correctness evidence is green:
+  `target/fret-diag/combobox-long-list-focused-minrun/1781896246714-ui-gallery-combobox-long-list-focused-filter-select-steady/bundle.schema2.json`.
+  Querying that bundle now shows the expected focused docs anchors plus the long-list trigger lane:
+  `docsec-long-list-content`, `ui-gallery-combobox-long-list-trigger`,
+  `ui-gallery-combobox-long-list-query`, and `ui-gallery-combobox-long-list-selected`.
+- Interpretation: the earlier timeout at `wait_until exists(ui-gallery-combobox-long-list-trigger)`
+  was stale evidence from an older launched binary/run boundary, not proof that the current
+  `docsec-long-list-content` focus path is still broken.
+- The focused launched repro is therefore back to being a trustworthy correctness/probe surface.
+
+## 2026-06-20 Focused Combobox Long-List Perf Recheck Note
+
+- Re-ran the current focused perf script on macOS through the launched `cargo run -p
+  fret-ui-gallery` path:
+  `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-long-list-focused-filter-select-steady.json --dir target/fret-diag/combobox-long-list-focused-perf-current --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery`
+- The resulting bundle
+  `target/fret-diag/combobox-long-list-focused-perf-current/1781896419197/bundle.schema2.json`
+  is not a heavy-component hotspot on this current-state surface. Worst frame is only
+  `top_total_time_us=244`, with `layout=14us`, `prepaint=130us`, and `paint=100us`.
+- This current focused probe therefore no longer supports “combobox long-list is still the
+  dominant heavy-component tail” on this machine/runtime shape. It should stay as a correctness +
+  narrow regression probe, but it is not the best next hotspot driver.
+- Next perf work should return to the currently heavier editor-controls / inspector / code-view
+  class surfaces unless a fresh focused combobox run on another target shows a contradictory tail.
+
+## 2026-06-20 Current-State Heavy Surface Re-Ranking Note
+
+- Re-ran the three current-state candidate probes on macOS instead of continuing from older
+  hotspot assumptions:
+  - `ui-gallery-inspector-torture-scroll`:
+    `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json --dir target/fret-diag/inspector-torture-scroll-current --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  - `ui-gallery-code-view-torture-mount`:
+    `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --dir target/fret-diag/code-view-torture-mount-current-macos --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  - `cookbook-imui-editor-controls-click-stress`:
+    `target/debug/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --dir target/fret-diag/cookbook-imui-editor-controls-click-stress-current --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+- Current ranking on this machine/runtime shape is:
+  1. `code-view` worst frame `total=3736us`, `layout=3456us`, `solve=946us`, evidence
+     `target/fret-diag/code-view-torture-mount-current-macos/1781897154059/bundle.schema2.json`
+  2. `inspector` worst frame `total=3396us`, `layout=3082us`, `solve=1241us`, evidence
+     `target/fret-diag/inspector-torture-scroll-current/1781897141976/bundle.schema2.json`
+  3. `editor-controls` worst frame `total=1348us`, `layout=1180us`, `solve=513us`, evidence
+     `target/fret-diag/cookbook-imui-editor-controls-click-stress-current/1781897209391/bundle.schema2.json`
+- Interpretation: on current macOS mainline, `editor-controls` is no longer the best next driver
+  for this loop, and `combobox long-list` is much lighter still. The best next hotspot to cut is
+  back on the `code-view` lane, with `inspector` as the secondary follow-on.
+
+## 2026-06-20 Code-View Content-Viewport Attribution Note
+
+- Re-ran `ui-gallery-code-view-torture-mount` with node-level layout attribution:
+  `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --dir target/fret-diag/code-view-torture-mount-node-profile-current --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=200 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+- The worst-frame aggregate stayed effectively unchanged (`total=3746us`, `layout=3420us`,
+  `solve=954us`), but the node profile changed the attribution story: the dominant self-time node
+  through the hot frames is the outer page scroll root with test id `ui-gallery-content-viewport`,
+  not the inner `ui-gallery-code-view-root` `VirtualList`.
+- Representative node-profile evidence from that run:
+  - `ui-gallery-content-viewport` repeatedly leads with about `2.2ms-2.6ms` self time and about
+    `2.6ms-3.0ms` total time after navigation settles.
+  - `ui-gallery-code-view-root` `VirtualList` only becomes the top node on the later narrow frame,
+    and there it is smaller (`self_us=821`, `total_us=2904`) than the outer content viewport was
+    on the hotter earlier frames.
+- A quick bisect supports the same conclusion. Running the same torture script with the existing
+  `BISECT_DISABLE_CONTENT_SCROLL` flag enabled:
+  `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --dir target/fret-diag/code-view-torture-mount-bisect-disable-content-scroll --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_BISECT=128 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  reduced worst frame from `3736us` to `3227us`, with layout dropping from `3456us` to `3027us`.
+- Interpretation: the next code-view slice should start from the page-level nested-scroll/content
+  viewport contract in `apps/fret-ui-gallery/src/ui/content.rs`, not from another wrapped-text or
+  code-block-local cache experiment. The correct question now is whether the code-view torture page
+  can avoid paying the extra outer content-scroll root while preserving the intended gallery page
+  contract and diagnostics anchors.
+
+## 2026-06-20 Code-View Static Content-Shell Rejection Note
+
+- Tried the obvious page-local version of the earlier bisect result in
+  `apps/fret-ui-gallery/src/ui/content.rs`: route `PAGE_CODE_VIEW_TORTURE` through the same static
+  content-shell branch that `BISECT_DISABLE_CONTENT_SCROLL` uses, while preserving
+  `ui-gallery-content-scroll`, `ui-gallery-page-code-view-torture`, and
+  `ui-gallery-code-view-root` anchors.
+- Focused validation for the experiment itself was green (`cargo fmt --all`, and a temporary source
+  gate plus `cargo check -p fret-ui-gallery --features gallery-dev`), but the perf evidence did not
+  justify keeping the implementation.
+- On the original mount probe surface, the page-local static-shell implementation was not an
+  improvement:
+  - first run:
+    `target/fret-diag/code-view-torture-mount-page-static-shell/1781898593104/bundle.json`
+    reported `total=3904us`, `layout=3571us`, `solve=1001us`
+  - repeat-3 rerun:
+    `target/fret-diag/code-view-torture-mount-page-static-shell-rerun/1781898666393/bundle.schema2.json`
+    reported `p50=3763us`, `p95=max=3807us`, still worse than the earlier current-state run
+    (`3736us`) and far from the full bisect path (`3227us`)
+- Node profiling on the experiment clarified why this is a bad landing slice:
+  `target/fret-diag/code-view-torture-mount-page-static-shell-node-profile/1781898744109/bundle.json`
+  still showed the hot frames dominated by `ui-gallery-content-viewport` on the ordinary content
+  scroll path. In other words, the current mount script kept measuring a path that never actually
+  exercised the intended page-local branch.
+- A control rerun with the same script but `FRET_UI_GALLERY_START_PAGE=code_view_torture`
+  dramatically reduced the page-local static-shell case:
+  `target/fret-diag/code-view-torture-mount-page-static-shell-start-page/1781898825559/bundle.schema2.json`
+  reported `p50=532us`, `p95=max=543us`.
+- Interpretation:
+  - the static shell itself is not obviously expensive
+  - the current `ui-gallery-code-view-torture-mount` probe is dominated by nav/search/page-switch
+    transition work before the code-view steady surface is isolated
+  - therefore this page-local shell change is the wrong thing to land right now
+- Decision: revert the implementation and keep the evidence. The next cut should narrow the probe
+  surface first (for example a start-page or direct-entry mount contract) before treating outer
+  content scroll as the primary code change target.
+
+## 2026-06-20 Code-View Direct-Entry Mount Clarification Note
+
+- Added a separate steady-surface probe at
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json` plus a
+  focused gate in `apps/fret-ui-gallery/tests/code_view_perf_surface.rs`.
+- The contract split is now explicit:
+  - `ui-gallery-code-view-torture-mount.json` is a nav/search/page-switch transition probe.
+  - `ui-gallery-code-view-torture-mount-direct-entry.json` is the steady direct-entry mount probe.
+- Refreshed direct-entry repeat-3 evidence:
+  `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json --dir target/fret-diag/code-view-torture-mount-direct-entry-refresh --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  reported `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=306/11/0/189/106/0/0`,
+  `p95=313/12/0/197/118/0/0`, and `max=313/12/0/197/118/0/0`; evidence bundle
+  `target/fret-diag/code-view-torture-mount-direct-entry-refresh/1781899846277/bundle.json`.
+- Refreshed direct-entry node-profile evidence:
+  `target/debug/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json --dir target/fret-diag/code-view-torture-mount-direct-entry-node-profile-refresh --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=100 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=310/11/0/197/102/0/0`;
+  evidence bundle
+  `target/fret-diag/code-view-torture-mount-direct-entry-node-profile-refresh/1781899876398/bundle.schema2.json`.
+- Interpretation:
+  - the steady code-view mount surface is currently light, not a multi-ms hotspot
+  - `layout` is down at roughly `11-12us`, `solve=0`, and total worst frame stays around `310us`
+  - the older `3736us` result should no longer be used as evidence for steady code-view-local work;
+    it is evidence for gallery transition cost until that probe is renamed more explicitly
+- Recommended next cut:
+  - either formalize/rename the old mount script as a transition probe and continue attribution on
+    nav/search/page-switch work
+  - or pivot the main hotspot driver to `inspector`, since code-view steady mount is now clarified
+    and no longer the strongest candidate on its own
+
+## 2026-06-20 Inspector Direct-Entry Static Content-Stack Note
+
+- The inspector direct-entry probe now routes through the static content stack in
+  `apps/fret-ui-gallery/src/ui/content.rs`, while the `code_view_torture` path keeps its own
+  scroll shell and fixed preview height.
+- This kept the change narrow and reversible: it did not alter the general gallery scroll contract,
+  only the inspector-specific direct-entry page shape.
+- Validation passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test inspector_perf_surface --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test code_view_perf_surface --no-fail-fast`
+- Latest perf evidence:
+  - direct-entry after static stack:
+    `target/fret-diag/inspector-direct-entry-after-static-content-stack/1781910619755/bundle.schema2.json`
+    with `top_total_time_us=2895`, `layout_time_us=2323`, and
+    `layout.root_phases.roots(total/apply)=1473/1473`
+  - node-profile rerun:
+    `target/fret-diag/inspector-direct-entry-after-static-content-stack-node-profile/1781911121082/bundle.schema2.json`
+    with worst frame `total=3052us`
+- Interpretation: the change is a real improvement, but the remaining hotspot is still the outer
+  `ui-gallery-content-viewport` `Scroll`, not the inspector `VirtualList`.
+- Next step: continue on the inspector/page-shell content viewport contract, or move back to the
+  code-view transition probe only if a new bundle shows a larger regression there.
+
+## 2026-06-20 Inspector Row Invalidation Narrowing Note
+
+- The inspector row tree was already on the shorter `pressable -> content` path from the earlier
+  shell shrink. The remaining row-local waste was not another wrapper, but the selected-row model
+  read itself.
+- `selected_row` now observes with `Invalidation::Paint` instead of `Invalidation::Layout`.
+  Selection state still updates row chrome and selected semantics, but it no longer advertises a
+  geometry change that does not exist.
+- Regression coverage now locks the paint-only read and the absence of the old layout-level read in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`.
+- This is still a narrow perf guard rather than a framework-level owner split. If a future bundle
+  moves the hotspot back into the row tree, the next cut should be evidence-led and not assume the
+  shell is the owner.
+- Perf rerun:
+  `target/fret-diag/inspector-direct-entry-selected-row-paint-invalidation/1781917561829/bundle.json`
+  reported `top_total_time_us=2901`, `layout_time_us=2293`, `layout_engine_solve_time_us=1017`,
+  `paint_time_us=438`. That keeps the inspector direct-entry surface in the same general band and
+  does not yet remove the outer viewport as the dominant owner.
+
+## 2026-06-20 Gallery Internal Preview Contract Tightening Note
+
+- Cleaned the remaining gallery internal preview surface drift so the typed-helper lane stays
+  consistent across `tree_torture.rs` and the overlay helpers.
+- `overlay_scroll_row_text` and `overlay_status_text` now return typed helpers (`impl UiChild +
+  use<>`) instead of landing on `AnyElement`, and `tree_torture.rs` dropped the stale
+  `AppRenderActionsExt` import.
+- Validation passed:
+  `cargo fmt --all --check`
+  and `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast`
+  after the cleanup.
+- This was a surface cleanup, not a new perf win. The current next cut still points back to the
+  outer `ui-gallery-content-viewport` / content-shell contract in `apps/fret-ui-gallery/src/ui/content.rs`,
+  because the current bundles still name that shell as the dominant owner rather than the inner
+  inspector/code-view rows.
+
+## 2026-06-20 Inspector Direct-Entry Follow-up Note
+
+- The inspector direct-entry probe remains the current page-shell candidate after the typed-helper
+  cleanup.
+- The current evidence still points at `ui-gallery-content-viewport` as the dominant owner, not the
+  inner `ui-gallery-inspector-root` `VirtualList`.
+- A retried current-state perf run for
+  `ui-gallery-inspector-torture-scroll-direct-entry` hit a compile mismatch in the overlay typed
+  helper chain first, then was corrected by collapsing the `map`/`into_element` borrow pattern and
+  aligning the gallery tests to the new typed-helper inventory.
+- Validation for the fix path passed with:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test inspector_perf_surface --test code_view_perf_surface --no-fail-fast`
+- I did not complete a fresh inspector perf bundle in this turn, so the next move remains to collect
+  updated evidence on the outer content viewport contract before changing the gallery shell again.
+
+## 2026-06-20 Inspector Direct-Entry Nav Scroll Intrinsic-Mode Note
+
+- The direct-entry inspector rerun now points the visible hot node at the fixed-width sidebar
+  `ui-gallery-nav-scroll`, not the inspector row tree.
+- `apps/fret-ui-gallery/src/ui/nav.rs` now forces that scroll viewport into
+  `ScrollIntrinsicMeasureMode::Viewport` with `viewport_probe_unbounded(false)`, matching the
+  already-bounded content viewport pattern and avoiding recursive nav-list measurement during
+  intrinsic sizing.
+- Validation passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot --no-fail-fast`
+- Perf rerun:
+  - `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-nav-scroll-rerun --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  - bundle: `target/fret-diag/inspector-direct-entry-nav-scroll-rerun/1781938135186/bundle.schema2.json`
+- Result: worst frame stayed around `3284us`, so this is a contract-tightening slice rather than a
+  major perf win.
+- Next step: keep chasing the remaining outer-shell / root-apply hotspot with another narrow,
+  evidence-led cut instead of widening back into row-local changes.
+
+## 2026-06-20 Inspector Direct-Entry A/B Note
+
+- The inspector direct-entry page was tested with `FRET_UI_GALLERY_VIEW_CACHE=1` and
+  `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+- That A/B did not produce a useful win. The cache-enabled run landed at
+  `p50 total/layout/solve/prepaint/paint = 3431/2810/985/83/535` and
+  `p95 = 3740/3122/1075/84/540`, which is worse than the current no-cache direct-entry band.
+- A second probe with `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=0` stayed in the same multi-ms range
+  (`p50 total/layout/solve/prepaint/paint = 3170/2517/1160/215/427`,
+  `p95 = 3379/2704/1190/248/453`).
+- `diag stats` on the keep-alive-off bundle still shows the outer shell/root-apply path as the
+  dominant owner, with p95/max `roots(total/apply)=1593/1593`.
+- Working conclusion: the next slice should target the inspector page shell in
+  `apps/fret-ui-gallery/src/ui/content.rs`, not cache toggles or the retained list knobs.
+
+## 2026-06-20 Inspector Direct-Entry Overscan-8 Note
+
+- Tightened the retained inspector list window from overscan `12` to `8` in
+  `apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs`.
+- The refreshed direct-entry run improved the steady band to
+  `p50 total/layout/solve/prepaint/paint = 2161/1538/849/199/328` and
+  `p95 = 2564/1899/993/229/419`; evidence bundle
+  `target/fret-diag/inspector-direct-entry-overscan-8/1781940494893/bundle.json`.
+- A node-profile rerun on the same bundle still points at the outer `ui-gallery-content-viewport`
+  `Scroll` as the dominant owner (`self_us=7449`, `total_us=11499` on the hot frame), while the
+  retained `ui-gallery-inspector-root` `VirtualList` sits much lower (`self_us=840`,
+  `total_us=1617`).
+- Conclusion: overscan `8` is a real improvement, but it does not move the owner out of the page
+  shell. The next cut should stay on `apps/fret-ui-gallery/src/ui/content.rs` and the inspector
+  direct-entry shell contract instead of shrinking the retained list window further first.
+
+## 2026-06-20 Inspector Direct-Entry Shell-Root-Prune Note
+
+- I tested a narrower shell change by removing the extra `ui_gallery.content_root` key from the
+  non-cache `content_view` path in `apps/fret-ui-gallery/src/driver/shell.rs`, leaving the selected
+  page key as the only content boundary.
+- Validation still passed for the inspector script surface:
+  `cargo fmt --all --check` and
+  `cargo nextest run -p fret-ui-gallery --test inspector_perf_surface --no-fail-fast`.
+- Perf rerun with the same direct-entry script:
+  `target/fret-diag/inspector-direct-entry-shell-root-prune/1781943312483/bundle.json`
+  reported `p50 total/layout/solve/prepaint/paint = 2102/1483/829/228/391` and
+  `p95 = 2721/2024/942/302/398`.
+- Node attribution on that rerun still keeps the hot path in the outer shell/root-apply surface;
+  the `ui-gallery-content-viewport` contract did not move to a clearly cheaper owner, and the
+  page-level frame got worse, not better.
+- Conclusion: the `content_root` prune is not a good next step. Keep the current shell shape and
+  look for a different evidence-backed cut in `apps/fret-ui-gallery/src/ui/content.rs` or a
+  narrower retained-list seam only if a future bundle moves the owner.
