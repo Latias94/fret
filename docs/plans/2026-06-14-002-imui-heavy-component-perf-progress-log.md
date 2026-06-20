@@ -567,6 +567,25 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
   different evidence-backed boundary in `apps/fret-ui-gallery/src/ui/content.rs`, or from the
   retained inspector list only if a future bundle moves the owner there first.
 
+## 2026-06-20 Inspector Direct-Entry Command Availability Follow-up
+
+- I revisited the inspector direct-entry perf lane after the no-focus subtree fallback route split
+  landed in `fret-ui`. The route-aware pruning stayed useful, but the broader no-focus subtree
+  summary cache did not show a clear net win, so I removed that extra layer instead of keeping a
+  speculative mechanism branch around.
+- Validation for the command-availability slice passed with
+  `cargo fmt --all --check` and
+  `cargo nextest run -p fret-ui window_command_action_availability_snapshot --no-fail-fast`.
+- Fresh direct-entry perf evidence for the inspector surface landed at
+  `target/fret-diag/inspector-direct-entry-no-focus-subtree-cache-current/1781955248948/bundle.schema2.json`.
+  The repeated run stayed in the same low-ms band, with worst frame
+  `total/layout/solve/prepaint/paint = 2762/2151/911/220/391` and `window_runtime_snapshot.command_availability`
+  still dominated by `edit.copy@subtree_no_focus_fallback` around `620us` on the hot frames.
+- Interpretation: the remaining inspector cost is still mostly outer shell/root-apply work, not the
+  no-focus subtree route itself. The command-availability route split is worth keeping, but the next
+  meaningful perf cut should return to the inspector page shell / content viewport boundary rather
+  than expanding the command-availability cache further.
+
 ## 2026-06-20 Gallery Header Semantics Shrink Note
 
 - `ui-gallery-content-header` now attaches semantics directly to `header_content` instead of

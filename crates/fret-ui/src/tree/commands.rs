@@ -81,6 +81,25 @@ impl DeclarativeCommandAvailabilityInterest {
             || self.commands.iter().any(|id| id == command)
     }
 
+    fn matches_for_route(
+        &self,
+        command: &CommandId,
+        route: CommandAvailabilityInterestRoute,
+    ) -> bool {
+        match route {
+            CommandAvailabilityInterestRoute::DispatchPath => self.matches(command),
+            CommandAvailabilityInterestRoute::NoFocusSubtreeFallback => {
+                if self.all {
+                    return true;
+                }
+
+                let command_name = command.as_str();
+                (self.focus_traversal && matches!(command_name, "focus.next" | "focus.previous"))
+                    || self.commands.iter().any(|id| id == command)
+            }
+        }
+    }
+
     fn union(mut self, other: Self) -> Self {
         if self.all || other.all {
             return Self::all();
@@ -111,6 +130,12 @@ impl From<crate::action::CommandAvailabilityInterest> for DeclarativeCommandAvai
 #[derive(Debug, Default)]
 struct CommandAvailabilityPublicationCache {
     declarative_interest: HashMap<NodeId, DeclarativeCommandAvailabilityInterest>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CommandAvailabilityInterestRoute {
+    DispatchPath,
+    NoFocusSubtreeFallback,
 }
 
 impl<H: UiHost> UiTree<H> {
@@ -1101,20 +1126,45 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
+        self.command_availability_at_node_with_interest_route(
+            app,
+            input_ctx,
+            node_id,
+            command,
+            CommandAvailabilityInterestRoute::DispatchPath,
+            publication_cache.as_deref_mut(),
+        )
+    }
+
+    fn command_availability_at_node_with_interest_route(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        node_id: NodeId,
+        command: &CommandId,
+        route: CommandAvailabilityInterestRoute,
+        mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
+    ) -> (CommandAvailability, Option<NodeId>) {
         let parent = self.nodes.get(node_id).and_then(|n| n.parent);
         let may_handle = if let Some(cache) = publication_cache.as_mut() {
             self.declarative_node_may_handle_command_availability(
                 app,
                 node_id,
                 command,
+                route,
                 Some(&mut **cache),
             )
         } else {
-            self.declarative_node_may_handle_command_availability(app, node_id, command, None)
+            self.declarative_node_may_handle_command_availability(
+                app, node_id, command, route, None,
+            )
         };
         if !may_handle {
             return (CommandAvailability::NotHandled, parent);
         }
+
+        #[cfg(test)]
+        super::record_command_availability_widget_probe();
 
         let availability = self.with_widget_mut(node_id, |widget, tree| {
             let window = tree.window;
@@ -1138,6 +1188,7 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         node: NodeId,
         command: &CommandId,
+        route: CommandAvailabilityInterestRoute,
         publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> bool {
         let frame_id = app.frame_id();
@@ -1150,11 +1201,11 @@ impl<H: UiHost> UiTree<H> {
                 cache.declarative_interest.insert(node, interest.clone());
                 interest
             };
-            return interest.matches(command);
+            return interest.matches_for_route(command, route);
         }
 
         self.declarative_node_command_availability_interest_cached(app, frame_id, node)
-            .matches(command)
+            .matches_for_route(command, route)
     }
 
     fn declarative_node_command_availability_interest_cached(
@@ -1305,6 +1356,25 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         root: NodeId,
         command: &CommandId,
+        publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        self.command_availability_in_subtree_with_interest_route(
+            app,
+            input_ctx,
+            root,
+            command,
+            CommandAvailabilityInterestRoute::DispatchPath,
+            publication_cache,
+        )
+    }
+
+    fn command_availability_in_subtree_with_interest_route(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        root: NodeId,
+        command: &CommandId,
+        route: CommandAvailabilityInterestRoute,
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut stack = vec![root];
@@ -1315,11 +1385,12 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            let (availability, _) = self.command_availability_at_node(
+            let (availability, _) = self.command_availability_at_node_with_interest_route(
                 app,
                 input_ctx,
                 node,
                 command,
+                route,
                 publication_cache.as_deref_mut(),
             );
             match availability {
@@ -1334,13 +1405,12 @@ impl<H: UiHost> UiTree<H> {
         (CommandAvailability::NotHandled, None)
     }
 
-    fn timed_command_availability_in_subtree(
+    fn timed_no_focus_command_availability_in_subtree(
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
         root: NodeId,
         command: &CommandId,
-        route: &'static str,
         window: AppWindowId,
         publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
@@ -1349,14 +1419,21 @@ impl<H: UiHost> UiTree<H> {
         } else {
             None
         };
-        let (availability, resolved_node) =
-            self.command_availability_in_subtree(app, input_ctx, root, command, publication_cache);
+        let (availability, resolved_node) = self
+            .command_availability_in_subtree_with_interest_route(
+                app,
+                input_ctx,
+                root,
+                command,
+                CommandAvailabilityInterestRoute::NoFocusSubtreeFallback,
+                publication_cache,
+            );
         if let Some(start_time) = start_time {
             self.debug_record_command_availability_hotspot(
                 app,
                 window,
                 command,
-                route,
+                "subtree_no_focus_fallback",
                 root,
                 resolved_node,
                 availability,
@@ -1732,12 +1809,11 @@ impl<H: UiHost> UiTree<H> {
                         && barrier_root.is_none()
                     {
                         availability = self
-                            .timed_command_availability_in_subtree(
+                            .timed_no_focus_command_availability_in_subtree(
                                 app,
                                 input_ctx,
                                 base_root,
                                 &id,
-                                "subtree_no_focus_fallback",
                                 window,
                                 Some(&mut publication_cache),
                             )

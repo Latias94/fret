@@ -29,6 +29,9 @@ historical records remain in:
   `docs/workstreams/perf-baselines/ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`.
 - The latest accepted command item-only fast-path gate stayed green with worst frame around
   `11215us`, still above strict 120Hz.
+- The inspector direct-entry lane is now showing that the remaining cost sits mostly in outer shell /
+  root-apply work; the route-aware no-focus subtree pruning is worth keeping, but the broader
+  subtree-summary cache was not a net win and was removed.
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 

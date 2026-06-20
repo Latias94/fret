@@ -8,6 +8,16 @@ use fret_runtime::{
 };
 use std::sync::Arc;
 
+fn attributed_plain(text: &str) -> fret_core::AttributedText {
+    fret_core::AttributedText::new(
+        Arc::<str>::from(text),
+        [fret_core::TextSpan {
+            len: text.len(),
+            ..Default::default()
+        }],
+    )
+}
+
 #[derive(Debug, Default)]
 struct AvailabilityLeaf;
 
@@ -1399,6 +1409,97 @@ fn action_availability_no_focus_subtree_fallback_honors_ancestor_blocking() {
     assert_eq!(
         svc.available(window, &CommandId::from("test.available")),
         Some(false)
+    );
+}
+
+#[test]
+fn action_availability_no_focus_subtree_fallback_prunes_focus_bound_text_interest() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(CommandId::from("edit.copy"), widget_command_meta("Copy"));
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "no-focus-selectable-copy-interest",
+        |cx| vec![cx.selectable_text(attributed_plain("copyable text"))],
+    );
+    ui.set_root(root);
+    ui.set_focus(None);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    crate::tree::reset_command_availability_widget_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert_eq!(
+        crate::tree::take_command_availability_widget_probe_count(),
+        0,
+        "no-focus subtree publication should not call focused-only text/selectable command availability"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("edit.copy")),
+        Some(false)
+    );
+}
+
+#[test]
+fn action_availability_focused_selectable_text_still_uses_text_interest() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("edit.select_all"),
+        widget_command_meta("Select All"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "focused-selectable-text-interest",
+        |cx| vec![cx.selectable_text(attributed_plain("copyable text"))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let selectable_node = ui.children(root)[0];
+    ui.set_focus(Some(selectable_node));
+
+    crate::tree::reset_command_availability_widget_probe_count();
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert!(
+        crate::tree::take_command_availability_widget_probe_count() > 0,
+        "focused text/selectable command availability must still participate in publication"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("edit.select_all")),
+        Some(true)
     );
 }
 
