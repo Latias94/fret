@@ -29,9 +29,11 @@ historical records remain in:
   `docs/workstreams/perf-baselines/ui-gallery-combobox-filter-select-steady.dev-fast.windows-rtx4090.v1.json`.
 - The latest accepted command item-only fast-path gate stayed green with worst frame around
   `11215us`, still above strict 120Hz.
-- The inspector direct-entry lane is now showing that the remaining cost sits mostly in outer shell /
-  root-apply work; the route-aware no-focus subtree pruning is worth keeping, but the broader
-  subtree-summary cache was not a net win and was removed.
+- The inspector direct-entry lane now skips the generic preview-card shell on
+  `inspector_torture`; the latest local rerun landed at `total/layout/solve/prepaint/paint =
+  2446/1900/864/220/361us`, while the outer `ui-gallery-content-viewport` still dominates. The
+  route-aware no-focus subtree pruning is worth keeping, but the broader subtree-summary cache was
+  not a net win and was removed.
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
@@ -2102,6 +2104,27 @@ popover overlay root solve tail.
   - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test inspector_perf_surface --test code_view_perf_surface --no-fail-fast`
 - I did not complete a fresh inspector perf bundle in this turn, so the next move remains to collect
   updated evidence on the outer content viewport contract before changing the gallery shell again.
+
+## 2026-06-20 Inspector Direct-Entry Short Shell Note
+
+- `preview_inspector_torture` now returns the retained inspector list directly, so the
+  direct-entry `inspector_torture` page skips the generic preview card shell while still keeping
+  the inspector diagnostics root.
+- Regression coverage now locks both boundaries: the generic preview card shell stays absent on
+  inspector direct-entry, and `ui-gallery-inspector-root` stays present.
+- Validation passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --features gallery-dev inspector_torture_skips_preview_card_shell --no-fail-fast`
+- Latest perf rerun:
+  - `target/fret-diag/inspector-direct-entry-short-shell-v2/1781958586751/bundle.json`
+  - `p50 total/layout/solve/prepaint/paint = 2361/1846/741/165/350`
+  - `p95 = 2700/2119/864/220/361`
+  - hot frame `total/layout/solve/prepaint/paint = 2446/1900/864/220/361`
+- Node attribution still keeps the outer `ui-gallery-content-viewport` as the dominant owner, so
+  this is a useful shell shrink but not yet an owner shift.
+- I also tried removing the generic `ui-gallery-page-preview` semantics wrapper. That rerun
+  regressed to `2700us`, so the change was reverted and the retained direct return is the only
+  short-shell win.
 
 ## 2026-06-20 Inspector Direct-Entry Nav Scroll Intrinsic-Mode Note
 

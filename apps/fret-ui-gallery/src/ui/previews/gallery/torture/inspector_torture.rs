@@ -50,7 +50,7 @@ fn inspector_row_semantics(index: usize, len: usize, selected: bool) -> Pressabl
 pub(in crate::ui) fn preview_inspector_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
-) -> Vec<AnyElement> {
+) -> AnyElement {
     let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
@@ -178,8 +178,8 @@ pub(in crate::ui) fn preview_inspector_torture(
             .test_id("ui-gallery-inspector-root"),
     );
 
-    vec![cx.cached_subtree_with(
+    cx.cached_subtree_with(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |_cx| vec![list],
-    )]
+    )
 }

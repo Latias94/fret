@@ -598,3 +598,24 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 - I did not rerun the perf probe for this note. The current evidence still says the outer content
   viewport is the dominant owner, so this is a structural cleanup rather than a new perf
   conclusion.
+
+## 2026-06-20 Inspector Direct-Entry Short Shell Note
+
+- `preview_inspector_torture` now returns the retained inspector list directly, so the direct-entry
+  `inspector_torture` page skips the generic preview card shell while still keeping the inspector
+  diagnostics root.
+- Regression coverage now locks both boundaries: the generic preview card shell stays absent on
+  inspector direct-entry, and `ui-gallery-inspector-root` stays present.
+- Validation passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --features gallery-dev inspector_torture_skips_preview_card_shell --no-fail-fast`
+- Perf rerun:
+  - `target/fret-diag/inspector-direct-entry-short-shell-v2/1781958586751/bundle.json`
+  - `p50 total/layout/solve/prepaint/paint = 2361/1846/741/165/350`
+  - `p95 = 2700/2119/864/220/361`
+  - hot frame `total/layout/solve/prepaint/paint = 2446/1900/864/220/361`
+- Node attribution still keeps the outer `ui-gallery-content-viewport` as the dominant owner, so
+  this is a useful shell shrink but not yet an owner shift.
+- I also tried removing the generic `ui-gallery-page-preview` semantics wrapper. That rerun
+  regressed to `2700us`, so the change was reverted and the retained direct return is the only
+  short-shell win.

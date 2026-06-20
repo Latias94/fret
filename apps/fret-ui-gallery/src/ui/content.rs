@@ -354,6 +354,11 @@ fn page_preview(
     #[cfg(feature = "gallery-dev")]
     let markdown_link_gate_last_activation = models.markdown_link_gate_last_activation.clone();
 
+    #[cfg(feature = "gallery-dev")]
+    if selected == PAGE_INSPECTOR_TORTURE {
+        return preview_inspector_torture(cx, theme);
+    }
+
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
         PAGE_MOTION_PRESETS => preview_motion_presets(cx, motion_preset, motion_preset_open),
@@ -465,8 +470,6 @@ fn page_preview(
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
-        #[cfg(feature = "gallery-dev")]
-        PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         #[cfg(feature = "gallery-dev")]
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => pages::preview_button(cx),
