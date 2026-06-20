@@ -34,6 +34,15 @@ historical records remain in:
   2446/1900/864/220/361us`, while the outer `ui-gallery-content-viewport` still dominates. The
   route-aware no-focus subtree pruning is worth keeping, but the broader subtree-summary cache was
   not a net win and was removed.
+- The inspector torture row shell is now flattened one step further: the row root keeps the
+  retained `Pressable` boundary, while the inner content lands through a single `ContainerProps`
+  surface with rich text for label/value and a dedicated `ui-gallery-inspector-row-{index}-label`
+  semantics anchor. Validation passed with `cargo fmt --all --check`, targeted `cargo nextest run
+  -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test inspector_perf_surface
+  --test ui_authoring_surface_content_shell --no-fail-fast`, and the follow-up perf probe
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json`
+  returned `p95.us(total/layout/solve/prepaint/paint)=2536/2041/970/223/310` on
+  `target/fret-diag/inspector-direct-entry-followup-6/1781999391436/bundle.schema2.json`.
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 

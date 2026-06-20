@@ -1,20 +1,11 @@
 use super::super::super::super::*;
 use fret::AppComponentCx;
-use fret_ui::element::{LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle};
-
-fn inspector_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
-where
-    T: Into<Arc<str>>,
-{
-    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
-}
-
-fn inspector_row_value_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
-where
-    T: Into<Arc<str>>,
-{
-    doc_layout::control_readout_text(cx, text)
-}
+use fret_core::{AttributedText, Edges, TextSpan};
+use fret_ui::element::{
+    ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle,
+};
+use fret_ui_kit::ColorRef;
+use fret_ui_kit::typography::{UiTextSize, control_text_style, muted_foreground_color};
 
 fn inspector_row_test_id(index: usize) -> Arc<str> {
     Arc::<str>::from(format!("ui-gallery-inspector-row-{index}"))
@@ -24,8 +15,30 @@ fn inspector_row_label_test_id(index: usize) -> Arc<str> {
     Arc::<str>::from(format!("ui-gallery-inspector-row-{index}-label"))
 }
 
-fn inspector_row_value_test_id(index: usize) -> Arc<str> {
-    Arc::<str>::from(format!("ui-gallery-inspector-row-{index}-value"))
+fn inspector_row_label_value_text(
+    cx: &mut AppComponentCx<'_>,
+    text_style: fret_core::TextStyle,
+    label_color: CoreColor,
+    value_color: CoreColor,
+    label: Arc<str>,
+    value: Arc<str>,
+) -> AnyElement {
+    let text = Arc::<str>::from(format!("{label} {value}"));
+
+    let mut value_span = TextSpan::new(value.len());
+    value_span.paint.fg = Some(value_color);
+
+    let rich = AttributedText::new(
+        text,
+        Arc::<[TextSpan]>::from([TextSpan::new(label.len()), TextSpan::new(1), value_span]),
+    );
+
+    ui::rich_text(rich)
+        .text_style(text_style)
+        .text_color(ColorRef::Color(label_color))
+        .truncate()
+        .overflow_hidden()
+        .into_element(cx)
 }
 
 fn inspector_row_semantics(index: usize, len: usize, selected: bool) -> PressableA11y {
@@ -87,6 +100,9 @@ pub(in crate::ui) fn preview_inspector_torture(
     let accent_color = theme.color_token("accent");
     let muted_color = theme.color_token("muted");
     let background_color = theme.color_token("background");
+    let label_color = theme.color_token("foreground");
+    let value_color = muted_foreground_color(theme);
+    let text_style = control_text_style(theme, UiTextSize::Sm);
     let selected_row_value = cx
         .get_model_copied(&selected_row, Invalidation::Paint)
         .flatten();
@@ -105,11 +121,26 @@ pub(in crate::ui) fn preview_inspector_torture(
                 host.request_redraw(action_cx.window);
             });
 
-        let name = inspector_row_label_text(cx, format!("prop_{index}"))
-            .test_id(inspector_row_label_test_id(index));
-        let value = inspector_row_value_text(cx, format!("value {index}"))
-            .test_id(inspector_row_value_test_id(index));
         let row_padding_left = Px(indent_px.0 + row_gap_px.0 * 2.0);
+        let row_background = if is_selected {
+            accent_color
+        } else if zebra {
+            muted_color
+        } else {
+            background_color
+        };
+
+        let row_content = inspector_row_label_value_text(
+            cx,
+            text_style.clone(),
+            label_color,
+            value_color,
+            Arc::from(format!("prop_{index}")),
+            Arc::from(format!("value {index}")),
+        )
+        .attach_semantics(
+            SemanticsDecoration::default().test_id(inspector_row_label_test_id(index)),
+        );
 
         let row = cx.pressable(
             PressableProps {
@@ -127,37 +158,23 @@ pub(in crate::ui) fn preview_inspector_torture(
             move |cx, st| {
                 cx.pressable_add_on_activate(on_select_row.clone());
 
-                let row_background = if is_selected {
+                let mut chrome = ContainerProps::default();
+                chrome.layout.size.width = Length::Fill;
+                chrome.layout.size.height = Length::Fill;
+                chrome.background = Some(if st.pressed {
                     accent_color
-                } else if zebra {
-                    muted_color
                 } else {
-                    background_color
-                };
+                    row_background
+                });
+                chrome.padding = Edges {
+                    top: row_gap_px,
+                    right: row_gap_px,
+                    bottom: row_gap_px,
+                    left: row_padding_left,
+                }
+                .into();
 
-                let row_content = ui::h_flex(|_cx| [name, value])
-                    .bg(ColorRef::Color(if st.pressed {
-                        accent_color
-                    } else {
-                        row_background
-                    }))
-                    .overflow_hidden()
-                    .paddings(Edges4::trbl(
-                        MetricRef::space(Space::N2),
-                        MetricRef::space(Space::N2),
-                        MetricRef::space(Space::N2),
-                        MetricRef::Px(row_padding_left),
-                    ))
-                    .layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(row_height)),
-                    )
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx);
-
-                [row_content]
+                [ui::container_props(chrome, move |_cx| [row_content]).into_element(cx)]
             },
         );
 

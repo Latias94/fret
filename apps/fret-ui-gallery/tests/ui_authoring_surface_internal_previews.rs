@@ -1271,18 +1271,32 @@ fn gallery_inspector_torture_uses_fixed_row_text_roles() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/torture/inspector_torture.rs",
         &[
-            "fninspector_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
-            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
-            "fninspector_row_value_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
-            "doc_layout::control_readout_text(cx,text)",
-            "inspector_row_label_text(cx,format!(\"prop_{index}\"))",
-            "inspector_row_value_text(cx,format!(\"value{index}\"))",
+            "usefret_core::{AttributedText,Edges,TextSpan};",
+            "usefret_ui_kit::ColorRef;",
+            "usefret_ui_kit::typography::{UiTextSize,control_text_style,muted_foreground_color};",
+            "fninspector_row_label_value_text(",
+            "letmutvalue_span=TextSpan::new(value.len());",
+            "value_span.paint.fg=Some(value_color);",
+            "AttributedText::new(text,Arc::<[TextSpan]>::from([TextSpan::new(label.len()),TextSpan::new(1),value_span]))",
+            "letlabel_color=theme.color_token(\"foreground\");",
+            "letvalue_color=muted_foreground_color(theme);",
+            "lettext_style=control_text_style(theme,UiTextSize::Sm);",
+            "label_color,",
+            "value_color,",
+            "ColorRef::Color(label_color)",
+            ".test_id(inspector_row_label_test_id(index))",
         ],
     );
 
     for forbidden in [
-        "cx.text(format!(\"prop_{index}\"))",
-        "cx.text(format!(\"value{index}\"))",
+        "fninspector_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+        "fninspector_row_value_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+        "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+        "doc_layout::control_readout_text(cx,text)",
+        "ui::h_flex(|_cx|[name,value])",
+        "inspector_row_label_text(cx,format!(\"prop_{index}\"))",
+        "inspector_row_value_text(cx,format!(\"value{index}\"))",
+        ".test_id(inspector_row_value_test_id(index))",
     ] {
         assert!(
             !normalized.contains(forbidden),
@@ -1298,19 +1312,20 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
         &[
             "fninspector_row_test_id(index:usize)->Arc<str>",
             "fninspector_row_label_test_id(index:usize)->Arc<str>",
-            "fninspector_row_value_test_id(index:usize)->Arc<str>",
             "fninspector_row_semantics(index:usize,len:usize,selected:bool)->PressableA11y",
             "PressableA11y{role:Some(fret_core::SemanticsRole::ListItem),",
             "test_id:Some(inspector_row_test_id(index)),",
             "selected_row_value==Some(index)",
             "cx.pressable_add_on_activate(on_select_row.clone())",
             "row.test_id(inspector_row_test_id(index))",
+            "SemanticsDecoration::default().test_id(inspector_row_label_test_id(index))",
         ],
     );
 
     for forbidden in [
         "row.test_id(format!(\"ui-gallery-inspector-row-{index}-label\"))",
         "row.test_id(format!(\"ui-gallery-inspector-row-{index}\"))",
+        "fninspector_row_value_test_id(index:usize)->Arc<str>",
     ] {
         assert!(
             !normalized.contains(forbidden),
@@ -1355,12 +1370,13 @@ fn gallery_inspector_torture_keeps_row_shell_shrunk() {
             "letmuted_color=theme.color_token(\"muted\")",
             "letbackground_color=theme.color_token(\"background\")",
             "letrow_padding_left=Px(indent_px.0+row_gap_px.0*2.0)",
-            "letrow_content=ui::h_flex(|_cx|[name,value])",
-            ".bg(ColorRef::Color(",
-            ".paddings(Edges4::trbl(",
-            ".layout(",
-            ".gap(Space::N2)",
-            ".items_center()",
+            "letrow_content=inspector_row_label_value_text(",
+            "SemanticsDecoration::default().test_id(inspector_row_label_test_id(index))",
+            "chrome.background=Some(ifst.pressed{accent_color}else{row_background})",
+            "chrome.layout.size.width=Length::Fill;",
+            "chrome.layout.size.height=Length::Fill;",
+            "chrome.padding=Edges{top:row_gap_px,right:row_gap_px,bottom:row_gap_px,left:row_padding_left,}.into();",
+            "ui::container_props(chrome,move|_cx|[row_content]).into_element(cx)",
             "[row_content]",
         ],
     );
