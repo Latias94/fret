@@ -140,6 +140,7 @@ where
                             cx,
                             reset_slot_w,
                             density.row_height,
+                            Px(0.0),
                             move |cx| {
                                 reset::property_row_reset_element(
                                     cx,
@@ -158,6 +159,7 @@ where
                             cx,
                             status_slot_w,
                             density.row_height,
+                            Px(0.0),
                             move |_cx| vec![action_el],
                         ));
                     }

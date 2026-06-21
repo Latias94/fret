@@ -8,7 +8,7 @@ use fret_ui::{Theme, UiTree, declarative};
 
 use super::{
     PROPERTY_ROW_VALUE_SLOT, PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions,
-    property_row_label_text,
+    PropertyRowReset, property_row_label_text,
 };
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::readout::editor_validation_message_text_props;
@@ -174,6 +174,77 @@ fn column_without_trailing_slots_keeps_value_container_directly_under_root() {
         row.children[1].component_slot.as_deref(),
         Some(PROPERTY_ROW_VALUE_SLOT),
         "value container should stay the direct slot root when no trailing affordances are present"
+    );
+}
+
+#[test]
+fn row_with_trailing_slots_keeps_slot_children_directly_under_root() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let reset = PropertyRowReset::new(Arc::new(|_, _| {}));
+    let gap = Px(8.0);
+    let trailing_gap = Px(4.0);
+    let row = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-row-trailing-layout",
+        |cx| {
+            PropertyRow::new()
+                .reset(Some(reset))
+                .options(PropertyRowOptions {
+                    variant: PropertyRowLayoutVariant::Row,
+                    label_width: Some(Px(104.0)),
+                    gap: Some(gap),
+                    trailing_gap: Some(trailing_gap),
+                    test_id: Some(Arc::from("inspector.exposure")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |cx| property_row_label_text(cx, "Exposure"),
+                    |cx| cx.text("0.50"),
+                    |_cx| None,
+                )
+        },
+    );
+
+    let trailing_gap_compensation = Px(trailing_gap.0 - gap.0);
+
+    let ElementKind::Flex(_) = &row.kind else {
+        panic!(
+            "property row root should remain a flex container, got {:?}",
+            row.kind
+        );
+    };
+    assert_eq!(
+        row.children.len(),
+        3,
+        "row with a reset slot should keep label, value, and trailing slot as direct children"
+    );
+    assert!(
+        matches!(row.children[0].kind, ElementKind::Container(_)),
+        "first child should be the label container"
+    );
+    assert!(
+        matches!(row.children[1].kind, ElementKind::Container(_)),
+        "second child should be the value container"
+    );
+    assert!(
+        matches!(row.children[2].kind, ElementKind::Flex(_)),
+        "third child should be the trailing slot flex container"
+    );
+
+    let ElementKind::Flex(props) = &row.children[2].kind else {
+        panic!(
+            "property row trailing slot should be a flex container, got {:?}",
+            row.children[2].kind
+        );
+    };
+    assert_eq!(
+        props.layout.margin.left,
+        fret_ui::element::MarginEdge::Px(trailing_gap_compensation),
+        "row trailing slot should keep the label/value gap on the root while compensating the trailing slot spacing with its own leading margin"
     );
 }
 

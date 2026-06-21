@@ -57,6 +57,7 @@ where
     } = options;
 
     let has_trailing_slots = has_reset_slot || actions_el.is_some();
+    let trailing_slot_leading_margin = Px(trailing_gap.0 - gap.0);
 
     cx.flex(
         FlexProps {
@@ -122,67 +123,39 @@ where
                 return vec![label, value];
             }
 
-            let body = cx.flex(
-                FlexProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            min_height: Some(Length::Px(density.row_height)),
-                            ..Default::default()
-                        },
-                        flex: FlexItemStyle {
-                            order: 0,
-                            grow: 1.0,
-                            shrink: 1.0,
-                            basis: Length::Px(Px(0.0)),
-                            align_self: None,
-                        },
-                        ..Default::default()
+            let mut out = vec![label, value];
+
+            if has_reset_slot {
+                let reset_for_slot = reset.clone();
+                out.push(property_row_trailing_slot(
+                    cx,
+                    reset_slot_w,
+                    density.row_height,
+                    trailing_slot_leading_margin,
+                    move |cx| {
+                        reset::property_row_reset_element(
+                            cx,
+                            reset_for_slot.clone(),
+                            affordance_extent,
+                            reset_fg,
+                        )
+                        .into_iter()
+                        .collect::<Vec<AnyElement>>()
                     },
-                    direction: Axis::Horizontal,
-                    gap: SpacingLength::Px(trailing_gap),
-                    padding: Edges::all(Px(0.0)).into(),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                },
-                move |cx| {
-                    let mut out = vec![value];
+                ));
+            }
 
-                    if has_reset_slot {
-                        let reset_for_slot = reset.clone();
-                        out.push(property_row_trailing_slot(
-                            cx,
-                            reset_slot_w,
-                            density.row_height,
-                            move |cx| {
-                                reset::property_row_reset_element(
-                                    cx,
-                                    reset_for_slot.clone(),
-                                    affordance_extent,
-                                    reset_fg,
-                                )
-                                .into_iter()
-                                .collect::<Vec<AnyElement>>()
-                            },
-                        ));
-                    }
+            if let Some(action_el) = actions_el {
+                out.push(property_row_trailing_slot(
+                    cx,
+                    status_slot_w,
+                    density.row_height,
+                    trailing_slot_leading_margin,
+                    move |_cx| vec![action_el],
+                ));
+            }
 
-                    if let Some(action_el) = actions_el {
-                        out.push(property_row_trailing_slot(
-                            cx,
-                            status_slot_w,
-                            density.row_height,
-                            move |_cx| vec![action_el],
-                        ));
-                    }
-
-                    out
-                },
-            );
-
-            vec![label, body]
+            out
         },
     )
 }

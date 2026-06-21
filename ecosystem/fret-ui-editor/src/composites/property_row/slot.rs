@@ -1,6 +1,7 @@
 use fret_core::{Axis, Edges, Px};
 use fret_ui::element::{
-    AnyElement, FlexItemStyle, FlexProps, LayoutStyle, Length, Overflow, SizeStyle, SpacingLength,
+    AnyElement, FlexItemStyle, FlexProps, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
+    SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -8,6 +9,7 @@ pub(super) fn property_row_trailing_slot<H, Children>(
     cx: &mut ElementContext<'_, H>,
     width: Px,
     row_height: Px,
+    leading_margin: Px,
     children: Children,
 ) -> AnyElement
 where
@@ -21,6 +23,10 @@ where
                     width: Length::Px(width),
                     height: Length::Auto,
                     min_height: Some(Length::Px(row_height)),
+                    ..Default::default()
+                },
+                margin: MarginEdges {
+                    left: MarginEdge::Px(leading_margin),
                     ..Default::default()
                 },
                 flex: FlexItemStyle {
