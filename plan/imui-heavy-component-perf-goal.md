@@ -116,6 +116,30 @@ historical records remain in:
   split, or move to a smaller owner shift only if it is benchmarked against the same direct-entry
   probe.
 
+## 2026-06-21 Hit-Test-Only Layout Skip Note
+
+- `fret-ui` now treats `Invalidation::HitTestOnly` as a prepaint / hit-test refresh concern, not a
+  reason to reject the clean root layout fast path when bounds, measured size, layout dirty state,
+  and subtree-layout dirty state are otherwise clean.
+- The mechanism is intentionally narrow: `can_skip_layout_for_root(...)` still rejects layout
+  invalidations, geometry changes, missing measured sizes, subtree layout dirties, and
+  post-resize full rebuilds.
+- Regression coverage was added in `crates/fret-ui/src/tree/tests/view_cache.rs` with
+  `layout_in_skips_hit_test_only_root_when_geometry_is_clean`; the existing retained fixed
+  `VirtualList` clean-row skip test remains green.
+- Validation passed with `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui layout_in_skips_hit_test_only_root_when_geometry_is_clean retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame --no-fail-fast`,
+  `cargo nextest run -p fret-ui virtual_list --no-fail-fast`, and the focused layout fast-path
+  nextest gate.
+- The inspector direct-entry probe
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json`
+  returned `p95.us(total/layout/solve/prepaint/paint)=2267/1845/888/177/247` on
+  `target/fret-diag/inspector-direct-entry-hit-test-layout-skip-codex-20260621/1782055672668/bundle.json`.
+- `diag stats` for that bundle reports `p95 layout=1663us` and root phases
+  `request_build(total)=407us`, `roots(apply)=1175us`. This is a small improvement over the
+  immediate current-state handoff run, but the remaining owner is still root apply / build-root
+  work rather than renderer cost.
+
 ## 2026-06-21 Code-View Torture Content-Scroll Bypass Note
 
 - The `code_view_torture` direct-entry path now opts out of the outer gallery content scroll shell

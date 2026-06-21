@@ -364,6 +364,47 @@ fn layout_in_skips_clean_root_even_when_another_node_is_layout_dirty() {
 }
 
 #[test]
+fn layout_in_skips_hit_test_only_root_when_geometry_is_clean() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let layouts = Arc::new(AtomicUsize::new(0));
+    let root = ui.create_node(CountingLayoutWidget {
+        layouts: Arc::clone(&layouts),
+    });
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(layouts.load(Ordering::SeqCst), 1);
+
+    ui.test_clear_node_invalidations(root);
+    ui.invalidate(root, Invalidation::HitTestOnly);
+
+    let visited_before = ui.debug_stats().layout_nodes_visited;
+    let size = ui.layout_in(&mut app, &mut services, root, bounds, 1.0);
+
+    assert_eq!(size, bounds.size);
+    assert_eq!(
+        layouts.load(Ordering::SeqCst),
+        1,
+        "hit-test-only dirty state should not force the root widget layout"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_nodes_visited,
+        visited_before,
+        "hit-test-only dirty state should stay on the root layout fast path"
+    );
+}
+
+#[test]
 fn view_cache_layout_dirty_expansion_reaches_clean_nested_cache_root_descendants() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());

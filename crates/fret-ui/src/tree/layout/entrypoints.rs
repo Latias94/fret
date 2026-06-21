@@ -114,10 +114,11 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.nodes.get(root).is_some_and(|node| {
+            // Hit-test dirty state is consumed by prepaint/hit-test refresh paths. It must not
+            // force layout when the root's geometry and layout dependency state are otherwise clean.
             node.bounds == bounds
                 && node.measured_size != Size::default()
                 && !node.invalidation.layout
-                && !node.invalidation.hit_test
                 && !self.node_subtree_layout_dirty(root)
         })
     }

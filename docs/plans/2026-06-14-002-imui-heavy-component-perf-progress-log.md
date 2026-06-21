@@ -182,6 +182,37 @@ active heavy-component performance goal. It complements the main plan rather tha
   probes: `2698/2468/47/400` and `1817/1585/10/222` respectively. The next slice should keep
   chasing those deeper row/session shells rather than reopening the now-thin example chrome.
 
+## 2026-06-21 Hit-Test-Only Layout Fast-Path Slice
+
+- The inspector direct-entry node profile pointed at retained fixed `VirtualList` rows that could
+  still be revisited during hit-test-only / scroll-window churn, even when geometry was already
+  stable.
+- The accepted mechanism change stays in `crates/fret-ui`: `can_skip_layout_for_root(...)` no
+  longer treats `node.invalidation.hit_test` as a layout-skip rejection. Layout skip is still gated
+  by exact bounds, non-default measured size, no layout invalidation, no subtree layout dirty, and
+  no post-resize forced rebuild.
+- The regression gate is intentionally lower-level than the retained inspector fixture:
+  `tree::tests::view_cache::layout_in_skips_hit_test_only_root_when_geometry_is_clean` proves the
+  shared `layout_in` fast path reuses a clean root even when that root is hit-test dirty. The
+  existing retained fixed `VirtualList` clean child-layout skip test remained green.
+- Validation passed with:
+  `cargo nextest run -p fret-ui layout_in_skips_hit_test_only_root_when_geometry_is_clean retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame --no-fail-fast`,
+  `cargo nextest run -p fret-ui virtual_list --no-fail-fast`,
+  `cargo nextest run -p fret-ui layout_in_skips_clean_root_even_when_another_node_is_layout_dirty layout_in_skips_hit_test_only_root_when_geometry_is_clean --no-fail-fast`,
+  and `cargo fmt --all --check`.
+- Perf evidence:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-hit-test-layout-skip-codex-20260621 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  produced
+  `p95.us(total/layout/solve/prepaint/paint)=2267/1845/888/177/247`; worst bundle:
+  `target/fret-diag/inspector-direct-entry-hit-test-layout-skip-codex-20260621/1782055672668/bundle.json`.
+- `diag stats` on the worst bundle reports `time p50/p95 total=1745/2132us`,
+  `layout=1327/1663us`, `layout.engine_solve=821/927us`, and root phases
+  `request_build(total)=407us`, `roots(apply)=1175us`.
+- Interpretation: this is a valid shared-mechanism cleanup and a small improvement over the
+  immediate current-state handoff run (`p95 total/layout/solve/prepaint/paint=2419/1945/935/211/307`),
+  but it does not close the inspector lane. The remaining substantive hotspot is still root
+  apply/build-root work around the inspector direct-entry path.
+
 ## Decisions
 
 ### D1. Do not cache the whole combobox page content root
