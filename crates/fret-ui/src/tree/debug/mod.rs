@@ -26,7 +26,7 @@ pub use layout::{
     UiDebugCleanGeometrySolveSkipRejection, UiDebugLayoutDirtyDescendant,
     UiDebugLayoutEngineMeasureChildHotspot, UiDebugLayoutEngineMeasureHotspot,
     UiDebugLayoutEngineSolve, UiDebugLayoutHotspot, UiDebugLayoutRequestBuildRoot,
-    UiDebugPaintWidgetHotspot, UiDebugWidgetMeasureHotspot,
+    UiDebugLayoutRootApply, UiDebugPaintWidgetHotspot, UiDebugWidgetMeasureHotspot,
 };
 pub use scroll::{
     UiDebugScrollAxis, UiDebugScrollHandleChange, UiDebugScrollHandleChangeKind,

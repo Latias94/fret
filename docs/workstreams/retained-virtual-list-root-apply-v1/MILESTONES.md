@@ -1,7 +1,7 @@
 # Milestones: Retained VirtualList Root Apply v1
 
 Status: Active
-Last updated: 2026-06-16
+Last updated: 2026-06-21
 
 ## M0 - Baseline And Lane Split
 
@@ -141,3 +141,30 @@ Evidence:
 - `target/fret-diag/1781594910783/bundle.schema2.json`
 - `diag stats --sort cpu_cycles --top 30`: `top_total_time_us=9965`, `layout=9328`,
   `layout.engine_solve=6595`, `layout.root apply=8546`, `layout.nodes=417`
+
+## M6 - Root Apply Owner Attribution
+
+Status: Complete.
+
+Done criteria:
+
+- `layout_roots_apply_time_us` has owner attribution instead of only an aggregate phase total.
+- Debug snapshots expose top root apply records with mode, dirty-state, node deltas, and
+  clean-geometry deltas.
+- `fret-diag` carries the records through stats JSON, human detail rows, triage JSON, and
+  `layout_perf_summary`.
+- The slice is diagnostic-only; normal layout behavior is unchanged.
+
+Evidence:
+
+- `crates/fret-ui/src/tree/layout/entrypoints.rs` records `debug.layout_root_applies[]` around the
+  window-root apply loop only when debug is enabled.
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs` exports
+  `UiLayoutRootApplyV1`.
+- `crates/fret-diag/src/stats/bundle_stats_snapshot.rs`,
+  `crates/fret-diag/src/triage_json.rs`, and
+  `crates/fret-diag/src/layout_perf_summary.rs` expose the new attribution in diag tooling.
+- Focused gates passed:
+  `clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout`,
+  `triage_includes_hints_and_unit_costs_for_worst_frame`, `layout_perf_summary`, and
+  `cargo check -p fret-bootstrap --lib`.

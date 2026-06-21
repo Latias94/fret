@@ -1,7 +1,7 @@
 # Evidence And Gates: Retained VirtualList Root Apply v1
 
 Status: Active
-Last updated: 2026-06-16
+Last updated: 2026-06-21
 
 ## Baseline Evidence
 
@@ -327,6 +327,39 @@ Scroll telemetry expansion:
   bundle and the stale first-pass body-hoist run, but retained `VirtualList` plus the parent
   `Scroll` still own the hotspot. The next slice should target a deeper fixed-height list/table
   mechanism or barrier/root contract, not another small row-wrapper cleanup.
+
+## 2026-06-21 Root Apply Owner Attribution
+
+```bash
+cargo nextest run -p fret-ui clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout --no-fail-fast
+cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame --no-fail-fast
+cargo nextest run -p fret-diag layout_perf_summary --no-fail-fast
+cargo check -p fret-bootstrap --lib
+cargo run -p fretboard-dev -- diag stats target/fret-diag/inspector-direct-entry-retained-noop-skip-codex-20260621/1782061219853/bundle.schema2.json --sort cpu_cycles --top 3
+```
+
+Observed gates:
+
+- The focused `fret-ui` clean-geometry root apply test passed and asserts
+  `mode=clean_geometry_plan` with `nodes_performed=0`.
+- The focused `fret-diag` triage fixture passed and now carries
+  `worst.layout_root_applies[]`.
+- The `layout_perf_summary` focused suite passed and now clips `layout_root_applies` alongside the
+  other layout attribution arrays.
+- `cargo check -p fret-bootstrap --lib` passed for the debug snapshot schema wiring.
+- The old retained noop-skip bundle still parses through `diag stats`; it predates
+  `debug.layout_root_applies[]`, so it is compatibility evidence, not new owner evidence.
+
+Interpretation:
+
+- This slice does not change layout behavior. It makes the aggregate
+  `layout_roots_apply_time_us` phase attributable to the top root apply records.
+- New snapshots expose `debug.layout_root_applies[]`; `fret-diag` surfaces that as
+  `layout_root_applies` in stats JSON, human `diag stats` detail rows, triage JSON, and
+  `layout_perf_summary`.
+- The next optimization slice should first rerun the retained data-table repro and inspect
+  `layout_root_applies` to decide whether the root owner is still retained `VirtualList` plus
+  parent `Scroll`, or whether ownership has moved to a narrower follow-on.
 
 ## Documentation Gates
 

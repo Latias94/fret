@@ -228,6 +228,15 @@ impl UiTreeDebugSnapshotV1 {
             }
         }
 
+        let mut layout_root_applies: Vec<UiLayoutRootApplyV1> = ui
+            .debug_layout_root_applies()
+            .iter()
+            .map(UiLayoutRootApplyV1::from_record)
+            .collect();
+        for r in &mut layout_root_applies {
+            truncate_opt_string_bytes(&mut r.root_element_path, max_debug_string_bytes);
+        }
+
         let mut layout_hotspots: Vec<UiLayoutHotspotV1> = ui
             .debug_layout_hotspots()
             .iter()
@@ -394,6 +403,7 @@ impl UiTreeDebugSnapshotV1 {
                 .map(UiWorkspaceInteractionSnapshotV1::from_snapshot),
             removed_subtrees,
             layout_request_build_roots,
+            layout_root_applies,
             layout_engine_solves,
             layout_hotspots,
             widget_measure_hotspots,

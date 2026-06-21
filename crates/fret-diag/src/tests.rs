@@ -1808,6 +1808,21 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                         "detail": "scroll_handle_layout"
                     }]
                 }],
+                "layout_root_applies": [{
+                    "root_node": 42,
+                    "root_kind": "window",
+                    "root_element": 100,
+                    "root_element_kind": "PerfRoot",
+                    "elapsed_us": 1_750,
+                    "mode": "layout_in",
+                    "layout_invalidated": false,
+                    "subtree_layout_dirty": true,
+                    "subtree_layout_dirty_count": 3,
+                    "nodes_visited": 120,
+                    "nodes_performed": 118,
+                    "clean_geometry_apply_nodes": 0,
+                    "clean_geometry_fallback_layouts": 0
+                }],
                 "scroll_nodes": [{
                     "node": 50,
                     "element": 200,
@@ -1842,6 +1857,11 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
                         "solve_barrier_us": 100,
                         "layout_children_us": 2_200,
                         "layout_children_first_pass_us": 1_700,
+                        "layout_child_first_pass_roots": 1,
+                        "layout_child_first_pass_layout_invalidated_roots": 1,
+                        "layout_child_first_pass_subtree_dirty_roots": 1,
+                        "layout_child_first_pass_performed_roots": 1,
+                        "layout_child_first_pass_skipped_roots": 0,
                         "layout_child_first_pass_nodes_visited": 15,
                         "layout_child_first_pass_nodes_performed": 6,
                         "layout_child_first_pass_max_us": 1_500,
@@ -2175,6 +2195,26 @@ fn triage_includes_hints_and_unit_costs_for_worst_frame() {
             .and_then(|v| v.get("detail"))
             .and_then(|v| v.as_str()),
         Some("scroll_handle_layout")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("layout_root_applies"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("mode"))
+            .and_then(|v| v.as_str()),
+        Some("layout_in")
+    );
+    assert_eq!(
+        triage
+            .get("worst")
+            .and_then(|v| v.get("layout_root_applies"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("nodes_performed"))
+            .and_then(|v| v.as_u64()),
+        Some(118)
     );
     assert_eq!(
         triage

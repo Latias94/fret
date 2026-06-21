@@ -98,6 +98,48 @@ impl UiLayoutRequestBuildRootV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutRootApplyV1 {
+    pub root_node: u64,
+    pub root_kind: String,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub root_element_kind: Option<String>,
+    #[serde(default)]
+    pub root_element_path: Option<String>,
+    pub elapsed_us: u64,
+    pub mode: String,
+    pub layout_invalidated: bool,
+    pub subtree_layout_dirty: bool,
+    pub subtree_layout_dirty_count: u32,
+    pub nodes_visited: u32,
+    pub nodes_performed: u32,
+    pub clean_geometry_apply_nodes: u32,
+    pub clean_geometry_fallback_layouts: u32,
+}
+
+impl UiLayoutRootApplyV1 {
+    pub(crate) fn from_record(r: &fret_ui::tree::UiDebugLayoutRootApply) -> Self {
+        Self {
+            root_node: r.root.data().as_ffi(),
+            root_kind: r.root_kind.to_string(),
+            root_element: r.root_element.map(|id| id.0),
+            root_element_kind: r.root_element_kind.map(|s| s.to_string()),
+            root_element_path: r.root_element_path.clone(),
+            elapsed_us: r.elapsed.as_micros().min(u64::MAX as u128) as u64,
+            mode: r.mode.to_string(),
+            layout_invalidated: r.layout_invalidated,
+            subtree_layout_dirty: r.subtree_layout_dirty,
+            subtree_layout_dirty_count: r.subtree_layout_dirty_count,
+            nodes_visited: r.nodes_visited,
+            nodes_performed: r.nodes_performed,
+            clean_geometry_apply_nodes: r.clean_geometry_apply_nodes,
+            clean_geometry_fallback_layouts: r.clean_geometry_fallback_layouts,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineSolveV1 {
     pub root_node: u64,
     #[serde(default)]

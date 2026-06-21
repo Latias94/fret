@@ -245,6 +245,7 @@ impl<H: UiHost> UiTree<H> {
         }
         self.debug_paint_cache_replays.clear();
         self.debug_layout_request_build_roots.clear();
+        self.debug_layout_root_applies.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_clean_geometry_solve_skip_rejections.clear();
         self.debug_layout_hotspots.clear();

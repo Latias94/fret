@@ -476,6 +476,23 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(crate) fn debug_record_layout_root_apply(&mut self, record: UiDebugLayoutRootApply) {
+        if !self.debug_enabled {
+            return;
+        }
+        const MAX_LAYOUT_ROOT_APPLIES: usize = 16;
+        let idx = self
+            .debug_layout_root_applies
+            .iter()
+            .position(|h| h.elapsed < record.elapsed)
+            .unwrap_or(self.debug_layout_root_applies.len());
+        self.debug_layout_root_applies.insert(idx, record);
+        if self.debug_layout_root_applies.len() > MAX_LAYOUT_ROOT_APPLIES {
+            self.debug_layout_root_applies
+                .truncate(MAX_LAYOUT_ROOT_APPLIES);
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_layout_engine_solve(
         &mut self,

@@ -4,7 +4,7 @@ use super::{
     BundleStatsLayoutDirtyDescendant, BundleStatsLayoutEngineMeasureChildHotspot,
     BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve,
     BundleStatsLayoutEngineSolveProfile, BundleStatsLayoutHotspot,
-    BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
+    BundleStatsLayoutRequestBuildRoot, BundleStatsLayoutRootApply, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
     BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
     BundleStatsScrollLayoutPhaseProfile, BundleStatsScrollLayoutProfile,
@@ -262,6 +262,97 @@ pub(super) fn snapshot_layout_request_build_roots(
             dirty.role = role;
             dirty.test_id = test_id;
         }
+    }
+
+    out
+}
+
+pub(super) fn snapshot_layout_root_applies(
+    semantics: &crate::json_bundle::SemanticsResolver<'_>,
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsLayoutRootApply> {
+    let applies = snapshot
+        .get("debug")
+        .and_then(|v| v.get("layout_root_applies"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if applies.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(semantics, snapshot);
+
+    let mut out: Vec<BundleStatsLayoutRootApply> = applies
+        .iter()
+        .take(max.max(1))
+        .map(|r| BundleStatsLayoutRootApply {
+            root_node: r.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
+            root_kind: r
+                .get("root_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            root_element: r.get("root_element").and_then(|v| v.as_u64()),
+            root_element_kind: r
+                .get("root_element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            root_element_path: r
+                .get("root_element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            elapsed_us: r.get("elapsed_us").and_then(|v| v.as_u64()).unwrap_or(0),
+            mode: r
+                .get("mode")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            layout_invalidated: r
+                .get("layout_invalidated")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            subtree_layout_dirty: r
+                .get("subtree_layout_dirty")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            subtree_layout_dirty_count: r
+                .get("subtree_layout_dirty_count")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            nodes_visited: r
+                .get("nodes_visited")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            nodes_performed: r
+                .get("nodes_performed")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            clean_geometry_apply_nodes: r
+                .get("clean_geometry_apply_nodes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            clean_geometry_fallback_layouts: r
+                .get("clean_geometry_fallback_layouts")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            root_role: None,
+            root_test_id: None,
+        })
+        .collect();
+
+    out.sort_by(|a, b| b.elapsed_us.cmp(&a.elapsed_us));
+    out.truncate(max);
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.root_node);
+        item.root_role = role;
+        item.root_test_id = test_id;
     }
 
     out

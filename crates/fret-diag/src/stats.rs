@@ -215,9 +215,10 @@ use bundle_stats_snapshot::{
     SemanticsIndex, format_text_prepare_reasons, snapshot_command_availability_hotspots,
     snapshot_global_change_hotspots, snapshot_global_change_unobserved,
     snapshot_layout_engine_solves, snapshot_layout_hotspots, snapshot_layout_request_build_roots,
-    snapshot_lookup_semantics, snapshot_model_change_hotspots, snapshot_model_change_unobserved,
-    snapshot_paint_text_prepare_hotspots, snapshot_paint_widget_hotspots,
-    snapshot_scroll_layout_profiles, snapshot_widget_measure_hotspots,
+    snapshot_layout_root_applies, snapshot_lookup_semantics, snapshot_model_change_hotspots,
+    snapshot_model_change_unobserved, snapshot_paint_text_prepare_hotspots,
+    snapshot_paint_widget_hotspots, snapshot_scroll_layout_profiles,
+    snapshot_widget_measure_hotspots,
 };
 
 fn bundle_artifact_alias_pair(bundle_path: &Path) -> (String, String) {

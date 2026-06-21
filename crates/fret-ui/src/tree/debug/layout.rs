@@ -53,6 +53,24 @@ pub struct UiDebugLayoutRequestBuildRoot {
 }
 
 #[derive(Debug, Clone)]
+pub struct UiDebugLayoutRootApply {
+    pub root: NodeId,
+    pub root_kind: &'static str,
+    pub root_element: Option<GlobalElementId>,
+    pub root_element_kind: Option<&'static str>,
+    pub root_element_path: Option<String>,
+    pub elapsed: Duration,
+    pub mode: &'static str,
+    pub layout_invalidated: bool,
+    pub subtree_layout_dirty: bool,
+    pub subtree_layout_dirty_count: u32,
+    pub nodes_visited: u32,
+    pub nodes_performed: u32,
+    pub clean_geometry_apply_nodes: u32,
+    pub clean_geometry_fallback_layouts: u32,
+}
+
+#[derive(Debug, Clone)]
 pub struct UiDebugLayoutEngineSolve {
     pub root: NodeId,
     pub root_element: Option<GlobalElementId>,

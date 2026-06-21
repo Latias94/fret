@@ -959,6 +959,13 @@ fn clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout() {
         ui.debug_stats().layout_clean_geometry_apply_nodes > 0,
         "window-root resize should consume the clean-geometry apply plan"
     );
+    let apply = ui
+        .debug_layout_root_applies()
+        .iter()
+        .find(|record| record.root == root)
+        .expect("window root apply record");
+    assert_eq!(apply.mode, "clean_geometry_plan");
+    assert_eq!(apply.nodes_performed, 0);
 
     let flex_node = ui.children(root)[0];
     let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");

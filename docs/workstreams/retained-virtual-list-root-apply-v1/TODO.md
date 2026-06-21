@@ -1,7 +1,7 @@
 # TODO: Retained VirtualList Root Apply v1
 
 Status: Active
-Last updated: 2026-06-16
+Last updated: 2026-06-21
 
 ## M0 - Lane Setup And Baseline
 
@@ -18,7 +18,7 @@ Last updated: 2026-06-16
 - [x] Confirm that the hot owner in the current bundle is the fixed/known-height retained
       `VirtualList` first-pass child layout path, with `Scroll` still paying a secondary
       root-apply/barrier cost.
-- [ ] Add diagnostics if the current bundle cannot answer that split.
+- [x] Add diagnostics if the current bundle cannot answer that split.
 - [x] Add a focused retained VirtualList test before changing mechanism behavior.
 - [x] Narrow the single-root layout fast path so clean roots no longer depend on global dirty
       counters before reusing cached size.
@@ -50,6 +50,9 @@ Last updated: 2026-06-16
 - [ ] If the current retained `VirtualList` frame still reports broad dirty-subtree fanout with no
       retained-reconcile burst, inspect scroll-handle invalidation and subtree dirty propagation
       before adding more root-local layout cleanup.
+- [ ] Re-run the retained data-table repro with `debug.layout_root_applies[]` available, then use
+      `layout_root_applies` to decide whether the next owner is root apply, retained `VirtualList`,
+      `Scroll`, or a narrower follow-on.
 - [ ] If the current evidence says the row/cell tree itself is the dominant cost, close this lane
       with a follow-on that owns table/recipe tree depth instead of more `VirtualList` cleanup.
 - [ ] Update `WORKSTREAM.json`, `MILESTONES.md`, and `EVIDENCE_AND_GATES.md` after each landed

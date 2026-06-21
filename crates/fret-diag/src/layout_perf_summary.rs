@@ -240,6 +240,7 @@ pub(crate) fn layout_perf_summary_v1_from_stats_json(
 
     let top_layout_engine_solves =
         clip_array_field(row, "top_layout_engine_solves", top, &mut clipped);
+    let layout_root_applies = clip_array_field(row, "layout_root_applies", top, &mut clipped);
     let layout_hotspots = clip_array_field(row, "layout_hotspots", top, &mut clipped);
     let widget_measure_hotspots =
         clip_array_field(row, "widget_measure_hotspots", top, &mut clipped);
@@ -272,6 +273,7 @@ pub(crate) fn layout_perf_summary_v1_from_stats_json(
         "frame": frame,
         "stats": stats_out,
         "top_layout_engine_solves": top_layout_engine_solves,
+        "layout_root_applies": layout_root_applies,
         "layout_hotspots": layout_hotspots,
         "widget_measure_hotspots": widget_measure_hotspots,
         "clipped": clipped,

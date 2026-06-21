@@ -1257,6 +1257,26 @@ pub(crate) fn triage_json_from_stats(
                     }).collect::<Vec<_>>(),
                 })
             }).collect::<Vec<_>>(),
+            "layout_root_applies": row.layout_root_applies.iter().take(10).map(|r| {
+                json!({
+                    "root_node": r.root_node,
+                    "root_kind": r.root_kind.clone(),
+                    "root_element": r.root_element,
+                    "root_element_kind": r.root_element_kind.clone(),
+                    "root_element_path": r.root_element_path.clone(),
+                    "elapsed_us": r.elapsed_us,
+                    "mode": r.mode.clone(),
+                    "layout_invalidated": r.layout_invalidated,
+                    "subtree_layout_dirty": r.subtree_layout_dirty,
+                    "subtree_layout_dirty_count": r.subtree_layout_dirty_count,
+                    "nodes_visited": r.nodes_visited,
+                    "nodes_performed": r.nodes_performed,
+                    "clean_geometry_apply_nodes": r.clean_geometry_apply_nodes,
+                    "clean_geometry_fallback_layouts": r.clean_geometry_fallback_layouts,
+                    "root_role": r.root_role.clone(),
+                    "root_test_id": r.root_test_id.clone(),
+                })
+            }).collect::<Vec<_>>(),
             "scroll_layout_profiles": row.scroll_layout_profiles.iter().take(10).map(|p| {
                 json!({
                     "node": p.node,

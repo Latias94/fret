@@ -3,9 +3,9 @@
   "slug": "retained-virtual-list-root-apply-v1",
   "title": "Retained VirtualList Root Apply v1",
   "status": "active",
-  "updated": "2026-06-16",
+  "updated": "2026-06-21",
   "scope_kind": "execution",
-  "problem": "Retained data-table optimization moved the measured owner out of table row/cell structure and into retained VirtualList layout/root application. Current evidence still shows the hot owner in the fixed/known-height retained VirtualList first-pass child layout path under post-layout root apply, but code inspection also shows the fixed path still walks every visible child and only skips measurement. This lane now owns the decision point between a narrower retained VirtualList fast path and a possible table/row-tree-depth follow-on.",
+  "problem": "Retained data-table optimization moved the measured owner out of table row/cell structure and into retained VirtualList layout/root application. Current evidence still shows the hot owner in the fixed/known-height retained VirtualList first-pass child layout path under post-layout root apply, but code inspection also shows the fixed path still walks every visible child and only skips measurement. Root apply owner attribution is now available through debug.layout_root_applies[], so this lane now owns a fresh evidence pass before choosing between a narrower retained VirtualList fast path, root apply/barrier work, and a possible table/row-tree-depth follow-on.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -33,7 +33,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the retained data-table filter-shrink script with retained data-table mode, layout node profiling, and scroll layout profiling enabled; then inspect diag stats for retained VirtualList, Scroll, and child-layout phase attribution. The current owner is still the fixed-height retained VirtualList first-pass child layout path under post-layout root apply, but the latest code slices removed a pure test-id Semantics wrapper from retained table cell rendering, hoisted the shared horizontal body transform, and the heavy torture preview now disables per-cell debug anchors while still showing the same retained VirtualList plus Scroll owner.",
+    "summary": "Run the retained data-table filter-shrink script with retained data-table mode, layout node profiling, and scroll layout profiling enabled; then inspect diag stats for retained VirtualList, Scroll, child-layout phase attribution, and layout_root_applies. The current owner was still the fixed-height retained VirtualList first-pass child layout path under post-layout root apply before root apply owner attribution landed; the next run should use layout_root_applies to decide whether the aggregate root apply phase belongs to retained VirtualList, Scroll, or a narrower follow-on.",
     "commands": [
       "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/retained-vlist-root-apply-m0-scroll-profile-v1 --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness",
       "target/release/fretboard-dev.exe diag stats <bundle.json> --sort cpu_cycles --top 30"
@@ -63,6 +63,22 @@
     {
       "name": "diff-check",
       "command": "git diff --check"
+    },
+    {
+      "name": "root-apply-attribution-ui",
+      "command": "cargo nextest run -p fret-ui clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout --no-fail-fast"
+    },
+    {
+      "name": "root-apply-attribution-diag-triage",
+      "command": "cargo nextest run -p fret-diag triage_includes_hints_and_unit_costs_for_worst_frame --no-fail-fast"
+    },
+    {
+      "name": "root-apply-attribution-layout-summary",
+      "command": "cargo nextest run -p fret-diag layout_perf_summary --no-fail-fast"
+    },
+    {
+      "name": "bootstrap-debug-snapshot-lib",
+      "command": "cargo check -p fret-bootstrap --lib"
     }
   ],
     "evidence": [
@@ -80,12 +96,17 @@
         "target/fret-diag/1781592842180/bundle.json",
         "target/fret-diag/1781594910783/bundle.schema2.json",
         "crates/fret-ui/src/declarative/mount.rs",
+        "crates/fret-ui/src/tree/debug/layout.rs",
         "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
         "crates/fret-ui/src/tree/layout/entrypoints.rs",
         "crates/fret-ui/src/tree/tests/mod.rs",
         "crates/fret-ui/src/tree/tests/view_cache.rs",
         "crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs",
-        "crates/fret-ui/src/widget.rs"
+        "crates/fret-ui/src/widget.rs",
+        "ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs",
+        "crates/fret-diag/src/stats/bundle_stats_snapshot.rs",
+        "crates/fret-diag/src/triage_json.rs",
+        "crates/fret-diag/src/layout_perf_summary.rs"
     ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
@@ -95,7 +116,7 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or barrier relayout. Split a narrower follow-on if evidence says the row/cell tree itself is the dominant cost, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slices removed pure test-id semantics wrappers from retained table cells, hoisted the shared horizontal body transform, and disabled per-cell debug anchors in the torture preview; they lowered breadth a little, but the remaining owner is still retained VirtualList plus the parent Scroll rather than broad table-local wrapper code."
+    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or barrier relayout. Split a narrower follow-on if evidence says the row/cell tree itself is the dominant cost, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slices removed pure test-id semantics wrappers from retained table cells, hoisted the shared horizontal body transform, disabled per-cell debug anchors in the torture preview, and added root apply owner attribution. The immediate next action is to rerun the retained data-table repro and inspect layout_root_applies before landing another runtime optimization."
   },
   "follow_on_of": "ui-table-row-cell-structural-churn-v1"
 }

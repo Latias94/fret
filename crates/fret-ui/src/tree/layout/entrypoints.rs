@@ -527,8 +527,24 @@ impl<H: UiHost> UiTree<H> {
             },
             || {
                 for root in roots {
-                    let apply_started = self.debug_enabled.then(Instant::now);
-                    if let Some(plan) = Self::consume_clean_geometry_apply_plan(
+                    let apply_debug_start = if self.debug_enabled {
+                        Some((
+                            Instant::now(),
+                            self.debug_stats.layout_nodes_visited,
+                            self.debug_stats.layout_nodes_performed,
+                            self.debug_stats.layout_clean_geometry_apply_nodes,
+                            self.debug_stats
+                                .layout_clean_geometry_apply_fallback_layouts,
+                            self.nodes
+                                .get(root)
+                                .is_some_and(|node| node.invalidation.layout),
+                            self.node_subtree_layout_dirty_count(root),
+                        ))
+                    } else {
+                        None
+                    };
+
+                    let mode = if let Some(plan) = Self::consume_clean_geometry_apply_plan(
                         &mut clean_geometry_apply_plans,
                         root,
                     ) {
@@ -540,6 +556,7 @@ impl<H: UiHost> UiTree<H> {
                             pass_kind,
                             crate::layout::overflow::LayoutOverflowContext::default(),
                         );
+                        "clean_geometry_plan"
                     } else {
                         let _ = self.layout_in_with_pass_kind(
                             app,
@@ -550,11 +567,36 @@ impl<H: UiHost> UiTree<H> {
                             pass_kind,
                             crate::layout::overflow::LayoutOverflowContext::default(),
                         );
-                    }
-                    if self.debug_enabled
-                        && let Some(apply_started) = apply_started
+                        "layout_in"
+                    };
+                    if let Some((
+                        apply_started,
+                        layout_nodes_visited_before,
+                        layout_nodes_performed_before,
+                        clean_geometry_apply_nodes_before,
+                        clean_geometry_fallback_layouts_before,
+                        layout_invalidated_before,
+                        subtree_layout_dirty_count_before,
+                    )) = apply_debug_start
                     {
-                        self.debug_stats.layout_roots_apply_time += apply_started.elapsed();
+                        let elapsed = apply_started.elapsed();
+                        self.debug_stats.layout_roots_apply_time += elapsed;
+                        if let Some(window) = window {
+                            self.debug_record_layout_root_apply_if_enabled(
+                                app,
+                                window,
+                                "window",
+                                root,
+                                elapsed,
+                                mode,
+                                layout_invalidated_before,
+                                subtree_layout_dirty_count_before,
+                                layout_nodes_visited_before,
+                                layout_nodes_performed_before,
+                                clean_geometry_apply_nodes_before,
+                                clean_geometry_fallback_layouts_before,
+                            );
+                        }
                     }
 
                     let flush_started = self.debug_enabled.then(Instant::now);
@@ -1763,6 +1805,61 @@ impl<H: UiHost> UiTree<H> {
             is_translation_only,
             nodes_marked_seen,
             dirty_descendants,
+        });
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn debug_record_layout_root_apply_if_enabled(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        root_kind: &'static str,
+        root: NodeId,
+        elapsed: Duration,
+        mode: &'static str,
+        layout_invalidated: bool,
+        subtree_layout_dirty_count: u32,
+        layout_nodes_visited_before: u32,
+        layout_nodes_performed_before: u32,
+        clean_geometry_apply_nodes_before: u64,
+        clean_geometry_fallback_layouts_before: u64,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        let (root_element, root_element_kind, root_element_path) =
+            self.debug_resolve_layout_solve_root_label(app, window, root);
+        let clean_geometry_apply_nodes = self
+            .debug_stats
+            .layout_clean_geometry_apply_nodes
+            .saturating_sub(clean_geometry_apply_nodes_before)
+            .min(u32::MAX as u64) as u32;
+        let clean_geometry_fallback_layouts = self
+            .debug_stats
+            .layout_clean_geometry_apply_fallback_layouts
+            .saturating_sub(clean_geometry_fallback_layouts_before)
+            .min(u32::MAX as u64) as u32;
+        self.debug_record_layout_root_apply(super::UiDebugLayoutRootApply {
+            root,
+            root_kind,
+            root_element,
+            root_element_kind,
+            root_element_path,
+            elapsed,
+            mode,
+            layout_invalidated,
+            subtree_layout_dirty: subtree_layout_dirty_count > 0,
+            subtree_layout_dirty_count,
+            nodes_visited: self
+                .debug_stats
+                .layout_nodes_visited
+                .saturating_sub(layout_nodes_visited_before),
+            nodes_performed: self
+                .debug_stats
+                .layout_nodes_performed
+                .saturating_sub(layout_nodes_performed_before),
+            clean_geometry_apply_nodes,
+            clean_geometry_fallback_layouts,
         });
     }
 
