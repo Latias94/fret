@@ -240,6 +240,37 @@ historical records remain in:
   `ui::h_flex(...).layout(...).gap(...).items_center()` row-content builders if a future visual or
   interaction gate proves the raw flex root changed row alignment semantics.
 
+## 2026-06-22 VirtualList Torture Outer Content Scroll Bypass Note
+
+- The next VirtualList torture slice disables the outer gallery content scroll shell for
+  `PAGE_VIRTUAL_LIST_TORTURE`, matching the existing page-scoped bypass pattern already used by
+  code-view and data-table torture surfaces.
+- This is intentionally narrow: the page still renders the same preview content, and the existing
+  `ui-gallery-content-scroll` test id remains available on the static stack branch. The change only
+  removes the redundant outer `ScrollArea` owner for this torture page.
+- Source coverage in `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now
+  requires the page-scoped bypass gate and keeps the existing content-shell contract explicit.
+- Validation:
+  `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_virtual_list_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-content-scroll-bypass-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=3213/2835/799/130/248/101/10`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-content-scroll-bypass-codex-20260622/1782078940937/bundle.schema2.json`
+  shows the expected owner split: outer content `Scroll` no longer appears in the top layout
+  hotspots, `layout.nodes` dropped `185 -> 179`, and root apply dropped `2246us -> 1848us`.
+  The tradeoff is that request-build / solve work rose (`209us -> 624us`, `590us -> 799us`),
+  so the overall total stayed effectively flat (`3207us -> 3213us`).
+- Interpretation: keep this as an attribution / shell-split slice, not a claimed net perf win.
+  The next pass should either re-benchmark this page with a stronger baseline or move back to the
+  remaining row/VirtualList root owner if the flat total is the more relevant signal.
+- Rollback is local: remove the `PAGE_VIRTUAL_LIST_TORTURE` bypass from
+  `apps/fret-ui-gallery/src/ui/content.rs` and drop the matching source gate if the outer content
+  scroll shell is needed again for this surface.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
