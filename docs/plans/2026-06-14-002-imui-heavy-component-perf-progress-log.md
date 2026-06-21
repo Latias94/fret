@@ -158,6 +158,25 @@ active heavy-component performance goal. It complements the main plan rather tha
 - Validation for this slice passed with `cargo fmt --all --check` and
   `cargo nextest run -p fret-ui-editor color_edit::popup::options --no-fail-fast`.
 
+## 2026-06-21 Cookbook Editor-Controls Shell Shrink
+
+- `apps/fret-cookbook/examples/imui_editor_controls_basics.rs` now drops the extra `controls`
+  wrapper. The page header and the `imui_raw` editor body sit under the same `v_flex` shell, so
+  the example no longer pays for a dedicated middle container.
+- The demo-only `PropertyRow` teaching surface was removed from the cookbook example and from the
+  source-policy gate in `apps/fret-cookbook/src/lib.rs`. The lesson now teaches the public
+  `PropertyGrid` / `PropertyGroup` entry points directly.
+- Validation stayed green with `cargo fmt --all --check`, `cargo check -p fret-cookbook --features
+  cookbook-imui --example imui_editor_controls_basics`, and the focused cookbook source-policy
+  `nextest` gate.
+- Current-state perf evidence from
+  `target/fret-diag/cookbook-imui-editor-controls-click-stress-shell-shrink-20260621/1782024052049/bundle.schema2.json`
+  improved click-stress to `p95.us(total/layout/solve/prepaint/paint)=1079/909/404/7/206`,
+  with `roots total/apply=354/353`; the prior baseline was `1190/994/458/7/248`.
+- The same run still leaves `overlay-focus-cycle` and `roughness-typing` as the hot remaining
+  probes: `2698/2468/47/400` and `1817/1585/10/222` respectively. The next slice should keep
+  chasing those deeper row/session shells rather than reopening the now-thin example chrome.
+
 ## Decisions
 
 ### D1. Do not cache the whole combobox page content root

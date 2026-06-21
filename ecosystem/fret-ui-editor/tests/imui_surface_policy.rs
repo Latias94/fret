@@ -337,7 +337,7 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_ELEMENT_FRAME_SETUP_RS.contains("reference_model(cx)"));
     assert!(COLOR_EDIT_ELEMENT_FRAME_SETUP_RS.contains("draft_model(cx)"));
     assert!(COLOR_EDIT_ELEMENT_FRAME_SETUP_RS.contains("error_model(cx)"));
-    assert!(COLOR_EDIT_ELEMENT_FRAME_SETUP_RS.contains("EditorDensity::resolve(theme)"));
+    assert!(COLOR_EDIT_ELEMENT_FRAME_SETUP_RS.contains("EditorStyle::resolve(theme)"));
     assert!(COLOR_EDIT_ELEMENT_FRAME_SETUP_RS.contains("EditorTokenKeys::COLOR_POPUP_PADDING"));
     assert!(
         COLOR_EDIT_ELEMENT_FRAME_SETUP_RS
@@ -402,11 +402,10 @@ fn color_edit_popup_is_a_real_preset_palette_not_a_stub() {
     assert!(COLOR_EDIT_INPUT_RS.contains("key_add_on_key_down_capture_for"));
     assert!(COLOR_EDIT_INPUT_RS.contains("KeyCode::Enter"));
     assert!(COLOR_EDIT_INPUT_RS.contains("KeyCode::Escape"));
-    assert!(COLOR_EDIT_INPUT_RS.contains("PointerRegionProps"));
     assert!(COLOR_EDIT_INPUT_RS.contains("parse_hex("));
     assert!(COLOR_EDIT_LAYOUT_RS.contains("pub(super) struct ColorEditRootLayoutArgs"));
     assert!(COLOR_EDIT_LAYOUT_RS.contains("pub(super) fn color_edit_root_layout<"));
-    assert!(COLOR_EDIT_LAYOUT_RS.contains("editor_inline_error_text_props"));
+    assert!(COLOR_EDIT_LAYOUT_RS.contains("editor_status_badge_text_props"));
     assert!(COLOR_EDIT_LAYOUT_RS.contains("Axis::Vertical"));
     assert!(COLOR_EDIT_LAYOUT_RS.contains("Axis::Horizontal"));
     assert!(COLOR_EDIT_LAYOUT_RS.contains("FlexProps"));

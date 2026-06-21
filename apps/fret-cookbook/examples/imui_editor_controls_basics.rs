@@ -7,7 +7,7 @@ use fret::imui::{
         self,
         composites::{
             InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGridOptions,
-            PropertyGroup, PropertyGroupOptions, PropertyRow, PropertyRowOptions,
+            PropertyGroup, PropertyGroupOptions,
         },
         controls::{
             ColorEdit, ColorEditOptions, DragValue, DragValueOptions, MiniSearchBox,
@@ -30,7 +30,6 @@ const TEST_ID_TINT: &str = "cookbook.imui_editor_controls.tint";
 const TEST_ID_SEARCH: &str = "cookbook.imui_editor_controls.search";
 const TEST_ID_ASSIST: &str = "cookbook.imui_editor_controls.assist";
 const TEST_ID_ASSIST_LIST: &str = "cookbook.imui_editor_controls.assist.list";
-const TEST_ID_PROPERTY_ROW: &str = "cookbook.imui_editor_controls.property_row";
 const TEST_ID_SUMMARY: &str = "cookbook.imui_editor_controls.summary";
 const TEST_ID_INSPECTOR: &str = "cookbook.imui_editor_controls.inspector";
 const TEST_ID_GROUP: &str = "cookbook.imui_editor_controls.group";
@@ -98,7 +97,9 @@ impl View for ImUiEditorControlsBasicsView {
             })
             .gap(Space::N1);
 
-            let controls = ui::v_flex(move |cx| {
+            let mut body = ui::children![cx; header];
+
+            body.extend(imui_raw(cx, move |ui| {
                 let exposure = exposure.clone();
                 let roughness = roughness.clone();
                 let tint = tint.clone();
@@ -108,189 +109,171 @@ impl View for ImUiEditorControlsBasicsView {
                 let assist_active_item_id = assist_active_item_id.clone();
                 let assist_items = assist_items.clone();
 
-                imui_raw(cx, move |ui| {
-                    editor::inspector_panel(
-                        ui,
-                        InspectorPanel::new(None).options(InspectorPanelOptions {
-                            title: Some(Arc::from("Object inspector")),
-                            test_id: Some(Arc::from(TEST_ID_INSPECTOR)),
-                            content_test_id: Some(Arc::from(
-                                "cookbook.imui_editor_controls.inspector.content",
-                            )),
-                            ..Default::default()
-                        }),
-                        |_cx, _panel| Vec::new(),
-                        move |cx, _panel| {
-                            let exposure = exposure.clone();
-                            let roughness = roughness.clone();
-                            let tint = tint.clone();
-                            let search = search.clone();
-                            let assist_query = assist_query.clone();
-                            let assist_dismissed_query = assist_dismissed_query.clone();
-                            let assist_active_item_id = assist_active_item_id.clone();
-                            let assist_items = assist_items.clone();
+                editor::inspector_panel(
+                    ui,
+                    InspectorPanel::new(None).options(InspectorPanelOptions {
+                        title: Some(Arc::from("Object inspector")),
+                        test_id: Some(Arc::from(TEST_ID_INSPECTOR)),
+                        content_test_id: Some(Arc::from(
+                            "cookbook.imui_editor_controls.inspector.content",
+                        )),
+                        ..Default::default()
+                    }),
+                    |_cx, _panel| Vec::new(),
+                    move |cx, _panel| {
+                        let exposure = exposure.clone();
+                        let tint = tint.clone();
+                        let search = search.clone();
+                        let assist_query = assist_query.clone();
+                        let assist_dismissed_query = assist_dismissed_query.clone();
+                        let assist_active_item_id = assist_active_item_id.clone();
+                        let assist_items = assist_items.clone();
 
-                            vec![
-                                PropertyGroup::new("Editor controls")
-                                    .options(PropertyGroupOptions {
-                                        collapsible: false,
-                                        test_id: Some(Arc::from(TEST_ID_GROUP)),
-                                        ..Default::default()
-                                    })
-                                    .into_element(
-                                        cx,
-                                        |_cx| None,
-                                        move |cx| {
-                                            vec![
-                                                PropertyGrid::new()
-                                                    .options(PropertyGridOptions {
-                                                        test_id: Some(Arc::from(TEST_ID_GRID)),
-                                                        ..Default::default()
-                                                    })
-                                                    .into_element(cx, move |cx, row_cx| {
-                                                        let exposure_presentation =
-                                                            NumericPresentation::<f64>::fixed_decimals(2)
-                                                                .with_chrome_suffix(" EV");
-                                                        let roughness_presentation =
-                                                            NumericPresentation::<f64>::percent_0_1(0);
+                        vec![
+                            PropertyGroup::new("Editor controls")
+                                .options(PropertyGroupOptions {
+                                    collapsible: false,
+                                    test_id: Some(Arc::from(TEST_ID_GROUP)),
+                                    ..Default::default()
+                                })
+                                .into_element(
+                                    cx,
+                                    |_cx| None,
+                                    move |cx| {
+                                        vec![
+                                            PropertyGrid::new()
+                                                .options(PropertyGridOptions {
+                                                    test_id: Some(Arc::from(TEST_ID_GRID)),
+                                                    ..Default::default()
+                                                })
+                                                .into_element(cx, move |cx, row_cx| {
+                                                    let exposure_presentation =
+                                                        NumericPresentation::<f64>::fixed_decimals(2)
+                                                            .with_chrome_suffix(" EV");
+                                                    let roughness_presentation =
+                                                        NumericPresentation::<f64>::percent_0_1(0);
 
-                                                        vec![
-                                                            row_cx.row_with(
-                                                                cx,
-                                                                PropertyRow::new().options(
-                                                                    PropertyRowOptions {
+                                                    vec![
+                                                        row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Exposure"),
+                                                            |cx| {
+                                                                NumericInput::from_presentation(
+                                                                    exposure.clone(),
+                                                                    exposure_presentation,
+                                                                )
+                                                                .options(NumericInputOptions {
+                                                                    id_source: Some(Arc::from(
+                                                                        "cookbook.imui_editor_controls.exposure",
+                                                                    )),
+                                                                    test_id: Some(Arc::from(
+                                                                        TEST_ID_EXPOSURE,
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
+                                                            },
+                                                        ),
+                                                        row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Roughness"),
+                                                            |cx| {
+                                                                DragValue::from_presentation(
+                                                                    roughness.clone(),
+                                                                    roughness_presentation,
+                                                                )
+                                                                .options(DragValueOptions {
+                                                                    id_source: Some(Arc::from(
+                                                                        "cookbook.imui_editor_controls.roughness",
+                                                                    )),
+                                                                    test_id: Some(Arc::from(
+                                                                        TEST_ID_ROUGHNESS,
+                                                                    )),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
+                                                            },
+                                                        ),
+                                                        row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Tint"),
+                                                            |cx| {
+                                                                ColorEdit::new(tint.clone())
+                                                                    .options(ColorEditOptions {
+                                                                        id_source: Some(Arc::from(
+                                                                            "cookbook.imui_editor_controls.tint",
+                                                                        )),
                                                                         test_id: Some(Arc::from(
-                                                                            TEST_ID_PROPERTY_ROW,
+                                                                            TEST_ID_TINT,
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    })
+                                                                    .into_element(cx)
+                                                            },
+                                                        ),
+                                                        row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Filter"),
+                                                            |cx| {
+                                                                MiniSearchBox::new(search.clone())
+                                                                    .options(MiniSearchBoxOptions {
+                                                                        test_id: Some(Arc::from(
+                                                                            TEST_ID_SEARCH,
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    })
+                                                                    .into_element(cx)
+                                                            },
+                                                        ),
+                                                        row_cx.row(
+                                                            cx,
+                                                            |cx| row_cx.label_text(cx, "Asset"),
+                                                            |cx| {
+                                                                TextAssistField::new(
+                                                                    assist_query.clone(),
+                                                                    assist_dismissed_query.clone(),
+                                                                    assist_active_item_id.clone(),
+                                                                    assist_items.clone(),
+                                                                )
+                                                                .options(TextAssistFieldOptions {
+                                                                    field: TextFieldOptions {
+                                                                        id_source: Some(Arc::from(
+                                                                            "cookbook.imui_editor_controls.assist",
+                                                                        )),
+                                                                        placeholder: Some(Arc::from(
+                                                                            "Jump to asset",
+                                                                        )),
+                                                                        test_id: Some(Arc::from(
+                                                                            TEST_ID_ASSIST,
                                                                         )),
                                                                         ..Default::default()
                                                                     },
-                                                                ),
-                                                                |cx| row_cx.label_text(cx, "Surface"),
-                                                                |cx| cx.text("Property row composite"),
-                                                                |_cx| None,
-                                                            ),
-                                                            row_cx.row(
-                                                                cx,
-                                                                |cx| row_cx.label_text(cx, "Exposure"),
-                                                                |cx| {
-                                                                    NumericInput::from_presentation(
-                                                                        exposure.clone(),
-                                                                        exposure_presentation,
-                                                                    )
-                                                                    .options(NumericInputOptions {
-                                                                        id_source: Some(Arc::from(
-                                                                            "cookbook.imui_editor_controls.exposure",
-                                                                        )),
-                                                                        test_id: Some(Arc::from(
-                                                                            TEST_ID_EXPOSURE,
-                                                                        )),
-                                                                        ..Default::default()
-                                                                    })
-                                                                    .into_element(cx)
-                                                                },
-                                                            ),
-                                                            row_cx.row(
-                                                                cx,
-                                                                |cx| row_cx.label_text(cx, "Roughness"),
-                                                                |cx| {
-                                                                    DragValue::from_presentation(
-                                                                        roughness.clone(),
-                                                                        roughness_presentation,
-                                                                    )
-                                                                    .options(DragValueOptions {
-                                                                        id_source: Some(Arc::from(
-                                                                            "cookbook.imui_editor_controls.roughness",
-                                                                        )),
-                                                                        test_id: Some(Arc::from(
-                                                                            TEST_ID_ROUGHNESS,
-                                                                        )),
-                                                                        ..Default::default()
-                                                                    })
-                                                                    .into_element(cx)
-                                                                },
-                                                            ),
-                                                            row_cx.row(
-                                                                cx,
-                                                                |cx| row_cx.label_text(cx, "Tint"),
-                                                                |cx| {
-                                                                    ColorEdit::new(tint.clone())
-                                                                        .options(ColorEditOptions {
-                                                                            id_source: Some(Arc::from(
-                                                                                "cookbook.imui_editor_controls.tint",
-                                                                            )),
-                                                                            test_id: Some(Arc::from(
-                                                                                TEST_ID_TINT,
-                                                                            )),
-                                                                            ..Default::default()
-                                                                        })
-                                                                        .into_element(cx)
-                                                                },
-                                                            ),
-                                                            row_cx.row(
-                                                                cx,
-                                                                |cx| row_cx.label_text(cx, "Filter"),
-                                                                |cx| {
-                                                                    MiniSearchBox::new(search.clone())
-                                                                        .options(MiniSearchBoxOptions {
-                                                                            test_id: Some(Arc::from(
-                                                                                TEST_ID_SEARCH,
-                                                                            )),
-                                                                            ..Default::default()
-                                                                        })
-                                                                        .into_element(cx)
-                                                                },
-                                                            ),
-                                                            row_cx.row(
-                                                                cx,
-                                                                |cx| row_cx.label_text(cx, "Asset"),
-                                                                |cx| {
-                                                                    TextAssistField::new(
-                                                                        assist_query.clone(),
-                                                                        assist_dismissed_query.clone(),
-                                                                        assist_active_item_id.clone(),
-                                                                        assist_items.clone(),
-                                                                    )
-                                                                    .options(TextAssistFieldOptions {
-                                                                        field: TextFieldOptions {
-                                                                            id_source: Some(Arc::from(
-                                                                                "cookbook.imui_editor_controls.assist",
-                                                                            )),
-                                                                            placeholder: Some(Arc::from(
-                                                                                "Jump to asset",
-                                                                            )),
-                                                                            test_id: Some(Arc::from(
-                                                                                TEST_ID_ASSIST,
-                                                                            )),
-                                                                            ..Default::default()
-                                                                        },
-                                                                        surface:
-                                                                            TextAssistFieldSurface::AnchoredOverlay,
-                                                                        list_test_id: Some(Arc::from(
-                                                                            TEST_ID_ASSIST_LIST,
-                                                                        )),
-                                                                        item_test_id_prefix: Some(
-                                                                            Arc::from(
-                                                                                "cookbook.imui_editor_controls.assist.item",
-                                                                            ),
+                                                                    surface:
+                                                                        TextAssistFieldSurface::AnchoredOverlay,
+                                                                    list_test_id: Some(Arc::from(
+                                                                        TEST_ID_ASSIST_LIST,
+                                                                    )),
+                                                                    item_test_id_prefix: Some(
+                                                                        Arc::from(
+                                                                            "cookbook.imui_editor_controls.assist.item",
                                                                         ),
-                                                                        ..Default::default()
-                                                                    })
-                                                                    .into_element(cx)
-                                                                },
-                                                            ),
-                                                        ]
-                                                    }),
-                                            ]
-                                        },
-                                    ),
-                            ]
-                        },
-                    );
-                })
-            })
-            .w_full();
+                                                                    ),
+                                                                    ..Default::default()
+                                                                })
+                                                                .into_element(cx)
+                                                            },
+                                                        ),
+                                                    ]
+                                                }),
+                                        ]
+                                    },
+                                ),
+                        ]
+                    },
+                );
+            }));
 
-            ui::children![cx; header, controls]
+            body
         })
         .w_full()
         .max_w(Px(560.0))
