@@ -66,6 +66,17 @@ historical records remain in:
   improvement, even though the nav scroll path still remains the hottest structural owner to watch
   on the next pass.
 
+## 2026-06-21 PropertyRow Direct-Root Shrink Note
+
+- The editor-controls follow-up now includes a local `PropertyRow` root-shrink slice in
+  `ecosystem/fret-ui-editor/src/composites/property_row/element.rs`, `row.rs`, and `column.rs`.
+- The new helper tries to patch the built child root's layout in place when the element kind exposes
+  mutable layout state; only the non-layout-capable fallback keeps the extra `Container` wrapper.
+- The direct-root contract is now covered in `ecosystem/fret-ui-editor/src/composites/property_row/tests.rs`
+  for row and column layouts, including the value-slot overflow contract and trailing-slot cases.
+- Validation passed with `cargo fmt --all --check` and targeted `cargo nextest run -p fret-ui-editor --lib --no-fail-fast`
+  on the four `property_row` tests.
+
 ## 2026-06-21 Inspector Direct-Attach Semantics Rejected
 
 - A direct-attach semantics rewrite on the retained inspector row path
