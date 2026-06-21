@@ -77,6 +77,17 @@ historical records remain in:
 - Validation passed with `cargo fmt --all --check` and targeted `cargo nextest run -p fret-ui-editor --lib --no-fail-fast`
   on the four `property_row` tests.
 
+## 2026-06-21 PropertyRow Reset Slot Direct-Root Shrink
+
+- `PropertyRow` 的 reset 尾部槽位现在直接挂在 `row` / `column` header 根上，不再额外
+  经过 `property_row_trailing_slot` 的单子项 `Flex` 壳。
+- reset 按钮本身保留原来的固定 affordance 尺寸，新增的左边距直接吸收了槽宽和尾部
+  gap 对齐，不改变视觉位置。
+- 结构回归现在覆盖 row 和 column 两条路径，确保 reset 按钮根直接落在 header / row
+  子树里，而不是再多一层中间槽位容器。
+- 验证通过 `cargo fmt --all` 和
+  `cargo nextest run -p fret-ui-editor --lib --no-fail-fast property_row`。
+
 ## 2026-06-21 Inspector Direct-Attach Semantics Rejected
 
 - A direct-attach semantics rewrite on the retained inspector row path

@@ -148,6 +148,11 @@ active heavy-component performance goal. It complements the main plan rather tha
 - Validation for the batch passed with
   `cargo fmt --all --check` and
   `cargo nextest run -p fret-ui-editor property_grid color_edit drag_value enum_select text_assist_field input_group --no-fail-fast`.
+- `PropertyRow` 的 reset 尾部槽位现在直接把 reset 按钮挂在 header 根上，不再额外包一层
+  单子项 `Flex` 容器；左侧偏移直接吸收槽宽和尾部 gap 对齐。
+- 这次结构覆盖也同步到了 column 分支，避免 reset 去壳只在 row 路径上成立。
+- 验证通过 `cargo fmt --all` 和
+  `cargo nextest run -p fret-ui-editor --lib --no-fail-fast property_row`。
 - `color_edit::popup::options::color_picker_options` now returns the single visible option directly
   even when a popup-level `test_id` is present, so the popup no longer keeps an extra vertical
   shell for the one-option case.
