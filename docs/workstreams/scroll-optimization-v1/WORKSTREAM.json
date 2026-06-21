@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-05-21",
+  "updated": "2026-06-22",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [

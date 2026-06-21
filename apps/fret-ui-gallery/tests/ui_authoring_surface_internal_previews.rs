@@ -1436,6 +1436,24 @@ fn gallery_code_view_torture_can_disable_the_outer_content_scroll_shell() {
 }
 
 #[test]
+fn gallery_data_table_torture_can_disable_the_outer_content_scroll_shell() {
+    let source = read_path(&manifest_path("src/ui/content.rs"));
+
+    assert!(
+        source.contains("disable_content_scroll_for_data_table_torture"),
+        "data_table_torture should have an explicit content-scroll bypass gate",
+    );
+    assert!(
+        source.contains("selected == PAGE_DATA_TABLE_TORTURE"),
+        "data_table_torture should key the bypass gate off the torture page selection",
+    );
+    assert!(
+        source.contains("|| disable_content_scroll_for_data_table_torture"),
+        "data_table_torture should join the bypass with the existing content-scroll guard",
+    );
+}
+
+#[test]
 fn gallery_inspector_torture_keeps_its_own_fixed_preview_shell() {
     let source = read_path(&manifest_path("src/ui/content.rs"));
 

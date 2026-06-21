@@ -3,6 +3,40 @@
 Date: 2026-05-16
 Status: Active
 
+## 2026-06-22 Data-table torture content-scroll bypass
+
+Source gate:
+
+```bash
+cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_can_disable_the_outer_content_scroll_shell gallery_code_view_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast
+cargo check -p fret-ui-gallery --profile dev-fast --features gallery-dev
+```
+
+Local perf repro:
+
+```bash
+target/release/fretboard-dev diag perf \
+  tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json \
+  --repeat 1 \
+  --warmup-frames 5 \
+  --dir target/fret-diag/data-table-content-scroll-bypass-codex-20260622 \
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev
+```
+
+Result:
+
+- Bundle:
+  `target/fret-diag/data-table-content-scroll-bypass-codex-20260622/1782072523216/bundle.schema2.json`.
+- `diag perf` reported
+  `top.us(total/layout/solve/prepaint/paint)=2879/2260/905/181/438`.
+- `layout-perf-summary` top owners:
+  - retained table `VirtualList`: `inclusive=898us`, `layout=271us`;
+  - retained row `Pressable`: `batch_roots=33`, `solve_time=201us`, `reason=first_solve`.
+- Interpretation: the page-level shell bypass removes the outer gallery content `Scroll` owner for
+  the direct-entry retained data-table torture page. This evidence does not justify a generic
+  runtime `Scroll` shortcut; it routes the page back to table-local `VirtualList` / row-shell
+  ownership.
+
 ## Candidate perf slice — Resize-jitter ScrollArea layout root attribution
 
 Seed evidence after the code-editor retained row-fragment prototype:

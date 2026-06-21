@@ -3,6 +3,29 @@
 Date: 2026-05-16
 Status: Active
 
+## 2026-06-22 Data-table torture content-scroll bypass
+
+- [x] Route `PAGE_DATA_TABLE_TORTURE` through the page-level static content-shell branch already
+      used by `code_view_torture` and `inspector_torture`.
+  - Scope guard: ordinary `PAGE_DATA_TABLE` docs and the older `PAGE_TABLE_RETAINED_TORTURE`
+    harness still use the normal gallery content `ScrollArea` path.
+  - Reason: retained data-table closeout evidence moved the next owner to either the outer content
+    `Scroll`, table-local first-solve row `Pressable` roots, or a future table primitive. This
+    slice removes the known outer gallery scroll owner for the direct-entry torture page without
+    changing `fret-ui` scroll semantics.
+- [x] Add a gallery source guard for the page-level bypass.
+  - Gate:
+    `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_can_disable_the_outer_content_scroll_shell gallery_code_view_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast`.
+- [x] Capture local direct-entry retained evidence after the bypass.
+  - Bundle:
+    `target/fret-diag/data-table-content-scroll-bypass-codex-20260622/1782072523216/bundle.schema2.json`.
+  - Result:
+    `top.us(total/layout/solve/prepaint/paint)=2879/2260/905/181/438`.
+  - `layout-perf-summary` moved the visible owner back to retained table `VirtualList`
+    (`inclusive=898us`, `layout=271us`) plus first-solve row `Pressable` roots
+    (`batch_roots=33`, `solve_time=201us`); the outer content `Scroll` no longer appears as the
+    top owner in this direct-entry capture.
+
 ## Candidate perf slice — Resize-jitter ScrollArea layout root attribution
 
 - [x] Reproduce the local resize-jitter post-row-fragment attribution with scroll/layout profiling enabled.

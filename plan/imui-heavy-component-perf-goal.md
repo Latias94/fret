@@ -117,6 +117,26 @@ historical records remain in:
   primitive lane, or another heavy-component lane such as code-view/editor-controls. Do not keep
   widening retained `VirtualList` runtime/root-apply shortcuts from this evidence.
 
+## 2026-06-22 Data Table Torture Content-Scroll Bypass Note
+
+- `PAGE_DATA_TABLE_TORTURE` now joins the page-level static content-shell branch that already serves
+  `code_view_torture` and `inspector_torture`.
+- Scope is intentionally narrow: the ordinary `data_table` docs page and the older
+  `table_retained_torture` page still use the normal gallery content scroll path.
+- Local direct-entry retained repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/data-table-content-scroll-bypass-codex-20260622 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/data-table-content-scroll-bypass-codex-20260622/1782072523216/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2879/2260/905/181/438` on local macOS/M4
+  Pro evidence.
+- `layout-perf-summary` no longer shows the outer content `Scroll` as the hot owner. The top
+  layout hotspot is retained table `VirtualList` (`inclusive=898us`, `layout=271us`), followed by
+  table-local first-solve row `Pressable` roots (`batch_roots=33`, `solve_time=201us`).
+- Interpretation: this confirms the owner split from the retained `VirtualList` closeout. The
+  gallery shell bypass removes the known outer content-scroll owner for this torture page; the next
+  data-table work should not be another gallery shell tweak unless fresh evidence reintroduces that
+  owner.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
