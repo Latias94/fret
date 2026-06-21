@@ -158,6 +158,39 @@ historical records remain in:
   still wait for clearer fixed-row/table-primitive evidence instead of continuing gallery shell or
   row-click policy tweaks.
 
+## 2026-06-22 Data Table Retained Row Semantics Direct-Hover Note
+
+- The retained data-table non-pointer row-selection path now attaches `ListItem` semantics directly
+  to the existing `HoverRegion` row root instead of wrapping the row in an extra same-layout
+  `Semantics` node.
+- Scope is narrow: the pointer row-selection branch still uses the existing `PressableA11y` row
+  root, nested child pressables stay hittable, and row `test_id` / `selected` semantics remain on
+  the row node.
+- Structural gate:
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_attach_semantics_to_hover_root --no-fail-fast`.
+- Behavior gates:
+  `cargo nextest run -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast`
+  and
+  `cargo nextest run -p fret-ui-kit table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-row-semantics-direct-hover-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/data-table-row-semantics-direct-hover-codex-20260622/1782084782151/bundle.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2326/1763/828/180/383`.
+- Layout attribution moved as intended. The prior current-state bundle
+  `target/fret-diag/data-table-retained-current-rerank-codex-20260622/1782083725751/bundle.schema2.json`
+  had a first-solve row `Semantics` root at `table.rs:6517` (`solve_us=211`) and a top layout
+  `Semantics` hotspot (`layout_us=411`, `inclusive_us=414`). The new bundle has a first-solve
+  `HoverRegion` root at the retained row path (`solve_us=134`) and no top row `Semantics` hotspot;
+  retained table `VirtualList` inclusive layout dropped from `953us` to `776us`.
+- Interpretation: keep this as an accepted structural row-root cleanup. The total/layout frame
+  moved from the handoff current rerun's `2447/1890us` to `2326/1763us`, while solve/paint noise
+  rose on this single repeat, so the next data-table pass should target the remaining retained
+  `VirtualList` / row text owners instead of reworking row semantics again.
+- Rollback is local: restore the non-pointer row-selection branch to
+  `cx.semantics_with_id(...)` wrapping `cx.hover_region(...)` if a future semantics or interaction
+  gate shows attached row semantics is not equivalent.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait

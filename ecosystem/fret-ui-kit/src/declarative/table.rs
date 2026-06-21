@@ -913,6 +913,52 @@ mod tests {
     }
 
     #[test]
+    fn retained_table_non_pointer_rows_attach_semantics_to_hover_root() {
+        let start = SOURCE
+            .find("fn table_virtualized_retained_v0_impl")
+            .expect("expected retained table implementation in source");
+        let tail = &SOURCE[start..];
+        let end = tail
+            .find("\n#[allow(clippy::too_many_arguments)]\n#[track_caller]\nfn table_virtualized_impl")
+            .expect("expected retained table implementation boundary");
+        let retained_impl = &tail[..end];
+        let hover_root = ["let row = cx.", "hover_region("].concat();
+        let semantics_wrapper = ["cx.", "semantics_with_id("].concat();
+        let row_wrapper_semantics = [
+            semantics_wrapper.as_str(),
+            "\n                            SemanticsProps {\n                                layout: row_wrapper_layout,",
+        ]
+        .concat();
+
+        assert!(
+            retained_impl.contains(&hover_root),
+            "non-pointer retained rows should use the existing hover root as the row root"
+        );
+        assert!(
+            retained_impl.contains("active_element.set(Some(row.id));"),
+            "active descendant should target the hover row root, not a wrapper"
+        );
+        assert!(
+            retained_impl.contains(
+                ".role(SemanticsRole::ListItem)\n                            .selected(selected);"
+            ),
+            "row semantics should keep the ListItem role and selected state"
+        );
+        assert!(
+            retained_impl.contains("semantics = semantics.test_id(test_id);"),
+            "row debug ids should remain attached to the row semantics"
+        );
+        assert!(
+            retained_impl.contains("row.attach_semantics(semantics)"),
+            "row semantics should be layout-transparent"
+        );
+        assert!(
+            !retained_impl.contains(&row_wrapper_semantics),
+            "non-pointer retained rows should not reintroduce a same-layout Semantics wrapper"
+        );
+    }
+
+    #[test]
     fn table_virtualized_hoists_single_root_renderer_test_ids_to_layout_anchors() {
         assert!(
             SOURCE.contains(
@@ -6514,26 +6560,23 @@ where
                             },
                         )
                     } else {
-                        cx.semantics_with_id(
-                            SemanticsProps {
+                        let row = cx.hover_region(
+                            HoverRegionProps {
                                 layout: row_wrapper_layout,
-                                role: SemanticsRole::ListItem,
-                                test_id,
-                                selected,
-                                ..Default::default()
                             },
-                            move |cx, id| {
-                                if active_index.get() == Some(i) {
-                                    active_element.set(Some(id));
-                                }
-                                vec![cx.hover_region(
-                                    HoverRegionProps {
-                                        layout: row_wrapper_layout,
-                                    },
-                                    move |cx, hovered| render_row_visuals(cx, hovered, false),
-                                )]
-                            },
-                        )
+                            move |cx, hovered| render_row_visuals(cx, hovered, false),
+                        );
+                        if active_index.get() == Some(i) {
+                            active_element.set(Some(row.id));
+                        }
+
+                        let mut semantics = SemanticsDecoration::default()
+                            .role(SemanticsRole::ListItem)
+                            .selected(selected);
+                        if let Some(test_id) = test_id {
+                            semantics = semantics.test_id(test_id);
+                        }
+                        row.attach_semantics(semantics)
                     }
                 })
             }
