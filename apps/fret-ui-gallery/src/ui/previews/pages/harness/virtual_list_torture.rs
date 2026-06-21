@@ -426,29 +426,18 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             .into_element(cx);
 
                         let right = if is_editing {
-                            let input = shadcn::Input::new(edit_text.clone())
+                            shadcn::Input::new(edit_text.clone())
                                 .a11y_label("Inline edit")
                                 .test_id("ui-gallery-virtual-list-edit-input")
                                 .placeholder("Type to edit…")
                                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                                .into_element(cx);
-
-                            ui::h_flex(|_cx| [input])
-                                .layout(LayoutRefinement::default().w_full())
-                                .gap(Space::N2)
-                                .items_center()
                                 .into_element(cx)
                         } else {
-                            let edit_button = shadcn::Button::new("Edit")
+                            shadcn::Button::new("Edit")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
                                 .on_activate(on_select_row)
-                                .into_element(cx);
-
-                            ui::h_row(|_cx| [edit_button])
-                                .gap(Space::N2)
-                                .items_center()
                                 .into_element(cx)
                         };
 
@@ -567,32 +556,18 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .into_element(cx);
 
                             let right = if is_editing {
-                                let input =
-                                    shadcn::Input::new(virtual_list_torture_edit_text.clone())
-                                        .a11y_label("Inline edit")
-                                        .test_id("ui-gallery-virtual-list-edit-input")
-                                        .placeholder("Type to edit…")
-                                        .refine_layout(
-                                            LayoutRefinement::default().w_full().min_w_0(),
-                                        )
-                                        .into_element(cx);
-
-                                ui::h_flex(|_cx| vec![input])
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .gap(Space::N2)
-                                    .items_center()
+                                shadcn::Input::new(virtual_list_torture_edit_text.clone())
+                                    .a11y_label("Inline edit")
+                                    .test_id("ui-gallery-virtual-list-edit-input")
+                                    .placeholder("Type to edit…")
+                                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                                     .into_element(cx)
                             } else {
-                                let edit_button = shadcn::Button::new("Edit")
+                                shadcn::Button::new("Edit")
                                     .variant(shadcn::ButtonVariant::Outline)
                                     .size(shadcn::ButtonSize::Sm)
                                     .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
                                     .on_activate(on_select_row)
-                                    .into_element(cx);
-
-                                ui::h_row(|_cx| vec![edit_button])
-                                    .gap(Space::N2)
-                                    .items_center()
                                     .into_element(cx)
                             };
 

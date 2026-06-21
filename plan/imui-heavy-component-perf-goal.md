@@ -179,6 +179,33 @@ historical records remain in:
 - Focused evidence is the `slider_frame_tracks_are_direct_flex_children_without_segment_wrappers`
   structure test and the `slider` nextest filter gate.
 
+## 2026-06-22 VirtualList Torture Right Slot Direct Child Note
+
+- A fresh four-script candidate probe put `ui-gallery-virtual-list-torture-steady` back at the top
+  of the current heavy-component queue on local macOS/M4 Pro:
+  `top.us(total/layout/solve/prepaint/paint)=3902/3382/674/161/359`.
+- Layout attribution showed the hot owner had moved into the VirtualList row shape:
+  `VirtualList inclusive/layout=2200/1810us`, with 15 newly mounted row roots solving
+  `subtree_nodes=195` at `522us`; the outer content `Scroll` was still visible but no longer the
+  best first cut for this probe.
+- `apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs` now mounts the row
+  right-side `Edit` button and inline edit `Input` directly into the main row flex instead of
+  wrapping each one in a single-child `h_row` / `h_flex` slot.
+- Validation:
+  `cargo fmt --all`,
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-right-slot-direct-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint)=3422/2959/592/142/321`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-right-slot-direct-codex-20260622/1782077288094/bundle.schema2.json`
+  confirmed the expected structural drop: hot-frame `layout.nodes=230 -> 200`, first-solve row
+  `subtree_nodes=195 -> 165`, VirtualList inclusive/layout `2200/1810us -> 1855/1512us`, and root
+  apply `2725us -> 2324us`.
+- Rollback is just the single row-right-slot change if a future visual/interaction test shows that
+  the direct children need a dedicated alignment wrapper after all.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

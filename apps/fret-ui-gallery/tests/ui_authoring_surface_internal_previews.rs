@@ -1570,6 +1570,10 @@ fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
         "cx.text(ifknown_heights{",
         "cx.text(ifkeep_alive>0{",
         "cx.text(\"Harness:minimal(nofocusablecontrols;reducesRAF/notifynoiseinperfbundles).\")",
+        "ui::h_flex(|_cx|[input]).layout(LayoutRefinement::default().w_full()).gap(Space::N2).items_center().into_element(cx)",
+        "ui::h_row(|_cx|[edit_button]).gap(Space::N2).items_center().into_element(cx)",
+        "ui::h_flex(|_cx|vec![input]).layout(LayoutRefinement::default().w_full()).gap(Space::N2).items_center().into_element(cx)",
+        "ui::h_row(|_cx|vec![edit_button]).gap(Space::N2).items_center().into_element(cx)",
     ] {
         assert!(
             !normalized.contains(forbidden),
