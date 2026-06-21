@@ -111,3 +111,27 @@ fn gallery_sidebar_view_does_not_keep_an_extra_keyed_shell_wrapper() {
         "gallery sidebar should not keep an extra keyed shell wrapper around the nav view",
     );
 }
+
+#[test]
+fn gallery_sidebar_view_keeps_chrome_and_layout_on_the_flex_root() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/nav.rs",
+        &[
+            "ui::v_flex(|_cx| [title_row, query_input, nav_scroll])",
+            ".bg(ColorRef::Color(",
+            ".p(Space::N4)",
+            ".layout(",
+            ".gap(Space::N4)",
+            ".into_element(cx)",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("let container = cx.container("),
+        "gallery sidebar should not keep a dedicated container wrapper around the nav root",
+    );
+    assert!(
+        !normalized.contains("decl_style::container_props("),
+        "gallery sidebar should not route chrome/layout through a separate container props wrapper",
+    );
+}

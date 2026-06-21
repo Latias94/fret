@@ -261,30 +261,21 @@ pub(crate) fn sidebar_view(
         nav_scroll.test_id("ui-gallery-nav-scroll")
     };
 
-    let container = cx.container(
-        decl_style::container_props(
-            theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(
-                    theme
-                        .color_by_key("sidebar")
-                        .unwrap_or_else(|| theme.color_token("background")),
-                ))
-                .p(Space::N4),
+    ui::v_flex(|_cx| [title_row, query_input, nav_scroll])
+        .bg(ColorRef::Color(
+            theme
+                .color_by_key("sidebar")
+                .unwrap_or_else(|| theme.color_token("background")),
+        ))
+        .p(Space::N4)
+        .layout(
             LayoutRefinement::default()
                 .w_px(Px(280.0))
                 .h_full()
                 .flex_shrink_0(),
-        ),
-        |cx| {
-            [ui::v_flex(|_cx| [title_row, query_input, nav_scroll])
-                .layout(LayoutRefinement::default().w_full().h_full())
-                .gap(Space::N4)
-                .into_element(cx)]
-        },
-    );
-
-    container
+        )
+        .gap(Space::N4)
+        .into_element(cx)
 }
 
 #[cfg(test)]

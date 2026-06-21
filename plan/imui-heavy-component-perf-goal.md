@@ -46,6 +46,26 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-21 Inspector Nav Shell Shrink Note
+
+- The inspector direct-entry lane got a narrower structural shrink in `apps/fret-ui-gallery/src/ui/nav.rs`:
+  the outer `cx.container(...)` wrapper was removed and its chrome/layout moved onto the existing
+  `ui::v_flex(...)` root.
+- This keeps the sidebar shell on a single flex root while preserving the same background, padding,
+  width, height, and shrink contract.
+- Structural coverage was added in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_content_shell.rs` so the sidebar root does not
+  drift back to a dedicated container wrapper.
+- Validation passed with `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_content_shell --no-fail-fast`,
+  and the direct-entry perf probe
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json`.
+- Latest probe result on `target/fret-diag/inspector-direct-entry-nav-shrink-v1/1782011573897/bundle.json`:
+  `p95.us(total/layout/solve/prepaint/paint)=1916/1537/750/166/229`.
+- Compared with the prior local baseline from the shell-cache exploration, this is a real steady-state
+  improvement, even though the nav scroll path still remains the hottest structural owner to watch
+  on the next pass.
+
 ## 2026-06-16 Progress Note
 
 - The retained data-table lane has now moved past table-local row/cell duplication into retained
