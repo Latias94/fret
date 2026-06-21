@@ -288,6 +288,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                 t.overscan(overscan)
                     .row_height(Px(32.0))
                     .measure_rows(variable_height)
+                    .row_click_selection(false)
                     .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                     .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
@@ -343,6 +344,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                 t.overscan(overscan)
                     .row_height(Px(32.0))
                     .measure_rows(variable_height)
+                    .row_click_selection(false)
                     .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                     .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {

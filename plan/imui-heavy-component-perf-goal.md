@@ -137,6 +137,27 @@ historical records remain in:
   data-table work should not be another gallery shell tweak unless fresh evidence reintroduces that
   owner.
 
+## 2026-06-22 Data Table Torture Row-Click Selection Harness Prune
+
+- The `data_table_torture` perf harness now disables `row_click_selection` on both retained and
+  non-retained `shadcn::DataTable` paths.
+- This aligns the torture page with the checkbox-driven shadcn DataTable recipe style already used
+  by the first-party DataTable snippets, and keeps the direct perf script focused on filtering,
+  sorting, VirtualList windowing, and table layout rather than row-body selection activation.
+- Direct local comparison against the content-scroll-bypass evidence:
+  - Before:
+    `target/fret-diag/data-table-content-scroll-bypass-codex-20260622/1782072523216/bundle.schema2.json`,
+    `layout.perf.summary` `total/layout/solve=2879/2260/905us`, retained table `VirtualList`
+    `inclusive=898us`, row `Pressable` first-solve `batch_roots=33 solve_time=201us`.
+  - After:
+    `target/fret-diag/data-table-torture-no-row-click-selection-codex-20260622/1782074160462/bundle.json`,
+    `layout.perf.summary` `total/layout/solve=2837/2258/874us`, retained table `VirtualList`
+    `inclusive=867us`, row first-solve root `Semantics` `batch_roots=33 solve_time=162us`.
+- Interpretation: keep this as a small harness policy prune, not a structural optimization claim.
+  The row root kind changes and subtree size grows, so the next table-local performance work should
+  still wait for clearer fixed-row/table-primitive evidence instead of continuing gallery shell or
+  row-click policy tweaks.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

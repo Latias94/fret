@@ -281,6 +281,42 @@ Decision:
 - Keep this table lane for table-local row/cell evidence only. Do not keep shaving wrappers here
   unless a fresh profile moves the owner back to `fret-ui-kit::table`.
 
+## 2026-06-22 Data Table Torture Row-Click Harness Prune
+
+Owner:
+
+- The `data_table_torture` direct perf script does not exercise row-body pointer selection.
+- The page already teaches a checkbox-driven shadcn DataTable selection style in first-party
+  snippets, and `DataTable::row_click_selection(false)` is the intended API for that recipe shape.
+
+Change:
+
+- `apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs` disables
+  `row_click_selection` on both retained and non-retained `shadcn::DataTable` paths.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now locks that the torture
+  source keeps both retained and non-retained paths disabled.
+
+Direct repro comparison:
+
+- Before bundle:
+  `target/fret-diag/data-table-content-scroll-bypass-codex-20260622/1782072523216/bundle.schema2.json`
+- Before `layout.perf.summary`: `total/layout/solve=2879/2260/905us`.
+- Before top retained table hotspot: `VirtualList inclusive=898us layout=271us`.
+- Before top row solve: `Pressable batch_roots=33 subtree_nodes=66 solve_time=201us`.
+- After bundle:
+  `target/fret-diag/data-table-torture-no-row-click-selection-codex-20260622/1782074160462/bundle.json`
+- After `layout.perf.summary`: `total/layout/solve=2837/2258/874us`.
+- After top retained table hotspot: `VirtualList inclusive=867us layout=228us`.
+- After top row solve: `Semantics batch_roots=33 subtree_nodes=99 solve_time=162us`.
+
+Interpretation:
+
+- Keep the change as a small harness policy prune and source-alignment cleanup.
+- Do not claim a structural table win from this slice: the row first-solve time moved slightly, but
+  the row root kind changed and the subtree became larger.
+- The next data-table slice should wait for clearer evidence around a fixed-row/table primitive or
+  a specific content `Scroll` owner, not another page-shell tweak.
+
 ## First Repro Commands
 
 Existing bundle attribution:
@@ -316,6 +352,7 @@ target\release\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\data-ta
 ## Correctness Gates
 
 ```powershell
+cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast
 cargo nextest run -p fret-ui-kit table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast
 cargo nextest run -p fret-ui-shadcn retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast
 cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast --no-capture

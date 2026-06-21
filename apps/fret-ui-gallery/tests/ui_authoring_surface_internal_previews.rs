@@ -1215,6 +1215,11 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
             && normalized.contains("ui-gallery-data-table-row-"),
         "table_torture should keep the structured data-table header/body diagnostics prefixes alongside the header-row anchor"
     );
+    assert_eq!(
+        normalized.matches(".row_click_selection(false)").count(),
+        2,
+        "table_torture should disable row-click selection on both retained and non-retained perf harness paths"
+    );
     for forbidden in [
         "cx.text(\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
         "cx.text(\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",

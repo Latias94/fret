@@ -3,7 +3,7 @@
   "slug": "ui-table-row-cell-structural-churn-v1",
   "title": "UI Table Row/Cell Structural Churn v1",
   "status": "active",
-  "updated": "2026-06-15",
+  "updated": "2026-06-22",
   "scope_kind": "execution",
   "problem": "General-app and shadcn-heavy perf probes show data-table and virtual-list frames are still layout-dominant after the prior data-table dirty-breadth lane closed. This lane owns the narrower follow-on: reduce or prove the remaining row/cell structural churn inside the contained fret-ui-kit table subtree without reopening page-cache, input chrome, renderer, or broad runtime invalidation scope.",
   "authoritative_docs": [
@@ -45,6 +45,10 @@
     ]
   },
   "gates": [
+    {
+      "name": "ui-gallery-authoring-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast"
+    },
     {
       "name": "table-row-cell-correctness",
       "command": "cargo nextest run -p fret-ui-kit table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast"
@@ -89,6 +93,10 @@
     "target/fret-diag/vlist-retained-filter-shrink-correct-script-v1/sessions/1781528832521-146560/1781528844457-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
     "target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
     "target/fret-diag/vlist-retained-row-key-hook-prune-v3-retained-only/1781536422863/bundle.json",
+    "target/fret-diag/data-table-content-scroll-bypass-codex-20260622/1782072523216/bundle.schema2.json",
+    "target/fret-diag/data-table-torture-no-row-click-selection-codex-20260622/1782074160462/bundle.json",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
+    "apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
     "ecosystem/fret-ui-shadcn/src/data_table.rs",
     "crates/fret-ui/src/elements/cx.rs"

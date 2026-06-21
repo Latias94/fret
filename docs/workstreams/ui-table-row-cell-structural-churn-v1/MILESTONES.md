@@ -1,7 +1,7 @@
 # Milestones: UI Table Row/Cell Structural Churn v1
 
 Status: Active
-Last updated: 2026-06-15
+Last updated: 2026-06-22
 
 ## M0 - Baseline Attribution
 
@@ -99,3 +99,6 @@ Current decision:
   node profile attributes the owner to retained `VirtualList` and its parent `Scroll`.
 - A mechanism-level fixed-track layout primitive remains a possible later split if retained
   root-apply attribution proves row geometry is the next owner.
+- The 2026-06-22 `data_table_torture` `row_click_selection(false)` slice is a harness policy prune,
+  not a structural table win. Keep it to isolate the direct perf script from row-body selection
+  activation, then wait for clearer fixed-row/table-primitive evidence before extending this lane.
