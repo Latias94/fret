@@ -158,6 +158,23 @@ historical records remain in:
   still wait for clearer fixed-row/table-primitive evidence instead of continuing gallery shell or
   row-click policy tweaks.
 
+## 2026-06-22 Code-View Transition Window Experiment Rejected
+
+- I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait
+  before `reset_diagnostics` and switching the measured click path to an immediate `click`.
+- That did not produce a cleaner transition attribution. The newest bundle
+  `target/fret-diag/code-view-transition-immediate-click-codex-20260622/1782079597569/bundle.schema2.json`
+  still surfaced the old page content `Scroll` as the top layout owner
+  (`layout_us=2010`, `inclusive_us=2352`) at
+  `apps/fret-ui-gallery/src/ui/content.rs:217`, and the overlay path remained in the top layout
+  hotspots as well.
+- `diag stats` showed the frame mix still dominated by layout and root apply work
+  (`p95.us(total/layout/solve/prepaint/paint)=2884/2635/720/38/211`, `layout.root_phases roots(apply)=2394/2394`),
+  so this change was measuring the wrong slice rather than shrinking the hot owner set.
+- Reverted the probe back to the original `reset_diagnostics -> wait_frames(1) -> click_stable`
+  transition shape and kept the existing regression test focused on preserving the nav-search /
+  page-switch setup.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
