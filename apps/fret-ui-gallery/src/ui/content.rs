@@ -156,73 +156,47 @@ pub(crate) fn content_view(
     } else {
         // Keep the page header (theme/motion presets) pinned above the scroll viewport so scripts
         // can toggle themes without scrolling back to the top.
-        //
-        // Key the scroll area by the selected page so navigation resets scroll position.
-        let scroll_body = cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
-            // Provide an explicit per-page handle so scroll position cannot leak across navigation.
-            // (We still key the subtree above to ensure the handle resets deterministically.)
-            let scroll_handle =
-                cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-            let should_reset_scroll = cx.slot_state(
-                || true,
-                |reset| {
-                    let out = *reset;
-                    *reset = false;
-                    out
-                },
+        let scroll_handle = cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+        #[cfg(feature = "gallery-dev")]
+        let mut scroll = shadcn::ScrollArea::new([preview_panel])
+            .scroll_handle(scroll_handle.clone())
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_full()
+                    .flex_1()
+                    .min_h_0()
+                    .min_w_0(),
+            )
+            .viewport_test_id("ui-gallery-content-viewport")
+            .viewport_intrinsic_measure_mode(fret_ui::element::ScrollIntrinsicMeasureMode::Viewport)
+            .viewport_probe_unbounded(false);
+        #[cfg(feature = "gallery-dev")]
+        if selected == PAGE_CODE_VIEW_TORTURE {
+            scroll = scroll.viewport_focus_ring(false);
+        }
+        #[cfg(not(feature = "gallery-dev"))]
+        let scroll = shadcn::ScrollArea::new([preview_panel])
+            .scroll_handle(scroll_handle)
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_full()
+                    .flex_1()
+                    .min_w_0()
+                    .min_h_0(),
+            )
+            .viewport_test_id("ui-gallery-content-viewport")
+            .viewport_intrinsic_measure_mode(fret_ui::element::ScrollIntrinsicMeasureMode::Viewport)
+            .viewport_probe_unbounded(false);
+        #[cfg(feature = "gallery-dev")]
+        if selected == PAGE_VIRTUAL_LIST_TORTURE {
+            scroll = scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
+            scroll = scroll.viewport_intrinsic_measure_mode(
+                fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
             );
-            if should_reset_scroll {
-                scroll_handle.scroll_to_offset(fret_core::Point::new(
-                    fret_core::Px(0.0),
-                    fret_core::Px(0.0),
-                ));
-            }
-            #[cfg(feature = "gallery-dev")]
-            let mut scroll = shadcn::ScrollArea::new([preview_panel])
-                .scroll_handle(scroll_handle.clone())
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_full()
-                        .flex_1()
-                        .min_h_0()
-                        .min_w_0(),
-                )
-                .viewport_test_id("ui-gallery-content-viewport")
-                .viewport_intrinsic_measure_mode(
-                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
-                )
-                .viewport_probe_unbounded(false);
-            #[cfg(feature = "gallery-dev")]
-            if selected == PAGE_CODE_VIEW_TORTURE {
-                scroll = scroll.viewport_focus_ring(false);
-            }
-            #[cfg(not(feature = "gallery-dev"))]
-            let scroll = shadcn::ScrollArea::new([preview_panel])
-                .scroll_handle(scroll_handle)
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_full()
-                        .flex_1()
-                        .min_w_0()
-                        .min_h_0(),
-                )
-                .viewport_test_id("ui-gallery-content-viewport")
-                .viewport_intrinsic_measure_mode(
-                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
-                )
-                .viewport_probe_unbounded(false);
-            #[cfg(feature = "gallery-dev")]
-            if selected == PAGE_VIRTUAL_LIST_TORTURE {
-                scroll =
-                    scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
-                scroll = scroll.viewport_intrinsic_measure_mode(
-                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
-                );
-            }
-            scroll.into_element(cx).test_id("ui-gallery-content-scroll")
-        });
+        }
+        let scroll_body = scroll.into_element(cx).test_id("ui-gallery-content-scroll");
 
         ui::v_flex(|_cx| [header, scroll_body])
             .layout(LayoutRefinement::default().w_full().h_full())

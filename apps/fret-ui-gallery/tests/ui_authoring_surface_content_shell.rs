@@ -75,3 +75,21 @@ fn gallery_content_preview_panel_keeps_page_preview_as_a_vec_anyelement_boundary
         "gallery content preview panel should still route inspector_torture through the shared preview boundary",
     );
 }
+
+#[test]
+fn gallery_content_scroll_area_keeps_the_page_level_handle_without_a_nested_page_key() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/content.rs",
+        &[
+            "let scroll_handle = cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());",
+            "shadcn::ScrollArea::new([preview_panel])",
+            ".scroll_handle(scroll_handle.clone())",
+            ".test_id(\"ui-gallery-content-scroll\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("ui_gallery.content_scroll_area"),
+        "gallery content should not keep the nested page-keyed scroll wrapper",
+    );
+}

@@ -2103,8 +2103,27 @@ popover overlay root solve tail.
   `AppRenderActionsExt` import.
 - Validation passed:
   `cargo fmt --all --check`
-  and `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast`
-  after the cleanup.
+
+## 2026-06-21 Code-View Content Scroll Wrapper Removal Note
+
+- Removed the extra page-keyed scroll wrapper around the `code_view_torture` content path in
+  `apps/fret-ui-gallery/src/ui/content.rs`.
+- The page-level `ScrollHandle` is still owned by the content view, but the scroll area now mounts
+  directly without the nested `cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), ...)`
+  boundary.
+- Regression coverage now asserts the remaining page-level handle contract and the absence of the
+  nested `ui_gallery.content_scroll_area` key in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_content_shell.rs`.
+- Follow-up evidence:
+  `target/fret-diag/code-view-torture-mount-after-scroll-wrapper-removal/1782001143782/bundle.json`
+  improved the direct-entry mount from `top_total_time_us=3736` to `2847`,
+  `layout_time_us=3456` to `2605`, `layout.root apply=3115` to `2361`, and
+  `layout_engine_solve_time_us=946` to `702`.
+- Interpretation: the nested keyed scroll wrapper was real transition noise, but the steady
+  direct-entry surface is now small enough that the next meaningful cut should stay on the
+  transition probe or move to the inspector lane if that bundle remains the larger owner.
+- Validation passed:
+  `cargo fmt --all --check`, `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_content_shell --no-fail-fast`, and `cargo nextest run -p fret-ui-gallery --test code_view_perf_surface --no-fail-fast`.
 - This was a surface cleanup, not a new perf win. The current next cut still points back to the
   outer `ui-gallery-content-viewport` / content-shell contract in `apps/fret-ui-gallery/src/ui/content.rs`,
   because the current bundles still name that shell as the dominant owner rather than the inner
