@@ -89,6 +89,21 @@ historical records remain in:
   obvious per-cell wrapper owner. The remaining retained child path is `Text` + `ManagedSurface`
   + `Pressable`, with the content `Scroll` shell still visible.
 
+## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
+
+- The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+  without defaulting `FRET_UI_GALLERY_VIEW_CACHE=1`.
+- Fresh inspector evidence at
+  `target/fret-diag/inspector-direct-entry-root-owner-codex-20260621/1782066882502/bundle.schema2.json`
+  reported `p95.us(total/layout/prepaint/paint)=1727/1355/254/238`,
+  `layout.root apply p95/max=905/959`, `cache_roots=2`, `cache.reused=0`, and
+  `debug.stats.view_cache_active=false`.
+- This means the run is measuring the stabilized shell composition contract, not global
+  view-cache hit behavior. The direct-entry script and `inspector_perf_surface` test now lock that
+  distinction so future attribution does not treat shell cache policy as active view-cache reuse.
+- Keep global `FRET_UI_GALLERY_VIEW_CACHE=1` as an explicit A/B override until a fresh bundle shows
+  it improves the inspector path; the earlier 2026-06-20 A/B note was negative.
+
 ## 2026-06-21 PropertyRow Direct-Root Shrink Note
 
 - The editor-controls follow-up now includes a local `PropertyRow` root-shrink slice in

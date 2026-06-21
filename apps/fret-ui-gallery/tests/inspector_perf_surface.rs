@@ -36,6 +36,21 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
         "inspector direct-entry perf script should default the sidebar shell cache so the direct-entry measurement stays on the stabilized shell contract",
     );
     assert!(
+        !env.contains_key("FRET_UI_GALLERY_VIEW_CACHE"),
+        "inspector direct-entry perf script should not silently enable global view-cache; shell cache policy is a separate measurement contract",
+    );
+    let target_hints = meta
+        .get("target_hints")
+        .and_then(Value::as_array)
+        .expect("inspector direct-entry script target hints");
+    assert!(
+        target_hints.iter().any(|hint| {
+            hint.as_str()
+                .is_some_and(|hint| hint.contains("global view-cache remains opt-in"))
+        }),
+        "inspector direct-entry perf script should document that shell cache policy does not imply global view-cache activation",
+    );
+    assert!(
         script.contains("\"ui-gallery-inspector-root\"")
             && script.contains("\"ui-gallery-inspector-row-0-label\""),
         "inspector direct-entry perf script should wait for both the inspector root and first row anchor",

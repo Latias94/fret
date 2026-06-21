@@ -20,7 +20,8 @@
     },
     "target_hints": [
       "Starts directly on the inspector_torture page so nav search and page-switch transitions do not dominate the probe.",
-      "Measures the retained inspector scroll surface after gallery chrome and font state settle."
+      "Measures the retained inspector scroll surface after gallery chrome and font state settle.",
+      "Enables the sidebar shell cache policy only; global view-cache remains opt-in through FRET_UI_GALLERY_VIEW_CACHE=1."
     ]
   },
   "steps": [
