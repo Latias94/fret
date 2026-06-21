@@ -628,3 +628,17 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 - I also tried removing the generic `ui-gallery-page-preview` semantics wrapper. That rerun
   regressed to `2700us`, so the change was reverted and the retained direct return is the only
   short-shell win.
+
+## 2026-06-21 Inspector Direct-Entry Fixed Virtual List Note
+
+- The retained inspector torture list now uses `VirtualListOptions::fixed(row_height, overscan)`
+  plus `VirtualListKeyCacheMode::VisibleOnly`, because the rows are fixed-height and the direct
+  entry surface no longer needs the known-height rebuild path.
+- Validation passed with:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast gallery_inspector_torture_uses_fixed_row_text_roles gallery_inspector_torture_stamps_row_root_semantics_and_action_state gallery_inspector_torture_keeps_selected_row_model_on_paint_invalidation gallery_inspector_torture_keeps_row_shell_shrunk gallery_inspector_torture_keeps_tight_virtual_list_overscan gallery_inspector_torture_wraps_the_retained_list_in_a_stable_root_semantics_host`
+  - `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-fixed-virtual-list-20260621 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+- Result: `p50 total/layout/solve/prepaint/paint = 2231/1822/883/162/233` and
+  `p95 = 2243/1835/886/177/246`.
+- The retained inspector path is still the hot owner, but this slice removed the avoidable
+  known-height rebuild work and left a smaller, more honest list boundary for the next pass.

@@ -29,6 +29,7 @@
     "commands": [
       "cargo run -p fretboard-dev --release -- diag perf --repeat 7 --warmup-frames 5 --reuse-launch --prelude-each-run --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --dir target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516 --max-pointer-move-dispatch-us 1500 --max-pointer-move-hit-test-us 500 tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json --launch -- cargo run -p fret-ui-gallery --release --features gallery-full",
       "cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-stable-root-focus-20260621 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev",
+      "cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-fixed-virtual-list-20260621 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev",
       "cargo run -p fretboard-dev --release -- diag stats target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json --sort command_availability --top 10",
       "cargo run -p fretboard-dev --release -- diag stats target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json --sort command_availability --top 10 --json",
       "cargo run -p fretboard-dev --release -- diag stats target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json --sort command_availability --top 10",
@@ -95,7 +96,8 @@
     "docs/workstreams/window-command-availability-snapshot-v2/TODO.md",
     "docs/workstreams/window-command-availability-snapshot-v2/MILESTONES.md",
     "docs/workstreams/window-command-availability-snapshot-v2/EVIDENCE_AND_GATES.md",
-    "target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json"
+    "target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json",
+    "target/fret-diag/inspector-direct-entry-fixed-virtual-list-20260621/1782022069457/bundle.schema2.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

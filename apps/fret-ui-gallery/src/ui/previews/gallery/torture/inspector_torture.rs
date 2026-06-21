@@ -92,9 +92,11 @@ pub(in crate::ui) fn preview_inspector_torture(
         ..Default::default()
     };
 
-    let options =
-        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height)
-            .keep_alive(keep_alive);
+    // The inspector torture rows are fixed-height, so we can use the fixed virtual-list path and
+    // avoid a full known-height rebuild on every retained-list refresh.
+    let mut options =
+        fret_ui::element::VirtualListOptions::fixed(row_height, overscan).keep_alive(keep_alive);
+    options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
     let row_gap_px = MetricRef::space(Space::N2).resolve(theme);
     let accent_color = theme.color_token("accent");

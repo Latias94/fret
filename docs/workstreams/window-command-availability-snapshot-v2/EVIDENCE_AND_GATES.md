@@ -102,6 +102,16 @@ Direct-entry stable-root focus rerun evidence:
 - `jq '[.windows[]?.snapshots[]?.debug.command_availability_hotspots[]? | select(.route == "subtree_no_focus_fallback")] | length'`
   returns `0` for the stable-root rerun bundle.
 
+Direct-entry fixed virtual-list rerun evidence:
+
+- `target/fret-diag/inspector-direct-entry-fixed-virtual-list-20260621/1782022069457/bundle.schema2.json`
+- `diag perf` for the direct-entry script now reports
+  `p50 total/layout/solve/prepaint/paint = 2231/1822/883/162/233` and
+  `p95 = 2243/1835/886/177/246`.
+- `diag stats` on the bundle keeps the hot layout owner on the retained inspector `VirtualList`
+  path, but the fixed-height path is cheaper than the prior known-height rebuild branch and no
+  longer dominates the direct-entry surface as heavily.
+
 Expected JSON path:
 
 - `/top/*/command_availability_hotspots/*/command`

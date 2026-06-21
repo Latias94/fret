@@ -44,6 +44,11 @@ Last updated: 2026-06-21
   focused coverage:
   `ui-gallery-inspector-torture-scroll-direct-entry` and the latest bundle
   `target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json`.
+- [x] Switch the fixed-height inspector direct-entry retained list to `VirtualListMeasureMode::Fixed`
+  with visible-only key caching so the torture surface no longer pays a known-height rebuild on
+  every refresh; focused coverage:
+  `gallery_inspector_torture_keeps_tight_virtual_list_overscan` and the latest bundle
+  `target/fret-diag/inspector-direct-entry-fixed-virtual-list-20260621/1782022069457/bundle.schema2.json`.
 
 ## Exit Criteria
 

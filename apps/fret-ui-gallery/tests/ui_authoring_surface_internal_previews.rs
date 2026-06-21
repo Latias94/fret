@@ -1459,13 +1459,14 @@ fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
         "src/ui/previews/gallery/torture/inspector_torture.rs",
         &[
             "letoverscan=8",
-            "VirtualListOptions::known(row_height,overscan,move|_index|row_height)",
+            "VirtualListOptions::fixed(row_height,overscan)",
+            "options.key_cache=fret_ui::element::VirtualListKeyCacheMode::VisibleOnly",
             ".keep_alive(keep_alive)",
         ],
     );
 
     assert!(
-        !normalized.contains("letoverscan=4"),
+        !normalized.contains("letoverscan=4") && !normalized.contains("VirtualListOptions::known("),
         "inspector_torture should stay on the tighter overscan budget so the retained window does not grow wider than needed"
     );
 }

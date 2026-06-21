@@ -51,3 +51,5 @@ Exit evidence:
   negligible.
 - The inspector direct-entry perf path keeps focus on the stable list root after row activation, and
   the latest bundle shows zero `subtree_no_focus_fallback` hotspots on that probe.
+- The retained inspector list stays on the fixed-height virtual-list path with visible-only keys,
+  so the direct-entry torture surface avoids the older known-height rebuild work.
