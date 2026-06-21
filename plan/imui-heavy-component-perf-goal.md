@@ -319,6 +319,25 @@ historical records remain in:
 - Rollback is local: change the label callsite back to `virtual_list_row_action_button(...)` if the
   direct pressable ever regresses row-label chrome or focus affordance.
 
+## 2026-06-22 VirtualList Torture Row Cache A/B Rejected Note
+
+- I checked the already-available `FRET_UI_GALLERY_VLIST_ROW_CACHE=1` path against the latest row
+  label direct-pressable shape before making it a default or a script contract.
+- Probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-row-cache-ab-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_VLIST_ROW_CACHE=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint)=2729/2355/703/134/240`.
+- Compared with the default row-label direct-pressable bundle
+  `target/fret-diag/virtual-list-row-label-pressable-codex-20260622/1782082905773/bundle.schema2.json`
+  at `2664/2287/729/137/240`, row cache regressed total/layout.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-row-cache-ab-codex-20260622/1782083558118/bundle.schema2.json`
+  explains why: row cache adds per-row `ViewCache` roots on this one-way bottom jump (`cache_roots=16`,
+  `layout.nodes=149`, root apply `1446us`) without cache reuse on the hot frame. The default path
+  stays leaner at `cache_roots=1`, `layout.nodes=134`, root apply `1341us`.
+- Decision: keep `FRET_UI_GALLERY_VLIST_ROW_CACHE` as an explicit behavior/proof knob, not the next
+  performance default for this steady torture probe. The next slice should target retained
+  `VirtualList` layout/root-apply or a row-shape cut that lowers nodes without adding cache roots.
+
 ## 2026-06-22 VirtualList Torture Outer Content Scroll Bypass Note
 
 - The next VirtualList torture slice disables the outer gallery content scroll shell for
