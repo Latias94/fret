@@ -15,6 +15,9 @@ pub use options::PropertyGroupOptions;
 
 pub type OnPropertyGroupToggle = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Clone)]
 pub struct PropertyGroup {
     label: Arc<str>,

@@ -105,31 +105,50 @@ where
         out.push(header);
 
         if !collapsed || !options.collapsible {
-            let mut content = cx.flex(
-                FlexProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
+            let content_children = contents(cx);
+            let content_padding: Edges = Edges {
+                top: Px(density.padding_y.0 + 2.0),
+                right: density.padding_x,
+                bottom: Px(density.padding_y.0 + 4.0),
+                left: density.padding_x,
+            };
+            let mut content = if content_children.len() == 1 {
+                cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
+                        padding: content_padding.into(),
                         ..Default::default()
                     },
-                    direction: Axis::Vertical,
-                    gap: SpacingLength::Px(gap),
-                    padding: Edges {
-                        top: Px(density.padding_y.0 + 2.0),
-                        right: density.padding_x,
-                        bottom: Px(density.padding_y.0 + 4.0),
-                        left: density.padding_x,
-                    }
-                    .into(),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
-                    wrap: false,
-                },
-                contents,
-            );
+                    move |_cx| content_children,
+                )
+            } else {
+                cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        direction: Axis::Vertical,
+                        gap: SpacingLength::Px(gap),
+                        padding: content_padding.into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |_cx| content_children,
+                )
+            };
             if let Some(test_id) = options.content_test_id.as_ref() {
                 content = content.test_id(test_id.clone());
             }

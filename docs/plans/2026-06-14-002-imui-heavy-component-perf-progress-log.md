@@ -110,6 +110,17 @@ active heavy-component performance goal. It complements the main plan rather tha
 - The editor-controls shell-shrink batch is consistent with the shell-shrink direction:
   `PropertyGrid`, `ColorEdit`, `DragValue`, `EnumSelect`, `TextAssistField`, and
   `editor_input_group_row` each now have targeted structural coverage.
+- The same shell-shrink direction now extends into `InspectorPanel` and `PropertyGroup`: title-only
+  inspector headers and non-collapsible property-group headers without actions now skip the extra
+  row/flex shell, and single-child content now mounts through a direct container. The regression
+  coverage now includes `inspector_panel_title_stays_single_line_when_header_is_narrow`,
+  `inspector_panel_title_only_uses_direct_header_and_single_content_shells`, and
+  `property_group_non_collapsible_single_content_uses_direct_header_and_content_containers`.
+  Validation passed with `cargo fmt --all` and
+  `cargo nextest run -p fret-ui-editor inspector_panel_title_stays_single_line_when_header_is_narrow
+  inspector_panel_title_only_uses_direct_header_and_single_content_shells
+  property_group_non_collapsible_single_content_uses_direct_header_and_content_containers
+  --no-fail-fast`.
 - `MiniSearchBox` is already thin enough that further shell removal would likely belong in
   `editor_joined_input_frame`, not the control itself.
 - `AssetRefField` still carries a meaningful multi-action shell because it composes value text,

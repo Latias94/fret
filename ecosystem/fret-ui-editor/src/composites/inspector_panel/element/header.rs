@@ -58,11 +58,71 @@ pub(super) fn inspector_panel_header_element<H: UiHost>(
         return None;
     }
 
+    let title_only = title.is_some() && toolbar.is_empty() && search.is_none();
+    let title_only_row = if title_only {
+        Some({
+            let title = title
+                .clone()
+                .expect("title should exist for the title-only branch");
+            let mut row = cx.text_props(editor_inspector_panel_title_text_props(
+                title,
+                header_fg,
+                density.row_height,
+            ));
+            if let Some(test_id) = toolbar_test_id.as_ref() {
+                row = row.test_id(test_id.clone());
+            }
+            row
+        })
+    } else {
+        None
+    };
+
     let mut out = Vec::new();
-    if let Some(title) = title {
-        let mut row = {
+    if let Some(row) = title_only_row {
+        out.push(row);
+    } else {
+        if let Some(title) = title {
+            let mut row = {
+                let toolbar = std::mem::take(&mut toolbar);
+                cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        direction: Axis::Horizontal,
+                        gap: SpacingLength::Px(Px(6.0)),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let mut row = Vec::new();
+                        row.push(cx.text_props(editor_inspector_panel_title_text_props(
+                            title.clone(),
+                            header_fg,
+                            density.row_height,
+                        )));
+                        row.extend(toolbar);
+                        row
+                    },
+                )
+            };
+
+            if let Some(test_id) = toolbar_test_id.as_ref() {
+                row = row.test_id(test_id.clone());
+            }
+
+            out.push(row);
+        } else if !toolbar.is_empty() {
             let toolbar = std::mem::take(&mut toolbar);
-            cx.flex(
+            let mut row = cx.flex(
                 FlexProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
@@ -75,68 +135,32 @@ pub(super) fn inspector_panel_header_element<H: UiHost>(
                     direction: Axis::Horizontal,
                     gap: SpacingLength::Px(Px(6.0)),
                     padding: Edges::all(Px(0.0)).into(),
-                    justify: MainAlign::Start,
+                    justify: MainAlign::End,
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |cx| {
-                    let mut row = Vec::new();
-                    row.push(cx.text_props(editor_inspector_panel_title_text_props(
-                        title.clone(),
-                        header_fg,
-                        density.row_height,
-                    )));
-                    row.extend(toolbar);
-                    row
-                },
-            )
-        };
+                move |_cx| toolbar,
+            );
 
-        if let Some(test_id) = toolbar_test_id.as_ref() {
-            row = row.test_id(test_id.clone());
+            if let Some(test_id) = toolbar_test_id.as_ref() {
+                row = row.test_id(test_id.clone());
+            }
+
+            out.push(row);
         }
 
-        out.push(row);
-    } else if !toolbar.is_empty() {
-        let toolbar = std::mem::take(&mut toolbar);
-        let mut row = cx.flex(
-            FlexProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                direction: Axis::Horizontal,
-                gap: SpacingLength::Px(Px(6.0)),
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::End,
-                align: CrossAlign::Center,
-                wrap: false,
-            },
-            move |_cx| toolbar,
-        );
+        if let Some(search) = search {
+            let search_el = inspector_panel_search_element(
+                cx,
+                search,
+                enabled,
+                search_test_id,
+                search_clear_test_id,
+                search_assist,
+            );
 
-        if let Some(test_id) = toolbar_test_id.as_ref() {
-            row = row.test_id(test_id.clone());
+            out.push(search_el);
         }
-
-        out.push(row);
-    }
-
-    if let Some(search) = search {
-        let search_el = inspector_panel_search_element(
-            cx,
-            search,
-            enabled,
-            search_test_id,
-            search_clear_test_id,
-            search_assist,
-        );
-
-        out.push(search_el);
     }
 
     let mut header = cx.container(
@@ -173,6 +197,10 @@ pub(super) fn inspector_panel_header_element<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            if title_only {
+                return out;
+            }
+
             vec![cx.flex(
                 FlexProps {
                     layout: LayoutStyle {

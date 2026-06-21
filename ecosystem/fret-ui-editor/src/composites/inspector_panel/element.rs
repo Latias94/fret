@@ -112,25 +112,44 @@ where
             },
         );
 
-        let mut content = cx.flex(
-            FlexProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
+        let content_children = contents(cx, &panel_cx);
+        let mut content = if content_children.len() == 1 {
+            cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
+                    padding: Edges::all(Px(0.0)).into(),
                     ..Default::default()
                 },
-                direction: Axis::Vertical,
-                gap: SpacingLength::Px(gap),
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::Start,
-                align: CrossAlign::Stretch,
-                wrap: false,
-            },
-            move |cx| contents(cx, &panel_cx),
-        );
+                move |_cx| content_children,
+            )
+        } else {
+            cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: Axis::Vertical,
+                    gap: SpacingLength::Px(gap),
+                    padding: Edges::all(Px(0.0)).into(),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    wrap: false,
+                },
+                move |_cx| content_children,
+            )
+        };
 
         if let Some(test_id) = options.content_test_id.as_ref() {
             content = content.test_id(test_id.clone());

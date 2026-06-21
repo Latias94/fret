@@ -69,6 +69,59 @@ where
 
     let header_label = label.clone();
     let collapsed_for_toggle = collapsed_model.clone();
+    let header_actions = header_actions(cx);
+    let header_padding = Edges {
+        top: Px(density.padding_y.0 + 2.0),
+        right: density.padding_x,
+        bottom: Px(density.padding_y.0 + 2.0),
+        left: density.padding_x,
+    }
+    .into();
+    let simple_header = !collapsible && header_actions.is_none();
+
+    if simple_header {
+        let mut header = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                padding: header_padding,
+                background: Some(header_bg),
+                corner_radii: Corners {
+                    top_left: radius,
+                    top_right: radius,
+                    bottom_right: Px(0.0),
+                    bottom_left: Px(0.0),
+                },
+                border: Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(1.0),
+                    left: Px(0.0),
+                },
+                border_color: Some(header_border),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.text_props(editor_property_group_header_text_props(
+                    label.clone(),
+                    header_fg,
+                    header_height,
+                ))]
+            },
+        );
+
+        if let Some(test_id) = test_id.as_ref() {
+            header = header.test_id(test_id.clone());
+        }
+
+        return header;
+    }
 
     let mut header = cx.pressable(
         PressableProps {
@@ -110,8 +163,7 @@ where
 
             let theme = Theme::global(&*cx.app);
             let header_bg = hover_overlay_bg(theme, header_bg, st.hovered, st.pressed);
-
-            let actions = header_actions(cx);
+            let actions = header_actions;
             vec![cx.container(
                 ContainerProps {
                     layout: LayoutStyle {
@@ -136,51 +188,44 @@ where
                         left: Px(0.0),
                     },
                     border_color: Some(header_border),
+                    padding: Edges::all(Px(0.0)).into(),
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![
-                        cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Auto,
-                                        ..Default::default()
-                                    },
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
                                     ..Default::default()
                                 },
-                                direction: Axis::Horizontal,
-                                gap: SpacingLength::Px(Px(6.0)),
-                                padding: Edges {
-                                    top: Px(density.padding_y.0 + 2.0),
-                                    right: density.padding_x,
-                                    bottom: Px(density.padding_y.0 + 2.0),
-                                    left: density.padding_x,
-                                }
-                                .into(),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Center,
-                                wrap: false,
+                                ..Default::default()
                             },
-                            move |cx| {
-                                let mut out = Vec::new();
-                                if let Some(icon) = disclosure_icon.clone() {
-                                    out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
-                                }
-                                out.push(cx.text_props(editor_property_group_header_text_props(
-                                    header_label.clone(),
-                                    header_fg,
-                                    header_height,
-                                )));
-                                out.push(cx.spacer(SpacerProps::default()));
-                                if let Some(actions) = actions {
-                                    out.push(actions);
-                                }
-                                out
-                            },
-                        ),
-                    ]
+                            direction: Axis::Horizontal,
+                            gap: SpacingLength::Px(Px(6.0)),
+                            padding: header_padding,
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            let mut out = Vec::new();
+                            if let Some(icon) = disclosure_icon.clone() {
+                                out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
+                            }
+                            out.push(cx.text_props(editor_property_group_header_text_props(
+                                header_label.clone(),
+                                header_fg,
+                                header_height,
+                            )));
+                            out.push(cx.spacer(SpacerProps::default()));
+                            if let Some(actions) = actions {
+                                out.push(actions);
+                            }
+                            out
+                        },
+                    )]
                 },
             )]
         },

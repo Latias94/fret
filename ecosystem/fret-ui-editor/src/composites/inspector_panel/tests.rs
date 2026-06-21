@@ -82,6 +82,20 @@ fn inspector_panel_title_stays_single_line_when_header_is_narrow() {
             assert_eq!(props.layout.flex.grow, 1.0);
             assert_eq!(props.layout.flex.shrink, 1.0);
 
+            let ElementKind::Flex(_) = &panel.children[0].kind else {
+                panic!("inspector panel root should keep its vertical shell");
+            };
+            let ElementKind::Container(_) = &panel.children[0].children[0].kind else {
+                panic!("inspector panel header should stay wrapped in a container");
+            };
+            assert!(
+                matches!(
+                    panel.children[0].children[0].children[0].kind,
+                    ElementKind::Flex(_)
+                ),
+                "inspector panel title+toolbar header should keep the row flex"
+            );
+
             *panel_id_for_render.lock().unwrap() = Some(panel.id);
             *title_id_for_render.lock().unwrap() = Some(title_text.id);
             vec![panel]
@@ -113,4 +127,75 @@ fn inspector_panel_title_stays_single_line_when_header_is_narrow() {
             <= panel_bounds.origin.y.0 + panel_bounds.size.height.0 + 0.01,
         "single-line title should stay inside the inspector panel header/body layout"
     );
+}
+
+#[test]
+fn inspector_panel_title_only_uses_direct_header_and_single_content_shells() {
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let mut services = WrappingTextServices;
+    let title: Arc<str> = Arc::from("Inspector");
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "inspector-panel-title-only-layout",
+        move |cx| {
+            let panel = InspectorPanel::new(None)
+                .options(InspectorPanelOptions {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    title: Some(title.clone()),
+                    test_id: Some(Arc::from("inspector.panel.title-only")),
+                    content_test_id: Some(Arc::from("inspector.panel.content")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |_cx, _panel| Vec::new(),
+                    |cx, _panel| vec![cx.text("Body")],
+                );
+
+            let ElementKind::Container(_) = &panel.kind else {
+                panic!("inspector panel should still return a container root");
+            };
+            let ElementKind::Flex(_) = &panel.children[0].kind else {
+                panic!("inspector panel root should keep its vertical shell");
+            };
+
+            let header = &panel.children[0].children[0];
+            let ElementKind::Container(_) = &header.kind else {
+                panic!("title-only header should use a container shell");
+            };
+            assert!(
+                matches!(header.children[0].kind, ElementKind::Text(_)),
+                "title-only inspector header should place the title directly in the header container"
+            );
+
+            let content = &panel.children[0].children[1];
+            assert!(
+                matches!(content.kind, ElementKind::Container(_)),
+                "single inspector content child should use a container shell"
+            );
+            assert!(
+                matches!(content.children[0].kind, ElementKind::Text(_)),
+                "single inspector content child should stay directly under the content container"
+            );
+
+            vec![panel]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds(), 1.0);
 }
