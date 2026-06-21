@@ -158,6 +158,17 @@ historical records remain in:
   still wait for clearer fixed-row/table-primitive evidence instead of continuing gallery shell or
   row-click policy tweaks.
 
+## 2026-06-22 ColorEdit Error Text Direct Sibling Note
+
+- Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
+  `ColorEdit`.
+- The error text sibling no longer goes through `editor_input_group_segment` just to get 4px of
+  leading inset; the inset now lives on the text element's own layout margin.
+- This removes one invalid-only `Container` wrapper while preserving the same normal-state row,
+  error-state vertical sibling contract, and error text label.
+- Focused evidence is the `color_edit_error_state_keeps_the_same_row_shape` structure test, which
+  now asserts the error sibling is direct `Text` with `margin.left = 4px`.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

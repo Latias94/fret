@@ -2,9 +2,9 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::{AppWindowId, Color, Rect};
+use fret_core::{AppWindowId, Color, Px, Rect};
 use fret_ui::Theme;
-use fret_ui::element::{AnyElement, ElementKind, Length};
+use fret_ui::element::{AnyElement, ElementKind, Length, MarginEdge};
 
 use super::drag_drop::apply_color_drop_payload;
 use super::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
@@ -151,7 +151,13 @@ fn color_edit_error_state_keeps_the_same_row_shape() {
     );
     assert_eq!(element.children.len(), 2);
     assert_eq!(element.children[0].children.len(), 2);
-    assert_eq!(element.children[1].children.len(), 1);
+    let ElementKind::Text(error_text) = &element.children[1].kind else {
+        panic!(
+            "color edit error sibling should be direct text without an input-group segment shell"
+        );
+    };
+    assert_eq!(error_text.layout.margin.left, MarginEdge::Px(Px(4.0)));
+    assert!(element.children[1].children.is_empty());
 }
 
 fn descendant_has_min_height(element: &AnyElement, label: &str, expected: fret_core::Px) -> bool {

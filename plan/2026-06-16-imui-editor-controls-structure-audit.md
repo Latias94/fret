@@ -229,3 +229,15 @@ height jump and the biggest leverage over the rest of the dense editor surface.
   才能真正成为零尺寸/绝对定位的隐藏分支。
 - 相关回归测试已经改成穿透事件壳检查稳定 shell，并验证 `drag_value` / `slider`
   的 focused nextest slice 通过。
+
+## 2026-06-22 ColorEdit Error Text Direct Sibling Note
+
+- `ColorEdit` used to wrap the invalid-state error text in
+  `editor_input_group_segment` just to get 4px of leading inset, producing a
+  `row + Container(Text)` sibling shape.
+- The inset now lives on the text element's own `layout.margin.left`, so the
+  error sibling is direct `Text` and the invalid-only path avoids one
+  behaviorless container layer.
+- This does not change the normal-state structure or the contract that
+  invalid-state copy appears below the main row; it only thins that error-text
+  shell and locks the shape with a structure test.
