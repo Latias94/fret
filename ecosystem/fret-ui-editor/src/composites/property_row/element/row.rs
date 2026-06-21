@@ -10,7 +10,7 @@ use fret_ui::{ElementContext, UiHost};
 use super::super::PropertyRowReset;
 use super::super::reset;
 use super::super::slot::property_row_trailing_slot;
-use super::mark_property_row_value_slot;
+use super::{mark_property_row_value_slot, property_row_land_child};
 use crate::primitives::EditorDensity;
 
 pub(super) struct PropertyRowRowElementOptions {
@@ -70,53 +70,92 @@ where
             wrap: false,
         },
         move |cx| {
-            let label = cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(label_w),
-                            height: Length::Px(density.row_height),
-                            min_height: Some(Length::Px(density.row_height)),
-                            max_height: Some(Length::Px(density.row_height)),
+            let label = property_row_land_child(
+                cx,
+                move |cx| label(cx),
+                move |layout| {
+                    layout.size.width = Length::Px(label_w);
+                    layout.size.height = Length::Px(density.row_height);
+                    layout.size.min_height = Some(Length::Px(density.row_height));
+                    layout.size.max_height = Some(Length::Px(density.row_height));
+                    layout.flex = FlexItemStyle {
+                        order: 0,
+                        grow: 0.0,
+                        shrink: 0.0,
+                        basis: Length::Px(label_w),
+                        align_self: None,
+                    };
+                    layout.overflow = Overflow::Clip;
+                },
+                move |cx, label| {
+                    cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Px(label_w),
+                                    height: Length::Px(density.row_height),
+                                    min_height: Some(Length::Px(density.row_height)),
+                                    max_height: Some(Length::Px(density.row_height)),
+                                    ..Default::default()
+                                },
+                                flex: FlexItemStyle {
+                                    order: 0,
+                                    grow: 0.0,
+                                    shrink: 0.0,
+                                    basis: Length::Px(label_w),
+                                    align_self: None,
+                                },
+                                overflow: Overflow::Clip,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        flex: FlexItemStyle {
-                            order: 0,
-                            grow: 0.0,
-                            shrink: 0.0,
-                            basis: Length::Px(label_w),
-                            align_self: None,
-                        },
-                        overflow: Overflow::Clip,
-                        ..Default::default()
-                    },
-                    ..Default::default()
+                        move |_cx| vec![label],
+                    )
                 },
-                |cx| vec![label(cx)],
             );
 
-            let value = mark_property_row_value_slot(cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            min_height: Some(Length::Px(density.row_height)),
-                            max_width: Some(Length::Px(value_max_w)),
+            let value = mark_property_row_value_slot(property_row_land_child(
+                cx,
+                move |cx| value(cx),
+                move |layout| {
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Auto;
+                    layout.size.min_height = Some(Length::Px(density.row_height));
+                    layout.size.max_width = Some(Length::Px(value_max_w));
+                    layout.flex = FlexItemStyle {
+                        order: 0,
+                        grow: 1.0,
+                        shrink: 1.0,
+                        basis: Length::Px(Px(0.0)),
+                        align_self: None,
+                    };
+                },
+                move |cx, value| {
+                    cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    min_height: Some(Length::Px(density.row_height)),
+                                    max_width: Some(Length::Px(value_max_w)),
+                                    ..Default::default()
+                                },
+                                flex: FlexItemStyle {
+                                    order: 0,
+                                    grow: 1.0,
+                                    shrink: 1.0,
+                                    basis: Length::Px(Px(0.0)),
+                                    align_self: None,
+                                },
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        flex: FlexItemStyle {
-                            order: 0,
-                            grow: 1.0,
-                            shrink: 1.0,
-                            basis: Length::Px(Px(0.0)),
-                            align_self: None,
-                        },
-                        ..Default::default()
-                    },
-                    ..Default::default()
+                        move |_cx| vec![value],
+                    )
                 },
-                |cx| vec![value(cx)],
             ));
 
             if !has_trailing_slots {

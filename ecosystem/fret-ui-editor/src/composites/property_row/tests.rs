@@ -61,9 +61,9 @@ fn row_value_slot_keeps_overflow_visible_for_wrapping_value_children() {
 
     let value_slot = find_component_slot(&row, PROPERTY_ROW_VALUE_SLOT)
         .expect("property row should mark its value slot for contract tests");
-    let ElementKind::Container(props) = &value_slot.kind else {
+    let ElementKind::Text(props) = &value_slot.kind else {
         panic!(
-            "property row value slot should be a container, got {:?}",
+            "property row value slot should land directly on the text root, got {:?}",
             value_slot.kind
         );
     };
@@ -76,9 +76,13 @@ fn row_value_slot_keeps_overflow_visible_for_wrapping_value_children() {
 }
 
 #[test]
-fn row_without_trailing_slots_keeps_value_container_directly_under_root() {
+fn row_without_trailing_slots_keeps_text_roots_directly_under_root() {
     let mut app = App::new();
     let window = AppWindowId::default();
+    let metrics = InspectorLayoutMetrics::resolve(Theme::global(&app));
+    let row_height = metrics.density.row_height;
+    let label_width = metrics.label_width;
+    let value_max_width = metrics.value_max_width;
     let row = fret_ui::elements::with_element_cx(
         &mut app,
         window,
@@ -112,24 +116,63 @@ fn row_without_trailing_slots_keeps_value_container_directly_under_root() {
         "row without trailing slots should only keep label and value children"
     );
     assert!(
-        matches!(row.children[0].kind, ElementKind::Container(_)),
-        "first child should be the fixed-width label container"
+        matches!(row.children[0].kind, ElementKind::Text(_)),
+        "first child should be the fixed-width label text root"
     );
+    if let ElementKind::Text(props) = &row.children[0].kind {
+        assert_eq!(
+            props.layout.size.width,
+            fret_ui::element::Length::Px(label_width)
+        );
+        assert_eq!(
+            props.layout.size.height,
+            fret_ui::element::Length::Px(row_height)
+        );
+        assert_eq!(
+            props.layout.size.min_height,
+            Some(fret_ui::element::Length::Px(row_height))
+        );
+        assert_eq!(
+            props.layout.size.max_height,
+            Some(fret_ui::element::Length::Px(row_height))
+        );
+        assert_eq!(
+            props.layout.flex.grow, 0.0,
+            "row label should stay fixed-width within the horizontal shell"
+        );
+        assert_eq!(props.layout.flex.shrink, 0.0);
+        assert_eq!(props.layout.overflow, Overflow::Clip);
+    }
     assert!(
-        matches!(row.children[1].kind, ElementKind::Container(_)),
-        "second child should be the value container directly under the root"
+        matches!(row.children[1].kind, ElementKind::Text(_)),
+        "second child should be the value text root directly under the row"
     );
+    if let ElementKind::Text(props) = &row.children[1].kind {
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(props.layout.size.height, fret_ui::element::Length::Auto);
+        assert_eq!(
+            props.layout.size.min_height,
+            Some(fret_ui::element::Length::Px(row_height))
+        );
+        assert_eq!(
+            props.layout.size.max_width,
+            Some(fret_ui::element::Length::Px(value_max_width))
+        );
+    }
     assert_eq!(
         row.children[1].component_slot.as_deref(),
         Some(PROPERTY_ROW_VALUE_SLOT),
-        "value container should stay the direct slot root when no trailing affordances are present"
+        "value text root should stay the direct slot root when no trailing affordances are present"
     );
 }
 
 #[test]
-fn column_without_trailing_slots_keeps_value_container_directly_under_root() {
+fn column_without_trailing_slots_keeps_text_roots_directly_under_root() {
     let mut app = App::new();
     let window = AppWindowId::default();
+    let metrics = InspectorLayoutMetrics::resolve(Theme::global(&app));
+    let row_height = metrics.density.row_height;
+    let value_max_width = metrics.value_max_width;
     let row = fret_ui::elements::with_element_cx(
         &mut app,
         window,
@@ -163,17 +206,49 @@ fn column_without_trailing_slots_keeps_value_container_directly_under_root() {
         "column row without trailing slots should only keep label and value children"
     );
     assert!(
-        matches!(row.children[0].kind, ElementKind::Container(_)),
-        "first child should be the fixed-width label container"
+        matches!(row.children[0].kind, ElementKind::Text(_)),
+        "first child should be the stretchable label text root"
     );
+    if let ElementKind::Text(props) = &row.children[0].kind {
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(
+            props.layout.size.height,
+            fret_ui::element::Length::Px(row_height)
+        );
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(fret_core::Px(0.0)))
+        );
+        assert_eq!(
+            props.layout.size.min_height,
+            Some(fret_ui::element::Length::Px(row_height))
+        );
+        assert_eq!(
+            props.layout.size.max_height,
+            Some(fret_ui::element::Length::Px(row_height))
+        );
+        assert_eq!(props.layout.overflow, Overflow::Clip);
+    }
     assert!(
-        matches!(row.children[1].kind, ElementKind::Container(_)),
-        "second child should be the value container directly under the root"
+        matches!(row.children[1].kind, ElementKind::Text(_)),
+        "second child should be the value text root directly under the row"
     );
+    if let ElementKind::Text(props) = &row.children[1].kind {
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(props.layout.size.height, fret_ui::element::Length::Auto);
+        assert_eq!(
+            props.layout.size.min_height,
+            Some(fret_ui::element::Length::Px(row_height))
+        );
+        assert_eq!(
+            props.layout.size.max_width,
+            Some(fret_ui::element::Length::Px(value_max_width))
+        );
+    }
     assert_eq!(
         row.children[1].component_slot.as_deref(),
         Some(PROPERTY_ROW_VALUE_SLOT),
-        "value container should stay the direct slot root when no trailing affordances are present"
+        "value text root should stay the direct slot root when no trailing affordances are present"
     );
 }
 
@@ -223,12 +298,12 @@ fn row_with_trailing_slots_keeps_slot_children_directly_under_root() {
         "row with a reset slot should keep label, value, and trailing slot as direct children"
     );
     assert!(
-        matches!(row.children[0].kind, ElementKind::Container(_)),
-        "first child should be the label container"
+        matches!(row.children[0].kind, ElementKind::Text(_)),
+        "first child should be the label text root"
     );
     assert!(
-        matches!(row.children[1].kind, ElementKind::Container(_)),
-        "second child should be the value container"
+        matches!(row.children[1].kind, ElementKind::Text(_)),
+        "second child should be the value text root"
     );
     assert!(
         matches!(row.children[2].kind, ElementKind::Flex(_)),

@@ -1,5 +1,5 @@
 use fret_core::Px;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use super::layout::{
@@ -25,6 +25,76 @@ fn mark_property_row_value_slot(element: AnyElement) -> AnyElement {
 #[cfg(not(test))]
 fn mark_property_row_value_slot(element: AnyElement) -> AnyElement {
     element
+}
+
+fn kind_layout_mut(kind: &mut fret_ui::element::ElementKind) -> Option<&mut LayoutStyle> {
+    use fret_ui::element::ElementKind;
+
+    match kind {
+        ElementKind::Container(props) => Some(&mut props.layout),
+        ElementKind::Semantics(props) => Some(&mut props.layout),
+        ElementKind::SemanticFlex(props) => Some(&mut props.flex.layout),
+        ElementKind::Pressable(props) => Some(&mut props.layout),
+        ElementKind::PointerRegion(props) => Some(&mut props.layout),
+        ElementKind::TextInputRegion(props) => Some(&mut props.layout),
+        ElementKind::InternalDragRegion(props) => Some(&mut props.layout),
+        ElementKind::Opacity(props) => Some(&mut props.layout),
+        ElementKind::InteractivityGate(props) => Some(&mut props.layout),
+        ElementKind::VisualTransform(props) => Some(&mut props.layout),
+        ElementKind::RenderTransform(props) => Some(&mut props.layout),
+        ElementKind::FractionalRenderTransform(props) => Some(&mut props.layout),
+        ElementKind::Anchored(props) => Some(&mut props.layout),
+        ElementKind::Column(props) => Some(&mut props.layout),
+        ElementKind::Row(props) => Some(&mut props.layout),
+        ElementKind::Stack(props) => Some(&mut props.layout),
+        ElementKind::Flex(props) => Some(&mut props.layout),
+        ElementKind::Grid(props) => Some(&mut props.layout),
+        ElementKind::Text(props) => Some(&mut props.layout),
+        ElementKind::StyledText(props) => Some(&mut props.layout),
+        ElementKind::SelectableText(props) => Some(&mut props.layout),
+        ElementKind::TextInput(props) => Some(&mut props.layout),
+        ElementKind::TextArea(props) => Some(&mut props.layout),
+        ElementKind::Image(props) => Some(&mut props.layout),
+        ElementKind::Canvas(props) => Some(&mut props.layout),
+        ElementKind::SvgIcon(props) => Some(&mut props.layout),
+        ElementKind::SvgImage(props) => Some(&mut props.layout),
+        ElementKind::Spinner(props) => Some(&mut props.layout),
+        ElementKind::Scroll(props) => Some(&mut props.layout),
+        ElementKind::Scrollbar(props) => Some(&mut props.layout),
+        ElementKind::Spacer(props) => Some(&mut props.layout),
+        ElementKind::HoverRegion(props) => Some(&mut props.layout),
+        ElementKind::WheelRegion(props) => Some(&mut props.layout),
+        ElementKind::EffectLayer(props) => Some(&mut props.layout),
+        ElementKind::FocusScope(props) => Some(&mut props.layout),
+        ElementKind::RovingFlex(props) => Some(&mut props.flex.layout),
+        ElementKind::VirtualList(props) => Some(&mut props.layout),
+        ElementKind::ResizablePanelGroup(props) => Some(&mut props.layout),
+        ElementKind::ViewportSurface(props) => Some(&mut props.layout),
+        ElementKind::ViewCache(props) => Some(&mut props.layout),
+        ElementKind::ManagedSurface(props) => Some(&mut props.layout),
+        _ => None,
+    }
+}
+
+pub(super) fn property_row_land_child<H, Build, Patch, Fallback>(
+    cx: &mut ElementContext<'_, H>,
+    build: Build,
+    patch: Patch,
+    fallback: Fallback,
+) -> AnyElement
+where
+    H: UiHost,
+    Build: FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    Patch: FnOnce(&mut LayoutStyle),
+    Fallback: FnOnce(&mut ElementContext<'_, H>, AnyElement) -> AnyElement,
+{
+    let mut element = build(cx);
+    if let Some(layout) = kind_layout_mut(&mut element.kind) {
+        patch(layout);
+        element
+    } else {
+        fallback(cx, element)
+    }
 }
 
 pub(super) fn property_row_element<H, Label, Value, Actions>(
