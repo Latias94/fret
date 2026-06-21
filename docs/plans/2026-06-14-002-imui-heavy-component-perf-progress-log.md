@@ -212,6 +212,26 @@ active heavy-component performance goal. It complements the main plan rather tha
   immediate current-state handoff run (`p95 total/layout/solve/prepaint/paint=2419/1945/935/211/307`),
   but it does not close the inspector lane. The remaining substantive hotspot is still root
   apply/build-root work around the inspector direct-entry path.
+- Rejected follow-up: a direct-bounds scratch removal for non-measured `VirtualList` built fixed /
+  known child bounds from `visible_items` instead of filling `layout_scratch.measured_updates`.
+  Correctness stayed green (`cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame --no-fail-fast`,
+  and `cargo nextest run -p fret-ui virtual_list --no-fail-fast`), but the inspector direct-entry
+  probe regressed to `p95.us(total/layout/solve/prepaint/paint)=2615/2067/982/205/343` on
+  `target/fret-diag/inspector-direct-entry-fixed-vlist-direct-bounds-codex-20260621/1782057344412/bundle.schema2.json`.
+  The node-profile rerun still kept `VirtualList` in the same broad self-time band and did not
+  move the larger outer `Scroll` / `roots.apply` owner, so the code experiment was rolled back.
+- Rejected follow-up: a retained `VirtualList` same-window no-op skip avoided barrier child rewrites
+  and ancestor view-cache membership refreshes when the desired visible window matched the mounted
+  window. Correctness stayed green (`cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui retained_virtual_list_same_window_reconcile_skips_barrier_child_rewrite --no-fail-fast`,
+  `cargo nextest run -p fret-ui retained_virtual_list_ --no-fail-fast`,
+  and `cargo nextest run -p fret-ui virtual_list --no-fail-fast`), but the inspector direct-entry
+  probe regressed to `p95.us(total/layout/solve/prepaint/paint)=2714/1981/977/405/328` on
+  `target/fret-diag/inspector-direct-entry-retained-noop-skip-codex-20260621/1782061219853/bundle.schema2.json`.
+  `diag stats` still showed root phases around
+  `roots(total/apply) p95/max=1212/1212 / 1240/1239`, so the code experiment was rolled back and
+  the next slice should target finer root-apply / request-build attribution.
 
 ## Decisions
 

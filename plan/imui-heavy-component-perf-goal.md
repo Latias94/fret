@@ -140,6 +140,42 @@ historical records remain in:
   immediate current-state handoff run, but the remaining owner is still root apply / build-root
   work rather than renderer cost.
 
+## 2026-06-21 Fixed VirtualList Direct-Bounds Experiment Rejected
+
+- A narrow `fret-ui` experiment removed the non-measured `VirtualList` `measured_updates` scratch
+  fill and built fixed/known child bounds directly from `visible_items`.
+- The focused correctness gates passed before rollback:
+  `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui retained_fixed_virtual_list_skips_clean_child_layout_in_on_steady_frame --no-fail-fast`,
+  and `cargo nextest run -p fret-ui virtual_list --no-fail-fast`.
+- Perf did not justify keeping it. The same inspector direct-entry probe returned
+  `p95.us(total/layout/solve/prepaint/paint)=2615/2067/982/205/343` on
+  `target/fret-diag/inspector-direct-entry-fixed-vlist-direct-bounds-codex-20260621/1782057344412/bundle.schema2.json`,
+  worse than the accepted hit-test skip evidence.
+- The node-profile follow-up still showed the retained inspector `VirtualList` self time in the
+  same broad band, while outer `Scroll` / root-apply work remained the larger owner. Keep this
+  direct-bounds scratch removal rejected unless a future profile isolates the scratch vector itself
+  as a dominant cost.
+
+## 2026-06-21 Retained VirtualList Same-Window Noop Skip Rejected
+
+- A second narrow `fret-ui` experiment tried to skip retained `VirtualList` barrier child rewrites
+  and ancestor view-cache membership refreshes when the desired visible window exactly matched the
+  mounted window and the list subtree was not layout-dirty.
+- Correctness stayed green before rollback:
+  `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui retained_virtual_list_same_window_reconcile_skips_barrier_child_rewrite --no-fail-fast`,
+  `cargo nextest run -p fret-ui retained_virtual_list_ --no-fail-fast`,
+  and `cargo nextest run -p fret-ui virtual_list --no-fail-fast`.
+- Perf did not support keeping it. The inspector direct-entry probe returned
+  `p95.us(total/layout/solve/prepaint/paint)=2714/1981/977/405/328` on
+  `target/fret-diag/inspector-direct-entry-retained-noop-skip-codex-20260621/1782061219853/bundle.schema2.json`,
+  worse than the accepted hit-test skip evidence.
+- `diag stats` still put root phases at roughly
+  `roots(total/apply) p95/max=1212/1212 / 1240/1239`; the same-window skip did not move the
+  actual root-apply owner. Keep this experiment rejected and push the next slice toward finer
+  root-apply / request-build attribution instead of retained reconcile guessing.
+
 ## 2026-06-21 Code-View Torture Content-Scroll Bypass Note
 
 - The `code_view_torture` direct-entry path now opts out of the outer gallery content scroll shell
