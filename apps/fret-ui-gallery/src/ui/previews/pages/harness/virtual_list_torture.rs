@@ -52,6 +52,32 @@ fn virtual_list_selected_row_semantics(
         .invokable(true)
 }
 
+fn virtual_list_row_content(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+    row_label: AnyElement,
+    right: AnyElement,
+) -> AnyElement {
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = fret_ui::element::Length::Fill;
+    layout.size.height = fret_ui::element::Length::Fill;
+
+    cx.flex(
+        fret_ui::element::FlexProps {
+            layout,
+            direction: fret_core::Axis::Horizontal,
+            gap: fret_ui::element::SpacingLength::Px(
+                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+            ),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
+            justify: fret_ui::element::MainAlign::Start,
+            align: fret_ui::element::CrossAlign::Center,
+            wrap: false,
+        },
+        |_cx| [row_label, right],
+    )
+}
+
 pub(in crate::ui) fn preview_virtual_list_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -464,11 +490,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         let row = cx.container(container_props, |cx| {
-                            [ui::h_flex(|_cx| [row_label, right])
-                                .layout(LayoutRefinement::default().w_full().h_full())
-                                .gap(Space::N2)
-                                .items_center()
-                                .into_element(cx)]
+                            [virtual_list_row_content(cx, &theme, row_label, right)]
                         });
 
                         row.attach_semantics(virtual_list_selected_row_semantics(
@@ -583,13 +605,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                             cx.container(container_props, |cx| {
-                                vec![
-                                    ui::h_flex(|_cx| vec![row_label, right])
-                                        .layout(LayoutRefinement::default().w_full().h_full())
-                                        .gap(Space::N2)
-                                        .items_center()
-                                        .into_element(cx),
-                                ]
+                                vec![virtual_list_row_content(cx, theme, row_label, right)]
                             })
                             .attach_semantics(virtual_list_row_semantics(index, len))
                         };

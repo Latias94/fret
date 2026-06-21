@@ -1548,6 +1548,8 @@ fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
             "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
             "fnvirtual_list_row_detail_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "doc_layout::control_readout_text(cx,text)",
+            "fnvirtual_list_row_content(cx:&mutAppComponentCx<'_>,theme:&Theme,row_label:AnyElement,right:AnyElement)->AnyElement",
+            "cx.flex(fret_ui::element::FlexProps{",
             "doc_layout::paragraph_text(cx,\"Goal:deterministicvirtualizationtorturesurface(10krows+scroll-to-item+inlineedit).\")",
             "doc_layout::control_readout_text(cx,ifretained_host{",
             "doc_layout::control_readout_text(cx,ifknown_heights{",
@@ -1574,6 +1576,8 @@ fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
         "ui::h_row(|_cx|[edit_button]).gap(Space::N2).items_center().into_element(cx)",
         "ui::h_flex(|_cx|vec![input]).layout(LayoutRefinement::default().w_full()).gap(Space::N2).items_center().into_element(cx)",
         "ui::h_row(|_cx|vec![edit_button]).gap(Space::N2).items_center().into_element(cx)",
+        "ui::h_flex(|_cx|[row_label,right]).layout(LayoutRefinement::default().w_full().h_full()).gap(Space::N2).items_center().into_element(cx)",
+        "ui::h_flex(|_cx|vec![row_label,right]).layout(LayoutRefinement::default().w_full().h_full()).gap(Space::N2).items_center().into_element(cx)",
     ] {
         assert!(
             !normalized.contains(forbidden),

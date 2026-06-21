@@ -206,6 +206,40 @@ historical records remain in:
 - Rollback is just the single row-right-slot change if a future visual/interaction test shows that
   the direct children need a dedicated alignment wrapper after all.
 
+## 2026-06-22 VirtualList Torture Row Content Direct Flex Note
+
+- The second VirtualList torture row-shrink slice replaces the retained and non-retained ordinary
+  row-content `ui::h_flex(...)` builder with a local `virtual_list_row_content(...)` helper that
+  mounts a raw `cx.flex(FlexProps { ... })` inside the existing row chrome container.
+- Scope is intentionally narrow: the outer row `Container`, semantics attachment, selected-row
+  styling, inline edit path, and right-slot direct-child change remain unchanged. This deletes only
+  the no-paint `Container -> Flex` shell introduced by the declarative `h_flex` helper for the main
+  row content.
+- Source structure coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now requires the helper
+  and forbids restoring the old `ui::h_flex(|_cx| [row_label, right])` /
+  `ui::h_flex(|_cx| vec![row_label, right])` row-content wrappers.
+- Validation:
+  `cargo fmt --all`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-row-content-direct-flex-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=3207/2785/590/155/267/99/9`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-row-content-direct-flex-codex-20260622/1782078027664/bundle.schema2.json`
+  confirmed the expected incremental structural drop versus the right-slot direct-child slice:
+  hot-frame `layout.nodes=200 -> 185`, first-solve row `subtree_nodes=165 -> 150`,
+  root apply `2324us -> 2246us`, and top frame `total/layout/solve=3422/2959/592us ->
+  3207/2785/590us`.
+- Remaining owner is still row/content layout, not paint: `VirtualList inclusive/layout=1755/1441us`,
+  content `Scroll inclusive/layout=2191/409us`, and the first-solve row batch still has
+  `batch_roots=15`, `subtree_nodes=150`, `solve_time_us=435`.
+- Rollback is local: replace `virtual_list_row_content(...)` callsites with the prior declarative
+  `ui::h_flex(...).layout(...).gap(...).items_center()` row-content builders if a future visual or
+  interaction gate proves the raw flex root changed row alignment semantics.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
