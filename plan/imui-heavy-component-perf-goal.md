@@ -66,6 +66,22 @@ historical records remain in:
   improvement, even though the nav scroll path still remains the hottest structural owner to watch
   on the next pass.
 
+## 2026-06-21 Inspector Direct-Attach Semantics Rejected
+
+- A direct-attach semantics rewrite on the retained inspector row path
+  (`cx.semantics_with_id(...) -> list.attach_semantics(...)`) regressed instead of improving.
+- The direct-attach bundle
+  `target/fret-diag/inspector-direct-entry-root-semantics-direct-attach-v1/1782031379610/bundle.schema2.json`
+  landed at `p95.us(total/layout/solve/prepaint/paint)=2234/1803/860/168/263` with
+  `layout.root_phases roots(total/apply)=1149/1149`.
+- The prior nav-shrink baseline remained better at
+  `target/fret-diag/inspector-direct-entry-nav-shrink-v1/1782011573897/bundle.json`:
+  `p95.us(total/layout/solve/prepaint/paint)=1916/1537/750/166/229` and
+  `layout.root_phases roots(total/apply)=976/976`.
+- Keep this experiment rejected. The next slice should stay on the current row/root/container
+  split, or move to a smaller owner shift only if it is benchmarked against the same direct-entry
+  probe.
+
 ## 2026-06-21 Code-View Torture Content-Scroll Bypass Note
 
 - The `code_view_torture` direct-entry path now opts out of the outer gallery content scroll shell

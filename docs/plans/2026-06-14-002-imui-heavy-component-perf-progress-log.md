@@ -102,6 +102,18 @@ active heavy-component performance goal. It complements the main plan rather tha
   `ui-gallery-inspector-root` host instead of the recycled row node, and the fresh bundle
   `target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json`
   reports `subtree_no_focus_fallback=0`.
+- A later direct-attach semantics experiment on the retained row path did not help:
+  `cx.semantics_with_id(...) -> list.attach_semantics(...)` produced
+  `target/fret-diag/inspector-direct-entry-root-semantics-direct-attach-v1/1782031379610/bundle.schema2.json`,
+  which regressed to `p95.us(total/layout/solve/prepaint/paint)=2234/1803/860/168/263` with
+  `layout.root_phases roots(total/apply)=1149/1149`.
+- The prior nav-shrink baseline stayed better at
+  `target/fret-diag/inspector-direct-entry-nav-shrink-v1/1782011573897/bundle.json`:
+  `p95.us(total/layout/solve/prepaint/paint)=1916/1537/750/166/229` and
+  `layout.root_phases roots(total/apply)=976/976`.
+- Conclusion: reject the direct-attach semantics idea for this lane. Stay on the existing
+  row/root/container structure, or move to a smaller owner shift only if it can be measured against
+  the same direct-entry probe.
 - Validation for that follow-up passed with
   `cargo nextest run -p fret-ui-gallery --no-fail-fast inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_search inspector_scroll_perf_script_keeps_nav_transition_setup gallery_inspector_torture_uses_fixed_row_text_roles gallery_inspector_torture_stamps_row_root_semantics_and_action_state gallery_inspector_torture_keeps_selected_row_model_on_paint_invalidation gallery_inspector_torture_keeps_row_shell_shrunk gallery_inspector_torture_keeps_tight_virtual_list_overscan gallery_inspector_torture_wraps_the_retained_list_in_a_stable_root_semantics_host`
   and
