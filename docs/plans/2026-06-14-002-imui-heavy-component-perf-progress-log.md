@@ -121,6 +121,13 @@ active heavy-component performance goal. It complements the main plan rather tha
   inspector_panel_title_only_uses_direct_header_and_single_content_shells
   property_group_non_collapsible_single_content_uses_direct_header_and_content_containers
   --no-fail-fast`.
+- A current-state rerun of the cookbook editor-controls click-stress script landed at
+  `total=1321us`, `layout=1157us`, `layout.engine_solve=514us`, and `paint=159us`; evidence
+  bundle
+  `target/fret-diag/cookbook-imui-editor-controls-click-stress-shell-shrink-20260621/1782024052049/bundle.schema2.json`.
+  The node-profile rerun stayed in the same band (`total=1370us`) and still points the hottest
+  layout paths at `property_row/element/row.rs` and `controls/session_shell.rs`, so the next slice
+  should keep chasing the deeper row/session shells rather than the now-shrunk header wrappers.
 - `MiniSearchBox` is already thin enough that further shell removal would likely belong in
   `editor_joined_input_frame`, not the control itself.
 - `AssetRefField` still carries a meaningful multi-action shell because it composes value text,
