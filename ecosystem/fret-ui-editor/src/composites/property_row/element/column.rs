@@ -9,7 +9,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use super::super::PropertyRowReset;
 use super::super::reset;
-use super::super::slot::property_row_trailing_slot;
+use super::kind_layout_mut;
 use super::{mark_property_row_value_slot, property_row_land_child};
 use crate::primitives::EditorDensity;
 
@@ -181,12 +181,11 @@ where
                     }
 
                     if let Some(action_el) = actions_el {
-                        out.push(property_row_trailing_slot(
+                        out.push(property_row_column_action_element(
                             cx,
+                            action_el,
+                            density,
                             status_slot_w,
-                            density.row_height,
-                            Px(0.0),
-                            move |_cx| vec![action_el],
                         ));
                     }
 
@@ -196,5 +195,62 @@ where
 
             vec![header, value]
         },
+    )
+}
+
+fn property_row_column_action_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    mut action_el: AnyElement,
+    density: EditorDensity,
+    status_slot_w: Px,
+) -> AnyElement {
+    if let Some(layout) = kind_layout_mut(&mut action_el.kind)
+        && let Length::Px(action_width) = layout.size.width
+    {
+        layout.flex = FlexItemStyle {
+            order: 0,
+            grow: 0.0,
+            shrink: 0.0,
+            basis: Length::Px(action_width),
+            align_self: None,
+        };
+        layout.margin = fret_ui::element::MarginEdges {
+            left: fret_ui::element::MarginEdge::Px(Px(status_slot_w.0 - action_width.0)),
+            ..Default::default()
+        };
+        return action_el;
+    }
+
+    cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Px(status_slot_w),
+                    height: Length::Auto,
+                    min_height: Some(Length::Px(density.row_height)),
+                    ..Default::default()
+                },
+                margin: fret_ui::element::MarginEdges {
+                    left: fret_ui::element::MarginEdge::Px(Px(0.0)),
+                    ..Default::default()
+                },
+                flex: FlexItemStyle {
+                    order: 0,
+                    grow: 0.0,
+                    shrink: 0.0,
+                    basis: Length::Px(status_slot_w),
+                    align_self: None,
+                },
+                overflow: Overflow::Clip,
+                ..Default::default()
+            },
+            direction: Axis::Horizontal,
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::End,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |_cx| vec![action_el],
     )
 }

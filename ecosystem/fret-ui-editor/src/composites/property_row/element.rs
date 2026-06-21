@@ -27,7 +27,9 @@ fn mark_property_row_value_slot(element: AnyElement) -> AnyElement {
     element
 }
 
-fn kind_layout_mut(kind: &mut fret_ui::element::ElementKind) -> Option<&mut LayoutStyle> {
+pub(super) fn kind_layout_mut(
+    kind: &mut fret_ui::element::ElementKind,
+) -> Option<&mut LayoutStyle> {
     use fret_ui::element::ElementKind;
 
     match kind {

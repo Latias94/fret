@@ -10,6 +10,7 @@ use super::{
     PROPERTY_ROW_VALUE_SLOT, PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions,
     PropertyRowReset, property_row_label_text,
 };
+use crate::controls::{IconButton, IconButtonOptions, OnIconButtonActivate};
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::readout::editor_validation_message_text_props;
 use crate::test_support::WrappingTextServices;
@@ -419,6 +420,125 @@ fn column_with_reset_slot_keeps_button_root_directly_under_header() {
         props.layout.margin.left,
         fret_ui::element::MarginEdge::Px(Px(reset_slot_width.0 - affordance_extent.0)),
         "column reset button should absorb the slot width without an extra wrapper"
+    );
+}
+
+#[test]
+fn row_with_trailing_action_keeps_action_root_directly_under_row() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let row = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-row-action-layout",
+        |cx| {
+            PropertyRow::new()
+                .options(PropertyRowOptions {
+                    variant: PropertyRowLayoutVariant::Row,
+                    label_width: Some(Px(104.0)),
+                    gap: Some(Px(8.0)),
+                    trailing_gap: Some(Px(4.0)),
+                    status_slot_width: Some(Px(24.0)),
+                    test_id: Some(Arc::from("inspector.row.action.row")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |cx| property_row_label_text(cx, "Exposure"),
+                    |cx| cx.text("0.50"),
+                    |cx| {
+                        let on_activate: OnIconButtonActivate = Arc::new(|_, _| {});
+                        Some(
+                            IconButton::new(fret_icons::ids::ui::CLOSE, on_activate)
+                                .options(IconButtonOptions {
+                                    test_id: Some(Arc::from("inspector.row.action")),
+                                    ..Default::default()
+                                })
+                                .into_element(cx),
+                        )
+                    },
+                )
+        },
+    );
+
+    let ElementKind::Flex(_) = &row.kind else {
+        panic!(
+            "property row root should remain a flex container, got {:?}",
+            row.kind
+        );
+    };
+    assert_eq!(row.children.len(), 3);
+    assert!(
+        matches!(row.children[2].kind, ElementKind::Pressable(_)),
+        "row trailing action should stay as a direct pressable root"
+    );
+    assert!(
+        !matches!(row.children[2].children[0].kind, ElementKind::Flex(_)),
+        "row trailing action should not gain an extra flex wrapper"
+    );
+}
+
+#[test]
+fn column_with_trailing_action_keeps_action_root_directly_under_header() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let row = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-row-action-column-layout",
+        |cx| {
+            PropertyRow::new()
+                .options(PropertyRowOptions {
+                    variant: PropertyRowLayoutVariant::Column,
+                    label_width: Some(Px(104.0)),
+                    trailing_gap: Some(Px(0.0)),
+                    status_slot_width: Some(Px(24.0)),
+                    test_id: Some(Arc::from("inspector.column.action.row")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |cx| property_row_label_text(cx, "Exposure"),
+                    |cx| cx.text("0.50"),
+                    |cx| {
+                        let on_activate: OnIconButtonActivate = Arc::new(|_, _| {});
+                        Some(
+                            IconButton::new(fret_icons::ids::ui::CLOSE, on_activate)
+                                .options(IconButtonOptions {
+                                    test_id: Some(Arc::from("inspector.column.action")),
+                                    ..Default::default()
+                                })
+                                .into_element(cx),
+                        )
+                    },
+                )
+        },
+    );
+
+    let ElementKind::Flex(_) = &row.kind else {
+        panic!(
+            "property row root should remain a flex container, got {:?}",
+            row.kind
+        );
+    };
+    assert_eq!(row.children.len(), 2);
+    let header = &row.children[0];
+    let ElementKind::Flex(_) = &header.kind else {
+        panic!(
+            "column header should remain a flex container, got {:?}",
+            header.kind
+        );
+    };
+    assert_eq!(header.children.len(), 2);
+    assert!(
+        matches!(header.children[1].kind, ElementKind::Pressable(_)),
+        "column trailing action should stay as a direct pressable root"
+    );
+    assert!(
+        !matches!(header.children[1].children[0].kind, ElementKind::Flex(_)),
+        "column trailing action should not gain an extra flex wrapper"
     );
 }
 

@@ -88,6 +88,18 @@ historical records remain in:
 - 验证通过 `cargo fmt --all` 和
   `cargo nextest run -p fret-ui-editor --lib --no-fail-fast property_row`。
 
+## 2026-06-21 PropertyRow Action Slot Direct-Root Shrink
+
+- `PropertyRow` 的 action/status 尾槽也收成了直接根，不再额外经过
+  `property_row_trailing_slot` 的中间 `Flex` 包装。
+- row / column 两条路径都改成在可布局的动作根上直接补齐 slot 宽度和 leading
+  margin；如果动作根本身不能就地补布局，再回退到旧的单层 `Flex` 容器。
+- 旧的 `property_row/slot.rs` 中间槽文件已经删除，避免留下只会增加树深的悬空 helper。
+- 结构回归新增了 row / column 的 trailing action 直接根测试，验证动作根不会再多一层
+  `Flex` 壳。
+- 验证通过 `cargo fmt --all --check` 和
+  `cargo nextest run -p fret-ui-editor --lib --no-fail-fast property_row`。
+
 ## 2026-06-21 Inspector Direct-Attach Semantics Rejected
 
 - A direct-attach semantics rewrite on the retained inspector row path
