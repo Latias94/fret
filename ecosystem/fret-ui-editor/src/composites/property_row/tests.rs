@@ -259,6 +259,13 @@ fn row_with_trailing_slots_keeps_slot_children_directly_under_root() {
     let reset = PropertyRowReset::new(Arc::new(|_, _| {}));
     let gap = Px(8.0);
     let trailing_gap = Px(4.0);
+    let metrics = InspectorLayoutMetrics::resolve(Theme::global(&app));
+    let affordance_extent = metrics.density.affordance_extent();
+    let reset_slot_width = if metrics.reset_slot_width.0 > affordance_extent.0 {
+        metrics.reset_slot_width
+    } else {
+        affordance_extent
+    };
     let row = fret_ui::elements::with_element_cx(
         &mut app,
         window,
@@ -295,7 +302,7 @@ fn row_with_trailing_slots_keeps_slot_children_directly_under_root() {
     assert_eq!(
         row.children.len(),
         3,
-        "row with a reset slot should keep label, value, and trailing slot as direct children"
+        "row with a reset slot should keep label, value, and reset button as direct children"
     );
     assert!(
         matches!(row.children[0].kind, ElementKind::Text(_)),
@@ -306,20 +313,112 @@ fn row_with_trailing_slots_keeps_slot_children_directly_under_root() {
         "second child should be the value text root"
     );
     assert!(
-        matches!(row.children[2].kind, ElementKind::Flex(_)),
-        "third child should be the trailing slot flex container"
+        matches!(row.children[2].kind, ElementKind::Pressable(_)),
+        "third child should be the reset pressable root"
     );
 
-    let ElementKind::Flex(props) = &row.children[2].kind else {
+    let ElementKind::Pressable(props) = &row.children[2].kind else {
         panic!(
-            "property row trailing slot should be a flex container, got {:?}",
+            "property row reset child should be a pressable root, got {:?}",
             row.children[2].kind
         );
     };
     assert_eq!(
+        props.layout.size.width,
+        fret_ui::element::Length::Px(affordance_extent)
+    );
+    assert_eq!(
         props.layout.margin.left,
-        fret_ui::element::MarginEdge::Px(trailing_gap_compensation),
-        "row trailing slot should keep the label/value gap on the root while compensating the trailing slot spacing with its own leading margin"
+        fret_ui::element::MarginEdge::Px(Px(
+            reset_slot_width.0 - affordance_extent.0 + trailing_gap_compensation.0
+        )),
+        "row reset button should absorb the slot width and compensate the root spacing with its own leading margin"
+    );
+}
+
+#[test]
+fn column_with_reset_slot_keeps_button_root_directly_under_header() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let reset = PropertyRowReset::new(Arc::new(|_, _| {}));
+    let metrics = InspectorLayoutMetrics::resolve(Theme::global(&app));
+    let affordance_extent = metrics.density.affordance_extent();
+    let reset_slot_width = if metrics.reset_slot_width.0 > affordance_extent.0 {
+        metrics.reset_slot_width
+    } else {
+        affordance_extent
+    };
+    let row = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "property-row-column-reset-layout",
+        |cx| {
+            PropertyRow::new()
+                .reset(Some(reset))
+                .options(PropertyRowOptions {
+                    variant: PropertyRowLayoutVariant::Column,
+                    label_width: Some(Px(104.0)),
+                    trailing_gap: Some(Px(0.0)),
+                    test_id: Some(Arc::from("inspector.exposure")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |cx| property_row_label_text(cx, "Exposure"),
+                    |cx| cx.text("0.50"),
+                    |_cx| None,
+                )
+        },
+    );
+
+    let ElementKind::Flex(_) = &row.kind else {
+        panic!(
+            "property row root should remain a flex container, got {:?}",
+            row.kind
+        );
+    };
+    assert_eq!(
+        row.children.len(),
+        2,
+        "column row should keep header and value children"
+    );
+
+    let header = &row.children[0];
+    let ElementKind::Flex(_) = &header.kind else {
+        panic!(
+            "column header should remain a flex container, got {:?}",
+            header.kind
+        );
+    };
+    assert_eq!(
+        header.children.len(),
+        2,
+        "column header should keep the label and reset button directly"
+    );
+    assert!(
+        matches!(header.children[0].kind, ElementKind::Text(_)),
+        "first header child should be the label text root"
+    );
+    assert!(
+        matches!(header.children[1].kind, ElementKind::Pressable(_)),
+        "second header child should be the reset pressable root"
+    );
+
+    let ElementKind::Pressable(props) = &header.children[1].kind else {
+        panic!(
+            "property row reset child should be a pressable root, got {:?}",
+            header.children[1].kind
+        );
+    };
+    assert_eq!(
+        props.layout.size.width,
+        fret_ui::element::Length::Px(affordance_extent)
+    );
+    assert_eq!(
+        props.layout.margin.left,
+        fret_ui::element::MarginEdge::Px(Px(reset_slot_width.0 - affordance_extent.0)),
+        "column reset button should absorb the slot width without an extra wrapper"
     );
 }
 

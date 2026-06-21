@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexItemStyle, LayoutStyle, Length, PressableA11y, PressableProps,
-    SizeStyle,
+    AnyElement, ContainerProps, FlexItemStyle, LayoutStyle, Length, MarginEdge, MarginEdges,
+    PressableA11y, PressableProps, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -66,6 +66,8 @@ pub(super) fn property_row_reset_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     reset: Option<PropertyRowReset>,
     affordance_extent: Px,
+    slot_width: Px,
+    leading_margin: Px,
     reset_fg: Color,
 ) -> Option<AnyElement> {
     let reset = reset?;
@@ -94,6 +96,8 @@ pub(super) fn property_row_reset_element<H: UiHost>(
                     test_id,
                     on_reset,
                     affordance_extent,
+                    slot_width,
+                    leading_margin,
                     reset_fg,
                 )
             },
@@ -106,6 +110,8 @@ pub(super) fn property_row_reset_element<H: UiHost>(
             test_id,
             on_reset,
             affordance_extent,
+            slot_width,
+            leading_margin,
             reset_fg,
         ))
     }
@@ -118,14 +124,22 @@ pub(super) fn property_row_reset_pressable<H: UiHost>(
     test_id: Option<Arc<str>>,
     on_reset: OnPropertyRowReset,
     affordance_extent: Px,
+    slot_width: Px,
+    leading_margin: Px,
     reset_fg: Color,
 ) -> AnyElement {
+    let margin_left = Px(slot_width.0 - affordance_extent.0 + leading_margin.0);
     cx.pressable(
         PressableProps {
             layout: LayoutStyle {
                 size: SizeStyle {
                     width: Length::Px(affordance_extent),
                     height: Length::Px(affordance_extent),
+                    min_height: Some(Length::Px(affordance_extent)),
+                    ..Default::default()
+                },
+                margin: MarginEdges {
+                    left: MarginEdge::Px(margin_left),
                     ..Default::default()
                 },
                 flex: FlexItemStyle {

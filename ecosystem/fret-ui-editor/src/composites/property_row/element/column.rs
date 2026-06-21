@@ -168,22 +168,16 @@ where
 
                     if has_reset_slot {
                         let reset_for_slot = reset.clone();
-                        out.push(property_row_trailing_slot(
+                        if let Some(reset) = reset::property_row_reset_element(
                             cx,
+                            reset_for_slot,
+                            affordance_extent,
                             reset_slot_w,
-                            density.row_height,
                             Px(0.0),
-                            move |cx| {
-                                reset::property_row_reset_element(
-                                    cx,
-                                    reset_for_slot.clone(),
-                                    affordance_extent,
-                                    reset_fg,
-                                )
-                                .into_iter()
-                                .collect::<Vec<AnyElement>>()
-                            },
-                        ));
+                            reset_fg,
+                        ) {
+                            out.push(reset);
+                        }
                     }
 
                     if let Some(action_el) = actions_el {
