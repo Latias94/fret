@@ -257,6 +257,35 @@ historical records remain in:
   `ui::h_flex(...).layout(...).gap(...).items_center()` row-content builders if a future visual or
   interaction gate proves the raw flex root changed row alignment semantics.
 
+## 2026-06-22 VirtualList Torture Row Action Button Shrink Note
+
+- The remaining `virtual_list_torture` row action path no longer routes the common left/right
+  buttons through full `shadcn::Button` recipe nodes.
+- A local `virtual_list_row_action_button(...)` helper now composes a pressable chrome container
+  directly with `control_chrome_pressable_with_id_props(...)`, `button_variants(...)`, and
+  `text_button_label_fill(...)` for the row label / `text_button_label(...)` for the outline edit
+  affordance.
+- Scope is still narrow: the retained/non-retained row chrome, row semantics, inline edit input
+  path, and page-scoped content-scroll bypass stay unchanged. Only the common non-editing row
+  action shape was tightened.
+- Validation passed with `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-row-action-fill-label-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint)=2719/2357/745/124/238`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-row-action-fill-label-codex-20260622/1782081927958/bundle.schema2.json`
+  confirmed the structural cut: `layout.nodes=149`, first-solve row `subtree_nodes=120`, root
+  apply `1434us`, and retained row solve `387us`.
+- Interpretation: this is a real win and a better continuation than the previous row-content-only
+  or content-scroll-only slices. The next pass should only continue here if fresh evidence shows
+  the remaining `VirtualList` / text-measure work is still the hottest owner.
+- Rollback is local: restore the `shadcn::Button` row label/edit callsites and delete
+  `virtual_list_row_action_button(...)` if a later visual or input gate shows this lighter authoring
+  lane is not acceptable.
+
 ## 2026-06-22 VirtualList Torture Outer Content Scroll Bypass Note
 
 - The next VirtualList torture slice disables the outer gallery content scroll shell for

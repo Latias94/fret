@@ -78,6 +78,65 @@ fn virtual_list_row_content(
     )
 }
 
+// Keeps row action chrome button-like without paying for the full shadcn Button slot tree.
+fn virtual_list_row_action_button<T, I>(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+    label: T,
+    test_id: I,
+    variant: shadcn::ButtonVariant,
+    layout: LayoutRefinement,
+    text_fill: bool,
+    on_activate: fret_ui::action::OnActivate,
+) -> AnyElement
+where
+    T: Into<Arc<str>>,
+    I: Into<Arc<str>>,
+{
+    let label = label.into();
+    let test_id = test_id.into();
+    let variants = shadcn::button_variants(&theme.snapshot(), variant, shadcn::ButtonSize::Sm);
+    let mut chrome = variants.chrome.px(Space::N3).py(Space::N1);
+    if variant == shadcn::ButtonVariant::Outline {
+        chrome = chrome.shadow_xs();
+    }
+
+    let pressable_layout = decl_style::layout_style(theme, variants.layout.merge(layout));
+    let chrome_props = decl_style::container_props(theme, chrome, LayoutRefinement::default());
+    let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
+
+    fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props(
+        cx,
+        move |cx, _state, _id| {
+            cx.pressable_on_activate(on_activate.clone());
+            let text = if text_fill {
+                fret_ui_kit::declarative::text::text_button_label_fill(cx, label.clone())
+            } else {
+                fret_ui_kit::declarative::text::text_button_label(cx, label.clone())
+            };
+
+            (
+                fret_ui::element::PressableProps {
+                    layout: pressable_layout,
+                    enabled: true,
+                    focusable: true,
+                    focus_ring: Some(focus_ring),
+                    key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
+                    a11y: fret_ui::element::PressableA11y {
+                        role: Some(fret_core::SemanticsRole::Button),
+                        label: Some(label.clone()),
+                        test_id: Some(test_id),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                chrome_props,
+                move |_cx| [text],
+            )
+        },
+    )
+}
+
 pub(in crate::ui) fn preview_virtual_list_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -443,13 +502,16 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 host.request_redraw(action_cx.window);
                             });
 
-                        let row_label = shadcn::Button::new(format!("Row {index}"))
-                            .variant(shadcn::ButtonVariant::Ghost)
-                            .size(shadcn::ButtonSize::Sm)
-                            .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
-                            .on_activate(on_select_row.clone())
-                            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .into_element(cx);
+                        let row_label = virtual_list_row_action_button(
+                            cx,
+                            &theme,
+                            format!("Row {index}"),
+                            format!("ui-gallery-virtual-list-row-{index}-label"),
+                            shadcn::ButtonVariant::Ghost,
+                            LayoutRefinement::default().flex_1().min_w_0(),
+                            true,
+                            on_select_row.clone(),
+                        );
 
                         let right = if is_editing {
                             shadcn::Input::new(edit_text.clone())
@@ -459,12 +521,16 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                                 .into_element(cx)
                         } else {
-                            shadcn::Button::new("Edit")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
-                                .on_activate(on_select_row)
-                                .into_element(cx)
+                            virtual_list_row_action_button(
+                                cx,
+                                &theme,
+                                "Edit",
+                                format!("ui-gallery-virtual-list-row-{index}-edit"),
+                                shadcn::ButtonVariant::Outline,
+                                LayoutRefinement::default(),
+                                false,
+                                on_select_row,
+                            )
                         };
 
                         let border_color = is_editing
@@ -569,13 +635,16 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                         });
                                     host.request_redraw(action_cx.window);
                                 });
-                            let row_label = shadcn::Button::new(format!("Row {index}"))
-                                .variant(shadcn::ButtonVariant::Ghost)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
-                                .on_activate(on_select_row.clone())
-                                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                                .into_element(cx);
+                            let row_label = virtual_list_row_action_button(
+                                cx,
+                                theme,
+                                format!("Row {index}"),
+                                format!("ui-gallery-virtual-list-row-{index}-label"),
+                                shadcn::ButtonVariant::Ghost,
+                                LayoutRefinement::default().flex_1().min_w_0(),
+                                true,
+                                on_select_row.clone(),
+                            );
 
                             let right = if is_editing {
                                 shadcn::Input::new(virtual_list_torture_edit_text.clone())
@@ -585,12 +654,16 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                                     .into_element(cx)
                             } else {
-                                shadcn::Button::new("Edit")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .size(shadcn::ButtonSize::Sm)
-                                    .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
-                                    .on_activate(on_select_row)
-                                    .into_element(cx)
+                                virtual_list_row_action_button(
+                                    cx,
+                                    theme,
+                                    "Edit",
+                                    format!("ui-gallery-virtual-list-row-{index}-edit"),
+                                    shadcn::ButtonVariant::Outline,
+                                    LayoutRefinement::default(),
+                                    false,
+                                    on_select_row,
+                                )
                             };
 
                             let mut container_props = decl_style::container_props(
