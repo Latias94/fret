@@ -29,6 +29,12 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
         Some("inspector_torture"),
         "inspector direct-entry perf script should start on inspector_torture",
     );
+    assert_eq!(
+        env.get("FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+            .and_then(Value::as_str),
+        Some("1"),
+        "inspector direct-entry perf script should default the sidebar shell cache so the direct-entry measurement stays on the stabilized shell contract",
+    );
     assert!(
         script.contains("\"ui-gallery-inspector-root\"")
             && script.contains("\"ui-gallery-inspector-row-0-label\""),

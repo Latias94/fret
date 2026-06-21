@@ -15,7 +15,8 @@
     "env_defaults": {
       "FRET_UI_GALLERY_START_PAGE": "inspector_torture",
       "FRET_UI_GALLERY_INSPECTOR_LEN": "96",
-      "FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE": "64"
+      "FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE": "64",
+      "FRET_UI_GALLERY_VIEW_CACHE_SHELL": "1"
     },
     "target_hints": [
       "Starts directly on the inspector_torture page so nav search and page-switch transitions do not dominate the probe.",

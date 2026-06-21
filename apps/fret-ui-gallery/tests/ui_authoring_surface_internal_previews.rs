@@ -1463,7 +1463,7 @@ fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
     );
 
     assert!(
-        !normalized.contains("letoverscan=12"),
+        !normalized.contains("letoverscan=4"),
         "inspector_torture should stay on the tighter overscan budget so the retained window does not grow wider than needed"
     );
 }

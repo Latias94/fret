@@ -2376,3 +2376,25 @@ popover overlay root solve tail.
   dominant owner out of the outer content viewport / shell path.
 - Conclusion: keep this as a negative slice and do not continue down the direct scroll-handle split
   path. The next cut needs a different owner shift, not another page-key scope tweak.
+
+## 2026-06-21 Inspector Direct-Entry Sidebar Shell Cache Contract Note
+
+- The inspector direct-entry perf surface now defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1` in
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json`, so
+  the steady probe measures the stabilized sidebar shell contract instead of the uncached sidebar
+  path.
+- Regression coverage now locks that env default in
+  `apps/fret-ui-gallery/tests/inspector_perf_surface.rs`.
+- Validation passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --test inspector_perf_surface --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast`
+- Perf rerun:
+  `target/fret-diag/inspector-direct-entry-shell-cache-probe-rerun/1782015545566/bundle.schema2.json`
+  reported `p50 total/layout/solve/prepaint/paint = 2300/1791/933/204/279` and
+  `p95 = 2442/1959/1069/228/281`.
+- Compared with the prior no-cache direct-entry band, this is a small but real total/layout win.
+  The remaining work is still in the broader sidebar/content shell owner, not the inspector rows.
+- Conclusion: keep this shell-cache default as part of the direct-entry measurement contract, but do
+  not treat it as the final structural fix. Continue the sidebar/nav shell line only if future node
+  profiles show another stable owner shift.
