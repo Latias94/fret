@@ -393,6 +393,15 @@ fn table_fixed_row_group<H: UiHost + 'static>(
     col_widths: Vec<Px>,
     cells: Vec<AnyElement>,
 ) -> AnyElement {
+    table_fixed_row_group_with_cell_padding(cx, col_widths, cells, None)
+}
+
+fn table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    col_widths: Vec<Px>,
+    cells: Vec<AnyElement>,
+    cell_padding: Option<(Px, Px)>,
+) -> AnyElement {
     let mut surface = fret_ui::element::ManagedSurfaceProps::default();
     surface.layout.size.width =
         Length::Px(col_widths.iter().fold(Px(0.0), |acc, w| Px(acc.0 + w.0)));
@@ -414,12 +423,23 @@ fn table_fixed_row_group<H: UiHost + 'static>(
 
                 for (idx, child) in children.into_iter().enumerate() {
                     let w = col_widths.get(idx).copied().unwrap_or(Px(0.0));
-                    let rect = fret_core::Rect::new(
+                    let cell_rect = fret_core::Rect::new(
                         fret_core::Point::new(x, y),
                         fret_core::Size::new(w, h),
                     );
-                    cx.layout_child(child, rect);
-                    hit_rects.push(rect);
+                    let child_rect = if let Some((pad_x, pad_y)) = cell_padding {
+                        fret_core::Rect::new(
+                            fret_core::Point::new(Px(x.0 + pad_x.0), Px(y.0 + pad_y.0)),
+                            fret_core::Size::new(
+                                Px((w.0 - pad_x.0 * 2.0).max(0.0)),
+                                Px((h.0 - pad_y.0 * 2.0).max(0.0)),
+                            ),
+                        )
+                    } else {
+                        cell_rect
+                    };
+                    cx.layout_child(child, child_rect);
+                    hit_rects.push(cell_rect);
                     x = Px(x.0 + w.0);
                 }
 
@@ -449,6 +469,21 @@ fn retained_table_fixed_row_group<H: UiHost + 'static>(
         .map(|col_idx| col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)))
         .collect::<Vec<_>>();
     table_fixed_row_group(cx, row_widths, cells)
+}
+
+fn retained_table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    col_widths: Arc<[Px]>,
+    col_indices: Vec<usize>,
+    cells: Vec<AnyElement>,
+    cell_px: Px,
+    cell_py: Px,
+) -> AnyElement {
+    let row_widths = col_indices
+        .iter()
+        .map(|col_idx| col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)))
+        .collect::<Vec<_>>();
+    table_fixed_row_group_with_cell_padding(cx, row_widths, cells, Some((cell_px, cell_py)))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -482,6 +517,9 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
         let row_cell_test_id_prefix = row_cell_test_id_prefix.clone();
         let data = data.clone();
         let props = props.clone();
+        let inline_cell_padding = matches!(props.row_measure_mode, TableRowMeasureMode::Fixed)
+            && props.optimize_grid_lines
+            && !row_cell_test_ids;
         let known_content_width = scroll_x_for_group
             .as_ref()
             .map(|_| table_known_content_width_for_indices(&col_widths, col_indices));
@@ -504,39 +542,54 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                         col.id.as_ref(),
                     );
 
-                    let cell = cx.container(
-                        ContainerProps {
-                            border: if props.optimize_grid_lines {
-                                Edges::default()
-                            } else {
-                                Edges {
-                                    right: Px(1.0),
-                                    ..Default::default()
-                                }
-                            },
-                            border_color: if props.optimize_grid_lines {
-                                None
-                            } else {
-                                Some(border)
-                            },
-                            padding: Edges::symmetric(cell_px, cell_py).into(),
-                            layout: table_fixed_column_layout(col_w),
-                            ..Default::default()
-                        },
-                        move |_cx| vec![cell],
-                    );
-
-                    if let Some(test_id) = cell_test_id {
-                        cell.test_id(test_id)
-                    } else {
+                    if inline_cell_padding {
                         cell
+                    } else {
+                        let cell = cx.container(
+                            ContainerProps {
+                                border: if props.optimize_grid_lines {
+                                    Edges::default()
+                                } else {
+                                    Edges {
+                                        right: Px(1.0),
+                                        ..Default::default()
+                                    }
+                                },
+                                border_color: if props.optimize_grid_lines {
+                                    None
+                                } else {
+                                    Some(border)
+                                },
+                                padding: Edges::symmetric(cell_px, cell_py).into(),
+                                layout: table_fixed_column_layout(col_w),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![cell],
+                        );
+
+                        if let Some(test_id) = cell_test_id {
+                            cell.test_id(test_id)
+                        } else {
+                            cell
+                        }
                     }
                 })
                 .collect::<Vec<_>>()
         };
 
         let row = if matches!(props.row_measure_mode, TableRowMeasureMode::Fixed) {
-            retained_table_fixed_row_group(cx, col_widths.clone(), col_indices.to_vec(), cells)
+            if inline_cell_padding {
+                retained_table_fixed_row_group_with_cell_padding(
+                    cx,
+                    col_widths.clone(),
+                    col_indices.to_vec(),
+                    cells,
+                    cell_px,
+                    cell_py,
+                )
+            } else {
+                retained_table_fixed_row_group(cx, col_widths.clone(), col_indices.to_vec(), cells)
+            }
         } else {
             ui::h_row(move |_cx| cells)
                 .gap(Space::N0)
@@ -1485,6 +1538,33 @@ mod tests {
         measure_mode: TableRowMeasureMode,
         selected_row: Option<RowKey>,
     ) {
+        render_retained_table_for_row_layout_with_options(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            measure_mode,
+            selected_row,
+            false,
+            TableDebugIds {
+                row_test_id_prefix: Some(Arc::<str>::from("retained-table-row-layout-row-")),
+                ..TableDebugIds::default()
+            },
+        );
+    }
+
+    fn render_retained_table_for_row_layout_with_options(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        measure_mode: TableRowMeasureMode,
+        selected_row: Option<RowKey>,
+        optimize_grid_lines: bool,
+        debug_ids: TableDebugIds,
+    ) {
         let mut state_value = TableState::default();
         state_value.pagination.page_size = 1;
         if let Some(row) = selected_row {
@@ -1522,6 +1602,7 @@ mod tests {
                             enable_column_grouping: false,
                             row_height: Some(Px(28.0)),
                             row_measure_mode: measure_mode,
+                            optimize_grid_lines,
                             ..TableViewProps::default()
                         },
                         Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
@@ -1534,12 +1615,7 @@ mod tests {
                                 cx.text(format!("{}-{row}", col.id.as_ref()))
                             },
                         ),
-                        TableDebugIds {
-                            row_test_id_prefix: Some(Arc::<str>::from(
-                                "retained-table-row-layout-row-",
-                            )),
-                            ..TableDebugIds::default()
-                        },
+                        debug_ids.clone(),
                     )]
                 },
             );
@@ -1807,6 +1883,60 @@ mod tests {
             Some("Pressable")
         );
         only_child_with_kind(&ui, &mut app, window, row_node, "ManagedSurface");
+    }
+
+    #[test]
+    fn table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        render_retained_table_for_row_layout_with_options(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            TableRowMeasureMode::Fixed,
+            None,
+            true,
+            TableDebugIds {
+                row_test_id_prefix: Some(Arc::<str>::from("retained-table-row-layout-row-")),
+                row_cell_test_ids: false,
+                ..TableDebugIds::default()
+            },
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        only_child_with_kind(&ui, &mut app, window, row_node, "ManagedSurface");
+        assert_eq!(
+            subtree_declarative_kind_count(&ui, &mut app, window, row_node, "Container"),
+            0,
+            "plain fixed retained rows should not keep per-cell Container wrappers when grid lines and per-cell debug anchors are disabled"
+        );
+        assert_eq!(
+            subtree_declarative_kind_count(&ui, &mut app, window, row_node, "Text"),
+            1,
+            "the cell renderer should still mount directly under the fixed row group"
+        );
     }
 
     #[test]

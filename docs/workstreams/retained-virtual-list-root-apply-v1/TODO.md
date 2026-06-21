@@ -33,8 +33,13 @@ Last updated: 2026-06-21
 - [x] Re-run the retained data-table diag script and record the before/after stats.
 - [x] Re-run the retained data-table perf repro after the cell wrapper deletion with the mouse-wheel
       path, avoiding the missing `diag.pointer_kind_touch` capability.
-- [ ] Compare the retained row subtree shape against upstream table/list references before the next
+- [x] Compare the retained row subtree shape against upstream table/list references before the next
       mechanism slice.
+      `repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx` and
+      `repo-ref/ui/apps/v4/registry/new-york-v4/examples/data-table-demo.tsx` keep the body row
+      shape at `TableRow -> TableCell -> content`, while Base UI keeps scroll-area content as a
+      separate viewport/content concern. Fresh stats moved the hot retained path back to per-cell
+      wrapper breadth, not a broader scroll-area mismatch.
 - [x] Decide whether the next slice should deepen `VirtualList` or flatten the row/cell tree.
 - [x] Disable per-cell debug anchors in the torture preview and verify the perf rerun stays
       owned by retained `VirtualList` plus the parent `Scroll`.
@@ -50,9 +55,11 @@ Last updated: 2026-06-21
 - [ ] If the current retained `VirtualList` frame still reports broad dirty-subtree fanout with no
       retained-reconcile burst, inspect scroll-handle invalidation and subtree dirty propagation
       before adding more root-local layout cleanup.
-- [ ] Re-run the retained data-table repro with `debug.layout_root_applies[]` available, then use
+- [x] Re-run the retained data-table repro with `debug.layout_root_applies[]` available, then use
       `layout_root_applies` to decide whether the next owner is root apply, retained `VirtualList`,
       `Scroll`, or a narrower follow-on.
+- [x] Re-run the retained data-table repro after the fixed-row inline cell-padding slice and record
+      the before/after stats.
 - [ ] If the current evidence says the row/cell tree itself is the dominant cost, close this lane
       with a follow-on that owns table/recipe tree depth instead of more `VirtualList` cleanup.
 - [ ] Update `WORKSTREAM.json`, `MILESTONES.md`, and `EVIDENCE_AND_GATES.md` after each landed

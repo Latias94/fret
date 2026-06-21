@@ -66,6 +66,29 @@ historical records remain in:
   improvement, even though the nav scroll path still remains the hottest structural owner to watch
   on the next pass.
 
+## 2026-06-21 Retained Data-Table Inline Cell Padding Note
+
+- The retained data-table root-apply evidence now shows the fixed-height retained row hot path was
+  paying for per-cell `Container` wrappers after the row/cell tree became the measured owner again.
+- `ecosystem/fret-ui-kit/src/declarative/table.rs` now lets the fixed-row `ManagedSurface` place
+  cell children directly into padded rects when grid lines and per-cell debug anchors are disabled.
+  The existing wrapper path remains for cell anchors, grid lines, and measured rows.
+- Upstream comparison: shadcn table keeps body rows as `TableRow -> TableCell -> content`, while
+  Base UI keeps scroll-area `Root -> Viewport -> Content` separate. That supports deleting a local
+  table cell shell in the no-anchor hot path instead of changing generic ScrollArea structure.
+- Validation passed with focused `fret-ui-kit` retained-row structure tests, retained table
+  integration gates, `fret-ui-shadcn` retained header sort coverage, and the release retained
+  data-table perf repro.
+- Latest probe:
+  `target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json`
+  reported `p95.us(total/layout/prepaint/paint)=1983/1642/76/306`,
+  `layout.root apply=1366`, and `layout.nodes=250`.
+- Compared with
+  `target/fret-diag/retained-vlist-root-apply-nextowner-codex-20260621/1782065143290/bundle.schema2.json`
+  at `4248/3408/293/575`, `layout.root apply=2678`, and `layout.nodes=382`, this removes the
+  obvious per-cell wrapper owner. The remaining retained child path is `Text` + `ManagedSurface`
+  + `Pressable`, with the content `Scroll` shell still visible.
+
 ## 2026-06-21 PropertyRow Direct-Root Shrink Note
 
 - The editor-controls follow-up now includes a local `PropertyRow` root-shrink slice in

@@ -168,3 +168,35 @@ Evidence:
   `clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout`,
   `triage_includes_hints_and_unit_costs_for_worst_frame`, `layout_perf_summary`, and
   `cargo check -p fret-bootstrap --lib`.
+
+## M7 - Retained Fixed Row Inline Cell Padding
+
+Status: Complete.
+
+Done criteria:
+
+- Fresh `layout_root_applies` evidence confirms the aggregate apply owner still expands through
+  the content `Scroll` into the retained data-table `VirtualList`.
+- Upstream table/list shape is checked before changing the row tree: shadcn keeps table cell
+  chrome on the `td` boundary, while Base UI keeps scroll-area content as its own viewport/content
+  part rather than per-row shell policy.
+- The retained fixed-row hot path drops per-cell `Container` wrappers when grid lines and per-cell
+  debug anchors are disabled, keeping the existing slower path for cell anchors, grid lines, and
+  measured rows.
+- Focused retained table and shadcn retained data-table gates pass.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/declarative/table.rs` now lets the fixed row `ManagedSurface` lay out
+  cell children directly into padded rects on the hot no-cell-anchor path.
+- `table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding` asserts the row subtree has
+  no per-cell `Container` wrappers while the cell renderer still mounts.
+- Pre-slice retained repro:
+  `target/fret-diag/retained-vlist-root-apply-nextowner-codex-20260621/1782065143290/bundle.schema2.json`
+  reported `p95.us(total/layout)=4248/3408`, `layout.root apply=2678`, and `layout.nodes=382`.
+- Post-slice retained repro:
+  `target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json`
+  reported `p95.us(total/layout)=1983/1642`, `layout.root apply=1366`, and `layout.nodes=250`.
+- Scroll profile deltas on the hot retained `VirtualList` child path:
+  nodes performed `330 -> 198`, `Container` nodes `132 -> 0`, and child-layout time
+  `1770us -> 667us`.

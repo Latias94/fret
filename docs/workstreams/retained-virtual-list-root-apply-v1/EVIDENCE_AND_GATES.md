@@ -361,6 +361,49 @@ Interpretation:
   `layout_root_applies` to decide whether the root owner is still retained `VirtualList` plus
   parent `Scroll`, or whether ownership has moved to a narrower follow-on.
 
+## 2026-06-21 Retained Fixed Row Inline Cell Padding
+
+```bash
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_selected_rows_keep_background_wrapper table_virtualized_retained_fixed_rows_mount_as_clip_boundaries --no-fail-fast --no-capture
+cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_header_debug_ids_click_sort_actions table_virtualized_retained_selected_semantics_follow_windowed_row_selection table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width --no-fail-fast --no-capture
+cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib retained_data_table_header_debug_ids_sort_with_column_actions --no-fail-fast --no-capture
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621 --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness
+target/release/fretboard-dev diag stats target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json --sort cpu_cycles --top 30
+```
+
+Observed gates:
+
+- Focused row-structure tests passed, including the new direct cell-padding assertion.
+- Retained table integration gates passed for horizontal transform alignment, nested focus
+  bubbling, header sort actions, selected-row semantics, and pinned/measured-row alignment.
+- The shadcn retained data-table header sort gate passed.
+- The release retained data-table repro completed and wrote
+  `target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json`.
+
+Stats:
+
+- Before:
+  `target/fret-diag/retained-vlist-root-apply-nextowner-codex-20260621/1782065143290/bundle.schema2.json`
+  reported `p95.us(total/layout/prepaint/paint)=4248/3408/293/575`,
+  `layout.root apply=2678`, `layout.nodes=382`, and the retained `VirtualList` child path had
+  `layout_children_first_pass=1770us`, `nodes_performed=330`, `Container nodes=132`.
+- After:
+  `target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json`
+  reported `p95.us(total/layout/prepaint/paint)=1983/1642/76/306`,
+  `layout.root apply=1366`, `layout.nodes=250`, and the retained `VirtualList` child path had
+  `layout_children_first_pass=667us`, `nodes_performed=198`, `Container nodes=0`.
+
+Interpretation:
+
+- The root apply owner is still the window root in `layout_root_applies[]`, but the scroll profile
+  now makes the child owner explicit: the prior cost was row/cell subtree breadth inside the
+  retained data-table `VirtualList`.
+- Inline cell padding is a bounded table mechanism/policy optimization, not a broad runtime
+  shortcut. It only applies to fixed-height retained rows when grid lines and per-cell debug anchors
+  are disabled; the previous wrapper path remains for cell anchors, grid lines, and measured rows.
+- The next owner is no longer the deleted cell `Container` shell. The remaining retained child path
+  is `Text` + `ManagedSurface` + `Pressable`, plus the content `Scroll` shell.
+
 ## Documentation Gates
 
 ```powershell

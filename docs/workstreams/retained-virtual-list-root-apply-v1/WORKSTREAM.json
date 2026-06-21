@@ -5,7 +5,7 @@
   "status": "active",
   "updated": "2026-06-21",
   "scope_kind": "execution",
-  "problem": "Retained data-table optimization moved the measured owner out of table row/cell structure and into retained VirtualList layout/root application. Current evidence still shows the hot owner in the fixed/known-height retained VirtualList first-pass child layout path under post-layout root apply, but code inspection also shows the fixed path still walks every visible child and only skips measurement. Root apply owner attribution is now available through debug.layout_root_applies[], so this lane now owns a fresh evidence pass before choosing between a narrower retained VirtualList fast path, root apply/barrier work, and a possible table/row-tree-depth follow-on.",
+  "problem": "Retained data-table optimization moved the measured owner out of table row/cell structure and into retained VirtualList layout/root application. Fresh evidence now shows the hottest fixed-height retained path was not just VirtualList traversal but also per-cell wrapper breadth inside the retained row subtree. Root apply owner attribution remains available through debug.layout_root_applies[], so this lane now owns the remaining fixed-height retained child-layout path, including whether to keep collapsing row/cell shells or split a narrower follow-on.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -95,6 +95,8 @@
         "target/fret-diag/retained-vlist-root-apply-m2-cell-semantic-dewrapper-v2/1781578517352/bundle.schema2.json",
         "target/fret-diag/1781592842180/bundle.json",
         "target/fret-diag/1781594910783/bundle.schema2.json",
+        "target/fret-diag/retained-vlist-root-apply-nextowner-codex-20260621/1782065143290/bundle.schema2.json",
+        "target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json",
         "crates/fret-ui/src/declarative/mount.rs",
         "crates/fret-ui/src/tree/debug/layout.rs",
         "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
@@ -103,6 +105,7 @@
         "crates/fret-ui/src/tree/tests/view_cache.rs",
         "crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs",
         "crates/fret-ui/src/widget.rs",
+        "ecosystem/fret-ui-kit/src/declarative/table.rs",
         "ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs",
         "crates/fret-diag/src/stats/bundle_stats_snapshot.rs",
         "crates/fret-diag/src/triage_json.rs",
@@ -116,7 +119,7 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or barrier relayout. Split a narrower follow-on if evidence says the row/cell tree itself is the dominant cost, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slices removed pure test-id semantics wrappers from retained table cells, hoisted the shared horizontal body transform, disabled per-cell debug anchors in the torture preview, and added root apply owner attribution. The immediate next action is to rerun the retained data-table repro and inspect layout_root_applies before landing another runtime optimization."
+    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or a local retained row/cell shell. Split a narrower follow-on if evidence says the row/cell tree itself is still dominant after the fixed-height inline-padding fast path, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slices removed pure test-id semantics wrappers from retained table cells, hoisted the shared horizontal body transform, disabled per-cell debug anchors in the torture preview, added root apply owner attribution, and then inlined cell padding on the hot fixed-row path. The immediate next action is to inspect whether the remaining hotspot is the content Scroll shell or a narrower retained row shell before landing another runtime optimization."
   },
   "follow_on_of": "ui-table-row-cell-structural-churn-v1"
 }
