@@ -144,8 +144,14 @@ pub(crate) fn content_view(
     #[cfg(not(feature = "gallery-dev"))]
     let disable_content_scroll_for_inspector = false;
 
+    #[cfg(feature = "gallery-dev")]
+    let disable_content_scroll_for_code_view = selected == PAGE_CODE_VIEW_TORTURE;
+    #[cfg(not(feature = "gallery-dev"))]
+    let disable_content_scroll_for_code_view = false;
+
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0
         || disable_content_scroll_for_inspector
+        || disable_content_scroll_for_code_view
     {
         // When content scroll is disabled, keep the header and page body in one static stack.
         ui::v_flex(|_cx| [header, preview_panel])

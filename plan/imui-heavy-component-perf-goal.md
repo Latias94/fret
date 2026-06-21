@@ -66,6 +66,25 @@ historical records remain in:
   improvement, even though the nav scroll path still remains the hottest structural owner to watch
   on the next pass.
 
+## 2026-06-21 Code-View Torture Content-Scroll Bypass Note
+
+- The `code_view_torture` direct-entry path now opts out of the outer gallery content scroll shell
+  in `apps/fret-ui-gallery/src/ui/content.rs` and renders as the same static header + body stack
+  used by the existing content-scroll-disabled branch.
+- The bypass is explicit and page-scoped: `selected == PAGE_CODE_VIEW_TORTURE` joins the existing
+  content-scroll guard, so the shortcut is narrow and easy to reverse if the contract changes.
+- Regression coverage was added in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` to lock the new bypass
+  gate.
+- Validation passed with `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test code_view_perf_surface --no-fail-fast`,
+  and the direct-entry perf probe
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json`.
+- Latest probe result on `target/fret-diag/code-view-direct-entry-content-scroll-bypass-v1/1782012408933/bundle.json`:
+  `p95.us(total/layout/solve/prepaint/paint)=300/9/0/193/98`.
+- Compared with the prior direct-entry run (`1916/1537/750/166/229`), this is the first cut that
+  removes the outer content-scroll owner from the hot path instead of only reshaping the page shell.
+
 ## 2026-06-16 Progress Note
 
 - The retained data-table lane has now moved past table-local row/cell duplication into retained
