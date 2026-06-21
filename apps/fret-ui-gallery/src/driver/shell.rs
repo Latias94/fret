@@ -107,38 +107,36 @@ pub(super) fn sidebar_view(
             },
         )
     } else {
-        cx.keyed("ui_gallery.sidebar", |cx| {
-            let selected = cx
-                .get_model_cloned(selected_page, Invalidation::Layout)
-                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-            let query = cx
-                .get_model_cloned(nav_query, Invalidation::Layout)
-                .unwrap_or_default();
+        let selected = cx
+            .get_model_cloned(selected_page, Invalidation::Layout)
+            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let query = cx
+            .get_model_cloned(nav_query, Invalidation::Layout)
+            .unwrap_or_default();
 
-            if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
-                cx.container(
-                    decl_style::container_props(
-                        theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(theme.color_token("muted")))
-                            .p(Space::N4),
-                        LayoutRefinement::default()
-                            .w_px(Px(280.0))
-                            .h_full()
-                            .flex_shrink_0(),
-                    ),
-                    |cx| vec![text_roles::chrome_readout_text(cx, "Sidebar (disabled)")],
-                )
-            } else {
-                ui::sidebar_view(
-                    cx,
+        if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+            cx.container(
+                decl_style::container_props(
                     theme,
-                    selected.as_ref(),
-                    query.as_str(),
-                    nav_query.clone(),
-                )
-            }
-        })
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(theme.color_token("muted")))
+                        .p(Space::N4),
+                    LayoutRefinement::default()
+                        .w_px(Px(280.0))
+                        .h_full()
+                        .flex_shrink_0(),
+                ),
+                |cx| vec![text_roles::chrome_readout_text(cx, "Sidebar (disabled)")],
+            )
+        } else {
+            ui::sidebar_view(
+                cx,
+                theme,
+                selected.as_ref(),
+                query.as_str(),
+                nav_query.clone(),
+            )
+        }
     }
 }
 

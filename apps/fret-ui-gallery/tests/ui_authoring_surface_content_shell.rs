@@ -93,3 +93,21 @@ fn gallery_content_scroll_area_keeps_the_page_level_handle_without_a_nested_page
         "gallery content should not keep the nested page-keyed scroll wrapper",
     );
 }
+
+#[test]
+fn gallery_sidebar_view_does_not_keep_an_extra_keyed_shell_wrapper() {
+    let normalized = assert_normalized_markers_present(
+        "src/driver/shell.rs",
+        &[
+            "let selected = cx",
+            "let query = cx",
+            "ui::sidebar_view(",
+            "if (bisect & BISECT_SIMPLE_SIDEBAR) != 0",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.keyed(\"ui_gallery.sidebar\""),
+        "gallery sidebar should not keep an extra keyed shell wrapper around the nav view",
+    );
+}

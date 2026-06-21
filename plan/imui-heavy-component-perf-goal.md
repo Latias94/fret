@@ -2297,6 +2297,32 @@ popover overlay root solve tail.
   slice should stay on the inspector content shell / viewport boundary instead of reopening the row
   micro-optimizations first.
 
+## 2026-06-21 Inspector Direct-Entry Sidebar Shell Shrink Note
+
+- The latest node-profile pass on `ui-gallery-inspector-torture-scroll-direct-entry` put the hottest
+  owner in the fixed-width sidebar `Scroll`, not the inspector retained list. The ranked hot node was
+  `ui-gallery-nav-scroll` with `self_us=6949` and `total_us=10714`, while the inspector
+  `ui-gallery-inspector-root` `VirtualList` stayed around `self_us=545` / `total_us=647` on the same
+  profile.
+- `apps/fret-ui-gallery/src/driver/shell.rs` no longer wraps the sidebar path in an extra
+  `cx.keyed("ui_gallery.sidebar", ...)` shell when sidebar view-caching is off. The branch now reads
+  the selected page/query once and hands the result directly to `ui::sidebar_view(...)`.
+- Regression coverage now locks the narrower sidebar-shell shape in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_content_shell.rs`, alongside the existing
+  content-shell and inspector-preview regression checks.
+- Validation passed with `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_content_shell --no-fail-fast`,
+  and perf reruns.
+- Perf evidence:
+  - before: `target/fret-diag/inspector-torture-scroll-direct-entry-followup/1782002141113/bundle.schema2.json`
+    with `p95 total/layout/prepaint/paint = 2608/1916/310/344`
+  - after: `target/fret-diag/inspector-direct-entry-after-sidebar-shrink/1782003641604/bundle.schema2.json`
+    with `p95 total/layout/solve/prepaint/paint = 2494/1991/940/263/468`
+- Interpretation: the sidebar shell shrink produced a real but modest improvement in total time, but
+  it also shifted some cost toward layout solve/paint. The next slice should stay evidence-led: either
+  continue trimming the sidebar/nav shell or look for a better owner shift in the content shell only
+  if a fresh node profile moves the hotspot again.
+
 ## 2026-06-21 Inspector Direct-Entry Scroll Handle Split Rejection Note
 
 - I tried splitting the keyed outer wrapper around the content scroll area in
