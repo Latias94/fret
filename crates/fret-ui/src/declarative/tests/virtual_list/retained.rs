@@ -669,6 +669,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
     let window = AppWindowId::default();
     ui.set_window(window);
     ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
 
     let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
     let bounds = Rect::new(
@@ -735,9 +736,22 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         )
     }
 
-    // Virtual lists need a "viewport-known" render to mount their first visible window. Do an
-    // initial two-frame warmup with view caching disabled so `VirtualListState.viewport_*` gets
-    // populated during layout, then allow the next render to build the initial children.
+    fn build_cached_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        captured_ids: &Arc<std::sync::Mutex<CapturedIds>>,
+        renders: Option<Arc<AtomicUsize>>,
+    ) -> AnyElement {
+        cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+            if let Some(renders) = renders.as_ref() {
+                renders.fetch_add(1, Ordering::SeqCst);
+            }
+            vec![build_list(cx, scroll_handle, captured_ids)]
+        })
+    }
+
+    // Virtual lists need a "viewport-known" render to mount their first visible window. Keep all
+    // frames on the same `view_cache` helper callsite so this test exercises one stable cache root.
     for _frame in 0..2 {
         let scroll_handle = scroll_handle.clone();
         let captured_ids = Arc::clone(&captured_ids);
@@ -748,13 +762,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
             window,
             bounds,
             "retained-virt-003",
-            move |cx| {
-                vec![
-                    cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
-                        vec![build_list(cx, &scroll_handle, &captured_ids)]
-                    }),
-                ]
-            },
+            move |cx| vec![build_cached_list(cx, &scroll_handle, &captured_ids, None)],
         );
 
         ui.set_root(root_node);
@@ -781,12 +789,12 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
             bounds,
             "retained-virt-003",
             move |cx| {
-                vec![
-                    cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
-                        renders.fetch_add(1, Ordering::SeqCst);
-                        vec![build_list(cx, &scroll_handle, &captured_ids)]
-                    }),
-                ]
+                vec![build_cached_list(
+                    cx,
+                    &scroll_handle,
+                    &captured_ids,
+                    Some(renders),
+                )]
             },
         );
 
@@ -949,12 +957,12 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
             bounds,
             "retained-virt-003",
             move |cx| {
-                vec![
-                    cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
-                        renders_for_closure.fetch_add(1, Ordering::SeqCst);
-                        vec![build_list(cx, &scroll_handle, &captured_ids)]
-                    }),
-                ]
+                vec![build_cached_list(
+                    cx,
+                    &scroll_handle,
+                    &captured_ids,
+                    Some(renders_for_closure),
+                )]
             },
         );
         ui.set_root(root_node);
@@ -981,6 +989,9 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
         "expected retained host reconciliation to avoid repeated rerendering the cache root (baseline_renders={baseline_renders}, renders_after_scroll_frames={renders_after_scroll_frames:?})"
     );
 
+    let vlist_node =
+        crate::declarative::node_for_element_in_window_frame(&mut app, window, vlist_element)
+            .expect("virtual list node exists after scroll reconcile");
     let (visible_indices, frame_children_len, ui_children_len): (Vec<usize>, usize, usize) =
         crate::declarative::with_window_frame(&mut app, window, |window_frame| {
             let window_frame = window_frame?;
@@ -1064,6 +1075,56 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
             );
         }
     });
+
+    let cache_node =
+        crate::declarative::node_for_element_in_window_frame(&mut app, window, cache_root)
+            .expect("cache root node exists after retained-host reconcile");
+    let cache_reusable_before_settle = ui.should_reuse_view_cache_node(cache_node);
+    assert!(
+        cache_reusable_before_settle,
+        "expected cache root to remain reusable before the retained virtual-list settle frame (layout_invalidated={}, subtree_dirty={}, subtree_dirty_count={}, needs_rerender={})",
+        ui.node_layout_invalidated(cache_node),
+        ui.node_subtree_layout_dirty(cache_node),
+        ui.node_subtree_layout_dirty_count(cache_node),
+        ui.view_cache_node_needs_rerender(cache_node)
+    );
+
+    let renders_before_settle = renders.load(Ordering::SeqCst);
+    crate::virtual_list::debug_reset_virtual_list_layout_in_calls();
+    let renders_for_closure = Arc::clone(&renders);
+    let scroll_handle = scroll_handle.clone();
+    let captured_ids = Arc::clone(&captured_ids);
+    let root_node = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-virt-003",
+        move |cx| {
+            vec![build_cached_list(
+                cx,
+                &scroll_handle,
+                &captured_ids,
+                Some(renders_for_closure),
+            )]
+        },
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let cache_root_stats_after_settle = ui.debug_cache_root_stats();
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        renders_before_settle,
+        "expected the retained virtual-list scroll settle frame to keep the cache root as a hit (cache_root_stats_after_settle={cache_root_stats_after_settle:?})"
+    );
+    assert_eq!(
+        crate::virtual_list::debug_virtual_list_layout_in_calls(),
+        0,
+        "expected the retained virtual-list scroll settle frame to skip clean child layout-in calls"
+    );
 }
 
 #[test]

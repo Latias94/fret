@@ -55,6 +55,9 @@ Last updated: 2026-06-21
 - [ ] If the current retained `VirtualList` frame still reports broad dirty-subtree fanout with no
       retained-reconcile burst, inspect scroll-handle invalidation and subtree dirty propagation
       before adding more root-local layout cleanup.
+- [x] Characterize the retained ViewCache settle frame after retained-host reconcile; stable
+      `view_cache` callsite identity proves the initial third-frame miss was a test artifact, so no
+      runtime reuse-root marking change should land from that evidence alone.
 - [x] Re-run the retained data-table repro with `debug.layout_root_applies[]` available, then use
       `layout_root_applies` to decide whether the next owner is root apply, retained `VirtualList`,
       `Scroll`, or a narrower follow-on.

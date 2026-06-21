@@ -404,6 +404,30 @@ Interpretation:
 - The next owner is no longer the deleted cell `Container` shell. The remaining retained child path
   is `Text` + `ManagedSurface` + `Pressable`, plus the content `Scroll` shell.
 
+## 2026-06-21 Retained View-Cache Settle Contract
+
+```bash
+cargo nextest run -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root --no-fail-fast --no-capture
+cargo nextest run -p fret-ui retained_virtual_list --no-fail-fast --no-capture
+```
+
+Observed gates:
+
+- The focused retained-host reconcile test passed.
+- The retained VirtualList group gate passed: 8 tests run, 8 passed.
+
+Interpretation:
+
+- The first third-frame settle assertion failed because the test duplicated the
+  `cx.view_cache(...)` callsite in a later render block. Declarative cache-root identity is
+  callsite-driven, so that block created a different cache-root `GlobalElementId` and forced the
+  render closure to run.
+- The test now uses a shared `build_cached_list` helper so warmup, scroll, and settle frames all
+  exercise the same cache root.
+- With stable cache-root identity, the settle frame after retained-host membership refresh keeps the
+  render count unchanged and records zero clean child `layout_in` calls.
+- No runtime reuse-root marking change landed from this characterization.
+
 ## Documentation Gates
 
 ```powershell

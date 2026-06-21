@@ -89,6 +89,20 @@ historical records remain in:
   obvious per-cell wrapper owner. The remaining retained child path is `Text` + `ManagedSurface`
   + `Pressable`, with the content `Scroll` shell still visible.
 
+## 2026-06-21 Retained VirtualList View-Cache Settle Contract Note
+
+- The retained `VirtualList` view-cache settle characterization now keeps every render phase on the
+  same `cx.view_cache(...)` helper callsite. The earlier third-frame rerender was a test identity
+  artifact caused by duplicating the `view_cache` callsite, not a proven runtime cache miss.
+- The trial runtime change that marked ancestor cache roots during retained membership refresh was
+  removed. With stable identity, no runtime behavior change is needed for this contract.
+- `retained_virtual_list_host_updates_window_without_rerendering_view_cache_root` now asserts that
+  after retained-host reconcile refreshes cache-root membership, the following settle frame keeps
+  the cache-root render count unchanged and performs zero clean child `layout_in` calls.
+- Validation passed with
+  `cargo nextest run -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root --no-fail-fast --no-capture`
+  and `cargo nextest run -p fret-ui retained_virtual_list --no-fail-fast --no-capture`.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

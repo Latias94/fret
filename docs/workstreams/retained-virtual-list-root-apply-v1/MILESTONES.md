@@ -200,3 +200,27 @@ Evidence:
 - Scroll profile deltas on the hot retained `VirtualList` child path:
   nodes performed `330 -> 198`, `Container` nodes `132 -> 0`, and child-layout time
   `1770us -> 667us`.
+
+## M8 - Retained View-Cache Settle Contract
+
+Status: Complete.
+
+Done criteria:
+
+- The retained-host reconcile test keeps every frame on one stable `view_cache` callsite so the
+  cache root `GlobalElementId` does not change between warmup, scroll, and settle frames.
+- The settle frame after retained membership refresh keeps the cache-root render count stable.
+- The same settle frame performs zero clean child `layout_in` calls.
+- Any runtime reuse-root marking experiment is removed unless a stable-identity repro still fails.
+
+Evidence:
+
+- `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs` now uses a shared
+  `build_cached_list` helper for the cache-root callsite in
+  `retained_virtual_list_host_updates_window_without_rerendering_view_cache_root`.
+- Focused gate passed:
+  `cargo nextest run -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root --no-fail-fast --no-capture`.
+- Retained VirtualList group gate passed:
+  `cargo nextest run -p fret-ui retained_virtual_list --no-fail-fast --no-capture`.
+- Interpretation: the initial third-frame miss was a duplicated-callsite test artifact, not a
+  proven runtime `ViewCache` or retained membership bug.

@@ -45,6 +45,10 @@
       "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui retained_virtual_list --no-fail-fast --no-capture"
     },
     {
+      "name": "retained-view-cache-settle-contract",
+      "command": "cargo nextest run -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root --no-fail-fast --no-capture"
+    },
+    {
       "name": "retained-table-integration",
       "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform table_virtualized_retained_nested_focus_bubbles_keyboard_to_list table_virtualized_retained_header_debug_ids_click_sort_actions --no-fail-fast --no-capture"
     },
@@ -98,6 +102,7 @@
         "target/fret-diag/retained-vlist-root-apply-nextowner-codex-20260621/1782065143290/bundle.schema2.json",
         "target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json",
         "crates/fret-ui/src/declarative/mount.rs",
+        "crates/fret-ui/src/declarative/tests/virtual_list/retained.rs",
         "crates/fret-ui/src/tree/debug/layout.rs",
         "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
         "crates/fret-ui/src/tree/layout/entrypoints.rs",
