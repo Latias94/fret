@@ -1,7 +1,7 @@
 # Evidence And Gates
 
 Status: Active
-Last updated: 2026-06-20
+Last updated: 2026-06-21
 
 ## Repro
 
@@ -93,6 +93,15 @@ Direct-entry no-focus subtree-interest rerun evidence:
   returns `0` for the rerun bundle, so the direct-entry no-focus subtree fallback hotspot class is
   no longer present on this probe.
 
+Direct-entry stable-root focus rerun evidence:
+
+- `target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json`
+- `diag stats --sort command_availability --top 10` now keeps the hottest frames on
+  `edit.copy@focused_or_default` / `action_route_fallback_roots`, with the stable-root click path
+  no longer surfacing `subtree_no_focus_fallback` hotspots.
+- `jq '[.windows[]?.snapshots[]?.debug.command_availability_hotspots[]? | select(.route == "subtree_no_focus_fallback")] | length'`
+  returns `0` for the stable-root rerun bundle.
+
 Expected JSON path:
 
 - `/top/*/command_availability_hotspots/*/command`
@@ -164,6 +173,22 @@ cargo nextest run -p fret-ui \
 ```
 
 Latest result: 1 passed.
+
+Focused inspector direct-entry stable-root coverage:
+
+```bash
+cargo nextest run -p fret-ui-gallery --no-fail-fast \
+  inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_search \
+  inspector_scroll_perf_script_keeps_nav_transition_setup \
+  gallery_inspector_torture_uses_fixed_row_text_roles \
+  gallery_inspector_torture_stamps_row_root_semantics_and_action_state \
+  gallery_inspector_torture_keeps_selected_row_model_on_paint_invalidation \
+  gallery_inspector_torture_keeps_row_shell_shrunk \
+  gallery_inspector_torture_keeps_tight_virtual_list_overscan \
+  gallery_inspector_torture_wraps_the_retained_list_in_a_stable_root_semantics_host
+```
+
+Latest result: 8 passed.
 
 Focused migrated parser and registry gates:
 

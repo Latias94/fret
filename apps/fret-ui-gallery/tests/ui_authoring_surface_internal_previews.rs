@@ -1317,6 +1317,8 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
             "test_id:Some(inspector_row_test_id(index)),",
             "selected_row_value==Some(index)",
             "cx.pressable_add_on_activate(on_select_row.clone())",
+            "cx.pressable_add_on_activate_focus(Arc::new(",
+            "host.request_focus(root_id);",
             "row.test_id(inspector_row_test_id(index))",
             "SemanticsDecoration::default().test_id(inspector_row_label_test_id(index))",
         ],
@@ -1469,10 +1471,16 @@ fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
 }
 
 #[test]
-fn gallery_inspector_torture_returns_the_retained_list_directly() {
+fn gallery_inspector_torture_wraps_the_retained_list_in_a_stable_root_semantics_host() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/torture/inspector_torture.rs",
-        &["letlist=list.attach_semantics(", "vec![list]"],
+        &[
+            "letroot=cx.semantics_with_id(",
+            "SemanticsProps{role:fret_core::SemanticsRole::List,",
+            "test_id:Some(Arc::from(\"ui-gallery-inspector-root\")),",
+            "vec![list]",
+            "vec![root]",
+        ],
     );
 
     assert!(
@@ -1482,7 +1490,7 @@ fn gallery_inspector_torture_returns_the_retained_list_directly() {
     assert!(
         !normalized
             .contains("CachedSubtreeProps::default().contain_layout_when_bounds_known(true)"),
-        "inspector_torture should let the retained virtual list own the direct boundary instead of wrapping it in a second cached subtree",
+        "inspector_torture should keep the retained list boundary direct even with the stable root semantics host",
     );
 }
 

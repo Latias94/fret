@@ -46,8 +46,8 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
     );
     assert!(
         script.contains("\"kind\": \"focus_is\"")
-            && script.contains("\"ui-gallery-inspector-row-0\""),
-        "inspector direct-entry perf script should wait for the clicked first row to become focused before the measured scroll window",
+            && script.contains("\"ui-gallery-inspector-root\""),
+        "inspector direct-entry perf script should wait for the stable inspector root to become focused before the measured scroll window",
     );
     assert!(
         !script.contains("\"ui-gallery-nav-search\"")
@@ -66,7 +66,7 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
     assert_eq!(
         reset_indices.len(),
         2,
-        "inspector direct-entry perf script should warm the page first, then reset diagnostics after the row-focus settle window",
+        "inspector direct-entry perf script should warm the page first, then reset diagnostics after the stable-focus settle window",
     );
 
     let focus_wait_index = steps
@@ -83,7 +83,7 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
                     .and_then(|predicate| predicate.get("target"))
                     .and_then(|target| target.get("id"))
                     .and_then(Value::as_str)
-                    == Some("ui-gallery-inspector-row-0")
+                    == Some("ui-gallery-inspector-root")
         })
         .expect("inspector direct-entry perf script focus wait step");
     let capture_index = steps

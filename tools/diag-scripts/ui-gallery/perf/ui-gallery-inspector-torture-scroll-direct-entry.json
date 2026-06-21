@@ -70,7 +70,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-inspector-row-0" }
+        "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }
       },
       "timeout_frames": 120
     },

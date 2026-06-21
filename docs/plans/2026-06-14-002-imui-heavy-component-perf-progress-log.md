@@ -98,6 +98,15 @@ active heavy-component performance goal. It complements the main plan rather tha
   structural cleanup, so the existing evidence still stands: code-view steady direct-entry is
   light, combobox long-list is light, and the inspector page-shell / content viewport remains the
   next substantive hotspot to cut.
+- The direct-entry probe then moved one layer deeper: row clicks now restore focus to the stable
+  `ui-gallery-inspector-root` host instead of the recycled row node, and the fresh bundle
+  `target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json`
+  reports `subtree_no_focus_fallback=0`.
+- Validation for that follow-up passed with
+  `cargo nextest run -p fret-ui-gallery --no-fail-fast inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_search inspector_scroll_perf_script_keeps_nav_transition_setup gallery_inspector_torture_uses_fixed_row_text_roles gallery_inspector_torture_stamps_row_root_semantics_and_action_state gallery_inspector_torture_keeps_selected_row_model_on_paint_invalidation gallery_inspector_torture_keeps_row_shell_shrunk gallery_inspector_torture_keeps_tight_virtual_list_overscan gallery_inspector_torture_wraps_the_retained_list_in_a_stable_root_semantics_host`
+  and
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --dir target/fret-diag/inspector-direct-entry-stable-root-focus-20260621 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`
+  plus the `jq` count check at `0`.
 - The editor-controls shell-shrink batch is consistent with the shell-shrink direction:
   `PropertyGrid`, `ColorEdit`, `DragValue`, `EnumSelect`, `TextAssistField`, and
   `editor_input_group_row` each now have targeted structural coverage.

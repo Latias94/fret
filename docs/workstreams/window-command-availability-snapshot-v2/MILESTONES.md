@@ -1,7 +1,7 @@
 # Milestones
 
 Status: Active
-Last updated: 2026-05-16
+Last updated: 2026-06-21
 
 ## M0 - Baseline Read
 
@@ -49,3 +49,5 @@ Exit evidence:
 - Route names are documented as diagnostics contract values.
 - Any double-resolution overhead in diagnostic-only fallback root labeling is removed or proven
   negligible.
+- The inspector direct-entry perf path keeps focus on the stable list root after row activation, and
+  the latest bundle shows zero `subtree_no_focus_fallback` hotspots on that probe.

@@ -1,7 +1,7 @@
 # TODO
 
 Status: Active
-Last updated: 2026-06-20
+Last updated: 2026-06-21
 
 ## Current Slice
 
@@ -39,6 +39,11 @@ Last updated: 2026-06-20
 - [x] Cache subtree-interest summaries for no-focus subtree fallback within one publication so
   repeated widget commands can reuse subtree pruning metadata; focused coverage:
   `action_availability_no_focus_subtree_fallback_reuses_subtree_interest_across_commands`.
+- [x] Re-anchor the inspector direct-entry click focus onto the stable `ui-gallery-inspector-root`
+  host so retained row recycling no longer drops the probe into `subtree_no_focus_fallback`;
+  focused coverage:
+  `ui-gallery-inspector-torture-scroll-direct-entry` and the latest bundle
+  `target/fret-diag/inspector-direct-entry-stable-root-focus-20260621/1782019574150/bundle.schema2.json`.
 
 ## Exit Criteria
 
