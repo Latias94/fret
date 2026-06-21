@@ -78,6 +78,57 @@ fn virtual_list_row_content(
     )
 }
 
+fn virtual_list_row_label_action<T, I>(
+    cx: &mut AppComponentCx<'_>,
+    theme: &Theme,
+    label: T,
+    test_id: I,
+    on_activate: fret_ui::action::OnActivate,
+) -> AnyElement
+where
+    T: Into<Arc<str>>,
+    I: Into<Arc<str>>,
+{
+    let label = label.into();
+    let test_id = test_id.into();
+    let variants = shadcn::button_variants(
+        &theme.snapshot(),
+        shadcn::ButtonVariant::Ghost,
+        shadcn::ButtonSize::Sm,
+    );
+    let pressable_layout = decl_style::layout_style(
+        theme,
+        variants
+            .layout
+            .merge(LayoutRefinement::default().flex_1().min_w_0()),
+    );
+    let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
+
+    cx.pressable(
+        fret_ui::element::PressableProps {
+            layout: pressable_layout,
+            enabled: true,
+            focusable: true,
+            focus_ring: Some(focus_ring),
+            key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
+            a11y: fret_ui::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::Button),
+                label: Some(label.clone()),
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _state| {
+            cx.pressable_on_activate(on_activate.clone());
+            [fret_ui_kit::declarative::text::text_button_label_fill(
+                cx,
+                label.clone(),
+            )]
+        },
+    )
+}
+
 // Keeps row action chrome button-like without paying for the full shadcn Button slot tree.
 fn virtual_list_row_action_button<T, I>(
     cx: &mut AppComponentCx<'_>,
@@ -86,7 +137,6 @@ fn virtual_list_row_action_button<T, I>(
     test_id: I,
     variant: shadcn::ButtonVariant,
     layout: LayoutRefinement,
-    text_fill: bool,
     on_activate: fret_ui::action::OnActivate,
 ) -> AnyElement
 where
@@ -109,11 +159,7 @@ where
         cx,
         move |cx, _state, _id| {
             cx.pressable_on_activate(on_activate.clone());
-            let text = if text_fill {
-                fret_ui_kit::declarative::text::text_button_label_fill(cx, label.clone())
-            } else {
-                fret_ui_kit::declarative::text::text_button_label(cx, label.clone())
-            };
+            let text = fret_ui_kit::declarative::text::text_button_label(cx, label.clone());
 
             (
                 fret_ui::element::PressableProps {
@@ -502,14 +548,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 host.request_redraw(action_cx.window);
                             });
 
-                        let row_label = virtual_list_row_action_button(
+                        let row_label = virtual_list_row_label_action(
                             cx,
                             &theme,
                             format!("Row {index}"),
                             format!("ui-gallery-virtual-list-row-{index}-label"),
-                            shadcn::ButtonVariant::Ghost,
-                            LayoutRefinement::default().flex_1().min_w_0(),
-                            true,
                             on_select_row.clone(),
                         );
 
@@ -528,7 +571,6 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 format!("ui-gallery-virtual-list-row-{index}-edit"),
                                 shadcn::ButtonVariant::Outline,
                                 LayoutRefinement::default(),
-                                false,
                                 on_select_row,
                             )
                         };
@@ -635,14 +677,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                         });
                                     host.request_redraw(action_cx.window);
                                 });
-                            let row_label = virtual_list_row_action_button(
+                            let row_label = virtual_list_row_label_action(
                                 cx,
                                 theme,
                                 format!("Row {index}"),
                                 format!("ui-gallery-virtual-list-row-{index}-label"),
-                                shadcn::ButtonVariant::Ghost,
-                                LayoutRefinement::default().flex_1().min_w_0(),
-                                true,
                                 on_select_row.clone(),
                             );
 
@@ -661,7 +700,6 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                     format!("ui-gallery-virtual-list-row-{index}-edit"),
                                     shadcn::ButtonVariant::Outline,
                                     LayoutRefinement::default(),
-                                    false,
                                     on_select_row,
                                 )
                             };

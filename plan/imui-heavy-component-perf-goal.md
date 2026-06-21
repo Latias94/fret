@@ -286,6 +286,39 @@ historical records remain in:
   `virtual_list_row_action_button(...)` if a later visual or input gate shows this lighter authoring
   lane is not acceptable.
 
+## 2026-06-22 VirtualList Torture Row Label Direct Pressable Note
+
+- The left-side `Row` label in `virtual_list_torture` now skips the shared chrome helper and goes
+  straight through `cx.pressable(...)` plus `text_button_label_fill(...)`.
+- This keeps the label affordance button-like with the same focus ring, keyboard activation, and
+  semantics label, while avoiding the extra `control_chrome_pressable_with_id_props(...)` shell on
+  the ghost-style row label.
+- The right-side outline `Edit` control still uses `virtual_list_row_action_button(...)`, so the
+  visible chrome remains on the affordance that actually needs it.
+- Source coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now locks the direct
+  `virtual_list_row_label_action(...)` helper shape and keeps the old shared-button label path from
+  drifting back in.
+- Validation:
+  `cargo fmt --all`,
+  `cargo fmt --all --check`,
+  `git diff --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-row-label-pressable-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2664/2287/729/137/240/96/10`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-row-label-pressable-codex-20260622/1782082905773/bundle.schema2.json`
+  confirmed `layout.nodes=134`, first-solve row `subtree_nodes=105`, root apply `1341us`, and row
+  solve `361us`.
+- Compared with the prior row-action-fill-label bundle
+  `target/fret-diag/virtual-list-row-action-fill-label-codex-20260622/1782081927958/bundle.schema2.json`
+  at `2719/2357/745/124/238`, this is a smaller but real drop in total/layout and row breadth.
+- Rollback is local: change the label callsite back to `virtual_list_row_action_button(...)` if the
+  direct pressable ever regresses row-label chrome or focus affordance.
+
 ## 2026-06-22 VirtualList Torture Outer Content Scroll Bypass Note
 
 - The next VirtualList torture slice disables the outer gallery content scroll shell for
