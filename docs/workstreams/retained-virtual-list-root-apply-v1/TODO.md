@@ -1,7 +1,12 @@
 # TODO: Retained VirtualList Root Apply v1
 
-Status: Active
-Last updated: 2026-06-21
+Status: Closed
+Last updated: 2026-06-22
+
+Status note (2026-06-22): this lane is closed by
+`CLOSEOUT_AUDIT_2026-06-22.md`. Remaining Scroll, first-solve row `Pressable`, or fixed-row/table
+primitive work should start as narrower follow-ons instead of widening this retained `VirtualList`
+root-apply lane.
 
 ## M0 - Lane Setup And Baseline
 
@@ -46,15 +51,15 @@ Last updated: 2026-06-21
 
 ## M3 - Closeout Or Next Split
 
-- [ ] If root apply/barrier work is reduced and the next owner moves to fixed row geometry, split a
-      fixed-track layout primitive lane.
-- [ ] If the owner moves to a narrower fixed-height retained `VirtualList` fast path, split that
+- [ ] If fresh evidence keeps first-solve row roots as the table-local owner, split a fixed-row/table
+      primitive lane.
+- [ ] If future evidence moves to a narrower fixed-height retained `VirtualList` fast path, split that
       as a follow-on rather than widening the current lane.
-- [ ] If the owner moves to `ViewCache`, renderer, or frame pipeline code, split a narrower owner
+- [ ] If future evidence moves to `ViewCache`, renderer, or frame pipeline code, split a narrower owner
       lane instead of widening this one.
-- [ ] If the current retained `VirtualList` frame still reports broad dirty-subtree fanout with no
-      retained-reconcile burst, inspect scroll-handle invalidation and subtree dirty propagation
-      before adding more root-local layout cleanup.
+- [ ] If future retained `VirtualList` frames still report broad dirty-subtree fanout with no
+      retained-reconcile burst, inspect scroll-handle invalidation and subtree dirty propagation in
+      a new owner lane before adding more root-local layout cleanup.
 - [x] Characterize the retained ViewCache settle frame after retained-host reconcile; stable
       `view_cache` callsite identity proves the initial third-frame miss was a test artifact, so no
       runtime reuse-root marking change should land from that evidence alone.
@@ -63,8 +68,9 @@ Last updated: 2026-06-21
       `Scroll`, or a narrower follow-on.
 - [x] Re-run the retained data-table repro after the fixed-row inline cell-padding slice and record
       the before/after stats.
-- [ ] If the current evidence says the row/cell tree itself is the dominant cost, close this lane
-      with a follow-on that owns table/recipe tree depth instead of more `VirtualList` cleanup.
-- [ ] Update `WORKSTREAM.json`, `MILESTONES.md`, and `EVIDENCE_AND_GATES.md` after each landed
+- [x] Close this lane after the post-padding evidence moved the next owner to content `Scroll`,
+      first-solve row `Pressable` roots, or a future fixed-row/table primitive rather than broad
+      retained `VirtualList` cleanup.
+- [x] Update `WORKSTREAM.json`, `MILESTONES.md`, and `EVIDENCE_AND_GATES.md` after each landed
       slice.
-- [ ] Add a closeout note when this lane stops owning active implementation.
+- [x] Add a closeout note when this lane stops owning active implementation.

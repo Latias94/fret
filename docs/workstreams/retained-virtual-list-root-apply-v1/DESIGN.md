@@ -1,7 +1,11 @@
 # Retained VirtualList Root Apply v1
 
-Status: Active
-Last updated: 2026-06-16
+Status: Closed
+Last updated: 2026-06-22
+
+Status note (2026-06-22): this document is retained as the design/audit history for the closed
+lane. Current closeout and follow-on ownership lives in
+`docs/workstreams/retained-virtual-list-root-apply-v1/CLOSEOUT_AUDIT_2026-06-22.md`.
 
 ## Scope
 

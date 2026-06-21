@@ -103,6 +103,20 @@ historical records remain in:
   `cargo nextest run -p fret-ui retained_virtual_list_host_updates_window_without_rerendering_view_cache_root --no-fail-fast --no-capture`
   and `cargo nextest run -p fret-ui retained_virtual_list --no-fail-fast --no-capture`.
 
+## 2026-06-22 Retained VirtualList Root-Apply Lane Closeout
+
+- The retained VirtualList root-apply follow-on is now closed by
+  `docs/workstreams/retained-virtual-list-root-apply-v1/CLOSEOUT_AUDIT_2026-06-22.md`.
+- The latest retained data-table post-padding bundle stays within this lane's current acceptable
+  budget at `p95.us(total/layout/prepaint/paint)=1983/1642/76/306`.
+- `layout-perf-summary` on that bundle shows the remaining owners as content `Scroll`
+  (`inclusive=1326us`), retained data-table `VirtualList` (`inclusive=824us`), and first-solve row
+  `Pressable` roots (`batch_roots=33`, `solve_time=123us`).
+- Interpretation: the last table-local wrapper breadth proven by this lane was removed by inline
+  cell padding. The next work should split by owner: a content `Scroll` lane, a fixed-row/table
+  primitive lane, or another heavy-component lane such as code-view/editor-controls. Do not keep
+  widening retained `VirtualList` runtime/root-apply shortcuts from this evidence.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

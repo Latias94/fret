@@ -224,3 +224,27 @@ Evidence:
   `cargo nextest run -p fret-ui retained_virtual_list --no-fail-fast --no-capture`.
 - Interpretation: the initial third-frame miss was a duplicated-callsite test artifact, not a
   proven runtime `ViewCache` or retained membership bug.
+
+## M9 - Closeout And Owner Split
+
+Status: Complete.
+
+Done criteria:
+
+- Fresh post-padding evidence is read after the retained `ViewCache` settle characterization.
+- The lane records that the remaining retained data-table owner is no longer a broad
+  `VirtualList` root-apply/runtime bug.
+- Future work is split by owner: content `Scroll`, first-solve row `Pressable` roots, or a denser
+  fixed-row/table primitive.
+
+Evidence:
+
+- Closeout note:
+  `docs/workstreams/retained-virtual-list-root-apply-v1/CLOSEOUT_AUDIT_2026-06-22.md`.
+- Latest retained data-table bundle:
+  `target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json`.
+- `layout-perf-summary` on that bundle reported `Scroll inclusive=1326us`, retained
+  `VirtualList inclusive=824us`, and `Pressable batch_roots=33 solve_time=123us` on the worst
+  frame.
+- Boundary decision: do not expand `PressableProps` or retained `VirtualList` runtime APIs from
+  this evidence. Start narrower follow-ons when fresh captures justify them.

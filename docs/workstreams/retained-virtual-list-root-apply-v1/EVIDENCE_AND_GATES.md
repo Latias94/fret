@@ -428,6 +428,41 @@ Interpretation:
   render count unchanged and records zero clean child `layout_in` calls.
 - No runtime reuse-root marking change landed from this characterization.
 
+## 2026-06-22 Closeout Owner Split
+
+```bash
+target/release/fretboard-dev diag stats target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json --sort cpu_cycles --top 30
+target/release/fretboard-dev diag layout-perf-summary target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json --json
+target/release/fretboard-dev diag stats target/fret-diag/retained-vlist-root-apply-nextowner-codex-20260621/1782065143290/bundle.schema2.json --sort cpu_cycles --top 30
+```
+
+Observed evidence:
+
+- The post-padding retained repro remains the closeout bundle:
+  `target/fret-diag/retained-vlist-inline-cell-padding-codex-20260621/1782066104208/bundle.json`.
+- The latest p95 frame is within the current lane budget:
+  `p95.us(total/layout/prepaint/paint)=1983/1642/76/306`.
+- `layout-perf-summary` on the latest worst frame attributes:
+  - content `Scroll`: `inclusive=1326us`, `layout=401us`;
+  - retained data-table `VirtualList`: `inclusive=824us`, `layout=194us`;
+  - table text: `inclusive=18us`, `layout=18us`.
+- Top layout engine solves on that frame are:
+  - row `Pressable`: `batch_roots=33`, `subtree_nodes=66`, `solve_time=123us`,
+    `reason=first_solve`;
+  - outer `Semantics`: `subtree_nodes=73`, `solve_time=113us`;
+  - window `Stack`: `subtree_nodes=100`, `solve_time=4us`.
+
+Interpretation:
+
+- The fixed-row inline cell-padding slice removed the remaining measured per-cell wrapper breadth
+  from this lane (`Container nodes=132 -> 0` on the hot child path).
+- The remaining row `Pressable` cost is first solve for newly mounted rows, not an unproven
+  retained `ViewCache` miss or a missed `Pressable` clean-geometry propagation case.
+- The remaining `Scroll` hotspot belongs to viewport/content ownership, so it should not be fixed
+  through another retained `VirtualList` root-apply shortcut.
+- This lane is closed by
+  `docs/workstreams/retained-virtual-list-root-apply-v1/CLOSEOUT_AUDIT_2026-06-22.md`.
+
 ## Documentation Gates
 
 ```powershell

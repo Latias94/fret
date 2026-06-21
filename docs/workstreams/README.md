@@ -2367,7 +2367,7 @@ Rule:
 - `docs/workstreams/retained-bridge-exit-v1/` — first 2026-02-07, latest 2026-02-08, 2 markdown docs
 - `docs/workstreams/retained-layout-orchestration-v1/` — first n/a, latest n/a, 7 markdown docs (closed retained layout orchestration follow-on that landed the `Semantics` clean-geometry propagation fast path and split remaining `Pressable`/`Scroll`/`ViewCache` owners to future narrower lanes; includes `WORKSTREAM.json`)
 - `docs/workstreams/retained-public-surface-exit-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on to retained bridge exit that gates retained widget authoring root exports behind `fret-ui/compat-retained-widgets` while keeping `fret-node/compat-retained-canvas` explicit; includes `WORKSTREAM.json`)
-- `docs/workstreams/retained-virtual-list-root-apply-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for attributing and reducing retained `VirtualList` layout/root-apply cost after retained data-table row/cell churn moved out of the hotspot; includes `WORKSTREAM.json`)
+- `docs/workstreams/retained-virtual-list-root-apply-v1/` — first n/a, latest n/a, 6 markdown docs (closed follow-on for attributing and reducing retained `VirtualList` layout/root-apply cost after retained data-table row/cell churn moved out of the hotspot; closeout split remaining Scroll, first-solve row Pressable, and fixed-row/table primitive owners to narrower follow-ons; includes `WORKSTREAM.json`)
 - `docs/workstreams/router-tanstack-parity-v1/` — first 2026-02-07, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/router-ui-v1/` — first 2026-02-08, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/router-v1/` — first 2026-02-06, latest 2026-03-11, 2 markdown docs

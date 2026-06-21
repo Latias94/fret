@@ -2,10 +2,10 @@
   "schema_version": 1,
   "slug": "retained-virtual-list-root-apply-v1",
   "title": "Retained VirtualList Root Apply v1",
-  "status": "active",
-  "updated": "2026-06-21",
-  "scope_kind": "execution",
-  "problem": "Retained data-table optimization moved the measured owner out of table row/cell structure and into retained VirtualList layout/root application. Fresh evidence now shows the hottest fixed-height retained path was not just VirtualList traversal but also per-cell wrapper breadth inside the retained row subtree. Root apply owner attribution remains available through debug.layout_root_applies[], so this lane now owns the remaining fixed-height retained child-layout path, including whether to keep collapsing row/cell shells or split a narrower follow-on.",
+  "status": "closed",
+  "updated": "2026-06-22",
+  "scope_kind": "closeout",
+  "problem": "Retained data-table optimization moved the measured owner out of table row/cell structure and into retained VirtualList layout/root application. The latest evidence shows the table-local per-cell wrapper breadth has been removed and the remaining owners are the outer content Scroll, first-solve row Pressable roots, or a future denser fixed-row/table primitive. This lane is closed so those owners can continue in narrower follow-ons instead of widening retained VirtualList root-apply cleanup.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -24,6 +24,10 @@
       "path": "docs/workstreams/retained-virtual-list-root-apply-v1/EVIDENCE_AND_GATES.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/workstreams/retained-virtual-list-root-apply-v1/CLOSEOUT_AUDIT_2026-06-22.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/ui-table-row-cell-structural-churn-v1/EVIDENCE_AND_GATES.md"
     },
@@ -33,7 +37,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the retained data-table filter-shrink script with retained data-table mode, layout node profiling, and scroll layout profiling enabled; then inspect diag stats for retained VirtualList, Scroll, child-layout phase attribution, and layout_root_applies. The current owner was still the fixed-height retained VirtualList first-pass child layout path under post-layout root apply before root apply owner attribution landed; the next run should use layout_root_applies to decide whether the aggregate root apply phase belongs to retained VirtualList, Scroll, or a narrower follow-on.",
+    "summary": "Historical closeout repro: run the retained data-table filter-shrink script with retained data-table mode, layout node profiling, and scroll layout profiling enabled; then inspect diag stats and layout-perf-summary for Scroll, retained VirtualList, Pressable first-solve roots, and layout_root_applies. The latest post-padding bundle is the closeout evidence for this lane.",
     "commands": [
       "target/release/fretboard-dev.exe diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/retained-vlist-root-apply-m0-scroll-profile-v1 --env FRET_UI_GALLERY_DATA_TABLE_RETAINED=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --sort cpu_cycles --top 15 --json --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness",
       "target/release/fretboard-dev.exe diag stats <bundle.json> --sort cpu_cycles --top 30"
@@ -89,6 +93,7 @@
         "plan/retained-virtual-list-root-apply-perf.md",
         "docs/workstreams/retained-virtual-list-root-apply-v1/DESIGN.md",
         "docs/workstreams/retained-virtual-list-root-apply-v1/EVIDENCE_AND_GATES.md",
+        "docs/workstreams/retained-virtual-list-root-apply-v1/CLOSEOUT_AUDIT_2026-06-22.md",
         "docs/workstreams/ui-table-row-cell-structural-churn-v1/EVIDENCE_AND_GATES.md",
         "docs/workstreams/retained-layout-orchestration-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "target/fret-diag/vlist-retained-shared-row-xform-v1/sessions/1781530321751-126564/1781531045060-ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change/bundle.schema2.json",
@@ -123,8 +128,8 @@
     "docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue here while the owner remains retained VirtualList first-pass child layout or a local retained row/cell shell. Split a narrower follow-on if evidence says the row/cell tree itself is still dominant after the fixed-height inline-padding fast path, if a fixed-track layout primitive is the next real seam, or if ownership moves to a more local retained component. The latest landed slices removed pure test-id semantics wrappers from retained table cells, hoisted the shared horizontal body transform, disabled per-cell debug anchors in the torture preview, added root apply owner attribution, and then inlined cell padding on the hot fixed-row path. The immediate next action is to inspect whether the remaining hotspot is the content Scroll shell or a narrower retained row shell before landing another runtime optimization."
+    "default_action": "start_follow_on",
+    "notes": "Do not reopen this lane for broad retained VirtualList root-apply cleanup. Start a narrower follow-on if fresh evidence keeps the content Scroll above the retained table/list subtree, if first-solve row Pressable roots remain the table-local owner, or if a denser fixed-row/table primitive becomes the next target. The closeout evidence shows the table-local per-cell wrapper breadth was removed and the remaining retained VirtualList cost is no longer a broad runtime ViewCache/reconcile bug."
   },
   "follow_on_of": "ui-table-row-cell-structural-churn-v1"
 }
