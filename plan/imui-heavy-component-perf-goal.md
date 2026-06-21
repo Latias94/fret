@@ -169,6 +169,16 @@ historical records remain in:
 - Focused evidence is the `color_edit_error_state_keeps_the_same_row_shape` structure test, which
   now asserts the error sibling is direct `Text` with `margin.left = 4px`.
 
+## 2026-06-22 Slider Track Segment Direct Flex Note
+
+- Continued the editor-controls shell-shrink lane with a small `Slider` frame cleanup.
+- The track branch no longer wraps the track flex in `editor_input_group_segment`; the frame
+  padding now lives directly on the track flex root.
+- This removes one container shell from the hot slider frame path while keeping the same track,
+  thumb, and value-readout structure.
+- Focused evidence is the `slider_frame_tracks_are_direct_flex_children_without_segment_wrappers`
+  structure test and the `slider` nextest filter gate.
+
 ## 2026-06-21 Inspector Direct-Entry View-Cache Contract Note
 
 - The inspector direct-entry probe intentionally defaults `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

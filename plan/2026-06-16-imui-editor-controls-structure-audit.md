@@ -241,3 +241,15 @@ height jump and the biggest leverage over the rest of the dense editor surface.
 - This does not change the normal-state structure or the contract that
   invalid-state copy appears below the main row; it only thins that error-text
   shell and locks the shape with a structure test.
+
+## 2026-06-22 Slider Track Segment Direct Flex Note
+
+- `Slider` used to build its visual track as `Container(Flex(track))` because the
+  input-group segment carried frame padding and flex sizing.
+- The track flex now owns that padding and outer flex sizing directly, so the
+  slider frame row mounts the track as a direct `Flex` child.
+- The value readout segment stays wrapped for now because its fixed width and
+  text padding are a separate visual contract.
+- The structure gate verifies that the track is no longer hidden behind a
+  segment container while the broader `slider` nextest filter keeps pointer,
+  typing, value-math, and chrome coverage green.

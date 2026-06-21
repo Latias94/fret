@@ -102,7 +102,7 @@ fn slider_track_props_encode_fill_track_layout_and_shape() {
     let geometry = resolve_slider_geometry(theme);
     let bg = Color::from_srgb_hex_rgb(0x35_5a_86);
 
-    let flex = slider_track_flex_props();
+    let flex = slider_track_flex_props(Edges::all(Px(0.0)));
     assert_eq!(flex.layout.size.width, Length::Fill);
     assert_eq!(flex.layout.size.height, Length::Fill);
     assert_eq!(flex.layout.flex.grow, 1.0);

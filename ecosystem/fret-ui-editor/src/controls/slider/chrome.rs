@@ -56,7 +56,7 @@ pub(super) fn resolve_slider_geometry(theme: &Theme) -> ResolvedSliderGeometry {
     }
 }
 
-pub(super) fn slider_track_flex_props() -> FlexProps {
+pub(super) fn slider_track_flex_props(padding: Edges) -> FlexProps {
     FlexProps {
         layout: LayoutStyle {
             size: SizeStyle {
@@ -75,7 +75,7 @@ pub(super) fn slider_track_flex_props() -> FlexProps {
         },
         direction: Axis::Horizontal,
         gap: SpacingLength::Px(Px(0.0)),
-        padding: Edges::all(Px(0.0)).into(),
+        padding: padding.into(),
         justify: MainAlign::Start,
         align: CrossAlign::Center,
         wrap: false,

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use super::Slider;
+use super::chrome::{resolve_slider_geometry, resolve_slider_paint};
+use super::frame::{SliderFrameArgs, slider_frame};
 use crate::primitives::NumericPresentation;
 use crate::primitives::style::EditorStyle;
 use fret_app::App;
@@ -58,6 +60,70 @@ fn slider_uses_stable_session_shell_for_slide_and_typing_branches() {
     assert_eq!(element.children.len(), 2);
     assert_branch_is_fill(&element.children[0], "slide branch");
     assert_branch_is_hidden(&element.children[1], "typing branch");
+}
+
+#[test]
+fn slider_frame_tracks_are_direct_flex_children_without_segment_wrappers() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let element = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        Rect::default(),
+        "slider-frame-track-shell",
+        |cx| {
+            let theme = Theme::global(&*cx.app);
+            let style = EditorStyle::resolve(theme);
+            let density = style.density;
+            let frame_chrome = style.frame_chrome_small();
+            let geometry = resolve_slider_geometry(theme);
+            let paint = resolve_slider_paint(theme, true, true, false, false);
+
+            slider_frame(
+                cx,
+                SliderFrameArgs {
+                    density,
+                    frame_chrome,
+                    geometry,
+                    paint,
+                    t: 0.5,
+                    interactive_enabled: true,
+                    hovered: false,
+                    pressed: false,
+                    focused: false,
+                    show_value: false,
+                    value_width: Px(64.0),
+                    value_display_text: Arc::from("50%"),
+                    value_display_test_id: None,
+                },
+            )
+        },
+    );
+
+    let ElementKind::Container(_) = &element.kind else {
+        panic!("slider frame root should stay the shared input-group frame container");
+    };
+    let outer = element
+        .children
+        .first()
+        .expect("slider frame should contain an outer content flex root");
+    let ElementKind::Flex(_) = &outer.kind else {
+        panic!(
+            "slider frame outer content should be a flex root, got {:?}",
+            outer.kind
+        );
+    };
+    let track = outer
+        .children
+        .first()
+        .expect("slider frame should keep a track child");
+    let ElementKind::Flex(_) = &track.kind else {
+        panic!(
+            "slider track should land directly as a flex root, got {:?}",
+            track.kind
+        );
+    };
+    assert!(track.children.len() >= 3);
 }
 
 fn assert_branch_is_fill(element: &AnyElement, label: &str) {

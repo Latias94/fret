@@ -89,7 +89,7 @@ pub(super) fn slider_frame<H: UiHost>(
             semantic: EditorFrameSemanticState::default(),
         },
         move |cx, frame_visuals| {
-            let track = cx.flex(slider_track_flex_props(), move |cx| {
+            let track = cx.flex(slider_track_flex_props(frame_chrome.padding), move |cx| {
                 let mut seg_layout = |grow: f32, bg: fret_core::Color, left: bool| {
                     cx.container(
                         slider_track_segment_props(geometry, grow, bg, left),
@@ -150,28 +150,7 @@ pub(super) fn slider_frame<H: UiHost>(
                 None
             };
 
-            let track_seg = editor_input_group_segment(
-                cx,
-                LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    flex: FlexItemStyle {
-                        order: 0,
-                        grow: 1.0,
-                        shrink: 1.0,
-                        basis: Length::Px(Px(0.0)),
-                        align_self: None,
-                    },
-                    ..Default::default()
-                },
-                frame_chrome.padding,
-                track,
-            );
-
-            let mut children = vec![track_seg];
+            let mut children = vec![track];
             if let Some(value_el) = value_el {
                 children.push(editor_input_group_divider(cx, frame_visuals.border));
                 children.push(value_el);
