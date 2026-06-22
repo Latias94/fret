@@ -3801,3 +3801,31 @@ popover overlay root solve tail.
 - Decision: reject and remove the `fret-ui` fixed-box layout skip plus its temporary test. The
   next code-view work should not add a generic passive-text layout shortcut unless it first proves
   the exact retained row final-layout path and accounts for paint/text-prepare cost migration.
+
+## 2026-06-22 Fixed/Known VirtualList Overscan Burst Experiment Rejected
+
+- Node-profile repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/code-view-row-profile-codex-20260622b --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=100 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Current-state profile bundle:
+  `target/fret-diag/code-view-row-profile-codex-20260622b/1782137366507/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=1799/1664/24/19/116`.
+  The follow-up row frame was `layout.nodes=35`, retained `VirtualList` inclusive layout
+  `1590us`, and row `StyledText` hotspots at `220us` and `102us`; renderer text prepare flush
+  was still visible (`flush max=408us`, `added/removed=158/113` on the row frame).
+- Hypothesis: the retained/windowed code-view path uses `VirtualListMeasureMode::Fixed`, so the
+  initial row burst still mounts the full visible+overscan window. I temporarily broadened
+  `overscan_for_items_change(...)` so fixed/known lists also render the visible window first after
+  an item revision or length change, matching the measured-list burst policy.
+- Focused Rust guard passed during the experiment:
+  `cargo fmt -p fret-ui --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui overscan_for_items_change --no-fail-fast`.
+- Perf disproved the hypothesis:
+  `target/fret-diag/code-view-fixed-overscan-burst-codex-20260622/1782138066218/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2033/1870/35/32/131`.
+  The row frame still had `layout.nodes=35`, `StyledText` first-solve `batch_roots=33`,
+  retained `VirtualList` inclusive layout `1759us`, and renderer text prepare
+  `flush max=433us` with the same `added/removed=158/113` shape.
+- Decision: reject and remove the fixed/known overscan burst policy change. The current row burst
+  is not being reduced by that helper path, so the next code-view slice should target row text
+  blob churn, retained row invalidation, or a code-view-specific row/text representation instead
+  of widening generic VirtualList burst policy.
