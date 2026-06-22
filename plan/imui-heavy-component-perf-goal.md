@@ -231,6 +231,37 @@ historical records remain in:
   `retained_table_body_column_props()` plus its structure guard if a future layout or focus gate
   proves the helper shell was needed.
 
+## 2026-06-22 Data Table Torture Local Header Text Prune Note
+
+- The `data_table_torture` perf harness now drops the two local explanatory `paragraph_text` lines
+  from the measured header. The operational readouts, reset button, toolbar, table diagnostics
+  anchors, and retained/non-retained table paths stay unchanged.
+- Source coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now requires the
+  controls/readouts-only header shape and forbids restoring the two local explanatory paragraphs.
+  `cargo fmt -p fret-ui-gallery` also normalized the surrounding `cx.keyed(...)` indentation in
+  `table_torture.rs`; that is mechanical rustfmt churn, not a behavioral part of the cut.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-no-local-header-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/data-table-no-local-header-codex-20260622/1782122326601/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2437/1804/744/210/423`.
+- Compared with the direct-flex body-column bundle
+  `target/fret-diag/data-table-direct-flex-body-column-codex-20260622/1782121405664/bundle.schema2.json`
+  at `2414/1824/840/188/402`, total frame time stayed in the same single-run noise band. The
+  targeted owner did move as intended: `layout-perf-summary` no longer reports the two
+  `table_torture.rs:276` paragraph text measure hotspots (`66us` and `43us` in the prior bundle).
+- Interpretation: keep this as harness hygiene that removes a known local text-measure distraction,
+  not as a table primitive win. The remaining data-table owners are still root `Stack`
+  solve/apply, retained `VirtualList` layout, row `HoverRegion` first solve, and toolbar/input
+  measurement.
+- Rollback is local: restore the two explanatory `doc_layout::paragraph_text(...)` lines in the
+  header and move the matching source-policy markers back from forbidden to required if the gallery
+  needs those teaching strings on the torture page.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait

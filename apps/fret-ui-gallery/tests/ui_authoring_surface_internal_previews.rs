@@ -1210,8 +1210,6 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
         &[
             "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
-            "doc_layout::paragraph_text(cx,\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
-            "doc_layout::paragraph_text(cx,\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
             "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
             "doc_layout::control_readout_text(cx,pinning_text.clone()).attach_semantics(",
             "doc_layout::control_readout_text(cx,global_filter_text.clone()).attach_semantics(",
@@ -1236,6 +1234,8 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
         "table_torture should disable row-click selection on both retained and non-retained perf harness paths"
     );
     for forbidden in [
+        "doc_layout::paragraph_text(cx,\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
+        "doc_layout::paragraph_text(cx,\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
         "cx.text(\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
         "cx.text(\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
         "cx.text(sorting_text.as_ref()).attach_semantics(",
