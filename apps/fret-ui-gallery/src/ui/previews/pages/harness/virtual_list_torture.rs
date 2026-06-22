@@ -445,41 +445,21 @@ pub(in crate::ui) fn preview_virtual_list_torture(
         )
     });
 
-    let header = ui::v_flex(|cx| {
-            let mut out = vec![
-                doc_layout::paragraph_text(cx, "Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
-                doc_layout::control_readout_text(cx, if retained_host {
-                    "Mode: retained host (virt-003 prototype; item subtrees can reattach without rerendering the parent cache root)."
-                } else {
-                    "Mode: render-driven (baseline; visible items update requires rerender when the window changes)."
-                }),
-                doc_layout::control_readout_text(cx, if known_heights {
-                    "Mode: known row heights (no measure pass; better for perf baselines)."
-                } else {
-                    "Mode: measured row heights (baseline)."
-                }),
-                doc_layout::control_readout_text(cx, if keep_alive > 0 {
-                    format!("Mode: keep-alive enabled (budget={keep_alive}).")
-                } else {
-                    "Mode: keep-alive disabled (budget=0).".to_string()
-                }),
-            ];
-
-            if minimal_harness {
-                out.push(doc_layout::paragraph_text(cx, "Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
-            } else {
-                if let Some(controls) = controls {
-                    out.push(controls);
-                }
-                if let Some(editing_indicator) = editing_indicator {
-                    out.push(editing_indicator);
-                }
+    let header = (!minimal_harness).then(|| {
+        ui::v_flex(|_cx| {
+            let mut out = Vec::new();
+            if let Some(controls) = controls {
+                out.push(controls);
             }
-
+            if let Some(editing_indicator) = editing_indicator {
+                out.push(editing_indicator);
+            }
             out
         })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N2)
+        .into_element(cx)
+    });
 
     let list_layout = fret_ui::element::LayoutStyle {
         size: fret_ui::element::SizeStyle {
@@ -893,10 +873,17 @@ pub(in crate::ui) fn preview_virtual_list_torture(
         },
     );
 
-    let root = ui::v_flex(|_cx| vec![header, list])
-        .layout(LayoutRefinement::default().w_full())
-        .gap(Space::N3)
-        .into_element(cx);
+    let root = ui::v_flex(|_cx| {
+        let mut children = Vec::new();
+        if let Some(header) = header {
+            children.push(header);
+        }
+        children.push(list);
+        children
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N3)
+    .into_element(cx);
 
     let root = root.attach_semantics(
         SemanticsDecoration::default()

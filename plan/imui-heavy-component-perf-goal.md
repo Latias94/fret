@@ -3314,3 +3314,32 @@ popover overlay root solve tail.
   `page_content_cache_contain_layout_when_bounds_known(...)`. The next VirtualList cut should
   target the retained row/list root solve owner directly, not another page cache boundary tweak.
 - Source experiment was reverted; no code/test change was kept from this slice.
+
+## 2026-06-22 VirtualList Torture Local Header Prune Note
+
+- The `virtual_list_torture` page now removes local explanatory header text and mode readouts from
+  the hot harness tree. The page still keeps the script-driven controls (`Jump`, `Bottom`, `Clear
+  edit`) and the editing-state readout, but does not mount the non-operational goal/mode paragraphs
+  above the retained list.
+- Source coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now requires the
+  controls-only header shape and forbids restoring the local explanatory `paragraph_text` /
+  mode `control_readout_text` lines.
+- Validation:
+  `cargo fmt -p fret-ui-gallery --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test virtual_list_perf_surface --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/virtual-list-local-header-prune-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Comparison against the exact no-boundary rollback A/B:
+  `target/fret-diag/virtual-list-page-cache-boundary-rollback-codex-20260622/1782111083260/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2239/1807/839/170/270`,
+  `root_apply=834us`, and `request_build=611us`.
+- Header-pruned evidence:
+  `target/fret-diag/virtual-list-local-header-prune-codex-20260622/1782111725876/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1988/1636/742/157/226`,
+  `root_apply=810us`, and `request_build=505us`.
+- `layout-perf-summary` shows the intended owner shift: the row `Container` first solve only moved
+  slightly (`452us -> 440us`), while the root `Stack` solve dropped `387us -> 302us`. The remaining
+  owner is still the retained `VirtualList` row/container solve path, not local page chrome.
+- Rollback is local: restore the removed explanatory header/readout lines and the old structural
+  assertions if the gallery needs those teaching strings back on the torture page.
