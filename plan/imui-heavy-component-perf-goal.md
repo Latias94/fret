@@ -4234,3 +4234,33 @@ popover overlay root solve tail.
 - Rollback is local: remove `disable_content_scroll_for_chrome_torture` from
   `apps/fret-ui-gallery/src/ui/content.rs` and drop the matching structure test if a future visual,
   scrolling, or diagnostics gate proves the outer content scroll is required for this harness.
+
+## 2026-06-23 Combobox Long-List Static Item Text Pool Note
+
+- The focused long-list combobox harness now keeps its synthetic 250-row value/label text pool in a
+  `OnceLock` in `apps/fret-ui-gallery/src/ui/snippets/combobox/long_list.rs`.
+- Scope is intentionally local to the UI Gallery snippet. `ComboboxItem` remains an owned,
+  move-only authoring value because items can contain `AnyElement` content; this cut only avoids
+  rebuilding stable `Arc<str>` value/label text for the synthetic long-list fixture on every render.
+- Structural coverage in
+  `apps/fret-ui-gallery/tests/combobox_perf_scripts_surface.rs` keeps the focused perf script
+  pinned and guards that the long-list snippet keeps the stable item text pool outside `render`.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `python3 -m json.tool tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-long-list-focused-filter-select-steady.json`,
+  `git diff --check`, and
+  `cargo nextest run -p fret-ui-gallery --test combobox_perf_scripts_surface --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-long-list-focused-filter-select-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/combobox-long-list-static-items-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/combobox-long-list-static-items-codex-20260623/1782152800621/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=284/10/0/167/109/0/3`.
+  `diag stats --sort cpu_cycles --top 30` reported p95 layout `10us`, renderer text-prepare
+  flush `1us`, no layout nodes on the considered frames, and stable retained text counts
+  (`added/removed=0/0`).
+- Interpretation: keep this as a small fixture hot-path allocation cleanup, not a major timing win.
+  It preserves the already-light sub-millisecond long-list gate while reducing avoidable synthetic
+  string formatting/allocation inside the render path.
+- Rollback is local: remove `long_list_item_specs` / `long_list_items`, restore the inline
+  `(0..250)` item construction in `render`, and drop the source-structure guard if a future
+  authoring requirement needs per-render generated labels.

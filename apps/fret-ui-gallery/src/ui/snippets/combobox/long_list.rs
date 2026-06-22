@@ -6,7 +6,32 @@ use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
 use fret_ui_kit::typography::fixed_line_box_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+
+type LongListItemSpec = (Arc<str>, Arc<str>);
+
+fn long_list_item_specs() -> &'static [LongListItemSpec] {
+    static ITEMS: OnceLock<Vec<LongListItemSpec>> = OnceLock::new();
+
+    ITEMS
+        .get_or_init(|| {
+            (0..250)
+                .map(|i| {
+                    let value = Arc::<str>::from(format!("{i:03}"));
+                    let label = Arc::<str>::from(format!("Item {i:03}"));
+                    (value, label)
+                })
+                .collect()
+        })
+        .as_slice()
+}
+
+fn long_list_items() -> Vec<shadcn::ComboboxItem> {
+    long_list_item_specs()
+        .iter()
+        .map(|(value, label)| shadcn::ComboboxItem::new(value.clone(), label.clone()))
+        .collect()
+}
 
 fn state_row(
     cx: &mut AppComponentCx<'_>,
@@ -72,13 +97,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);
 
-    let items: Vec<shadcn::ComboboxItem> = (0..250)
-        .map(|i| {
-            let value = format!("{i:03}");
-            let label = format!("Item {i:03}");
-            shadcn::ComboboxItem::new(value, label)
-        })
-        .collect();
+    let items = long_list_items();
 
     let combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox long list")
