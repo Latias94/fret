@@ -4462,3 +4462,36 @@ popover overlay root solve tail.
   no-op tests if a future focus/draft sync regression appears. Separately, the release
   `FRET_DIAG_MODEL_CHANGE_SOURCES` diagnostic path can be reverted by removing the opt-in
   `ModelStore` source map and reinstating the debug-only snapshot guard.
+
+## 2026-06-23 Editor-Controls Swatch/Drag No-Op Source Prune Note
+
+- The follow-up overlay-focus-cycle source audit showed two more `ColorEdit` no-op write classes:
+  swatch activation always wrote `copy_menu_open=false`, and color drag source pointer handlers
+  could dirty `ColorDragDropStore` even when no matching active drag session existed.
+- Accepted source cut: swatch activation now only closes the copy menu model when it is currently
+  open; color drag pointer-down only removes matching active sessions after a read-side match, and
+  pointer-up only enters the store update when it finds a matching active session to remove or
+  deliver.
+- Regression coverage asserts revision stability for closed copy-menu activation, empty/unmatched
+  pointer-down drag stores, and empty/unmatched pointer-up drag stores, while keeping the positive
+  paths for closing an open copy menu, removing an active drag, and delivering a hovered drop.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `git diff --check`, and
+  `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`.
+- Perf follow-up:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-overlay-focus-cycle.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-swatch-drag-noop-v2-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Follow-up bundle
+  `target/fret-diag/editor-controls-swatch-drag-noop-v2-codex-20260623/1782159031901/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=3161/2366/938/53/742/0/8`.
+  Treat this as the same overlay-transition band, not a frame-time win. The intended effect is the
+  source attribution: `changed_model_sources_top` no longer reports `ColorDragDropStore` from the
+  pointer click path or a redundant `copy_menu_open=false` write. The remaining model sources are
+  real swatch `open` / `reference` writes, window overlay state, tooltip hover state, and
+  `TextAssistField` focus/accept writes.
+- Interpretation: keep this as an invalidation-noise cleanup that makes the next owner audit
+  sharper. Do not cut swatch `reference` capture, swatch tooltip state, `TextAssist` row chrome, or
+  generic drag-store dirty semantics from this evidence.
+- Rollback is local: restore the unconditional swatch `copy_menu_open` update and the pointer
+  handler store updates, then remove the matching revision tests if a future drag or copy-menu
+  regression shows the guarded path was hiding required state churn.

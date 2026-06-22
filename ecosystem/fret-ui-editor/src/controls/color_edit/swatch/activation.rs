@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::Color;
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
+use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 
 use super::super::ColorEditPopupOptions;
 
@@ -43,7 +43,106 @@ pub(super) fn color_swatch_activate(input: ColorSwatchActivateInput) -> OnActiva
                 .update(&reference, |reference| *reference = Some(current));
         }
         let _ = host.models_mut().update(&open, |v| *v = opening);
-        let _ = host.models_mut().update(&copy_menu_open, |v| *v = false);
+        close_copy_menu_if_open(host, &copy_menu_open);
         host.request_redraw(action_cx.window);
     })
+}
+
+fn close_copy_menu_if_open<H: UiActionHost + ?Sized>(
+    host: &mut H,
+    copy_menu_open: &Model<bool>,
+) -> bool {
+    if !host
+        .models_mut()
+        .get_copied(copy_menu_open)
+        .unwrap_or(false)
+    {
+        return false;
+    }
+
+    host.models_mut()
+        .update(copy_menu_open, |value| *value = false)
+        .is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_core::{AppWindowId, Color};
+    use fret_ui::GlobalElementId;
+    use fret_ui::action::{ActionCx, ActivateReason, UiActionHostAdapter};
+
+    use super::*;
+
+    #[test]
+    fn swatch_activate_does_not_reclose_closed_copy_menu_model() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let model = app
+            .models_mut()
+            .insert(Color::from_srgb_hex_rgb(0x33_66_99));
+        let open = app.models_mut().insert(false);
+        let copy_menu_open = app.models_mut().insert(false);
+        let reference = app.models_mut().insert(None::<Color>);
+        let copy_revision = copy_menu_open.revision(&app);
+        let activate = color_swatch_activate(ColorSwatchActivateInput {
+            model,
+            open,
+            copy_menu_open: copy_menu_open.clone(),
+            reference,
+            popup_has_visible_content: true,
+            popup_options: ColorEditPopupOptions::default(),
+        });
+
+        {
+            let mut host = UiActionHostAdapter { app: &mut app };
+            activate(
+                &mut host,
+                ActionCx {
+                    window,
+                    target: GlobalElementId(7),
+                },
+                ActivateReason::Pointer,
+            );
+        }
+
+        assert_eq!(copy_menu_open.revision(&app), copy_revision);
+        assert_eq!(app.models_mut().get_copied(&copy_menu_open), Some(false));
+    }
+
+    #[test]
+    fn swatch_activate_closes_open_copy_menu_model() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let model = app
+            .models_mut()
+            .insert(Color::from_srgb_hex_rgb(0x33_66_99));
+        let open = app.models_mut().insert(false);
+        let copy_menu_open = app.models_mut().insert(true);
+        let reference = app.models_mut().insert(None::<Color>);
+        let copy_revision = copy_menu_open.revision(&app);
+        let activate = color_swatch_activate(ColorSwatchActivateInput {
+            model,
+            open,
+            copy_menu_open: copy_menu_open.clone(),
+            reference,
+            popup_has_visible_content: true,
+            popup_options: ColorEditPopupOptions::default(),
+        });
+
+        {
+            let mut host = UiActionHostAdapter { app: &mut app };
+            activate(
+                &mut host,
+                ActionCx {
+                    window,
+                    target: GlobalElementId(7),
+                },
+                ActivateReason::Pointer,
+            );
+        }
+
+        assert_ne!(copy_menu_open.revision(&app), copy_revision);
+        assert_eq!(app.models_mut().get_copied(&copy_menu_open), Some(false));
+    }
 }
