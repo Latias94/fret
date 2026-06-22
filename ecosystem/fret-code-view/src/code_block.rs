@@ -1402,6 +1402,7 @@ impl CodeBlockWindowedLineRichCache {
 struct CodeBlockLineRowTheme {
     mono_size: Px,
     mono_line_height: Px,
+    text_style: TextStyle,
     fg: fret_core::Color,
     muted_fg: fret_core::Color,
     syntax_colors: HashMap<&'static str, Option<fret_core::Color>>,
@@ -1409,16 +1410,28 @@ struct CodeBlockLineRowTheme {
 
 impl CodeBlockLineRowTheme {
     fn new(theme: &Theme, prepared: &crate::prepare::PreparedCodeBlock) -> Self {
+        let mono_size = theme.metric_token("metric.font.mono_size");
+        let mono_line_height = theme.metric_token("metric.font.mono_line_height");
         let syntax_colors = prepared
             .syntax_highlights
             .iter()
             .copied()
             .map(|highlight| (highlight, syntax_color(theme, highlight)))
             .collect::<HashMap<_, _>>();
+        let text_style = typography::as_control_text(TextStyle {
+            font: FontId::monospace(),
+            size: mono_size,
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(mono_line_height),
+            letter_spacing_em: None,
+            ..Default::default()
+        });
 
         Self {
-            mono_size: theme.metric_token("metric.font.mono_size"),
-            mono_line_height: theme.metric_token("metric.font.mono_line_height"),
+            mono_size,
+            mono_line_height,
+            text_style,
             fg: theme.color_token("foreground"),
             muted_fg: theme.color_token("muted-foreground"),
             syntax_colors,
@@ -1435,16 +1448,6 @@ fn render_code_block_line_row<H: UiHost>(
     row_theme: &CodeBlockLineRowTheme,
     rich: AttributedText,
 ) -> AnyElement {
-    let text_style = typography::as_control_text(TextStyle {
-        font: FontId::monospace(),
-        size: row_theme.mono_size,
-        weight: FontWeight::NORMAL,
-        slant: Default::default(),
-        line_height: Some(row_theme.mono_line_height),
-        letter_spacing_em: None,
-        ..Default::default()
-    });
-
     let code = cx.styled_text_props(StyledTextProps {
         layout: {
             let mut layout = LayoutStyle::default();
@@ -1453,7 +1456,7 @@ fn render_code_block_line_row<H: UiHost>(
             layout
         },
         rich,
-        style: Some(text_style),
+        style: Some(row_theme.text_style.clone()),
         color: Some(row_theme.fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
@@ -1952,6 +1955,7 @@ mod tests {
         let row_theme = CodeBlockLineRowTheme {
             mono_size: Px(10.0),
             mono_line_height: Px(14.0),
+            text_style: TextStyle::default(),
             fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
             muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
             syntax_colors: HashMap::new(),
@@ -2078,6 +2082,33 @@ mod tests {
                 "windowed code rows should keep fixed line-box StyledText layout marker `{marker}`"
             );
         }
+    }
+
+    #[test]
+    fn code_block_windowed_rows_reuse_theme_text_style() {
+        let row_theme_section = CODE_BLOCK_RS
+            .split("struct CodeBlockLineRowTheme {")
+            .nth(1)
+            .and_then(|section| section.split("impl CodeBlockLineRowTheme").next())
+            .expect("row theme section should exist");
+        assert!(
+            row_theme_section.contains("text_style: TextStyle,"),
+            "windowed row theme should own the shared StyledText style"
+        );
+
+        let render_row_section = CODE_BLOCK_RS
+            .split("fn render_code_block_line_row")
+            .nth(1)
+            .and_then(|section| section.split("#[allow(clippy::too_many_arguments)]").next())
+            .expect("render_code_block_line_row section should exist");
+        assert!(
+            render_row_section.contains("style: Some(row_theme.text_style.clone()),"),
+            "windowed rows should reuse the style cached on CodeBlockLineRowTheme"
+        );
+        assert!(
+            !render_row_section.contains("typography::as_control_text(TextStyle {"),
+            "windowed rows should not rebuild the same TextStyle for every mounted line"
+        );
     }
 
     #[test]

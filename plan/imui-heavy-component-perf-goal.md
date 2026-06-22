@@ -4296,3 +4296,38 @@ popover overlay root solve tail.
 - Rollback is local: restore the separate line-number and separator spans in
   `build_code_block_line_rich`, and revert the corresponding span-count test if a future renderer
   expectation needs the gutter separated again.
+
+## 2026-06-23 Code-View Windowed Row Text-Style Hoist Note
+
+- The windowed code-view row path now resolves the shared monospaced `TextStyle` once in
+  `CodeBlockLineRowTheme` and reuses it for each mounted row's `StyledText`.
+- Scope is deliberately narrow: no `VirtualList`, renderer, prepared-code, line-rich cache, or
+  non-windowed path behavior changed. This only removes repeated construction of the same row text
+  style from `render_code_block_line_row(...)`.
+- Structural coverage in the `code_block` test module now requires `CodeBlockLineRowTheme` to own
+  `text_style: TextStyle`, requires row rendering to use `row_theme.text_style.clone()`, and
+  forbids reintroducing `typography::as_control_text(TextStyle { ... })` inside the per-row render
+  function.
+- Focused gates:
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and `git diff --check`.
+- Transition perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-row-style-theme-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/code-view-row-style-theme-codex-20260623/1782154066709/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1847/1710/39/23/115/0/3`.
+  Compared with the immediate pre-change same-script baseline
+  `target/fret-diag/code-view-row-style-baseline-codex-20260623/1782153720560/bundle.schema2.json`
+  at `1965/1830/56/25/110/0/4`, this is a small positive move in the transition/mount band.
+- Interaction guard:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-row-style-theme-wheel-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=984/833/23/22/129/0/4`,
+  so steady scroll remains around the existing 1ms band.
+- Interpretation: keep this as a tiny row-mount cleanup stacked on the gutter span fold. The
+  remaining transition owner is still row/text blob churn (`renderer.text_prepare flush` remains
+  roughly `439us` in this bundle), so the next code-view work needs stronger evidence before
+  touching renderer pinning, `VirtualList`, or row identity.
+- Rollback is local: remove `text_style` from `CodeBlockLineRowTheme`, restore the per-row
+  `typography::as_control_text(TextStyle { ... })` construction in `render_code_block_line_row`,
+  and remove the matching structure guard if a future style-inheritance contract requires
+  row-local style construction.
