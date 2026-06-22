@@ -4222,6 +4222,15 @@ popover overlay root solve tail.
 - Interpretation: keep the content-scroll bypass as a real structural win. The next chrome work,
   if any, should target the remaining request-build/compute invalidation owner directly rather
   than deleting the preview-card shell.
+- Follow-up node-profile repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/chrome-torture-content-scroll-bypass-node-profile-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Follow-up bundle
+  `target/fret-diag/chrome-torture-content-scroll-bypass-node-profile-codex-20260623/1782151614166/bundle.schema2.json`
+  reported `time p95.us(total/layout/prepaint/paint)=2043/1796/37/233`,
+  `layout.root_phases request_build=1392us`, and `roots(apply)=417us`. The steady node-profile
+  owner left in the page is the nested `ui-gallery-portal-geometry-scroll-area` at roughly
+  `130-184us` self, `180-249us` total, so there is no evidence here for another portal-scroll
+  deletion.
 - Rollback is local: remove `disable_content_scroll_for_chrome_torture` from
   `apps/fret-ui-gallery/src/ui/content.rs` and drop the matching structure test if a future visual,
   scrolling, or diagnostics gate proves the outer content scroll is required for this harness.
