@@ -3343,3 +3343,38 @@ popover overlay root solve tail.
   owner is still the retained `VirtualList` row/container solve path, not local page chrome.
 - Rollback is local: restore the removed explanatory header/readout lines and the old structural
   assertions if the gallery needs those teaching strings back on the torture page.
+
+## 2026-06-22 Inspector Torture Row Text Layout Reuse Note
+
+- The inspector torture retained-row path now gives the combined label/value `RichText` an explicit
+  list-row layout contract (`w_full + min_w_0`) while keeping the same single rich text node,
+  row `Pressable`, inner chrome `Container`, `ListItem` semantics, and label diagnostics anchor.
+- The row builder now creates the row test id, label test id, `prop_{index}` label, and
+  `value {index}` string once per mounted row and reuses those values for semantics, diagnostics,
+  and text construction instead of formatting the same row strings through separate helper calls.
+- Source coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` locks the text layout
+  contract and the reused row id/label variables.
+- Validation:
+  `cargo fmt --all --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test inspector_perf_surface --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/inspector-row-text-layout-reuse-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Baseline:
+  `target/fret-diag/current-rank-inspector-direct-codex-20260622-followup/1782111938859/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2282/1851/893/175/256`.
+- Accepted evidence:
+  `target/fret-diag/inspector-row-text-layout-reuse-codex-20260622/1782113031242/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1662/1328/533/141/221`.
+- `layout-perf-summary` shows the intended owner movement without claiming a node-count win:
+  layout nodes stayed at `125`, while the row `Pressable` solve dropped `655us -> 367us`, root
+  `Stack` solve dropped `237us -> 165us`, and retained inspector `VirtualList` layout/inclusive
+  dropped `746/996us -> 447/658us`. `diag stats` also shows root apply falling from about
+  `1068us` on the compared worst frame to `705us`.
+- Interpretation: keep this as an accepted row layout/build contract cleanup. The remaining
+  inspector owner is still layout/root-apply dominated, but the row text is now constrained enough
+  that future work should inspect the retained `VirtualList` / root apply path rather than
+  reformatting or splitting the label/value text again.
+- Rollback is local: remove the `LayoutRefinement::default().w_full().min_w_0()` rich-text layout
+  patch, restore row semantics to format its own label/test id, and drop the matching source
+  assertions if a future visual or semantics gate proves the reused row contract wrong.

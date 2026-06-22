@@ -5,6 +5,7 @@ use fret_ui::element::{
     ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps, SizeStyle,
 };
 use fret_ui_kit::ColorRef;
+use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::typography::{UiTextSize, control_text_style, muted_foreground_color};
 
 fn inspector_row_test_id(index: usize) -> Arc<str> {
@@ -34,6 +35,7 @@ fn inspector_row_label_value_text(
     );
 
     ui::rich_text(rich)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
         .text_style(text_style)
         .text_color(ColorRef::Color(label_color))
         .truncate()
@@ -41,12 +43,18 @@ fn inspector_row_label_value_text(
         .into_element(cx)
 }
 
-fn inspector_row_semantics(index: usize, len: usize, selected: bool) -> PressableA11y {
+fn inspector_row_semantics(
+    index: usize,
+    len: usize,
+    selected: bool,
+    label: Arc<str>,
+    test_id: Arc<str>,
+) -> PressableA11y {
     let mut a11y = PressableA11y {
         role: Some(fret_core::SemanticsRole::ListItem),
-        label: Some(Arc::<str>::from(format!("prop_{index}"))),
+        label: Some(label),
         selected,
-        test_id: Some(inspector_row_test_id(index)),
+        test_id: Some(test_id),
         ..Default::default()
     };
 
@@ -140,17 +148,19 @@ pub(in crate::ui) fn preview_inspector_torture(
                     background_color
                 };
 
+                let row_test_id = inspector_row_test_id(index);
+                let row_label_test_id = inspector_row_label_test_id(index);
+                let label = Arc::<str>::from(format!("prop_{index}"));
+                let value = Arc::<str>::from(format!("value {index}"));
                 let row_content = inspector_row_label_value_text(
                     cx,
                     text_style.clone(),
                     label_color,
                     value_color,
-                    Arc::from(format!("prop_{index}")),
-                    Arc::from(format!("value {index}")),
+                    label.clone(),
+                    value,
                 )
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id(inspector_row_label_test_id(index)),
-                );
+                .attach_semantics(SemanticsDecoration::default().test_id(row_label_test_id));
 
                 let row = cx.pressable(
                     PressableProps {
@@ -162,7 +172,13 @@ pub(in crate::ui) fn preview_inspector_torture(
                             },
                             ..Default::default()
                         },
-                        a11y: inspector_row_semantics(index, len, is_selected),
+                        a11y: inspector_row_semantics(
+                            index,
+                            len,
+                            is_selected,
+                            label.clone(),
+                            row_test_id.clone(),
+                        ),
                         ..Default::default()
                     },
                     move |cx, st| {
@@ -193,7 +209,7 @@ pub(in crate::ui) fn preview_inspector_torture(
                     },
                 );
 
-                row.test_id(inspector_row_test_id(index))
+                row.test_id(row_test_id)
             };
 
             let list = cx.virtual_list_keyed_retained_with_layout_fn(
