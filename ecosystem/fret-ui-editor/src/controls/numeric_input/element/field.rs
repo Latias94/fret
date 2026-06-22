@@ -25,7 +25,9 @@ use super::super::model::{
 };
 use super::affix::numeric_input_affix_segment;
 use super::error::numeric_input_trailing_error_icon;
-use super::input::{NumericInputTextEntryArgs, numeric_input_text_entry};
+use super::input::{
+    NumericInputTextEntryArgs, numeric_input_text_entry, numeric_input_text_entry_fill_layout,
+};
 
 pub(super) struct NumericInputFieldArgs<T> {
     pub(super) layout: LayoutStyle,
@@ -141,6 +143,7 @@ where
             numeric_input_text_entry(
                 cx,
                 NumericInputTextEntryArgs {
+                    layout: numeric_input_text_entry_fill_layout(density),
                     model: model.clone(),
                     draft: draft.clone(),
                     error: error_for_field.clone(),
@@ -148,7 +151,6 @@ where
                     last_draft_text: last_draft_text.clone(),
                     current_text: current_text.clone(),
                     has_error,
-                    density,
                     enabled: enabled_for_paint,
                     focusable,
                     placeholder: placeholder.clone(),

@@ -11,7 +11,7 @@ use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
 use fret_runtime::Model;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::{ElementContext, UiHost};
 
 use crate::primitives::NumericPresentation;
@@ -25,7 +25,7 @@ mod session;
 #[cfg(test)]
 mod tests;
 
-use element::numeric_input_into_element_keyed;
+use element::{numeric_input_hidden_text_entry, numeric_input_into_element_keyed};
 pub use model::{
     NumericFormatFn, NumericInputErrorDisplay, NumericInputOptions, NumericInputOutcome,
     NumericParseFn, NumericValidateFn, OnNumericInputOutcome,
@@ -91,24 +91,52 @@ where
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_at(cx, Location::caller(), None)
+    }
+
+    #[track_caller]
+    pub(crate) fn into_element_with_hidden_text_entry_layout<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        hidden_layout: Option<LayoutStyle>,
+    ) -> AnyElement {
+        self.into_element_at(cx, Location::caller(), hidden_layout)
+    }
+
+    fn into_element_at<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        loc: &'static Location<'static>,
+        hidden_layout: Option<LayoutStyle>,
+    ) -> AnyElement {
         let model_id = self.model.id();
-        let loc = Location::caller();
         let callsite = (loc.file(), loc.line(), loc.column());
         let id_source = self.options.id_source.clone();
 
         if let Some(id_source) = id_source.as_deref() {
-            cx.keyed(
+            cx.keyed_at(
+                loc,
                 ("fret-ui-editor.numeric_input", id_source, model_id),
-                |cx| self.into_element_keyed(cx),
+                |cx| self.into_element_keyed_or_hidden(cx, hidden_layout),
             )
         } else {
-            cx.keyed(("fret-ui-editor.numeric_input", callsite, model_id), |cx| {
-                self.into_element_keyed(cx)
-            })
+            cx.keyed_at(
+                loc,
+                ("fret-ui-editor.numeric_input", callsite, model_id),
+                |cx| self.into_element_keyed_or_hidden(cx, hidden_layout),
+            )
         }
     }
 
-    fn into_element_keyed<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        numeric_input_into_element_keyed(self, cx)
+    fn into_element_keyed_or_hidden<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        hidden_layout: Option<LayoutStyle>,
+    ) -> AnyElement {
+        if let Some(layout) = hidden_layout {
+            numeric_input_hidden_text_entry(self, cx, layout)
+        } else {
+            numeric_input_into_element_keyed(self, cx)
+        }
     }
 }

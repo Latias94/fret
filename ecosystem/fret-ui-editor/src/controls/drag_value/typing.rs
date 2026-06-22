@@ -64,6 +64,12 @@ where
         Arc::new(Mutex::new(None));
     let constrained_parse: NumericParseFn<T> =
         Arc::new(move |text| parse(text).map(|value| constrain_numeric_value(constraints, value)));
+    let mut input_layout = input_layout;
+    let hidden_layout = (!typing).then_some(input_layout);
+    if hidden_layout.is_some() {
+        input_layout = LayoutStyle::default();
+    }
+
     let input = NumericInput::new(model, format, constrained_parse)
         .validate(validate)
         .focus_target(input_focus_target.clone())
@@ -100,7 +106,7 @@ where
                 }
             }
         })))
-        .into_element(cx);
+        .into_element_with_hidden_text_entry_layout(cx, hidden_layout);
 
     if let Some(input_id) = input_focus_target
         .lock()

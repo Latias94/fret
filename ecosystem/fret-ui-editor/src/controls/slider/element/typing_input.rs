@@ -72,6 +72,11 @@ where
     let state_for_input = state.clone();
     let input_focus_target: Arc<Mutex<Option<fret_ui::GlobalElementId>>> =
         Arc::new(Mutex::new(None));
+    let mut input_layout = input_layout;
+    let hidden_layout = (!typing).then_some(input_layout);
+    if hidden_layout.is_some() {
+        input_layout = LayoutStyle::default();
+    }
     let input = NumericInput::new(model, format, parse_for_input)
         .validate(validate_for_input)
         .focus_target(input_focus_target.clone())
@@ -102,7 +107,7 @@ where
                 host.request_redraw(action_cx.window);
             }
         })))
-        .into_element(cx);
+        .into_element_with_hidden_text_entry_layout(cx, hidden_layout);
 
     if let Some(input_id) = input_focus_target
         .lock()

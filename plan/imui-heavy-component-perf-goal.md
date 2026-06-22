@@ -372,6 +372,46 @@ historical records remain in:
 - Focused evidence is the `slider_frame_tracks_are_direct_flex_children_without_segment_wrappers`
   structure test and the `slider` nextest filter gate.
 
+## 2026-06-22 Hidden Numeric Typing Branch Flatten Note
+
+- Continued the editor-controls shell-shrink lane on the `DragValue` / `Slider` stable session
+  shell path.
+- When the typing branch is inactive, the branch now keeps only the hidden `TextInput` root needed
+  for numeric draft/error/focus handoff state. It no longer mounts the full
+  `NumericInput -> HoverRegion -> PointerRegion -> frame` wrapper chain while hidden.
+- The active typing branch still uses the full `NumericInput` frame, affixes, validation, and
+  trailing error icon behavior. This keeps the public component API and `fret-ui` mechanism layer
+  unchanged.
+- Structure coverage now asserts that inactive `DragValue` and `Slider` typing branches are
+  zero-sized hidden `TextInput` roots and do not retain hover/pointer frame wrappers.
+- Focused gates:
+  `cargo fmt --all --check` and
+  `cargo nextest run -p fret-ui-editor drag_value slider numeric_input --no-fail-fast`.
+- Correctness repro:
+  `target/release/fretboard-dev diag run tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json --dir target/fret-diag/editor-controls-hidden-numeric-input-roughness-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --dir target/fret-diag/editor-controls-hidden-numeric-input-codex-20260622 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Baseline bundle:
+  `target/fret-diag/rank-editor-controls-current-20260622/1782115740419/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=866/732/352`. Its worst layout summary still had the
+  hidden numeric branch as a `HoverRegion` solve root under `drag_value/typing.rs` /
+  `input_group/joined.rs`.
+- Changed repeat=3 bundles:
+  `target/fret-diag/editor-controls-hidden-numeric-input-codex-20260622/1782118573861/bundle.schema2.json`,
+  `target/fret-diag/editor-controls-hidden-numeric-input-codex-20260622/1782118577941/bundle.schema2.json`,
+  and
+  `target/fret-diag/editor-controls-hidden-numeric-input-codex-20260622/1782118581863/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=814/675/311`, `812/660/301`, and `904/744/354`.
+- Interpretation: p95 is a small positive to roughly neutral timing signal because the script is
+  already sub-millisecond on this machine, but the intended owner moved cleanly. The compared worst
+  layout frame changed from a hidden-branch `HoverRegion` solve root (`10us`, wrapper measure
+  hotspots) to a hidden `TextInput` root (`1us`) and root `Stack` solve dropped on the same frame
+  from `1232us` to about `435us`. Remaining editor-controls owners are now the root session shell
+  solve and `TextAssistField` option-row text/layout, not hidden numeric frame wrappers.
+- Rollback is local: restore `DragValue` / `Slider` hidden typing branches to call
+  `NumericInput::into_element(...)` with the hidden session branch layout and remove
+  `numeric_input_hidden_text_entry(...)` plus the matching structure assertions.
+
 ## 2026-06-22 VirtualList Torture Right Slot Direct Child Note
 
 - A fresh four-script candidate probe put `ui-gallery-virtual-list-torture-steady` back at the top

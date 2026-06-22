@@ -1,7 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use fret_core::{Axis, Edges, Px};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, SpacingLength};
+use fret_ui::element::{
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
+};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ChromeRefinement;
 
@@ -18,6 +20,7 @@ mod input;
 
 use error::numeric_input_inline_error;
 use field::{NumericInputFieldArgs, numeric_input_field};
+use input::{NumericInputTextEntryArgs, numeric_input_text_entry};
 
 use super::NumericInput;
 use super::model::editor_numeric_input_text_style;
@@ -154,4 +157,82 @@ where
     } else {
         field
     }
+}
+
+pub(super) fn numeric_input_hidden_text_entry<T, H>(
+    input: NumericInput<T>,
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutStyle,
+) -> AnyElement
+where
+    T: Copy + Default + 'static,
+    H: UiHost,
+{
+    let NumericInput {
+        model,
+        format,
+        parse,
+        validate,
+        on_outcome,
+        options,
+        focus_target,
+    } = input;
+
+    let draft = draft_model(cx);
+    let error = error_model(cx);
+    let focus_state = numeric_text_entry_focus_state(cx);
+    let last_draft_text = cx.slot_state(|| Arc::new(Mutex::new(String::new())), |st| st.clone());
+    let current_value = cx
+        .get_model_copied(&model, Invalidation::Paint)
+        .unwrap_or_default();
+    let current_text = (format)(current_value);
+    let has_error = cx
+        .get_model_cloned(&error, Invalidation::Paint)
+        .unwrap_or(None)
+        .is_some();
+
+    let (density, chrome, text_style) = {
+        let theme = Theme::global(&*cx.app);
+        let style = EditorStyle::resolve(theme);
+        let (chrome, text_style) =
+            resolve_editor_text_field_style(theme, options.size, &ChromeRefinement::default());
+        (style.density, chrome, text_style)
+    };
+
+    numeric_input_text_entry(
+        cx,
+        NumericInputTextEntryArgs {
+            layout: hidden_text_entry_layout(layout),
+            model,
+            draft: draft.clone(),
+            error: error.clone(),
+            focus_state: focus_state.clone(),
+            last_draft_text: last_draft_text.clone(),
+            current_text: current_text.clone(),
+            has_error,
+            enabled: options.enabled,
+            focusable: options.focusable,
+            placeholder: options.placeholder.clone(),
+            test_id: options.test_id.clone(),
+            chrome,
+            text_style: editor_numeric_input_text_style(text_style, density),
+            focus_target: focus_target.clone(),
+            selection_behavior: options.selection_behavior,
+            parse,
+            format,
+            validate,
+            on_outcome,
+        },
+    )
+}
+
+fn hidden_text_entry_layout(mut layout: LayoutStyle) -> LayoutStyle {
+    layout.size = SizeStyle {
+        width: Length::Px(Px(0.0)),
+        height: Length::Px(Px(0.0)),
+        min_width: Some(Length::Px(Px(0.0))),
+        min_height: Some(Length::Px(Px(0.0))),
+        ..Default::default()
+    };
+    layout
 }

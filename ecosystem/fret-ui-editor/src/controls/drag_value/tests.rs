@@ -73,6 +73,18 @@ fn drag_value_uses_stable_session_shell_for_scrub_and_typing_branches() {
     assert_eq!(element.children.len(), 2);
     assert_branch_is_fill(&element.children[0], "scrub branch");
     assert_branch_is_hidden(&element.children[1], "typing branch");
+    assert!(
+        matches!(element.children[1].kind, ElementKind::TextInput(_)),
+        "inactive typing branch should keep only the hidden TextInput root, got {:?}",
+        element.children[1].kind
+    );
+    assert!(
+        !branch_contains_kind(&element.children[1], |kind| matches!(
+            kind,
+            ElementKind::HoverRegion(_) | ElementKind::PointerRegion(_)
+        )),
+        "inactive typing branch should not keep hover/pointer frame wrappers"
+    );
 }
 
 fn assert_branch_is_fill(element: &AnyElement, label: &str) {
@@ -126,6 +138,14 @@ fn branch_has_hidden_layout(element: &AnyElement) -> bool {
     }
 
     element.children.iter().any(branch_has_hidden_layout)
+}
+
+fn branch_contains_kind(element: &AnyElement, pred: impl Fn(&ElementKind) -> bool + Copy) -> bool {
+    pred(&element.kind)
+        || element
+            .children
+            .iter()
+            .any(|child| branch_contains_kind(child, pred))
 }
 
 fn layout_for_hidden_check<'a>(

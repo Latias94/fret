@@ -21,6 +21,7 @@ use super::super::model::{
 };
 
 pub(super) struct NumericInputTextEntryArgs<T> {
+    pub(super) layout: LayoutStyle,
     pub(super) model: Model<T>,
     pub(super) draft: Model<String>,
     pub(super) error: Model<Option<Arc<str>>>,
@@ -28,7 +29,6 @@ pub(super) struct NumericInputTextEntryArgs<T> {
     pub(super) last_draft_text: Arc<Mutex<String>>,
     pub(super) current_text: Arc<str>,
     pub(super) has_error: bool,
-    pub(super) density: EditorDensity,
     pub(super) enabled: bool,
     pub(super) focusable: bool,
     pub(super) placeholder: Option<Arc<str>>,
@@ -59,7 +59,6 @@ where
         last_draft_text,
         current_text,
         has_error,
-        density,
         enabled,
         focusable,
         placeholder,
@@ -72,18 +71,11 @@ where
         format,
         validate,
         on_outcome,
+        layout,
     } = args;
 
     let mut props = TextInputProps::new(draft.clone());
-    props.layout = LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Fill,
-            min_height: Some(Length::Px(density.row_height)),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    props.layout = layout;
     props.enabled = enabled;
     props.focusable = focusable;
     props.placeholder = placeholder;
@@ -133,4 +125,16 @@ where
     clear_numeric_error_when_draft_changes(cx, is_focused, &draft, &error, &last_draft_text);
 
     input
+}
+
+pub(super) fn numeric_input_text_entry_fill_layout(density: EditorDensity) -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            min_height: Some(Length::Px(density.row_height)),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
 }
