@@ -4820,3 +4820,23 @@ popover overlay root solve tail.
   shaping / keep-alive cuts. Keep treating code-view as a documented no-cut for now, and only
   reopen it with direct evidence that changes row text representation or renderer text-blob
   retention.
+
+## 2026-06-23 Named Priority Recheck No-Cut
+
+- I reran the other named priority surfaces after the code-view validation to make sure the current
+  ranking still holds on this machine:
+  - Combobox long-list steady:
+    `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-long-list-focused-filter-select-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/combobox-long-list-current-codex-20260623h --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+    reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=283/8/0/168/107/0/2` on
+    `target/fret-diag/combobox-long-list-current-codex-20260623h/1782170794053/bundle.json`.
+  - Editor-controls click-stress:
+    `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-current-codex-20260623h --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+    reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1306/1184/857/11/206/0/4` on
+    `target/fret-diag/editor-controls-current-codex-20260623h/1782170824843/bundle.schema2.json`.
+    The same bundle's `diag stats --sort time --top 20 --verbose` showed the considered-frame
+    p95 band at `848/712/11/139us`, with the remaining owner shape still anchored in the real
+    `ViewCache` / `session_shell` / input-group path.
+- Interpretation: combobox is still sub-millisecond, and editor-controls remains around the
+  low-millisecond band with no fresh source-cut proof. The current active heavy owner remains the
+  code-view transition/mount path, but that lane is now explicitly documented as a no-cut until
+  direct row-text/blob evidence appears.
