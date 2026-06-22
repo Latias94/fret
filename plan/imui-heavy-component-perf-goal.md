@@ -4358,3 +4358,28 @@ popover overlay root solve tail.
 - Decision: reject and revert the source experiment. The line-number temporary allocation is not
   the current measurable code-view owner; the next code-view cut should target stronger row/text
   blob churn evidence instead of another line-number formatting micro-cut.
+
+## 2026-06-23 Editor-Controls Follow-up Node-Profile No-Cut
+
+- Rechecked the cookbook editor-controls click-stress probe after the latest code-view work:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-current-codex-20260623e --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- The raw `diag perf` tuple reported
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1577/1451/1008/5/137/0/4` on
+  `target/fret-diag/editor-controls-current-codex-20260623e/1782154791305/bundle.schema2.json`,
+  but `diag stats` on that same bundle reported the typical considered-frame p95 at
+  `total/layout/prepaint/paint=912/766/7/266us`; the raw p95 was a single request-build outlier
+  rather than a sustained interaction band.
+- Node-profile repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-node-profile-codex-20260623e --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Node-profile bundle
+  `target/fret-diag/editor-controls-node-profile-codex-20260623e/1782154820688/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=1110/975/493/5/130` and typical stats p95
+  around `874/706/6/292us`. The visible node owners were still the editor `session_shell` stack,
+  active `DragValue` value text, and `TextAssistField` option text.
+- Decision: no source cut. `session_shell` owns the stable scrub/typing branch contract, the
+  `TextAssist` row container owns list-option background/radius/padding/a11y shape, and the
+  `DragValue` value text remains real content under the input-group frame. Deleting any of those
+  from this evidence would be a contract change, not a safe performance cleanup.
+- Next editor-controls work needs a narrower proof: either a repeated request-build owner tied to a
+  specific local observer/model read, or a small row/text measurement cache owner that can be
+  validated without weakening the session shell.
