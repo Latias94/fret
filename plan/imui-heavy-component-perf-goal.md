@@ -389,6 +389,44 @@ historical records remain in:
   matching source-structure gate if a future visual, focus, or interaction test shows the direct
   pressable is not equivalent.
 
+## 2026-06-22 VirtualList Torture Row Action Style Hoist Note
+
+- The row label/edit direct-pressable helpers now receive a small
+  `VirtualListRowActionStyle` instead of resolving the same ghost/sm button layout and focus ring
+  inside every mounted row.
+- Scope is intentionally narrow: row node shape, row chrome, label/edit semantics, focus behavior,
+  and the retained/non-retained row builders stay the same. Minimal-harness rows do not compute this
+  action style because they do not mount row action buttons.
+- Upstream comparison supports this shape: shadcn's `Button` and Base UI's `Button` keep one button
+  host with style/behavior props rather than adding per-row style wrapper nodes.
+- Source coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now requires
+  `VirtualListRowActionStyle` / `virtual_list_row_action_style(...)` and forbids restoring
+  `Theme` parameters on `virtual_list_row_label_action(...)` /
+  `virtual_list_row_edit_action(...)`.
+- Validation:
+  `cargo fmt --all`,
+  `cargo fmt --all --check`,
+  `git diff --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-row-action-style-hoist-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2376/1979/595/147/250/92/10`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-row-action-style-hoist-codex-20260622/1782087228220/bundle.schema2.json`
+  showed the expected small build/layout movement with the same row breadth: `layout.nodes=119`,
+  `paint.nodes=140`, `child_rect_queries=67`, request-build `590us -> 581us`, solve
+  `606us -> 595us`, and row first-solve `232us -> 230us`. Root apply stayed in the same band
+  (`1086us -> 1098us`), so this is not a root-apply fix.
+- Interpretation: keep this as a low-risk build-path cleanup, not a major structural win. The next
+  VirtualList work should target the remaining root apply / VirtualList layout owner rather than
+  chasing more per-row style hoists unless fresh evidence isolates style resolution again.
+- Rollback is local: pass `Theme` back into the row label/edit helpers, restore their internal
+  `button_variants(...)` / `focus_ring(...)` resolution, and remove the matching source-structure
+  assertions.
+
 ## 2026-06-22 VirtualList Torture Row Cache A/B Rejected Note
 
 - I checked the already-available `FRET_UI_GALLERY_VLIST_ROW_CACHE=1` path against the latest row

@@ -78,9 +78,39 @@ fn virtual_list_row_content(
     )
 }
 
+#[derive(Clone, Copy)]
+struct VirtualListRowActionStyle {
+    label_layout: fret_ui::element::LayoutStyle,
+    edit_layout: fret_ui::element::LayoutStyle,
+    focus_ring: fret_ui::element::RingStyle,
+}
+
+fn virtual_list_row_action_style(theme: &Theme) -> VirtualListRowActionStyle {
+    let variants = shadcn::button_variants(
+        &theme.snapshot(),
+        shadcn::ButtonVariant::Ghost,
+        shadcn::ButtonSize::Sm,
+    );
+    let label_layout = decl_style::layout_style(
+        theme,
+        variants
+            .layout
+            .clone()
+            .merge(LayoutRefinement::default().flex_1().min_w_0()),
+    );
+    let edit_layout = decl_style::layout_style(theme, variants.layout);
+    let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
+
+    VirtualListRowActionStyle {
+        label_layout,
+        edit_layout,
+        focus_ring,
+    }
+}
+
 fn virtual_list_row_label_action<T, I>(
     cx: &mut AppComponentCx<'_>,
-    theme: &Theme,
+    style: &VirtualListRowActionStyle,
     label: T,
     test_id: I,
     on_activate: fret_ui::action::OnActivate,
@@ -91,25 +121,13 @@ where
 {
     let label = label.into();
     let test_id = test_id.into();
-    let variants = shadcn::button_variants(
-        &theme.snapshot(),
-        shadcn::ButtonVariant::Ghost,
-        shadcn::ButtonSize::Sm,
-    );
-    let pressable_layout = decl_style::layout_style(
-        theme,
-        variants
-            .layout
-            .merge(LayoutRefinement::default().flex_1().min_w_0()),
-    );
-    let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
 
     cx.pressable(
         fret_ui::element::PressableProps {
-            layout: pressable_layout,
+            layout: style.label_layout,
             enabled: true,
             focusable: true,
-            focus_ring: Some(focus_ring),
+            focus_ring: Some(style.focus_ring),
             key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
             a11y: fret_ui::element::PressableA11y {
                 role: Some(fret_core::SemanticsRole::Button),
@@ -131,7 +149,7 @@ where
 
 fn virtual_list_row_edit_action<T, I>(
     cx: &mut AppComponentCx<'_>,
-    theme: &Theme,
+    style: &VirtualListRowActionStyle,
     label: T,
     test_id: I,
     on_activate: fret_ui::action::OnActivate,
@@ -142,20 +160,13 @@ where
 {
     let label = label.into();
     let test_id = test_id.into();
-    let variants = shadcn::button_variants(
-        &theme.snapshot(),
-        shadcn::ButtonVariant::Ghost,
-        shadcn::ButtonSize::Sm,
-    );
-    let pressable_layout = decl_style::layout_style(theme, variants.layout);
-    let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
 
     cx.pressable(
         fret_ui::element::PressableProps {
-            layout: pressable_layout,
+            layout: style.edit_layout,
             enabled: true,
             focusable: true,
-            focus_ring: Some(focus_ring),
+            focus_ring: Some(style.focus_ring),
             key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
             a11y: fret_ui::element::PressableA11y {
                 role: Some(fret_core::SemanticsRole::Button),
@@ -503,6 +514,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                 }
             } else if retained_host {
                 let theme = theme.clone();
+                let row_action_style = virtual_list_row_action_style(&theme);
                 let edit_row = virtual_list_torture_edit_row.clone();
                 let edit_text = virtual_list_torture_edit_text.clone();
                 let row_cache = row_cache;
@@ -542,7 +554,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
 
                         let row_label = virtual_list_row_label_action(
                             cx,
-                            &theme,
+                            &row_action_style,
                             format!("Row {index}"),
                             format!("ui-gallery-virtual-list-row-{index}-label"),
                             on_select_row.clone(),
@@ -558,7 +570,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         } else {
                             virtual_list_row_edit_action(
                                 cx,
-                                &theme,
+                                &row_action_style,
                                 "Edit",
                                 format!("ui-gallery-virtual-list-row-{index}-edit"),
                                 on_select_row,
@@ -626,6 +638,8 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                     row,
                 )
             } else {
+                let row_action_style = virtual_list_row_action_style(theme);
+
                 cx.virtual_list_keyed_with_layout(
                     list_layout,
                     len,
@@ -669,7 +683,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 });
                             let row_label = virtual_list_row_label_action(
                                 cx,
-                                theme,
+                                &row_action_style,
                                 format!("Row {index}"),
                                 format!("ui-gallery-virtual-list-row-{index}-label"),
                                 on_select_row.clone(),
@@ -685,7 +699,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             } else {
                                 virtual_list_row_edit_action(
                                     cx,
-                                    theme,
+                                    &row_action_style,
                                     "Edit",
                                     format!("ui-gallery-virtual-list-row-{index}-edit"),
                                     on_select_row,
