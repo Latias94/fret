@@ -421,6 +421,23 @@ historical records remain in:
   from `.paint()` back to `.layout()` and remove
   `data_table_toolbar_filter_sync_observes_local_inputs_as_paint_only`.
 
+## 2026-06-22 Data Table Fixed Row Width Arc Experiment Rejected
+
+- I tested changing `table_fixed_row_group_with_cell_padding(...)` to take `Arc<[Px]>` so the
+  layout closure would clone only the shared width handle instead of cloning the row-local
+  `Vec<Px>`.
+- Focused structure gates passed during the experiment, but the perf repro regressed:
+  `target/fret-diag/data-table-fixed-row-widths-arc-codex-20260622/1782133505363/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2640/1923/504/241/476`.
+- Compared with the accepted toolbar filter paint-watch bundle
+  `target/fret-diag/data-table-toolbar-filter-paint-watch-codex-20260622/1782132776781/bundle.schema2.json`
+  at `2346/1748/475/185/413`, the Arc width-handle cut worsened total, layout, prepaint, and
+  paint. It slightly reduced the retained `VirtualList` inclusive band in one summary, but not
+  enough to justify the frame regression.
+- Decision: reject and revert the source experiment. No code/test change is kept from this slice.
+  The next data-table cut should target root apply, retained-list row solve, or remaining toolbar
+  text/readout measurement with a stronger positive A/B.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait
