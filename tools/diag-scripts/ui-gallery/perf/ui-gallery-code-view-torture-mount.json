@@ -1,5 +1,18 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-code-view-torture-mount",
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["gallery-dev"],
+    "tags": ["ui-gallery", "perf", "code-view", "mount", "transition"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "intro"
+    },
+    "target_hints": [
+      "Starts from the lightweight intro page so the nav-search/page-switch transition probe does not inherit the diagnostics default overlay page.",
+      "Measures the transition into code_view_torture; use ui-gallery-code-view-torture-mount-direct-entry for the steady direct-entry mount surface."
+    ]
+  },
   "steps": [
     {
       "type": "wait_until",

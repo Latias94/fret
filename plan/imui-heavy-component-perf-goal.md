@@ -9,9 +9,10 @@ date: 2026-06-14
 ## Goal
 
 Keep optimizing Fret's IMUI and shadcn-style heavy component paths until dense general-app
-surfaces can stay within a practical 120Hz interaction budget. The current primary gate is the
-ui-gallery searchable combobox long-list perf probe because it exercises nested composition,
-command filtering, virtual rows, overlays, semantics selectors, layout, paint, and diagnostics.
+surfaces can stay within a practical 120Hz interaction budget. The current driver should be the
+heaviest reproducible UI Gallery surface from the latest local evidence, not a fixed historical
+component. The searchable combobox long-list probe remains an important regression surface, but the
+latest focused run on this machine no longer supports treating it as the primary hotspot.
 
 This root-level `plan/` note mirrors the user's requested progress log location. The longer
 historical records remain in:
@@ -43,6 +44,10 @@ historical records remain in:
   `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json`
   returned `p95.us(total/layout/solve/prepaint/paint)=2536/2041/970/223/310` on
   `target/fret-diag/inspector-direct-entry-followup-6/1781999391436/bundle.schema2.json`.
+- The latest focused combobox long-list repeat=3 run is light on this machine
+  (`p95.total` roughly `612-714us`), so the active investigation should stay on the current
+  heavier code-view / inspector / editor-controls class surfaces unless fresh evidence contradicts
+  that ranking.
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
@@ -207,6 +212,29 @@ historical records remain in:
 - Reverted the probe back to the original `reset_diagnostics -> wait_frames(1) -> click_stable`
   transition shape and kept the existing regression test focused on preserving the nav-search /
   page-switch setup.
+
+## 2026-06-22 Transition Perf Probes Intro Start-Page Contract Note
+
+- The code-view and inspector transition perf probes were clarified as transition probes, not
+  direct-entry steady-state probes. Both now declare metadata and pin
+  `FRET_UI_GALLERY_START_PAGE=intro` in `meta.env_defaults`.
+- Reason: the previous code-view transition run inherited the diagnostics default `overlay` start
+  page. Its worst frame still included stale overlay/content-scroll work, which made the top owner
+  look like old gallery shell pollution instead of the actual transition into `code_view_torture`.
+- The A/B with the explicit intro start page shifted ownership away from the overlay path. After
+  making the script default explicit, the official run without manual start-page env landed at
+  `target/fret-diag/code-view-transition-intro-script-default-codex-20260622/1782105611492/bundle.schema2.json`
+  with `p95.us(total/layout/solve)=2430/2287/1631`.
+- `diag stats` on that clean bundle reported worst-frame
+  `total/layout/prepaint/paint=2430/2287/30/113`, and layout attribution now points at
+  `Stack root[fret-ui-gallery]` solve plus code-view mount/text-measure owners rather than the old
+  overlay/content-scroll owner.
+- Regression coverage now checks that the promoted transition scripts keep the nav-search /
+  page-switch setup, advertise their stable names, and document why they start from the lightweight
+  intro page.
+- Next code-view cut should target the cleaned transition owner: root `Stack` solve and
+  code-view mount/text-measure cost. Do not optimize overlay/content-scroll from the polluted
+  pre-fix bundle.
 
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 

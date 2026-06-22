@@ -1,5 +1,18 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-inspector-torture-scroll",
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["gallery-dev"],
+    "tags": ["ui-gallery", "perf", "inspector", "scroll", "transition"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "intro"
+    },
+    "target_hints": [
+      "Starts from the lightweight intro page so the nav-search/page-switch transition probe does not inherit the diagnostics default overlay page.",
+      "Measures the transition into inspector_torture before the scroll stress; use ui-gallery-inspector-torture-scroll-direct-entry for the steady direct-entry scroll surface."
+    ]
+  },
   "steps": [
     {
       "predicate": {

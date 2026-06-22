@@ -72,6 +72,11 @@ fn code_view_mount_perf_script_keeps_nav_transition_setup() {
         "../../../tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json"
     );
     let value = serde_json::from_str::<Value>(script).expect("valid transition perf script json");
+    let meta = value.get("meta").expect("transition perf script meta");
+    let env = meta
+        .get("env_defaults")
+        .and_then(Value::as_object)
+        .expect("transition perf script env defaults");
 
     assert!(
         script.contains("\"ui-gallery-nav-search\"")
@@ -79,9 +84,27 @@ fn code_view_mount_perf_script_keeps_nav_transition_setup() {
             && script.contains("\"text\": \"code_view_torture\""),
         "transition perf script should keep the nav-search/page-switch setup steps",
     );
+    assert_eq!(
+        meta.get("name").and_then(Value::as_str),
+        Some("ui-gallery-code-view-torture-mount"),
+        "transition perf script should keep a stable promoted name",
+    );
+    assert_eq!(
+        env.get("FRET_UI_GALLERY_START_PAGE")
+            .and_then(Value::as_str),
+        Some("intro"),
+        "transition perf script should start from the lightweight intro page instead of inheriting the diagnostics default overlay page",
+    );
+    let target_hints = meta
+        .get("target_hints")
+        .and_then(Value::as_array)
+        .expect("transition perf script target hints");
     assert!(
-        !script.contains("\"FRET_UI_GALLERY_START_PAGE\""),
-        "transition perf script should not silently turn into a start-page direct-entry probe",
+        target_hints.iter().any(|hint| {
+            hint.as_str()
+                .is_some_and(|hint| hint.contains("diagnostics default overlay page"))
+        }),
+        "transition perf script should document why the explicit intro start page exists",
     );
 
     let steps = value
