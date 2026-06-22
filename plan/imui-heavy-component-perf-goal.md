@@ -621,6 +621,28 @@ historical records remain in:
   retained data-table, or another heavier current owner before changing code-view retention,
   overscan, key-cache, or renderer glyph pin behavior.
 
+## 2026-06-23 VirtualList/DataTable Current Rerank Note
+
+- After code-view steady/scroll fell out of the primary hotspot set, I reran the two remaining
+  recent 2ms-class candidates with the same local macOS/M4 Pro release setup.
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json` repeat=1
+  reported `top.us(total/layout/solve/prepaint/paint)=2129/1722/771/163/244` on
+  `target/fret-diag/virtual-list-current-rerank-codex-20260623/1782147015840/bundle.schema2.json`.
+  Attribution still points at first-solve retained row containers (`batch_roots=15`,
+  `subtree_nodes=75`, `solve_us=456`), root `Stack` solve/apply, and the harness `VirtualList`
+  layout (`inclusive/layout=779/552us`). The ordinary row container still owns visible chrome,
+  padding, fixed height, and clipping, so this evidence does not justify deleting it.
+- `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json`
+  repeat=1 reported `top.us(total/layout/solve/prepaint/paint)=2246/1691/487/176/379` on
+  `target/fret-diag/data-table-current-rerank-codex-20260623/1782147052219/bundle.json`.
+  Attribution remains root build/apply plus retained table `VirtualList` and row `HoverRegion`
+  solve (`batch_roots=33`, `subtree_nodes=66`, `solve_us=123` on the top frame), with no obvious
+  gallery shell owner reintroduced.
+- Interpretation: both surfaces are still heavier than code-view steady/scroll, but both are well
+  below the 8.33ms 120Hz frame budget on this machine. The next slice should be evidence-led and
+  narrow: either find a clearer retained-row/root-apply owner, or rerank another heavy surface
+  before changing generic VirtualList, table row, or renderer behavior.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
