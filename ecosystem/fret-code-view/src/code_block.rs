@@ -1507,6 +1507,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     let mut list_options = VirtualListOptions::fixed(row_h, overscan.max(1));
     list_options.items_revision = prepared.revision;
     list_options.key_cache = VirtualListKeyCacheMode::VisibleOnly;
+    list_options.keep_alive = overscan.saturating_mul(8).max(32);
 
     let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
@@ -2139,6 +2140,25 @@ mod tests {
         assert!(
             !line_cache_section.contains("code_shaping_for_code_block_flags("),
             "windowed line rich cache should not rebuild the same shaping style for every missed line"
+        );
+    }
+
+    #[test]
+    fn code_block_windowed_list_keeps_visible_keys_with_limited_row_keep_alive() {
+        let windowed_section = CODE_BLOCK_RS
+            .split("fn render_code_block_windowed_lines")
+            .nth(1)
+            .and_then(|section| section.split("let len = prepared.lines.len();").next())
+            .expect("render_code_block_windowed_lines options section should exist");
+        assert!(
+            windowed_section
+                .contains("list_options.key_cache = VirtualListKeyCacheMode::VisibleOnly;"),
+            "windowed code view should keep visible-only key caching instead of rebuilding all row keys"
+        );
+        assert!(
+            windowed_section
+                .contains("list_options.keep_alive = overscan.saturating_mul(8).max(32);"),
+            "windowed code view should retain a bounded off-window row pool for scroll reuse"
         );
     }
 

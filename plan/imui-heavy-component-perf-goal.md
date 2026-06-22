@@ -4615,3 +4615,47 @@ popover overlay root solve tail.
   fixed-line-box layout skip as a code-view optimization unless it is paired with evidence that
   renderer text-blob preparation or retention is also reduced. The next valid code-view cut should
   target row text representation or renderer text-blob retention directly.
+
+## 2026-06-23 Code-View Windowed Row Keep-Alive Note
+
+- The windowed code-view `VirtualList` now keeps `VisibleOnly` key caching but sets a bounded
+  retained row keep-alive pool (`overscan * 8`, minimum `32`). This uses the existing retained
+  virtual-list off-window row reuse mechanism instead of restoring the rejected full `AllKeys`
+  cache.
+- Scope is narrow: row keys, row text representation, overscan, `CodeBlockWindowedLineRichCache`,
+  and renderer blob/cache policy are unchanged. The cut only keeps a small pool of recently
+  detached row subtrees alive so short wheel-scroll reversals and settle frames can reuse
+  `StyledText` host state and text blobs.
+- Structural gate:
+  `code_block_windowed_list_keeps_visible_keys_with_limited_row_keep_alive` now requires the
+  windowed lane to keep `VirtualListKeyCacheMode::VisibleOnly` and the bounded keep-alive formula.
+- Focused gates:
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and `git diff --check`.
+- Wheel-scroll steady evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-keepalive-wheel-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=883/765/15/16/104/0/3`
+  with worst bundle
+  `target/fret-diag/code-view-keepalive-wheel-codex-20260623/1782163805666/bundle.schema2.json`.
+  The latest comparable scroll guard before this row-retention cut was
+  `target/fret-diag/code-view-row-style-theme-wheel-codex-20260623` at
+  `984/833/23/22/129/0/4`.
+- `diag stats --sort time --top 10 --verbose` on the keep-alive wheel bundle showed
+  `paint.text_prepare p95=0us`, renderer text flush `max=85us`, and worst-frame
+  text pin churn at `blobs/fast_reuse/pinned/prewarm/retained/added/removed=59/0/261/22/239/22/1`.
+  The retained text state grew modestly during the scroll run (`blob_cache_entries` around the low
+  300s), which is expected for a bounded off-window row pool.
+- Mount/transition guard:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-keepalive-mount-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1877/1741/32/23/114/0/4`,
+  with worst bundle
+  `target/fret-diag/code-view-keepalive-mount-codex-20260623/1782163842616/bundle.schema2.json`.
+  This stays inside the accepted shaping-hoist transition band (`1886/1739/37/27/125/0/3`) and does
+  not reintroduce the fixed-line-box no-cut's paint prepare regression.
+- Interpretation: keep this as a targeted scroll-retention win. It reduces steady scroll text
+  preparation without paying the full key-cache startup cost that previous `AllKeys` evidence
+  rejected. The remaining code-view transition owner is still first-mount row text/layout work, so
+  future cuts should not widen this keep-alive pool without fresh memory and frame-time evidence.
+- Rollback is local: remove the `list_options.keep_alive = overscan.saturating_mul(8).max(32);`
+  assignment and drop `code_block_windowed_list_keeps_visible_keys_with_limited_row_keep_alive` if a
+  future memory-sensitive profile shows the retained off-window row pool is too costly.
