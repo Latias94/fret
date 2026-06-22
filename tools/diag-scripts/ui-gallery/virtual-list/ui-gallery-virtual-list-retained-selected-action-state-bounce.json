@@ -72,15 +72,8 @@
       "timeout_frames": 240
     },
     {
-      "type": "wait_semantics_scroll_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-content-viewport-virtual_list_torture"
-      },
-      "field": "y",
-      "max_delta": 0.25,
-      "stable_frames": 8,
-      "timeout_frames": 300
+      "type": "wait_frames",
+      "n": 8
     },
     {
       "type": "assert",
@@ -109,7 +102,7 @@
       "type": "click_stable",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-virtual-list-row-2-label.chrome"
+        "id": "ui-gallery-virtual-list-row-2-label"
       }
     },
     {
@@ -153,15 +146,8 @@
       "pointer_kind": "touch"
     },
     {
-      "type": "wait_semantics_scroll_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-content-viewport-virtual_list_torture"
-      },
-      "field": "y",
-      "max_delta": 0.25,
-      "stable_frames": 4,
-      "timeout_frames": 300
+      "type": "wait_frames",
+      "n": 4
     },
     {
       "type": "wait_until",
@@ -235,15 +221,8 @@
       "pointer_kind": "touch"
     },
     {
-      "type": "wait_semantics_scroll_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-content-viewport-virtual_list_torture"
-      },
-      "field": "y",
-      "max_delta": 0.25,
-      "stable_frames": 4,
-      "timeout_frames": 300
+      "type": "wait_frames",
+      "n": 4
     },
     {
       "type": "wait_until",

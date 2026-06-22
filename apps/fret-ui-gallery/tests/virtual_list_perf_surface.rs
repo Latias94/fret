@@ -19,6 +19,26 @@ fn test_id_target(step: &Value) -> Option<&str> {
         .and_then(Value::as_str)
 }
 
+fn contains_test_id(value: &Value, needle: &str) -> bool {
+    match value {
+        Value::Object(map) => map.iter().any(|(key, value)| {
+            (key == "id" && value.as_str() == Some(needle)) || contains_test_id(value, needle)
+        }),
+        Value::Array(values) => values.iter().any(|value| contains_test_id(value, needle)),
+        _ => false,
+    }
+}
+
+fn contains_step_type(value: &Value, needle: &str) -> bool {
+    match value {
+        Value::Object(map) => map.iter().any(|(key, value)| {
+            (key == "type" && value.as_str() == Some(needle)) || contains_step_type(value, needle)
+        }),
+        Value::Array(values) => values.iter().any(|value| contains_step_type(value, needle)),
+        _ => false,
+    }
+}
+
 fn first_step_index(steps: &[Value], expected_type: &str, expected_target: Option<&str>) -> usize {
     steps
         .iter()
@@ -92,4 +112,58 @@ fn virtual_list_steady_script_keeps_jump_input_setup_outside_perf_capture_window
         set_9000 < reset && reset < jump_click,
         "steady perf script should prepare the jump input before reset_diagnostics, then measure jump/bottom behavior",
     );
+}
+
+#[test]
+fn virtual_list_torture_correctness_scripts_target_inner_list_scroll_after_content_bypass() {
+    for (name, script) in [
+        (
+            "retained selected action state bounce",
+            include_str!(
+                "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json"
+            ),
+        ),
+        (
+            "retained collection metadata bounce",
+            include_str!(
+                "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+            ),
+        ),
+        (
+            "window boundary scroll",
+            include_str!(
+                "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json"
+            ),
+        ),
+        (
+            "window boundary scroll retained",
+            include_str!(
+                "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+            ),
+        ),
+        (
+            "small scroll no window shifts",
+            include_str!(
+                "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json"
+            ),
+        ),
+    ] {
+        let parsed = serde_json::from_str::<Value>(script).expect("valid virtual-list script json");
+        assert!(
+            !contains_test_id(&parsed, "ui-gallery-content-viewport-virtual_list_torture"),
+            "{name} should not target the removed outer content viewport"
+        );
+        assert!(
+            !contains_step_type(&parsed, "wait_semantics_scroll_stable"),
+            "{name} should not wait for ScrollArea semantics on the inner VirtualList"
+        );
+        assert!(
+            !contains_test_id(&parsed, "ui-gallery-virtual-list-row-2-label.chrome"),
+            "{name} should target direct row-action pressables, not removed chrome wrappers"
+        );
+        assert!(
+            contains_test_id(&parsed, "ui-gallery-virtual-list-root"),
+            "{name} should target the inner virtual-list scroll root"
+        );
+    }
 }

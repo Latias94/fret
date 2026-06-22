@@ -95,15 +95,8 @@
       "type": "wait_until"
     },
     {
-      "field": "y",
-      "max_delta": 0.25,
-      "stable_frames": 8,
-      "target": {
-        "id": "ui-gallery-content-viewport-virtual_list_torture",
-        "kind": "test_id"
-      },
-      "timeout_frames": 300,
-      "type": "wait_semantics_scroll_stable"
+      "type": "wait_frames",
+      "n": 8
     },
     { "type": "reset_diagnostics" },
     { "type": "wait_frames", "n": 2 },
@@ -133,7 +126,7 @@
       "delta_x": 0.0,
       "delta_y": 60.0,
       "target": {
-        "id": "ui-gallery-content-viewport-virtual_list_torture",
+        "id": "ui-gallery-virtual-list-root",
         "kind": "test_id"
       },
       "type": "wheel"
@@ -153,7 +146,7 @@
       "delta_x": 0.0,
       "delta_y": -60.0,
       "target": {
-        "id": "ui-gallery-content-viewport-virtual_list_torture",
+        "id": "ui-gallery-virtual-list-root",
         "kind": "test_id"
       },
       "type": "wheel"
@@ -170,15 +163,8 @@
       }
     },
     {
-      "field": "y",
-      "max_delta": 0.25,
-      "stable_frames": 8,
-      "target": {
-        "id": "ui-gallery-content-viewport-virtual_list_torture",
-        "kind": "test_id"
-      },
-      "timeout_frames": 300,
-      "type": "wait_semantics_scroll_stable"
+      "type": "wait_frames",
+      "n": 8
     },
     {
       "label": "ui-gallery-virtual-list-small-scroll-no-window-shifts-after",

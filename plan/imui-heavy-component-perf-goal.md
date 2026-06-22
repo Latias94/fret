@@ -3040,3 +3040,33 @@ popover overlay root solve tail.
   `relative`, and return non-editing rows to `virtual_list_row_content(...)` with the direct
   label/edit pressables if a future visual, focus, or interaction gate shows fixed absolute lanes
   are not acceptable.
+
+## 2026-06-22 VirtualList Torture Correctness Script Target Refresh Note
+
+- The virtual-list torture correctness/mechanism scripts no longer target the removed outer
+  `ui-gallery-content-viewport-virtual_list_torture` ScrollArea viewport. `PAGE_VIRTUAL_LIST_TORTURE`
+  now uses the content-scroll bypass, so that viewport is absent by design.
+- The scripts now use bounded `wait_frames` settle points plus existing row visibility /
+  `pos_in_set` / `set_size` assertions. The inner `ui-gallery-virtual-list-root` is retained as the
+  wheel target, but not used for `wait_semantics_scroll_stable` because it is exposed as `role=list`
+  without ScrollArea semantics fields.
+- The retained selected/action script also clicks `ui-gallery-virtual-list-row-2-label` directly
+  instead of the removed `ui-gallery-virtual-list-row-2-label.chrome` wrapper. That matches the
+  accepted direct row-action pressable shape.
+- Static coverage:
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast` now checks
+  the virtual-list scripts do not reference the removed outer viewport, do not use
+  `wait_semantics_scroll_stable` for this page, and do not target the removed row-label chrome
+  wrapper.
+- Validation:
+  `cargo fmt --all --check`, `git diff --check`, and the focused `virtual_list_perf_surface` test.
+- Actual diag smoke passed for the two retained correctness scripts called out by the previous
+  absolute-actions note:
+  - `target/release/fretboard-dev diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json --dir target/fret-diag/virtual-list-retained-collection-metadata-bounce-inner-root-settle-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  - `target/release/fretboard-dev diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json --dir target/fret-diag/virtual-list-retained-selected-action-state-bounce-direct-row-action-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Residual: `ui-gallery-virtual-list-window-boundary-scroll-retained.json` no longer fails on the
+  removed viewport wait, but the local smoke exposed an older follow-on failure at the final
+  `reused_from_keep_alive_items_min` retained-reconcile assertion:
+  `target/fret-diag/virtual-list-window-boundary-scroll-retained-inner-root-settle-codex-20260622/1782098771484-script-step-0026-assert-failed/bundle.schema2.json`.
+  Treat that as a separate retained window-boundary contract refresh, not as evidence against the
+  row absolute-action slice.
