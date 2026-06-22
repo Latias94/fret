@@ -4801,3 +4801,22 @@ popover overlay root solve tail.
 - Rollback is local: remove `disable_content_scroll_for_file_tree_torture`, remove
   `PAGE_FILE_TREE_TORTURE` from the direct preview-card bypass, and drop the two matching tests if
   a future page layout contract needs file-tree torture back inside the generic gallery scaffold.
+
+## 2026-06-23 Code-View Transition Current Rerun No-Cut
+
+- I reran the current code-view transition probe to validate the latest owner ranking after the
+  keep-alive and row shaping work:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-transition-current-codex-20260623g --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Fresh repeat=3 evidence:
+  `target/fret-diag/code-view-transition-current-codex-20260623g/1782170671862/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1861/1739/50/24/123/0/4`.
+  The companion `diag stats --sort time --top 20 --verbose` output showed the considered worst
+  transition frame still rooted in code-view `VirtualList` first-solve row mounting:
+  `batch_roots=33`, `layout.nodes=35`, `renderer.text_prepare.flush=439us`, and
+  `renderer.text_prepare.counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)=53/0/291/158/133/158/113`.
+- Interpretation: this is back in the accepted ~1.8ms transition band, not a source-cut trigger.
+  The remaining cost is still the same mounted `StyledText` row first-solve + text-prepare churn
+  shape, but the fresh run does not expose a narrower safe win than the already-accepted row
+  shaping / keep-alive cuts. Keep treating code-view as a documented no-cut for now, and only
+  reopen it with direct evidence that changes row text representation or renderer text-blob
+  retention.
