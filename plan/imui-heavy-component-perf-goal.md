@@ -4761,3 +4761,43 @@ popover overlay root solve tail.
 - Decision: reject and remove the torture-page `overscan(2)` call-site change. Future code-view
   work should keep targeting row text representation or renderer text-blob retention with direct
   evidence, not another overscan-count tweak.
+
+## 2026-06-23 File-Tree Torture Direct Content Shell Note
+
+- The file-tree torture page now joins the `gallery-dev` heavy direct-entry shell policy. It skips
+  both the outer gallery content `ScrollArea` and the generic `shadcn::Card("Preview")` wrapper,
+  matching the already accepted inspector/data-table torture bypass pattern.
+- Scope is intentionally gallery-harness-only. `fret-ui-kit` `FileTreeView`, retained row
+  `Pressable -> Container -> Flex -> StyledText` structure, row activation, treeitem semantics,
+  padding, clipping, overscan, and keep-alive behavior are unchanged.
+- Regression coverage:
+  `gallery_file_tree_torture_can_disable_the_outer_content_scroll_shell` locks the explicit
+  content-scroll bypass gate, and `file_tree_torture_skips_preview_card_shell` verifies the
+  runtime page keeps `ui-gallery-file-tree-root` while omitting `ui-gallery-preview-card`.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_file_tree_torture_can_disable_the_outer_content_scroll_shell gallery_data_table_torture_can_disable_the_outer_content_scroll_shell gallery_code_view_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-ui-gallery --features gallery-dev file_tree_torture_skips_preview_card_shell data_table_torture_skips_preview_card_shell inspector_torture_skips_preview_card_shell --no-fail-fast`.
+- Pre-cut node-profile rerun:
+  `target/fret-diag/file-tree-scroll-steady-post-text-node-profile-codex-20260623/1782168778337/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1188/985/385/31/193/59/8`.
+  `diag stats` showed the outer content `Scroll` still visible (`inclusive` around `728us`),
+  layout nodes at `148`, root apply p95 around `736us`, and retained row batch solve still rooted
+  at `Pressable` with `subtree_nodes=120` for `batch_roots=30`.
+- Accepted perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/file-tree-direct-content-shell-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1042/854/407/23/185/59/8`
+  with worst bundle
+  `target/fret-diag/file-tree-direct-content-shell-codex-20260623/1782169781445/bundle.json`.
+- `diag stats --sort time --top 20 --verbose` on the accepted bundle showed the intended owner
+  movement: `ui-gallery-content-viewport` is no longer a layout hotspot, layout nodes dropped
+  `148 -> 137`, invalidation nodes dropped `988 -> 647`, and root apply p95 dropped roughly
+  `736us -> 566us`. The remaining local owner is still the file-tree retained `VirtualList` and
+  row `Pressable` batch solve, not generic preview chrome.
+- Interpretation: keep this as a heavy-page harness-shell cleanup. Do not use it as evidence to
+  delete the remaining file-tree row `Flex`; that layer is currently a small vertical-centering
+  owner and needs separate geometry proof before removal.
+- Rollback is local: remove `disable_content_scroll_for_file_tree_torture`, remove
+  `PAGE_FILE_TREE_TORTURE` from the direct preview-card bypass, and drop the two matching tests if
+  a future page layout contract needs file-tree torture back inside the generic gallery scaffold.

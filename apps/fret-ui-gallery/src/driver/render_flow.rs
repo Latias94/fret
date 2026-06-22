@@ -1702,6 +1702,26 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn file_tree_torture_skips_preview_card_shell() {
+        let rendered = render_gallery_page(PAGE_FILE_TREE_TORTURE);
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot for file tree torture page");
+
+        assert!(
+            find_node_by_test_id(snapshot, "ui-gallery-preview-card").is_none(),
+            "expected file tree torture page to skip the generic preview card shell"
+        );
+        assert!(
+            find_node_by_test_id(snapshot, "ui-gallery-file-tree-root").is_some(),
+            "expected file tree torture page to keep the file-tree diagnostics root"
+        );
+    }
+
     fn rects_intersect(a: Rect, b: Rect) -> bool {
         let a_right = a.origin.x.0 + a.size.width.0;
         let a_bottom = a.origin.y.0 + a.size.height.0;

@@ -155,6 +155,11 @@ pub(crate) fn content_view(
     let disable_content_scroll_for_data_table_torture = false;
 
     #[cfg(feature = "gallery-dev")]
+    let disable_content_scroll_for_file_tree_torture = selected == PAGE_FILE_TREE_TORTURE;
+    #[cfg(not(feature = "gallery-dev"))]
+    let disable_content_scroll_for_file_tree_torture = false;
+
+    #[cfg(feature = "gallery-dev")]
     let disable_content_scroll_for_virtual_list_torture = selected == PAGE_VIRTUAL_LIST_TORTURE;
     #[cfg(not(feature = "gallery-dev"))]
     let disable_content_scroll_for_virtual_list_torture = false;
@@ -168,6 +173,7 @@ pub(crate) fn content_view(
         || disable_content_scroll_for_inspector
         || disable_content_scroll_for_code_view
         || disable_content_scroll_for_data_table_torture
+        || disable_content_scroll_for_file_tree_torture
         || disable_content_scroll_for_virtual_list_torture
         || disable_content_scroll_for_chrome_torture
     {
@@ -744,7 +750,10 @@ fn page_preview(
     };
 
     #[cfg(feature = "gallery-dev")]
-    if selected == PAGE_INSPECTOR_TORTURE || selected == PAGE_DATA_TABLE_TORTURE {
+    if selected == PAGE_INSPECTOR_TORTURE
+        || selected == PAGE_DATA_TABLE_TORTURE
+        || selected == PAGE_FILE_TREE_TORTURE
+    {
         return body;
     }
 
