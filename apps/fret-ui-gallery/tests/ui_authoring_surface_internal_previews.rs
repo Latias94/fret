@@ -1932,3 +1932,22 @@ fn page_chrome_torture_uses_control_label_roles() {
         );
     }
 }
+
+#[test]
+fn page_chrome_torture_keeps_control_rows_off_doc_wrap_rows() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/torture/chrome_torture.rs",
+        &[
+            "ui::h_row(|cx|{vec![shadcn::Button::new(\"One\")",
+            ".layout(LayoutRefinement::default().w_full().min_w_0())",
+            ".items_start().into_element(cx);out.push(fields);",
+        ],
+    );
+
+    for forbidden in ["doc_layout::wrap_controls_row", "doc_layout::wrap_row"] {
+        assert!(
+            !normalized.contains(forbidden),
+            "chrome_torture should keep local control rows off doc wrap rows for the perf harness: {forbidden}"
+        );
+    }
+}

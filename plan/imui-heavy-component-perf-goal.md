@@ -4879,3 +4879,33 @@ popover overlay root solve tail.
   a narrow row-geometry replacement with before/after layout evidence. Avoid repeating the rejected
   chrome preview-card bypass, table row-hover deletion, or generic virtual-list row-shell trimming
   without new evidence.
+
+## 2026-06-23 Chrome Torture Fixed Row Cut
+
+- Source cut: the chrome torture page no longer uses the shared doc-layout wrap helpers for its
+  button row and field row. It now uses local `ui::h_row(...)` containers with `w_full().min_w_0()`
+  and the same `Space::N2` spacing / cross-axis alignment, while keeping overlay triggers,
+  control labels, and existing test IDs intact.
+- Structural coverage:
+  `page_chrome_torture_keeps_control_rows_off_doc_wrap_rows` now locks the chrome torture harness
+  to the fixed-row path and keeps the page out of `doc_layout::wrap_controls_row` /
+  `doc_layout::wrap_row`.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews page_chrome_torture_uses_control_label_roles page_chrome_torture_keeps_control_rows_off_doc_wrap_rows gallery_chrome_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-fixed-control-rows-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2061/1817/754/45/202/0/2`
+  on `target/fret-diag/chrome-fixed-control-rows-codex-20260623/1782172020106/bundle.schema2.json`.
+  The previous rerank bundle on the same page reported
+  `2114/1881/743/38/195/0/3`.
+- `diag stats --sort time --top 20 --verbose` on the accepted bundle showed the intended layout
+  reduction: root `Stack` solve stayed the dominant owner, but `flex_patch` dropped roughly
+  `610us -> 508us`, wrap nodes `5 -> 3`, candidate children `16 -> 10`, probes `31 -> 19`, and
+  mutations `14 -> 10`. Root apply also eased modestly (`446us -> 432us` p95), while the retained
+  overlay/content path stayed unchanged.
+- Interpretation: keep this as a small but real chrome-harness cut. It does not eliminate the
+  remaining root `Stack` solve cost, but it removes unnecessary wrap patch work from the steady
+  chrome torture page and gives the next loop a cleaner owner split. If a future regression needs
+  chrome rows to wrap again, restore the doc-layout helpers locally and re-run the same perf script.

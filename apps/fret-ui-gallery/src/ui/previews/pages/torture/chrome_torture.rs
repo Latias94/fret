@@ -4,7 +4,7 @@ use fret::AppComponentCx;
 
 pub(in crate::ui) fn preview_chrome_torture(
     cx: &mut AppComponentCx<'_>,
-    theme: &Theme,
+    _theme: &Theme,
     popover_open: Model<bool>,
     dialog_open: Model<bool>,
     dialog_glass_open: Model<bool>,
@@ -40,7 +40,7 @@ pub(in crate::ui) fn preview_chrome_torture(
         let controls = ui::v_flex(|cx| {
             let mut out: Vec<AnyElement> = Vec::new();
 
-            let row = doc_layout::wrap_controls_row(cx, theme, Space::N2, |cx| {
+            let row = ui::h_row(|cx| {
                 vec![
                     shadcn::Button::new("One")
                         .test_id("ui-gallery-chrome-btn-1")
@@ -59,46 +59,46 @@ pub(in crate::ui) fn preview_chrome_torture(
                         .into_element(cx),
                 ]
             })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items_center()
             .into_element(cx);
             out.push(row);
 
-            let fields = doc_layout::wrap_row(
-                cx,
-                theme,
-                Space::N2,
-                fret_ui::element::CrossAlign::Start,
-                |cx| {
-                    vec![
-                        ui::v_stack(|cx| {
-                            let input = shadcn::Input::new(text_input.clone())
-                                .a11y_label("Chrome torture input")
-                                .placeholder("Type")
-                                .into_element(cx);
-                            let input = input.attach_semantics(
-                                SemanticsDecoration::default()
-                                    .role(fret_core::SemanticsRole::TextField)
-                                    .test_id("ui-gallery-chrome-text-input"),
-                            );
-                            vec![doc_layout::control_label_text(cx, "Text input"), input]
-                        })
-                        .gap(Space::N1)
-                        .into_element(cx),
-                        ui::v_stack(|cx| {
-                            let textarea = shadcn::Textarea::new(text_area.clone())
-                                .a11y_label("Chrome torture textarea")
-                                .into_element(cx);
-                            let textarea = textarea.attach_semantics(
-                                SemanticsDecoration::default()
-                                    .role(fret_core::SemanticsRole::TextField)
-                                    .test_id("ui-gallery-chrome-text-area"),
-                            );
-                            vec![doc_layout::control_label_text(cx, "Text area"), textarea]
-                        })
-                        .gap(Space::N1)
-                        .into_element(cx),
-                    ]
-                },
-            )
+            let fields = ui::h_row(|cx| {
+                vec![
+                    ui::v_stack(|cx| {
+                        let input = shadcn::Input::new(text_input.clone())
+                            .a11y_label("Chrome torture input")
+                            .placeholder("Type")
+                            .into_element(cx);
+                        let input = input.attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::TextField)
+                                .test_id("ui-gallery-chrome-text-input"),
+                        );
+                        vec![doc_layout::control_label_text(cx, "Text input"), input]
+                    })
+                    .gap(Space::N1)
+                    .into_element(cx),
+                    ui::v_stack(|cx| {
+                        let textarea = shadcn::Textarea::new(text_area.clone())
+                            .a11y_label("Chrome torture textarea")
+                            .into_element(cx);
+                        let textarea = textarea.attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::TextField)
+                                .test_id("ui-gallery-chrome-text-area"),
+                        );
+                        vec![doc_layout::control_label_text(cx, "Text area"), textarea]
+                    })
+                    .gap(Space::N1)
+                    .into_element(cx),
+                ]
+            })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items_start()
             .into_element(cx);
             out.push(fields);
 
