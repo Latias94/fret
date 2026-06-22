@@ -4,7 +4,8 @@ use std::sync::Arc;
 use fret_core::{Color, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, Overflow, PressableA11y, PressableProps, SemanticsDecoration,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
+    PressableProps, SemanticsDecoration, SpacingLength,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -165,6 +166,19 @@ fn file_tree_retained_row_layout(row_h: Px) -> LayoutStyle {
     layout
 }
 
+fn file_tree_row_content_props(theme: &Theme) -> FlexProps {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+
+    FlexProps {
+        layout,
+        gap: SpacingLength::Px(MetricRef::space(Space::N2).resolve(theme)),
+        align: CrossAlign::Center,
+        ..FlexProps::default()
+    }
+}
+
 #[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -315,18 +329,14 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                 }
                 .into();
 
+                let row_content_props = file_tree_row_content_props(Theme::global(&*cx.app));
+
                 vec![cx.container(row_props, |cx| {
-                    vec![
-                        crate::ui::h_row(|cx| {
-                            let icon = file_tree_row_icon(cx, icon);
-                            let label = file_tree_row_label(cx, entry.label.clone());
-                            [icon, label]
-                        })
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N2)
-                        .items_center()
-                        .into_element(cx),
-                    ]
+                    vec![cx.flex(row_content_props, |cx| {
+                        let icon = file_tree_row_icon(cx, icon);
+                        let label = file_tree_row_label(cx, entry.label.clone());
+                        vec![icon, label]
+                    })]
                 })]
             },
         )
@@ -506,6 +516,28 @@ mod tests {
             .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
     }
 
+    fn only_child_with_kind(
+        ui: &UiTree<App>,
+        app: &mut App,
+        window: AppWindowId,
+        node: fret_core::NodeId,
+        kind: &'static str,
+    ) -> fret_core::NodeId {
+        let children = ui.debug_node_children(node);
+        assert_eq!(
+            children.len(),
+            1,
+            "expected {kind} to be the only child of {node:?}, got {children:?}"
+        );
+        let child = children[0];
+        assert_eq!(
+            ui.debug_declarative_instance_kind(app, window, child),
+            Some(kind),
+            "unexpected child kind for {child:?}"
+        );
+        child
+    }
+
     #[test]
     fn file_tree_item_a11y_sets_level_and_expanded_for_parent_rows() {
         let a11y = file_tree_item_a11y(&entry(true, 0), true, true, Some(Arc::from("file-row")));
@@ -622,6 +654,14 @@ mod tests {
             ui.debug_node_clips_hit_test(row_node),
             Some(true),
             "retained file-tree row should clip oversized/wrapping row content"
+        );
+
+        let row_background = only_child_with_kind(&ui, &mut app, window, row_node, "Container");
+        let row_content = only_child_with_kind(&ui, &mut app, window, row_background, "Flex");
+        assert_eq!(
+            ui.debug_node_children(row_content).len(),
+            2,
+            "retained file-tree rows should direct-mount icon and label under the content Flex"
         );
     }
 }

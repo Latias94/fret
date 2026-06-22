@@ -4659,3 +4659,38 @@ popover overlay root solve tail.
 - Rollback is local: remove the `list_options.keep_alive = overscan.saturating_mul(8).max(32);`
   assignment and drop `code_block_windowed_list_keeps_visible_keys_with_limited_row_keep_alive` if a
   future memory-sensitive profile shows the retained off-window row pool is too costly.
+
+## 2026-06-23 File-Tree Retained Row Direct-Flex Note
+
+- The latest ui-gallery rerank moved the next actionable steady-scroll owner from code-view/chart
+  to the retained file-tree row path. The pre-cut file-tree scroll probe
+  `target/fret-diag/file-tree-scroll-steady-rerank-codex-20260623b/1782164942475/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1727/1451/674/44/235/94/11`.
+- Accepted source cut: retained file-tree rows now keep the semantic `Pressable` and visual
+  background/padding/clip `Container`, but replace the inner no-chrome `crate::ui::h_row(...)`
+  builder shell with a direct `cx.flex(...)` content root. This removes one layout node per
+  mounted visible row without changing activation, treeitem a11y, indentation, selection/hover
+  background, row height, or label/icon text policy.
+- Structural coverage now asserts the row path is `Pressable -> Container -> Flex` and that icon
+  and label mount directly under the content `Flex`. Existing row icon/label and clip-boundary
+  tests still cover no-wrap/ellipsis behavior and fixed row clipping.
+- Focused gates:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo nextest run -p fret-ui-kit file_tree --no-fail-fast`, and `git diff --check`.
+- Perf follow-up:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/file-tree-scroll-steady-direct-flex-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Follow-up evidence:
+  `target/fret-diag/file-tree-scroll-steady-direct-flex-codex-20260623/1782165526811/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1529/1249/598/37/246/93/12`.
+  `diag stats --sort time --top 30 --verbose` showed the row batch solve still owned by
+  `Pressable`, but reduced to `subtree_nodes=150` for `batch_roots=30` (one removed node per row)
+  with `VirtualList` inclusive around `799us` and the outer `Scroll` inclusive around `962us` in
+  the worst frame.
+- Interpretation: keep this as a small structural steady-scroll win. The file-tree surface remains
+  layout-owned, but the row shell is now closer to the minimum semantically correct tree shape.
+  Do not remove the outer `Pressable` or row `Container` from this evidence; both still own hard
+  interaction/visual responsibilities. The next file-tree cut should target invalidation/root
+  apply or virtual-list row batch solving directly, not another blind row chrome deletion.
+- Rollback is local: restore the `crate::ui::h_row(...)` builder inside
+  `file_tree_view_retained_v0`, remove `file_tree_row_content_props`, and drop the direct child
+  structure assertion if a future row layout/flex inheritance regression appears.
