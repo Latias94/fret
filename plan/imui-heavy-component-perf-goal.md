@@ -3844,3 +3844,20 @@ popover overlay root solve tail.
 - Interpretation: the all-text fallback is not a viable performance escape hatch. It is orders of
   magnitude slower than the current windowed path, so code-view optimization must continue to stay
   on the retained windowed row lane rather than trying to revert to a single full-body text host.
+
+## 2026-06-22 Code-View Tight Overscan Experiment Rejected
+
+- Experiment repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-overscan1-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Temporary change: `code_view_torture` set `CodeBlockWindowedOptions::overscan(1)` on the
+  `PlainIndexed` retained/windowed lane.
+- Evidence bundle:
+  `target/fret-diag/code-view-overscan1-codex-20260622/1782141708097/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2161/1949/34/35/177`.
+  The row frame did shrink `layout.nodes=35 -> 30` and `StyledText` first-solve
+  `batch_roots=33 -> 28`, but retained `VirtualList` inclusive layout rose to `1827us`,
+  top `StyledText` layout rose to `260us`, and renderer text prepare flush rose to `451us`.
+- Decision: reject and remove the torture-page `overscan(1)` change. Reducing the row batch by
+  five rows did not reduce the current p95 owner, so the next code-view slice should target row
+  text layout/blob reuse or renderer text-prepare retention rather than further tuning this page's
+  overscan count.
