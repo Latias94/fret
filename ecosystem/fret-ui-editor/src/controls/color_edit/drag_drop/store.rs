@@ -52,9 +52,10 @@ pub(in crate::controls::color_edit) fn prune_color_drag_drop_store<H: UiHost>(
     store: &Model<ColorDragDropStore>,
 ) {
     let current_tick = cx.app.tick_id();
-    let stale_sessions = cx
+    let (stale_sessions, has_stale_delivered) = cx
         .read_model(store, Invalidation::Paint, |app, st| {
-            st.active
+            let stale_sessions = st
+                .active
                 .iter()
                 .filter_map(|(session_id, active)| {
                     app.drag(active.pointer_id)
@@ -62,9 +63,18 @@ pub(in crate::controls::color_edit) fn prune_color_drag_drop_store<H: UiHost>(
                         .map(|_| None)
                         .unwrap_or(Some(*session_id))
                 })
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
+            let has_stale_delivered = st
+                .delivered
+                .values()
+                .any(|drop| current_tick.0 > drop.tick_id.0.saturating_add(1));
+            (stale_sessions, has_stale_delivered)
         })
         .unwrap_or_default();
+
+    if stale_sessions.is_empty() && !has_stale_delivered {
+        return;
+    }
 
     let _ = cx.app.models_mut().update(store, |st| {
         for session_id in &stale_sessions {

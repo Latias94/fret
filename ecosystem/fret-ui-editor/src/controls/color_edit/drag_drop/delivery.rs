@@ -14,6 +14,15 @@ pub(in crate::controls::color_edit) fn take_delivered_color_drop<H: UiHost>(
     target_id: GlobalElementId,
 ) -> Option<ColorEditDragDropPayload> {
     let current_tick = cx.app.tick_id();
+    let has_target = cx
+        .read_model_ref(store, Invalidation::Paint, |st| {
+            st.delivered.contains_key(&target_id)
+        })
+        .unwrap_or(true);
+    if !has_target {
+        return None;
+    }
+
     cx.app
         .models_mut()
         .update(store, |st| {

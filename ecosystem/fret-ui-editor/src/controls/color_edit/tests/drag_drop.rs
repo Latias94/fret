@@ -1,3 +1,6 @@
+use super::super::drag_drop::{
+    ColorDragDropStore, prune_color_drag_drop_store, take_delivered_color_drop,
+};
 use super::*;
 
 #[test]
@@ -83,4 +86,51 @@ fn drag_drop_payload_apply_matches_imgui_col3f_col4f_alpha_rules() {
         source.to_srgb_hex_rgb()
     );
     assert!((rgba_to_rgba_target.a - source.a).abs() < f32::EPSILON);
+}
+
+#[test]
+fn empty_drag_drop_prune_does_not_bump_store_revision() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let store = app.models_mut().insert(ColorDragDropStore::default());
+    let revision = store.revision(&app);
+    let store_for_render = store.clone();
+
+    let _ = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        Rect::default(),
+        "color-edit-drag-prune-noop",
+        |cx| {
+            prune_color_drag_drop_store(cx, &store_for_render);
+            cx.spacer(Default::default())
+        },
+    );
+
+    assert_eq!(store.revision(&app), revision);
+}
+
+#[test]
+fn missing_delivered_drop_does_not_bump_store_revision() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let store = app.models_mut().insert(ColorDragDropStore::default());
+    let revision = store.revision(&app);
+    let store_for_render = store.clone();
+    let mut delivered = None;
+
+    let _ = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        Rect::default(),
+        "color-edit-drop-take-noop",
+        |cx| {
+            delivered =
+                take_delivered_color_drop(cx, &store_for_render, fret_ui::GlobalElementId(42));
+            cx.spacer(Default::default())
+        },
+    );
+
+    assert_eq!(delivered, None);
+    assert_eq!(store.revision(&app), revision);
 }

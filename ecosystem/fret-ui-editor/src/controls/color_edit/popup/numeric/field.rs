@@ -49,10 +49,17 @@ pub(super) fn color_numeric_input_field<H: UiHost>(
     let is_focused = cx.is_focused_element(input_id);
 
     if !is_focused {
-        let _ = cx
+        let draft_needs_sync = cx
             .app
-            .models_mut()
-            .update(&draft, |s| *s = display_text.as_ref().to_string());
+            .models()
+            .read(&draft, |s| s.as_str() != display_text.as_ref())
+            .unwrap_or(true);
+        if draft_needs_sync {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&draft, |s| *s = display_text.as_ref().to_string());
+        }
     }
 
     let model_for_key = model;

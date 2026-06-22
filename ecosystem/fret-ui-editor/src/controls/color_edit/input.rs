@@ -56,11 +56,26 @@ pub(super) fn color_hex_input<H: UiHost>(
     let is_focused = cx.is_focused_element(input_id);
 
     if !is_focused {
-        let _ = cx
+        let draft_needs_sync = cx
             .app
-            .models_mut()
-            .update(&args.draft, |s| *s = args.current_hex.as_ref().to_string());
-        let _ = cx.app.models_mut().update(&args.error, |e| *e = None);
+            .models()
+            .read(&args.draft, |s| s.as_str() != args.current_hex.as_ref())
+            .unwrap_or(true);
+        if draft_needs_sync {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&args.draft, |s| *s = args.current_hex.as_ref().to_string());
+        }
+
+        let error_needs_clear = cx
+            .app
+            .models()
+            .read(&args.error, Option::is_some)
+            .unwrap_or(true);
+        if error_needs_clear {
+            let _ = cx.app.models_mut().update(&args.error, |e| *e = None);
+        }
     }
 
     let model_for_key = args.model.clone();

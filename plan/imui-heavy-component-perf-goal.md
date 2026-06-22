@@ -4417,3 +4417,48 @@ popover overlay root solve tail.
   either add stronger model-source attribution for request-build owners or find a proven local
   text/cache owner; do not delete the `TextAssist` row container or `session_shell` from the
   current evidence.
+
+## 2026-06-23 Editor-Controls Model-Source Diagnostics and ColorEdit No-Op Prune Note
+
+- `ModelStore` change-source diagnostics can now be enabled in release perf runs with
+  `FRET_DIAG_MODEL_CHANGE_SOURCES=1`; debug builds still record source info by default. The
+  diagnostics snapshot now fills `changed_model_sources_top` whenever source tracking is enabled,
+  not only in debug builds.
+- Baseline source repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-model-source-diag-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Baseline bundle
+  `target/fret-diag/editor-controls-model-source-diag-codex-20260623/1782156704138/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1027/893/411/4/130/0/3`.
+  Its `changed_model_sources_top` proved a repeated `ColorEdit` no-op source set:
+  `color_edit/popup/numeric/field.rs`, `color_edit/input.rs`, `color_edit/drag_drop/delivery.rs`,
+  and `color_edit/state.rs` appeared across the measured frames even when the synced values were
+  already current.
+- Accepted source cut: unfocused `ColorEdit` hex/numeric draft syncs now compare before update,
+  `ColorEdit` input error clearing skips `None -> None`, popup runtime options only update when
+  defaults changed, drag/drop prune skips empty stores, and delivered-drop lookup skips the store
+  update when the target has no delivery.
+- Regression coverage asserts the no-op contract with model revision checks:
+  unchanged hex input sync, unchanged popup numeric drafts, unchanged popup runtime defaults, empty
+  drag-drop prune, and missing delivered drop all preserve the relevant model revision.
+- Focused gates:
+  `cargo fmt -p fret-runtime -p fret-bootstrap -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-runtime store --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`, and
+  `cargo check -p fret-bootstrap`.
+- Perf follow-up:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-color-edit-noop-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Follow-up bundle
+  `target/fret-diag/editor-controls-color-edit-noop-codex-20260623/1782157659087/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1047/916/440/5/126/0/2`.
+  Treat the timing as the same sub-1.1ms band, not a frame-time win. The intended effect is the
+  source attribution: `changed_model_sources_top` no longer reports the old `ColorEdit` no-op
+  writers. Remaining source entries are `TextAssistField` / keyboard / accept event writes.
+- Interpretation: keep this as a diagnostics-enabled invalidation cleanup. It removes proven
+  no-op model writes from the editor-controls frame stream without touching `session_shell`,
+  `TextAssist` row chrome, or generic runtime dirty semantics. The next editor-controls slice, if
+  any, should inspect the remaining `TextAssistField` model writes before deleting visual row
+  structure.
+- Rollback is local: restore the unconditional `ColorEdit` update calls and remove the revision
+  no-op tests if a future focus/draft sync regression appears. Separately, the release
+  `FRET_DIAG_MODEL_CHANGE_SOURCES` diagnostic path can be reverted by removing the opt-in
+  `ModelStore` source map and reinstating the debug-only snapshot guard.

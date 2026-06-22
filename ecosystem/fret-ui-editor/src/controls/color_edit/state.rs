@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::Color;
 use fret_runtime::Model;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use super::ColorEditPopupRuntimeOptions;
 
@@ -49,6 +49,15 @@ pub(super) fn sync_popup_runtime_options<H: UiHost>(
     model: &Model<ColorEditPopupRuntimeOptions>,
     defaults: ColorEditPopupRuntimeOptions,
 ) {
+    let needs_sync = cx
+        .read_model_ref(model, Invalidation::Paint, |runtime| {
+            runtime.needs_default_sync(defaults)
+        })
+        .unwrap_or(true);
+    if !needs_sync {
+        return;
+    }
+
     let _ = cx
         .app
         .models_mut()

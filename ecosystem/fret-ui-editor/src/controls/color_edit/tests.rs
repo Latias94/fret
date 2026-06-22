@@ -7,6 +7,7 @@ use fret_ui::Theme;
 use fret_ui::element::{AnyElement, ElementKind, Length, MarginEdge};
 
 use super::drag_drop::apply_color_drop_payload;
+use super::input::{ColorEditInputArgs, color_hex_input};
 use super::layout::{ColorEditRootLayoutArgs, color_edit_root_layout};
 use super::model::{
     ColorNumericInputMode, HsvColor, HueWheelDragTarget, color_from_rgb_preserving_alpha,
@@ -158,6 +159,53 @@ fn color_edit_error_state_keeps_the_same_row_shape() {
     };
     assert_eq!(error_text.layout.margin.left, MarginEdge::Px(Px(4.0)));
     assert!(element.children[1].children.is_empty());
+}
+
+#[test]
+fn color_hex_input_does_not_resync_unchanged_unfocused_models() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let current = Color::from_srgb_hex_rgb(0x33_66_99);
+    let current_hex = format_hex(current, false);
+    let model = app.models_mut().insert(current);
+    let draft = app.models_mut().insert(current_hex.as_ref().to_string());
+    let error = app.models_mut().insert(None::<Arc<str>>);
+    let control_height = EditorStyle::resolve(Theme::global(&app))
+        .frame_chrome_small()
+        .control_outer_height(EditorDensity::resolve(Theme::global(&app)).row_height);
+    let draft_revision = draft.revision(&app);
+    let error_revision = error.revision(&app);
+
+    let model_for_render = model.clone();
+    let draft_for_render = draft.clone();
+    let error_for_render = error.clone();
+    let current_hex_for_render = current_hex.clone();
+    let element = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        Rect::default(),
+        "color-edit-hex-noop-sync",
+        |cx| {
+            color_hex_input(
+                cx,
+                ColorEditInputArgs {
+                    model: model_for_render,
+                    draft: draft_for_render,
+                    error: error_for_render,
+                    current_hex: current_hex_for_render,
+                    show_alpha: false,
+                    enabled: true,
+                    focusable: true,
+                    test_id: Some(Arc::from("color-edit-hex-noop-sync")),
+                    control_height,
+                },
+            )
+        },
+    );
+
+    assert!(matches!(element.kind, ElementKind::TextInput(_)));
+    assert_eq!(draft.revision(&app), draft_revision);
+    assert_eq!(error.revision(&app), error_revision);
 }
 
 fn descendant_has_min_height(element: &AnyElement, label: &str, expected: fret_core::Px) -> bool {
