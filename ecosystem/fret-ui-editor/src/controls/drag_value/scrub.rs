@@ -8,8 +8,9 @@ use crate::primitives::EditorDensity;
 use crate::primitives::chrome::ResolvedEditorFrameChrome;
 use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::input_group::{
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
-    editor_input_group_row, editor_input_value_text, editor_text_segment,
+    EditorInputGroupFrameOverrides, editor_input_group_divider,
+    editor_input_group_frame_with_overrides, editor_input_group_inset, editor_input_group_row,
+    editor_input_value_text, editor_text_segment,
 };
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 
@@ -50,7 +51,17 @@ pub(super) fn drag_value_scrub_frame<H: UiHost>(
         value_test_id,
     } = args;
 
-    let mut scrub_frame = editor_input_group_frame(
+    let has_affixes = prefix.is_some() || suffix.is_some();
+    let frame_overrides = if has_affixes {
+        EditorInputGroupFrameOverrides::none()
+    } else {
+        EditorInputGroupFrameOverrides {
+            padding: Some(scrub_chrome.padding),
+            ..EditorInputGroupFrameOverrides::none()
+        }
+    };
+
+    let mut scrub_frame = editor_input_group_frame_with_overrides(
         cx,
         LayoutStyle {
             size: SizeStyle {
@@ -71,10 +82,8 @@ pub(super) fn drag_value_scrub_frame<H: UiHost>(
             open: false,
             semantic: EditorFrameSemanticState::default(),
         },
+        frame_overrides,
         move |cx, visuals| {
-            let theme = Theme::global(&*cx.app);
-            let affix_color = editor_muted_foreground(theme);
-            let divider = scrub_chrome.border;
             let value_text_el = editor_input_value_text(
                 cx,
                 density,
@@ -83,6 +92,19 @@ pub(super) fn drag_value_scrub_frame<H: UiHost>(
                 visuals.fg,
                 Length::Fill,
             );
+            if !has_affixes {
+                let mut value = value_text_el;
+                if let Some(test_id) = value_test_id.as_ref() {
+                    value = value
+                        .test_id(test_id.clone())
+                        .a11y_label(value_text.clone());
+                }
+                return vec![value];
+            }
+
+            let theme = Theme::global(&*cx.app);
+            let affix_color = editor_muted_foreground(theme);
+            let divider = scrub_chrome.border;
             let mut value = editor_input_group_inset(cx, scrub_chrome.padding, value_text_el);
             if let Some(test_id) = value_test_id.as_ref() {
                 value = value

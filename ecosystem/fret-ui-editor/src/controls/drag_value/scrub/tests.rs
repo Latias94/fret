@@ -30,7 +30,7 @@ fn test_chrome() -> ResolvedEditorFrameChrome {
 }
 
 #[test]
-fn drag_value_scrub_frame_uses_single_frame_padding_layer() {
+fn scrub_frame_without_affixes_mounts_value_text_directly() {
     let window = AppWindowId::default();
     let mut app = App::new();
     let density = EditorDensity::default();
@@ -61,8 +61,8 @@ fn drag_value_scrub_frame_uses_single_frame_padding_layer() {
     };
     assert_eq!(
         frame.padding,
-        SpacingEdges::all(SpacingLength::Px(Px(0.0))),
-        "the frame owns border/background only; value segments own content padding"
+        chrome.padding.into(),
+        "plain scrub frames should own content padding so the value text can mount directly"
     );
     assert_eq!(frame.layout.size.width, Length::Fill);
     assert_eq!(frame.layout.size.height, Length::Fill);
@@ -71,13 +71,65 @@ fn drag_value_scrub_frame_uses_single_frame_padding_layer() {
         Some(Length::Px(density.row_height))
     );
 
-    let ElementKind::Container(value_segment) = &el.children[0].kind else {
-        panic!("expected scrub frame child to mount the single value segment directly");
+    let ElementKind::Text(_) = &el.children[0].kind else {
+        panic!("expected scrub frame child to mount the value text directly");
     };
-    assert_eq!(value_segment.layout.size.height, Length::Fill);
+}
 
-    let ElementKind::Text(_) = &el.children[0].children[0].kind else {
-        panic!("expected the value segment to mount the text directly");
+#[test]
+fn scrub_frame_with_affixes_keeps_segment_padding_layers() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let density = EditorDensity::default();
+    let chrome = test_chrome();
+
+    let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+        drag_value_scrub_frame(
+            cx,
+            DragValueScrubFrameArgs {
+                density,
+                scrub_chrome: chrome,
+                hovered: false,
+                pressed: false,
+                focused: false,
+                value_text: Arc::from("42"),
+                prefix: Some(Arc::from("$")),
+                suffix: Some(Arc::from("ms")),
+                scrub_test_id: Some(Arc::from("drag.value")),
+                prefix_test_id: Some(Arc::from("drag.value.prefix")),
+                suffix_test_id: Some(Arc::from("drag.value.suffix")),
+                value_test_id: Some(Arc::from("drag.value.value")),
+            },
+        )
+    });
+
+    let ElementKind::Container(frame) = &el.kind else {
+        panic!("expected scrub frame to build a Container root");
+    };
+    assert_eq!(
+        frame.padding,
+        SpacingEdges::all(SpacingLength::Px(Px(0.0))),
+        "segmented scrub frames keep padding on each segment so dividers reach the frame edge"
+    );
+
+    assert_eq!(
+        el.children.len(),
+        1,
+        "affix scrub frames should keep the joined row shell"
+    );
+    let row = &el.children[0];
+    assert_eq!(
+        row.children.len(),
+        5,
+        "prefix, divider, value, divider, and suffix should remain separate segments"
+    );
+
+    let ElementKind::Container(value_segment) = &row.children[2].kind else {
+        panic!("expected the value segment to remain a padded Container");
     };
     assert_eq!(value_segment.padding, chrome.padding.into());
+
+    let ElementKind::Text(_) = &row.children[2].children[0].kind else {
+        panic!("expected the value segment to mount the text directly");
+    };
 }

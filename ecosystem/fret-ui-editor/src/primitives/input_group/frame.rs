@@ -32,6 +32,7 @@ pub(crate) struct EditorInputGroupFrameOverrides {
     pub(crate) bg: Option<Color>,
     pub(crate) border: Option<Color>,
     pub(crate) semantic: Option<EditorFrameSemanticState>,
+    pub(crate) padding: Option<Edges>,
 }
 
 impl EditorInputGroupFrameOverrides {
@@ -40,6 +41,7 @@ impl EditorInputGroupFrameOverrides {
             bg: None,
             border: None,
             semantic: None,
+            padding: None,
         }
     }
 }
@@ -74,7 +76,7 @@ pub(crate) fn editor_input_group_frame_with_overrides<H: UiHost>(
     cx.container(
         ContainerProps {
             layout,
-            padding: Edges::all(Px(0.0)).into(),
+            padding: overrides.padding.unwrap_or(Edges::all(Px(0.0))).into(),
             background: Some(visuals.bg),
             border: Edges::all(chrome.border_width),
             border_color: Some(visuals.border),

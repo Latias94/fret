@@ -3879,3 +3879,38 @@ popover overlay root solve tail.
 - Decision: reject and remove the AllKeys experiment. The retained row/text churn did not change,
   while the 8k-line key cache risks making the transition frame heavier. Keep `VisibleOnly` on this
   synthetic fixed-height code-view lane and continue toward row text layout/blob retention.
+
+## 2026-06-22 DragValue Plain Scrub Value Direct Text Note
+
+- Re-profiled the current `editor-controls` click-stress surface before cutting into the next
+  owner:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --dir target/fret-diag/editor-controls-current-next-codex-20260622b --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Baseline bundle
+  `target/fret-diag/editor-controls-current-next-codex-20260622b/1782144111367/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1078/944/470/5/145`. The current owner is
+  not primarily `TextAssistField` option rows; the main path is still root `Stack` build/apply
+  with visible `session_shell.rs`, `drag_value/scrub_element.rs`, and input-group frame/segment
+  structure.
+- The accepted cut makes the common no-prefix/no-suffix `DragValue` scrub frame move content
+  padding onto the frame and mount the value `Text` directly. Prefix/suffix cases keep the old
+  segmented row so dividers and affix padding still reach the frame edge.
+- Structure gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `git diff --check`,
+  `cargo nextest run -p fret-ui-editor scrub_frame_without_affixes_mounts_value_text_directly scrub_frame_with_affixes_keeps_segment_padding_layers --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor drag_value --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-editor input_group --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --dir target/fret-diag/editor-controls-drag-value-direct-value-codex-20260622 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Evidence bundle
+  `target/fret-diag/editor-controls-drag-value-direct-value-codex-20260622/1782144733920/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1088/944/442/5/139`.
+- Interpretation: keep this as a local tree-depth cleanup, not as a claimed timing win. Total and
+  layout p95 stayed in the same noise band, while the targeted scrub `Pressable` first-solve row
+  shrank from `subtree_nodes=4` to `subtree_nodes=3` and solve moved roughly `89us -> 80us` on the
+  compared interaction frame. The remaining editor-controls owner is still root/session-shell
+  apply/build work plus popup row text when the assist overlay is mounted.
+- Rollback is local: remove the `padding` override field from `EditorInputGroupFrameOverrides`,
+  switch `drag_value_scrub_frame` back to `editor_input_group_frame(...)`, and restore the plain
+  value path to `editor_input_group_inset(...)` if a future visual, semantics, or hit-test gate
+  shows frame-owned padding is not equivalent.
