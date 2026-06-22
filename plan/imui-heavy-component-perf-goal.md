@@ -3829,3 +3829,18 @@ popover overlay root solve tail.
   is not being reduced by that helper path, so the next code-view slice should target row text
   blob churn, retained row invalidation, or a code-view-specific row/text representation instead
   of widening generic VirtualList burst policy.
+
+## 2026-06-22 Code-View Non-Windowed Control Rejected
+
+- Control repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-nonwindowed-transition-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Control evidence:
+  `target/fret-diag/code-view-nonwindowed-transition-codex-20260622/1782139404581/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=3034365/3032432/10631/52/1881`.
+  The top layout owner was the non-windowed `SelectableText` body at
+  `layout_us=1570366` with `measure_us=1428151`, and the surrounding `Scroll` wrapper took
+  `layout_us=1434061`. Renderer text prepare was still present but secondary
+  (`flush max=634us`).
+- Interpretation: the all-text fallback is not a viable performance escape hatch. It is orders of
+  magnitude slower than the current windowed path, so code-view optimization must continue to stay
+  on the retained windowed row lane rather than trying to revert to a single full-body text host.
