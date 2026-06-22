@@ -3117,3 +3117,33 @@ popover overlay root solve tail.
   evidence. Both shift some work out of layout/solve, but neither improves total frame time on the
   local repeat=3 probe. The next real slice should target row subtree/root solve or retained
   VirtualList root apply without changing the row-height semantics of the current perf surface.
+
+## 2026-06-22 VirtualList Torture Absolute-Only Container Fast Path Rejected Note
+
+- I tried a `crates/fret-ui` mechanism fast path for definite wrappers whose direct children are
+  all `position:absolute`: keep the wrapper sized by its own/father constraints, remove those
+  absolute children from the wrapper's Taffy flow children, and let host layout place them manually.
+- The broad version carried definite-axis state through `Overlay` /
+  `PassthroughOverlayNoStretch` parent kinds and applied to the generic wrapper branch. It passed
+  focused `fret-ui` absolute/container/VirtualList tests and the two `fret-ui-gallery`
+  virtual-list gates, but the evidence did not justify the semantic surface area.
+- Broad no-profile repeat=5 probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-absolute-only-container-fastpath-no-profile-codex-20260622 --repeat 5 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p50/p95.us(total/layout/solve)=2197/2259, 1838/1893, 811/835`.
+- Clean-HEAD no-profile comparison from a detached worktree:
+  `target/fret-diag/virtual-list-baseline-no-profile-codex-20260622/1782103321747/bundle.schema2.json`
+  reported `p50/p95.us(total/layout/solve)=2130/2375, 1749/1907, 815/855`.
+- Interpretation of the broad version: it removed the row `Container` first-solve root from the
+  hot frame (`470us` in the clean comparison), but it changed the solve shape to many small
+  absolute-child roots (`solves=32` vs `2`) and raised root apply on the exact worst comparison
+  (`931us` vs `898us`). That is too much behavior-wrapper/overlay-parent contract surface for a
+  small, mixed tail improvement.
+- I then narrowed the candidate to non-transparent `Container` nodes only. That preserved the row
+  torture shape and avoided changing generic behavior wrappers, but the repeat=5 probe regressed:
+  `target/fret-diag/virtual-list-container-absolute-fastpath-no-profile-codex-20260622/1782104207482/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=2464/1981/855`, with root apply `993us`.
+- Decision: reject and remove this `fret-ui` fast path. The accepted row-level absolute action
+  slice remains the right local optimization, but a runtime absolute-only wrapper shortcut needs a
+  stronger design that does not turn one batched row solve into many child-root solves or widen
+  overlay/behavior wrapper layout semantics.
+- Source experiment was reverted; no code/test change was kept from this slice.
