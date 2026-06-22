@@ -3782,3 +3782,22 @@ popover overlay root solve tail.
   to `code_block_with*`, remove `.show_language_in_header(false)` from `code_view_torture`, and
   drop the matching source-structure tests if a future gate shows the header language suppress path
   is not worth carrying.
+
+## 2026-06-22 StyledText Fixed-Box Layout Skip Experiment Rejected
+
+- Hypothesis: the post-transition code-view row frame is dominated by retained row `StyledText`
+  layout even though the rows have fixed width/height, `TextWrap::None`, `TextOverflow::Clip`, and
+  `TextInkOverflow::None`. I tried a narrow `fret-ui` layout fast path that returned the fixed box
+  size without preparing text during layout.
+- The first focused guard exposed the wrong boundary: a simple fixed `StyledText` tree still went
+  through probe/measure before final layout and prepared text during `layout_all`, so the temporary
+  test failed before it proved the intended code-view row path.
+- The temporary implementation also only produced same-band perf movement:
+  `target/fret-diag/code-view-styled-text-fixed-layout-skip-codex-20260622/1782136609342/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2076/1907/43/31/138`. That is not a clear
+  improvement over the no-language-header run (`2108/1939/33/31/138`) and remains same-band versus
+  the rank baseline (`2022/1867/57/28/127`), while renderer text prepare worsened
+  (`flush max=445us`).
+- Decision: reject and remove the `fret-ui` fixed-box layout skip plus its temporary test. The
+  next code-view work should not add a generic passive-text layout shortcut unless it first proves
+  the exact retained row final-layout path and accounts for paint/text-prepare cost migration.
