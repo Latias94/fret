@@ -129,14 +129,11 @@ where
     )
 }
 
-// Keeps row action chrome button-like without paying for the full shadcn Button slot tree.
-fn virtual_list_row_action_button<T, I>(
+fn virtual_list_row_edit_action<T, I>(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
     label: T,
     test_id: I,
-    variant: shadcn::ButtonVariant,
-    layout: LayoutRefinement,
     on_activate: fret_ui::action::OnActivate,
 ) -> AnyElement
 where
@@ -145,40 +142,35 @@ where
 {
     let label = label.into();
     let test_id = test_id.into();
-    let variants = shadcn::button_variants(&theme.snapshot(), variant, shadcn::ButtonSize::Sm);
-    let mut chrome = variants.chrome.px(Space::N3).py(Space::N1);
-    if variant == shadcn::ButtonVariant::Outline {
-        chrome = chrome.shadow_xs();
-    }
-
-    let pressable_layout = decl_style::layout_style(theme, variants.layout.merge(layout));
-    let chrome_props = decl_style::container_props(theme, chrome, LayoutRefinement::default());
+    let variants = shadcn::button_variants(
+        &theme.snapshot(),
+        shadcn::ButtonVariant::Ghost,
+        shadcn::ButtonSize::Sm,
+    );
+    let pressable_layout = decl_style::layout_style(theme, variants.layout);
     let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
 
-    fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props(
-        cx,
-        move |cx, _state, _id| {
+    cx.pressable(
+        fret_ui::element::PressableProps {
+            layout: pressable_layout,
+            enabled: true,
+            focusable: true,
+            focus_ring: Some(focus_ring),
+            key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
+            a11y: fret_ui::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::Button),
+                label: Some(label.clone()),
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _state| {
             cx.pressable_on_activate(on_activate.clone());
-            let text = fret_ui_kit::declarative::text::text_button_label(cx, label.clone());
-
-            (
-                fret_ui::element::PressableProps {
-                    layout: pressable_layout,
-                    enabled: true,
-                    focusable: true,
-                    focus_ring: Some(focus_ring),
-                    key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
-                    a11y: fret_ui::element::PressableA11y {
-                        role: Some(fret_core::SemanticsRole::Button),
-                        label: Some(label.clone()),
-                        test_id: Some(test_id),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                chrome_props,
-                move |_cx| [text],
-            )
+            [fret_ui_kit::declarative::text::text_button_label(
+                cx,
+                label.clone(),
+            )]
         },
     )
 }
@@ -564,13 +556,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                                 .into_element(cx)
                         } else {
-                            virtual_list_row_action_button(
+                            virtual_list_row_edit_action(
                                 cx,
                                 &theme,
                                 "Edit",
                                 format!("ui-gallery-virtual-list-row-{index}-edit"),
-                                shadcn::ButtonVariant::Outline,
-                                LayoutRefinement::default(),
                                 on_select_row,
                             )
                         };
@@ -693,13 +683,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                                     .into_element(cx)
                             } else {
-                                virtual_list_row_action_button(
+                                virtual_list_row_edit_action(
                                     cx,
                                     theme,
                                     "Edit",
                                     format!("ui-gallery-virtual-list-row-{index}-edit"),
-                                    shadcn::ButtonVariant::Outline,
-                                    LayoutRefinement::default(),
                                     on_select_row,
                                 )
                             };

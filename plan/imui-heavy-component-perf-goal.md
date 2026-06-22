@@ -352,6 +352,43 @@ historical records remain in:
 - Rollback is local: change the label callsite back to `virtual_list_row_action_button(...)` if the
   direct pressable ever regresses row-label chrome or focus affordance.
 
+## 2026-06-22 VirtualList Torture Edit Action Direct Pressable Note
+
+- The right-side `Edit` affordance in `virtual_list_torture` now skips the remaining local chrome
+  helper and mounts as `cx.pressable(...)` plus `text_button_label(...)`.
+- Scope stays deliberately small: the row `Container` still owns background, border, padding,
+  fixed height, overflow clip, selected styling, and row semantics. The new helper keeps the edit
+  button's focus ring, Enter/Space activation, `Button` role, label, and
+  `ui-gallery-virtual-list-row-{index}-edit` test id.
+- Source coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` now requires
+  `virtual_list_row_edit_action(...)` and forbids restoring
+  `virtual_list_row_action_button(...)` or
+  `control_chrome_pressable_with_id_props(...)` on this row action path.
+- Validation:
+  `cargo fmt --all`,
+  `cargo fmt --all --check`,
+  `git diff --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-edit-action-direct-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2402/2021/606/146/235/89/8`.
+- `layout-perf-summary` on
+  `target/fret-diag/virtual-list-edit-action-direct-codex-20260622/1782086197404/bundle.schema2.json`
+  confirmed the expected structural drop versus the row-label direct-pressable slice:
+  `layout.nodes=134 -> 119`, `paint.nodes=155 -> 140`, `child_rect_queries=82 -> 67`,
+  root apply `1341us -> 1086us`, first-solve row root `361us -> 232us`, and
+  `VirtualList inclusive/layout=1278/1030us -> 1025/808us`.
+- Interpretation: this is the expected row-shape win from removing the last chrome wrapper around
+  the common edit affordance. Do not remove the outer row `Container` from this evidence; it still
+  owns row chrome and clipping.
+- Rollback is local: restore `virtual_list_row_action_button(...)` with
+  `control_chrome_pressable_with_id_props(...)` for the right-side `Edit` callsites and revert the
+  matching source-structure gate if a future visual, focus, or interaction test shows the direct
+  pressable is not equivalent.
+
 ## 2026-06-22 VirtualList Torture Row Cache A/B Rejected Note
 
 - I checked the already-available `FRET_UI_GALLERY_VLIST_ROW_CACHE=1` path against the latest row
