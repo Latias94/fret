@@ -236,6 +236,27 @@ historical records remain in:
   code-view mount/text-measure cost. Do not optimize overlay/content-scroll from the polluted
   pre-fix bundle.
 
+## 2026-06-22 Code-View Windowed Overscan-2 Experiment Rejected
+
+- Followed the cleaned transition evidence into the windowed code-view `VirtualList` mount path.
+  A node-profile run at
+  `target/fret-diag/code-view-transition-intro-node-profile-codex-20260622/1782106139795/bundle.schema2.json`
+  showed the second hot frame was `ui-gallery-code-view-root` mounting 33 retained `StyledText`
+  row roots (`VirtualList inclusive/layout=2914/845us`, batch solve `716us`).
+- Hypothesis: lower the code-view torture call-site overscan from the default `6` to `2`, reducing
+  first visible row roots from roughly `27 + 6` to `27 + 2`.
+- Result: rejected. The repeat=3 transition probe at
+  `target/fret-diag/code-view-transition-overscan-2-codex-20260622/1782106544271/bundle.schema2.json`
+  returned `p95.us(total/layout/solve/prepaint/paint)=3161/2956/2156/65/152`, worse than the clean
+  intro-script evidence (`2430/2287/1631/30/113`).
+- The layout summary confirmed the row-count effect moved as expected on the follow-up frame
+  (`layout.nodes=31`, `renderer.encode.text ops=52`), but the worst frame regressed back to the
+  root `Stack` solve (`solve_us=2135`, `subtree_nodes=132`) and header paragraph text measurement
+  remained visible.
+- Decision: do not lower `CodeBlockWindowedOptions` default overscan or the gallery torture
+  call-site overscan from this evidence. The next cut should target the root transition build/solve
+  owner or a text-prepare/cache owner with a direct positive A/B.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
