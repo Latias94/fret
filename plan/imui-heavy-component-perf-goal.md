@@ -196,6 +196,41 @@ historical records remain in:
   `cx.semantics_with_id(...)` wrapping `cx.hover_region(...)` if a future semantics or interaction
   gate shows attached row semantics is not equivalent.
 
+## 2026-06-22 Data Table Retained Body Direct Flex Note
+
+- The retained table body now mounts its header/body column as a direct `Flex` root via
+  `retained_table_body_column_props()` instead of routing through `ui::v_flex(...)`.
+- Scope is intentionally table-local: the outer focus/background `Container`, list semantics,
+  pointer focus wrapper, header, horizontal wheel/transform branch, and retained `VirtualList`
+  contract stay unchanged. This only removes the no-chrome helper `Container` that sat between the
+  body `PointerRegion` and the vertical `Flex`.
+- Upstream comparison: shadcn table keeps body row/cell structure flat inside the table container,
+  and Base UI keeps scroll-area structural wrappers meaningful (`Root -> Viewport -> Content`).
+  That supports removing this Fret-only helper shell instead of widening runtime or scroll-area
+  shortcuts.
+- Focused gates:
+  `cargo fmt -p fret-ui-kit --check` and
+  `cargo nextest run -p fret-ui-kit retained_table_body_column_uses_direct_flex_without_helper_container retained_table_non_pointer_rows_attach_semantics_to_hover_root table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-direct-flex-body-column-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/data-table-direct-flex-body-column-codex-20260622/1782121405664/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2414/1824/840/188/402`.
+- Compared with the current rerank bundle
+  `target/fret-diag/rank-data-table-current-codex-20260622b/1782120185894/bundle.json`
+  at `2576/1914/879/191/471`, this is a small but aligned structural win. The hot-frame
+  `layout.nodes` moved `245 -> 244`, child rect queries `68 -> 67`, root apply `1016us -> 957us`,
+  retained table `VirtualList` inclusive/layout `865/220us -> 822/207us`, and row first-solve
+  `HoverRegion` `147us -> 141us`.
+- Interpretation: keep this as a low-risk body-shell cleanup, not as evidence for another
+  retained `VirtualList` mechanism shortcut. Remaining data-table owners are still root `Stack`
+  solve/apply, retained `VirtualList` layout, row `HoverRegion` first solve, and harness header
+  text/input measurement.
+- Rollback is local: restore the body content to `ui::v_flex(...).layout(...).gap(Space::N0)
+  .justify_start().items_stretch().into_element(cx)` and remove
+  `retained_table_body_column_props()` plus its structure guard if a future layout or focus gate
+  proves the helper shell was needed.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait

@@ -1,8 +1,10 @@
-use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole, Size as CoreSize};
+use fret_core::{
+    Axis, Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole, Size as CoreSize,
+};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow,
+    AnyElement, ContainerProps, FlexProps, HoverRegionProps, LayoutStyle, Length, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RingPlacement, RingStyle, ScrollAxis,
     ScrollProps, SemanticsDecoration, SemanticsProps, VirtualListOptions,
 };
@@ -235,6 +237,14 @@ fn table_scroll_fill_layout() -> LayoutStyle {
     layout.flex.shrink = 1.0;
     layout.flex.basis = Length::Px(Px(0.0));
     layout
+}
+
+fn retained_table_body_column_props() -> FlexProps {
+    FlexProps {
+        layout: table_scroll_fill_layout(),
+        direction: Axis::Vertical,
+        ..FlexProps::default()
+    }
 }
 
 fn table_clip_fill_layout() -> LayoutStyle {
@@ -915,7 +925,7 @@ mod tests {
     #[test]
     fn retained_table_non_pointer_rows_attach_semantics_to_hover_root() {
         let start = SOURCE
-            .find("fn table_virtualized_retained_v0_impl")
+            .rfind("fn table_virtualized_retained_v0_impl")
             .expect("expected retained table implementation in source");
         let tail = &SOURCE[start..];
         let end = tail
@@ -955,6 +965,44 @@ mod tests {
         assert!(
             !retained_impl.contains(&row_wrapper_semantics),
             "non-pointer retained rows should not reintroduce a same-layout Semantics wrapper"
+        );
+    }
+
+    #[test]
+    fn retained_table_body_column_uses_direct_flex_without_helper_container() {
+        let props = retained_table_body_column_props();
+        assert_eq!(props.direction, Axis::Vertical);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+
+        let start = SOURCE
+            .rfind("fn table_virtualized_retained_v0_impl")
+            .expect("expected retained table implementation in source");
+        let tail = &SOURCE[start..];
+        let end = tail
+            .find("\n#[allow(clippy::too_many_arguments)]\n#[track_caller]\nfn table_virtualized_impl")
+            .expect("expected retained table implementation boundary");
+        let retained_impl = &tail[..end];
+
+        let content_start = retained_impl
+            .find("cx.pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx|")
+            .expect("expected retained body content wrapper");
+        let content_tail = &retained_impl[content_start..];
+        let content_end = content_tail
+            .find("let focus_ring = RingStyle")
+            .expect("expected retained body content wrapper boundary");
+        let content_impl = &content_tail[..content_end];
+
+        assert!(
+            content_impl.contains("cx.flex(retained_table_body_column_props(), move |cx|"),
+            "retained table body should place the header/body column on a direct Flex root"
+        );
+        assert!(
+            !content_impl.contains("ui::v_flex(move |cx|"),
+            "retained table body should not reintroduce the no-chrome helper Container around the Flex root"
         );
     }
 
@@ -6762,57 +6810,50 @@ where
                         false
                     }));
 
-                    vec![
-                        ui::v_flex(move |cx| {
-                            let body_list = cx.virtual_list_keyed_retained_with_layout(
-                                fill_layout,
-                                entries_for_list.len(),
-                                options,
-                                vertical_scroll,
-                                key_at,
-                                row,
+                    vec![cx.flex(retained_table_body_column_props(), move |cx| {
+                        let body_list = cx.virtual_list_keyed_retained_with_layout(
+                            fill_layout,
+                            entries_for_list.len(),
+                            options,
+                            vertical_scroll,
+                            key_at,
+                            row,
+                        );
+                        let body = if table_has_single_center_group(
+                            left_col_indices.len(),
+                            center_col_indices.len(),
+                            right_col_indices.len(),
+                        ) {
+                            let mut wheel = fret_ui::element::WheelRegionProps::default();
+                            wheel.axis = ScrollAxis::X;
+                            wheel.scroll_handle = scroll_x.clone();
+                            wheel.layout = table_scroll_fill_layout();
+                            wheel.layout.overflow = Overflow::Clip;
+                            let body = table_wrap_horizontal_transform(
+                                cx,
+                                scroll_x.clone(),
+                                table_known_content_width_for_indices(
+                                    &col_widths,
+                                    center_col_indices.as_ref(),
+                                ),
+                                body_list,
                             );
-                            let body = if table_has_single_center_group(
-                                left_col_indices.len(),
-                                center_col_indices.len(),
-                                right_col_indices.len(),
-                            ) {
-                                let mut wheel = fret_ui::element::WheelRegionProps::default();
-                                wheel.axis = ScrollAxis::X;
-                                wheel.scroll_handle = scroll_x.clone();
-                                wheel.layout = table_scroll_fill_layout();
-                                wheel.layout.overflow = Overflow::Clip;
-                                let body = table_wrap_horizontal_transform(
-                                    cx,
-                                    scroll_x.clone(),
-                                    table_known_content_width_for_indices(
-                                        &col_widths,
-                                        center_col_indices.as_ref(),
-                                    ),
-                                    body_list,
-                                );
-                                let body = cx.wheel_region(wheel, |_| vec![body]);
-                                if let Some(test_id) = debug_body_test_id.clone() {
-                                    body.test_id(test_id)
-                                } else {
-                                    body
-                                }
+                            let body = cx.wheel_region(wheel, |_| vec![body]);
+                            if let Some(test_id) = debug_body_test_id.clone() {
+                                body.test_id(test_id)
                             } else {
-                                if let Some(test_id) = debug_body_test_id.clone() {
-                                    body_list.test_id(test_id)
-                                } else {
-                                    body_list
-                                }
-                            };
+                                body
+                            }
+                        } else {
+                            if let Some(test_id) = debug_body_test_id.clone() {
+                                body_list.test_id(test_id)
+                            } else {
+                                body_list
+                            }
+                        };
 
-                            vec![header, body]
-                        })
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N0)
-                        .justify_start()
-                        .items_stretch()
-                        .into_element(cx),
-                    ]
+                        vec![header, body]
+                    })]
                 });
 
             let focus_ring = RingStyle {
