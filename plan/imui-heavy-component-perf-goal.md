@@ -4729,3 +4729,35 @@ popover overlay root solve tail.
 - Rollback is local: split `file_tree_row_text(...)` back into `file_tree_row_icon(...)` plus
   `file_tree_row_label(...)`, restore the two-child content `Flex`, and restore the previous
   structural assertions if attributed row text causes a future font/ellipsis regression.
+
+## 2026-06-23 Code-View Torture Overscan-2 Recheck Rejected
+
+- I rechecked the earlier rejected `code_view_torture` `overscan(2)` idea after the accepted
+  row-shaping and bounded keep-alive cuts, because the current row burst evidence still showed
+  first-mounted `StyledText` rows and renderer text-prepare churn.
+- Temporary change: only the gallery torture call-site used
+  `CodeBlockWindowedOptions::default().overscan(2)` before
+  `.highlight_mode(CodeBlockWindowedHighlightMode::PlainIndexed)`. The generic
+  `CodeBlockWindowedOptions` default, retained row keep-alive policy, row keys, and renderer text
+  cache behavior were unchanged.
+- Focused gates passed while the experiment was active:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_code_view --no-fail-fast`.
+- Transition/mount recheck:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-overscan2-mount-recheck-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1907/1746/44/28/133/0/3`
+  with worst bundle
+  `target/fret-diag/code-view-overscan2-mount-recheck-codex-20260623/1782168188747/bundle.schema2.json`.
+- Wheel-scroll steady recheck:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-overscan2-wheel-recheck-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=921/802/16/23/104/0/3`
+  with worst bundle
+  `target/fret-diag/code-view-overscan2-wheel-recheck-codex-20260623/1782168216733/bundle.json`.
+- Compared with the accepted bounded keep-alive evidence
+  (`1877/1741/32/23/114/0/4` for mount and `883/765/15/16/104/0/3` for wheel steady), this is
+  not a positive A/B. The mount result is in the same noisy band and the steady scroll result is
+  slightly worse.
+- Decision: reject and remove the torture-page `overscan(2)` call-site change. Future code-view
+  work should keep targeting row text representation or renderer text-blob retention with direct
+  evidence, not another overscan-count tweak.
