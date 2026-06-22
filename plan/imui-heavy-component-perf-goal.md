@@ -711,6 +711,35 @@ historical records remain in:
   local owner; otherwise rerank a different heavy surface before broadening generic VirtualList,
   root-apply, table row, or text-measure behavior.
 
+## 2026-06-23 Code-View/Editor-Controls Node-Profile Recheck Note
+
+- I rechecked the named priority surfaces after the DataTable/VirtualList no-cut to avoid drifting
+  away from the original combobox/editor-controls/code-view goal.
+- Code-view transition repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/code-view-transition-node-profile-codex-20260623d --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+  Evidence bundle:
+  `target/fret-diag/code-view-transition-node-profile-codex-20260623d/1782148797575/bundle.json`.
+  `diag stats` reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1985/1834/53/37/129/214/13`.
+  The worst frame is the transition mount frame with `layout.nodes=35`, `solve_us=53`, no
+  meaningful root apply (`roots apply=0us`), and renderer text prepare churn
+  (`flush=394us`, `added/removed=158/113`). Node profile still points at the code-view
+  `VirtualList` plus mounted `StyledText` rows, but this is the entry/mount path rather than
+  direct-entry steady-state.
+- Editor-controls click-stress node-profile repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-node-profile-codex-20260623d --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+  Evidence bundle:
+  `target/fret-diag/editor-controls-node-profile-codex-20260623d/1782148840486/bundle.schema2.json`.
+  `diag stats` reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=903/763/365/9/294/120/11`.
+  The worst captured frame is still below 1.3ms total; node-profile output shows the remaining
+  visible owners as the editor `session_shell` stack and active input/readout text nodes. The
+  `session_shell` stack owns stable edit-branch overlay/hidden-branch positioning, so deleting it
+  would break the session contract rather than remove a cosmetic wrapper.
+- Interpretation: do not cut code-view row/text or editor-controls session-shell again from this
+  evidence. Code-view's remaining transition cost is renderer/text mount churn after steady-state
+  already measured light; editor-controls is now a sub-millisecond p95 surface with no local shell
+  owner exposed. The next source change should require a new local owner proof, or it should come
+  from a different heavy surface rerank.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
