@@ -3861,3 +3861,21 @@ popover overlay root solve tail.
   five rows did not reduce the current p95 owner, so the next code-view slice should target row
   text layout/blob reuse or renderer text-prepare retention rather than further tuning this page's
   overscan count.
+
+## 2026-06-22 Code-View AllKeys Key-Cache Experiment Rejected
+
+- Experiment repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-allkeys-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Temporary change: removed the code-view retained/windowed lane's explicit
+  `VirtualListKeyCacheMode::VisibleOnly`, allowing fixed-mode `VirtualListOptions::fixed(...)` to
+  use its default `AllKeys` cache.
+- Evidence bundle:
+  `target/fret-diag/code-view-allkeys-codex-20260622/1782142154405/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1903/1772/34/25/118`.
+  The top row frame still had `layout.nodes=35`, `StyledText` first-solve `batch_roots=33`,
+  retained `VirtualList` inclusive layout `1682us`, and renderer text prepare
+  `added/removed=158/113` with `flush max=377us`. The page-switch frame's request-build p95
+  increased to `715us`.
+- Decision: reject and remove the AllKeys experiment. The retained row/text churn did not change,
+  while the 8k-line key cache risks making the transition frame heavier. Keep `VisibleOnly` on this
+  synthetic fixed-height code-view lane and continue toward row text layout/blob retention.
