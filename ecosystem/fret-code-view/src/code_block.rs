@@ -1275,18 +1275,9 @@ fn build_code_block_line_rich(
     if prepared.show_line_numbers {
         let number = line_number_text(prepared, line_i);
         text.push_str(number.as_ref());
-        spans.push(TextSpan {
-            len: number.len(),
-            shaping: code_shaping.clone(),
-            paint: TextPaintStyle {
-                fg: Some(row_theme.muted_fg),
-                ..Default::default()
-            },
-        });
-
         text.push_str(WINDOWED_LINE_NUMBER_SEPARATOR);
         spans.push(TextSpan {
-            len: WINDOWED_LINE_NUMBER_SEPARATOR.len(),
+            len: number.len() + WINDOWED_LINE_NUMBER_SEPARATOR.len(),
             shaping: code_shaping.clone(),
             paint: TextPaintStyle {
                 fg: Some(row_theme.muted_fg),
@@ -1970,13 +1961,11 @@ mod tests {
             build_code_block_line_rich(&row_theme, &prepared, 0, &TextShapingStyle::default());
 
         assert_eq!(rich.text.as_ref(), "  1  let value = 1;");
-        assert_eq!(rich.spans.len(), 3);
-        assert_eq!(rich.spans[0].len, 3);
-        assert_eq!(rich.spans[1].len, WINDOWED_LINE_NUMBER_SEPARATOR.len());
-        assert_eq!("let value = 1;".len(), rich.spans[2].len);
+        assert_eq!(rich.spans.len(), 2);
+        assert_eq!(rich.spans[0].len, 3 + WINDOWED_LINE_NUMBER_SEPARATOR.len());
+        assert_eq!("let value = 1;".len(), rich.spans[1].len);
         assert_eq!(rich.spans[0].paint.fg, Some(row_theme.muted_fg));
-        assert_eq!(rich.spans[1].paint.fg, Some(row_theme.muted_fg));
-        assert_eq!(rich.spans[2].paint.fg, None);
+        assert_eq!(rich.spans[1].paint.fg, None);
     }
 
     #[test]

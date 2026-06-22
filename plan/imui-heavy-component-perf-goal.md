@@ -4264,3 +4264,35 @@ popover overlay root solve tail.
 - Rollback is local: remove `long_list_item_specs` / `long_list_items`, restore the inline
   `(0..250)` item construction in `render`, and drop the source-structure guard if a future
   authoring requirement needs per-render generated labels.
+
+## 2026-06-23 Code-View Windowed Gutter Span Fold Note
+
+- The retained/windowed code-view row builder now folds the fixed line-number gutter and separator
+  into one muted `TextSpan` inside `ecosystem/fret-code-view/src/code_block.rs`.
+- Scope is intentionally tiny: no change to `VirtualList`, no change to `PreparedCodeBlock`, and no
+  change to the non-windowed path. This only removes one redundant span from every mounted row that
+  shows line numbers.
+- Structural coverage in the `code_block` test module now asserts that the windowed rich line uses
+  two spans instead of three while preserving the gutter text and muted foreground.
+- Focused gates:
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view windowed_line_numbers_are_folded_into_single_rich_line --no-fail-fast`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `git diff --check`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-gutter-span-fold-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/code-view-gutter-span-fold-codex-20260623/1782153357989/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1934/1789/49/24/121/0/4`.
+  Compared with the immediately previous same-script rerun
+  `target/fret-diag/code-view-current-followup-codex-20260623/1782153051384/bundle.json`
+  at `2008/1860/51/26/150/0/4`, this is a small but real reduction in the transition/mount band.
+  `diag stats --sort cpu_cycles --top 30` still shows the same owner shape: `layout.nodes=35`,
+  `VirtualList` inclusive layout `1607us`, row `StyledText` self/total hotspots, and renderer text
+  prepare flush around `438us`.
+- Interpretation: keep this as a local span-count cleanup, not a claim that code-view is solved.
+  The row mount is still the active owner; this cut simply removes an avoidable per-row span split
+  and leaves the remaining work focused on row/text/blob churn.
+- Rollback is local: restore the separate line-number and separator spans in
+  `build_code_block_line_rich`, and revert the corresponding span-count test if a future renderer
+  expectation needs the gutter separated again.
