@@ -818,7 +818,7 @@ impl<TData> DataTableToolbar<TData> {
                 if let Some(filter_model) = filter_model.as_ref() {
                     let filter_value = cx
                         .watch_model(filter_model)
-                        .layout()
+                        .paint()
                         .cloned()
                         .unwrap_or_default();
                     sync_global_filter(&mut *cx.app, &self.state, &filter_value);
@@ -827,7 +827,7 @@ impl<TData> DataTableToolbar<TData> {
                 if let (Some(column_id), Some(model)) =
                     (self.column_filter.as_ref(), column_filter_model.as_ref())
                 {
-                    let value = cx.watch_model(model).layout().cloned().unwrap_or_default();
+                    let value = cx.watch_model(model).paint().cloned().unwrap_or_default();
                     let next = normalized_global_filter(&value);
                     let should_update = cx
                         .app
@@ -1889,6 +1889,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{Point, Rect, TextOverflow, TextWrap};
     use fret_ui::element::ElementKind;
+    const SOURCE: &str = include_str!("data_table_recipes.rs");
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     enum PageSizeAction {
@@ -2003,6 +2004,35 @@ mod tests {
                 "pagination summaries must keep the upstream-like medium emphasis"
             );
         });
+    }
+
+    #[test]
+    fn data_table_toolbar_filter_sync_observes_local_inputs_as_paint_only() {
+        let start = SOURCE
+            .find("if let Some(filter_model) = filter_model.as_ref() {")
+            .expect("expected global filter sync block");
+        let tail = &SOURCE[start..];
+        let end = tail
+            .find("let desired_visibility: HashMap<ColumnId, bool>")
+            .expect("expected toolbar sync block boundary");
+        let sync_impl = &tail[..end];
+
+        assert!(
+            sync_impl.contains(".watch_model(filter_model)\n                        .paint()"),
+            "global filter local input sync should not mark the toolbar layout-dirty"
+        );
+        assert!(
+            sync_impl.contains("cx.watch_model(model).paint().cloned().unwrap_or_default()"),
+            "column filter local input sync should not mark the toolbar layout-dirty"
+        );
+        assert!(
+            !sync_impl.contains(".watch_model(filter_model)\n                        .layout()"),
+            "global filter local input sync should stay paint-only"
+        );
+        assert!(
+            !sync_impl.contains("cx.watch_model(model).layout().cloned().unwrap_or_default()"),
+            "column filter local input sync should stay paint-only"
+        );
     }
 
     #[test]

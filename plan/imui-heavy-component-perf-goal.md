@@ -383,6 +383,44 @@ historical records remain in:
   `table_fixed_row_group_with_cell_padding(...)` and remove the source guard if future borrow or
   behavior constraints require snapshotting the child list.
 
+## 2026-06-22 Data Table Toolbar Filter Paint-Watch Note
+
+- `DataTableToolbar` now observes its local global-filter and column-filter input models with
+  paint-only invalidation when syncing them back into `TableState`. These reads only drive state
+  synchronization; they do not change the fixed input/toolbar geometry directly.
+- The main `TableState` observation remains layout-level because table filtering can legitimately
+  add/remove the reset button, selected/readout controls, and table rows. Faceted filter, visibility,
+  and pinning model reads were left unchanged in this slice.
+- Source coverage in `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` guards the two local
+  filter sync reads so they do not drift back to `.layout()` observations.
+- Focused gates:
+  `cargo fmt -p fret-ui-shadcn --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-shadcn data_table_toolbar_filter_sync_observes_local_inputs_as_paint_only global_filter_change_resets_page_index input_inner_text_input_uses_fixed_height_when_caller_overrides_px_height --no-fail-fast`.
+  Note: that nextest invocation selected only 3 tests but still compiled 120 `fret-ui-shadcn`
+  test binaries; use a narrower target next time when only the library unit tests are needed.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-toolbar-filter-paint-watch-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/data-table-toolbar-filter-paint-watch-codex-20260622/1782132776781/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2346/1748/475/185/413`.
+- Compared with the previous child-clone prune bundle
+  `target/fret-diag/data-table-fixed-row-no-child-vec-codex-20260622/1782131267353/bundle.json`
+  at `2410/1833/515/183/394`, the expected owner moved in the right direction: root `Stack` solve
+  dropped `382us -> 342us`, retained `VirtualList` inclusive/layout stayed in the same band
+  (`794/188us -> 785/186us`), request-build p95 dropped `530us -> 492us`, and root apply p95
+  dropped `919us -> 904us`.
+- `diag stats --verbose` also changed the worst-frame dirty descriptor from toolbar/table
+  `model_observation` to `structural_children_changed`, which matches the intended result: local
+  filter text no longer marks the toolbar layout-dirty by itself, while real structure changes from
+  filtering/reset controls still do.
+- Interpretation: keep this as a targeted invalidation-ownership cleanup. The remaining Data Table
+  direct-entry frame is still layout/root-apply dominated, and the next pass should target retained
+  list/root structure or the remaining toolbar button/readout text measurement instead of further
+  local filter observer tweaks.
+- Rollback is local: change the two local filter sync reads in `DataTableToolbar::into_element(...)`
+  from `.paint()` back to `.layout()` and remove
+  `data_table_toolbar_filter_sync_observes_local_inputs_as_paint_only`.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait
