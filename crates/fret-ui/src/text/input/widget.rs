@@ -36,6 +36,27 @@ fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
     ))
 }
 
+impl TextInput {
+    pub(super) fn layout_with_fixed_height<H: UiHost>(
+        &mut self,
+        cx: &mut LayoutCx<'_, H>,
+        height: Px,
+    ) -> Size {
+        self.last_bounds = cx.bounds;
+
+        cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+
+        self.edit_state()
+            .clamp_caret_and_anchor_to_grapheme_boundary();
+
+        let theme = cx.theme().snapshot();
+        self.sync_chrome_from_theme(theme.clone());
+        self.sync_text_style_from_theme(theme);
+
+        Size::new(cx.available.width, Px(height.0.max(0.0)))
+    }
+}
+
 impl<H: UiHost> Widget<H> for TextInput {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.queue_release_all_text_blobs();

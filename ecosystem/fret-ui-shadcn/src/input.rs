@@ -462,6 +462,19 @@ fn input_element<H: UiHost>(
     }
 
     let text_style = typography::control_text_style_scaled(theme, FontId::ui(), resolved.text_px);
+    let mut root_layout = decl_style::layout_style(
+        theme,
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .h_px(resolved.min_height)
+            .merge(layout_override),
+    );
+    root_layout.overflow = fret_ui::element::Overflow::Visible;
+    let inner_height = match root_layout.size.height {
+        Length::Px(px) => Length::Px(px),
+        Length::Auto | Length::Fill | Length::Fraction(_) => Length::Fill,
+    };
 
     let mut props = TextInputProps::new(model);
     props.enabled = !disabled;
@@ -481,7 +494,7 @@ fn input_element<H: UiHost>(
     props.text_style = text_style;
     props.layout.size = SizeStyle {
         width: Length::Fill,
-        height: Length::Fill,
+        height: inner_height,
         min_width: Some(Length::Px(fret_core::Px(0.0))),
         ..Default::default()
     };
@@ -489,15 +502,6 @@ fn input_element<H: UiHost>(
 
     // shadcn/ui `Input` uses `shadow-xs`. The text input widget does not expose a shadow field in
     // its chrome style, so we model the outcome by wrapping it in a shadow-only container.
-    let mut root_layout = decl_style::layout_style(
-        theme,
-        LayoutRefinement::default()
-            .w_full()
-            .min_w_0()
-            .h_px(resolved.min_height)
-            .merge(layout_override),
-    );
-    root_layout.overflow = fret_ui::element::Overflow::Visible;
     let root_shadow = {
         let mut shadow = decl_style::shadow_xs(theme, resolved.radius);
         if let Some(corners) = corner_radii_override {
@@ -860,6 +864,10 @@ mod tests {
             "expected Input to have shadow-xs wrapper"
         );
         assert_eq!(root.layout.size.width, Length::Fill);
+        assert!(
+            matches!(root.layout.size.height, Length::Px(_)),
+            "expected default Input wrapper height to be fixed"
+        );
 
         let child = el.children.first().expect("shadow wrapper child");
         let ElementKind::TextInput(props) = &child.kind else {
@@ -869,6 +877,100 @@ mod tests {
             );
         };
         assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, root.layout.size.height);
+    }
+
+    #[test]
+    fn input_inner_text_input_uses_fixed_height_when_caller_overrides_px_height() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "input-overridden-height-wrapper",
+            |cx| {
+                Input::new(model.clone())
+                    .a11y_label("Input")
+                    .refine_layout(LayoutRefinement::default().h_px(Px(48.0)))
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Container(root) = &el.kind else {
+            panic!(
+                "expected Input root to be a shadow container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(root.layout.size.height, Length::Px(Px(48.0)));
+
+        let child = el.children.first().expect("shadow wrapper child");
+        let ElementKind::TextInput(props) = &child.kind else {
+            panic!(
+                "expected shadow wrapper child to be TextInput, got {:?}",
+                child.kind
+            );
+        };
+        assert_eq!(props.layout.size.height, Length::Px(Px(48.0)));
+    }
+
+    #[test]
+    fn input_inner_text_input_fills_when_caller_uses_fill_height() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "input-fill-height-wrapper",
+            |cx| {
+                Input::new(model.clone())
+                    .a11y_label("Input")
+                    .refine_layout(LayoutRefinement::default().h_full())
+                    .into_element(cx)
+            },
+        );
+
+        let ElementKind::Container(root) = &el.kind else {
+            panic!(
+                "expected Input root to be a shadow container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(root.layout.size.height, Length::Fill);
+
+        let child = el.children.first().expect("shadow wrapper child");
+        let ElementKind::TextInput(props) = &child.kind else {
+            panic!(
+                "expected shadow wrapper child to be TextInput, got {:?}",
+                child.kind
+            );
+        };
         assert_eq!(props.layout.size.height, Length::Fill);
     }
 

@@ -309,6 +309,47 @@ historical records remain in:
   rather than table filtering work, change the direct filter-shrink scripts back to
   `type_text_into` and fix that interaction path separately.
 
+## 2026-06-22 Data Table Fixed-Height Input Measure Fast Path Note
+
+- Declarative `TextInput` now has a narrower fixed-height measurement/layout fast path:
+  `TextInputProps.layout.size.height = Length::Px(_)` returns the fixed size without calling the
+  text service during widget measure/layout. `Auto`, `Fill`, and `Fraction(_)` still use the old
+  text-service measurement path because their height can depend on content or parent negotiation.
+- `fret-ui-shadcn` `Input` now maps the final fixed root height onto the inner `TextInput`. This
+  covers both the default shadcn input height and explicit caller `h_px(...)` overrides such as the
+  DataTable toolbar `h-8` filter inputs. Non-fixed root heights still keep the inner text input on
+  `Fill`, preserving fill/dynamic shell semantics.
+- Focused gates:
+  `cargo fmt -p fret-ui -p fret-ui-shadcn --check`, `git diff --check`,
+  `cargo nextest run -p fret-ui fixed_height_text_input_model_change_invalidates_paint_only fixed_height_text_input_measure_skips_text_service auto_height_text_input_model_change_keeps_layout_invalidation auto_height_text_input_measure_keeps_text_service_probe fill_height_text_input_measure_keeps_text_service_probe clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-ui-shadcn input_wraps_in_shadow_container_like_shadcn input_inner_text_input_uses_fixed_height_when_caller_overrides_px_height input_inner_text_input_fills_when_caller_uses_fill_height --no-fail-fast`.
+- Broader `cargo nextest run -p fret-ui text_input --no-fail-fast` was also checked earlier in this
+  slice. It had 74 passing tests and one known existing failure,
+  `declarative::tests::layout::scroll::text_input_region_preserves_fill_scroll_viewport_for_tall_canvas_child`;
+  a detached clean `HEAD=df93f5d7a4` worktree reproduced the same failure, so it is not attributed
+  to this cut.
+- Intermediate perf evidence showed why recipe wiring mattered. With only the runtime `Length::Px`
+  fast path, `target/fret-diag/data-table-fixed-textinput-measure-codex-20260622/1782127853097/bundle.json`
+  still reported `top.us(total/layout/solve/prepaint/paint)=2459/1858/543/193/408` and a toolbar
+  `TextInput` widget measure hotspot around `32us`, because the shadcn toolbar filter used an
+  explicit `h_px(Px(32.0))` wrapper while the inner text input still used `Fill`.
+- Accepted perf evidence:
+  `target/fret-diag/data-table-input-fixed-px-height-codex-20260622/1782130405741/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2450/1833/491/189/428`.
+  `layout-perf-summary` no longer reports a `TextInput` entry in `widget_measure_hotspots`; the top
+  widget-measure items are now small `Text` probes (`29us`, `4us`) and the retained table
+  `VirtualList` (`1us`).
+- Interpretation: keep this as a targeted measurement-owner cleanup, not a broad frame-time win.
+  The single-run total/layout numbers remain in the same noise band as the direct preview-body
+  evidence, while the intended toolbar `TextInput` measure owner is gone. The remaining data-table
+  work should target root apply / retained `VirtualList` / row owners or the remaining toolbar text
+  measurement, not another `TextInput` size probe shortcut.
+- Rollback is local: remove the `fixed_text_input_height_px` branch and
+  `layout_with_fixed_height` path from `fret-ui`, and restore shadcn `Input` inner height to `Fill`
+  if a future input sizing/focus regression proves that fixed inner heights are not equivalent for
+  fixed root heights.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait

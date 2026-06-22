@@ -375,6 +375,110 @@ fn fixed_height_text_input_model_change_invalidates_paint_only() {
 }
 
 #[test]
+fn fixed_height_text_input_measure_skips_text_service() {
+    let mut app = TestHost::new();
+    let model = app.models_mut().insert(String::from("Process 123"));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "fixed-height-text-input-measure-skips-text-service",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(40.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        services.prepare_calls, 0,
+        "fixed-height text input measure should not call the text service"
+    );
+}
+
+#[test]
+fn auto_height_text_input_measure_keeps_text_service_probe() {
+    let mut app = TestHost::new();
+    let model = app.models_mut().insert(String::from("Process 123"));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "auto-height-text-input-measure-keeps-text-service-probe",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        services.prepare_calls > 0,
+        "auto-height text input measure must still call the text service"
+    );
+}
+
+#[test]
+fn fill_height_text_input_measure_keeps_text_service_probe() {
+    let mut app = TestHost::new();
+    let model = app.models_mut().insert(String::from("Process 123"));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "fill-height-text-input-measure-keeps-text-service-probe",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Fill;
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        services.prepare_calls > 0,
+        "fill-height text input must keep the regular layout measurement path"
+    );
+}
+
+#[test]
 fn auto_height_text_input_model_change_keeps_layout_invalidation() {
     let mut app = TestHost::new();
     let model = app.models_mut().insert(String::new());

@@ -136,6 +136,20 @@ impl BoundTextInput {
         self.input.semantics(cx);
     }
 
+    pub(crate) fn layout_with_fixed_height<H: UiHost>(
+        &mut self,
+        cx: &mut LayoutCx<'_, H>,
+        height: fret_core::Px,
+    ) -> Size {
+        cx.observe_model(&self.model, self.text_change_invalidation);
+        if self.text_change_invalidation != Invalidation::Paint {
+            cx.observe_model(&self.model, Invalidation::Paint);
+        }
+        let force = cx.focus != Some(cx.node) || !self.dirty_since_sync;
+        self.sync_from_model(cx.app, force);
+        self.input.layout_with_fixed_height(cx, height)
+    }
+
     fn sync_from_model<H: UiHost>(&mut self, app: &H, force: bool) {
         let revision = app.models().revision(&self.model);
         if revision == self.last_revision {

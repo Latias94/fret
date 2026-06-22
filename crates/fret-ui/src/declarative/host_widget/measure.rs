@@ -28,6 +28,13 @@ fn available_px_or_zero(constraints: LayoutConstraints) -> Size {
     Size::new(w, h)
 }
 
+pub(super) fn fixed_text_input_height_px(height: Length) -> Option<Px> {
+    match height {
+        Length::Px(px) => Some(Px(px.0.max(0.0))),
+        Length::Auto | Length::Fill | Length::Fraction(_) => None,
+    }
+}
+
 fn clamp_to_constraints_in_measure(
     mut size: Size,
     style: LayoutStyle,
@@ -1523,6 +1530,25 @@ impl ElementHostWidget {
         cx: &mut MeasureCx<'_, H>,
         props: crate::element::TextInputProps,
     ) -> Size {
+        let text_change_invalidation = super::text_input_text_change_invalidation(&props);
+        if text_change_invalidation == Invalidation::Layout {
+            (cx.observe_model)(props.model.id(), Invalidation::Layout);
+        }
+
+        let avail = available_px_or_zero(cx.constraints);
+        let w = match props.layout.size.width {
+            Length::Px(px) => Px(px.0.max(0.0)),
+            Length::Fill | Length::Auto => avail.width,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((avail.width.0 * f).max(0.0))
+            }
+        };
+
+        if let Some(h) = fixed_text_input_height_px(props.layout.size.height) {
+            return clamp_to_constraints_in_measure(Size::new(w, h), props.layout, cx.constraints);
+        }
+
         let max_width = cx
             .constraints
             .known
@@ -1535,10 +1561,6 @@ impl ElementHostWidget {
             align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
-        let text_change_invalidation = super::text_input_text_change_invalidation(&props);
-        if text_change_invalidation == Invalidation::Layout {
-            (cx.observe_model)(props.model.id(), Invalidation::Layout);
-        }
         let text = (text_change_invalidation == Invalidation::Layout)
             .then(|| cx.app.models().get_cloned(&props.model).unwrap_or_default());
         let measure_text = text
@@ -1552,16 +1574,6 @@ impl ElementHostWidget {
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding.top.0.max(0.0) + props.chrome.padding.bottom.0.max(0.0);
         let h = Px((metrics.size.height.0 + pad_h + border_h).max(0.0));
-
-        let avail = available_px_or_zero(cx.constraints);
-        let w = match props.layout.size.width {
-            Length::Px(px) => Px(px.0.max(0.0)),
-            Length::Fill | Length::Auto => avail.width,
-            Length::Fraction(f) => {
-                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
-                Px((avail.width.0 * f).max(0.0))
-            }
-        };
 
         clamp_to_constraints_in_measure(Size::new(w, h), props.layout, cx.constraints)
     }

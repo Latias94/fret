@@ -1504,7 +1504,13 @@ impl ElementHostWidget {
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
 
-                let desired = input.layout(cx);
+                let desired = if let Some(height) =
+                    super::measure::fixed_text_input_height_px(props.layout.size.height)
+                {
+                    input.layout_with_fixed_height(cx, height)
+                } else {
+                    input.layout(cx)
+                };
                 clamp_to_constraints_with_overflow_context(
                     desired,
                     props.layout,
