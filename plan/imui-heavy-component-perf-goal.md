@@ -740,6 +740,45 @@ historical records remain in:
   owner exposed. The next source change should require a new local owner proof, or it should come
   from a different heavy surface rerank.
 
+## 2026-06-23 AI Transcript Steady Probe Split Note
+
+- I reranked a small set of heavy-looking surfaces outside the already downgraded
+  combobox/editor-controls/code-view set.
+- `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json`
+  repeat=1 reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=440/9/0/282/149/0/0`
+  on `target/fret-diag/rerank-code-editor-autoscroll-codex-20260623/1782149184892/bundle.schema2.json`.
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll.json` repeat=1 reported
+  `2442/2171/1005/42/229/72/8` on
+  `target/fret-diag/rerank-file-tree-scroll-codex-20260623/1782149201590/bundle.json`.
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json` repeat=1 reported
+  `2844/2400/672/168/276/44/2` on
+  `target/fret-diag/rerank-chart-pan-zoom-codex-20260623/1782149228305/bundle.schema2.json`.
+- The existing AI transcript torture script initially looked like the new heaviest candidate:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json` repeat=1
+  reported `4608/4425/2808/45/138/79/7` on
+  `target/fret-diag/rerank-ai-transcript-scroll-codex-20260623/1782149215162/bundle.schema2.json`.
+  Node-profile rerun reported `4761/4552/2834/49/160/87/8` on
+  `target/fret-diag/rerank-ai-transcript-scroll-node-profile-codex-20260623/1782149251719/bundle.schema2.json`;
+  the local hot frame was `ui-gallery-ai-transcript-root` `VirtualList`
+  (`self_us=3085`, `total_us=3276`) after page entry.
+- That script intentionally covers page navigation, mount, variable-height list scroll, append,
+  screenshot, and sidecar evidence. It did not reset diagnostics after the page and model had
+  settled, so the 4-5ms frame is a mount/entry attribution result, not steady scroll attribution.
+- I added the dedicated steady probe
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll-steady.json`, which
+  navigates to the page, waits for the deterministic `240`-message model, waits briefly, resets
+  diagnostics, and then measures the scroll/append interaction window.
+- The steady probe repeat=1 reported `668/577/175/15/76/79/8` on
+  `target/fret-diag/ai-transcript-scroll-steady-codex-20260623b/1782149376393/bundle.schema2.json`.
+  Repeat=3 confirmed the result with
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=666/564/169/16/87/114/9` and worst
+  bundle `target/fret-diag/ai-transcript-scroll-steady-r3-codex-20260623/1782149399114/bundle.schema2.json`.
+- Interpretation: keep the original AI transcript script as a full-flow mount/sidecar probe and use
+  the new steady script for interaction ranking. Do not change generic `VirtualList`, transcript row
+  layout, or renderer text behavior from the full-flow 4-5ms frame; steady interaction is currently
+  sub-millisecond on this machine. The next rerank target should be file-tree, chart, chrome, or
+  another surface that remains heavy after a post-settle reset.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
