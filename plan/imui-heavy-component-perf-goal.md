@@ -621,6 +621,27 @@ historical records remain in:
   retained data-table, or another heavier current owner before changing code-view retention,
   overscan, key-cache, or renderer glyph pin behavior.
 
+## 2026-06-23 Named Priority Rerank Note
+
+- I reran the current named priority surfaces on the same local macOS/M4 Pro release setup to
+  confirm whether any of them had become the current heavy owner again.
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-combobox-long-list-focused-filter-select-steady.json`
+  repeat=3 reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=300/9/0/174/118/0/3`
+  on `target/fret-diag/rerank-combobox-long-list-codex-20260623b/1782147574970/bundle.schema2.json`.
+  The long-list combobox is currently a sub-millisecond surface on this machine.
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json`
+  repeat=3 reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1478/1158/415/152/205/0/3`
+  on `target/fret-diag/rerank-inspector-direct-entry-codex-20260623b/1782147603169/bundle.schema2.json`.
+  The retained inspector scroll path is still measurable, but it is not the highest current owner.
+- `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json`
+  repeat=3 reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1065/937/448/5/169/163/15`
+  on `target/fret-diag/rerank-editor-controls-codex-20260623b/1782147628386/bundle.schema2.json`.
+  The remaining work there is still root/session-shell and popup text, not another obvious local
+  shell cut.
+- Interpretation: the named priority set is currently below the remaining 120Hz-risky surfaces on
+  this machine. The next evidence-led slice should stay on the heavier VirtualList/DataTable owner
+  pair unless a fresh code-view bundle reintroduces a transition spike that deserves priority.
+
 ## 2026-06-23 VirtualList/DataTable Current Rerank Note
 
 - After code-view steady/scroll fell out of the primary hotspot set, I reran the two remaining
@@ -642,6 +663,28 @@ historical records remain in:
   below the 8.33ms 120Hz frame budget on this machine. The next slice should be evidence-led and
   narrow: either find a clearer retained-row/root-apply owner, or rerank another heavy surface
   before changing generic VirtualList, table row, or renderer behavior.
+
+## 2026-06-23 VirtualList/DataTable Repeat-3 Follow-up Note
+
+- I reran the current heavier owner pair with repeat=3 after confirming combobox/editor-controls
+  were not the active heavy owners.
+- `tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json` repeat=3
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2219/1751/787/178/299/113/11`
+  on `target/fret-diag/rerank-virtual-list-codex-20260623b/1782147644152/bundle.schema2.json`.
+  `layout-perf-summary` shows the top frame at `total/layout/solve=2219/1742/760us`, with row
+  first-solve still visible as a retained row `Container` root (`solve_us=457`) plus root `Stack`
+  solve (`303us`) and `VirtualList inclusive/layout=787/553us`.
+- `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json`
+  repeat=3 reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2419/1838/535/186/478/0/0`
+  on `target/fret-diag/rerank-data-table-codex-20260623b/1782147671857/bundle.json`.
+  `layout-perf-summary` shows root `Stack` solve (`398us`), table row `HoverRegion` first solve
+  (`136us`), and retained table `VirtualList inclusive/layout=814/194us`; `diag stats` reports
+  root apply p95 around `944us` and request-build p95 around `532us`.
+- Interpretation: DataTable is still the local top surface by a small margin, followed closely by
+  VirtualList torture. Both are comfortably within the 8.33ms frame budget, so the next code slice
+  should require a clearer owner proof than "it is the largest current number." Do not delete
+  ordinary row containers or widen generic VirtualList/root-apply shortcuts from this evidence; the
+  row containers still own chrome, padding, height, clipping, and row semantics.
 
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
