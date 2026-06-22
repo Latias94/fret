@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, Px, SemanticsRole};
+use fret_core::{AttributedText, Color, Edges, Px, SemanticsRole, TextSpan};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
@@ -138,18 +138,24 @@ fn file_tree_item_a11y(
     }
 }
 
-fn file_tree_row_icon<H: UiHost>(
+fn file_tree_row_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     icon: impl Into<Arc<str>>,
-) -> AnyElement {
-    crate::declarative::text::text_chrome_glyph(cx, icon)
-}
-
-fn file_tree_row_label<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
     label: impl Into<Arc<str>>,
 ) -> AnyElement {
-    crate::declarative::text::text_list_row_label(cx, label)
+    let icon = icon.into();
+    let label = label.into();
+    let mut text = String::with_capacity(icon.len() + 1 + label.len());
+    text.push_str(&icon);
+    text.push(' ');
+    text.push_str(&label);
+
+    let text_len = text.len();
+    let rich = AttributedText::new(
+        Arc::<str>::from(text),
+        Arc::<[TextSpan]>::from([TextSpan::new(text_len)]),
+    );
+    crate::declarative::text::text_list_row_label_attributed(cx, rich)
 }
 
 fn file_tree_missing_virtual_row_placeholder<H: UiHost>(
@@ -333,9 +339,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
 
                 vec![cx.container(row_props, |cx| {
                     vec![cx.flex(row_content_props, |cx| {
-                        let icon = file_tree_row_icon(cx, icon);
-                        let label = file_tree_row_label(cx, entry.label.clone());
-                        vec![icon, label]
+                        vec![file_tree_row_text(cx, icon, entry.label.clone())]
                     })]
                 })]
             },
@@ -558,38 +562,29 @@ mod tests {
     }
 
     #[test]
-    fn file_tree_row_icon_uses_shared_chrome_glyph_text_role() {
+    fn file_tree_row_text_collapses_icon_and_label_into_one_styled_text() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
-                file_tree_row_icon(cx, ">")
+                file_tree_row_text(cx, ">", "Very long nested file name that should not wrap")
             });
 
-        let ElementKind::Text(props) = &element.kind else {
-            panic!("file tree row icon should be text");
+        let ElementKind::StyledText(props) = &element.kind else {
+            panic!("file tree row text should be styled text");
         };
-        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-        assert_eq!(props.layout.flex.shrink, 1.0);
-        assert_eq!(props.wrap, TextWrap::None);
-        assert_eq!(props.overflow, TextOverflow::Clip);
-    }
 
-    #[test]
-    fn file_tree_row_label_uses_shared_list_row_text_role() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-        let element =
-            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
-                file_tree_row_label(cx, "Very long nested file name that should not wrap")
-            });
-
-        let ElementKind::Text(props) = &element.kind else {
-            panic!("file tree row label should be text");
-        };
+        assert_eq!(
+            props.rich.text.as_ref(),
+            "> Very long nested file name that should not wrap"
+        );
+        assert_eq!(props.rich.spans.len(), 1);
+        assert_eq!(props.rich.spans[0].len, props.rich.text.len());
         assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
@@ -660,8 +655,14 @@ mod tests {
         let row_content = only_child_with_kind(&ui, &mut app, window, row_background, "Flex");
         assert_eq!(
             ui.debug_node_children(row_content).len(),
-            2,
-            "retained file-tree rows should direct-mount icon and label under the content Flex"
+            1,
+            "retained file-tree rows should collapse icon and label under the content Flex"
+        );
+        let row_text = only_child_with_kind(&ui, &mut app, window, row_content, "StyledText");
+        assert_eq!(
+            ui.debug_node_children(row_text).len(),
+            0,
+            "retained file-tree row text should be a leaf"
         );
     }
 }

@@ -4694,3 +4694,38 @@ popover overlay root solve tail.
 - Rollback is local: restore the `crate::ui::h_row(...)` builder inside
   `file_tree_view_retained_v0`, remove `file_tree_row_content_props`, and drop the direct child
   structure assertion if a future row layout/flex inheritance regression appears.
+
+## 2026-06-23 File-Tree Row Text Collapse Note
+
+- Follow-up source cut: retained file-tree rows now keep the row content `Flex` for vertical
+  centering, but collapse the disclosure glyph and label from two sibling `Text` elements into one
+  `StyledText` built through `text_list_row_label_attributed(...)`. This removes one text/layout
+  node per mounted visible row while preserving `Pressable` treeitem semantics, row
+  selection/hover background, padding/indent, clip boundary, and single-line ellipsis policy.
+- Structural coverage now asserts the row path is
+  `Pressable -> Container -> Flex -> StyledText`, with the combined row text as a leaf. The helper
+  test also locks the combined text into the list-row attributed-text contract:
+  fill width, `min-width: 0`, `wrap=None`, and `overflow=Ellipsis`.
+- Focused gates:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo nextest run -p fret-ui-kit file_tree --no-fail-fast`, and `git diff --check`.
+- Perf follow-up:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/file-tree-scroll-steady-merged-text-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Follow-up evidence:
+  `target/fret-diag/file-tree-scroll-steady-merged-text-codex-20260623/1782166557453/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1214/1008/428/26/183/0/3`.
+  This improves on the direct-flex cut's
+  `1529/1249/598/37/246/93/12` result under the same script/env shape.
+- `diag stats --sort time --top 30 --verbose` on the merged-text bundle showed the expected
+  structural reduction: the row batch solve is still rooted at `Pressable`, but it is now
+  `subtree_nodes=120` for `batch_roots=30` instead of the prior `150`. Worst-frame `VirtualList`
+  inclusive was around `526us` and the outer content `Scroll` inclusive around `697us`; root apply
+  remains a meaningful part of the frame (`roots apply` p95 around `745us`), so this does not close
+  the file-tree layout lane.
+- Interpretation: keep this as a second positive structural row cut. The next file-tree
+  optimization should not delete `Pressable`, row `Container`, or the content `Flex` without fresh
+  visual/geometry evidence; the remaining owner is now less about obvious per-row chrome and more
+  about row-batch invalidation/root apply or a separately validated vertical-centering replacement.
+- Rollback is local: split `file_tree_row_text(...)` back into `file_tree_row_icon(...)` plus
+  `file_tree_row_label(...)`, restore the two-child content `Flex`, and restore the previous
+  structural assertions if attributed row text causes a future font/ellipsis regression.
