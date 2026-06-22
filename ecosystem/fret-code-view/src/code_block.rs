@@ -282,6 +282,7 @@ pub struct CodeBlock {
     language: Option<Arc<str>>,
     show_line_numbers: bool,
     show_header: bool,
+    show_language_in_header: bool,
     header_divider: bool,
     header_background: CodeBlockHeaderBackground,
     show_copy_button: bool,
@@ -306,6 +307,7 @@ impl CodeBlock {
             language: None,
             show_line_numbers: false,
             show_header: false,
+            show_language_in_header: true,
             header_divider: false,
             header_background: CodeBlockHeaderBackground::None,
             show_copy_button: false,
@@ -336,6 +338,11 @@ impl CodeBlock {
 
     pub fn show_header(mut self, show: bool) -> Self {
         self.show_header = show;
+        self
+    }
+
+    pub fn show_language_in_header(mut self, show: bool) -> Self {
+        self.show_language_in_header = show;
         self
     }
 
@@ -425,7 +432,7 @@ impl CodeBlock {
             self.windowed.is_none(),
             "CodeBlock::windowed(...) requires CodeBlock::into_element_windowed(...)"
         );
-        code_block_with(
+        code_block_with_header_slots(
             cx,
             &self.code,
             self.language.as_deref(),
@@ -447,6 +454,7 @@ impl CodeBlock {
                 disable_ligatures: self.disable_ligatures,
                 disable_contextual_alternates: self.disable_contextual_alternates,
             },
+            CodeBlockHeaderSlots::default().show_language(self.show_language_in_header),
         )
     }
 
@@ -456,7 +464,7 @@ impl CodeBlock {
         cx: &mut ElementContext<'_, H>,
     ) -> AnyElement {
         let windowed = self.windowed.unwrap_or_default();
-        code_block_with_windowed(
+        code_block_with_header_slots_windowed(
             cx,
             &self.code,
             self.language.as_deref(),
@@ -478,6 +486,7 @@ impl CodeBlock {
                 disable_ligatures: self.disable_ligatures,
                 disable_contextual_alternates: self.disable_contextual_alternates,
             },
+            CodeBlockHeaderSlots::default().show_language(self.show_language_in_header),
             windowed,
         )
     }
@@ -2029,6 +2038,21 @@ mod tests {
             assert!(
                 CODE_BLOCK_RS.contains(marker),
                 "code_block.rs should keep non-windowed public surface marker `{marker}`"
+            );
+        }
+    }
+
+    #[test]
+    fn code_block_builder_can_hide_header_language_without_dropping_prepare_language() {
+        for marker in [
+            "show_language_in_header: bool,",
+            "show_language_in_header: true,",
+            "pub fn show_language_in_header(mut self, show: bool) -> Self {",
+            "CodeBlockHeaderSlots::default().show_language(self.show_language_in_header),",
+        ] {
+            assert!(
+                CODE_BLOCK_RS.contains(marker),
+                "CodeBlock builder should keep header-language display independent from prepare language marker `{marker}`"
             );
         }
     }

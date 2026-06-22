@@ -39,6 +39,7 @@ pub(in crate::ui) fn preview_code_view_torture(
 
     let block = code_view::CodeBlock::new(code)
         .language("rust")
+        .show_language_in_header(false)
         .show_line_numbers(true)
         .show_scrollbar_y(true)
         .scrollbar_y_on_hover(false)

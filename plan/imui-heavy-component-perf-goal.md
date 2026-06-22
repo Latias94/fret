@@ -3734,3 +3734,51 @@ popover overlay root solve tail.
 - Decision: reject and remove the passive text fixed-box measure shortcut. No source/test change is
   kept from this slice. The next code-view cut should target retained row layout/root solve,
   transition root build/apply, or renderer text-prepare flush directly, not text measure.
+
+## 2026-06-22 Code-View Torture Header Language Suppress Note
+
+- `CodeBlock` now exposes `show_language_in_header(false)` on the builder surface. This keeps
+  `.language("rust")` available for prepare/highlight semantics while allowing a caller to suppress
+  the language text that otherwise makes a header visible even when `show_header(false)`.
+- `code_view_torture` uses this builder option so the torture harness keeps Rust language prepare
+  and line numbers, but no longer mounts the code-block language header. Lower-level
+  `code_block_with*` helpers still keep their default `CodeBlockHeaderSlots::default()` behavior.
+- Source coverage:
+  `ecosystem/fret-code-view/src/code_block.rs` locks the builder field/default/method/slot bridge,
+  and `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` requires
+  `code_view_torture` to keep both `.language("rust")` and `.show_language_in_header(false)`.
+- Focused gates:
+  `cargo fmt -p fret-code-view -p fret-ui-gallery --check`,
+  `git diff --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_code_view --no-fail-fast`.
+- Transition perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-torture-no-language-header-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Transition evidence:
+  `target/fret-diag/code-view-torture-no-language-header-codex-20260622/1782135678729/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2108/1939/33/31/138`.
+  The repeat=5 follow-up
+  `target/fret-diag/code-view-torture-no-language-header-r5-codex-20260622/1782135722721/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2152/2007/130/27/127`.
+- Compared with the current priority-rank bundle
+  `target/fret-diag/rank-code-view-transition-codex-20260622-cont/1782134133042/bundle.json`
+  at `2022/1867/57/28/127`, total/layout timing stayed in the same noisy band and should not be
+  claimed as a p95 win. The structural target did move: the page-switch frame dropped
+  `layout.nodes 72 -> 62`, `paint.nodes 90 -> 80`, root apply `363us -> 345us`, request-build
+  p95 `784us -> 668us`, and root `Stack` solve `683us -> 571us`. The worst frame is now still the
+  follow-up windowed row frame, dominated by retained `VirtualList` / row `StyledText` layout and
+  renderer text-prepare flush.
+- Direct-entry steady repro stayed light:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-direct-entry-no-language-header-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+  Evidence bundle
+  `target/fret-diag/code-view-direct-entry-no-language-header-codex-20260622/1782135794513/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=255/7/0/160/88`, matching the prior
+  direct-entry light band.
+- Interpretation: keep this as a small structural/API cleanup that completes the earlier
+  headerless-body direction for the torture harness, not as a timing win. The next code-view cut
+  should target the remaining row `StyledText` layout, retained `VirtualList` row invalidation, or
+  renderer text-prepare flush.
+- Rollback is local: remove `show_language_in_header` from `CodeBlock`, restore the builder paths
+  to `code_block_with*`, remove `.show_language_in_header(false)` from `code_view_torture`, and
+  drop the matching source-structure tests if a future gate shows the header language suppress path
+  is not worth carrying.
