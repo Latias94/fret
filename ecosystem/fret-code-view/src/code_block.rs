@@ -1376,9 +1376,7 @@ impl CodeBlockWindowedLineRichCache {
             return rich.clone();
         }
 
-        let shaping =
-            code_shaping_for_code_block_flags(disable_ligatures, disable_contextual_alternates);
-        let rich = build_code_block_line_rich(row_theme, prepared, line_i, &shaping);
+        let rich = build_code_block_line_rich(row_theme, prepared, line_i, &row_theme.code_shaping);
         self.entries.insert(line_i, (rich.clone(), tick));
         self.queue.push_back((line_i, tick));
 
@@ -1402,6 +1400,7 @@ impl CodeBlockWindowedLineRichCache {
 struct CodeBlockLineRowTheme {
     mono_size: Px,
     mono_line_height: Px,
+    code_shaping: TextShapingStyle,
     text_style: TextStyle,
     fg: fret_core::Color,
     muted_fg: fret_core::Color,
@@ -1409,7 +1408,12 @@ struct CodeBlockLineRowTheme {
 }
 
 impl CodeBlockLineRowTheme {
-    fn new(theme: &Theme, prepared: &crate::prepare::PreparedCodeBlock) -> Self {
+    fn new(
+        theme: &Theme,
+        prepared: &crate::prepare::PreparedCodeBlock,
+        disable_ligatures: bool,
+        disable_contextual_alternates: bool,
+    ) -> Self {
         let mono_size = theme.metric_token("metric.font.mono_size");
         let mono_line_height = theme.metric_token("metric.font.mono_line_height");
         let syntax_colors = prepared
@@ -1427,10 +1431,13 @@ impl CodeBlockLineRowTheme {
             letter_spacing_em: None,
             ..Default::default()
         });
+        let code_shaping =
+            code_shaping_for_code_block_flags(disable_ligatures, disable_contextual_alternates);
 
         Self {
             mono_size,
             mono_line_height,
+            code_shaping,
             text_style,
             fg: theme.color_token("foreground"),
             muted_fg: theme.color_token("muted-foreground"),
@@ -1503,7 +1510,12 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
 
     let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
-    let row_theme = Arc::new(CodeBlockLineRowTheme::new(theme, prepared.as_ref()));
+    let row_theme = Arc::new(CodeBlockLineRowTheme::new(
+        theme,
+        prepared.as_ref(),
+        disable_ligatures,
+        disable_contextual_alternates,
+    ));
     let known_content_size = fret_core::Size::new(
         estimate_monospace_content_width_px(
             prepared.as_ref(),
@@ -1955,6 +1967,7 @@ mod tests {
         let row_theme = CodeBlockLineRowTheme {
             mono_size: Px(10.0),
             mono_line_height: Px(14.0),
+            code_shaping: TextShapingStyle::default(),
             text_style: TextStyle::default(),
             fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
             muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
@@ -2095,6 +2108,10 @@ mod tests {
             row_theme_section.contains("text_style: TextStyle,"),
             "windowed row theme should own the shared StyledText style"
         );
+        assert!(
+            row_theme_section.contains("code_shaping: TextShapingStyle,"),
+            "windowed row theme should own the shared code shaping style"
+        );
 
         let render_row_section = CODE_BLOCK_RS
             .split("fn render_code_block_line_row")
@@ -2108,6 +2125,20 @@ mod tests {
         assert!(
             !render_row_section.contains("typography::as_control_text(TextStyle {"),
             "windowed rows should not rebuild the same TextStyle for every mounted line"
+        );
+
+        let line_cache_section = CODE_BLOCK_RS
+            .split("impl CodeBlockWindowedLineRichCache")
+            .nth(1)
+            .and_then(|section| section.split("#[derive(Debug, Clone)]").next())
+            .expect("windowed line rich cache section should exist");
+        assert!(
+            line_cache_section.contains("&row_theme.code_shaping"),
+            "windowed line rich cache should reuse the row theme shaping style"
+        );
+        assert!(
+            !line_cache_section.contains("code_shaping_for_code_block_flags("),
+            "windowed line rich cache should not rebuild the same shaping style for every missed line"
         );
     }
 

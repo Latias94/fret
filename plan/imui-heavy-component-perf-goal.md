@@ -4551,3 +4551,39 @@ popover overlay root solve tail.
   actual focus/open/dismiss/accept/value-commit path, and the surface is still around a 1ms
   interaction band. Do not delete `TextAssistField` row chrome, overlay dismiss state, or the
   editor `session_shell` from this evidence.
+
+## 2026-06-23 Code-View Windowed Row Shaping Hoist Note
+
+- The windowed code-view row path now resolves the shared code `TextShapingStyle` once on
+  `CodeBlockLineRowTheme` and reuses it for every missed `CodeBlockWindowedLineRichCache` entry.
+  This keeps the earlier row text-style hoist intact and removes another per-mounted-line rebuild
+  from the transition path.
+- Scope is intentionally narrow: `PreparedCodeBlock`, `VirtualList`, row identity, line rich-cache
+  eviction, `PlainIndexed` behavior, and renderer text-blob retention are unchanged.
+- Focused gates:
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and `git diff --check`.
+- Transition baseline:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-row-shaping-baseline-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2025/1876/62/26/130/0/7`
+  with worst bundle
+  `target/fret-diag/code-view-row-shaping-baseline-codex-20260623/1782160680821/bundle.json`.
+- Changed transition evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-row-shaping-theme-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1886/1739/37/27/125/0/3`
+  with worst bundle
+  `target/fret-diag/code-view-row-shaping-theme-codex-20260623/1782161117008/bundle.schema2.json`.
+  `diag stats --sort cpu_cycles --top 20` still shows the same true remaining owner:
+  mounted row text blobs (`renderer.text_prepare.flush` around `441us`) plus transition
+  request-build/apply work.
+- Direct-entry guard:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/code-view-row-shaping-theme-direct-entry-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=223/6/0/140/77/0/0`,
+  so direct-entry steady state remains light.
+- Interpretation: keep this as a small row-mount cleanup with a positive transition A/B. It does
+  not solve the remaining renderer text-blob churn; the next valid code-view cut still needs direct
+  evidence around row text representation or text-blob retention, not another overscan or
+  line-number-only attempt.
+- Rollback is local: remove `code_shaping` from `CodeBlockLineRowTheme`, restore
+  `code_shaping_for_code_block_flags(...)` inside `CodeBlockWindowedLineRichCache::resolve`, and
+  drop the matching source guard if a future shaping inheritance regression appears.
