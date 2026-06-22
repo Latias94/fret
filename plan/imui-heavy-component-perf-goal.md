@@ -3701,3 +3701,36 @@ popover overlay root solve tail.
   rendering strategy.
 - Rollback is local: in `render_code_block_content(...)`, restore the body render call to the
   unconditional `ui::v_flex(...)` content branch and remove the direct-body source-structure test.
+
+## 2026-06-22 Current Priority Surface Re-Ranking and Passive Text Fast Path Rejected
+
+- Refreshed the user-priority surfaces on current macOS/M4 Pro release builds:
+  - combobox focused long-list:
+    `target/fret-diag/rank-combobox-long-list-codex-20260622-cont/1782134043411/bundle.schema2.json`
+    reported `top.us(total/layout/solve/prepaint/paint)=295/8/0/173/114`;
+  - editor-controls click stress:
+    `target/fret-diag/rank-editor-controls-codex-20260622-cont/1782134117964/bundle.schema2.json`
+    reported `top.us(total/layout/solve/prepaint/paint)=1002/860/400/3/139`;
+  - code-view transition:
+    `target/fret-diag/rank-code-view-transition-codex-20260622-cont/1782134133042/bundle.json`
+    reported `top.us(total/layout/solve/prepaint/paint)=2022/1867/57/28/127`.
+- Interpretation: combobox remains light on this machine, editor-controls is still sub-1.1ms, and
+  code-view transition is the best next driver among the named priority surfaces.
+- Attribution on the code-view bundle showed two frame shapes. The page-switch frame is dominated
+  by root request-build/apply (`request_build p95=784us`, `root apply p95=363us`). The follow-up
+  code-view row frame is dominated by retained `VirtualList` / `StyledText` layout plus renderer
+  text prepare flush (`renderer.text_prepare.flush max=423us`).
+- I tested a narrow `fret-ui` fast path for fixed-size clipped passive text (`Text`, `StyledText`,
+  `SelectableText`) so code-view fixed line-box rows could skip text-service measurement during
+  layout. The focused Rust guard passed, but the hypothesis did not match the current owner:
+  the baseline code-view row `StyledText` first-solve already had `measure.calls=0`, so this was
+  not a text-service measurement hotspot.
+- Changed repeat=3 evidence:
+  `target/fret-diag/code-view-fixed-passive-text-measure-codex-20260622-cont/1782134805499/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1989/1822/45/27/147`. This is only a
+  small same-band movement versus the current rank bundle and the prior headerless-body band, while
+  root request-build/apply did not improve (`842us` / `380us` in the changed worst transition
+  frame).
+- Decision: reject and remove the passive text fixed-box measure shortcut. No source/test change is
+  kept from this slice. The next code-view cut should target retained row layout/root solve,
+  transition root build/apply, or renderer text-prepare flush directly, not text measure.
