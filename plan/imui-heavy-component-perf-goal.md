@@ -4587,3 +4587,31 @@ popover overlay root solve tail.
 - Rollback is local: remove `code_shaping` from `CodeBlockLineRowTheme`, restore
   `code_shaping_for_code_block_flags(...)` inside `CodeBlockWindowedLineRichCache::resolve`, and
   drop the matching source guard if a future shaping inheritance regression appears.
+
+## 2026-06-23 Code-View Fixed Line-Box Passive Text No-Cut
+
+- I tested a narrow `fret-ui` fast path that skipped layout-time text service preparation for
+  passive fixed-height `Text` / `StyledText` when the line box was fully constraint-owned
+  (`wrap=None`, `overflow=Clip`, `align=Start`, no ink overflow, non-auto width).
+- Characterization gates passed on the trial branch:
+  `cargo fmt -p fret-ui --check`,
+  `cargo nextest run -p fret-ui fixed_height_wrap_none_passive_text_measure_skips_text_service --no-fail-fast`,
+  `cargo nextest run -p fret-ui text_cache --no-fail-fast`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and `git diff --check`.
+- Changed perf probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-fixed-linebox-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1918/204/34/23/1717/0/3`
+  with worst bundle
+  `target/fret-diag/code-view-fixed-linebox-codex-20260623/1782163026693/bundle.json`.
+- Compared with the accepted shaping-hoist bundle
+  `target/fret-diag/code-view-row-shaping-theme-codex-20260623/1782161117008/bundle.schema2.json`
+  at `1886/1739/37/27/125/0/3`, this was not a net total-frame win. The trial moved the mounted
+  row text work out of layout and into paint instead of removing it.
+- `diag stats --sort time --top 20` on the trial bundle showed the worst frame at
+  `total/layout/prepaint/paint=1918/178/23/1717us`, `paint.text_prepare p95=1575us`,
+  `renderer.text_prepare.flush=445us`, and the same mounted text blob churn shape
+  (`blobs/fast_reuse/pinned/prewarm/retained/added/removed=53/0/291/158/133/158/113`).
+- Decision: no source cut. The trial `fret-ui` changes were reverted. Do not reattempt a generic
+  fixed-line-box layout skip as a code-view optimization unless it is paired with evidence that
+  renderer text-blob preparation or retention is also reduced. The next valid code-view cut should
+  target row text representation or renderer text-blob retention directly.
