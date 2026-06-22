@@ -4495,3 +4495,38 @@ popover overlay root solve tail.
 - Rollback is local: restore the unconditional swatch `copy_menu_open` update and the pointer
   handler store updates, then remove the matching revision tests if a future drag or copy-menu
   regression shows the guarded path was hiding required state churn.
+
+## 2026-06-23 Editor Controls No-Op Source Prune Note
+
+- I accepted the current editor-controls model-write cleanup as an invalidation-source prune, not a
+  frame-time win. `NumericInput` now skips clearing an already-empty error model and skips writing
+  the same validation message again. This removed the redundant numeric error source from the
+  click-stress attribution; the remaining numeric sources are the real draft string and committed
+  value writes.
+- `TextAssistField` accept now also skips writes when the accepted query, dismissed query, or active
+  item already match. The current click-stress script still exercises real accept transitions, so
+  this guard is defensive hygiene rather than a current-source win.
+- Comparison evidence:
+  - Current source baseline:
+    `target/fret-diag/editor-controls-text-assist-source-current-codex-20260623/1782159284915/bundle.schema2.json`
+    reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1439/1306/983/3/130/0/1`
+    and included `TextAssistField` accept writes plus numeric error writes in
+    `changed_model_sources_top`.
+  - After the accept guard:
+    `target/fret-diag/editor-controls-text-assist-accept-noop-codex-20260623/1782159481331/bundle.schema2.json`
+    still showed accept sources because the measured transitions were real changes.
+  - After the numeric error guard:
+    `target/fret-diag/editor-controls-numeric-error-noop-codex-20260623/1782159678433/bundle.schema2.json`
+    reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1215/1022/554/4/189/0/2`
+    and no longer reported the numeric `Option<Arc<str>>` error write as a top model-change source.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `git diff --check`, and
+  `cargo nextest run -p fret-ui-editor clear_numeric_input_error set_numeric_input_error accept_match --no-fail-fast`.
+- Interpretation: keep the two small guards because they make source attribution cleaner and lock in
+  no-op model revision behavior with unit tests. Do not treat this as evidence for deleting
+  `TextAssistField` overlay dismissal/focus state or the editor `session_shell`; those writes and
+  shells were still real semantics in the current evidence.
+- Rollback is local: restore the direct `models_mut().update(...)` writes in
+  `controls/text_assist_field/accept.rs` and `controls/numeric_input/keyboard.rs`, then remove the
+  corresponding no-op revision tests.
