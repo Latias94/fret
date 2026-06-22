@@ -317,6 +317,40 @@ historical records remain in:
   (`solve_us=518`). The next code-view cut should target retained line row text/layout work or the
   renderer text-prepare flush path, not page-local explanatory chrome.
 
+## 2026-06-22 Code-View Windowed Fixed Line-Box Text Note
+
+- The accepted follow-up makes each windowed code row's `StyledText` use a definite line box:
+  `width=Fill` and `height=Px(row_theme.mono_line_height)`. The text style already carries the
+  same monospaced line height; this change makes the retained row layout contract explicit instead
+  of asking layout to auto-size every mounted row's text box.
+- Focused gate:
+  `cargo fmt -p fret-code-view --check` and
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 5 --warmup-frames 5 --dir target/fret-diag/code-view-windowed-fixed-line-box-r5-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Baseline for this slice:
+  `target/fret-diag/code-view-torture-no-local-header-rerun-codex-20260622/1782108770212/bundle.json`
+  reported `p95.us(total/layout/solve)=2346/2188/535`; the worst frame's direct
+  `layout.solve_us` was `528us`.
+- The first changed repeat=3 run
+  `target/fret-diag/code-view-windowed-fixed-line-box-codex-20260622/1782109374569/bundle.json`
+  was noisy on p95 (`2636/2435/375us`), but it already showed the intended explicit solve drop.
+- Rerun evidence:
+  `target/fret-diag/code-view-windowed-fixed-line-box-rerun-codex-20260622/1782109546060/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=1957/1797/50`.
+- Repeat=5 evidence:
+  `target/fret-diag/code-view-windowed-fixed-line-box-r5-codex-20260622/1782109595637/bundle.json`
+  reported `p95.us(total/layout/solve)=2089/1809/50`.
+- Interpretation: keep this cut. It removes the retained row `StyledText` solve owner from the
+  tail frame (`528us -> 50us` on the compared worst frame) and lowers repeat=5 p95 layout versus
+  the no-local-header baseline (`2188us -> 1809us`). The remaining owner is no longer row text
+  auto-sizing; the worst bundles still show root build/apply work and renderer text prepare flush
+  (`flush` around `413us`). The next code-view slice should inspect retained `VirtualList`
+  root/apply behavior or renderer text-prepare flush, not row `StyledText` sizing.
+- Rollback is local: return `render_code_block_line_row` text layout to auto width/no explicit
+  height and remove the fixed-line-box structure guard if a future visual or selection geometry
+  gate proves the fixed text box is wrong.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in

@@ -1449,7 +1449,8 @@ fn render_code_block_line_row<H: UiHost>(
     let code = cx.styled_text_props(StyledTextProps {
         layout: {
             let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Auto;
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(row_theme.mono_line_height);
             layout
         },
         rich,
@@ -2050,6 +2051,19 @@ mod tests {
             assert!(
                 CODE_BLOCK_RS.contains(marker),
                 "code_block.rs should keep explicit retained-lane marker `{marker}`"
+            );
+        }
+    }
+
+    #[test]
+    fn code_block_windowed_rows_keep_fixed_line_box_text_layout() {
+        for marker in [
+            "layout.size.width = Length::Fill;",
+            "layout.size.height = Length::Px(row_theme.mono_line_height);",
+        ] {
+            assert!(
+                CODE_BLOCK_RS.contains(marker),
+                "windowed code rows should keep fixed line-box StyledText layout marker `{marker}`"
             );
         }
     }
