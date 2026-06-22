@@ -737,6 +737,11 @@ fn page_preview(
         _ => preview_intro(cx, theme),
     };
 
+    #[cfg(feature = "gallery-dev")]
+    if selected == PAGE_INSPECTOR_TORTURE || selected == PAGE_DATA_TABLE_TORTURE {
+        return body;
+    }
+
     vec![
         shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![

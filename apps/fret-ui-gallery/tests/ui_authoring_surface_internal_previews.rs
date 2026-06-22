@@ -1487,6 +1487,11 @@ fn gallery_data_table_torture_can_disable_the_outer_content_scroll_shell() {
         source.contains("|| disable_content_scroll_for_data_table_torture"),
         "data_table_torture should join the bypass with the existing content-scroll guard",
     );
+    assert!(
+        source
+            .contains("selected == PAGE_INSPECTOR_TORTURE || selected == PAGE_DATA_TABLE_TORTURE"),
+        "data_table_torture should share the heavy direct-entry preview-card bypass with inspector_torture",
+    );
 }
 
 #[test]
@@ -1522,6 +1527,11 @@ fn gallery_inspector_torture_keeps_its_own_fixed_preview_shell() {
     assert!(
         source.contains("preview_semantics_layout.overflow = fret_ui::element::Overflow::Clip;"),
         "inspector_torture should keep the clipped fixed preview shell",
+    );
+    assert!(
+        source
+            .contains("selected == PAGE_INSPECTOR_TORTURE || selected == PAGE_DATA_TABLE_TORTURE"),
+        "inspector_torture should keep the heavy direct-entry preview-card bypass",
     );
 }
 

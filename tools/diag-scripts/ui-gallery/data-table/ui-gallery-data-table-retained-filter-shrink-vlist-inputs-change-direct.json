@@ -142,13 +142,12 @@
       "type": "wait_frames"
     },
     {
-      "clear_before_type": true,
       "target": {
         "id": "ui-gallery-data-table-torture-toolbar-global-filter-input",
         "kind": "test_id"
       },
       "text": "Process 123",
-      "type": "type_text_into"
+      "type": "set_text_value"
     },
     {
       "n": 5,

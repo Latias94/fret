@@ -262,6 +262,53 @@ historical records remain in:
   header and move the matching source-policy markers back from forbidden to required if the gallery
   needs those teaching strings on the torture page.
 
+## 2026-06-22 Data Table Torture Direct Preview Body Shell Note
+
+- The `gallery-dev` direct-entry heavy pages now skip the generic `shadcn::Card("Preview")`
+  wrapper in `page_preview(...)` for both `inspector_torture` and `data_table_torture`.
+- Scope is deliberately gallery-harness-only. The direct-entry torture pages already own their
+  fixed preview shell and diagnostic roots; this removes the generic preview card chrome from the
+  measured body instead of changing the table primitive, ScrollArea, or retained VirtualList
+  mechanism.
+- Regression coverage now locks the shared bypass in both places:
+  `data_table_torture_skips_preview_card_shell`,
+  `inspector_torture_skips_preview_card_shell`, and the source-policy guards in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`.
+- The direct data-table filter-shrink perf scripts now use `set_text_value` for the global filter.
+  After the direct shell cleanup, the older `type_text_into` path dispatched `TextInput` but did
+  not update the filter value in this harness shape. This probe is meant to measure filter shrink
+  and retained VirtualList work, not TextInput focus behavior, so the direct value-set step is the
+  narrower perf trigger.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`, `git diff --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_can_disable_the_outer_content_scroll_shell gallery_inspector_torture_keeps_its_own_fixed_preview_shell --no-fail-fast`,
+  `cargo nextest run -p fret-ui-gallery --features gallery-dev inspector_torture_skips_preview_card_shell data_table_torture_skips_preview_card_shell --no-fail-fast`,
+  and `fretboard-dev diag script validate` for both direct filter-shrink scripts.
+- Correctness repro:
+  `target/release/fretboard-dev diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-direct-preview-body-run-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=1 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-direct-preview-body-codex-20260622b --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/data-table-direct-preview-body-codex-20260622b/1782124885613/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2443/1863/528/181/399`.
+- Compared with the local-header-prune bundle
+  `target/fret-diag/data-table-no-local-header-codex-20260622/1782122326601/bundle.schema2.json`
+  at `2437/1804/744/210/423`, total/layout stayed in the same single-run noise band, but the
+  intended structural owners moved: hot-frame `layout.nodes=244 -> 238`, child rect queries
+  `67 -> 64`, root `Stack` solve `602us -> 394us`, retained table `VirtualList` inclusive/layout
+  `858/228us -> 777/197us`, and the preview-card `content.rs:743/745` text measure hotspots
+  disappeared. Remaining `widget_measure_hotspots` are the toolbar `TextInput` and small table
+  toolbar texts.
+- Interpretation: keep this as heavy direct-entry harness shell cleanup and inspector contract
+  drift repair. It should not be used as evidence for another table primitive shortcut. The next
+  data-table pass should target root apply noise, the retained `VirtualList`/row owners, or the
+  toolbar input/text measurement if fresh attribution still ranks them above other heavy
+  components.
+- Rollback is local: restore generic preview-card wrapping for these pages and remove the matching
+  render-flow/source-policy guards. If a future script needs to test real TextInput focus behavior
+  rather than table filtering work, change the direct filter-shrink scripts back to
+  `type_text_into` and fix that interaction path separately.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait
