@@ -4530,3 +4530,24 @@ popover overlay root solve tail.
 - Rollback is local: restore the direct `models_mut().update(...)` writes in
   `controls/text_assist_field/accept.rs` and `controls/numeric_input/keyboard.rs`, then remove the
   corresponding no-op revision tests.
+
+## 2026-06-23 Editor Controls Post-Noop Source Audit No-Cut
+
+- I reran the click-stress source-attribution probe after landing the `TextAssistField` accept and
+  `NumericInput` error no-op guards:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-post-accept-error-noop-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`.
+- Evidence bundle:
+  `target/fret-diag/editor-controls-post-accept-error-noop-codex-20260623/1782160122045/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1069/926/454/6/137/0/3`.
+  `diag stats --sort cpu_cycles --top 30` reported considered-frame
+  `p95.us(total/layout/prepaint/paint)=887/734/9/148`, root request-build p95 around `360us`, and
+  roots apply p95 around `235us`.
+- `changed_model_sources_top` now shows the remaining sources as real interaction state:
+  `TextAssistField` focus tracking (`body.rs:152`), overlay open (`body.rs:88`), dismissal clear
+  (`body.rs:146`), overlay dismiss (`overlay.rs:98/102`), the real accept write
+  (`accept.rs:44/69`), and the roughness commit's numeric value/draft writes
+  (`numeric_input/keyboard.rs:76/80`). The numeric error no-op source remains absent.
+- Decision: no follow-up source cut from this bundle. The remaining writes match the script's
+  actual focus/open/dismiss/accept/value-commit path, and the surface is still around a 1ms
+  interaction band. Do not delete `TextAssistField` row chrome, overlay dismiss state, or the
+  editor `session_shell` from this evidence.
