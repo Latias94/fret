@@ -4840,3 +4840,42 @@ popover overlay root solve tail.
   low-millisecond band with no fresh source-cut proof. The current active heavy owner remains the
   code-view transition/mount path, but that lane is now explicitly documented as a no-cut until
   direct row-text/blob evidence appears.
+
+## 2026-06-23 Secondary Rerank No-Cut
+
+- After the named priority recheck, I reranked the next likely heavy gallery surfaces to avoid
+  expanding public infrastructure before there is a concrete owner:
+  - Chrome torture steady:
+    `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/rerank-chrome-current-codex-20260623i --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+    reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2114/1881/743/38/195/0/3`
+    on
+    `target/fret-diag/rerank-chrome-current-codex-20260623i/1782171036434/bundle.schema2.json`.
+    `diag stats --sort time --top 12 --verbose` showed the primary owner as root `Stack`
+    layout with `flex_patch.us` around `610us`, `wrap=5`, `candidates=16`, and `mutations=14`.
+    The page already uses `DocSection::no_shell()` and content-scroll bypass, while the earlier
+    direct preview-card bypass for chrome worsened the result. Treat this as a root/flex-layout
+    investigation candidate, not another local chrome-widget deletion.
+  - Data-table retained filter shrink:
+    `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/rerank-data-table-current-codex-20260623i --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+    reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2329/1773/522/178/378/0/0`
+    on `target/fret-diag/rerank-data-table-current-codex-20260623i/1782171076237/bundle.json`.
+    The worst-frame attribution was dominated by root apply (`~913us`), root `Stack` solve
+    (`~373us`), and retained table `VirtualList` inclusive layout (`~787us`). The retained row
+    fast path is already active for shadcn `DataTable`: `optimize_grid_lines=true`, fixed rows,
+    and `row_cell_test_ids=false` collapse row cells into the managed-surface padding path, leaving
+    the row batch at roughly `HoverRegion + ManagedSurface` (`subtree_nodes=66` for
+    `batch_roots=33`). Do not delete `HoverRegion` or the fixed-row `ManagedSurface` without a
+    new row-hover / fixed-column geometry replacement.
+  - Virtual-list torture steady:
+    `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/rerank-virtual-list-current-codex-20260623i --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+    reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2036/1679/756/128/229/109/11`
+    on
+    `target/fret-diag/rerank-virtual-list-current-codex-20260623i/1782171089280/bundle.schema2.json`.
+    The considered worst frame showed root apply around `841us`, `VirtualList` inclusive layout
+    around `775us`, and a row first-solve batch (`15` roots, `75` subtree nodes) rather than a
+    single removable shell.
+- Decision: record all three as current no-cut surfaces. The next source cut should come from a
+  fresh owner that can reduce root apply / flex patch / VirtualList batch solving directly, or from
+  a narrow row-geometry replacement with before/after layout evidence. Avoid repeating the rejected
+  chrome preview-card bypass, table row-hover deletion, or generic virtual-list row-shell trimming
+  without new evidence.
