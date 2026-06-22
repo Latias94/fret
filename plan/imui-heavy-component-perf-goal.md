@@ -2964,3 +2964,29 @@ popover overlay root solve tail.
   removes the child-measure hotspot but does not reduce the VirtualList torture frame budget and
   shifts the visible cost into layout-engine solve. The next slice should stay on the row layout
   engine root shape / solve attribution instead of another child-measure shortcut.
+
+## 2026-06-22 VirtualList Single Fill-Child Direct Layout Rejection Note
+
+- I tested a narrower `Container` final-layout fast path that bypassed the outer container's
+  layout-engine root when the container was non-auto-sized and had exactly one static child with
+  `width=Fill`, `height=Fill`, default margin/inset, and no min/max/aspect constraints.
+- A focused container test proved the local owner effect: the outer fill-sized chrome container no
+  longer appeared as a layout-engine solve root, while the child still received the expected
+  padding/border-adjusted bounds.
+- Validation for the experiment passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui container_directly_lays_out_single_fill_child_without_engine_solve --no-fail-fast`
+  - `cargo nextest run -p fret-ui virtual_list --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`
+- Perf evidence rejected the slice:
+  - Repeat=3 bundle:
+    `target/fret-diag/virtual-list-single-fill-child-direct-layout-codex-20260622-r3/1782092986612/bundle.schema2.json`
+    reported `p95/max total/layout/solve=2667/2204/651us`.
+  - The change reduced the solve band versus the prior rejected early-return run, but the total
+    frame and layout bands regressed. The worst frame showed `layout.root_phases roots(apply)=1216us`
+    and `VirtualList inclusive=1144us`, so the saved row-root solve did not translate into a better
+    frame budget.
+- Conclusion: reject and revert the single fill-child direct-layout fast path. The next cut should
+  avoid manually bypassing final container layout until root-apply / child layout invalidation
+  effects are understood.
