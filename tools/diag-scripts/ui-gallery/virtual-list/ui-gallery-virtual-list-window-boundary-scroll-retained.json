@@ -213,7 +213,7 @@
                 "kind": "retained_virtual_list_reconciles_matching_ge",
                 "min": 1,
                 "reconcile_kind": "escape",
-                "reused_from_keep_alive_items_min": 1
+                "attached_items_min": 1
             }
         },
         {

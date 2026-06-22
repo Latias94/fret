@@ -39,6 +39,16 @@ fn contains_step_type(value: &Value, needle: &str) -> bool {
     }
 }
 
+fn contains_key(value: &Value, needle: &str) -> bool {
+    match value {
+        Value::Object(map) => map
+            .iter()
+            .any(|(key, value)| key == needle || contains_key(value, needle)),
+        Value::Array(values) => values.iter().any(|value| contains_key(value, needle)),
+        _ => false,
+    }
+}
+
 fn first_step_index(steps: &[Value], expected_type: &str, expected_target: Option<&str>) -> usize {
     steps
         .iter()
@@ -166,4 +176,25 @@ fn virtual_list_torture_correctness_scripts_target_inner_list_scroll_after_conte
             "{name} should target the inner virtual-list scroll root"
         );
     }
+}
+
+#[test]
+fn virtual_list_window_boundary_retained_gate_stays_scoped_to_window_reconcile() {
+    let parsed = serde_json::from_str::<Value>(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+    ))
+    .expect("valid virtual-list retained boundary script json");
+
+    assert!(
+        !contains_key(&parsed, "FRET_UI_GALLERY_VLIST_KEEP_ALIVE"),
+        "window-boundary retained gate should not enable keep-alive by default"
+    );
+    assert!(
+        !contains_key(&parsed, "reused_from_keep_alive_items_min"),
+        "window-boundary retained gate proves retained window reconcile, not keep-alive reuse"
+    );
+    assert!(
+        contains_key(&parsed, "attached_items_min"),
+        "window-boundary retained gate should still prove visible items were attached"
+    );
 }
