@@ -4187,3 +4187,41 @@ popover overlay root solve tail.
   content viewport/root apply rather than a narrow local chrome widget. Do not cut portal geometry
   or chrome source from this evidence; the next valid chrome slice needs a smaller repro proving a
   local content-scroll/root-apply owner.
+
+## 2026-06-23 Chrome Torture Content-Scroll Bypass Note
+
+- `PAGE_CHROME_TORTURE` now joins the page-level static content-shell branch that already serves
+  `inspector_torture`, `code_view_torture`, `data_table_torture`, and `virtual_list_torture`.
+- Scope is intentionally narrow: the chrome torture page content still goes through its existing
+  `render_doc_page(...)` and preview-card path. Only the outer gallery content `ScrollArea` is
+  skipped for this short torture harness, so the reusable page header remains in the same static
+  stack as the preview body.
+- Structural coverage in
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` locks the explicit
+  `disable_content_scroll_for_chrome_torture` gate and guard join.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `git diff --check`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_chrome_torture_can_disable_the_outer_content_scroll_shell gallery_data_table_torture_can_disable_the_outer_content_scroll_shell gallery_inspector_torture_keeps_its_own_fixed_preview_shell --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-torture-content-scroll-bypass-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Evidence bundle:
+  `target/fret-diag/chrome-torture-content-scroll-bypass-codex-20260623/1782150752748/bundle.schema2.json`
+  reported
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2122/1888/806/46/198/0/2`.
+- Compared with the prior repeat=3 current-state bundle
+  `target/fret-diag/chrome-torture-steady-r3-codex-20260623/1782150031394/bundle.schema2.json`
+  at `3226/2989/827/40/213/0/0`, this removes the proven outer content-scroll root-apply owner.
+  `diag stats` moved layout root `roots(apply)` on the worst frame from about `2827us` to `424us`.
+  The remaining cost is request-build/compute (`~1.3-1.45ms`) plus ordinary chrome widget solve.
+- Rejected companion experiment: adding `PAGE_CHROME_TORTURE` to the direct preview-card bypass
+  that serves inspector/data-table worsened the repeat=3 result to
+  `2201/1914/750/52/235/0/4` on
+  `target/fret-diag/chrome-torture-static-shell-direct-preview-codex-20260623/1782151181642/bundle.schema2.json`.
+  Keep the generic preview card around chrome torture from this evidence.
+- Interpretation: keep the content-scroll bypass as a real structural win. The next chrome work,
+  if any, should target the remaining request-build/compute invalidation owner directly rather
+  than deleting the preview-card shell.
+- Rollback is local: remove `disable_content_scroll_for_chrome_torture` from
+  `apps/fret-ui-gallery/src/ui/content.rs` and drop the matching structure test if a future visual,
+  scrolling, or diagnostics gate proves the outer content scroll is required for this harness.
