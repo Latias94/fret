@@ -4383,3 +4383,37 @@ popover overlay root solve tail.
 - Next editor-controls work needs a narrower proof: either a repeated request-build owner tied to a
   specific local observer/model read, or a small row/text measurement cache owner that can be
   validated without weakening the session shell.
+
+## 2026-06-23 Code-View / Editor-Controls Next-Owner Audit No-Cut
+
+- Re-ran the code-view transition probe with node-level layout attribution after the row text-style
+  hoist:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/code-view-transition-node-profile-codex-20260623f --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle
+  `target/fret-diag/code-view-transition-node-profile-codex-20260623f/1782155424998/bundle.schema2.json`
+  reported `p95.us(total/layout/prepaint/paint)=1820/1669/37/132`.
+  `diag stats --sort cpu_cycles --top 20` showed the same remaining shape as the prior accepted
+  code-view cuts: the transition page-switch frame paid `request_build=660us` / `roots.apply=306us`,
+  and the row frame paid retained text churn with `renderer.text_prepare.flush=440us` and
+  `added/removed=158/113`.
+- The node-profile stdout identified the actual row owner: `ui-gallery-code-view-root` `VirtualList`
+  total about `1561us`, with mounted `StyledText` rows under
+  `ecosystem/fret-code-view/src/code_block.rs:1451` at roughly `62-233us` self each.
+- Decision: no code-view source cut from this audit. The remaining owner is real first-solve/text
+  blob work for mounted code rows, not an outer shell. Prior local evidence already rejected
+  `AllKeys`, lower overscan, generic passive-text layout skips, and line-number formatting micro
+  cuts. The next valid code-view cut must change the row text representation or renderer text-blob
+  retention with a direct positive A/B; do not repeat key-cache/overscan/line-number-only attempts.
+- I also queried the editor-controls outlier bundle directly. The worst click-stress frame still had
+  `layout_request_build_roots_phase2_compute=1008us`, but the detailed records showed a root
+  `Stack` solve over 79 nodes plus an initial `editor.text_assist.*` `DismissibleLayer` mount with
+  13 nodes. `model_change_hotspots` did not include source type/name metadata, so the bundle does
+  not prove a specific local observer/model read to remove.
+- The follow-up `TextAssistField` row audit found the row shape is `Pressable -> Container -> Text`.
+  The `Container` owns option padding, active/hover background, and row radius; `PressableProps`
+  has no chrome/padding fields. Deleting that row container would weaken list-option visual and
+  a11y semantics instead of removing an empty shell.
+- Decision: no editor-controls source cut from this audit. The next editor-controls work should
+  either add stronger model-source attribution for request-build owners or find a proven local
+  text/cache owner; do not delete the `TextAssist` row container or `session_shell` from the
+  current evidence.
