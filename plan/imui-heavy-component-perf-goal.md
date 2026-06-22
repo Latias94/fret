@@ -779,6 +779,37 @@ historical records remain in:
   sub-millisecond on this machine. The next rerank target should be file-tree, chart, chrome, or
   another surface that remains heavy after a post-settle reset.
 
+## 2026-06-23 File Tree Steady Probe Split Note
+
+- I followed the next rerank candidate from the AI transcript split: the existing
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll.json` full-flow script.
+  It had reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2442/2171/1005/42/229/72/8`
+  on `target/fret-diag/rerank-file-tree-scroll-codex-20260623/1782149201590/bundle.json`.
+- The original script navigates, mounts the file-tree torture page, immediately scrolls, and captures
+  a bundle without a post-settle `reset_diagnostics`, so I added
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll-steady.json` as the
+  interaction-ranking probe. It waits for `ui-gallery-file-tree-root` and
+  `ui-gallery-file-tree-node-0`, waits briefly, resets diagnostics, then performs the same wheel
+  scroll burst.
+- Steady repeat=1 reported `1710/1425/665/39/246/74/12` on
+  `target/fret-diag/file-tree-scroll-steady-codex-20260623/1782149687377/bundle.json`.
+  Repeat=3 reported
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1707/1419/684/44/248/96/12`, with
+  worst bundle
+  `target/fret-diag/file-tree-scroll-steady-r3-codex-20260623/1782149702579/bundle.json`.
+- Node-profile rerun:
+  `target/fret-diag/file-tree-scroll-steady-node-profile-codex-20260623/1782149728525/bundle.schema2.json`.
+  `diag stats` reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1635/1368/676/40/253/62/7`,
+  with root apply around `1120us` p95. The node-profile stream showed the steady frame owner as
+  `ui-gallery-file-tree-root` `VirtualList` (`self_us` roughly `620-670us`, `total_us` roughly
+  `800-880us`) under the outer `ui-gallery-content-viewport` scroll root.
+- Interpretation: keep the new steady script as the canonical interaction-ranking probe and treat
+  the older script as full-flow navigation/mount evidence. Do not cut file-tree row wrappers from
+  this result: the row path owns `Pressable`, treeitem a11y, padding/indent, fixed height, chrome,
+  clipping, and retained identity, while the measured path is already well below the 8.33ms frame
+  budget. The next rerank should continue with chart/chrome or another surface that remains heavy
+  after a post-settle reset.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in

@@ -1,0 +1,143 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "required_launch_features": ["gallery-dev"],
+    "name": "UI Gallery: file tree torture scroll steady",
+    "tags": ["ui-gallery", "perf", "file-tree", "virtual-list", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigates to the file tree torture page, waits for the retained tree to mount, then resets diagnostics before measuring wheel-scroll interaction.",
+      "Use ui-gallery-file-tree-torture-scroll.json when full-flow navigation and mount evidence are needed."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "file tree torture" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-file-tree-torture" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-file-tree-torture" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-file-tree-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 20 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 1 },
+
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" }
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-file-tree-node-0" },
+      "delta_x": 0.0,
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-file-tree-torture-scroll-steady"
+    }
+  ]
+}
