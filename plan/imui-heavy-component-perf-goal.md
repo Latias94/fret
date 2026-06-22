@@ -2934,3 +2934,33 @@ popover overlay root solve tail.
 - Conclusion: keep this shell-cache default as part of the direct-entry measurement contract, but do
   not treat it as the final structural fix. Continue the sidebar/nav shell line only if future node
   profiles show another stable owner shift.
+
+## 2026-06-22 VirtualList Container Measure Early-Return Rejection Note
+
+- I tested a generic `fret-ui` runtime shortcut that made `measure_container` return immediately
+  when `resolved_measure_size_without_children(...)` could fully resolve the container size from
+  known constraints, fixed pixels, fill, or fraction sizing.
+- A focused unit test proved the intended mechanism locally: fully resolved fixed/fill containers
+  skipped child text measurement while auto-sized containers still measured their child.
+- Validation for the experiment passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui container_measure_skips_children_when_size_is_fully_resolved --no-fail-fast`
+  - `cargo nextest run -p fret-ui virtual_list --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`
+- Perf evidence rejected the slice:
+  - Before bundle:
+    `target/fret-diag/virtual-list-current-scroll-node-profile-codex-20260622/1782090148050/bundle.schema2.json`
+    reported `total/layout/solve=2333/1964/581us`, row `Container` solve `226us`,
+    and widget measure hotspots in row `Container` / inner `Flex` (`inclusive=66/63us`).
+  - After repeat=1 bundle:
+    `target/fret-diag/virtual-list-container-measure-early-return-codex-20260622/1782091466711/bundle.schema2.json`
+    reported `total/layout/solve=2640/2140/1015us`, row `Container` solve `630us`;
+    widget measure moved to `Text`, so the shortcut took effect but did not improve the frame.
+  - After repeat=3 worst bundle:
+    `target/fret-diag/virtual-list-container-measure-early-return-codex-20260622-r3/1782091526967/bundle.schema2.json`
+    reported `max total/layout/solve=2343/1973/984us`, row `Container` solve `593us`.
+- Conclusion: reject and revert the generic `measure_container` early-return for this lane. It
+  removes the child-measure hotspot but does not reduce the VirtualList torture frame budget and
+  shifts the visible cost into layout-engine solve. The next slice should stay on the row layout
+  engine root shape / solve attribution instead of another child-measure shortcut.
