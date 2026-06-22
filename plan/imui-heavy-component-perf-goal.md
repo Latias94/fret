@@ -593,6 +593,34 @@ historical records remain in:
   height and remove the fixed-line-box structure guard if a future visual or selection geometry
   gate proves the fixed text box is wrong.
 
+## 2026-06-23 Code-View Current Rerank Note
+
+- A fresh transition rerun of
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json` reported
+  `p95.us(total/layout/solve/prepaint/paint)=1925/1779/43/23/123` on
+  `target/fret-diag/code-view-current-next-codex-20260623/1782145408764/bundle.schema2.json`.
+- `diag stats --verbose` showed the worst transition follow-up frame was still code-view
+  `VirtualList` / mounted row `StyledText` layout and renderer text blob pin churn
+  (`renderer.text_prepare flush=482us`, counts
+  `blobs/fast_reuse/pinned/prewarm/retained/added/removed=53/0/291/158/133/158/113`).
+- Direct-entry steady-state evidence changes the priority ranking:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json`
+  repeat=3 reported `p95.us(total/layout/solve/prepaint/paint)=265/8/0/169/94` on
+  `target/fret-diag/code-view-direct-entry-current-codex-20260623/1782146510625/bundle.schema2.json`.
+  The page had no layout invalidations and no text-prepare add/remove churn after fonts and the
+  page settled.
+- Wheel-scroll interaction evidence is also within budget:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json`
+  repeat=3 reported `p95.us(total/layout/solve/prepaint/paint)=980/848/16/20/112` on
+  `target/fret-diag/code-view-wheel-scroll-current-codex-20260623/1782146567095/bundle.schema2.json`.
+  The worst scroll frame still mounts a small row batch (`batch_roots=15`) and shows
+  `VirtualList inclusive/layout=775/63us`, but total time stays comfortably below a 120Hz frame.
+- Interpretation: do not keep treating code-view as the current primary heavy-component owner.
+  The remaining transition frame is an entry/mount cost, while steady and scroll interaction are
+  already light on this machine. The next active slice should rerank against VirtualList torture,
+  retained data-table, or another heavier current owner before changing code-view retention,
+  overscan, key-cache, or renderer glyph pin behavior.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
