@@ -2990,3 +2990,53 @@ popover overlay root solve tail.
 - Conclusion: reject and revert the single fill-child direct-layout fast path. The next cut should
   avoid manually bypassing final container layout until root-apply / child layout invalidation
   effects are understood.
+
+## 2026-06-22 VirtualList Torture Non-Editing Row Absolute Actions Note
+
+- The accepted follow-up stays app-local in `virtual_list_torture`: ordinary non-editing rows now
+  mount the `Row N` label and `Edit` action as absolute pressable children of the row chrome
+  container instead of paying for the `Container -> Flex -> label/edit` content shell.
+- The editing row path deliberately keeps `virtual_list_row_content(...)` and the inline
+  `shadcn::Input` flex negotiation, because that state still needs the label/input width split.
+- The row chrome container is now `relative`, the label action uses a fixed `96px` lane derived
+  from `component.size.sm.button.h * 3`, and the right action uses a fixed `60px` lane derived from
+  button height + spacing + text allowance. Both actions keep their `Pressable` host, button role,
+  test id, focus ring, and Enter/Space activation.
+- Upstream comparison: `repo-ref/ui` `new-york-v4/ui/button.tsx` at `3ffd3e1c7` and
+  `repo-ref/base-ui` `Button.tsx` / `useButton.ts` at `131b37d55` both support the single-button
+  host / keyboard-semantics direction, but they do not justify promoting absolute row actions into
+  the shadcn recipe layer. This remains a torture-harness layout optimization.
+- Structure gate:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles --no-fail-fast`.
+- Perf-surface gate:
+  `cargo nextest run -p fret-ui-gallery --test virtual_list_perf_surface --no-fail-fast`.
+- Hitbox sanity used a temporary local script
+  `target/fret-diag/tmp-virtual-list-row-actions-hitboxes.json` and the artifact directory
+  `target/fret-diag/virtual-list-row-absolute-actions-hitboxes-fixed-label-codex-20260622/...`.
+  Row 4 reported label bounds `x=338,w=96` and edit bounds `x=1162,w=60`, so the fixed lanes did
+  not overlap on the measured surface. The temp script is intentionally not a commit artifact.
+- Repeat=3 perf rerun:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-row-absolute-actions-fixed-label-codex-20260622 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence:
+  `target/fret-diag/virtual-list-row-absolute-actions-fixed-label-codex-20260622/1782097173281/bundle.schema2.json`
+  reported `p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2106/1744/802/140/251/95/10`
+  and `p95/max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2288/1820/838/180/288/109/11`.
+- Compared with the current repeat=3 baseline
+  `p95/max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2470/2050/596/158/262/108/11`,
+  this lowers total and layout tail while raising solve. The worst bundle shows the intended
+  structural drop: `layout.nodes=104`, `paint.nodes=125`, root apply around `861us`, and
+  `VirtualList inclusive=794us`, versus the earlier baseline around `layout.nodes=119`,
+  `paint.nodes=140`, root apply around `1125us`, and `VirtualList inclusive=1060us`.
+- Tradeoff: absolute placement moves some work from root breadth/root apply into solve
+  (`596us -> 838us` on the compared p95/max band). Keep this slice because the overall p95/max
+  total/layout improved, but do not generalize it into a runtime fast path without fresh evidence.
+- Existing older correctness scripts
+  `ui-gallery-virtual-list-retained-selected-action-state-bounce.json` and
+  `ui-gallery-virtual-list-retained-collection-metadata-bounce.json` currently fail before this row
+  assertion path at `wait_semantics_scroll_stable`; they still target the removed
+  `ui-gallery-content-viewport-virtual_list_torture` outer viewport after the content-scroll
+  bypass. Refresh those scripts before using them as this slice's correctness gate.
+- Rollback is local: remove the absolute row-action helpers, stop marking the row container
+  `relative`, and return non-editing rows to `virtual_list_row_content(...)` with the direct
+  label/edit pressables if a future visual, focus, or interaction gate shows fixed absolute lanes
+  are not acceptable.

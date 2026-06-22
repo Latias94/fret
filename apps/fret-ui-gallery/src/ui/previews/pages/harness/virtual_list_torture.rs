@@ -81,7 +81,9 @@ fn virtual_list_row_content(
 #[derive(Clone, Copy)]
 struct VirtualListRowActionStyle {
     label_layout: fret_ui::element::LayoutStyle,
+    label_absolute_layout: fret_ui::element::LayoutStyle,
     edit_layout: fret_ui::element::LayoutStyle,
+    edit_absolute_layout: fret_ui::element::LayoutStyle,
     focus_ring: fret_ui::element::RingStyle,
 }
 
@@ -98,12 +100,40 @@ fn virtual_list_row_action_style(theme: &Theme) -> VirtualListRowActionStyle {
             .clone()
             .merge(LayoutRefinement::default().flex_1().min_w_0()),
     );
+    let button_h = theme
+        .metric_by_key("component.size.sm.button.h")
+        .unwrap_or(Px(32.0));
+    let edit_width = button_h.0 + fret_ui_kit::MetricRef::space(Space::N2).resolve(theme).0 + 20.0;
+    let label_width = button_h.0 * 3.0;
+    let label_absolute_layout = decl_style::layout_style(
+        theme,
+        variants.layout.clone().merge(
+            LayoutRefinement::default()
+                .absolute()
+                .left(Space::N0)
+                .top(Space::N0)
+                .bottom(Space::N0)
+                .w_px(Px(label_width))
+                .min_w_0(),
+        ),
+    );
     let edit_layout = decl_style::layout_style(theme, variants.layout);
+    let edit_absolute_layout = decl_style::layout_style(
+        theme,
+        LayoutRefinement::default()
+            .absolute()
+            .right(Space::N0)
+            .top(Space::N0)
+            .bottom(Space::N0)
+            .w_px(Px(edit_width)),
+    );
     let focus_ring = decl_style::focus_ring(theme, decl_style::radius(theme, Radius::Md));
 
     VirtualListRowActionStyle {
         label_layout,
+        label_absolute_layout,
         edit_layout,
+        edit_absolute_layout,
         focus_ring,
     }
 }
@@ -147,6 +177,45 @@ where
     )
 }
 
+fn virtual_list_row_label_action_absolute<T, I>(
+    cx: &mut AppComponentCx<'_>,
+    style: &VirtualListRowActionStyle,
+    label: T,
+    test_id: I,
+    on_activate: fret_ui::action::OnActivate,
+) -> AnyElement
+where
+    T: Into<Arc<str>>,
+    I: Into<Arc<str>>,
+{
+    let label = label.into();
+    let test_id = test_id.into();
+
+    cx.pressable(
+        fret_ui::element::PressableProps {
+            layout: style.label_absolute_layout,
+            enabled: true,
+            focusable: true,
+            focus_ring: Some(style.focus_ring),
+            key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
+            a11y: fret_ui::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::Button),
+                label: Some(label.clone()),
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _state| {
+            cx.pressable_on_activate(on_activate.clone());
+            [fret_ui_kit::declarative::text::text_button_label_fill(
+                cx,
+                label.clone(),
+            )]
+        },
+    )
+}
+
 fn virtual_list_row_edit_action<T, I>(
     cx: &mut AppComponentCx<'_>,
     style: &VirtualListRowActionStyle,
@@ -164,6 +233,45 @@ where
     cx.pressable(
         fret_ui::element::PressableProps {
             layout: style.edit_layout,
+            enabled: true,
+            focusable: true,
+            focus_ring: Some(style.focus_ring),
+            key_activation: fret_ui::element::PressableKeyActivation::EnterAndSpace,
+            a11y: fret_ui::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::Button),
+                label: Some(label.clone()),
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, _state| {
+            cx.pressable_on_activate(on_activate.clone());
+            [fret_ui_kit::declarative::text::text_button_label(
+                cx,
+                label.clone(),
+            )]
+        },
+    )
+}
+
+fn virtual_list_row_edit_action_absolute<T, I>(
+    cx: &mut AppComponentCx<'_>,
+    style: &VirtualListRowActionStyle,
+    label: T,
+    test_id: I,
+    on_activate: fret_ui::action::OnActivate,
+) -> AnyElement
+where
+    T: Into<Arc<str>>,
+    I: Into<Arc<str>>,
+{
+    let label = label.into();
+    let test_id = test_id.into();
+
+    cx.pressable(
+        fret_ui::element::PressableProps {
+            layout: style.edit_absolute_layout,
             enabled: true,
             focusable: true,
             focus_ring: Some(style.focus_ring),
@@ -552,28 +660,40 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 host.request_redraw(action_cx.window);
                             });
 
-                        let row_label = virtual_list_row_label_action(
-                            cx,
-                            &row_action_style,
-                            format!("Row {index}"),
-                            format!("ui-gallery-virtual-list-row-{index}-label"),
-                            on_select_row.clone(),
-                        );
-
-                        let right = if is_editing {
-                            shadcn::Input::new(edit_text.clone())
-                                .a11y_label("Inline edit")
-                                .test_id("ui-gallery-virtual-list-edit-input")
-                                .placeholder("Type to edit…")
-                                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                                .into_element(cx)
+                        let (row_label, right, row_uses_content_flex) = if is_editing {
+                            (
+                                virtual_list_row_label_action(
+                                    cx,
+                                    &row_action_style,
+                                    format!("Row {index}"),
+                                    format!("ui-gallery-virtual-list-row-{index}-label"),
+                                    on_select_row.clone(),
+                                ),
+                                shadcn::Input::new(edit_text.clone())
+                                    .a11y_label("Inline edit")
+                                    .test_id("ui-gallery-virtual-list-edit-input")
+                                    .placeholder("Type to edit…")
+                                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                                    .into_element(cx),
+                                true,
+                            )
                         } else {
-                            virtual_list_row_edit_action(
-                                cx,
-                                &row_action_style,
-                                "Edit",
-                                format!("ui-gallery-virtual-list-row-{index}-edit"),
-                                on_select_row,
+                            (
+                                virtual_list_row_label_action_absolute(
+                                    cx,
+                                    &row_action_style,
+                                    format!("Row {index}"),
+                                    format!("ui-gallery-virtual-list-row-{index}-label"),
+                                    on_select_row.clone(),
+                                ),
+                                virtual_list_row_edit_action_absolute(
+                                    cx,
+                                    &row_action_style,
+                                    "Edit",
+                                    format!("ui-gallery-virtual-list-row-{index}-edit"),
+                                    on_select_row,
+                                ),
+                                false,
                             )
                         };
 
@@ -595,12 +715,19 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         let mut container_props = decl_style::container_props(
                             &theme,
                             chrome,
-                            LayoutRefinement::default().w_full().h_px(height_hint),
+                            LayoutRefinement::default()
+                                .relative()
+                                .w_full()
+                                .h_px(height_hint),
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         let row = cx.container(container_props, |cx| {
-                            [virtual_list_row_content(cx, &theme, row_label, right)]
+                            if row_uses_content_flex {
+                                vec![virtual_list_row_content(cx, &theme, row_label, right)]
+                            } else {
+                                vec![row_label, right]
+                            }
                         });
 
                         row.attach_semantics(virtual_list_selected_row_semantics(
@@ -681,28 +808,42 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                         });
                                     host.request_redraw(action_cx.window);
                                 });
-                            let row_label = virtual_list_row_label_action(
-                                cx,
-                                &row_action_style,
-                                format!("Row {index}"),
-                                format!("ui-gallery-virtual-list-row-{index}-label"),
-                                on_select_row.clone(),
-                            );
-
-                            let right = if is_editing {
-                                shadcn::Input::new(virtual_list_torture_edit_text.clone())
-                                    .a11y_label("Inline edit")
-                                    .test_id("ui-gallery-virtual-list-edit-input")
-                                    .placeholder("Type to edit…")
-                                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                                    .into_element(cx)
+                            let (row_label, right, row_uses_content_flex) = if is_editing {
+                                (
+                                    virtual_list_row_label_action(
+                                        cx,
+                                        &row_action_style,
+                                        format!("Row {index}"),
+                                        format!("ui-gallery-virtual-list-row-{index}-label"),
+                                        on_select_row.clone(),
+                                    ),
+                                    shadcn::Input::new(virtual_list_torture_edit_text.clone())
+                                        .a11y_label("Inline edit")
+                                        .test_id("ui-gallery-virtual-list-edit-input")
+                                        .placeholder("Type to edit…")
+                                        .refine_layout(
+                                            LayoutRefinement::default().w_full().min_w_0(),
+                                        )
+                                        .into_element(cx),
+                                    true,
+                                )
                             } else {
-                                virtual_list_row_edit_action(
-                                    cx,
-                                    &row_action_style,
-                                    "Edit",
-                                    format!("ui-gallery-virtual-list-row-{index}-edit"),
-                                    on_select_row,
+                                (
+                                    virtual_list_row_label_action_absolute(
+                                        cx,
+                                        &row_action_style,
+                                        format!("Row {index}"),
+                                        format!("ui-gallery-virtual-list-row-{index}-label"),
+                                        on_select_row.clone(),
+                                    ),
+                                    virtual_list_row_edit_action_absolute(
+                                        cx,
+                                        &row_action_style,
+                                        "Edit",
+                                        format!("ui-gallery-virtual-list-row-{index}-edit"),
+                                        on_select_row,
+                                    ),
+                                    false,
                                 )
                             };
 
@@ -712,13 +853,18 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                     .bg(ColorRef::Color(background))
                                     .p(Space::N2),
                                 LayoutRefinement::default()
+                                    .relative()
                                     .w_full()
                                     .h_px(MetricRef::Px(height_hint)),
                             );
                             container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                             cx.container(container_props, |cx| {
-                                vec![virtual_list_row_content(cx, theme, row_label, right)]
+                                if row_uses_content_flex {
+                                    vec![virtual_list_row_content(cx, theme, row_label, right)]
+                                } else {
+                                    vec![row_label, right]
+                                }
                             })
                             .attach_semantics(virtual_list_row_semantics(index, len))
                         };
