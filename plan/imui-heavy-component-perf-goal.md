@@ -686,6 +686,31 @@ historical records remain in:
   ordinary row containers or widen generic VirtualList/root-apply shortcuts from this evidence; the
   row containers still own chrome, padding, height, clipping, and row semantics.
 
+## 2026-06-23 VirtualList/DataTable Node-Profile Follow-up Note
+
+- I followed the repeat=3 rerank with one node-profile pass for each heavier surface to check
+  whether a smaller local owner had become safe enough for a code slice.
+- DataTable retained direct-entry node-profile evidence:
+  `target/fret-diag/data-table-node-profile-codex-20260623c/1782148045898/bundle.json`.
+  `diag stats` reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2530/1904/498/216/438/88/0`,
+  with root build/apply still visible (`request_build p95=492us`, `roots apply p95=992us`).
+  The top frame had `layout.nodes=236`, `layout.solve_us=498`, `roots apply=992us`, and the same
+  retained table `VirtualList` / row `HoverRegion` ownership seen in the repeat=3 summary. Small
+  renderer text work (`text_prepare flush max=54us`) was not large enough to justify a generic text
+  helper change.
+- VirtualList torture node-profile evidence:
+  `target/fret-diag/virtual-list-node-profile-codex-20260623c/1782148472491/bundle.schema2.json`.
+  `diag stats` reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2070/1710/745/170/244/177/12`,
+  with root build/apply still visible (`request_build p95=538us`, `roots apply p95=812us`). The
+  top frame had `layout.nodes=104`, `layout.solve_us=745`, and the stable owner remains the
+  VirtualList row/layout path rather than a newly obvious shell wrapper.
+- Interpretation: close this investigation as a documented no-cut, not a source change. The
+  node-profile pass confirms the current 2ms-class pair is below the 120Hz budget and does not
+  expose a safe, narrow wrapper removal or runtime shortcut. The next active slice should return to
+  the named priority surfaces only when fresh code-view/editor-controls/combobox evidence shows a
+  local owner; otherwise rerank a different heavy surface before broadening generic VirtualList,
+  root-apply, table row, or text-measure behavior.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
