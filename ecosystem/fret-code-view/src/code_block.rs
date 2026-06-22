@@ -730,7 +730,7 @@ fn code_block_with_header_slots_impl<H: UiHost, F>(
     language: Option<&str>,
     show_line_numbers: bool,
     options: CodeBlockUiOptions,
-    mut header: CodeBlockHeaderSlots,
+    header: CodeBlockHeaderSlots,
     prepare_mode: CodeBlockPrepareMode,
     render_body: F,
 ) -> AnyElement
@@ -772,82 +772,142 @@ where
         .show_copy_button
         .then(|| Arc::<str>::from(code.to_string()));
     let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
+    let needs_hover_tracking = code_block_needs_hover_tracking(options);
 
-    cx.container(props, |cx| {
-        vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
-            let copied = feedback.is_copied();
-            let copy_visible = !options.copy_button_on_hover || hovered || copied;
-            let scrollbar_x_enabled = options.show_scrollbar_x;
-            let scrollbar_x_visible =
-                scrollbar_x_enabled && (!options.scrollbar_x_on_hover || hovered);
-            let scrollbar_y_enabled = options.show_scrollbar_y && options.max_height.is_some();
-            let scrollbar_y_visible =
-                scrollbar_y_enabled && (!options.scrollbar_y_on_hover || hovered);
-
-            let header_visible = options.show_header
-                || !header.left.is_empty()
-                || !header.right.is_empty()
-                || (header.show_language && language.is_some());
-
-            if !header_visible {
-                header.show_language = false;
-            }
-
-            let content = ui::v_flex(|cx| {
-                let mut out = Vec::new();
-                if header_visible {
-                    out.push(render_code_block_header(
+    cx.container(props, move |cx| {
+        if needs_hover_tracking {
+            vec![
+                cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+                    render_code_block_content(
                         cx,
                         &theme,
                         language,
                         header,
-                        options.header_divider,
-                        options.header_background,
-                        if options.show_copy_button
-                            && options.copy_button_placement == CodeBlockCopyButtonPlacement::Header
-                        {
-                            Some(CopyButtonInHeader {
-                                feedback: feedback.clone(),
-                                code: copy_code
-                                    .as_ref()
-                                    .cloned()
-                                    .unwrap_or_else(|| Arc::<str>::from("")),
-                                visible: copy_visible,
-                            })
-                        } else {
-                            None
-                        },
-                    ));
-                }
-                out.push(render_body(
-                    cx,
-                    &theme,
-                    prepared.clone(),
-                    CodeBlockUiOptions {
-                        show_scrollbar_x: scrollbar_x_enabled,
-                        scrollbar_x_on_hover: scrollbar_x_visible,
-                        show_scrollbar_y: scrollbar_y_enabled,
-                        scrollbar_y_on_hover: scrollbar_y_visible,
-                        ..options
-                    },
-                ));
-                out
-            })
-            .gap(Space::N0)
-            .layout(LayoutRefinement::default().w_full())
-            .into_element(cx);
-
-            let mut out = vec![content];
-            if options.show_copy_button
-                && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay
-                && let Some(code) = copy_code.clone()
-            {
-                let el = render_copy_button_overlay(cx, &theme, feedback.clone(), code);
-                out.push(cx.opacity(if copy_visible { 1.0 } else { 0.0 }, |_cx| vec![el]));
-            }
-            out
-        })]
+                        options,
+                        prepared.clone(),
+                        copy_code.clone(),
+                        feedback.clone(),
+                        &render_body,
+                        hovered,
+                    )
+                }),
+            ]
+        } else {
+            render_code_block_content(
+                cx,
+                &theme,
+                language,
+                header,
+                options,
+                prepared.clone(),
+                copy_code.clone(),
+                feedback.clone(),
+                &render_body,
+                false,
+            )
+        }
     })
+}
+
+fn code_block_needs_hover_tracking(options: CodeBlockUiOptions) -> bool {
+    let copy_depends_on_hover = options.show_copy_button && options.copy_button_on_hover;
+    let scrollbar_x_depends_on_hover = options.show_scrollbar_x && options.scrollbar_x_on_hover;
+    let scrollbar_y_depends_on_hover =
+        options.show_scrollbar_y && options.max_height.is_some() && options.scrollbar_y_on_hover;
+
+    copy_depends_on_hover || scrollbar_x_depends_on_hover || scrollbar_y_depends_on_hover
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_code_block_content<H: UiHost, F>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    language: Option<&str>,
+    mut header: CodeBlockHeaderSlots,
+    options: CodeBlockUiOptions,
+    prepared: Arc<crate::prepare::PreparedCodeBlock>,
+    copy_code: Option<Arc<str>>,
+    feedback: CopyFeedbackRef,
+    render_body: &F,
+    hovered: bool,
+) -> Vec<AnyElement>
+where
+    F: Fn(
+        &mut ElementContext<'_, H>,
+        &Theme,
+        Arc<crate::prepare::PreparedCodeBlock>,
+        CodeBlockUiOptions,
+    ) -> AnyElement,
+{
+    let copied = feedback.is_copied();
+    let copy_visible = !options.copy_button_on_hover || hovered || copied;
+    let scrollbar_x_enabled = options.show_scrollbar_x;
+    let scrollbar_x_visible = scrollbar_x_enabled && (!options.scrollbar_x_on_hover || hovered);
+    let scrollbar_y_enabled = options.show_scrollbar_y && options.max_height.is_some();
+    let scrollbar_y_visible = scrollbar_y_enabled && (!options.scrollbar_y_on_hover || hovered);
+
+    let header_visible = options.show_header
+        || !header.left.is_empty()
+        || !header.right.is_empty()
+        || (header.show_language && language.is_some());
+
+    if !header_visible {
+        header.show_language = false;
+    }
+
+    let content = ui::v_flex(|cx| {
+        let mut out = Vec::new();
+        if header_visible {
+            out.push(render_code_block_header(
+                cx,
+                theme,
+                language,
+                header,
+                options.header_divider,
+                options.header_background,
+                if options.show_copy_button
+                    && options.copy_button_placement == CodeBlockCopyButtonPlacement::Header
+                {
+                    Some(CopyButtonInHeader {
+                        feedback: feedback.clone(),
+                        code: copy_code
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| Arc::<str>::from("")),
+                        visible: copy_visible,
+                    })
+                } else {
+                    None
+                },
+            ));
+        }
+        out.push(render_body(
+            cx,
+            theme,
+            prepared.clone(),
+            CodeBlockUiOptions {
+                show_scrollbar_x: scrollbar_x_enabled,
+                scrollbar_x_on_hover: scrollbar_x_visible,
+                show_scrollbar_y: scrollbar_y_enabled,
+                scrollbar_y_on_hover: scrollbar_y_visible,
+                ..options
+            },
+        ));
+        out
+    })
+    .gap(Space::N0)
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx);
+
+    let mut out = vec![content];
+    if options.show_copy_button
+        && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay
+        && let Some(code) = copy_code.clone()
+    {
+        let el = render_copy_button_overlay(cx, theme, feedback.clone(), code);
+        out.push(cx.opacity(if copy_visible { 1.0 } else { 0.0 }, |_cx| vec![el]));
+    }
+    out
 }
 
 #[derive(Clone)]
@@ -1908,6 +1968,51 @@ mod tests {
         assert_eq!(rich.spans[0].paint.fg, Some(row_theme.muted_fg));
         assert_eq!(rich.spans[1].paint.fg, Some(row_theme.muted_fg));
         assert_eq!(rich.spans[2].paint.fg, None);
+    }
+
+    #[test]
+    fn code_block_hover_tracking_is_only_required_for_hover_chrome() {
+        let mut options = CodeBlockUiOptions::default();
+        assert!(
+            !code_block_needs_hover_tracking(options),
+            "plain code blocks should not pay for a hover tracking root"
+        );
+
+        options.show_scrollbar_y = true;
+        options.max_height = Some(Px(100.0));
+        assert!(
+            code_block_needs_hover_tracking(options),
+            "hover-only Y scrollbars need hover tracking"
+        );
+        options.scrollbar_y_on_hover = false;
+        assert!(
+            !code_block_needs_hover_tracking(options),
+            "always-visible Y scrollbars should not require hover tracking"
+        );
+
+        options = CodeBlockUiOptions::default();
+        options.show_scrollbar_x = true;
+        assert!(
+            code_block_needs_hover_tracking(options),
+            "hover-only X scrollbars need hover tracking"
+        );
+        options.scrollbar_x_on_hover = false;
+        assert!(
+            !code_block_needs_hover_tracking(options),
+            "always-visible X scrollbars should not require hover tracking"
+        );
+
+        options = CodeBlockUiOptions::default();
+        options.show_copy_button = true;
+        assert!(
+            code_block_needs_hover_tracking(options),
+            "copy buttons hidden until hover need hover tracking"
+        );
+        options.copy_button_on_hover = false;
+        assert!(
+            !code_block_needs_hover_tracking(options),
+            "always-visible copy buttons should not require hover tracking"
+        );
     }
 
     #[test]

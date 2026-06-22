@@ -309,6 +309,18 @@ fn editor_code_view_header_uses_paragraph_roles() {
 }
 
 #[test]
+fn editor_code_view_torture_keeps_scrollbar_y_always_visible() {
+    assert_normalized_markers_present(
+        "src/ui/previews/pages/editors/code_view.rs",
+        &[
+            ".show_scrollbar_y(true)",
+            ".scrollbar_y_on_hover(false)",
+            ".windowed(code_view::CodeBlockWindowedOptions::default().highlight_mode(code_view::CodeBlockWindowedHighlightMode::PlainIndexed),)",
+        ],
+    );
+}
+
+#[test]
 fn editor_text_conformance_headers_use_text_roles() {
     for (relative_path, required, forbidden) in [
         (

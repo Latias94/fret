@@ -257,6 +257,35 @@ historical records remain in:
   call-site overscan from this evidence. The next cut should target the root transition build/solve
   owner or a text-prepare/cache owner with a direct positive A/B.
 
+## 2026-06-22 Code-View Hoverless Scrollbar Root Shrink Note
+
+- The next cleaned-transition cut removes a redundant code-view hover root when no visible chrome
+  depends on hover state. `CodeBlock` now only wraps its content in `HoverRegion` when hover is
+  needed for copy-button visibility or hover-only X/Y scrollbars.
+- `code_view_torture` now keeps its Y scrollbar always visible with
+  `.scrollbar_y_on_hover(false)`, so the page can use the no-hover-root path while preserving the
+  same vertical scrollbar affordance.
+- Focused gates:
+  `cargo fmt -p fret-code-view -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_code_view --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-hoverless-scrollbar-rerun-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Clean baseline:
+  `target/fret-diag/code-view-transition-intro-script-default-codex-20260622/1782105611492/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=2430/2287/1631`.
+- The first changed run at
+  `target/fret-diag/code-view-hoverless-scrollbar-codex-20260622/1782107836240/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=2596/2297/1687`, so the timing signal is still noisy.
+- The rerun at
+  `target/fret-diag/code-view-hoverless-scrollbar-rerun-codex-20260622/1782107907056/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=2188/2055/1528`, with the expected structural shrink:
+  root `Stack` subtree `132 -> 131` and root apply nodes `77 -> 76`.
+- Interpretation: accept this as a small structural cleanup with noise-sensitive positive evidence,
+  not as the end of the code-view transition lane. The next cut should stay on the cleaned root
+  `Stack` solve/header paragraph text-measure owner or the renderer text-prepare flush path; do not
+  return to overscan from the rejected A/B without fresh evidence.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in

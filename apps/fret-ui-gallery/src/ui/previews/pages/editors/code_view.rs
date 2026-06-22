@@ -57,6 +57,7 @@ pub(in crate::ui) fn preview_code_view_torture(
         .language("rust")
         .show_line_numbers(true)
         .show_scrollbar_y(true)
+        .scrollbar_y_on_hover(false)
         .max_height(Px(420.0));
     let block = if windowed {
         block.windowed(
