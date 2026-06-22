@@ -4131,3 +4131,59 @@ popover overlay root solve tail.
   switch `drag_value_scrub_frame` back to `editor_input_group_frame(...)`, and restore the plain
   value path to `editor_input_group_inset(...)` if a future visual, semantics, or hit-test gate
   shows frame-owned padding is not equivalent.
+
+## 2026-06-23 Chart Pan/Zoom Steady Probe Note
+
+- Added `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom-steady.json` to split
+  chart steady interaction cost from the older full-flow
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json` script. The full-flow
+  script still covers before/after screenshots, navigation, mount, and interaction evidence; the
+  new steady script waits for the chart engine and full-domain oracles, resets diagnostics, then
+  measures drag and wheel pan/zoom interaction only.
+- Script validation:
+  `python3 -m json.tool tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom-steady.json`.
+- Single-run perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom-steady.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/chart-pan-zoom-steady-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Single-run evidence bundle
+  `target/fret-diag/chart-pan-zoom-steady-codex-20260623/1782149975488/bundle.schema2.json`
+  reported the raw `diag perf` tuple `355/268/83/20/67/420/31`.
+- Repeat=3 perf repro used the same launch/env shape with
+  `--dir target/fret-diag/chart-pan-zoom-steady-r3-codex-20260623`.
+- Repeat=3 evidence bundle
+  `target/fret-diag/chart-pan-zoom-steady-r3-codex-20260623/1782150000238/bundle.schema2.json`
+  reported the raw `diag perf` tuple `338/263/92/18/57/439/32`. `diag stats` on that bundle
+  reported `time p95.us(total/layout/prepaint/paint)=123/66/20/49`; the top considered frame was
+  `total/layout/solve/prepaint/paint=338/263/83/18/57us`.
+- Interpretation: chart pan/zoom is not a current heavy interaction owner. The older full-flow
+  number was dominated by setup/evidence/navigation shape rather than steady pan/zoom runtime. Keep
+  the steady probe as the reusable gate and do not cut chart source code from this evidence.
+
+## 2026-06-23 Chrome Torture Steady Root-Apply Note
+
+- Re-profiled the existing steady chrome torture script:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-torture-steady-r3-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Repeat=3 evidence bundle
+  `target/fret-diag/chrome-torture-steady-r3-codex-20260623/1782150031394/bundle.schema2.json`
+  reported the raw `diag perf` tuple `3226/2989/827/40/213/0/0`.
+- `diag stats --sort cpu_cycles --top 30` on that bundle reported
+  `time p50/p95.us(total/layout/prepaint/paint)=2956/3226, 2749/2989, 25/40, 186/200`; the hot
+  layout root phases were `roots(total/apply)=2828/2827us` on the worst frame, with
+  `layout.nodes=168`, `paint.nodes=168`, and renderer/text work remaining small.
+- Node-profile repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/chrome-torture-steady-node-profile-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`.
+- Node-profile evidence bundle
+  `target/fret-diag/chrome-torture-steady-node-profile-codex-20260623/1782150058986/bundle.schema2.json`
+  reported `time p50/p95.us(total/layout/prepaint/paint)=3036/3233, 2823/2949, 24/49, 202/235`.
+  The stable owner was the outer `ui-gallery-content-viewport` scroll/root-apply path: self around
+  `2260-2530us`, total around `2590-2931us`. The nested
+  `ui-gallery-portal-geometry-scroll-area` was normally small at about `110-131us` self and
+  `159-198us` total.
+- One node-profile stdout line showed a suspicious `ui-gallery-portal-geometry-scroll-area`
+  `~496ms` self/total sample, but neither the repeat bundle nor the node-profile bundle stats
+  include a matching considered-frame spike (`p95 total` stayed about `3.2ms`). Treat that line as
+  a logging/profile anomaly until a bundle reproduces it as a considered perf frame.
+- Interpretation: chrome torture steady is the current heavier candidate among the reranked
+  surfaces, but it is still below the 8.33ms 120Hz frame budget on this machine. The owner is broad
+  content viewport/root apply rather than a narrow local chrome widget. Do not cut portal geometry
+  or chrome source from this evidence; the next valid chrome slice needs a smaller repro proving a
+  local content-scroll/root-apply owner.

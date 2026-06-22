@@ -1,0 +1,260 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "required_launch_features": ["gallery-chart"],
+    "name": "UI Gallery: chart torture pan zoom steady",
+    "tags": ["ui-gallery", "perf", "chart", "pan-zoom", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigates to the chart torture page, waits for the chart engine and full-domain output, then resets diagnostics before measuring drag+wheel pan/zoom interaction.",
+      "Use ui-gallery-chart-torture-pan-zoom.json when before/after screenshots and full-flow navigation evidence are needed."
+    ]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "chart torture" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-chart-torture" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-chart-torture" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/engine_present",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_data_zoom/active",
+        "value": false
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/min_ms_rounded",
+        "value": 1735689600000
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/max_ms_rounded",
+        "value": 1747689540000
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/span_ms_rounded",
+        "value": 11999940000
+      },
+      "timeout_frames": 60
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" }
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" },
+      "delta_x": 180.0,
+      "delta_y": 0.0,
+      "steps": 12
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" },
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" },
+      "delta_x": -360.0,
+      "delta_y": 0.0,
+      "steps": 18
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_data_zoom/active",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/present",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_axis_output_matches_data_zoom",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/domain_windows_count",
+        "value": 1
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/x_domain_window/present",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_output_model_domain_matches_data_zoom",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_axis_output_changed_from_full_domain",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_output_model_domain_changed_from_full_domain",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip_lines_count",
+        "value": 3
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/axis_header_count",
+        "value": 1
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/series_rows_count",
+        "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/source_series_rows_count",
+        "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/missing_rows_count",
+        "value": 0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/has_series_a",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/has_series_b",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-chart-torture-pan-zoom-steady" }
+  ]
+}
