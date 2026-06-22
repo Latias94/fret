@@ -3378,3 +3378,44 @@ popover overlay root solve tail.
 - Rollback is local: remove the `LayoutRefinement::default().w_full().min_w_0()` rich-text layout
   patch, restore row semantics to format its own label/test id, and drop the matching source
   assertions if a future visual or semantics gate proves the reused row contract wrong.
+
+## 2026-06-22 Code-View Headerless Body Direct-Root Note
+
+- `CodeBlock` now skips the empty vertical flex content shell when no header is visible. Headered
+  code blocks keep the old `header + body` vertical flex path, while headerless blocks return the
+  body root directly and still attach overlay copy chrome as a sibling under the same relative
+  code-block container.
+- Source coverage in `ecosystem/fret-code-view/src/code_block.rs` locks the direct-body branch so
+  the body-only path does not drift back to an empty `ui::v_flex(...)` shell.
+- Validation:
+  `cargo fmt --all --check`, `git diff --check`, and
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`.
+- Transition perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-headerless-body-direct-codex-20260622-next --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Baseline transition evidence:
+  `target/fret-diag/code-view-transition-current-codex-20260622-next/1782113503250/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2009/1866/38/28/134`.
+- Accepted transition evidence:
+  `target/fret-diag/code-view-headerless-body-direct-codex-20260622-next/1782114914100/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1990/1825/49/29/136`.
+- Repeat=5 follow-up stayed in the same band after one noisy outlier:
+  `target/fret-diag/code-view-headerless-body-direct-r5b-codex-20260622-next/1782115086920/bundle.schema2.json`
+  reported `p50.us(total/layout/solve)=1883/1740/36` and
+  `p95.us(total/layout/solve)=2030/1864/42`. The earlier repeat=5 outlier at
+  `target/fret-diag/code-view-headerless-body-direct-r5-codex-20260622-next/1782114975959/bundle.schema2.json`
+  hit `2407/2252/250` on the same StyledText solve spike shape, so treat this cut as
+  noise-sensitive structural cleanup, not a large transition win.
+- Direct-entry steady evidence stayed positive:
+  baseline
+  `target/fret-diag/code-view-direct-entry-current-codex-20260622-next/1782114307663/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=271/7/0/170/94`, while the accepted run
+  `target/fret-diag/code-view-direct-entry-headerless-body-direct-codex-20260622-next/1782115142953/bundle.schema2.json`
+  reported `250/7/0/161/93`.
+- Rejected companion experiment: disabling line numbers on `code_view_torture` reduced some
+  renderer text-prepare flush time but regressed the transition p95 to
+  `2138/2015/251/29/135` on
+  `target/fret-diag/code-view-transition-no-line-numbers-codex-20260622-next/1782114023792/bundle.json`.
+  Keep line numbers enabled on this surface unless fresh evidence isolates a better line-number
+  rendering strategy.
+- Rollback is local: in `render_code_block_content(...)`, restore the body render call to the
+  unconditional `ui::v_flex(...)` content branch and remove the direct-body source-structure test.

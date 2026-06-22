@@ -855,9 +855,19 @@ where
         header.show_language = false;
     }
 
-    let content = ui::v_flex(|cx| {
-        let mut out = Vec::new();
-        if header_visible {
+    let body_options = CodeBlockUiOptions {
+        show_scrollbar_x: scrollbar_x_enabled,
+        scrollbar_x_on_hover: scrollbar_x_visible,
+        show_scrollbar_y: scrollbar_y_enabled,
+        scrollbar_y_on_hover: scrollbar_y_visible,
+        ..options
+    };
+
+    let content = if !header_visible {
+        render_body(cx, theme, prepared.clone(), body_options)
+    } else {
+        ui::v_flex(|cx| {
+            let mut out = Vec::new();
             out.push(render_code_block_header(
                 cx,
                 theme,
@@ -880,24 +890,13 @@ where
                     None
                 },
             ));
-        }
-        out.push(render_body(
-            cx,
-            theme,
-            prepared.clone(),
-            CodeBlockUiOptions {
-                show_scrollbar_x: scrollbar_x_enabled,
-                scrollbar_x_on_hover: scrollbar_x_visible,
-                show_scrollbar_y: scrollbar_y_enabled,
-                scrollbar_y_on_hover: scrollbar_y_visible,
-                ..options
-            },
-        ));
-        out
-    })
-    .gap(Space::N0)
-    .layout(LayoutRefinement::default().w_full())
-    .into_element(cx);
+            out.push(render_body(cx, theme, prepared.clone(), body_options));
+            out
+        })
+        .gap(Space::N0)
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+    };
 
     let mut out = vec![content];
     if options.show_copy_button
@@ -2064,6 +2063,21 @@ mod tests {
             assert!(
                 CODE_BLOCK_RS.contains(marker),
                 "windowed code rows should keep fixed line-box StyledText layout marker `{marker}`"
+            );
+        }
+    }
+
+    #[test]
+    fn code_block_headerless_content_path_skips_the_empty_vertical_flex_shell() {
+        let normalized = CODE_BLOCK_RS.split_whitespace().collect::<String>();
+        for marker in [
+            "letcontent=if!header_visible{render_body(cx,theme,prepared.clone(),body_options)}else{",
+            "render_body(cx,theme,prepared.clone(),body_options)",
+            "ui::v_flex(|cx|{",
+        ] {
+            assert!(
+                normalized.contains(marker),
+                "headerless code block content path should keep the direct-body shortcut marker `{marker}`"
             );
         }
     }
