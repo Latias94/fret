@@ -26,22 +26,6 @@ pub(in crate::ui) fn preview_code_view_torture(
     cx: &mut AppComponentCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
-    let header = ui::v_flex(|cx| {
-        vec![
-            doc_layout::paragraph_text(
-                cx,
-                "Goal: stress large scrollable code/text surfaces (candidate for prepaint-windowed lines).",
-            ),
-            doc_layout::paragraph_text(
-                cx,
-                "Use scripted wheel steps + stale-paint checks to validate scroll stability.",
-            ),
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full())
-    .gap(Space::N2)
-    .into_element(cx);
-
     let code = code_view_torture_source();
 
     let windowed =
@@ -79,7 +63,7 @@ pub(in crate::ui) fn preview_code_view_torture(
             .test_id("ui-gallery-code-view-root"),
     );
 
-    let page = doc_layout::wrap_preview_page(cx, None, "Code view", vec![header, block]);
+    let page = doc_layout::wrap_preview_page(cx, None, "Code view", vec![block]);
 
     vec![page.into_element(cx)]
 }

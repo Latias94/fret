@@ -288,22 +288,25 @@ fn wrap_preview_page_callers_land_the_typed_preview_shell_explicitly() {
 }
 
 #[test]
-fn editor_code_view_header_uses_paragraph_roles() {
+fn editor_code_view_torture_does_not_mount_local_explanatory_header() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/pages/editors/code_view.rs",
         &[
-            "doc_layout::paragraph_text(cx,\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
-            "doc_layout::paragraph_text(cx,\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
+            "letpage=doc_layout::wrap_preview_page(cx,None,\"Codeview\",vec![block]);",
+            "letblock=block.attach_semantics(",
         ],
     );
 
     for forbidden in [
+        "doc_layout::paragraph_text(cx,\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
+        "doc_layout::paragraph_text(cx,\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
         "cx.text(\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
         "cx.text(\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
+        "vec![header,block]",
     ] {
         assert!(
             !normalized.contains(forbidden),
-            "code_view reintroduced bare explanatory header text: {forbidden}"
+            "code_view_torture reintroduced the local explanatory header: {forbidden}"
         );
     }
 }

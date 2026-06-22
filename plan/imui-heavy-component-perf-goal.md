@@ -286,6 +286,37 @@ historical records remain in:
   `Stack` solve/header paragraph text-measure owner or the renderer text-prepare flush path; do not
   return to overscan from the rejected A/B without fresh evidence.
 
+## 2026-06-22 Code-View Torture Local Header Prune Note
+
+- The next code-view transition cut removes the local explanatory header from
+  `code_view_torture`. The perf page still uses the shared preview-page title and the
+  `ui-gallery-code-view-root` semantics anchor, but no longer mounts two page-local paragraph
+  texts above the code block.
+- Reason: the clean hoverless bundle still showed the transition frame paying for page-local text
+  measurement before the code-view body, and `layout-perf-summary` attributed the largest explicit
+  measure hotspot to `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_view.rs:43`.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_code_view --no-fail-fast`, and
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-torture-no-local-header-rerun-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- First changed run at
+  `target/fret-diag/code-view-torture-no-local-header-codex-20260622/1782108722440/bundle.schema2.json`
+  was noisy and worse on p95 (`2610/2419/539us` for total/layout/solve), even though the first
+  transition frame's root build/solve work dropped.
+- Rerun evidence:
+  `target/fret-diag/code-view-torture-no-local-header-rerun-codex-20260622/1782108770212/bundle.json`
+  reported `p95.us(total/layout/solve)=2346/2188/535`.
+- Compared with the hoverless rerun bundle at `2188/2055/1528`, this cut lowers solve/root build
+  work sharply (`request_build compute 1515us -> 719us`) but leaves total/layout p95 in the same
+  noisy band because the next frame is now dominated by retained code-line `VirtualList` /
+  `StyledText` layout.
+- Current next owner: `layout-perf-summary` on the rerun worst frame points at the code block body
+  `VirtualList` (`layout/inclusive=616/2082us`) and mounted `StyledText` rows
+  (`solve_us=518`). The next code-view cut should target retained line row text/layout work or the
+  renderer text-prepare flush path, not page-local explanatory chrome.
+
 ## 2026-06-22 ColorEdit Error Text Direct Sibling Note
 
 - Continued the editor-controls shell-shrink lane with a narrow invalid-state path in
