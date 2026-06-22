@@ -3093,3 +3093,27 @@ popover overlay root solve tail.
   `target/release/fretboard-dev diag run tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json --dir target/fret-diag/virtual-list-window-boundary-retained-narrow-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
 - Passing diag run:
   `target/fret-diag/virtual-list-window-boundary-retained-narrow-codex-20260622/1782099465590`.
+
+## 2026-06-22 VirtualList Torture Row-Height Mode A/B Rejected Note
+
+- Refreshed the current post-absolute-actions attribution before another code change:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --dir target/fret-diag/virtual-list-current-node-profile-codex-20260622 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=80 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Current bundle
+  `target/fret-diag/virtual-list-current-node-profile-codex-20260622/1782099563491/bundle.schema2.json`
+  reported `p95/max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2212/1826/860/136/250/109/10`.
+- `layout-perf-summary` still puts the owner in row/list layout rather than text measurement:
+  `layout.nodes=104`, `root apply=870us`, `VirtualList inclusive/layout=806/583us`, first-solve row
+  `Container batch_roots=15 subtree_nodes=75 solve=480us`, and root `Stack solve=379us`.
+- A no-code A/B with `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` reduced part of the layout/solve band
+  but did not reduce total:
+  `target/fret-diag/virtual-list-known-heights-ab-codex-20260622/1782099722996/bundle.schema2.json`
+  reported `2226/1792/821/162/272/135/13`.
+- A local experiment that made the default steady harness use `VirtualListOptions::fixed(Px(28.0),
+  10)` and kept periodic tall rows only for `known_heights` / `variable_height` was also rejected.
+  It reported
+  `target/fret-diag/virtual-list-fixed-row-default-codex-20260622/1782100194208/bundle.schema2.json`
+  at `2240/1802/852/162/304/111/10`.
+- Decision: do not default the steady torture page to `known` or `fixed` row-height modes from this
+  evidence. Both shift some work out of layout/solve, but neither improves total frame time on the
+  local repeat=3 probe. The next real slice should target row subtree/root solve or retained
+  VirtualList root apply without changing the row-height semantics of the current perf surface.
