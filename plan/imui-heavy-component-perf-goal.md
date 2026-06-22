@@ -4331,3 +4331,30 @@ popover overlay root solve tail.
   `typography::as_control_text(TextStyle { ... })` construction in `render_code_block_line_row`,
   and remove the matching structure guard if a future style-inheritance contract requires
   row-local style construction.
+
+## 2026-06-23 Code-View Line-Number Direct-Append Experiment Rejected
+
+- I tested replacing the windowed row `line_number_text(...) -> Arc<str>` helper with direct writes
+  into the final row `String`, and also changed the non-windowed line-number column builder to
+  avoid per-line `format!` temporaries.
+- Focused `fret-code-view` structure/behavior gates passed after fixing the guard to ignore test
+  source:
+  `cargo fmt -p fret-code-view --check` and
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`.
+- The first perf attempt was polluted by running the transition and wheel probes concurrently while
+  Cargo was compiling the release gallery target. It produced a bad transition bundle at
+  `target/fret-diag/code-view-line-number-append-codex-20260623/1782154611683/bundle.json`
+  (`2738/2574/504/29/135/0/4`) and a wheel bundle at
+  `target/fret-diag/code-view-line-number-append-wheel-codex-20260623/1782154615992/bundle.schema2.json`.
+  The wheel bundle's own `diag stats` p95 was still around `998us` total, but the max frame hit
+  `1612us`, so the run was not clean enough to justify a source cut.
+- A clean serialized transition rerun at
+  `target/fret-diag/code-view-line-number-append-rerun-codex-20260623/1782154660660/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1934/1780/35/26/128/0/4`.
+  That is inside the existing code-view transition band, but it is not a positive A/B versus the
+  immediately accepted row text-style hoist bundle
+  `target/fret-diag/code-view-row-style-theme-codex-20260623/1782154066709/bundle.schema2.json`
+  at `1847/1710/39/23/115/0/3`.
+- Decision: reject and revert the source experiment. The line-number temporary allocation is not
+  the current measurable code-view owner; the next code-view cut should target stronger row/text
+  blob churn evidence instead of another line-number formatting micro-cut.
