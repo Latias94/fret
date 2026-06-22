@@ -133,7 +133,8 @@ pub struct UiDiagnosticsSnapshotV1 {
 
     /// Aggregated writers for `changed_models`, derived from `ModelStore` debug info.
     ///
-    /// This is best-effort and only populated in debug builds.
+    /// This is best-effort and populated in debug builds or release diagnostics runs that opt into
+    /// model source tracking.
     #[serde(default)]
     pub changed_model_sources_top: Vec<UiChangedModelSourceHotspotV1>,
 

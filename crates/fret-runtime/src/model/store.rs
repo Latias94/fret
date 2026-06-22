@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     cell::RefCell,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     marker::PhantomData,
     panic::{AssertUnwindSafe, Location, catch_unwind, resume_unwind},
     rc::Rc,
@@ -54,6 +54,22 @@ fn strict_runtime_enabled() -> bool {
         .unwrap_or_else(crate::strict_runtime::strict_runtime_enabled_from_env)
 }
 
+#[cfg(not(debug_assertions))]
+fn model_change_source_diagnostics_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_DIAG_MODEL_CHANGE_SOURCES").is_some_and(|v| {
+            let v = v.to_string_lossy().trim().to_ascii_lowercase();
+            !v.is_empty() && !matches!(v.as_str(), "0" | "false" | "no" | "off")
+        })
+    })
+}
+
+#[cfg(debug_assertions)]
+fn model_change_source_diagnostics_enabled() -> bool {
+    true
+}
+
 #[cfg(test)]
 struct StrictRuntimeGuard(Option<bool>);
 
@@ -79,6 +95,7 @@ struct ModelStoreState {
     storage: SlotMap<ModelId, ModelEntry>,
     changed: Vec<ModelId>,
     changed_dedup: HashSet<ModelId>,
+    change_source_diagnostics: Option<HashMap<ModelId, ModelChangedDebugInfo>>,
 }
 
 struct ModelEntry {
@@ -94,10 +111,6 @@ struct ModelEntry {
     leased_at: Option<&'static Location<'static>>,
     #[cfg(debug_assertions)]
     leased_type: Option<&'static str>,
-    #[cfg(debug_assertions)]
-    last_changed_at: Option<&'static Location<'static>>,
-    #[cfg(debug_assertions)]
-    last_changed_type: Option<&'static str>,
 }
 
 pub(super) struct ModelLease<T: Any> {
@@ -250,24 +263,40 @@ impl ModelStore {
     }
 
     pub fn debug_last_changed_info_for_id(&self, id: ModelId) -> Option<ModelChangedDebugInfo> {
-        #[cfg(debug_assertions)]
-        {
-            let state = self.state();
-            let entry = state.storage.get(id)?;
-            let at = entry.last_changed_at?;
-            let type_name = entry.last_changed_type.unwrap_or("<unknown>");
-            Some(ModelChangedDebugInfo {
-                type_name,
-                file: at.file(),
-                line: at.line(),
-                column: at.column(),
-            })
+        let state = self.state();
+        state
+            .change_source_diagnostics
+            .as_ref()
+            .and_then(|entries| entries.get(&id).copied())
+    }
+
+    fn record_changed_info_locked(
+        state: &mut ModelStoreState,
+        id: ModelId,
+        changed_type: &'static str,
+        changed_at: &'static Location<'static>,
+    ) {
+        if !model_change_source_diagnostics_enabled() {
+            return;
         }
 
-        #[cfg(not(debug_assertions))]
-        {
-            let _ = id;
-            None
+        state
+            .change_source_diagnostics
+            .get_or_insert_with(HashMap::new)
+            .insert(
+                id,
+                ModelChangedDebugInfo {
+                    type_name: changed_type,
+                    file: changed_at.file(),
+                    line: changed_at.line(),
+                    column: changed_at.column(),
+                },
+            );
+    }
+
+    fn clear_changed_info_locked(state: &mut ModelStoreState, id: ModelId) {
+        if let Some(entries) = state.change_source_diagnostics.as_mut() {
+            entries.remove(&id);
         }
     }
 
@@ -303,7 +332,10 @@ impl ModelStore {
                 should_remove_now
             };
             Self::mark_changed_locked(&mut state, id);
-            should_remove_now.then(|| state.storage.remove(id))
+            should_remove_now.then(|| {
+                Self::clear_changed_info_locked(&mut state, id);
+                state.storage.remove(id)
+            })
         };
 
         drop(removed);
@@ -357,10 +389,6 @@ impl ModelStore {
             leased_at: None,
             #[cfg(debug_assertions)]
             leased_type: None,
-            #[cfg(debug_assertions)]
-            last_changed_at: None,
-            #[cfg(debug_assertions)]
-            last_changed_type: None,
         });
         Model::from_store_id(self.clone(), id)
     }
@@ -382,7 +410,7 @@ impl ModelStore {
             Ok(f(lease.value_ref()))
         };
 
-        self.end_lease_shared(&mut lease, None);
+        self.end_lease_shared(&mut lease);
 
         match result {
             Ok(value) => Ok(value),
@@ -609,7 +637,11 @@ impl ModelStore {
         match result {
             Ok(value) => {
                 lease.mark_dirty();
-                self.end_lease_any_with_changed_at(&mut lease, changed_at);
+                {
+                    let mut state = self.state_mut();
+                    Self::record_changed_info_locked(&mut state, lease.id, "<unknown>", changed_at);
+                }
+                self.end_lease_any(&mut lease);
                 Ok(value)
             }
             Err(panic) => {
@@ -781,11 +813,7 @@ impl ModelStore {
         })
     }
 
-    fn end_lease_shared<T: Any>(
-        &self,
-        lease: &mut ModelLease<T>,
-        _changed_at: Option<&'static Location<'static>>,
-    ) {
+    fn end_lease_shared<T: Any>(&self, lease: &mut ModelLease<T>) {
         let Some(value) = lease.value.take() else {
             return;
         };
@@ -804,11 +832,6 @@ impl ModelStore {
                 }
                 if lease.dirty {
                     entry.revision = entry.revision.saturating_add(1);
-                    #[cfg(debug_assertions)]
-                    {
-                        entry.last_changed_at = _changed_at;
-                        entry.last_changed_type = Some(std::any::type_name::<T>());
-                    }
                     // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
                 }
                 let should_remove = entry.pending_drop && entry.strong == 0;
@@ -819,6 +842,7 @@ impl ModelStore {
             }
             if should_remove {
                 Self::mark_changed_locked(&mut state, lease.id);
+                Self::clear_changed_info_locked(&mut state, lease.id);
                 Some(state.storage.remove(lease.id))
             } else {
                 None
@@ -829,7 +853,7 @@ impl ModelStore {
     }
 
     pub(super) fn end_lease<T: Any>(&mut self, lease: &mut ModelLease<T>) {
-        self.end_lease_shared(lease, None);
+        self.end_lease_shared(lease);
     }
 
     pub(super) fn end_lease_with_changed_at<T: Any>(
@@ -837,14 +861,19 @@ impl ModelStore {
         lease: &mut ModelLease<T>,
         changed_at: &'static Location<'static>,
     ) {
-        self.end_lease_shared(lease, Some(changed_at));
+        {
+            let mut state = self.state_mut();
+            Self::record_changed_info_locked(
+                &mut state,
+                lease.id,
+                std::any::type_name::<T>(),
+                changed_at,
+            );
+        }
+        self.end_lease_shared(lease);
     }
 
-    fn end_lease_any_shared(
-        &self,
-        lease: &mut ModelLeaseAny,
-        _changed_at: Option<&'static Location<'static>>,
-    ) {
+    fn end_lease_any_shared(&self, lease: &mut ModelLeaseAny) {
         let Some(value) = lease.value.take() else {
             return;
         };
@@ -863,11 +892,6 @@ impl ModelStore {
                 }
                 if lease.dirty {
                     entry.revision = entry.revision.saturating_add(1);
-                    #[cfg(debug_assertions)]
-                    {
-                        entry.last_changed_at = _changed_at;
-                        entry.last_changed_type = Some(entry.created_type);
-                    }
                     // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
                 }
                 let should_remove = entry.pending_drop && entry.strong == 0;
@@ -878,6 +902,7 @@ impl ModelStore {
             }
             if should_remove {
                 Self::mark_changed_locked(&mut state, lease.id);
+                Self::clear_changed_info_locked(&mut state, lease.id);
                 Some(state.storage.remove(lease.id))
             } else {
                 None
@@ -888,15 +913,7 @@ impl ModelStore {
     }
 
     fn end_lease_any(&mut self, lease: &mut ModelLeaseAny) {
-        self.end_lease_any_shared(lease, None);
-    }
-
-    fn end_lease_any_with_changed_at(
-        &mut self,
-        lease: &mut ModelLeaseAny,
-        changed_at: &'static Location<'static>,
-    ) {
-        self.end_lease_any_shared(lease, Some(changed_at));
+        self.end_lease_any_shared(lease);
     }
 
     pub fn notify_with_changed_at<T: Any>(
@@ -922,13 +939,9 @@ impl ModelStore {
             }
 
             entry.revision = entry.revision.saturating_add(1);
-            #[cfg(debug_assertions)]
-            {
-                entry.last_changed_at = Some(_changed_at);
-                entry.last_changed_type = Some(std::any::type_name::<T>());
-            }
         }
 
+        Self::record_changed_info_locked(&mut state, id, std::any::type_name::<T>(), _changed_at);
         Self::mark_changed_locked(&mut state, id);
         Ok(())
     }
@@ -1132,6 +1145,64 @@ mod tests {
 
         let changed = store.take_changed_models();
         assert_eq!(changed, vec![model.id()]);
+    }
+
+    #[test]
+    fn model_change_source_info_tracks_update_notify_and_update_any() {
+        if !model_change_source_diagnostics_enabled() {
+            return;
+        }
+
+        let mut store = ModelStore::default();
+        let model = store.insert(1_u32);
+
+        store
+            .update(&model, |v| *v = 2)
+            .expect("update should succeed");
+        let update_info = store
+            .debug_last_changed_info_for_id(model.id())
+            .expect("update source should be recorded");
+        assert_eq!(update_info.type_name, std::any::type_name::<u32>());
+        assert!(update_info.line > 0);
+        assert!(update_info.column > 0);
+
+        store.notify(&model).expect("notify should succeed");
+        let notify_info = store
+            .debug_last_changed_info_for_id(model.id())
+            .expect("notify source should be recorded");
+        assert_eq!(notify_info.type_name, std::any::type_name::<u32>());
+        assert!(notify_info.line > 0);
+        assert!(notify_info.column > 0);
+
+        store
+            .update_any(model.id(), |any| {
+                let v = any.downcast_mut::<u32>().expect("stored type should match");
+                *v = 3;
+            })
+            .expect("update_any should succeed");
+        let update_any_info = store
+            .debug_last_changed_info_for_id(model.id())
+            .expect("update_any source should be recorded");
+        assert_eq!(update_any_info.type_name, "<unknown>");
+        assert!(update_any_info.line > 0);
+        assert!(update_any_info.column > 0);
+    }
+
+    #[test]
+    fn dropping_last_strong_clears_model_change_source_info() {
+        if !model_change_source_diagnostics_enabled() {
+            return;
+        }
+
+        let mut store = ModelStore::default();
+        let model = store.insert(123_u32);
+        let id = model.id();
+
+        store.update(&model, |v| *v = 456_u32).unwrap();
+        assert!(store.debug_last_changed_info_for_id(id).is_some());
+
+        drop(model);
+        assert!(store.debug_last_changed_info_for_id(id).is_none());
     }
 
     #[test]

@@ -4,7 +4,7 @@ pub(super) fn changed_model_sources_top(
     app: &App,
     changed_models: &[u64],
 ) -> Vec<UiChangedModelSourceHotspotV1> {
-    if !cfg!(debug_assertions) || changed_models.is_empty() {
+    if changed_models.is_empty() {
         return Vec::new();
     }
 
