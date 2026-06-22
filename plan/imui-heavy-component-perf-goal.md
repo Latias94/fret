@@ -3290,3 +3290,27 @@ popover overlay root solve tail.
   stronger design that does not turn one batched row solve into many child-root solves or widen
   overlay/behavior wrapper layout semantics.
 - Source experiment was reverted; no code/test change was kept from this slice.
+
+## 2026-06-22 VirtualList Torture Page Cache Boundary A/B Rejected Note
+
+- I tested adding `PAGE_VIRTUAL_LIST_TORTURE` to
+  `page_content_cache_contain_layout_when_bounds_known(...)` so the page content cache boundary
+  would be explicitly contained when bounds are known, matching some other torture pages.
+- Boundary-on repeat=3 probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/virtual-list-page-cache-boundary-codex-20260622 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- The boundary-on run produced mixed bundles. The worst captured bundle
+  `target/fret-diag/virtual-list-page-cache-boundary-codex-20260622/1782110513956-ui-gallery-virtual-list-bottom-steady/bundle.schema2.json`
+  reported `p95.us(total/layout/solve)=2313/1845/848`, while the two later captured bundles
+  reported `1917/1563/735` and `1930/1575/743`.
+- Exact rollback A/B with the same source except without the new boundary entry:
+  `target/fret-diag/virtual-list-page-cache-boundary-rollback-codex-20260622` reported
+  `p50.us(total/layout/solve)=2121/1731/801` and
+  `p95.us(total/layout/solve)=2239/1807/839`.
+- `layout-perf-summary` did not show a structural owner change. Both boundary-on and no-boundary
+  runs stayed on the same two solve roots: the row `Container` under the `VirtualList` subtree and
+  the root `Stack`. The top layout owner remained the same `VirtualList` path, with no new root
+  apply win to justify the page-cache boundary contract change.
+- Decision: reject this boundary change and keep `PAGE_VIRTUAL_LIST_TORTURE` out of
+  `page_content_cache_contain_layout_when_bounds_known(...)`. The next VirtualList cut should
+  target the retained row/list root solve owner directly, not another page cache boundary tweak.
+- Source experiment was reverted; no code/test change was kept from this slice.
