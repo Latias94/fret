@@ -428,10 +428,11 @@ fn table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
                 let mut x = cx.bounds().origin.x;
                 let y = cx.bounds().origin.y;
                 let h = cx.bounds().size.height;
-                let mut hit_rects = Vec::with_capacity(cx.children().len());
-                let children = cx.children().to_vec();
+                let child_count = cx.children().len();
+                let mut hit_rects = Vec::with_capacity(child_count);
 
-                for (idx, child) in children.into_iter().enumerate() {
+                for idx in 0..child_count {
+                    let child = cx.children()[idx];
                     let w = col_widths.get(idx).copied().unwrap_or(Px(0.0));
                     let cell_rect = fret_core::Rect::new(
                         fret_core::Point::new(x, y),
@@ -457,8 +458,9 @@ fn table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
             }
         },
         move |cx| {
-            let children = cx.children().to_vec();
-            for child in children {
+            let child_count = cx.children().len();
+            for idx in 0..child_count {
+                let child = cx.children()[idx];
                 if let Some(bounds) = cx.child_bounds(child) {
                     cx.paint_child(child, bounds);
                 }
@@ -1003,6 +1005,37 @@ mod tests {
         assert!(
             !content_impl.contains("ui::v_flex(move |cx|"),
             "retained table body should not reintroduce the no-chrome helper Container around the Flex root"
+        );
+    }
+
+    #[test]
+    fn retained_table_fixed_row_group_does_not_clone_children_for_layout_or_paint() {
+        let start = SOURCE
+            .find("fn table_fixed_row_group_with_cell_padding")
+            .expect("expected fixed row group helper in source");
+        let tail = &SOURCE[start..];
+        let end = tail
+            .find("\nfn retained_table_fixed_row_group")
+            .expect("expected fixed row group helper boundary");
+        let helper_impl = &tail[..end];
+
+        assert!(
+            !helper_impl.contains("children().to_vec()"),
+            "fixed retained rows should not allocate a temporary child Vec during layout or paint"
+        );
+        assert!(
+            helper_impl
+                .match_indices("let child_count = cx.children().len();")
+                .count()
+                >= 2,
+            "layout and paint should snapshot only the child count"
+        );
+        assert!(
+            helper_impl
+                .match_indices("for idx in 0..child_count")
+                .count()
+                >= 2,
+            "layout and paint should walk children by index"
         );
     }
 

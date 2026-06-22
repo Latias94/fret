@@ -350,6 +350,39 @@ historical records remain in:
   if a future input sizing/focus regression proves that fixed inner heights are not equivalent for
   fixed root heights.
 
+## 2026-06-22 Data Table Fixed Row Child-Clone Prune Note
+
+- Retained table fixed-row layout/paint no longer clones `cx.children()` into a temporary
+  `Vec<NodeId>` on every row pass. `table_fixed_row_group_with_cell_padding(...)` snapshots the
+  child count and walks children by index for both layout and paint.
+- Scope is intentionally table-local and structural-neutral: column widths, cell padding,
+  child placement, hit-test rects, child bounds, and paint order stay unchanged. This only removes
+  per-row transient allocation from the fixed retained row group.
+- Source coverage in `ecosystem/fret-ui-kit/src/declarative/table.rs` now guards this helper against
+  reintroducing `children().to_vec()` and requires the count/index iteration shape in both layout
+  and paint.
+- Focused gates:
+  `cargo fmt -p fret-ui-kit --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-kit retained_table_fixed_row_group_does_not_clone_children_for_layout_or_paint table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding retained_table_body_column_uses_direct_flex_without_helper_container table_virtualized_retained_unpinned_body_uses_shared_horizontal_transform --no-fail-fast`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --dir target/fret-diag/data-table-fixed-row-no-child-vec-codex-20260622 --repeat 1 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Evidence bundle:
+  `target/fret-diag/data-table-fixed-row-no-child-vec-codex-20260622/1782131267353/bundle.json`
+  reported `top.us(total/layout/solve/prepaint/paint)=2410/1833/515/183/394`.
+- Compared with the previous fixed-height input evidence
+  `target/fret-diag/data-table-input-fixed-px-height-codex-20260622/1782130405741/bundle.schema2.json`
+  at `2450/1833/491/189/428`, this is a small allocation-path cleanup rather than a layout-phase
+  breakthrough. The intended owner moved slightly: retained table `VirtualList` inclusive/layout
+  is now `794/188us` (previously `801/193us`), and the retained row `HoverRegion` first solve is
+  `133us` (previously around `138us`).
+- Remaining owners are unchanged in shape: root `Stack` solve/apply, retained `VirtualList`
+  layout, row `HoverRegion` first solve, and small toolbar/header text measurement. The next
+  data-table pass should target a higher-leverage root apply / retained-list owner instead of
+  trying to squeeze more out of this row child iteration path.
+- Rollback is local: restore the two `children().to_vec()` loops in
+  `table_fixed_row_group_with_cell_padding(...)` and remove the source guard if future borrow or
+  behavior constraints require snapshotting the child list.
+
 ## 2026-06-22 Code-View Transition Window Experiment Rejected
 
 - I tried tightening `ui-gallery-code-view-torture-mount` by moving the nav target stability wait
