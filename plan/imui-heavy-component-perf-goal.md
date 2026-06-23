@@ -4552,6 +4552,42 @@ popover overlay root solve tail.
   interaction band. Do not delete `TextAssistField` row chrome, overlay dismiss state, or the
   editor `session_shell` from this evidence.
 
+## 2026-06-23 Editor Controls Numeric Draft Error Clear Guard
+
+- Source cut: `numeric_text_entry::clear_numeric_error_when_draft_changes` now reuses
+  `clear_error_if_present` instead of writing `None` into an already-empty
+  `Model<Option<Arc<str>>>` whenever focused draft text changes.
+- This is distinct from the earlier `NumericInput` keyboard-path error guard. It removes a
+  draft-change cleanup write in the shared numeric text-entry primitive while preserving the
+  positive path that clears an actual error.
+- Regression coverage pins both sides:
+  `clear_numeric_error_when_draft_changes_skips_none_errors` keeps the draft/error model revisions
+  stable when the error is already `None`, while
+  `clear_numeric_error_when_draft_changes_clears_present_errors` still requires a revision bump
+  when a real error is present.
+- Focused gates:
+  `cargo nextest run -p fret-ui-editor numeric_text_entry --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`,
+  `cargo fmt -p fret-ui-editor --check`, and `git diff --check`.
+- Perf follow-up:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-draft-error-guard-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1154/937/456/5/240/0/3`
+  with worst bundle
+  `target/fret-diag/editor-controls-draft-error-guard-codex-20260623/1782180077805/bundle.schema2.json`.
+- Source-attribution follow-up:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-draft-error-guard-source-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1064/873/427/4/187/0/2`
+  with bundle
+  `target/fret-diag/editor-controls-draft-error-guard-source-codex-20260623/1782180097195/bundle.schema2.json`.
+- Interpretation: keep this as a small invalidation-source cleanup. The guarded empty-error write is
+  gone from the hot path; the remaining `numeric_text_entry/focus.rs` source attribution belongs to
+  the real `sync_draft_from_current_text` draft sync, alongside real `TextAssistField`
+  focus/open/dismiss/accept writes and numeric value commits. Do not use this evidence to delete
+  numeric focus handoff state or editor session shells.
+- Rollback is local: restore the unconditional `models_mut().update(error, |value| *value = None)`
+  in `clear_numeric_error_when_draft_changes` and remove the two revision-stability tests.
+
 ## 2026-06-23 Code-View Windowed Row Shaping Hoist Note
 
 - The windowed code-view row path now resolves the shared code `TextShapingStyle` once on

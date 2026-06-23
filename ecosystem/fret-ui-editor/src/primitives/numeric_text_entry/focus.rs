@@ -174,6 +174,62 @@ pub(crate) fn clear_numeric_error_when_draft_changes<H: UiHost>(
     };
 
     if changed {
-        let _ = cx.app.models_mut().update(error, |value| *value = None);
+        let _ = clear_error_if_present(cx, error);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+
+    use super::clear_numeric_error_when_draft_changes;
+
+    #[test]
+    fn clear_numeric_error_when_draft_changes_skips_none_errors() {
+        let mut app = App::new();
+        let draft = app.models_mut().insert(String::from("42"));
+        let error = app.models_mut().insert(None::<Arc<str>>);
+        let draft_revision = draft.revision(&app);
+        let error_revision = error.revision(&app);
+        let last_draft_text = Arc::new(Mutex::new(String::new()));
+
+        with_element_cx(
+            &mut app,
+            AppWindowId::default(),
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
+            "numeric-text-entry-focus-test",
+            |cx| {
+                clear_numeric_error_when_draft_changes(cx, true, &draft, &error, &last_draft_text);
+            },
+        );
+
+        assert_eq!(draft_revision, draft.revision(&app));
+        assert_eq!(error_revision, error.revision(&app));
+    }
+
+    #[test]
+    fn clear_numeric_error_when_draft_changes_clears_present_errors() {
+        let mut app = App::new();
+        let draft = app.models_mut().insert(String::from("42"));
+        let error = app.models_mut().insert(Some(Arc::from("Invalid number")));
+        let error_revision = error.revision(&app);
+        let last_draft_text = Arc::new(Mutex::new(String::new()));
+
+        with_element_cx(
+            &mut app,
+            AppWindowId::default(),
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
+            "numeric-text-entry-focus-test",
+            |cx| {
+                clear_numeric_error_when_draft_changes(cx, true, &draft, &error, &last_draft_text);
+            },
+        );
+
+        assert_ne!(error_revision, error.revision(&app));
+        assert!(app.models_mut().read(&error, Option::is_none).unwrap());
     }
 }
