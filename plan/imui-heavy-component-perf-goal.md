@@ -5191,3 +5191,36 @@ popover overlay root solve tail.
 - Rollback is doc-only: remove this note only if a future line-number structural split produces
   contradictory evidence and lands with focused `fret-code-view` tests plus the same mount/wheel
   perf probes.
+
+## 2026-06-23 Code-View Plain Indexed Line-Number Split No-Cut
+
+- Trial: I split the windowed `PlainIndexed + show_line_numbers` row into separate plain
+  `TextProps` nodes for the muted line-number prefix and the code body. The intent was to avoid
+  per-row `StyledText` first-solve batches on `code_view_torture` while keeping line-number text
+  visually equivalent to the old folded prefix.
+- Focused gates passed while the trial code was present:
+  `cargo fmt -p fret-code-view`,
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-plain-indexed-split-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2997/2784/626/43/170/0/3`
+  on
+  `target/fret-diag/code-view-plain-indexed-split-codex-20260623/1782179414576/bundle.json`.
+  This is a clear regression versus the accepted row-rich fast path mount result
+  `1910/1784/36/25/108/0/3`.
+- `diag stats --sort time --top 25 --verbose` showed why the source cut failed: the worst frame
+  traded `StyledText` first-solve for a much deeper row subtree. `layout.nodes` jumped from the
+  accepted baseline's `35` to `134`, and the new top solve was a `Container` first-solve at
+  `ecosystem/fret-code-view/src/code_block.rs:1635` with `subtree_nodes=132` and
+  `batch_roots=33`. Renderer text work did not improve enough either:
+  `renderer.text_prepare.counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)` became
+  `86/0/288/155/133/155/113` versus the accepted `53/0/291/158/133/158/113`.
+- Decision: reject and leave no source change. The `StyledText` batch is cheaper than the extra
+  per-row `h_flex + line-number Text + code Text` subtree for this mount surface. Do not split
+  line numbers structurally inside retained `VirtualList` rows unless a future design can preserve
+  one-row-one-leaf topology or prove a retained row update contract that avoids the 4x layout-node
+  increase.
+- Rollback is already applied manually: no `ecosystem/fret-code-view/src/code_block.rs` source diff
+  remains from this trial. The wheel guard was intentionally skipped because the mount probe was a
+  decisive regression.
