@@ -4660,6 +4660,36 @@ popover overlay root solve tail.
   assignment and drop `code_block_windowed_list_keeps_visible_keys_with_limited_row_keep_alive` if a
   future memory-sensitive profile shows the retained off-window row pool is too costly.
 
+## 2026-06-23 Code-View X-Scrollbar Overlay Stack No-Cut
+
+- I tried a narrower windowed code-view structure cut: only build the horizontal scrollbar overlay
+  `Stack` when `scrollbar_x_enabled` is true, and otherwise route the X scroll surface directly into
+  the outer wheel region. This kept the retained `VirtualList`, the row `StyledText`, and the
+  existing bounded keep-alive policy unchanged.
+- Scope was deliberately small:
+  `ecosystem/fret-code-view/src/code_block.rs` only; no gallery harness changes and no row text or
+  overscan changes.
+- Focused gates passed while the experiment was active:
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence did not support keeping the cut:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-x-scrollbar-stack-on-demand-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1946/1806/48/25/120/0/4`,
+  which was worse than the accepted direct-entry mount evidence at `1861/1739/50/24/123/0/4`.
+  The worst bundle `diag stats --sort time --top 20 --verbose` still showed the same mounted row
+  text/blob churn shape, with `renderer.text_prepare.flush p95=431us` and root apply p95 `392us`.
+- Wheel steady also regressed:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-x-scrollbar-stack-on-demand-wheel-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1009/869/17/27/115/0/5`,
+  which is worse than the accepted bounded keep-alive wheel evidence at `883/765/15/16/104/0/3`.
+- Interpretation: reject this cut. The structure got slightly smaller, but it did not move the
+  frame-time owner in the right direction. The code-view next step should stay focused on row text
+  representation or blob retention, not on gating the X scrollbar overlay stack.
+- Rollback is local: restore the unconditional `scroll_x_and_bar = cx.stack_props(...)` wrapper
+  in `render_code_block_windowed_lines` and remove this note if a future experiment finds a direct
+  positive A/B on the same surface.
+
 ## 2026-06-23 File-Tree Retained Row Direct-Flex Note
 
 - The latest ui-gallery rerank moved the next actionable steady-scroll owner from code-view/chart
