@@ -595,20 +595,26 @@ pub(super) fn portal_geometry(
     cx: &mut AppComponentCx<'_>,
     models: &OverlayModels,
 ) -> impl UiChild + use<> {
-    portal_geometry_with_rows(cx, models, 48)
+    portal_geometry_with_body(cx, models, PortalGeometryBody::ScrollRows(48))
 }
 
-pub(super) fn portal_geometry_compact(
+pub(super) fn portal_geometry_trigger_only(
     cx: &mut AppComponentCx<'_>,
     models: &OverlayModels,
 ) -> impl UiChild + use<> {
-    portal_geometry_with_rows(cx, models, 12)
+    portal_geometry_with_body(cx, models, PortalGeometryBody::TriggerOnly)
 }
 
-fn portal_geometry_with_rows(
+#[derive(Clone, Copy)]
+enum PortalGeometryBody {
+    ScrollRows(usize),
+    TriggerOnly,
+}
+
+fn portal_geometry_with_body(
     cx: &mut AppComponentCx<'_>,
     models: &OverlayModels,
-    row_count: usize,
+    body: PortalGeometryBody,
 ) -> impl UiChild + use<> {
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
 
@@ -648,26 +654,33 @@ fn portal_geometry_with_rows(
             },
         );
 
-    let items = (1..=row_count.max(1))
-        .map(|i| overlay_scroll_row_text(cx, format!("Scroll item {i:02}")).into_element(cx))
-        .collect::<Vec<_>>();
+    let content = match body {
+        PortalGeometryBody::ScrollRows(row_count) => {
+            let items = (1..=row_count.max(1))
+                .map(|i| {
+                    overlay_scroll_row_text(cx, format!("Scroll item {i:02}")).into_element(cx)
+                })
+                .collect::<Vec<_>>();
 
-    let body = ui::v_stack(|_cx| {
-        let mut out: Vec<AnyElement> = Vec::with_capacity(items.len() + 2);
-        out.push(popover);
-        out.extend(items);
-        out
-    })
-    .gap(Space::N2)
-    .into_element(cx);
+            let body = ui::v_stack(|_cx| {
+                let mut out: Vec<AnyElement> = Vec::with_capacity(items.len() + 2);
+                out.push(popover);
+                out.extend(items);
+                out
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
-    let scroll = shadcn::ScrollArea::new(vec![body])
-        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
-        .into_element(cx);
-
-    let scroll = scroll.attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-portal-geometry-scroll-area"),
-    );
+            shadcn::ScrollArea::new(vec![body])
+                .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .test_id("ui-gallery-portal-geometry-scroll-area"),
+                )
+        }
+        PortalGeometryBody::TriggerOnly => popover,
+    };
 
     shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
@@ -678,7 +691,7 @@ fn portal_geometry_with_rows(
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![scroll]).into_element(cx),
+        shadcn::CardContent::new(vec![content]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)

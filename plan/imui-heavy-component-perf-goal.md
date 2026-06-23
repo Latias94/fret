@@ -5006,6 +5006,48 @@ popover overlay root solve tail.
   the root `Stack` solve/apply path plus the compact `ScrollArea`, so the next chrome pass should
   target root invalidation/apply breadth or a deeper overlay content cache boundary with fresh
   stats evidence.
-- Rollback is local: route `compose_body_fixed_rows(...)` back to `PortalGeometryRows::Full`,
-  remove `portal_geometry_compact(...)` and the row-budget guard, then rerun the same focused
-  test and chrome torture steady perf script.
+- This compact-scroll intermediate is superseded by the trigger-only follow-up below. If the
+  follow-up must be backed out while keeping this intermediate cut, restore the fixed-row route to
+  a compact scroll body and rerun the same focused test plus chrome torture steady perf script.
+
+## 2026-06-23 Chrome Torture Trigger-Only Portal Geometry Follow-Up
+
+- Follow-up attribution after the compact portal-geometry cut showed the remaining local chrome
+  owner was still the static portal-geometry `ScrollArea`. The node-profile repro
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/chrome-compact-node-profile-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=30 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=25 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+  reported a worst bundle at
+  `target/fret-diag/chrome-compact-node-profile-codex-20260623/1782174546255/bundle.schema2.json`,
+  and the repeated profile lines identified `ui-gallery-portal-geometry-scroll-area` as the top
+  steady local node.
+- Source cut: the standalone overlay preview still builds portal geometry with `ScrollRows(48)`,
+  but the chrome torture fixed-row body now uses a `TriggerOnly` portal-geometry mode. This keeps
+  the same popover trigger and content available from the chrome harness while removing the static
+  scroll rows and `ScrollArea` that the steady script never exercises.
+- Structural coverage:
+  `gallery_overlay_preview_retains_intentional_raw_boundaries` now locks
+  `PortalGeometryMode::FullScroll` for the standalone preview and
+  `PortalGeometryMode::TriggerOnly` for the fixed-row perf body, while preserving the existing
+  fixed overlay row and control-row guards.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_preview_retains_intentional_raw_boundaries page_chrome_torture_uses_fixed_overlay_rows page_chrome_torture_keeps_control_rows_off_doc_wrap_rows page_chrome_torture_uses_control_label_roles --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-trigger-only-portal-geometry-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1669/1450/1102/40/181/0/3`
+  on
+  `target/fret-diag/chrome-trigger-only-portal-geometry-codex-20260623/1782175054717/bundle.schema2.json`.
+  The compact portal-geometry baseline reported `1788/1589/1120/39/184/0/2`.
+- `diag stats --sort time --top 20 --verbose` confirmed the intended owner movement:
+  `layout.nodes` dropped `126 -> 109`, invalidation breadth dropped
+  `28 calls / 1127 nodes -> 13 calls / 482 nodes`, root apply p95 dropped `352us -> 232us`,
+  and the portal-geometry `Scroll` hotspot no longer appeared in the worst-frame hotspot list.
+- Interpretation: keep this cut as the second chrome-harness portal pass. It is narrower than
+  deleting overlay behavior: standalone parity keeps the full scroll geometry, and the chrome
+  harness still exposes the popover trigger/content. Remaining cost is now mostly root `Stack`
+  solve plus ordinary button/text/flex chrome; the next chrome cut needs fresh evidence for root
+  invalidation/apply breadth, not another portal-geometry row tweak.
+- Rollback is local: route `compose_body_fixed_rows(...)` back to
+  `PortalGeometryMode::FullScroll`, remove `portal_geometry_trigger_only(...)` and the
+  `PortalGeometryBody::TriggerOnly` branch, then rerun the same focused test and chrome torture
+  steady perf script.

@@ -37,27 +37,27 @@ pub(super) fn compose_body(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
 ) -> impl UiChild + use<> {
-    compose_body_with_row_wrap(cx, models, true, PortalGeometryRows::Full)
+    compose_body_with_row_wrap(cx, models, true, PortalGeometryMode::FullScroll)
 }
 
 pub(super) fn compose_body_fixed_rows(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
 ) -> impl UiChild + use<> {
-    compose_body_with_row_wrap(cx, models, false, PortalGeometryRows::Compact)
+    compose_body_with_row_wrap(cx, models, false, PortalGeometryMode::TriggerOnly)
 }
 
 #[derive(Clone, Copy)]
-enum PortalGeometryRows {
-    Full,
-    Compact,
+enum PortalGeometryMode {
+    FullScroll,
+    TriggerOnly,
 }
 
 fn compose_body_with_row_wrap(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
     wrap_rows: bool,
-    portal_geometry_rows: PortalGeometryRows,
+    portal_geometry_mode: PortalGeometryMode,
 ) -> impl UiChild + use<> {
     let _ = cx;
     ui::v_flex(move |cx| {
@@ -102,9 +102,9 @@ fn compose_body_with_row_wrap(
             edge_row,
             overlays_row,
             modal_row,
-            match portal_geometry_rows {
-                PortalGeometryRows::Full => widgets::portal_geometry(cx, &models).into_element(cx),
-                PortalGeometryRows::Compact => widgets::portal_geometry_compact(cx, &models).into_element(cx),
+            match portal_geometry_mode {
+                PortalGeometryMode::FullScroll => widgets::portal_geometry(cx, &models).into_element(cx),
+                PortalGeometryMode::TriggerOnly => widgets::portal_geometry_trigger_only(cx, &models).into_element(cx),
             },
         ]
     })
