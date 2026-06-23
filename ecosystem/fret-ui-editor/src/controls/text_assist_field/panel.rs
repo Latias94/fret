@@ -1,16 +1,14 @@
 //! Text-assist suggestion panel rendering owner.
 
-use std::cell::Cell;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, ScrollAxis,
-    ScrollProps, SizeStyle,
+    ScrollProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::headless::text_assist::TextAssistController;
 
 mod row;
@@ -99,7 +97,6 @@ pub(super) fn render_text_assist_panel<H: UiHost>(
         })
         .collect();
 
-    let listbox_id_out = Rc::new(Cell::new(None::<GlobalElementId>));
     let listbox_label = options.list_label.clone();
     let list_test_id = options.list_test_id.clone();
     let panel_layout = if is_overlay_surface {
@@ -123,78 +120,71 @@ pub(super) fn render_text_assist_panel<H: UiHost>(
             ..Default::default()
         }
     };
-    let panel = {
-        let listbox_id_out = listbox_id_out.clone();
-        cx.semantics_with_id(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::ListBox,
-                label: Some(listbox_label),
-                test_id: list_test_id,
+
+    let list_content = cx.flex(
+        FlexProps {
+            layout: LayoutStyle {
+                size: SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            move |cx, id| {
-                listbox_id_out.set(Some(id));
+            direction: Axis::Vertical,
+            gap: editor_popup_list_row_gap().into(),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |_cx| option_rows,
+    );
 
-                let list_content = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        direction: Axis::Vertical,
-                        gap: editor_popup_list_row_gap().into(),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Stretch,
-                        wrap: false,
-                    },
-                    move |_cx| option_rows,
-                );
-
-                let body = if viewport_height != content_height {
-                    cx.scroll(
-                        ScrollProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Px(viewport_height),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            axis: ScrollAxis::Y,
-                            ..Default::default()
-                        },
-                        move |_cx| vec![list_content],
-                    )
-                } else {
-                    list_content
-                };
-
-                vec![cx.container(
-                    ContainerProps {
-                        layout: panel_layout,
-                        padding: Edges::all(editor_popup_list_surface_padding()).into(),
-                        background: Some(popup_chrome.bg),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(popup_chrome.border),
-                        corner_radii: Corners::all(popup_chrome.radius),
-                        shadow: popup_chrome.shadow,
+    let body = if viewport_height != content_height {
+        cx.scroll(
+            ScrollProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(viewport_height),
                         ..Default::default()
                     },
-                    move |_cx| vec![body],
-                )]
+                    ..Default::default()
+                },
+                axis: ScrollAxis::Y,
+                ..Default::default()
             },
+            move |_cx| vec![list_content],
         )
+    } else {
+        list_content
     };
+
+    let mut panel = cx.container(
+        ContainerProps {
+            layout: panel_layout,
+            padding: Edges::all(editor_popup_list_surface_padding()).into(),
+            background: Some(popup_chrome.bg),
+            border: Edges::all(Px(1.0)),
+            border_color: Some(popup_chrome.border),
+            corner_radii: Corners::all(popup_chrome.radius),
+            shadow: popup_chrome.shadow,
+            ..Default::default()
+        },
+        move |_cx| vec![body],
+    );
+    let listbox_id = panel.id;
+    panel = panel.attach_semantics(SemanticsDecoration {
+        role: Some(SemanticsRole::ListBox),
+        label: Some(listbox_label),
+        test_id: list_test_id,
+        ..Default::default()
+    });
 
     Some(RenderedTextAssistPanel {
         panel,
-        listbox_id: listbox_id_out.get(),
+        listbox_id: Some(listbox_id),
         option_elements,
         surface_height,
     })

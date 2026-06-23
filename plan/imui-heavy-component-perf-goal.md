@@ -5334,3 +5334,37 @@ popover overlay root solve tail.
 - Rollback is local: restore the two direct `models_mut().update(...)` calls and unconditional
   redraw in `ecosystem/fret-ui-editor/src/controls/text_assist_field/overlay.rs`, then rerun the
   same focused text-assist test and click-stress source repro.
+
+## 2026-06-23 Editor-Controls TextAssist Listbox Semantics Downshift
+
+- Source cut: `TextAssistField` panel rendering now attaches the listbox role/label/test-id to the
+  existing popup `Container` with `SemanticsDecoration` instead of wrapping the panel in an extra
+  transparent `Semantics` layout node. The `listbox_id` used by input-owned active-descendant /
+  controls wiring is now the panel container id, so the ARIA-style relationship still targets the
+  mounted listbox element while removing one wrapper from the overlay panel tree.
+- Coverage:
+  `anchored_overlay_panel_attaches_listbox_semantics_without_layout_wrapper` guards the local source
+  shape so the panel does not drift back to `cx.semantics_with_id(...)` or a `listbox_id_out`
+  wrapper handoff.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-editor text_assist_field --no-fail-fast`.
+- Perf/source repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-text-assist-listbox-attach-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1110/921/448/4/185/0/3`
+  on
+  `target/fret-diag/editor-controls-text-assist-listbox-attach-codex-20260623/1782222503068/bundle.schema2.json`.
+- Compared with the prior overlay dismiss source bundle
+  `target/fret-diag/editor-controls-overlay-dismiss-noop-source-codex-20260623/1782221476277/bundle.schema2.json`
+  at `1113/917/446/4/192/0/3`, frame time stayed in the same single-run noise band. The intended
+  structural direction is still worth keeping: `stats --verbose` shows total invalidation nodes
+  `2035 -> 2028`, while the remaining hot frame is still the main action-root `ViewCache`
+  contained relayout through `input_group/frame.rs` and `controls/session_shell.rs`.
+- Interpretation: keep this as a small tree-depth cleanup and semantics/layout separation cut, not
+  as a large frame-time win. The next editor-controls slice should continue with the main
+  `session_shell` / `input_group` relayout owner or fixed-size text measure owner rather than
+  spending more time on TextAssist panel chrome.
+- Rollback is local: restore the panel `cx.semantics_with_id(...)` wrapper in
+  `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs`, restore the `Rc<Cell>`
+  `listbox_id_out` handoff, and remove
+  `anchored_overlay_panel_attaches_listbox_semantics_without_layout_wrapper`.

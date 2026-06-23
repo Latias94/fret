@@ -14,6 +14,7 @@ use super::{
 
 const TEXT_ASSIST_BODY_RS: &str = include_str!("element/body.rs");
 const TEXT_ASSIST_OVERLAY_RS: &str = include_str!("overlay.rs");
+const TEXT_ASSIST_PANEL_RS: &str = include_str!("panel.rs");
 
 fn render_text_assist_field(
     surface: TextAssistFieldSurface,
@@ -103,6 +104,14 @@ fn anchored_overlay_never_falls_back_to_inline_layout_flow() {
     assert!(!TEXT_ASSIST_OVERLAY_RS.contains("-> Option<AnyElement>"));
     assert!(!TEXT_ASSIST_OVERLAY_RS.contains("return Some(panel)"));
     assert!(TEXT_ASSIST_OVERLAY_RS.contains("cx.app.request_redraw(cx.window);"));
+}
+
+#[test]
+fn anchored_overlay_panel_attaches_listbox_semantics_without_layout_wrapper() {
+    assert!(TEXT_ASSIST_PANEL_RS.contains("panel.attach_semantics("));
+    assert!(TEXT_ASSIST_PANEL_RS.contains("SemanticsDecoration {"));
+    assert!(!TEXT_ASSIST_PANEL_RS.contains("cx.semantics_with_id("));
+    assert!(!TEXT_ASSIST_PANEL_RS.contains("listbox_id_out"));
 }
 
 #[test]
