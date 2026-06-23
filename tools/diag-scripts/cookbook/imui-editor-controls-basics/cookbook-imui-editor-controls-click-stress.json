@@ -14,11 +14,11 @@
     "required_launch_features": ["cookbook-diag", "cookbook-imui"],
     "target_hints": [
       "Exercises the manual path that repeatedly opens and dismisses editor-control overlays.",
-      "Covers text assist open/dismiss/reopen, option accept, roughness typing, search focus, and color popup open/dismiss."
+      "Covers text assist open/dismiss/reopen, option accept, roughness typing, search focus, and color popup open/dismiss.",
+      "Resets diagnostics after the cookbook root settles so startup resize/header measurement does not pollute the interaction window."
     ]
   },
   "steps": [
-    { "type": "reset_diagnostics" },
     { "type": "set_window_inner_size", "width_px": 1000.0, "height_px": 700.0 },
     {
       "type": "wait_until",
@@ -28,6 +28,8 @@
       },
       "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "reset_diagnostics" },
     {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },

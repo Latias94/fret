@@ -5368,3 +5368,44 @@ popover overlay root solve tail.
   `ecosystem/fret-ui-editor/src/controls/text_assist_field/panel.rs`, restore the `Rc<Cell>`
   `listbox_id_out` handoff, and remove
   `anchored_overlay_panel_attaches_listbox_semantics_without_layout_wrapper`.
+
+## 2026-06-23 Editor-Controls Click-Stress Reset Boundary Note
+
+- Probe cut: `cookbook-imui-editor-controls-click-stress.json` now sizes the window, waits for the
+  cookbook root, waits 8 settle frames, and only then runs `reset_diagnostics`. This keeps startup
+  resize/root/header measurement out of the measured click-stress interaction window without
+  changing the cookbook UI or deleting teaching text from the example.
+- Coverage:
+  `apps/fret-cookbook/tests/imui_editor_controls_perf_scripts.rs` locks the reset order so the
+  click-stress script continues to settle the root before reset and capture after reset.
+- Focused gates:
+  `cargo fmt -p fret-cookbook --check`,
+  `python3 -m json.tool tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json >/dev/null`,
+  `target/release/fretboard-dev diag script validate tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json`,
+  `cargo nextest run -p fret-cookbook --test imui_editor_controls_perf_scripts editor_controls_click_stress_resets_after_initial_root_settle --no-fail-fast`,
+  and `git diff --check`.
+- A broader `cargo nextest run -p fret-cookbook editor_controls_click_stress_resets_after_initial_root_settle --no-fail-fast`
+  was intentionally not used as a gate after it compiled unrelated cookbook examples and hit the
+  existing `hello_counter` missing-icons-feature failure (`fret::icons::icon` is gated behind the
+  `icons` feature).
+- Perf/source repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-click-stress-reset-after-root-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1270/1046/510/3/221/0/3`
+  on
+  `target/fret-diag/editor-controls-click-stress-reset-after-root-codex-20260623/1782224156391/bundle.schema2.json`.
+- Compared with the prior text-assist listbox bundle
+  `target/fret-diag/editor-controls-text-assist-listbox-attach-codex-20260623/1782222503068/bundle.schema2.json`
+  at `1110/921/448/4/185/0/3`, this is not a component frame-time win and should not be read as
+  such. The intended measurement owner did move: the worst frame is now an interaction frame at
+  `tick=69/frame=71`, and startup-style invalidation max dropped from `calls/nodes=69/968` in the
+  prior source bundle to `14/225` in the reset-after-root run. The remaining hot owner is still the
+  action-root `ViewCache` contained relayout through `input_group/frame.rs`, `session_shell.rs`, and
+  property-row structure.
+- No-cut note: do not wrap already-built `session_shell` branch children in
+  `ElementContext::view_cache(...)`. That would put the model/global observations outside the cache
+  scope and risks reusing stale branch subtrees. A valid session-shell cache experiment must build
+  the branch contents inside the view-cache closure or provide complete explicit cache keys for all
+  render inputs, which is a larger contract slice.
+- Rollback is local: move `reset_diagnostics` back to the first click-stress step and remove
+  `editor_controls_click_stress_resets_after_initial_root_settle` if future perf tooling needs to
+  include cookbook startup/resize frames in this probe.
