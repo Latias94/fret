@@ -4588,6 +4588,47 @@ popover overlay root solve tail.
 - Rollback is local: restore the unconditional `models_mut().update(error, |value| *value = None)`
   in `clear_numeric_error_when_draft_changes` and remove the two revision-stability tests.
 
+## 2026-06-23 Text-Assist Boundary Active-Item No-Op Guard
+
+- Source cut: `input_owned_text_assist_key_handler` now updates
+  `active_item_id_model` only when keyboard navigation resolves to a different active item. When a
+  non-wrapping `ArrowUp` / `ArrowDown` / page movement clamps at the current edge, the handler still
+  consumes the key but skips the same-value active-item model write and skips the redundant redraw.
+- This lives in `ecosystem/fret-ui-kit/src/headless/text_assist.rs`, not in the editor component
+  shell. It targets the shared input-owned text-assist policy that `TextAssistField` uses.
+- Regression coverage pins both sides:
+  `key_handler_skips_boundary_noop_active_item_writes` keeps the active-item model revision stable
+  and records zero redraw requests for an `ArrowUp` clamp at the first item, while
+  `key_handler_updates_active_item_when_navigation_changes` still requires the model revision and
+  redraw when `ArrowDown` moves from `camera` to `canvas`.
+- Added a dedicated repro:
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-text-assist-key-boundary.json`.
+  The script opens the cookbook Asset text-assist overlay, initializes the active item with one
+  `ArrowUp`, resets diagnostics, then measures the second non-wrapping `ArrowUp` at the boundary.
+- Focused gates:
+  `python3 -m json.tool tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-text-assist-key-boundary.json`,
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo nextest run -p fret-ui-kit text_assist --no-fail-fast`, and `git diff --check`.
+- Boundary perf/source evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-text-assist-key-boundary.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-text-assist-key-boundary-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=187/8/0/5/174/0/0`
+  with bundle
+  `target/fret-diag/editor-controls-text-assist-key-boundary-codex-20260623/1782181425091/bundle.schema2.json`.
+- `diag stats --sort time --top 3 --verbose` on that bundle reported `model_changes=0`,
+  `roots.model=0`, `layout.engine_solve p95=0`, `cache roots reused=22/22`, and no
+  `changed_models_top`. The only changed global was the dev reload watcher, so the second boundary
+  key no longer dirties the editor view-cache through active-item model churn.
+- Broader click-stress source evidence was intentionally left as a guard, not as the primary proof:
+  `target/fret-diag/editor-controls-text-assist-active-item-noop-codex-20260623/1782181250228/bundle.schema2.json`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1082/900/437/4/178/0/3`
+  and kept the same real `TextAssistField` focus/open/dismiss/accept plus numeric commit sources.
+  That script does not exercise the non-wrapping key boundary, so do not claim a click-stress
+  frame-time win from this slice.
+- Rollback is local: restore the unconditional `active_item_id_model` update and redraw in
+  `input_owned_text_assist_key_handler`, remove the two key-boundary tests, and delete the dedicated
+  diag script if a future keyboard navigation regression shows redraw must occur even when active
+  item identity is unchanged.
+
 ## 2026-06-23 Code-View Windowed Row Shaping Hoist Note
 
 - The windowed code-view row path now resolves the shared code `TextShapingStyle` once on

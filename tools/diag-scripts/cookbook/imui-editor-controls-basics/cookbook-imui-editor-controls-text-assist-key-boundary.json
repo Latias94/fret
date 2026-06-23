@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook imui editor controls: text assist key boundary",
+    "tags": [
+      "cookbook",
+      "cookbook.imui_editor_controls_basics",
+      "imui",
+      "editor-controls",
+      "text-assist",
+      "keyboard",
+      "perf"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
+    "target_hints": [
+      "Opens the Asset text-assist overlay, initializes the active item, then measures a non-wrapping ArrowUp boundary key.",
+      "This isolates the no-op active-item model write path from broader click-stress overlay transitions."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1000.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist" },
+      "button": "left",
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.assist.list" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "arrow_up" },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "arrow_up" },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-imui-editor-controls-text-assist-key-boundary"
+    }
+  ]
+}
