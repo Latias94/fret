@@ -157,7 +157,14 @@ where
 
         let mut root = cx.flex(
             FlexProps {
-                layout: options.layout,
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 direction: Axis::Vertical,
                 gap: SpacingLength::Px(Px(0.0)),
                 padding: Edges::all(Px(0.0)).into(),

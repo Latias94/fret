@@ -5409,3 +5409,26 @@ popover overlay root solve tail.
 - Rollback is local: move `reset_diagnostics` back to the first click-stress step and remove
   `editor_controls_click_stress_resets_after_initial_root_settle` if future perf tooling needs to
   include cookbook startup/resize frames in this probe.
+
+## 2026-06-23 Editor-Controls PropertyGroup Inner Layout Shell Split Note
+
+- `PropertyGroup` now keeps the caller-provided `layout` only on the outer chrome `Container`.
+  The inner vertical `Flex` shell uses an internal `width=Fill / height=Auto` layout with default
+  flex and margin, so caller layout no longer gets duplicated onto both nodes.
+- Coverage:
+  `property_group_outer_layout_stays_on_the_chrome_root_only` locks the outer layout ownership and
+  the inner shell defaults.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor property_group --no-fail-fast`,
+  `git diff --check`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-property-group-inner-layout-r3-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1316/1089/552/5/223/0/3`
+  on `target/fret-diag/editor-controls-property-group-inner-layout-r3-codex-20260623/1782224921601/bundle.schema2.json`.
+- Interpretation: this is a structural cleanup, not a frame-time win. The hottest frame remains the
+  action-root `ViewCache` contained relayout through `session_shell.rs` / `input_group/frame.rs`,
+  and the measured p95 stays in the same sub-2ms band. Keep this change because it removes a
+  duplicated layout owner, but do not count it as a performance breakthrough.
+- Rollback is local: restore `layout: options.layout` on the inner `FlexProps` if a future layout
+  contract or geometry gate proves the inner shell needs to inherit caller layout again.
