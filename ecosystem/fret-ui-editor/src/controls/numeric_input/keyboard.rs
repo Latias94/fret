@@ -66,7 +66,7 @@ where
             && let Some(message) = validate(value)
         {
             set_numeric_input_error_if_changed(host, &args.error, message);
-            write_last_draft(&args.last_draft_text, text);
+            write_last_draft_if_changed(&args.last_draft_text, &text);
             host.request_redraw(action_cx.window);
             return true;
         }
@@ -75,17 +75,15 @@ where
             .models_mut()
             .update(&args.model, |model| *model = value);
         let formatted = (args.format)(value);
-        let _ = host
-            .models_mut()
-            .update(&args.draft, |draft| *draft = formatted.as_ref().to_string());
+        set_string_model_if_changed(host, &args.draft, formatted.as_ref());
         clear_numeric_input_error_if_present(host, &args.error);
-        write_last_draft(&args.last_draft_text, formatted.as_ref().to_string());
+        write_last_draft_if_changed(&args.last_draft_text, formatted.as_ref());
         if let Some(callback) = args.on_outcome.as_ref() {
             callback(host, action_cx, NumericInputOutcome::Committed);
         }
     } else {
         set_numeric_input_error_if_changed(host, &args.error, Arc::from("Invalid number"));
-        write_last_draft(&args.last_draft_text, text);
+        write_last_draft_if_changed(&args.last_draft_text, &text);
     }
     host.request_redraw(action_cx.window);
     true
@@ -104,11 +102,9 @@ where
         .get_copied(&args.model)
         .unwrap_or_default();
     let formatted = (args.format)(current);
-    let _ = host
-        .models_mut()
-        .update(&args.draft, |draft| *draft = formatted.as_ref().to_string());
+    set_string_model_if_changed(host, &args.draft, formatted.as_ref());
     clear_numeric_input_error_if_present(host, &args.error);
-    write_last_draft(&args.last_draft_text, formatted.as_ref().to_string());
+    write_last_draft_if_changed(&args.last_draft_text, formatted.as_ref());
     if let Some(callback) = args.on_outcome.as_ref() {
         callback(host, action_cx, NumericInputOutcome::Canceled);
     }
@@ -116,9 +112,33 @@ where
     true
 }
 
-fn write_last_draft(last_draft_text: &Arc<Mutex<String>>, text: String) {
+fn set_string_model_if_changed(
+    host: &mut dyn UiActionHost,
+    model: &Model<String>,
+    next: &str,
+) -> bool {
+    let unchanged = host
+        .models_mut()
+        .read(model, |value| value == next)
+        .unwrap_or(false);
+    if unchanged {
+        return false;
+    }
+
+    host.models_mut()
+        .update(model, |value| {
+            value.clear();
+            value.push_str(next);
+        })
+        .is_ok()
+}
+
+fn write_last_draft_if_changed(last_draft_text: &Arc<Mutex<String>>, text: &str) {
     let mut last = last_draft_text.lock().unwrap_or_else(|e| e.into_inner());
-    *last = text;
+    if last.as_str() != text {
+        last.clear();
+        last.push_str(text);
+    }
 }
 
 fn clear_numeric_input_error_if_present(
@@ -212,5 +232,19 @@ mod tests {
 
         assert!(!changed);
         assert_eq!(error.revision(&app), revision);
+    }
+
+    #[test]
+    fn set_string_model_if_changed_skips_unchanged_text() {
+        let mut app = App::new();
+        let draft = app.models_mut().insert(String::from("123"));
+        let revision = draft.revision(&app);
+        let changed = {
+            let mut host = UiActionHostAdapter { app: &mut app };
+            set_string_model_if_changed(&mut host, &draft, "123")
+        };
+
+        assert!(!changed);
+        assert_eq!(draft.revision(&app), revision);
     }
 }

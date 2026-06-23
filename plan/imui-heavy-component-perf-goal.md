@@ -5051,3 +5051,34 @@ popover overlay root solve tail.
   `PortalGeometryMode::FullScroll`, remove `portal_geometry_trigger_only(...)` and the
   `PortalGeometryBody::TriggerOnly` branch, then rerun the same focused test and chrome torture
   steady perf script.
+
+## 2026-06-23 Editor-Controls Numeric Draft No-Op Prune
+
+- Source cut: `numeric_input::keyboard` now routes commit/cancel draft updates through a local
+  `set_string_model_if_changed(...)` helper and only mutates `last_draft_text` when the formatted
+  text actually differs. This keeps repeated commit/cancel paths from bumping unchanged draft
+  revisions while leaving the numeric value update and validation behavior intact.
+- Structural coverage: `set_string_model_if_changed_skips_unchanged_text` locks the unchanged-draft
+  path so the helper does not regress back to unconditional draft rewrites.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor`,
+  `cargo nextest run -p fret-ui-editor numeric_input --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-string-noop-cut-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1198/1037/507/15/198/0/11`
+  on
+  `target/fret-diag/editor-controls-string-noop-cut-codex-20260623/1782175927685/bundle.schema2.json`.
+  The source-attribution rerun on
+  `target/fret-diag/editor-controls-string-noop-source-codex-20260623/1782175963475/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1163/974/502/5/184/0/2`
+  and the changed-model sources now attribute the remaining numeric draft write to the real
+  update branch at `numeric_input/keyboard.rs:129:10` rather than an unconditional draft rewrite.
+- Interpretation: keep this as a safe editor-controls hygiene cut. It trims repeated unchanged
+  draft churn and preserves the same user-visible behavior, but it does not replace the current
+  editor-controls owners (`ViewCache`, `session_shell`, text-assist overlay/focus flow). The next
+  editor-controls slice should still come from a repeated source or root-layout owner if we want a
+  larger gain.
+- Rollback is local: restore the direct `update(&args.draft, ...)` and `write_last_draft(...)`
+  writes in `ecosystem/fret-ui-editor/src/controls/numeric_input/keyboard.rs`, then rerun the same
+  focused test and perf script.
