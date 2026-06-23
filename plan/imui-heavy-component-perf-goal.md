@@ -5467,3 +5467,37 @@ popover overlay root solve tail.
   `ecosystem/fret-ui-editor/src/composites/property_group/element.rs`, remove the four structure
   tests above, then rerun the same `inspector_panel` / `property_group` nextest filters and the
   editor-controls click-stress perf probe.
+
+## 2026-06-23 Editor-Controls Joined Input Pointer Finish No-Op
+
+- Source cut: `editor_joined_input_frame_with_overrides(...)` now invalidates paint on pointer
+  finish only when the joined input frame actually transitions from pressed to unpressed. Pointer
+  up/cancel events that follow a trailing segment click, or another path that never armed the text
+  input pressed state, still update the last pointer type but skip the redundant paint invalidation
+  and redraw request.
+- Scope is intentionally narrow. The real `HoverRegion -> PointerRegion -> frame Container`
+  structure stays in place because it owns hover, pressed, focus, border, background, and trailing
+  segment hit behavior.
+- Coverage:
+  `joined_input_pointer_finish_without_text_input_press_is_noop` and
+  `joined_input_pointer_state_reports_only_pressed_edges` lock the pressed-state edge semantics.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor joined_input_pointer --no-fail-fast`, and
+  `git diff --check`.
+- Perf/source repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-joined-pointer-finish-noop-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1251/1035/527/6/219/0/10`
+  on
+  `target/fret-diag/editor-controls-joined-pointer-finish-noop-codex-20260623/1782227879510/bundle.schema2.json`.
+- Compared with the prior inspector/property-group content-inline bundle at
+  `1270/1045/527/6/219/0/3`, this is a tiny paint-source hygiene win rather than a structural
+  layout breakthrough. `diag stats --sort time --top 12 --verbose` still reports aggregate
+  invalidation at `calls/nodes=103/948`, max invalidation at `14/201`, and the worst contained
+  relayout at `layout.nodes=63`. The remaining owner is still the action-root `ViewCache`
+  contained relayout through `session_shell.rs`, `input_group/frame.rs`, and real control
+  subtrees.
+- Rollback is local: restore the unconditional paint invalidation/redraw calls in
+  `ecosystem/fret-ui-editor/src/primitives/input_group/joined.rs` pointer up/cancel handlers and
+  remove the two `JoinedInputPointerState` edge tests, then rerun the same focused nextest filter
+  and editor-controls click-stress perf probe.

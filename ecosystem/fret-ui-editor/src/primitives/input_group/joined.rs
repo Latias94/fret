@@ -22,6 +22,26 @@ struct JoinedInputPointerState {
     last_pointer_type: Option<fret_core::PointerType>,
 }
 
+impl JoinedInputPointerState {
+    fn press_text_input(&mut self, pointer_type: fret_core::PointerType) -> bool {
+        self.last_pointer_type = Some(pointer_type);
+        if self.pressed {
+            return false;
+        }
+        self.pressed = true;
+        true
+    }
+
+    fn release(&mut self, pointer_type: fret_core::PointerType) -> bool {
+        self.last_pointer_type = Some(pointer_type);
+        if !self.pressed {
+            return false;
+        }
+        self.pressed = false;
+        true
+    }
+}
+
 #[derive(Debug)]
 struct EditorJoinedInputContents {
     pub(crate) root: AnyElement,
@@ -153,34 +173,40 @@ fn editor_joined_input_frame_with_overrides<H: UiHost>(
                 return false;
             }
 
-            if let Ok(mut st) = pointer_state_down.lock() {
-                st.pressed = true;
-                st.last_pointer_type = Some(down.pointer_type);
+            let changed = pointer_state_down
+                .lock()
+                .map(|mut st| st.press_text_input(down.pointer_type))
+                .unwrap_or(false);
+            if changed {
+                host.invalidate(Invalidation::Paint);
+                host.request_redraw(action_cx.window);
             }
-            host.invalidate(Invalidation::Paint);
-            host.request_redraw(action_cx.window);
             false
         });
 
         let pointer_state_up = pointer_state.clone();
         let on_up: OnPointerUp = Arc::new(move |host, action_cx: ActionCx, _up| {
-            if let Ok(mut st) = pointer_state_up.lock() {
-                st.pressed = false;
-                st.last_pointer_type = Some(_up.pointer_type);
+            let changed = pointer_state_up
+                .lock()
+                .map(|mut st| st.release(_up.pointer_type))
+                .unwrap_or(false);
+            if changed {
+                host.invalidate(Invalidation::Paint);
+                host.request_redraw(action_cx.window);
             }
-            host.invalidate(Invalidation::Paint);
-            host.request_redraw(action_cx.window);
             false
         });
 
         let pointer_state_cancel = pointer_state.clone();
         let on_cancel: OnPointerCancel = Arc::new(move |host, action_cx: ActionCx, _cancel| {
-            if let Ok(mut st) = pointer_state_cancel.lock() {
-                st.pressed = false;
-                st.last_pointer_type = Some(_cancel.pointer_type);
+            let changed = pointer_state_cancel
+                .lock()
+                .map(|mut st| st.release(_cancel.pointer_type))
+                .unwrap_or(false);
+            if changed {
+                host.invalidate(Invalidation::Paint);
+                host.request_redraw(action_cx.window);
             }
-            host.invalidate(Invalidation::Paint);
-            host.request_redraw(action_cx.window);
             false
         });
 
@@ -235,4 +261,37 @@ fn editor_joined_input_frame_with_overrides<H: UiHost>(
 
         vec![root]
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::PointerType;
+
+    #[test]
+    fn joined_input_pointer_finish_without_text_input_press_is_noop() {
+        let mut state = JoinedInputPointerState::default();
+
+        assert!(!state.release(PointerType::Mouse));
+        assert!(!state.pressed);
+        assert_eq!(state.last_pointer_type, Some(PointerType::Mouse));
+    }
+
+    #[test]
+    fn joined_input_pointer_state_reports_only_pressed_edges() {
+        let mut state = JoinedInputPointerState::default();
+
+        assert!(state.press_text_input(PointerType::Mouse));
+        assert!(state.pressed);
+        assert_eq!(state.last_pointer_type, Some(PointerType::Mouse));
+
+        assert!(!state.press_text_input(PointerType::Mouse));
+        assert!(state.pressed);
+
+        assert!(state.release(PointerType::Mouse));
+        assert!(!state.pressed);
+
+        assert!(!state.release(PointerType::Mouse));
+        assert!(!state.pressed);
+    }
 }
