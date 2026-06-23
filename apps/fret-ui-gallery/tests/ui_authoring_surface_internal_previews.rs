@@ -593,6 +593,8 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
         "src/ui/previews/gallery/overlays/overlay.rs",
         &[
             "pub(in crate::ui) fn preview_overlay(",
+            "pub(in crate::ui) fn preview_overlay_fixed_rows(",
+            "fn preview_overlay_with_row_wrap(",
             ") -> Vec<AnyElement> {",
             "let mut out: Vec<AnyElement> = vec![overlays, last_action_status];",
         ],
@@ -601,6 +603,11 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
         overlay_normalized
             .contains("vec![layout::compose_body(cx,models.clone()).into_element(cx)]"),
         "src/ui/previews/gallery/overlays/overlay.rs should keep the cached overlay body as a landed preview root",
+    );
+    assert!(
+        overlay_normalized
+            .contains("vec![layout::compose_body_fixed_rows(cx,models.clone()).into_element(cx)]"),
+        "src/ui/previews/gallery/overlays/overlay.rs should expose a fixed-row overlay body for perf harnesses",
     );
     assert!(
         read_path(&manifest_path(
@@ -612,14 +619,16 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
     let layout_normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/overlays/overlay/layout.rs",
         &[
-            "fn row(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
+            "fn row(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>, wrap_rows: bool) -> impl UiChild + use<>",
             "fn row_end(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
             "pub(super) fn compose_body(cx: &mut AppComponentCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
+            "pub(super) fn compose_body_fixed_rows(cx: &mut AppComponentCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
+            "fn compose_body_with_row_wrap(cx: &mut AppComponentCx<'_>, models: OverlayModels, wrap_rows: bool) -> impl UiChild + use<>",
         ],
     );
     assert_eq!(
         layout_normalized.matches("->implUiChild+use<>").count(),
-        3,
+        5,
         "src/ui/previews/gallery/overlays/overlay/layout.rs should keep the typed row/body helper lane",
     );
     assert!(
@@ -1950,4 +1959,17 @@ fn page_chrome_torture_keeps_control_rows_off_doc_wrap_rows() {
             "chrome_torture should keep local control rows off doc wrap rows for the perf harness: {forbidden}"
         );
     }
+}
+
+#[test]
+fn page_chrome_torture_uses_fixed_overlay_rows() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/torture/chrome_torture.rs",
+        &["out.extend(preview_overlay_fixed_rows("],
+    );
+
+    assert!(
+        !normalized.contains("out.extend(preview_overlay("),
+        "chrome_torture should keep the overlay body on the fixed-row perf harness path",
+    );
 }

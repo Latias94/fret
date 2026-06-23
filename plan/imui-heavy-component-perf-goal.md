@@ -4909,3 +4909,36 @@ popover overlay root solve tail.
   remaining root `Stack` solve cost, but it removes unnecessary wrap patch work from the steady
   chrome torture page and gives the next loop a cleaner owner split. If a future regression needs
   chrome rows to wrap again, restore the doc-layout helpers locally and re-run the same perf script.
+
+## 2026-06-23 Chrome Torture Fixed Overlay Rows
+
+- Source cut: `chrome_torture` now uses `preview_overlay_fixed_rows(...)`, which keeps the
+  standalone overlay preview on its original wrapping body while routing the torture harness
+  through no-wrap overlay rows. This preserves the broader gallery preview behavior and limits the
+  fixed-row assumption to the perf surface.
+- Structural coverage:
+  `gallery_overlay_preview_retains_intentional_raw_boundaries` now locks both overlay entry points,
+  and `page_chrome_torture_uses_fixed_overlay_rows` prevents the torture page from drifting back to
+  the wrapping overlay body.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_preview_retains_intentional_raw_boundaries page_chrome_torture_uses_fixed_overlay_rows page_chrome_torture_keeps_control_rows_off_doc_wrap_rows page_chrome_torture_uses_control_label_roles --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-fixed-overlay-rows-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1989/1725/1160/47/224/0/3`
+  on `target/fret-diag/chrome-fixed-overlay-rows-codex-20260623/1782172766874/bundle.schema2.json`.
+  The prior accepted fixed-control-row bundle reported `2061/1817/754/45/202/0/2`.
+- `diag stats --sort time --top 20 --verbose` on the new bundle showed the intended mechanism:
+  flex-wrap patch activity is now absent from the bundle. The remaining worst frame is root
+  `Stack` layout with `request_build_roots=1240us`, `phase2 compute=1064us`, root apply `472us`,
+  and `layout.engine_solve=1160us`, plus the existing overlay content `Container` solve around
+  `97us`.
+- Interpretation: keep this cut because total and layout p95 improve and the targeted flex-wrap
+  patch owner is gone. Do not mistake the larger `layout.engine_solve` p95 for a solved root
+  layout problem: this cut exposes ordinary Taffy solve as the next owner rather than eliminating
+  root solve. The next chrome pass should target root solve/apply or overlay content structure with
+  direct before/after attribution, not another broad gallery shell bypass.
+- Rollback is local: switch `chrome_torture` back from `preview_overlay_fixed_rows(...)` to
+  `preview_overlay(...)`, remove the fixed-row overlay entry point and guard, then re-run the same
+  focused gate and chrome torture steady perf script.

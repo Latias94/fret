@@ -23,7 +23,7 @@ pub(in crate::ui) fn preview_chrome_torture(
     let body = ui::v_flex(|cx| {
         let mut out = Vec::new();
 
-        out.extend(preview_overlay(
+        out.extend(preview_overlay_fixed_rows(
             cx,
             popover_open,
             dialog_open,
