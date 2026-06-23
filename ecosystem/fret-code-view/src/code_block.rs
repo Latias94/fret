@@ -1,6 +1,7 @@
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
+    fmt::Write as _,
     rc::Rc,
     sync::Arc,
 };
@@ -104,18 +105,6 @@ fn build_line_numbers(prepared: &crate::prepare::PreparedCodeBlock) -> Arc<str> 
         }
         s
     })
-}
-
-fn line_number_text(prepared: &crate::prepare::PreparedCodeBlock, line_i: usize) -> Arc<str> {
-    if !prepared.show_line_numbers || line_i >= prepared.lines.len() {
-        return Arc::<str>::from("");
-    }
-    let n = line_i + 1;
-    Arc::<str>::from(format!(
-        "{n:>width$}",
-        n = n,
-        width = prepared.line_number_width
-    ))
 }
 
 #[track_caller]
@@ -1260,6 +1249,26 @@ fn overlay_chrome<H: UiHost>(
 
 const WINDOWED_LINE_NUMBER_SEPARATOR: &str = "  ";
 
+fn decimal_digits(mut n: usize) -> usize {
+    let mut digits = 1;
+    while n >= 10 {
+        n /= 10;
+        digits += 1;
+    }
+    digits
+}
+
+fn write_windowed_line_number_prefix(
+    out: &mut String,
+    prepared: &crate::prepare::PreparedCodeBlock,
+    line_i: usize,
+) {
+    let n = line_i + 1;
+    let width = prepared.line_number_width.max(decimal_digits(n));
+    let _ = write!(out, "{n:>width$}");
+    out.push_str(WINDOWED_LINE_NUMBER_SEPARATOR);
+}
+
 fn build_code_block_line_rich(
     row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
@@ -1269,15 +1278,50 @@ fn build_code_block_line_rich(
     let Some(line) = prepared.lines.get(line_i) else {
         return AttributedText::new(Arc::<str>::from(""), Arc::<[TextSpan]>::from([]));
     };
-    let mut text = String::new();
-    let mut spans: Vec<TextSpan> = Vec::new();
+    if !prepared.show_line_numbers
+        && line.segments.len() == 1
+        && let Some(seg) = line.segments.first()
+        && !seg.text.is_empty()
+    {
+        return AttributedText::new(
+            Arc::clone(&seg.text),
+            Arc::<[TextSpan]>::from([TextSpan {
+                len: seg.text.len(),
+                shaping: code_shaping.clone(),
+                paint: TextPaintStyle {
+                    fg: seg.highlight.and_then(|h| row_theme.syntax_color(h)),
+                    ..Default::default()
+                },
+            }]),
+        );
+    }
+
+    let code_len = line
+        .segments
+        .iter()
+        .map(|seg| seg.text.len())
+        .sum::<usize>();
+    let prefix_len = if prepared.show_line_numbers {
+        prepared
+            .line_number_width
+            .max(decimal_digits(line_i.saturating_add(1)))
+            + WINDOWED_LINE_NUMBER_SEPARATOR.len()
+    } else {
+        0
+    };
+    let mut text = String::with_capacity(prefix_len + code_len);
+    let mut spans: Vec<TextSpan> = Vec::with_capacity(
+        line.segments
+            .iter()
+            .filter(|seg| !seg.text.is_empty())
+            .count()
+            + usize::from(prepared.show_line_numbers),
+    );
 
     if prepared.show_line_numbers {
-        let number = line_number_text(prepared, line_i);
-        text.push_str(number.as_ref());
-        text.push_str(WINDOWED_LINE_NUMBER_SEPARATOR);
+        write_windowed_line_number_prefix(&mut text, prepared, line_i);
         spans.push(TextSpan {
-            len: number.len() + WINDOWED_LINE_NUMBER_SEPARATOR.len(),
+            len: prefix_len,
             shaping: code_shaping.clone(),
             paint: TextPaintStyle {
                 fg: Some(row_theme.muted_fg),
@@ -1984,6 +2028,39 @@ mod tests {
         assert_eq!("let value = 1;".len(), rich.spans[1].len);
         assert_eq!(rich.spans[0].paint.fg, Some(row_theme.muted_fg));
         assert_eq!(rich.spans[1].paint.fg, None);
+    }
+
+    #[test]
+    fn windowed_plain_single_segment_rows_reuse_prepared_text() {
+        let text = Arc::<str>::from("let value = 1;");
+        let mut prepared = crate::prepare::PreparedCodeBlock {
+            show_line_numbers: false,
+            ..Default::default()
+        };
+        prepared.lines.push(crate::prepare::PreparedLine {
+            segments: vec![crate::prepare::PreparedSegment {
+                text: Arc::clone(&text),
+                highlight: None,
+            }],
+        });
+
+        let row_theme = CodeBlockLineRowTheme {
+            mono_size: Px(10.0),
+            mono_line_height: Px(14.0),
+            code_shaping: TextShapingStyle::default(),
+            text_style: TextStyle::default(),
+            fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
+            syntax_colors: HashMap::new(),
+        };
+
+        let rich =
+            build_code_block_line_rich(&row_theme, &prepared, 0, &TextShapingStyle::default());
+
+        assert!(Arc::ptr_eq(&rich.text, &text));
+        assert_eq!(rich.text.as_ref(), "let value = 1;");
+        assert_eq!(rich.spans.len(), 1);
+        assert_eq!("let value = 1;".len(), rich.spans[0].len);
     }
 
     #[test]

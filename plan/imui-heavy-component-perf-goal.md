@@ -5082,3 +5082,37 @@ popover overlay root solve tail.
 - Rollback is local: restore the direct `update(&args.draft, ...)` and `write_last_draft(...)`
   writes in `ecosystem/fret-ui-editor/src/controls/numeric_input/keyboard.rs`, then rerun the same
   focused test and perf script.
+
+## 2026-06-23 Code-View Row Rich Fast Path
+
+- Source cut: the windowed code-view row rich builder now avoids a per-row `Arc<str>` allocation for
+  line numbers by formatting the line-number prefix directly into the final row buffer. It also
+  adds a no-line-number single-segment fast path that reuses the prepared segment `Arc<str>` instead
+  of copying it into a new row string.
+- Structural coverage:
+  `windowed_plain_single_segment_rows_reuse_prepared_text` locks the no-line-number fast path with
+  `Arc::ptr_eq`, while the existing `windowed_line_numbers_are_folded_into_single_rich_line` test
+  keeps the visible line-number prefix and muted span behavior unchanged.
+- Focused gates:
+  `cargo fmt -p fret-code-view`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-row-rich-fastpath-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1910/1784/36/25/108/0/3`
+  on `target/fret-diag/code-view-row-rich-fastpath-codex-20260623/1782176552637/bundle.json`.
+  The previous post-chrome rerank was `1959/1828/40/24/107/0/4`, so this is a small
+  allocation-path improvement rather than a new solved band.
+- Wheel-scroll guard:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-row-rich-fastpath-wheel-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=937/803/21/22/119/0/4`
+  on
+  `target/fret-diag/code-view-row-rich-fastpath-wheel-codex-20260623/1782176588370/bundle.schema2.json`.
+- `diag stats --sort time --top 20 --verbose` on the mount bundle confirmed the remaining owner
+  shape did not change: the worst frame still has `33` mounted `StyledText` batch roots and
+  `renderer.text_prepare.counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)=53/0/291/158/133/158/113`.
+  Keep treating this as a row-rich allocation cleanup, not as a renderer text-blob retention fix.
+- Rollback is local: restore `line_number_text(...)`, remove
+  `write_windowed_line_number_prefix(...)` / `decimal_digits(...)`, remove the single-segment
+  fast path and its test, then rerun the same `fret-code-view code_block` test plus code-view
+  mount/wheel perf scripts.
