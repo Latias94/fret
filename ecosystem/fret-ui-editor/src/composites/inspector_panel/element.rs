@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    SpacingLength,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
+    SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -21,6 +21,52 @@ mod search;
 use header::{InspectorPanelHeaderInput, inspector_panel_header_element};
 
 use super::{InspectorPanelCx, InspectorPanelOptions};
+
+fn inspector_panel_content_shell_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Auto,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn element_root_layout(element: &AnyElement) -> Option<&LayoutStyle> {
+    match &element.kind {
+        ElementKind::Container(props) => Some(&props.layout),
+        ElementKind::Semantics(props) => Some(&props.layout),
+        ElementKind::SemanticFlex(props) => Some(&props.flex.layout),
+        ElementKind::Stack(props) => Some(&props.layout),
+        ElementKind::Column(props) => Some(&props.layout),
+        ElementKind::Row(props) => Some(&props.layout),
+        ElementKind::Flex(props) => Some(&props.layout),
+        ElementKind::Grid(props) => Some(&props.layout),
+        _ => None,
+    }
+}
+
+fn element_root_test_id(element: &AnyElement) -> Option<&Arc<str>> {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|decoration| decoration.test_id.as_ref())
+}
+
+fn can_inline_single_content_child(
+    element: &AnyElement,
+    content_test_id: Option<&Arc<str>>,
+) -> bool {
+    let Some(layout) = element_root_layout(element) else {
+        return false;
+    };
+    if *layout != inspector_panel_content_shell_layout() {
+        return false;
+    }
+
+    content_test_id.is_none() || element_root_test_id(element).is_none()
+}
 
 pub(super) fn inspector_panel_element<H, Toolbar, Contents>(
     cx: &mut ElementContext<'_, H>,
@@ -112,18 +158,21 @@ where
             },
         );
 
-        let content_children = contents(cx, &panel_cx);
-        let mut content = if content_children.len() == 1 {
+        let mut content_children = contents(cx, &panel_cx);
+        let mut content = if content_children.len() == 1
+            && can_inline_single_content_child(
+                &content_children[0],
+                options.content_test_id.as_ref(),
+            ) {
+            let mut content = content_children.pop().expect("single content child");
+            if let Some(test_id) = options.content_test_id.as_ref() {
+                content = content.test_id(test_id.clone());
+            }
+            content
+        } else if content_children.len() == 1 {
             cx.container(
                 ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    layout: inspector_panel_content_shell_layout(),
                     padding: Edges::all(Px(0.0)).into(),
                     ..Default::default()
                 },
@@ -132,14 +181,7 @@ where
         } else {
             cx.flex(
                 FlexProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    layout: inspector_panel_content_shell_layout(),
                     direction: Axis::Vertical,
                     gap: SpacingLength::Px(gap),
                     padding: Edges::all(Px(0.0)).into(),
@@ -151,7 +193,9 @@ where
             )
         };
 
-        if let Some(test_id) = options.content_test_id.as_ref() {
+        if let Some(test_id) = options.content_test_id.as_ref()
+            && element_root_test_id(&content).is_none()
+        {
             content = content.test_id(test_id.clone());
         }
 

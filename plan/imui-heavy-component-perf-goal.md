@@ -5432,3 +5432,38 @@ popover overlay root solve tail.
   duplicated layout owner, but do not count it as a performance breakthrough.
 - Rollback is local: restore `layout: options.layout` on the inner `FlexProps` if a future layout
   contract or geometry gate proves the inner shell needs to inherit caller layout again.
+
+## 2026-06-23 Editor-Controls Inspector/Group Single-Content Shell Inline
+
+- Source cut: `InspectorPanel` now reuses a single content child directly when the child root already
+  owns the same `Fill/Auto` shell layout and stamping `content_test_id` would not overwrite an
+  existing root `test_id`. `PropertyGroup` now does the same for a single `Flex` content root,
+  moving the group content padding onto that `Flex` so cookbook-style `PropertyGrid` content keeps
+  its visual spacing without an extra layout wrapper.
+- Coverage:
+  `inspector_panel_inlines_single_fill_auto_content_root_for_content_test_id`,
+  `inspector_panel_keeps_single_content_shell_when_child_root_has_test_id`,
+  `property_group_inlines_single_fill_auto_flex_content_and_keeps_padding`, and
+  `property_group_keeps_single_content_shell_when_child_root_has_test_id` lock the direct-child and
+  test-id collision paths.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor inspector_panel --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor property_group --no-fail-fast`,
+  `git diff --check`.
+- Perf repro:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-inspector-property-group-content-inline-r3-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1270/1045/527/6/219/0/3`
+  on
+  `target/fret-diag/editor-controls-inspector-property-group-content-inline-r3-codex-20260623/1782226563435/bundle.schema2.json`.
+- Compared with the prior `PropertyGroup` inner-layout evidence at
+  `1316/1089/552/5/223/0/3`, this is a small real win on the editor-controls path. `diag stats`
+  shows invalidation nodes dropping `1060 -> 948`, max invalidation nodes `225 -> 201`, and the
+  worst contained-relayout frame at `layout.nodes=63` instead of `65`. The remaining owner is still
+  the action-root `ViewCache` contained relayout through `session_shell.rs`, `input_group/frame.rs`,
+  and control row subtrees.
+- Rollback is local: restore the single-child content `Container` branches in
+  `ecosystem/fret-ui-editor/src/composites/inspector_panel/element.rs` and
+  `ecosystem/fret-ui-editor/src/composites/property_group/element.rs`, remove the four structure
+  tests above, then rerun the same `inspector_panel` / `property_group` nextest filters and the
+  editor-controls click-stress perf probe.

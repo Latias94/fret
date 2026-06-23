@@ -4,7 +4,7 @@ use super::{InspectorPanel, InspectorPanelOptions};
 use crate::test_support::WrappingTextServices;
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
-use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, Length, SizeStyle};
+use fret_ui::element::{AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{UiTree, declarative};
 
@@ -27,6 +27,24 @@ fn find_text<'a>(element: &'a AnyElement, expected: &str) -> Option<&'a AnyEleme
 
 fn lock_id(id: &Arc<Mutex<Option<GlobalElementId>>>, label: &str) -> GlobalElementId {
     id.lock().unwrap().unwrap_or_else(|| panic!("{label} id"))
+}
+
+fn fill_auto_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Auto,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn element_test_id(element: &AnyElement) -> Option<&str> {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|decoration| decoration.test_id.as_deref())
 }
 
 #[test]
@@ -198,4 +216,109 @@ fn inspector_panel_title_only_uses_direct_header_and_single_content_shells() {
     );
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+}
+
+#[test]
+fn inspector_panel_inlines_single_fill_auto_content_root_for_content_test_id() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let title: Arc<str> = Arc::from("Inspector");
+
+    let panel = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "inspector-panel-inline-content-layout",
+        |cx| {
+            InspectorPanel::new(None)
+                .options(InspectorPanelOptions {
+                    title: Some(title.clone()),
+                    content_test_id: Some(Arc::from("inspector.panel.content")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |_cx, _panel| Vec::new(),
+                    |cx, _panel| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: fill_auto_layout(),
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.text("Body")],
+                        )]
+                    },
+                )
+        },
+    );
+
+    let ElementKind::Container(_) = &panel.kind else {
+        panic!("inspector panel should still return a container root");
+    };
+    let content = &panel.children[0].children[1];
+    assert_eq!(element_test_id(content), Some("inspector.panel.content"));
+    assert!(
+        matches!(content.kind, ElementKind::Container(_)),
+        "single layout-equivalent content root should be reused directly"
+    );
+    assert!(
+        matches!(content.children[0].kind, ElementKind::Text(_)),
+        "single layout-equivalent content root should not be wrapped in another container"
+    );
+}
+
+#[test]
+fn inspector_panel_keeps_single_content_shell_when_child_root_has_test_id() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let title: Arc<str> = Arc::from("Inspector");
+
+    let panel = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds(),
+        "inspector-panel-content-test-id-collision",
+        |cx| {
+            InspectorPanel::new(None)
+                .options(InspectorPanelOptions {
+                    title: Some(title.clone()),
+                    content_test_id: Some(Arc::from("inspector.panel.content")),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |_cx, _panel| Vec::new(),
+                    |cx, _panel| {
+                        vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: fill_auto_layout(),
+                                    ..Default::default()
+                                },
+                                |cx| vec![cx.text("Body")],
+                            )
+                            .test_id("inspector.panel.child"),
+                        ]
+                    },
+                )
+        },
+    );
+
+    let content = &panel.children[0].children[1];
+    assert_eq!(element_test_id(content), Some("inspector.panel.content"));
+    assert!(
+        matches!(content.kind, ElementKind::Container(_)),
+        "inspector content should keep a wrapper when the child root already owns a test id"
+    );
+
+    let child = &content.children[0];
+    assert_eq!(element_test_id(child), Some("inspector.panel.child"));
+    assert!(
+        matches!(child.kind, ElementKind::Container(_)),
+        "the original child root should stay below the content wrapper"
+    );
+    assert!(
+        matches!(child.children[0].kind, ElementKind::Text(_)),
+        "the original child content should remain intact"
+    );
 }

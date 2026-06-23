@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    SpacingLength,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
+    SizeStyle, SpacingEdges, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -22,6 +22,50 @@ mod header;
 use header::{PropertyGroupHeaderElementOptions, property_group_header_element};
 
 use super::{OnPropertyGroupToggle, PropertyGroupOptions};
+
+fn property_group_content_shell_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Auto,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn zero_spacing_edges() -> SpacingEdges {
+    Edges::all(Px(0.0)).into()
+}
+
+fn element_root_test_id(element: &AnyElement) -> Option<&Arc<str>> {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|decoration| decoration.test_id.as_ref())
+}
+
+fn try_inline_single_content_flex(
+    element: &mut AnyElement,
+    content_test_id: Option<&Arc<str>>,
+    content_padding: Edges,
+) -> bool {
+    if content_test_id.is_some() && element_root_test_id(element).is_some() {
+        return false;
+    }
+
+    let ElementKind::Flex(props) = &mut element.kind else {
+        return false;
+    };
+    if props.layout != property_group_content_shell_layout()
+        || props.padding != zero_spacing_edges()
+    {
+        return false;
+    }
+
+    props.padding = content_padding.into();
+    true
+}
 
 pub(super) fn property_group_element<H, HeaderActions, Contents>(
     cx: &mut ElementContext<'_, H>,
@@ -105,24 +149,37 @@ where
         out.push(header);
 
         if !collapsed || !options.collapsible {
-            let content_children = contents(cx);
+            let mut content_children = contents(cx);
             let content_padding: Edges = Edges {
                 top: Px(density.padding_y.0 + 2.0),
                 right: density.padding_x,
                 bottom: Px(density.padding_y.0 + 4.0),
                 left: density.padding_x,
             };
-            let mut content = if content_children.len() == 1 {
+
+            let mut inline_content = None;
+            if content_children.len() == 1 {
+                let mut child = content_children.pop().expect("single content child");
+                if try_inline_single_content_flex(
+                    &mut child,
+                    options.content_test_id.as_ref(),
+                    content_padding,
+                ) {
+                    if let Some(test_id) = options.content_test_id.as_ref() {
+                        child = child.test_id(test_id.clone());
+                    }
+                    inline_content = Some(child);
+                } else {
+                    content_children.push(child);
+                }
+            }
+
+            let mut content = if let Some(content) = inline_content {
+                content
+            } else if content_children.len() == 1 {
                 cx.container(
                     ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
+                        layout: property_group_content_shell_layout(),
                         padding: content_padding.into(),
                         ..Default::default()
                     },
@@ -131,14 +188,7 @@ where
             } else {
                 cx.flex(
                     FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
+                        layout: property_group_content_shell_layout(),
                         direction: Axis::Vertical,
                         gap: SpacingLength::Px(gap),
                         padding: content_padding.into(),
@@ -149,7 +199,9 @@ where
                     move |_cx| content_children,
                 )
             };
-            if let Some(test_id) = options.content_test_id.as_ref() {
+            if let Some(test_id) = options.content_test_id.as_ref()
+                && element_root_test_id(&content).is_none()
+            {
                 content = content.test_id(test_id.clone());
             }
             out.push(content);
