@@ -5158,3 +5158,36 @@ popover overlay root solve tail.
   the blob LRU or a stable same-scene bucket taking the full diff path.
 - Rollback is doc-only: remove this no-cut note if a future experiment produces contradictory
   evidence and lands a renderer-retention change with focused `fret-render-wgpu` tests.
+
+## 2026-06-23 Code-View Plain Text Row Fast Path Trial No-Cut
+
+- Trial: I attempted to route plain windowed code lines through a lighter `TextProps` path when
+  rows were single-segment plain text. This looked plausible because the torture fixture uses
+  `PlainIndexed` content.
+- Rejection reason: `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_view.rs` still enables
+  `.show_line_numbers(true)` for `code_view_torture`, so visible rows need the muted line-number
+  span and remain on the `StyledText` path. `diag stats --sort time --top 25 --verbose` confirmed
+  the trial did not remove the measured `StyledText` first-solve roots at
+  `ecosystem/fret-code-view/src/code_block.rs:1561`.
+- Focused gates while the trial code was present:
+  `cargo fmt -p fret-code-view --check` and
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-plain-text-fastpath-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2034/1867/62/30/137/0/4`
+  on
+  `target/fret-diag/code-view-plain-text-fastpath-codex-20260623/1782177958598/bundle.schema2.json`,
+  worse than the accepted row-rich fast path mount result `1910/1784/36/25/108/0/3`.
+- Wheel-scroll guard:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-plain-text-fastpath-wheel-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=913/784/16/25/116/0/3`
+  on
+  `target/fret-diag/code-view-plain-text-fastpath-wheel-codex-20260623/1782178210452/bundle.schema2.json`.
+  Treat this as noise: the expected fast path did not hit and the renderer/text owner shape stayed
+  unchanged.
+- Decision: reject and leave no source change. Do not reattempt a plain `TextProps` row path for
+  this perf surface unless a no-line-number code-view repro becomes primary or line-number rendering
+  is split structurally so the main code text can avoid per-row `StyledText` batches.
+- Rollback is doc-only: remove this note only if a future line-number structural split produces
+  contradictory evidence and lands with focused `fret-code-view` tests plus the same mount/wheel
+  perf probes.
