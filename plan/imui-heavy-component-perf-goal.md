@@ -5116,3 +5116,45 @@ popover overlay root solve tail.
   `write_windowed_line_number_prefix(...)` / `decimal_digits(...)`, remove the single-segment
   fast path and its test, then rerun the same `fret-code-view code_block` test plus code-view
   mount/wheel perf scripts.
+
+## 2026-06-23 Code-View Blob Retention Audit No-Cut
+
+- Follow-up audit after the row-rich fast path checked the renderer text retention path before
+  attempting a broader scene-signature change. The relevant renderer path is
+  `crates/fret-render-wgpu/src/text/prepare/cache_flow.rs`,
+  `crates/fret-render-wgpu/src/text/prepare/driver.rs`,
+  `crates/fret-render-wgpu/src/text/pin_state.rs`, and
+  `crates/fret-render-wgpu/src/text/atlas_flow.rs`.
+- Current renderer contract summary: native builds already keep a bounded released-blob LRU by
+  default (`FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES`, default `256` in
+  `crates/fret-render-text/src/cache_tuning.rs`). `try_reuse_cached_blob(...)` can resurrect a
+  released blob and preserve its `TextBlobId` when the same `TextBlobKey` returns. Scene bucket
+  fast reuse is intentionally stricter: `SceneTextSignature` is the exact ordered
+  `TextBlobId` sequence for the bucket, and tests such as
+  `prepare_for_scene_reuses_unchanged_ring_bucket_signature` and
+  `prepare_for_scene_diffs_mutated_ring_bucket_incrementally` require changed scenes to take the
+  full diff path.
+- Existing evidence re-read with `diag stats --sort time --top 30 --verbose`:
+  - Mount bundle
+    `target/fret-diag/code-view-row-rich-fastpath-codex-20260623/1782176552637/bundle.json`
+    reports `p95.us(total/layout/prepaint/paint)=1910/1784/42/121`. The worst frame still has
+    `33` `StyledText` batch roots and renderer text counts
+    `53/0/291/158/133/158/113` for
+    `blobs/fast_reuse/pinned/prewarm/retained/added/removed`.
+  - Wheel bundle
+    `target/fret-diag/code-view-row-rich-fastpath-wheel-codex-20260623/1782176588370/bundle.schema2.json`
+    reports `max.us(total/layout/prepaint/paint)=937/803/32/119`. The top scroll frames mount
+    new row text (`9` to `15` new blob/shape misses in renderer text diagnostics) while atlas
+    pinning mostly retains existing glyph keys.
+- Interpretation: do not loosen renderer scene-bucket reuse to compare stable blob keys instead of
+  `TextBlobId` from this evidence. The visible churn comes from scrolling into previously unseen
+  code lines, so there is no prior blob key to resurrect in those frames. Atlas pin diffing is
+  already retaining most glyph keys; the remaining code-view owner is the row/window structural
+  mount path (`VirtualList` structural children changed, `StyledText` first-solve batches), not a
+  proven renderer blob-retention defect.
+- Next code-view work should target a row/window representation change that reduces `StyledText`
+  first-solve batches or structural child churn with direct before/after attribution. Avoid
+  broadening `SceneTextSignature` reuse unless a future repro shows repeated same-key rows missing
+  the blob LRU or a stable same-scene bucket taking the full diff path.
+- Rollback is doc-only: remove this no-cut note if a future experiment produces contradictory
+  evidence and lands a renderer-retention change with focused `fret-render-wgpu` tests.
