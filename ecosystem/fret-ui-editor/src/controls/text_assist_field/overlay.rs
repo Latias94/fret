@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::{Edges, Px, Size};
 use fret_runtime::Model;
-use fret_ui::action::ActionCx;
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{AnyElement, Overflow};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, UiHost};
@@ -93,16 +93,12 @@ pub(super) fn request_text_assist_overlay<H: UiHost>(
                 .read(&query_model_for_dismiss, Clone::clone)
                 .ok()
                 .unwrap_or_default();
-            let _ = host
-                .models_mut()
-                .update(&dismissed_query_model_for_dismiss, |value| {
-                    value.clear();
-                    value.push_str(&query);
-                });
-            let _ = host.models_mut().update(&open_for_dismiss, |value| {
-                *value = false;
-            });
-            host.request_redraw(action_cx.window);
+            let dismissed_query_changed =
+                set_model_if_changed(host, &dismissed_query_model_for_dismiss, query.clone());
+            let open_changed = set_model_if_changed(host, &open_for_dismiss, false);
+            if dismissed_query_changed || open_changed {
+                host.request_redraw(action_cx.window);
+            }
         }));
 
     OverlayController::request(cx, request);
@@ -111,4 +107,93 @@ pub(super) fn request_text_assist_overlay<H: UiHost>(
 #[track_caller]
 pub(super) fn overlay_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     cx.local_model(|| false)
+}
+
+fn set_model_if_changed<T>(host: &mut dyn UiActionHost, model: &Model<T>, next: T) -> bool
+where
+    T: Clone + PartialEq + 'static,
+{
+    let unchanged = host
+        .models_mut()
+        .read(model, |value| value == &next)
+        .unwrap_or(false);
+    if unchanged {
+        return false;
+    }
+
+    host.models_mut()
+        .update(model, |value| *value = next.clone())
+        .is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_ui::action::UiActionHostAdapter;
+
+    use super::*;
+
+    #[test]
+    fn dismiss_request_does_not_bump_already_closed_models() {
+        let mut app = App::new();
+        let query_model = app.models_mut().insert(String::from("Cube"));
+        let dismissed_query_model = app.models_mut().insert(String::from("Cube"));
+        let open_model = app.models_mut().insert(false);
+        let query_revision = query_model.revision(&app);
+        let dismissed_revision = dismissed_query_model.revision(&app);
+        let open_revision = open_model.revision(&app);
+
+        {
+            let mut host = UiActionHostAdapter { app: &mut app };
+            let query = host
+                .models_mut()
+                .read(&query_model, Clone::clone)
+                .unwrap_or_default();
+            let dismissed_query_changed =
+                set_model_if_changed(&mut host, &dismissed_query_model, query.clone());
+            let open_changed = set_model_if_changed(&mut host, &open_model, false);
+            assert!(!dismissed_query_changed);
+            assert!(!open_changed);
+        }
+
+        assert_eq!(query_model.revision(&app), query_revision);
+        assert_eq!(dismissed_query_model.revision(&app), dismissed_revision);
+        assert_eq!(open_model.revision(&app), open_revision);
+    }
+
+    #[test]
+    fn dismiss_request_updates_open_and_dismissed_query_when_needed() {
+        let mut app = App::new();
+        let query_model = app.models_mut().insert(String::from("ca"));
+        let dismissed_query_model = app.models_mut().insert(String::new());
+        let open_model = app.models_mut().insert(true);
+        let query_revision = query_model.revision(&app);
+        let dismissed_revision = dismissed_query_model.revision(&app);
+        let open_revision = open_model.revision(&app);
+
+        {
+            let mut host = UiActionHostAdapter { app: &mut app };
+            let query = host
+                .models_mut()
+                .read(&query_model, Clone::clone)
+                .unwrap_or_default();
+            assert!(set_model_if_changed(
+                &mut host,
+                &dismissed_query_model,
+                query.clone()
+            ));
+            assert!(set_model_if_changed(&mut host, &open_model, false));
+        }
+
+        assert_eq!(query_model.revision(&app), query_revision);
+        assert_ne!(dismissed_query_model.revision(&app), dismissed_revision);
+        assert_ne!(open_model.revision(&app), open_revision);
+        assert_eq!(
+            app.models_mut()
+                .read(&dismissed_query_model, Clone::clone)
+                .unwrap(),
+            "ca"
+        );
+        assert!(!app.models_mut().read(&open_model, Clone::clone).unwrap());
+    }
 }

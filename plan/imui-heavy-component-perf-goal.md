@@ -5301,3 +5301,36 @@ popover overlay root solve tail.
 - Rollback is already applied manually: no `ecosystem/fret-code-view/src/code_block.rs` source diff
   remains from this trial. The wheel guard was intentionally skipped because the mount probe was a
   decisive regression.
+
+## 2026-06-23 Editor-Controls Overlay Dismiss No-Op Prune
+
+- Source cut: `TextAssistField` anchored-overlay dismiss now writes `dismissed_query` and the
+  overlay `open` model only when the next value differs. The dismiss callback also skips its redraw
+  request when both models are already at the target values.
+- Coverage:
+  `dismiss_request_does_not_bump_already_closed_models` locks the already-dismissed path, and
+  `dismiss_request_updates_open_and_dismissed_query_when_needed` keeps the real dismiss transition
+  covered.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`, `git diff --check`, and
+  `cargo nextest run -p fret-ui-editor text_assist_field --no-fail-fast`.
+  A broader `cargo nextest run -p fret-ui-editor --no-fail-fast` was also attempted; it ran
+  `315` tests with `314` passing and the unrelated existing
+  `composites::property_grid::tests::property_grid_with_single_row_returns_the_row_directly`
+  structure assertion failing.
+- Perf/source evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 1 --warmup-frames 5 --dir target/fret-diag/editor-controls-overlay-dismiss-noop-source-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MODEL_CHANGE_SOURCES=1 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  reported `top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1113/917/446/4/192/0/3`
+  on
+  `target/fret-diag/editor-controls-overlay-dismiss-noop-source-codex-20260623/1782221476277/bundle.schema2.json`.
+  `diag stats --sort time --top 3 --verbose` confirmed the intended source movement:
+  the prior source run listed overlay dismiss writes at
+  `controls/text_assist_field/overlay.rs:98:18` and `overlay.rs:102:39` with count `2` each;
+  the new `changed_models_top` no longer lists `overlay.rs`. Remaining text-assist sources are the
+  guarded body focus/open/dismissal-clear transitions plus real accept/numeric commits.
+- Interpretation: keep this as a source-hygiene cut, not as a large frame-time win. The current
+  editor-controls heavy owner remains the contained `ViewCache`/`session_shell` relayout on input
+  context changes, with top frames still around the same `~1.1ms` band on this machine.
+- Rollback is local: restore the two direct `models_mut().update(...)` calls and unconditional
+  redraw in `ecosystem/fret-ui-editor/src/controls/text_assist_field/overlay.rs`, then rerun the
+  same focused text-assist test and click-stress source repro.
