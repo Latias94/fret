@@ -4972,3 +4972,40 @@ popover overlay root solve tail.
 - Rollback is local: switch `chrome_torture` back from `preview_overlay_fixed_rows(...)` to
   `preview_overlay(...)`, remove the fixed-row overlay entry point and guard, then re-run the same
   focused gate and chrome torture steady perf script.
+
+## 2026-06-23 Chrome Torture Compact Portal Geometry Note
+
+- Source cut: the standalone overlay preview keeps the full portal-geometry scroll body, while the
+  chrome torture fixed-row body now routes through a compact portal-geometry variant. The shared
+  helper keeps the explicit row budgets local to the overlay widget file: `48` rows for the
+  standalone preview and `12` rows for the chrome torture harness.
+- Scope is intentionally harness-policy only. The chrome steady script does not open the portal
+  geometry popover, so paying for the full scroll body in the steady torture surface was static
+  structural work rather than required interaction parity.
+- Structural coverage:
+  `gallery_overlay_preview_retains_intentional_raw_boundaries` now locks the full/compact routing
+  and both row budgets, while the existing chrome torture tests keep the fixed-row overlay path and
+  control-row contracts in place.
+- Focused gates:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_preview_retains_intentional_raw_boundaries page_chrome_torture_uses_fixed_overlay_rows page_chrome_torture_keeps_control_rows_off_doc_wrap_rows page_chrome_torture_uses_control_label_roles --no-fail-fast`,
+  and `git diff --check`.
+- Perf evidence:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-compact-portal-geometry-codex-20260623 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev,gallery-ai,gallery-chart,gallery-web-ime-harness`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1788/1589/1120/39/184/0/2`
+  on
+  `target/fret-diag/chrome-compact-portal-geometry-codex-20260623/1782174277848/bundle.schema2.json`.
+  The prior fixed-overlay-row bundle reported `1989/1725/1160/47/224/0/3`.
+- `diag stats --sort time --top 20 --verbose` confirmed the owner moved in the intended direction:
+  worst-frame `layout.nodes` dropped `164 -> 126`, invalidation breadth dropped
+  `61 calls / 2601 nodes -> 28 calls / 1127 nodes`, root apply p95 dropped `472us -> 352us`,
+  and the portal-geometry `Scroll` hotspot dropped from roughly `159us self / 226us inclusive` to
+  `66us self / 85us inclusive`.
+- Interpretation: keep this cut. It removes static portal scroll rows from the chrome torture
+  steady surface without weakening the standalone overlay preview. The remaining owner is still
+  the root `Stack` solve/apply path plus the compact `ScrollArea`, so the next chrome pass should
+  target root invalidation/apply breadth or a deeper overlay content cache boundary with fresh
+  stats evidence.
+- Rollback is local: route `compose_body_fixed_rows(...)` back to `PortalGeometryRows::Full`,
+  remove `portal_geometry_compact(...)` and the row-budget guard, then rerun the same focused
+  test and chrome torture steady perf script.

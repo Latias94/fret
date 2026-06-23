@@ -37,20 +37,27 @@ pub(super) fn compose_body(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
 ) -> impl UiChild + use<> {
-    compose_body_with_row_wrap(cx, models, true)
+    compose_body_with_row_wrap(cx, models, true, PortalGeometryRows::Full)
 }
 
 pub(super) fn compose_body_fixed_rows(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
 ) -> impl UiChild + use<> {
-    compose_body_with_row_wrap(cx, models, false)
+    compose_body_with_row_wrap(cx, models, false, PortalGeometryRows::Compact)
+}
+
+#[derive(Clone, Copy)]
+enum PortalGeometryRows {
+    Full,
+    Compact,
 }
 
 fn compose_body_with_row_wrap(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
     wrap_rows: bool,
+    portal_geometry_rows: PortalGeometryRows,
 ) -> impl UiChild + use<> {
     let _ = cx;
     ui::v_flex(move |cx| {
@@ -95,7 +102,10 @@ fn compose_body_with_row_wrap(
             edge_row,
             overlays_row,
             modal_row,
-            widgets::portal_geometry(cx, &models),
+            match portal_geometry_rows {
+                PortalGeometryRows::Full => widgets::portal_geometry(cx, &models).into_element(cx),
+                PortalGeometryRows::Compact => widgets::portal_geometry_compact(cx, &models).into_element(cx),
+            },
         ]
     })
     .gap(Space::N2)

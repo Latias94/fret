@@ -595,6 +595,21 @@ pub(super) fn portal_geometry(
     cx: &mut AppComponentCx<'_>,
     models: &OverlayModels,
 ) -> impl UiChild + use<> {
+    portal_geometry_with_rows(cx, models, 48)
+}
+
+pub(super) fn portal_geometry_compact(
+    cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
+    portal_geometry_with_rows(cx, models, 12)
+}
+
+fn portal_geometry_with_rows(
+    cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+    row_count: usize,
+) -> impl UiChild + use<> {
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
 
     let popover = shadcn::Popover::from_open(portal_geometry_popover_open.clone())
@@ -633,7 +648,7 @@ pub(super) fn portal_geometry(
             },
         );
 
-    let items = (1..=48)
+    let items = (1..=row_count.max(1))
         .map(|i| overlay_scroll_row_text(cx, format!("Scroll item {i:02}")).into_element(cx))
         .collect::<Vec<_>>();
 
