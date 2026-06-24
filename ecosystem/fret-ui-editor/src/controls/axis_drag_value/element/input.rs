@@ -13,6 +13,7 @@ use crate::primitives::chrome::joined_text_input_style;
 pub(super) struct AxisDragValueTypingInputArgs {
     pub(super) draft: Model<String>,
     pub(super) density: EditorDensity,
+    pub(super) layout: LayoutStyle,
     pub(super) input_chrome: TextInputStyle,
     pub(super) text_style: TextStyle,
     pub(super) enabled: bool,
@@ -35,6 +36,7 @@ pub(super) fn axis_drag_value_typing_input<H: UiHost>(
     let AxisDragValueTypingInputArgs {
         draft,
         density,
+        layout,
         input_chrome,
         text_style,
         enabled,
@@ -45,14 +47,18 @@ pub(super) fn axis_drag_value_typing_input<H: UiHost>(
     } = args;
 
     let mut props = TextInputProps::new(draft);
-    props.layout = LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Auto,
-            min_height: Some(Length::Px(density.row_height)),
+    props.layout = if typing {
+        LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Auto,
+                min_height: Some(Length::Px(density.row_height)),
+                ..Default::default()
+            },
             ..Default::default()
-        },
-        ..Default::default()
+        }
+    } else {
+        layout
     };
     props.enabled = enabled && typing;
     props.focusable = focusable && typing;

@@ -118,6 +118,7 @@ where
         AxisDragValueTypingInputArgs {
             draft: draft.clone(),
             density,
+            layout,
             input_chrome,
             text_style: text_style.clone(),
             enabled,
@@ -130,6 +131,10 @@ where
     let input = typing_input.input;
     let input_id = typing_input.input_id;
     let is_focused = typing_input.is_focused;
+
+    if !typing {
+        return input;
+    }
 
     axis_drag_value_sync_typing_focus(
         cx,

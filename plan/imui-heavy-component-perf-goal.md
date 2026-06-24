@@ -5579,3 +5579,33 @@ popover overlay root solve tail.
 - Interpretation: this is measurement-surface hardening only. The current code-view evidence still
   separates the light steady/direct-entry path from the heavier transition mount path; the next
   code-view optimization should target transition mount owners rather than mixing the two probes.
+
+## 2026-06-24 AxisDragValue Hidden Typing Branch Trim
+
+- Source cut: `AxisDragValue` now matches the earlier `DragValue` and `Slider` hidden typing branch
+  contract. When the control is in scrub mode, the typing branch keeps only the zero-sized hidden
+  `TextInput` root mounted for stable identity/focus target continuity, and skips the full
+  input-group frame chrome, axis/prefix/suffix/reset segments, typing focus sync, key handler, and
+  draft-error cleanup work.
+- Active typing mode is unchanged: the branch still builds the full axis-aware typing field with
+  focus/key/error/reset behavior.
+- Coverage:
+  `axis_drag_value_uses_stable_session_shell_for_scrub_and_typing_branches` now requires the
+  inactive typing branch to be a direct `TextInput` root and forbids restoring the full
+  `Container`/`Flex`/hover/pointer/pressable chrome wrapper stack.
+- Focused gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor axis_drag_value --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-editor drag_value slider axis_drag_value --no-fail-fast`.
+- Perf evidence note: this is a structural editor-control-family cleanup, not a claimed
+  click-stress frame-time win. The current
+  `apps/fret-cookbook/examples/imui_editor_controls_basics.rs` and
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/*` surfaces cover `NumericInput`,
+  `DragValue`, and `Slider`-adjacent paths, but do not currently mount `AxisDragValue`; a direct
+  perf bundle would not exercise this cut. If `AxisDragValue` becomes part of a measured editor
+  controls repro, rerun the focused repro with `FRET_DIAG_MODEL_CHANGE_SOURCES=1` before making a
+  larger session-shell change.
+- Rollback is local: remove the non-typing fast return in
+  `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_element.rs`, stop passing
+  the hidden branch layout into `axis_drag_value_typing_input(...)`, and relax the strengthened
+  structure assertions in `ecosystem/fret-ui-editor/src/controls/axis_drag_value/tests.rs`.
