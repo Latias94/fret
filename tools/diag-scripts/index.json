@@ -645,7 +645,8 @@
       ],
       "target_hints": [
         "Exercises the manual path that repeatedly opens and dismisses editor-control overlays.",
-        "Covers text assist open/dismiss/reopen, option accept, roughness typing, search focus, and color popup open/dismiss."
+        "Covers text assist open/dismiss/reopen, option accept, roughness typing, search focus, and color popup open/dismiss.",
+        "Resets diagnostics after the cookbook root settles so startup resize/header measurement does not pollute the interaction window."
       ]
     },
     {
@@ -10235,14 +10236,27 @@
     {
       "id": "ui-gallery-inspector-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json",
-      "required_capabilities": [],
-      "required_launch_features": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-inspector-torture",
         "ui-gallery-inspector-torture-keep-alive"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "inspector",
+        "perf",
+        "scroll",
+        "transition",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts from the lightweight intro page so the nav-search/page-switch transition probe does not inherit the diagnostics default overlay page.",
+        "Measures the transition into inspector_torture before the scroll stress; use ui-gallery-inspector-torture-scroll-direct-entry for the steady direct-entry scroll surface."
+      ]
     },
     {
       "id": "ui-gallery-item-demo-link-action-state",
