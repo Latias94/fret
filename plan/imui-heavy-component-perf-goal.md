@@ -5501,3 +5501,39 @@ popover overlay root solve tail.
   `ecosystem/fret-ui-editor/src/primitives/input_group/joined.rs` pointer up/cancel handlers and
   remove the two `JoinedInputPointerState` edge tests, then rerun the same focused nextest filter
   and editor-controls click-stress perf probe.
+
+## 2026-06-24 Data Table Row Selection Snapshot No-Cut
+
+- Rechecked the retained data-table direct-entry perf surface after code-view direct-entry proved
+  light enough to stop owning the current heavy-component lane. The current retained data-table
+  baseline command was:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-retained-current-rerank-codex-20260624 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Baseline result:
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2374/1780/504/179/439/0/0`
+  on
+  `target/fret-diag/data-table-retained-current-rerank-codex-20260624/1782264558744/bundle.schema2.json`.
+  `diag stats` still attributed the hot path to retained `VirtualList` layout/root apply shape:
+  `ecosystem/fret-ui-kit/src/declarative/table.rs:6846` at about `755us` inclusive, 33 row
+  `HoverRegion` batch roots (`subtree_nodes=66`), and repeated `ManagedSurface` declarative
+  instance changes from `table.rs:423`.
+- Trial: retained rows captured a parent `state_value.row_selection.clone()` snapshot and used
+  `row_selection.contains(&row_key)` in the row builder instead of adding a per-row
+  `cx.watch_model(&state).paint().read_ref(...)` observation for selected state.
+- Trial perf command:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-row-selection-snapshot-codex-20260624 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Trial result:
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2629/1973/497/208/491/0/0`
+  on
+  `target/fret-diag/data-table-row-selection-snapshot-codex-20260624/1782265551761/bundle.schema2.json`.
+  The intended source movement was too small: layout observation model items moved only slightly in
+  some frames, while invalidation stayed around `calls=905 nodes=25277` and the same
+  `VirtualList` / row `HoverRegion` / `ManagedSurface` owners remained.
+- Decision: reject and leave no source change. Per-row selected-state observation is not the
+  dominant retained-table owner on this repro, and replacing it with a parent snapshot regressed p95.
+  The next retained data-table cut should target the actual layout/root-apply owner: row hover batch
+  roots, fixed-row `ManagedSurface` geometry ownership, or a narrower retained-list/root apply
+  contract. Do not make `ManagedSurface` diff-equal globally without a framework-level contract and
+  gates; `crates/fret-ui/src/declarative/mount.rs` intentionally treats opaque managed hooks as
+  changed during declarative render.
+- Rollback is already applied manually: no
+  `ecosystem/fret-ui-kit/src/declarative/table.rs` source diff remains from this trial.
