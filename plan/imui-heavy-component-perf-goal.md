@@ -5562,3 +5562,20 @@ popover overlay root solve tail.
   the promoted registry.
 - Interpretation: this is measurement-surface hardening only. The next chrome cut should still be
   driven by fresh root/layout evidence, not by more registry churn.
+
+## 2026-06-24 Code-View Direct-Entry Registry Note
+
+- The code-view torture direct-entry measurement surface is now promoted as a suite-reachable
+  asset:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json`, with
+  a legacy redirect stub at
+  `tools/diag-scripts/ui-gallery-code-view-torture-mount-direct-entry.json` and a suite manifest at
+  `tools/diag-scripts/suites/perf-ui-gallery-code-view-torture-mount-direct-entry/suite.json`.
+- Structural coverage in `apps/fret-ui-gallery/tests/code_view_perf_surface.rs` now locks the
+  promoted name, direct-entry start page, no-nav-search setup, registry promotion, and redirect
+  pointer.
+- `tools/diag-scripts/index.json` was refreshed so the direct-entry script is suite-reachable in
+  the promoted registry.
+- Interpretation: this is measurement-surface hardening only. The current code-view evidence still
+  separates the light steady/direct-entry path from the heavier transition mount path; the next
+  code-view optimization should target transition mount owners rather than mixing the two probes.

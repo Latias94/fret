@@ -6600,6 +6600,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-code-view-torture-mount-direct-entry",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "perf-ui-gallery-code-view-torture-mount-direct-entry"
+      ],
+      "tags": [
+        "code-view",
+        "direct-entry",
+        "mount",
+        "perf",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the code_view_torture page so nav search and page-switch transitions do not dominate the probe.",
+        "Captures the direct-entry mount shape after the gallery chrome and font state settle."
+      ]
+    },
+    {
       "id": "ui-gallery-code-view-torture-wheel-scroll-hit-changes",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-hit-changes.json",
       "required_capabilities": [],

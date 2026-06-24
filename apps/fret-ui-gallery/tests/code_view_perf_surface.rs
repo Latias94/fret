@@ -1,5 +1,12 @@
 use serde_json::Value;
 
+const CODE_VIEW_TORTURE_MOUNT_DIRECT_ENTRY_SUITE: &str = include_str!(
+    "../../../tools/diag-scripts/suites/perf-ui-gallery-code-view-torture-mount-direct-entry/suite.json"
+);
+const CODE_VIEW_TORTURE_MOUNT_DIRECT_ENTRY_REDIRECT: &str = include_str!(
+    "../../../tools/diag-scripts/ui-gallery-code-view-torture-mount-direct-entry.json"
+);
+
 #[test]
 fn code_view_mount_direct_entry_perf_script_starts_on_target_page_without_nav_search() {
     let script = include_str!(
@@ -63,6 +70,71 @@ fn code_view_mount_direct_entry_perf_script_starts_on_target_page_without_nav_se
     assert!(
         reset_indices[1] < capture_index,
         "direct-entry perf script should capture after the second reset_diagnostics",
+    );
+}
+
+#[test]
+fn code_view_mount_direct_entry_perf_suite_stays_promoted_in_registry() {
+    let suite = serde_json::from_str::<Value>(CODE_VIEW_TORTURE_MOUNT_DIRECT_ENTRY_SUITE)
+        .expect("valid code-view direct-entry suite");
+    let registry =
+        serde_json::from_str::<Value>(include_str!("../../../tools/diag-scripts/index.json"))
+            .expect("valid diag script registry");
+
+    assert_eq!(
+        suite.get("kind").and_then(Value::as_str),
+        Some("diag_script_suite_manifest"),
+        "code-view direct-entry perf suite should stay on the suite-manifest format",
+    );
+
+    let scripts = suite
+        .get("scripts")
+        .and_then(Value::as_array)
+        .expect("code-view direct-entry perf suite scripts");
+    assert_eq!(
+        scripts.iter().filter_map(Value::as_str).collect::<Vec<_>>(),
+        vec![
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json"
+        ],
+        "code-view direct-entry perf suite should keep the promoted direct-entry script path stable",
+    );
+
+    let registry_entries = registry
+        .get("scripts")
+        .and_then(Value::as_array)
+        .expect("diag script registry entries");
+    let entry = registry_entries
+        .iter()
+        .find(|entry| {
+            entry.get("path").and_then(Value::as_str)
+                == Some(
+                    "tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json",
+                )
+        })
+        .expect("registry should promote the code-view direct-entry perf script");
+
+    assert!(
+        entry
+            .get("suite_memberships")
+            .and_then(Value::as_array)
+            .is_some_and(|suite_memberships| {
+                suite_memberships.iter().any(|suite_name| {
+                    suite_name.as_str()
+                        == Some("perf-ui-gallery-code-view-torture-mount-direct-entry")
+                })
+            }),
+        "registry should keep the code-view direct-entry perf suite membership",
+    );
+}
+
+#[test]
+fn code_view_mount_direct_entry_legacy_redirect_points_at_the_promoted_script() {
+    assert!(
+        CODE_VIEW_TORTURE_MOUNT_DIRECT_ENTRY_REDIRECT.contains("\"kind\": \"script_redirect\"")
+            && CODE_VIEW_TORTURE_MOUNT_DIRECT_ENTRY_REDIRECT.contains(
+                "\"to\": \"tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json\""
+            ),
+        "legacy code-view direct-entry redirect should keep pointing at the promoted perf script",
     );
 }
 
