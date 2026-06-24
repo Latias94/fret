@@ -48,6 +48,14 @@ historical records remain in:
   (`p95.total` roughly `612-714us`), so the active investigation should stay on the current
   heavier code-view / inspector / editor-controls class surfaces unless fresh evidence contradicts
   that ranking.
+- The retained `DataTable` `ManagedSurface` opt-in revision experiment was tried and rejected. A
+  stable revision on `ManagedSurfaceProps` looked like a plausible contract slice, but the perf
+  probe regressed from
+  `target/fret-diag/data-table-retained-current-rerank-codex-20260624/1782264558744/bundle.schema2.json`
+  at `p95.us(total/layout/solve/prepaint/paint)=2374/1780/504/179/439` to
+  `target/fret-diag/data-table-stable-revision-codex-20260624/1782269015856/bundle.json` at
+  `2826/2119/574/213/509`. The revision hook was reverted, and `ManagedSurface` stays opaque by
+  default.
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
