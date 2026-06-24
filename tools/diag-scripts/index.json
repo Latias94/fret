@@ -6092,6 +6092,34 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-chrome-torture-steady-direct-entry",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady-direct-entry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-ai",
+        "gallery-chart",
+        "gallery-dev",
+        "gallery-web-ime-harness"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-chrome-torture-steady-direct-entry"
+      ],
+      "tags": [
+        "chrome",
+        "direct-entry",
+        "perf",
+        "steady",
+        "torture",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on chrome_torture so nav search and page-switch transitions do not dominate the probe.",
+        "Captures the steady direct-entry chrome surface after the gallery chrome and font state settle."
+      ]
+    },
+    {
       "id": "ui-gallery-chrome-torture-typical",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
       "required_capabilities": [],

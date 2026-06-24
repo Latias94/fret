@@ -5545,3 +5545,20 @@ popover overlay root solve tail.
   changed during declarative render.
 - Rollback is already applied manually: no
   `ecosystem/fret-ui-kit/src/declarative/table.rs` source diff remains from this trial.
+
+## 2026-06-24 Chrome Torture Steady Direct-Entry Registry Note
+
+- The chrome torture steady direct-entry measurement surface is now promoted as a suite-reachable
+  asset:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady-direct-entry.json`, with
+  the legacy redirect stub preserved at
+  `tools/diag-scripts/ui-gallery-chrome-torture-steady-direct-entry.json` and the suite manifest
+  at
+  `tools/diag-scripts/suites/perf-ui-gallery-chrome-torture-steady-direct-entry/suite.json`.
+- Structural coverage in `apps/fret-ui-gallery/tests/chrome_perf_surface.rs` now locks the
+  promoted name, direct-entry start page, no-nav-search setup, registry promotion, and redirect
+  pointer.
+- `tools/diag-scripts/index.json` was refreshed so the direct-entry script is suite-reachable in
+  the promoted registry.
+- Interpretation: this is measurement-surface hardening only. The next chrome cut should still be
+  driven by fresh root/layout evidence, not by more registry churn.
