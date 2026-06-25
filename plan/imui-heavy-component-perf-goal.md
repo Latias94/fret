@@ -59,6 +59,45 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-25 Retained DataTable Fixed-Row Background Wrapper Removal Note
+
+- The retained `DataTable` fixed-row row chrome was flattened one layer further in
+  `ecosystem/fret-ui-kit/src/declarative/table.rs`: selected/hovered row backgrounds now paint
+  directly from the row `ManagedSurface` instead of being wrapped in a separate background-only
+  `Container`.
+- The retained fixed-row helper path still keeps the `ManagedSurface` boundary, but the extra
+  background shell is gone. Measured rows already used inline `h_row(...).bg(...)`, so this keeps
+  the fixed/measured split aligned.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-kit retained_table_fixed_row_group_does_not_clone_children_for_layout_or_paint table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper --no-fail-fast`
+  and `cargo fmt --all --check`.
+- Follow-up still needed: rerun the retained DataTable perf probe on the current torture script so
+  the reduced row-shell depth can be compared against the latest `VirtualList` / row-root owners.
+
+## 2026-06-25 IMUI Editor Proof Demo Inspector Shell Prune Note
+
+- The review-only `imui_editor_proof_demo` inspector surface now avoids building empty
+  `PropertyGroup` shells for sections that do not match the current query. `InspectorPanelCx`
+  keeps an ASCII fast path for case-insensitive matching, and the Object/Material/Gradient/
+  Advanced surfaces now return `Option<AnyElement>` with explicit `any_match` flags.
+- `render_editor_inspector_content(...)` only pushes matched sections, so a narrow query no longer
+  carries the full object/material/gradient/advanced owner set through the proof shell.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor inspector_panel buffered --no-fail-fast`,
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`,
+  and `cargo nextest run -p fret-examples --test imui_editor_asset_ref_field_surface --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-steady-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/imui-editor-proof-gradient-stop-color-popup-steady-codex-20260625 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`
+- Result bundle:
+  `target/fret-diag/imui-editor-proof-gradient-stop-color-popup-steady-codex-20260625/1782390252619/bundle.schema2.json`
+  reported `p95.us(total/layout/prepaint/paint)=182/18/93/87`, with no `layout.engine_solve`
+  hotspot and only embedded viewport service globals changing in the steady window.
+- Interpretation: keep this structural prune. It is not a broad proof-demo rewrite, just a
+  matched-section owner split that removes unnecessary shells from the empty-query path and keeps
+  the gradient popup steady surface very light. Rollback is local: restore unconditional section
+  mounting and the old lowercase query string path if a future search regression appears.
+
 ## 2026-06-21 Inspector Nav Shell Shrink Note
 
 - The inspector direct-entry lane got a narrower structural shrink in `apps/fret-ui-gallery/src/ui/nav.rs`:
@@ -5580,6 +5619,31 @@ popover overlay root solve tail.
   separates the light steady/direct-entry path from the heavier transition mount path; the next
   code-view optimization should target transition mount owners rather than mixing the two probes.
 
+## 2026-06-24 Code-View X-Scrollbar Shell Guard Trial No-Cut
+
+- I tested a narrow `code-view` windowed-shell cut in
+  `ecosystem/fret-code-view/src/code_block.rs`: keep the horizontal scrollbar shell conditional on
+  `scrollbar_x_enabled` so the default `show_scrollbar_x = false` path would return the bare X
+  `Scroll` element instead of always building the nested stack wrapper.
+- Focused gates passed after the experiment and revert:
+  `cargo fmt -p fret-code-view --check` and
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`.
+- Perf repro:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-scrollbar-shell-guard-codex-20260624 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Accepted evidence from the rerank baseline remains the better local comparison point:
+  `target/fret-diag/code-view-transition-current-codex-20260623g/1782170671862/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1861/1739/50/24/123`.
+- Trial evidence:
+  `target/fret-diag/code-view-scrollbar-shell-guard-codex-20260624/1782279368709/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2137/1935/41/37/165`.
+- `diag stats --sort time --top 20 --verbose` on the trial bundle showed the hot frame still
+  rooted in code-view `VirtualList` row mounting with `renderer.text_prepare.flush=416us` and
+  `layout.root_phases.roots(apply)=334us`. The trial did not reduce the measured transition path
+  versus the current accepted rerank; it therefore stays a no-cut and was reverted.
+- Rollback is local: restore the unconditional horizontal X shell in
+  `render_code_block_windowed_lines(...)` and keep the existing windowed row / text / keep-alive
+  cuts as the current accepted state.
+
 ## 2026-06-24 AxisDragValue Hidden Typing Branch Trim
 
 - Source cut: `AxisDragValue` now matches the earlier `DragValue` and `Slider` hidden typing branch
@@ -5609,3 +5673,120 @@ popover overlay root solve tail.
   `ecosystem/fret-ui-editor/src/controls/axis_drag_value/element/typing_element.rs`, stop passing
   the hidden branch layout into `axis_drag_value_typing_input(...)`, and relax the strengthened
   structure assertions in `ecosystem/fret-ui-editor/src/controls/axis_drag_value/tests.rs`.
+
+## 2026-06-25 TextAssistField Focus Slot No-Cut
+
+- 我试过把 `TextAssistField` 的本地焦点过渡态从
+  `cx.local_model(|| false)` 改成 `slot_state` / `keyed_slot_state`，目标是去掉一个
+  `Model<bool>` 写源。
+- 做过的三种实现都被证伪：
+  1. `slot_id + state_for`
+  2. `slot_id + state_for + request_animation_frame`
+  3. `keyed_slot_state(query_model.id(), ...)`
+- 共同的失败模式一致：`tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json`
+  在 step 5 等待 `cookbook.imui_editor_controls.assist.list` 时超时，
+  `target/fret-diag/editor-controls-text-assist-focus-slot-codex-20260625c/1782321398939-script-step-0005-wait_until-timeout/bundle.schema2.json`
+  里 `selector_resolution_trace` 对 `cookbook.imui_editor_controls.assist.list` 的
+  `match_count` 仍是 `0`，而 `changed_models` / `changed_globals` 仍为空。
+- 这个结果说明这条焦点态不能只换成 slot-local state；它还承担了当前视图重算/展开节拍。
+  已回滚到原来的 `local_model` 方案，并保留 `cargo fmt -p fret-ui-editor --check` 与
+  `cargo nextest run -p fret-ui-editor text_assist_field --no-fail-fast` 作为回退门。
+- 下一步不要再沿 `TextAssistField` 的这个焦点槽硬拧，应该转去别的 editor-controls owner，
+  或先把能证明 view-cache 失效语义的更小切片单独拆出来。
+
+## 2026-06-25 File-Tree Row Flex Collapse
+
+- Follow-up cut on the retained file-tree surface: the row content no longer routes through a
+  single-child `Flex` shell. `file_tree_view_retained_v0(...)` now places `StyledText` directly
+  under the row `Container`, while keeping the `Pressable` boundary, row padding, clip, and row
+  text policy unchanged.
+- Structural coverage was updated so the mounted row path is now
+  `Pressable -> Container -> StyledText` instead of `Pressable -> Container -> Flex -> StyledText`.
+- Focused gates:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo nextest run -p fret-ui-kit file_tree --no-fail-fast`,
+  and the gallery guard
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_file_tree_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll-steady.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/file-tree-row-flex-cut-codex-20260625 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Perf evidence:
+  `target/fret-diag/file-tree-row-flex-cut-codex-20260625/1782325307527/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=173/91/0/36/62/0/0`.
+  `diag stats --sort time --top 30 --verbose` showed the measured frames were now dominated by
+  paint-only input/hover activity; the retained row batch no longer exposed the previous layout
+  solve / root-apply shape, and the hot file-tree row walk is now `declarative_instance_changed`
+  around `ecosystem/fret-ui-kit/src/declarative/file_tree.rs:324`.
+- Interpretation: keep this cut. It removes one unnecessary layout shell per mounted row while
+  preserving the semantics and clipping contract. If a later row-centering regression needs the
+  wrapper back, restore `file_tree_row_content_props(...)` and the `cx.flex(...)` content shell,
+  then rerun the same file-tree steady script.
+
+## 2026-06-25 ColorEdit Preview Shell Shrink
+
+- 这次切的是 `ColorEdit` 预览层的外壳，不动 `session_shell`、焦点、overlay 或输入模型契约。
+- `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview/fill.rs` 里的
+  `color_preview_stack(...)` 现在直接返回分支内层节点，去掉了原先重复的一层外部 `Container`
+  包装；`opaque` / `checkerboard` 两个预览分支都保留了原有内部结构。
+- 结构覆盖已经补上两条：
+  `opaque_preview_returns_the_solid_fill_root_directly` 和
+  `checkerboard_preview_keeps_the_stack_root_directly`。
+- 已验门：
+  `cargo fmt -p fret-ui-editor --check`
+  与
+  `cargo nextest run -p fret-ui-editor opaque_preview_returns_the_solid_fill_root_directly checkerboard_preview_keeps_the_stack_root_directly --no-fail-fast`。
+- perf probe 这次跑的是
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json`，
+  但在 step 24 的 `capture_screenshot_timeout` 处失败；失败前主 bundle 已落盘：
+  `target/fret-diag/editor-controls-color-preview-stack-cut-codex-20260625/1782322717615-cookbook-imui-editor-controls-click-stress/bundle.schema2.json`。
+- `diag stats` 读数：
+  `snapshots=102`、`model_changes=14`、`global_changes=17`、
+  `p95 total/layout/prepaint/paint=653/534/3/118`、`layout roots(apply)=176/175`、
+  `dispatch p95=107`、`hit_test p95=8`。
+- 和旧的 editor-controls node-profile 基线
+  `target/fret-diag/editor-controls-node-profile-codex-20260623d/1782148840486/bundle.schema2.json`
+  的 `903/763/9/294` 相比，这次整体数字更低，但两次脚本形态不完全一致，不能当成严格
+  回归/改进结论。
+- 当前判断：这刀是可回退的，而且在调用点已有固定尺寸和圆角容器时，外层包装确实是重复的。
+  下一步先换一个不依赖截图的更小 perf script，再继续拆 editor-controls 里更重的 owner。
+
+## 2026-06-25 ColorEdit Gradient Popup Bundle Probe
+
+- 为了拿到更贴近 `ColorEdit` 的 bundle 证据，新增了
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-bundle.json`。
+  这个 probe 保留了 `imui_editor_proof_demo` 的 full layout / root viewport 路径，但去掉了
+  screenshot-only 的收尾步骤，专门收 open popup 的 bundle。
+- 验证门通过：
+  `python3 -m json.tool tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-bundle.json >/dev/null`
+  和
+  `cargo run -p fretboard-dev --release -- diag script validate tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-bundle.json`。
+- perf command:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/color-edit-gradient-stop-popup-bundle-root-codex-20260625 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`
+- `fretboard-dev diag stats` on the worst bundle
+  `target/fret-diag/color-edit-gradient-stop-popup-bundle-root-codex-20260625/1782327951194/bundle.schema2.json`
+  reported `p95.us(total/layout/prepaint/paint/dispatch/hit_test)=10159/7759/238/2162/94/0`.
+  `layout roots(apply)=16305/289`, `layout.engine_solve p95=3291us`, and the top owner remained the
+  proof demo's outer `Scroll` / root `Stack` rather than the `color_preview_stack(...)` body itself.
+- Interpretation: the preview-shell collapse is still structurally correct, but this bundle shows the
+  proof-demo shell is the current heavy owner on this path. Keep the cut as a cleanup, but do not
+  treat it as a measured 120Hz win yet. The next ColorEdit-local step should either shrink the
+  proof-demo scroll shell or switch to a narrower surface with less outer chrome.
+
+## 2026-06-25 ColorEdit Gradient Popup Steady-State Probe
+
+- 为了把启动与过滤过渡噪音剥离开，新增了
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-steady-bundle.json`。
+  这个 probe 先把搜索过滤和 popup 打开走完，再 `reset_diagnostics`，只在稳定态收 bundle。
+- 验证门通过：
+  `python3 -m json.tool tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-steady-bundle.json >/dev/null`
+  和
+  `cargo run -p fretboard-dev --release -- diag script validate tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-steady-bundle.json`。
+- perf command:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-steady-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/color-edit-gradient-stop-popup-steady-codex-20260625 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`
+- 稳态 bundle:
+  `target/fret-diag/color-edit-gradient-stop-popup-steady-codex-20260625/1782342132569/bundle.schema2.json`
+  的 `diag stats` 只剩 `windows=1 snapshots=7 considered=6`，`p95.us(total/layout/prepaint/paint/dispatch/hit_test)=203/9/114/80/0/0`，
+  并且 `hot p50/p95` 里没有 `layout.engine_solve` 或 `paint.widget` 的显式热点。
+- 对比之前的 root bundle
+  `target/fret-diag/color-edit-gradient-stop-popup-bundle-root-codex-20260625/1782327951194/bundle.schema2.json`
+  仍然能看到 proof demo 的外层 `Scroll` / root `Stack` 才是 transition 阶段的重 owner，说明之前那条 bundle 的大头是壳层切换，不是 popup 本体。
+- Interpretation: 这条线已经证明 ColorEdit popup 的稳态本身很轻；下一步如果继续拆 ColorEdit，应当盯 proof-demo 外壳或更窄的 surface，而不是继续往 popup 细节上加刀。

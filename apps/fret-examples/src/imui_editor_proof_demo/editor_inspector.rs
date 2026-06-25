@@ -196,8 +196,9 @@ fn render_editor_inspector_content(
 ) -> Vec<AnyElement> {
     let mut out = Vec::new();
 
-    out.push(render_editor_object_surface(
+    let object_surface = render_editor_object_surface(
         cx,
+        panel_cx,
         EditorObjectModels {
             name: models.name.clone(),
             buffered_name: models.buffered_name.clone(),
@@ -212,7 +213,11 @@ fn render_editor_inspector_content(
             notes: models.notes.clone(),
             notes_outcome: models.notes_outcome.clone(),
         },
-    ));
+    );
+    let object_any_match = object_surface.any_match;
+    if let Some(element) = object_surface.element {
+        out.push(element);
+    }
 
     let material_surface = render_editor_material_surface(
         cx,
@@ -231,19 +236,23 @@ fn render_editor_inspector_content(
         },
     );
     let material_any_match = material_surface.any_match;
-    out.push(material_surface.element);
+    if let Some(element) = material_surface.element {
+        out.push(element);
+    }
 
-    out.push(
-        render_editor_gradient_surface(
-            cx,
-            EditorGradientModels {
-                angle_degrees: models.gradient_angle.clone(),
-                stops: models.gradient_stops.clone(),
-                next_id: models.gradient_next_id.clone(),
-            },
-        )
-        .into_element(cx),
+    let gradient_surface = render_editor_gradient_surface(
+        cx,
+        panel_cx,
+        EditorGradientModels {
+            angle_degrees: models.gradient_angle.clone(),
+            stops: models.gradient_stops.clone(),
+            next_id: models.gradient_next_id.clone(),
+        },
     );
+    let gradient_any_match = gradient_surface.any_match;
+    if let Some(element) = gradient_surface.element {
+        out.push(element);
+    }
 
     let advanced_surface = render_editor_advanced_surface(
         cx,
@@ -265,9 +274,12 @@ fn render_editor_inspector_content(
         },
     );
     let advanced_any_match = advanced_surface.any_match;
-    out.push(advanced_surface.element);
+    if let Some(element) = advanced_surface.element {
+        out.push(element);
+    }
 
-    let any_match = material_any_match || advanced_any_match;
+    let any_match =
+        object_any_match || material_any_match || gradient_any_match || advanced_any_match;
 
     if !panel_cx.is_query_empty() && !any_match {
         out.push(proof_empty_state_text(

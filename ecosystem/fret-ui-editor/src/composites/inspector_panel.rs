@@ -13,6 +13,7 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
+use fret_ui_headless::table::contains_ascii_case_insensitive;
 
 use crate::primitives::EditorDensity;
 
@@ -26,7 +27,7 @@ mod tests;
 pub struct InspectorPanelCx {
     density: EditorDensity,
     query: Arc<str>,
-    query_lower: Arc<str>,
+    query_lower: Option<Arc<str>>,
 }
 
 impl InspectorPanelCx {
@@ -39,14 +40,22 @@ impl InspectorPanelCx {
     }
 
     pub fn is_query_empty(&self) -> bool {
-        self.query_lower.is_empty()
+        self.query.is_empty()
     }
 
     pub fn matches(&self, s: &str) -> bool {
-        if self.query_lower.is_empty() {
+        if self.query.is_empty() {
             return true;
         }
-        s.to_lowercase().contains(self.query_lower.as_ref())
+        if self.query.is_ascii() {
+            return contains_ascii_case_insensitive(s, self.query.as_ref());
+        }
+        s.to_lowercase().contains(
+            self.query_lower
+                .as_ref()
+                .expect("non-ascii query_lower")
+                .as_ref(),
+        )
     }
 }
 

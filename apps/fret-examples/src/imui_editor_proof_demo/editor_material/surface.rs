@@ -40,33 +40,8 @@ pub struct EditorMaterialModels {
 }
 
 pub struct EditorMaterialSurface {
-    pub element: AnyElement,
+    pub element: Option<AnyElement>,
     pub any_match: bool,
-}
-
-pub fn render_editor_material_surface(
-    cx: &mut ElementContext<'_, KernelApp>,
-    panel_cx: &InspectorPanelCx,
-    models: EditorMaterialModels,
-) -> EditorMaterialSurface {
-    let visibility = EditorMaterialVisibility::from_panel(panel_cx);
-    let element = PropertyGroup::new("Material")
-        .options(PropertyGroupOptions {
-            test_id: Some(Arc::from("imui-editor-proof.editor.group.material")),
-            header_test_id: Some(Arc::from("imui-editor-proof.editor.group.material.header")),
-            content_test_id: Some(Arc::from("imui-editor-proof.editor.group.material.content")),
-            ..Default::default()
-        })
-        .into_element(
-            cx,
-            |_cx| None,
-            move |cx| render_editor_material_rows(cx, visibility, models),
-        );
-
-    EditorMaterialSurface {
-        element,
-        any_match: visibility.any_match(),
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -114,6 +89,39 @@ impl EditorMaterialVisibility {
             || self.alpha_clip
             || self.cast_shadows
     }
+}
+
+pub fn render_editor_material_surface(
+    cx: &mut ElementContext<'_, KernelApp>,
+    panel_cx: &InspectorPanelCx,
+    models: EditorMaterialModels,
+) -> EditorMaterialSurface {
+    let visibility = EditorMaterialVisibility::from_panel(panel_cx);
+    let any_match = visibility.any_match();
+    let element = if any_match {
+        Some(
+            PropertyGroup::new("Material")
+                .options(PropertyGroupOptions {
+                    test_id: Some(Arc::from("imui-editor-proof.editor.group.material")),
+                    header_test_id: Some(Arc::from(
+                        "imui-editor-proof.editor.group.material.header",
+                    )),
+                    content_test_id: Some(Arc::from(
+                        "imui-editor-proof.editor.group.material.content",
+                    )),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |_cx| None,
+                    move |cx| render_editor_material_rows(cx, visibility, models),
+                ),
+        )
+    } else {
+        None
+    };
+
+    EditorMaterialSurface { element, any_match }
 }
 
 fn render_editor_material_rows(

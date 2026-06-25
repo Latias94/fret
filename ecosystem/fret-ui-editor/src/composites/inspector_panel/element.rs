@@ -128,12 +128,16 @@ where
                     .map(|s| s.trim().to_string())
             })
             .unwrap_or_default();
-        let query_lower = query.to_lowercase();
+        let query_lower = if query.is_ascii() {
+            None
+        } else {
+            Some(Arc::from(query.to_lowercase()))
+        };
 
         let panel_cx = InspectorPanelCx {
             density,
             query: Arc::from(query),
-            query_lower: Arc::from(query_lower),
+            query_lower,
         };
 
         let toolbar_elements = toolbar(cx, &panel_cx);

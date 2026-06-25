@@ -6,8 +6,9 @@ use fret::component::prelude::*;
 use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
+use fret_ui::element::AnyElement;
 use fret_ui_editor::composites::{
-    GradientEditor, GradientEditorOptions, GradientStopBinding, OnGradientAction,
+    GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanelCx, OnGradientAction,
     OnGradientStopAction, PropertyGroup, PropertyGroupOptions,
 };
 
@@ -20,22 +21,72 @@ pub(super) struct EditorGradientModels {
     pub(super) next_id: Model<u64>,
 }
 
+pub struct EditorGradientSurface {
+    pub element: Option<AnyElement>,
+    pub any_match: bool,
+}
+
+#[derive(Clone, Copy)]
+struct EditorGradientVisibility {
+    gradient: bool,
+    angle: bool,
+    stops: bool,
+    color: bool,
+    add_stop: bool,
+    remove_stop: bool,
+}
+
+impl EditorGradientVisibility {
+    fn from_panel(panel_cx: &InspectorPanelCx) -> Self {
+        let gradient_show_all = panel_cx.matches("gradient");
+        Self {
+            gradient: gradient_show_all,
+            angle: gradient_show_all || panel_cx.matches("angle"),
+            stops: gradient_show_all || panel_cx.matches("stop") || panel_cx.matches("stops"),
+            color: gradient_show_all || panel_cx.matches("color") || panel_cx.matches("swatch"),
+            add_stop: gradient_show_all || panel_cx.matches("add"),
+            remove_stop: gradient_show_all || panel_cx.matches("remove"),
+        }
+    }
+
+    fn any_match(self) -> bool {
+        self.gradient || self.angle || self.stops || self.color || self.add_stop || self.remove_stop
+    }
+}
+
 pub(super) fn render_editor_gradient_surface(
     cx: &mut ElementContext<'_, KernelApp>,
+    panel_cx: &InspectorPanelCx,
     models: EditorGradientModels,
-) -> impl IntoUiElement<KernelApp> + use<> {
-    PropertyGroup::new("Gradient")
-        .options(PropertyGroupOptions {
-            test_id: Some(Arc::from("imui-editor-proof.editor.group.gradient")),
-            header_test_id: Some(Arc::from("imui-editor-proof.editor.group.gradient.header")),
-            content_test_id: Some(Arc::from("imui-editor-proof.editor.group.gradient.content")),
-            ..Default::default()
-        })
-        .into_element(
-            cx,
-            |_cx| None,
-            move |cx| vec![render_gradient_editor(cx, models)],
+) -> EditorGradientSurface {
+    let visibility = EditorGradientVisibility::from_panel(panel_cx);
+    let element = if visibility.any_match() {
+        Some(
+            PropertyGroup::new("Gradient")
+                .options(PropertyGroupOptions {
+                    test_id: Some(Arc::from("imui-editor-proof.editor.group.gradient")),
+                    header_test_id: Some(Arc::from(
+                        "imui-editor-proof.editor.group.gradient.header",
+                    )),
+                    content_test_id: Some(Arc::from(
+                        "imui-editor-proof.editor.group.gradient.content",
+                    )),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |_cx| None,
+                    move |cx| vec![render_gradient_editor(cx, models)],
+                ),
         )
+    } else {
+        None
+    };
+
+    EditorGradientSurface {
+        element,
+        any_match: visibility.any_match(),
+    }
 }
 
 fn render_gradient_editor(

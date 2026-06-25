@@ -40,33 +40,8 @@ pub struct EditorAdvancedModels {
 }
 
 pub struct EditorAdvancedSurface {
-    pub element: AnyElement,
+    pub element: Option<AnyElement>,
     pub any_match: bool,
-}
-
-pub fn render_editor_advanced_surface(
-    cx: &mut ElementContext<'_, KernelApp>,
-    panel_cx: &InspectorPanelCx,
-    models: EditorAdvancedModels,
-) -> EditorAdvancedSurface {
-    let visibility = EditorAdvancedVisibility::from_panel(panel_cx);
-    let element = PropertyGroup::new("Advanced")
-        .options(PropertyGroupOptions {
-            test_id: Some(Arc::from("imui-editor-proof.editor.group.advanced")),
-            header_test_id: Some(Arc::from("imui-editor-proof.editor.group.advanced.header")),
-            content_test_id: Some(Arc::from("imui-editor-proof.editor.group.advanced.content")),
-            ..Default::default()
-        })
-        .into_element(
-            cx,
-            |_cx| None,
-            move |cx| render_editor_advanced_rows(cx, visibility, models),
-        );
-
-    EditorAdvancedSurface {
-        element,
-        any_match: visibility.any_match(),
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -97,6 +72,41 @@ impl EditorAdvancedVisibility {
 
     fn any_match(self) -> bool {
         self.position || self.transform || self.iterations || self.exposure
+    }
+}
+
+pub fn render_editor_advanced_surface(
+    cx: &mut ElementContext<'_, KernelApp>,
+    panel_cx: &InspectorPanelCx,
+    models: EditorAdvancedModels,
+) -> EditorAdvancedSurface {
+    let visibility = EditorAdvancedVisibility::from_panel(panel_cx);
+    let element = if visibility.any_match() {
+        Some(
+            PropertyGroup::new("Advanced")
+                .options(PropertyGroupOptions {
+                    test_id: Some(Arc::from("imui-editor-proof.editor.group.advanced")),
+                    header_test_id: Some(Arc::from(
+                        "imui-editor-proof.editor.group.advanced.header",
+                    )),
+                    content_test_id: Some(Arc::from(
+                        "imui-editor-proof.editor.group.advanced.content",
+                    )),
+                    ..Default::default()
+                })
+                .into_element(
+                    cx,
+                    |_cx| None,
+                    move |cx| render_editor_advanced_rows(cx, visibility, models),
+                ),
+        )
+    } else {
+        None
+    };
+
+    EditorAdvancedSurface {
+        element,
+        any_match: visibility.any_match(),
     }
 }
 

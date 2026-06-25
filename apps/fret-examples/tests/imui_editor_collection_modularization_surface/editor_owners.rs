@@ -29,7 +29,8 @@ pub(super) fn assert_editor_owner_split(
         "EditorGradientModels {",
         "render_editor_advanced_surface(",
         "EditorAdvancedModels {",
-        "let any_match = material_any_match || advanced_any_match;",
+        "let any_match =",
+        "object_any_match || material_any_match || gradient_any_match || advanced_any_match;",
         "proof_empty_state_text(",
         "\"imui-editor-proof.editor.no-matches\"",
     ] {
@@ -47,7 +48,9 @@ pub(super) fn assert_editor_owner_split(
 
     for needle in [
         "pub struct EditorObjectModels",
+        "pub struct EditorObjectSurface",
         "pub fn render_editor_object_surface(",
+        "EditorObjectVisibility",
         "fn render_editor_object_grid(",
         "PropertyGroup::new(\"Object\")",
         "PropertyGrid::new().into_element",
@@ -84,7 +87,7 @@ pub(super) fn assert_editor_owner_split(
 
     for needle in [
         "mod surface;",
-        "pub use surface::{EditorObjectModels, render_editor_object_surface};",
+        "pub use surface::{EditorObjectModels, EditorObjectSurface, render_editor_object_surface};",
     ] {
         assert!(
             editor_object_router_source.contains(needle),
@@ -104,6 +107,7 @@ pub(super) fn assert_editor_owner_split(
         "pub fn render_editor_advanced_surface(",
         "struct EditorAdvancedVisibility",
         "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
+        "let element = if visibility.any_match() {",
         "PropertyGroup::new(\"Advanced\")",
         "Vec3Edit::from_presentation(",
         "TransformEdit::from_presentations(",
@@ -135,6 +139,8 @@ pub(super) fn assert_editor_owner_split(
     for needle in [
         "pub(super) struct EditorGradientModels",
         "pub(super) fn render_editor_gradient_surface(",
+        "pub struct EditorGradientSurface",
+        "EditorGradientVisibility",
         "PropertyGroup::new(\"Gradient\")",
         "fn render_gradient_editor(",
         "GradientEditor::new(bindings)",
@@ -158,6 +164,7 @@ pub(super) fn assert_editor_owner_split(
         "pub fn render_editor_material_surface(",
         "struct EditorMaterialVisibility",
         "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
+        "let element = if any_match {",
         "PropertyGroup::new(\"Material\")",
         "DragValue::from_presentation(",
         "record_drag_value_outcome(host, action_cx, &outcome_model, outcome);",

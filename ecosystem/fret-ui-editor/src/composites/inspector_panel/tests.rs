@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use super::{InspectorPanel, InspectorPanelOptions};
+use super::{InspectorPanel, InspectorPanelCx, InspectorPanelOptions};
 use crate::test_support::WrappingTextServices;
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
@@ -45,6 +45,45 @@ fn element_test_id(element: &AnyElement) -> Option<&str> {
         .semantics_decoration
         .as_ref()
         .and_then(|decoration| decoration.test_id.as_deref())
+}
+
+#[test]
+fn inspector_panel_query_matches_case_insensitively_without_allocating() {
+    let panel_cx = InspectorPanelCx {
+        density: Default::default(),
+        query: Arc::from("gRaDiEnT"),
+        query_lower: None,
+    };
+
+    assert!(panel_cx.is_query_empty() == false);
+    assert!(panel_cx.matches("Gradient editor"));
+    assert!(panel_cx.matches("color gradient stop"));
+    assert!(!panel_cx.matches("Material"));
+}
+
+#[test]
+fn inspector_panel_empty_query_matches_everything() {
+    let panel_cx = InspectorPanelCx {
+        density: Default::default(),
+        query: Arc::from(""),
+        query_lower: None,
+    };
+
+    assert!(panel_cx.is_query_empty());
+    assert!(panel_cx.matches("Object"));
+    assert!(panel_cx.matches(""));
+}
+
+#[test]
+fn inspector_panel_non_ascii_query_still_matches_via_lowercase_fallback() {
+    let panel_cx = InspectorPanelCx {
+        density: Default::default(),
+        query: Arc::from("Café"),
+        query_lower: Some(Arc::from("café")),
+    };
+
+    assert!(panel_cx.matches("menu café item"));
+    assert!(!panel_cx.matches("menu cafe item"));
 }
 
 #[test]
