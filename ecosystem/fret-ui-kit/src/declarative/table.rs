@@ -59,7 +59,7 @@ use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::ui;
-use crate::{IntoUiElement, LayoutRefinement, MetricRef, Size, Space, collect_children};
+use crate::{ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Size, Space, collect_children};
 
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
@@ -201,22 +201,6 @@ fn with_table_view_column_constraints<TData>(
             .collect();
     }
     col
-}
-
-fn retained_table_row_fill_layout() -> LayoutStyle {
-    LayoutStyle {
-        size: fret_ui::element::SizeStyle {
-            width: Length::Fill,
-            ..Default::default()
-        },
-        flex: fret_ui::element::FlexItemStyle {
-            grow: 1.0,
-            shrink: 1.0,
-            basis: Length::Px(Px(0.0)),
-            ..Default::default()
-        },
-        ..Default::default()
-    }
 }
 
 fn table_body_row_layout(row_h: Px, measure_mode: TableRowMeasureMode) -> LayoutStyle {
@@ -402,8 +386,9 @@ fn table_fixed_row_group<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     col_widths: Vec<Px>,
     cells: Vec<AnyElement>,
+    row_background: Option<Color>,
 ) -> AnyElement {
-    table_fixed_row_group_with_cell_padding(cx, col_widths, cells, None)
+    table_fixed_row_group_with_cell_padding(cx, col_widths, cells, None, row_background)
 }
 
 fn table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
@@ -411,6 +396,7 @@ fn table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
     col_widths: Vec<Px>,
     cells: Vec<AnyElement>,
     cell_padding: Option<(Px, Px)>,
+    row_background: Option<Color>,
 ) -> AnyElement {
     let mut surface = fret_ui::element::ManagedSurfaceProps::default();
     surface.layout.size.width =
@@ -458,6 +444,17 @@ fn table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
             }
         },
         move |cx| {
+            if let Some(bg) = row_background {
+                let bounds = cx.bounds();
+                cx.scene().push(fret_core::SceneOp::Quad {
+                    order: fret_core::DrawOrder(0),
+                    rect: bounds,
+                    background: fret_core::Paint::Solid(bg).into(),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+            }
             let child_count = cx.children().len();
             for idx in 0..child_count {
                 let child = cx.children()[idx];
@@ -475,12 +472,13 @@ fn retained_table_fixed_row_group<H: UiHost + 'static>(
     col_widths: Arc<[Px]>,
     col_indices: Vec<usize>,
     cells: Vec<AnyElement>,
+    row_background: Option<Color>,
 ) -> AnyElement {
     let row_widths = col_indices
         .iter()
         .map(|col_idx| col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)))
         .collect::<Vec<_>>();
-    table_fixed_row_group(cx, row_widths, cells)
+    table_fixed_row_group(cx, row_widths, cells, row_background)
 }
 
 fn retained_table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
@@ -490,12 +488,19 @@ fn retained_table_fixed_row_group_with_cell_padding<H: UiHost + 'static>(
     cells: Vec<AnyElement>,
     cell_px: Px,
     cell_py: Px,
+    row_background: Option<Color>,
 ) -> AnyElement {
     let row_widths = col_indices
         .iter()
         .map(|col_idx| col_widths.get(*col_idx).copied().unwrap_or(Px(0.0)))
         .collect::<Vec<_>>();
-    table_fixed_row_group_with_cell_padding(cx, row_widths, cells, Some((cell_px, cell_py)))
+    table_fixed_row_group_with_cell_padding(
+        cx,
+        row_widths,
+        cells,
+        Some((cell_px, cell_py)),
+        row_background,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -598,16 +603,26 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
                     cells,
                     cell_px,
                     cell_py,
+                    bg,
                 )
             } else {
-                retained_table_fixed_row_group(cx, col_widths.clone(), col_indices.to_vec(), cells)
+                retained_table_fixed_row_group(
+                    cx,
+                    col_widths.clone(),
+                    col_indices.to_vec(),
+                    cells,
+                    bg,
+                )
             }
         } else {
-            ui::h_row(move |_cx| cells)
+            let mut row = ui::h_row(move |_cx| cells)
                 .gap(Space::N0)
                 .justify_start()
-                .items_center()
-                .into_element(cx)
+                .items_center();
+            if let Some(bg) = bg {
+                row = row.bg(ColorRef::Color(bg));
+            }
+            row.into_element(cx)
         };
         table_wrap_horizontal_scroll(cx, scroll_x_for_group, known_content_width, row)
     };
@@ -641,18 +656,7 @@ fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
             .into_element(cx)
     };
 
-    if let Some(bg) = bg {
-        cx.container(
-            ContainerProps {
-                background: Some(bg),
-                layout: retained_table_row_fill_layout(),
-                ..Default::default()
-            },
-            move |_cx| vec![row_content],
-        )
-    } else {
-        row_content
-    }
+    row_content
 }
 
 #[derive(Debug, Clone)]
@@ -2067,7 +2071,7 @@ mod tests {
     }
 
     #[test]
-    fn table_virtualized_retained_selected_rows_keep_background_wrapper() {
+    fn table_virtualized_retained_selected_rows_paint_background_without_wrapper() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -2101,8 +2105,44 @@ mod tests {
             ui.debug_declarative_instance_kind(&mut app, window, row_node),
             Some("Pressable")
         );
-        let background = only_child_with_kind(&ui, &mut app, window, row_node, "Container");
-        only_child_with_kind(&ui, &mut app, window, background, "ManagedSurface");
+        let managed_surface_node =
+            only_child_with_kind(&ui, &mut app, window, row_node, "ManagedSurface");
+        let managed_surface_bounds = ui
+            .debug_node_bounds(managed_surface_node)
+            .expect("managed surface bounds");
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let (_, _, _, _, row_active) = resolve_table_colors(Theme::global(&app));
+        let row_active_bg = Color {
+            a: row_active.a.min(0.18),
+            ..row_active
+        };
+        let row_active_bg_matches = |color: Color| {
+            (color.r - row_active_bg.r).abs() < 1e-6
+                && (color.g - row_active_bg.g).abs() < 1e-6
+                && (color.b - row_active_bg.b).abs() < 1e-6
+                && (color.a - row_active_bg.a).abs() < 1e-6
+        };
+        let quads: Vec<(Rect, Color)> = scene
+            .ops()
+            .iter()
+            .filter_map(|op| match op {
+                fret_core::SceneOp::Quad {
+                    rect, background, ..
+                } => match background.paint {
+                    fret_core::Paint::Solid(color) => Some((*rect, color)),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
+        assert!(
+            quads.iter().any(|(rect, color)| {
+                *rect == managed_surface_bounds && row_active_bg_matches(*color)
+            }),
+            "selected retained rows should paint their background directly on the managed surface; row_active_bg={row_active_bg:?}, managed_surface_bounds={managed_surface_bounds:?}, quads={quads:?}"
+        );
     }
 
     #[test]
@@ -9890,7 +9930,12 @@ where
                                                                                             }
                                                                             })
                                                                             .collect::<Vec<_>>();
-                                                                        table_fixed_row_group(cx, col_widths, cells)
+                                                                        table_fixed_row_group(
+                                                                            cx,
+                                                                            col_widths,
+                                                                            cells,
+                                                                            None,
+                                                                        )
                                                                     };
 
                                                                     let known_content_width = scroll_x
