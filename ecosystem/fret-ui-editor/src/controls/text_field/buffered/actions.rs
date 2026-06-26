@@ -6,7 +6,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
 
 use super::super::{OnTextFieldOutcome, TextFieldOutcome};
-use super::BufferedTextFieldState;
+use super::{BufferedTextFieldState, sync_string_model_if_needed};
 
 fn clear_buffered_text_field_pending_blur(state: &mut BufferedTextFieldState) {
     state.blur_timer = None;
@@ -39,14 +39,7 @@ pub(in crate::controls::text_field) fn commit_buffered_text_field(
         changed
     };
 
-    {
-        let next_for_update = next.clone();
-        let _ = host.models_mut().update(model, |text| {
-            if text.as_str() != next_for_update.as_str() {
-                *text = next_for_update.clone();
-            }
-        });
-    }
+    let _ = sync_string_model_if_needed(host.models_mut(), model, next.as_str());
     if should_emit_outcome && let Some(cb) = on_outcome {
         cb(host, action_cx, TextFieldOutcome::Committed);
     }
@@ -72,14 +65,7 @@ pub(in crate::controls::text_field) fn commit_buffered_text_field_from_controlle
         let _ = state.session.commit();
     }
 
-    {
-        let next_for_update = next.clone();
-        let _ = host.models_mut().update(model, |text| {
-            if text.as_str() != next_for_update.as_str() {
-                *text = next_for_update.clone();
-            }
-        });
-    }
+    let _ = sync_string_model_if_needed(host.models_mut(), model, next.as_str());
     if let Some(command) = submit_command {
         host.dispatch_command(Some(action_cx.window), command.clone());
     }
@@ -108,19 +94,8 @@ pub(in crate::controls::text_field) fn cancel_buffered_text_field(
         (revert, changed)
     };
 
-    {
-        let revert_for_draft = revert.clone();
-        let _ = host.models_mut().update(draft, |text| {
-            if text.as_str() != revert_for_draft.as_str() {
-                *text = revert_for_draft.clone();
-            }
-        });
-    }
-    let _ = host.models_mut().update(model, |text| {
-        if text.as_str() != revert.as_str() {
-            *text = revert.clone();
-        }
-    });
+    let _ = sync_string_model_if_needed(host.models_mut(), draft, revert.as_str());
+    let _ = sync_string_model_if_needed(host.models_mut(), model, revert.as_str());
     if should_emit_outcome && let Some(cb) = on_outcome {
         cb(host, action_cx, TextFieldOutcome::Canceled);
     }
@@ -145,19 +120,8 @@ pub(in crate::controls::text_field) fn cancel_buffered_text_field_from_controlle
             .unwrap_or_else(|| current_model.clone())
     };
 
-    {
-        let revert_for_draft = revert.clone();
-        let _ = host.models_mut().update(draft, |text| {
-            if text.as_str() != revert_for_draft.as_str() {
-                *text = revert_for_draft.clone();
-            }
-        });
-    }
-    let _ = host.models_mut().update(model, |text| {
-        if text.as_str() != revert.as_str() {
-            *text = revert.clone();
-        }
-    });
+    let _ = sync_string_model_if_needed(host.models_mut(), draft, revert.as_str());
+    let _ = sync_string_model_if_needed(host.models_mut(), model, revert.as_str());
     host.request_redraw(action_cx.window);
     true
 }

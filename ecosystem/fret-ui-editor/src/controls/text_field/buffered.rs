@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use fret_runtime::{Model, TimerToken};
+use fret_runtime::{Model, ModelStore, TimerToken};
 use fret_ui::action::KeyDownCx;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -98,6 +98,23 @@ pub(super) fn buffered_state<H: UiHost>(
     )
 }
 
+fn sync_string_model_if_needed(
+    models: &mut ModelStore,
+    model: &Model<String>,
+    next_text: &str,
+) -> bool {
+    let should_update = models
+        .get_cloned(model)
+        .is_none_or(|text| text.as_str() != next_text);
+    if should_update {
+        let next = next_text.to_owned();
+        let _ = models.update(model, move |text| {
+            *text = next;
+        });
+    }
+    should_update
+}
+
 pub(super) fn sync_draft_from_model_when_session_inactive<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     draft: &Model<String>,
@@ -113,12 +130,7 @@ pub(super) fn sync_draft_from_model_when_session_inactive<H: UiHost>(
         return;
     }
 
-    let next = current_text.to_owned();
-    let _ = cx.app.models_mut().update(draft, |text| {
-        if text.as_str() != next.as_str() {
-            *text = next.clone();
-        }
-    });
+    let _ = sync_string_model_if_needed(cx.app.models_mut(), draft, current_text);
 }
 
 pub(super) fn sync_buffered_text_field_session<H: UiHost>(
@@ -175,12 +187,7 @@ pub(super) fn sync_buffered_text_field_session<H: UiHost>(
     }
 
     if begin_session {
-        let next = current_text.to_owned();
-        let _ = cx.app.models_mut().update(draft, |text| {
-            if text.as_str() != next.as_str() {
-                *text = next.clone();
-            }
-        });
+        let _ = sync_string_model_if_needed(cx.app.models_mut(), draft, current_text);
     }
 }
 
