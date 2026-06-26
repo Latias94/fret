@@ -100,6 +100,28 @@ historical records remain in:
   the `VisibleOnly` fixed/known-height branch to preserving overscan on input changes, and rerun the
   same `fret-ui` VirtualList tests plus the DataTable and code-view perf guards.
 
+## 2026-06-27 Retained DataTable Row Cache Experiment Rejected
+
+- Tried two retained-cache placements on the visible-only fixed DataTable surface in
+  `ecosystem/fret-ui-kit/src/declarative/table.rs`:
+  - a cell-level `cached_subtree` around each cell
+  - a row-level `cached_subtree` around the fixed row shell, first outside and then inside the
+    horizontal scroll wrapper
+- Same repro command as the current visible-only fixed input burst:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-visibleonly-input-overscan-defer-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Baseline bundle before this lane stayed better:
+  `target/fret-diag/data-table-visibleonly-input-overscan-defer-codex-20260627/1782493708781/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2287/1715/554/190/416` with
+  `layout.root apply=775us` and `layout.nodes=176`.
+- The final row-cache bundle regressed:
+  `target/fret-diag/data-table-visibleonly-input-overscan-defer-codex-20260627/1782504044226/bundle.json`
+  reported `2606/1984/661/196/436`, with `layout.root apply=939us`, `layout.nodes=209`,
+  `cache_roots=34`, `cache.reused=0`, and `cache.replayed_ops=0`.
+- Conclusion: this surface churns too much for a row-level view-cache boundary on this script, so the
+  cache root overhead outweighed any replay wins. The code was restored to the pre-experiment
+  baseline. Next work should target a different retained-table hotspot instead of more cache
+  placement on this same lane.
+
 ## 2026-06-27 IMUI Gradient Popup Filtered-Open Probe Normalization
 
 - The previous filtered Gradient popup bundle measured the whole setup window: reset, Escape,
