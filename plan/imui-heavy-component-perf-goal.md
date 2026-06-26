@@ -59,6 +59,32 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-27 IMUI Gradient Popup Filtered-Open Probe Normalization
+
+- The previous filtered Gradient popup bundle measured the whole setup window: reset, Escape,
+  window resize, search focus, query typing, filter settle, and popup open. Its p95 frame was
+  dominated by a root `Stack` resize/layout solve (`new_frame_key_changed`) rather than the popup
+  open interaction itself.
+- Added `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-filtered-open-bundle.json`
+  to settle the review layout, search query, and Gradient-only filter first, then call
+  `reset_diagnostics` immediately before clicking the stop color swatch. This keeps the measured
+  window focused on the popup open transition.
+- Validation passed:
+  `python3 -m json.tool tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-filtered-open-bundle.json >/dev/null`
+  and
+  `target/release/fretboard-dev diag script validate tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-filtered-open-bundle.json`.
+- Perf probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-filtered-open-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/imui-editor-proof-gradient-stop-color-popup-filtered-open-normalized-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`.
+- Result bundle:
+  `target/fret-diag/imui-editor-proof-gradient-stop-color-popup-filtered-open-normalized-codex-20260627/1782492123181/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=163/121/0/19/29/0/7`.
+  `diag stats` showed only 3 measured snapshots, `layout.engine_solve=0`, no layout nodes, and no
+  paint widget/text-prepare hotspot.
+- Interpretation: ColorEdit popup open is already light once setup frames are excluded. Do not use
+  the older filtered all-setup p95 as the next optimization target. The heavy-component work should
+  move back to a surface where the measured interaction window itself is heavy, such as
+  editor-controls, code-view, or a freshly ranked ui-gallery heavy surface.
+
 ## 2026-06-26 IMUI Proof Inspector Lazy Section Model Note
 
 - The review-only `imui_editor_proof_demo` inspector now owns section models inside the matching
