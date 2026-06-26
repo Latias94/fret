@@ -59,6 +59,47 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-27 Visible-Only Fixed VirtualList Input Burst Overscan Deferral
+
+- Reranked the current heavy surfaces before cutting code again:
+  - retained DataTable direct filter/input surface:
+    `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/rerank-data-table-retained-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+    reported `p95.us(total/layout/solve/prepaint/paint)=2627/1895/483/192/540` on
+    `target/fret-diag/rerank-data-table-retained-codex-20260627/1782492929529/bundle.schema2.json`.
+  - `inspector_torture` direct-entry scroll reported `1768/1388/523/170/229` on
+    `target/fret-diag/rerank-inspector-direct-entry-codex-20260627/1782492959576/bundle.schema2.json`.
+  - `cookbook-imui-editor-controls-click-stress` reported `1878/1722/1167/6/156` on
+    `target/fret-diag/rerank-editor-controls-codex-20260627/1782493045689/bundle.schema2.json`.
+  - the current code-view transition rerun remained around `2078/1926/41/26/126` on
+    `target/fret-diag/code-view-transition-current-codex-20260627/1782492583213/bundle.json`.
+- Source cut: `crates/fret-ui/src/virtual_list/mod.rs` now treats input-revision bursts on
+  `VirtualListKeyCacheMode::VisibleOnly` fixed/known-height lists like the measured-list burst path:
+  render the true visible range first with overscan `0`, then let the existing deferred overscan
+  catch-up frame fill the prefetch rows. The call site in `crates/fret-ui/src/elements/cx.rs`
+  passes the resolved key-cache mode into `overscan_for_items_change(...)`.
+- This is a tail-smoothing cut, not a total-work deletion. The DataTable filter frame previously
+  mounted the full visible+overscan row batch in one transition frame; after the change the first
+  structural frame mounts the visible window, then the follow-up frame fills overscan. The worst
+  frame's `layout.nodes` dropped from `236` to `176`, `layout.root apply` from `964us` to `775us`,
+  and `paint_widget` p95 from `154us` to `64us`. Total measured work across all frames is still in
+  the same band, so future work should still target row `HoverRegion`/`ManagedSurface` churn.
+- Changed perf probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-visibleonly-input-overscan-defer-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2287/1715/554/190/416/0/0`
+  on `target/fret-diag/data-table-visibleonly-input-overscan-defer-codex-20260627/1782493708781/bundle.json`.
+- Guards:
+  `cargo fmt -p fret-ui --check`,
+  `cargo nextest run -p fret-ui overscan_for_items_change --no-fail-fast`,
+  and `cargo nextest run -p fret-ui retained_virtual_list virtual_list --no-fail-fast` passed.
+  Code-view `VisibleOnly` fixed-list guards also stayed in the accepted band:
+  `ui-gallery-code-view-torture-wheel-scroll-steady` reported `942/787/22/31/124` on
+  `target/fret-diag/code-view-wheel-visibleonly-input-overscan-defer-guard-codex-20260627/1782493879879/bundle.schema2.json`,
+  and `ui-gallery-code-view-torture-mount` reported `1969/1807/44/40/122` on
+  `target/fret-diag/code-view-transition-visibleonly-input-overscan-defer-guard-codex-20260627/1782493903436/bundle.schema2.json`.
+- Rollback is local: remove the `key_cache` parameter from `overscan_for_items_change(...)`, revert
+  the `VisibleOnly` fixed/known-height branch to preserving overscan on input changes, and rerun the
+  same `fret-ui` VirtualList tests plus the DataTable and code-view perf guards.
+
 ## 2026-06-27 IMUI Gradient Popup Filtered-Open Probe Normalization
 
 - The previous filtered Gradient popup bundle measured the whole setup window: reset, Escape,

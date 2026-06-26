@@ -4213,6 +4213,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 } else {
                     crate::virtual_list::overscan_for_items_change(
                         options.measure_mode,
+                        key_cache,
                         state.items_revision,
                         state.items_len,
                         options.items_revision,

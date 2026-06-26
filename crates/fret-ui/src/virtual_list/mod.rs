@@ -1,7 +1,7 @@
 use fret_core::Px;
 use std::sync::Arc;
 
-use crate::element::VirtualListMeasureMode;
+use crate::element::{VirtualListKeyCacheMode, VirtualListMeasureMode};
 use crate::scroll::ScrollStrategy;
 
 #[cfg(test)]
@@ -248,16 +248,25 @@ pub(crate) fn virtual_list_needs_visible_range_refresh(
 
 pub(crate) fn overscan_for_items_change(
     measure_mode: VirtualListMeasureMode,
+    key_cache: VirtualListKeyCacheMode,
     prev_items_revision: u64,
     prev_items_len: usize,
     next_items_revision: u64,
     next_items_len: usize,
     requested_overscan: usize,
 ) -> usize {
-    if measure_mode == VirtualListMeasureMode::Measured
-        && requested_overscan > 0
-        && (prev_items_revision != next_items_revision || prev_items_len != next_items_len)
-    {
+    let inputs_changed =
+        prev_items_revision != next_items_revision || prev_items_len != next_items_len;
+    let should_defer_overscan = matches!(
+        (measure_mode, key_cache),
+        (VirtualListMeasureMode::Measured, _)
+            | (
+                VirtualListMeasureMode::Fixed | VirtualListMeasureMode::Known,
+                VirtualListKeyCacheMode::VisibleOnly,
+            )
+    );
+
+    if requested_overscan > 0 && inputs_changed && should_defer_overscan {
         0
     } else {
         requested_overscan
@@ -879,30 +888,100 @@ mod tests {
     #[test]
     fn overscan_for_items_change_skips_measured_data_change_bursts() {
         assert_eq!(
-            overscan_for_items_change(VirtualListMeasureMode::Measured, 1, 50_000, 2, 4321, 10),
+            overscan_for_items_change(
+                VirtualListMeasureMode::Measured,
+                VirtualListKeyCacheMode::AllKeys,
+                1,
+                50_000,
+                2,
+                4321,
+                10,
+            ),
             0,
             "measured virtual lists should render the visible window first after input changes"
         );
         assert_eq!(
-            overscan_for_items_change(VirtualListMeasureMode::Measured, 2, 50_000, 2, 4321, 10),
+            overscan_for_items_change(
+                VirtualListMeasureMode::Measured,
+                VirtualListKeyCacheMode::AllKeys,
+                2,
+                50_000,
+                2,
+                4321,
+                10,
+            ),
             0,
             "measured virtual lists should also treat filtered length changes as bursty"
         );
     }
 
     #[test]
-    fn overscan_for_items_change_preserves_steady_state_and_fixed_lists() {
+    fn overscan_for_items_change_preserves_steady_state_and_all_key_fixed_lists() {
         assert_eq!(
-            overscan_for_items_change(VirtualListMeasureMode::Measured, 2, 4321, 2, 4321, 10),
+            overscan_for_items_change(
+                VirtualListMeasureMode::Measured,
+                VirtualListKeyCacheMode::AllKeys,
+                2,
+                4321,
+                2,
+                4321,
+                10,
+            ),
             10
         );
         assert_eq!(
-            overscan_for_items_change(VirtualListMeasureMode::Fixed, 1, 50_000, 2, 4321, 10),
+            overscan_for_items_change(
+                VirtualListMeasureMode::Fixed,
+                VirtualListKeyCacheMode::AllKeys,
+                1,
+                50_000,
+                2,
+                4321,
+                10,
+            ),
             10
         );
         assert_eq!(
-            overscan_for_items_change(VirtualListMeasureMode::Measured, 1, 50_000, 2, 4321, 0),
+            overscan_for_items_change(
+                VirtualListMeasureMode::Measured,
+                VirtualListKeyCacheMode::AllKeys,
+                1,
+                50_000,
+                2,
+                4321,
+                0,
+            ),
             0
+        );
+    }
+
+    #[test]
+    fn overscan_for_items_change_skips_visible_only_fixed_data_change_bursts() {
+        assert_eq!(
+            overscan_for_items_change(
+                VirtualListMeasureMode::Fixed,
+                VirtualListKeyCacheMode::VisibleOnly,
+                1,
+                50_000,
+                2,
+                4321,
+                10,
+            ),
+            0,
+            "large fixed visible-key lists should render the visible window first after input changes"
+        );
+        assert_eq!(
+            overscan_for_items_change(
+                VirtualListMeasureMode::Known,
+                VirtualListKeyCacheMode::VisibleOnly,
+                1,
+                50_000,
+                2,
+                4321,
+                10,
+            ),
+            0,
+            "known-height visible-key lists should also defer overscan on data bursts"
         );
     }
 
