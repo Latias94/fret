@@ -1,6 +1,6 @@
-use fret_core::Px;
+use fret_core::{Axis, Px};
 use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle, StackProps,
+    AnyElement, FlexProps, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -48,7 +48,14 @@ pub(super) fn session_shell<H: UiHost>(
     layout: LayoutStyle,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    cx.stack_props(StackProps { layout }, move |_cx| children)
+    cx.flex(
+        FlexProps {
+            layout,
+            direction: Axis::Vertical,
+            ..Default::default()
+        },
+        move |_cx| children,
+    )
 }
 
 #[cfg(test)]

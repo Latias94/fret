@@ -90,6 +90,7 @@ fn color_edit_uses_stable_editor_chrome_height() {
         root.layout.size.min_height,
         Some(Length::Px(expected_min_height))
     );
+    assert_eq!(root.layout.size.height, Length::Px(expected_min_height));
     assert_eq!(element.children.len(), 2);
 
     let swatch_layout = element_layout(&element.children[0], "swatch");
@@ -100,9 +101,15 @@ fn color_edit_uses_stable_editor_chrome_height() {
         descendant_has_min_height(&element.children[1], "input", expected_min_height),
         "color edit input branch should reserve the full editor chrome height"
     );
-    assert!(
-        matches!(element.children[1].kind, ElementKind::TextInput(_)),
-        "color edit input branch should mount the text input directly without an extra pointer shell"
+    let ElementKind::TextInput(input) = &element.children[1].kind else {
+        panic!(
+            "color edit input branch should mount the text input directly without an extra pointer shell"
+        );
+    };
+    assert_eq!(input.layout.size.height, Length::Px(expected_min_height));
+    assert_eq!(
+        input.layout.size.min_height,
+        Some(Length::Px(expected_min_height))
     );
 }
 
@@ -150,8 +157,13 @@ fn color_edit_error_state_keeps_the_same_row_shape() {
         root.layout.size.min_height,
         Some(Length::Px(control_height))
     );
+    assert_eq!(root.layout.size.height, Length::Auto);
     assert_eq!(element.children.len(), 2);
     assert_eq!(element.children[0].children.len(), 2);
+    assert_eq!(
+        element_layout(&element.children[0], "row").size.height,
+        Length::Px(control_height)
+    );
     let ElementKind::Text(error_text) = &element.children[1].kind else {
         panic!(
             "color edit error sibling should be direct text without an input-group segment shell"

@@ -39,8 +39,8 @@ fn slider_uses_stable_session_shell_for_slide_and_typing_branches() {
         |cx| Slider::new(model, 0.0, 1.0).into_element(cx),
     );
 
-    let ElementKind::Stack(shell) = &element.kind else {
-        panic!("slider should mount slide/typing branches in a stack shell");
+    let ElementKind::Flex(shell) = &element.kind else {
+        panic!("slider should mount slide/typing branches in a flex shell");
     };
     let expected_min_height = {
         let style = EditorStyle::resolve(Theme::global(&app));

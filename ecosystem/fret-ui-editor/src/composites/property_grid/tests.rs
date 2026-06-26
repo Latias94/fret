@@ -78,16 +78,16 @@ fn property_grid_with_single_row_returns_the_row_directly() {
     assert!(
         matches!(
             grid.children[0].kind,
-            fret_ui::element::ElementKind::Container(_)
+            fret_ui::element::ElementKind::Text(_)
         ),
-        "first child should be the label container from the row"
+        "first child should be the label text root from the row"
     );
     assert!(
         matches!(
             grid.children[1].kind,
-            fret_ui::element::ElementKind::Container(_)
+            fret_ui::element::ElementKind::Text(_)
         ),
-        "second child should be the value container from the row"
+        "second child should be the value text root from the row"
     );
 }
 

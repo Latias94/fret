@@ -4,6 +4,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
@@ -48,6 +49,8 @@ pub(super) struct TextFieldSingleLineEntryArgs {
     pub(super) assistive_semantics: TextFieldAssistiveSemantics,
     pub(super) selection_behavior: EditorTextSelectionBehavior,
     pub(super) cancel_behavior: EditorTextCancelBehavior,
+    pub(super) stable_line_boxes: bool,
+    pub(super) control_height: Px,
 }
 
 pub(super) fn text_field_single_line_entry<H: UiHost>(
@@ -77,6 +80,8 @@ pub(super) fn text_field_single_line_entry<H: UiHost>(
         assistive_semantics,
         selection_behavior,
         cancel_behavior,
+        stable_line_boxes,
+        control_height,
     } = args;
 
     let input_model = draft.clone().unwrap_or_else(|| model.clone());
@@ -89,6 +94,8 @@ pub(super) fn text_field_single_line_entry<H: UiHost>(
             density,
             enabled,
             focusable,
+            stable_line_boxes,
+            control_height,
             placeholder: placeholder.clone(),
             a11y_label: a11y_label.clone(),
             test_id: test_id.clone(),

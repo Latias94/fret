@@ -37,6 +37,8 @@ pub(super) struct TextFieldInputPropsArgs {
     pub(super) density: EditorDensity,
     pub(super) enabled: bool,
     pub(super) focusable: bool,
+    pub(super) stable_line_boxes: bool,
+    pub(super) control_height: Px,
     pub(super) placeholder: Option<Arc<str>>,
     pub(super) a11y_label: Option<Arc<str>>,
     pub(super) test_id: Option<Arc<str>>,
@@ -101,6 +103,8 @@ pub(super) fn text_field_input_props(
         density,
         enabled,
         focusable,
+        stable_line_boxes,
+        control_height,
         placeholder,
         a11y_label,
         test_id,
@@ -115,11 +119,16 @@ pub(super) fn text_field_input_props(
         resolve_editor_text_field_style(theme, size, &ChromeRefinement::default());
 
     let mut props = TextInputProps::new(input_model);
+    let height = if stable_line_boxes {
+        Length::Px(control_height)
+    } else {
+        Length::Fill
+    };
     props.layout = LayoutStyle {
         size: SizeStyle {
             width: Length::Fill,
-            height: Length::Fill,
-            min_height: Some(Length::Px(density.row_height)),
+            height,
+            min_height: Some(Length::Px(control_height)),
             ..Default::default()
         },
         ..Default::default()

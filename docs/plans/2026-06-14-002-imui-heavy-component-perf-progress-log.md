@@ -747,3 +747,26 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
   `p95 = 2243/1835/886/177/246`.
 - The retained inspector path is still the hot owner, but this slice removed the avoidable
   known-height rebuild work and left a smaller, more honest list boundary for the next pass.
+
+## 2026-06-27 Cookbook Editor-Controls Row/Swatch Refresh
+
+- `ColorEdit` kept the fixed-height text-input fast path, and the root row now resolves to a
+  fixed height whenever the caller leaves `height` at `Auto` and no error row is present. The
+  error state keeps the outer shell auto-height while the inner row stays fixed-height.
+- I rejected the `NumericInput` fixed-height experiment and restored the fill-height layout there;
+  it lowered layout a bit but did not improve end-to-end p95 enough to justify the extra surface.
+- Validation passed with:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-editor --lib --no-fail-fast color_edit_uses_stable_editor_chrome_height color_edit_error_state_keeps_the_same_row_shape color_hex_input_does_not_resync_unchanged_unfocused_models session_shell_layout_preserves_caller_flex_and_adds_control_min_height session_shell_layout_keeps_explicit_min_height_and_width active_session_branch_fills_shell_without_external_flex hidden_session_branch_is_absolute_zero_sized numeric_input`
+- `ColorEdit` popup alpha checkerboard background now returns a direct canvas root instead of the
+  old 2x2 grid shell, so the default checkerboard path stops paying for extra layout nodes.
+- Validation for that follow-up passed with:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-editor --lib --no-fail-fast`
+- Refresh perf on the cookbook click-stress script:
+  - `cargo run -p fretboard-dev -- diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --dir target/fret-diag/cookbook-imui-editor-controls-click-stress-checkerboard-canvas-20260627 --repeat 3 --warmup-frames 5 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  - `p95 total/layout/solve/prepaint/paint = 1165/1002/453/8/205`
+  - worst bundle: `target/fret-diag/cookbook-imui-editor-controls-click-stress-checkerboard-canvas-20260627/1782515613185/bundle.schema2.json`
+- This slice is still inside the editor-controls lane, but the remaining cost is now mostly the
+  page stack and row ownership around the swatch surface rather than the checkerboard background
+  itself.

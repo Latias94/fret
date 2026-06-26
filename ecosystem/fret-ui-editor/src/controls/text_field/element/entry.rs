@@ -51,6 +51,7 @@ pub(super) struct TextFieldEntryArgs {
     pub(super) multiline: bool,
     pub(super) stable_line_boxes: bool,
     pub(super) min_height: Option<Px>,
+    pub(super) control_height: Px,
 }
 
 pub(super) fn text_field_entry<H: UiHost>(
@@ -83,6 +84,7 @@ pub(super) fn text_field_entry<H: UiHost>(
         multiline,
         stable_line_boxes,
         min_height,
+        control_height,
     } = args;
 
     if multiline {
@@ -137,6 +139,8 @@ pub(super) fn text_field_entry<H: UiHost>(
                 assistive_semantics,
                 selection_behavior,
                 cancel_behavior,
+                stable_line_boxes,
+                control_height,
             },
         )
     }

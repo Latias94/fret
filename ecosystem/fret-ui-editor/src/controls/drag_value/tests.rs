@@ -44,8 +44,8 @@ fn drag_value_uses_stable_session_shell_for_scrub_and_typing_branches() {
         },
     );
 
-    let ElementKind::Stack(shell) = &element.kind else {
-        panic!("drag value should mount scrub/typing branches in a stack shell");
+    let ElementKind::Flex(shell) = &element.kind else {
+        panic!("drag value should mount scrub/typing branches in a flex shell");
     };
     let expected_min_height = {
         let style = EditorStyle::resolve(Theme::global(&app));

@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
-use fret_ui::element::{AnyElement, ElementKind};
+use fret_ui::element::{AnyElement, ElementKind, Length};
 use fret_ui::elements::with_element_cx;
 
 use super::TextField;
@@ -36,4 +36,8 @@ fn text_field_without_clear_button_keeps_input_directly_inside_frame() {
         "default text field should not add a row shell when no clear segment is present, got {:?}",
         content.kind
     );
+    if let ElementKind::TextInput(props) = &content.kind {
+        assert!(matches!(props.layout.size.height, Length::Px(_)));
+        assert!(matches!(props.layout.size.min_height, Some(Length::Px(_))));
+    }
 }

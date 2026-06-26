@@ -31,7 +31,8 @@ pub(super) fn color_hex_input<H: UiHost>(
     props.layout = LayoutStyle {
         size: SizeStyle {
             width: Length::Fill,
-            height: Length::Auto,
+            // Use a fixed height so the text input can take the fixed-height layout fast path.
+            height: Length::Px(args.control_height),
             min_height: Some(Length::Px(args.control_height)),
             ..Default::default()
         },

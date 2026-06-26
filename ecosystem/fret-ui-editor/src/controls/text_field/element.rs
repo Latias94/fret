@@ -1,5 +1,6 @@
 use std::panic::Location;
 
+use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -111,6 +112,7 @@ impl TextField {
             let style = EditorStyle::resolve(theme);
             (style.density, style.frame_chrome(size))
         };
+        let control_height = Px(density.row_height.0 + density.padding_y.0 * 2.0);
 
         let model_for_trailing = model.clone();
         let draft_for_trailing = draft.clone();
@@ -156,6 +158,7 @@ impl TextField {
                         multiline,
                         stable_line_boxes,
                         min_height,
+                        control_height,
                     },
                 )
             },

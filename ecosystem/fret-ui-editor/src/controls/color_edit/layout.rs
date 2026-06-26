@@ -49,9 +49,19 @@ pub(super) fn color_edit_root_layout<H: UiHost>(
         layout.size.min_height = Some(Length::Px(control_height));
     }
 
+    let row_height = if matches!(layout.size.height, Length::Auto) {
+        Length::Px(control_height)
+    } else {
+        layout.size.height
+    };
+
+    if error_msg.is_none() && matches!(layout.size.height, Length::Auto) {
+        layout.size.height = row_height;
+    }
+
     let mut row_layout = layout.clone();
     row_layout.size.width = Length::Fill;
-    row_layout.size.height = Length::Auto;
+    row_layout.size.height = row_height;
 
     let row = cx.flex(
         FlexProps {

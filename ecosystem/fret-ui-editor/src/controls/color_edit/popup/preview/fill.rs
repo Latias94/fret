@@ -1,7 +1,7 @@
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, DrawOrder, Edges, Paint, Point, Px, Rect, SceneOp, Size};
+use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
-    AnyElement, ContainerProps, GridProps, GridTrackSizing, InsetStyle, LayoutStyle, Length,
-    Overflow, PositionStyle, SizeStyle, SpacingLength, StackProps,
+    AnyElement, CanvasProps, ContainerProps, LayoutStyle, Length, Overflow, SizeStyle,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -17,23 +17,14 @@ pub(in crate::controls::color_edit) fn color_preview_stack<H: UiHost>(
     radius: Px,
     alpha_preview: ColorEditAlphaPreview,
 ) -> AnyElement {
-    cx.container(
-        ContainerProps {
-            layout: fill_preview_layout(),
-            corner_radii: Corners::all(radius),
-            ..Default::default()
-        },
-        move |cx| match alpha_preview {
-            ColorEditAlphaPreview::Checkerboard => {
-                vec![checkerboard_preview_fill(cx, color, radius)]
-            }
-            ColorEditAlphaPreview::Opaque => {
-                vec![solid_preview_fill(cx, opaque_preview_color(color), radius)]
-            }
-            ColorEditAlphaPreview::NoBackground => vec![solid_preview_fill(cx, color, radius)],
-            ColorEditAlphaPreview::Half => vec![half_alpha_preview_fill(cx, color, radius)],
-        },
-    )
+    match alpha_preview {
+        ColorEditAlphaPreview::Checkerboard => checkerboard_preview_fill(cx, color, radius),
+        ColorEditAlphaPreview::Opaque => {
+            solid_preview_fill(cx, opaque_preview_color(color), radius)
+        }
+        ColorEditAlphaPreview::NoBackground => solid_preview_fill(cx, color, radius),
+        ColorEditAlphaPreview::Half => half_alpha_preview_fill(cx, color, radius),
+    }
 }
 
 fn checkerboard_preview_fill<H: UiHost>(
@@ -41,22 +32,13 @@ fn checkerboard_preview_fill<H: UiHost>(
     color: Color,
     radius: Px,
 ) -> AnyElement {
-    cx.stack_props(
-        StackProps {
+    cx.canvas(
+        CanvasProps {
             layout: fill_preview_layout(),
+            ..Default::default()
         },
-        move |cx| {
-            let checkerboard = checkerboard_grid(cx);
-            let overlay = cx.container(
-                ContainerProps {
-                    layout: fill_absolute_preview_layout(),
-                    background: Some(color),
-                    corner_radii: Corners::all(radius),
-                    ..Default::default()
-                },
-                |_cx| vec![],
-            );
-            vec![checkerboard, overlay]
+        move |p| {
+            paint_checkerboard_preview(p, color, radius);
         },
     )
 }
@@ -82,22 +64,13 @@ fn half_alpha_preview_fill<H: UiHost>(
     color: Color,
     radius: Px,
 ) -> AnyElement {
-    cx.grid(
-        GridProps {
+    cx.canvas(
+        CanvasProps {
             layout: fill_preview_layout(),
-            cols: 2,
-            rows: Some(1),
-            template_columns: Some(vec![GridTrackSizing::Flex(1.0), GridTrackSizing::Flex(1.0)]),
-            template_rows: Some(vec![GridTrackSizing::Flex(1.0)]),
-            gap: SpacingLength::Px(Px(0.0)),
-            padding: Edges::all(Px(0.0)).into(),
             ..Default::default()
         },
-        move |cx| {
-            vec![
-                solid_preview_fill(cx, opaque_preview_color(color), radius),
-                checkerboard_preview_fill(cx, color, radius),
-            ]
+        move |p| {
+            paint_half_alpha_preview(p, color, radius);
         },
     )
 }
@@ -114,21 +87,65 @@ pub(in crate::controls::color_edit::popup) fn fill_preview_layout() -> LayoutSty
     }
 }
 
-fn fill_absolute_preview_layout() -> LayoutStyle {
-    let mut layout = fill_preview_layout();
-    layout.position = PositionStyle::Absolute;
-    layout.inset = InsetStyle {
-        top: Some(Px(0.0)).into(),
-        right: Some(Px(0.0)).into(),
-        bottom: Some(Px(0.0)).into(),
-        left: Some(Px(0.0)).into(),
-    };
-    layout
-}
-
 pub(in crate::controls::color_edit) fn opaque_preview_color(mut color: Color) -> Color {
     color.a = 1.0;
     color
+}
+
+fn paint_checkerboard_preview(painter: &mut CanvasPainter<'_>, color: Color, radius: Px) {
+    let bounds = painter.bounds();
+    painter.with_clip_rrect(bounds, Corners::all(radius), |painter| {
+        paint_checkerboard_cells(painter, bounds);
+        push_solid_rect(painter, bounds, color, DrawOrder(1));
+    });
+}
+
+fn paint_half_alpha_preview(painter: &mut CanvasPainter<'_>, color: Color, radius: Px) {
+    let bounds = painter.bounds();
+    painter.with_clip_rrect(bounds, Corners::all(radius), |painter| {
+        let half_width = bounds.size.width / 2.0;
+        let left = Rect::new(bounds.origin, Size::new(half_width, bounds.size.height));
+        let right = Rect::new(
+            Point::new(bounds.origin.x + half_width, bounds.origin.y),
+            Size::new(half_width, bounds.size.height),
+        );
+
+        push_solid_rect(painter, left, opaque_preview_color(color), DrawOrder(0));
+        paint_checkerboard_cells(painter, right);
+        push_solid_rect(painter, right, color, DrawOrder(1));
+    });
+}
+
+fn paint_checkerboard_cells(painter: &mut CanvasPainter<'_>, bounds: Rect) {
+    let half_width = bounds.size.width / 2.0;
+    let half_height = bounds.size.height / 2.0;
+    let x0 = bounds.origin.x;
+    let y0 = bounds.origin.y;
+    let x1 = x0 + half_width;
+    let y1 = y0 + half_height;
+
+    for (row, y) in [(0usize, y0), (1usize, y1)] {
+        for (col, x) in [(0usize, x0), (1usize, x1)] {
+            let cell = Rect::new(Point::new(x, y), Size::new(half_width, half_height));
+            push_solid_rect(
+                painter,
+                cell,
+                checkerboard::checkerboard_cell_color(row, col),
+                DrawOrder(0),
+            );
+        }
+    }
+}
+
+fn push_solid_rect(painter: &mut CanvasPainter<'_>, rect: Rect, color: Color, order: DrawOrder) {
+    painter.scene().push(SceneOp::Quad {
+        order,
+        rect,
+        background: Paint::Solid(color).into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+        corner_radii: Corners::default(),
+    });
 }
 
 pub(in crate::controls::color_edit) fn preview_color_for_alpha_visibility(
@@ -139,5 +156,60 @@ pub(in crate::controls::color_edit) fn preview_color_for_alpha_visibility(
         color
     } else {
         opaque_preview_color(color)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Color, Px, Rect};
+    use fret_ui::element::ElementKind;
+
+    #[test]
+    fn checkerboard_preview_returns_canvas_root_directly() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::default(),
+            "color-preview-checkerboard",
+            |cx| {
+                color_preview_stack(
+                    cx,
+                    Color::from_srgb_hex_rgb(0x33_66_99),
+                    Px(5.0),
+                    ColorEditAlphaPreview::Checkerboard,
+                )
+            },
+        );
+
+        assert!(matches!(element.kind, ElementKind::Canvas(_)));
+        assert!(element.children.is_empty());
+    }
+
+    #[test]
+    fn half_alpha_preview_returns_canvas_root_directly() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::default(),
+            "color-preview-half",
+            |cx| {
+                color_preview_stack(
+                    cx,
+                    Color::from_srgb_hex_rgb(0x33_66_99),
+                    Px(5.0),
+                    ColorEditAlphaPreview::Half,
+                )
+            },
+        );
+
+        assert!(matches!(element.kind, ElementKind::Canvas(_)));
+        assert!(element.children.is_empty());
     }
 }
