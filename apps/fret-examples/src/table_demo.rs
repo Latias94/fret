@@ -541,6 +541,7 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                         row_test_id_prefix: Some(Arc::<str>::from(
                                                             "table-demo-row-",
                                                         )),
+                                                        ..Default::default()
                                                     };
 
                                                 vec![fret_ui_kit::declarative::table::table_virtualized(

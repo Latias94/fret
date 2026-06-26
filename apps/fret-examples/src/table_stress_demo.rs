@@ -643,6 +643,7 @@ fn render(
                                                         row_test_id_prefix: Some(Arc::<str>::from(
                                                             "table-stress-row-",
                                                         )),
+                                                        ..Default::default()
                                                     };
 
                                                 vec![fret_ui_kit::declarative::table::table_virtualized(

@@ -302,6 +302,7 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
                     header_row_test_id: Some(Arc::<str>::from("datatable-demo-header-row")),
                     header_cell_test_id_prefix: Some(Arc::<str>::from("datatable-demo-header-")),
                     row_test_id_prefix: Some(Arc::<str>::from("datatable-demo-row-")),
+                    ..Default::default()
                 })
                 .into_element(
                     cx,
