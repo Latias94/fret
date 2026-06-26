@@ -20,6 +20,7 @@ pub(super) fn color_numeric_input_field<H: UiHost>(
     display_text: Arc<str>,
     show_alpha: bool,
     enabled: bool,
+    row_height: Px,
     chrome: fret_ui::TextInputStyle,
     text_style: TextStyle,
     has_error: bool,
@@ -30,7 +31,7 @@ pub(super) fn color_numeric_input_field<H: UiHost>(
         size: SizeStyle {
             width: Length::Fill,
             height: Length::Auto,
-            min_height: Some(Length::Px(row_height_from_style(&text_style))),
+            min_height: Some(Length::Px(row_height)),
             ..Default::default()
         },
         ..Default::default()
@@ -116,10 +117,6 @@ pub(super) fn color_numeric_input_field<H: UiHost>(
     );
 
     input
-}
-
-fn row_height_from_style(style: &TextStyle) -> Px {
-    style.line_height.unwrap_or(style.size)
 }
 
 fn color_numeric_placeholder(mode: ColorNumericInputMode, show_alpha: bool) -> Arc<str> {

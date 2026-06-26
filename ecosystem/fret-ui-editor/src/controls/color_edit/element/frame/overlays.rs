@@ -33,6 +33,10 @@ pub(super) struct ColorEditFrameOverlayArgs<'a> {
     pub(super) copy_options: ColorEditCopyOptions,
     pub(super) popup_runtime_options: Model<ColorEditPopupRuntimeOptions>,
     pub(super) popup_padding: Px,
+    pub(super) row_height: Px,
+    pub(super) text_input_chrome: fret_ui::TextInputStyle,
+    pub(super) text_input_text_style: fret_core::TextStyle,
+    pub(super) error_color: Color,
     pub(super) test_ids: &'a ColorEditElementTestIds,
 }
 
@@ -61,6 +65,10 @@ pub(super) fn request_color_edit_frame_overlays<H: UiHost>(
         args.popup_options,
         args.popup_runtime_options,
         args.popup_padding,
+        args.row_height,
+        args.text_input_chrome,
+        args.text_input_text_style,
+        args.error_color,
         args.test_ids.popup.clone(),
         args.test_ids.eyedropper.clone(),
     );

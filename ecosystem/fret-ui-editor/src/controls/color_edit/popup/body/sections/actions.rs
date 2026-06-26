@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::Color;
+use fret_core::{Color, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -76,6 +76,10 @@ pub(super) fn color_popup_numeric_section<H: UiHost>(
     effective_popup_options: ColorEditPopupOptions,
     show_alpha: bool,
     enabled: bool,
+    row_height: Px,
+    text_input_chrome: fret_ui::TextInputStyle,
+    text_input_text_style: TextStyle,
+    error_color: Color,
     popup_test_id: Option<&Arc<str>>,
 ) -> Option<AnyElement> {
     (effective_popup_options.numeric_inputs != ColorEditPopupNumericInputs::Hidden).then(|| {
@@ -90,6 +94,10 @@ pub(super) fn color_popup_numeric_section<H: UiHost>(
             effective_popup_options.numeric_inputs,
             show_alpha,
             enabled,
+            row_height,
+            text_input_chrome,
+            text_input_text_style,
+            error_color,
             derived_test_id(popup_test_id, "numbers"),
         )
     })

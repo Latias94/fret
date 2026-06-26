@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use fret_app::App;
 use fret_core::{AppWindowId, Color, Rect};
+use fret_ui::Theme;
 use fret_ui::element::ElementKind;
 use fret_ui::elements::with_element_cx;
 
 use super::super::super::model::format_hex;
 use super::*;
+use crate::primitives::EditorDensity;
 
 fn mount_numeric_inputs(
     numeric_inputs: ColorEditPopupNumericInputs,
@@ -16,6 +18,21 @@ fn mount_numeric_inputs(
     let mut app = App::new();
     let window = AppWindowId::default();
     let current = Color::from_srgb_hex_rgb(0x33_66_99);
+    let theme = Theme::global(&app);
+    let density = EditorDensity::resolve(theme);
+    let row_height = density.row_height;
+    let (text_input_chrome, text_input_text_style) =
+        crate::primitives::chrome::resolve_editor_text_field_style(
+            theme,
+            fret_ui_kit::Size::default(),
+            &fret_ui_kit::ChromeRefinement::default(),
+        );
+    let text_input_text_style = fret_ui_kit::typography::as_control_text(fret_core::TextStyle {
+        size: fret_core::Px(10.0),
+        line_height: Some(row_height),
+        ..text_input_text_style
+    });
+    let error_color = theme.color_token("destructive");
     let model = app.models_mut().insert(current);
     let hex_draft = app
         .models_mut()
@@ -45,6 +62,10 @@ fn mount_numeric_inputs(
                 numeric_inputs,
                 true,
                 true,
+                row_height,
+                text_input_chrome,
+                text_input_text_style,
+                error_color,
                 test_id,
             )
         },
@@ -112,6 +133,21 @@ fn numeric_inputs_do_not_resync_unchanged_unfocused_drafts() {
     let mut app = App::new();
     let window = AppWindowId::default();
     let current = Color::from_srgb_hex_rgb(0x33_66_99);
+    let theme = Theme::global(&app);
+    let density = EditorDensity::resolve(theme);
+    let row_height = density.row_height;
+    let (text_input_chrome, text_input_text_style) =
+        crate::primitives::chrome::resolve_editor_text_field_style(
+            theme,
+            fret_ui_kit::Size::default(),
+            &fret_ui_kit::ChromeRefinement::default(),
+        );
+    let text_input_text_style = fret_ui_kit::typography::as_control_text(fret_core::TextStyle {
+        size: fret_core::Px(10.0),
+        line_height: Some(row_height),
+        ..text_input_text_style
+    });
+    let error_color = theme.color_token("destructive");
     let model = app.models_mut().insert(current);
     let hex_draft = app
         .models_mut()
@@ -148,6 +184,10 @@ fn numeric_inputs_do_not_resync_unchanged_unfocused_drafts() {
                 ColorEditPopupNumericInputs::RgbAndHsv,
                 true,
                 true,
+                row_height,
+                text_input_chrome,
+                text_input_text_style,
+                error_color,
                 Some(Arc::from("color-edit-popup-numeric-noop-sync")),
             )
         },

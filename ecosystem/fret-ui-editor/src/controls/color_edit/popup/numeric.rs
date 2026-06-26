@@ -9,12 +9,9 @@ use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorDensity;
-use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::readout::editor_inline_error_text_props;
 
@@ -35,6 +32,10 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
     numeric_inputs: ColorEditPopupNumericInputs,
     show_alpha: bool,
     enabled: bool,
+    row_height: Px,
+    text_input_chrome: fret_ui::TextInputStyle,
+    text_input_text_style: TextStyle,
+    error_color: Color,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let rgb = rgb_numeric_text(current, show_alpha);
@@ -43,22 +44,11 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
     let error_msg = cx
         .get_model_cloned(&error, Invalidation::Paint)
         .unwrap_or(None);
-    let (chrome, text_style, error_color, row_height) = {
-        let theme = Theme::global(&*cx.app);
-        let density = EditorDensity::resolve(theme);
-        let (chrome, text_style) =
-            resolve_editor_text_field_style(theme, Size::default(), &ChromeRefinement::default());
-        (
-            chrome,
-            typography::as_control_text(TextStyle {
-                size: Px(10.0),
-                line_height: Some(density.row_height),
-                ..text_style
-            }),
-            theme.color_token("destructive"),
-            density.row_height,
-        )
-    };
+    let text_style = typography::as_control_text(TextStyle {
+        size: Px(10.0),
+        line_height: Some(row_height),
+        ..text_input_text_style
+    });
     let rgb_test_id = derived_test_id(test_id.as_ref(), ColorNumericInputMode::Rgb.test_suffix());
     let hsv_test_id = derived_test_id(test_id.as_ref(), ColorNumericInputMode::Hsv.test_suffix());
 
@@ -78,7 +68,8 @@ pub(super) fn color_numeric_inputs<H: UiHost>(
             display_text,
             show_alpha,
             enabled,
-            chrome.clone(),
+            row_height,
+            text_input_chrome.clone(),
             text_style.clone(),
             error_msg.is_some(),
             test_id,

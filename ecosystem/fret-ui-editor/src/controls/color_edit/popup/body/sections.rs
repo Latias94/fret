@@ -42,6 +42,10 @@ pub(super) struct ColorPopupBodySectionsArgs {
     pub(super) popup_runtime_options: Model<ColorEditPopupRuntimeOptions>,
     pub(super) runtime_options: ColorEditPopupRuntimeOptions,
     pub(super) effective_popup_options: ColorEditPopupOptions,
+    pub(super) row_height: Px,
+    pub(super) text_input_chrome: fret_ui::TextInputStyle,
+    pub(super) text_input_text_style: fret_core::TextStyle,
+    pub(super) error_color: fret_core::Color,
     pub(super) popup_test_id: Option<Arc<str>>,
     pub(super) eyedropper_test_id: Option<Arc<str>>,
 }

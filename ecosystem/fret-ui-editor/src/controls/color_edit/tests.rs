@@ -170,9 +170,16 @@ fn color_hex_input_does_not_resync_unchanged_unfocused_models() {
     let model = app.models_mut().insert(current);
     let draft = app.models_mut().insert(current_hex.as_ref().to_string());
     let error = app.models_mut().insert(None::<Arc<str>>);
-    let control_height = EditorStyle::resolve(Theme::global(&app))
+    let theme = Theme::global(&app);
+    let control_height = EditorStyle::resolve(theme)
         .frame_chrome_small()
-        .control_outer_height(EditorDensity::resolve(Theme::global(&app)).row_height);
+        .control_outer_height(EditorDensity::resolve(theme).row_height);
+    let (text_input_chrome, text_input_text_style) =
+        crate::primitives::chrome::resolve_editor_text_field_style(
+            theme,
+            fret_ui_kit::Size::default(),
+            &fret_ui_kit::ChromeRefinement::default(),
+        );
     let draft_revision = draft.revision(&app);
     let error_revision = error.revision(&app);
 
@@ -198,6 +205,8 @@ fn color_hex_input_does_not_resync_unchanged_unfocused_models() {
                     focusable: true,
                     test_id: Some(Arc::from("color-edit-hex-noop-sync")),
                     control_height,
+                    text_input_chrome,
+                    text_input_text_style,
                 },
             )
         },

@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::EditorTokenKeys;
+use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::style::EditorStyle;
 
 use super::super::super::ColorEdit;
@@ -34,6 +36,9 @@ pub(super) struct ColorEditFrameSetup {
     pub(super) row_height: Px,
     pub(super) control_height: Px,
     pub(super) popup_padding: Px,
+    pub(super) text_input_chrome: fret_ui::TextInputStyle,
+    pub(super) text_input_text_style: TextStyle,
+    pub(super) error_color: Color,
     pub(super) current: Color,
     pub(super) current_hex: Arc<str>,
     pub(super) drag_drop_store: Model<ColorDragDropStore>,
@@ -58,9 +63,18 @@ pub(super) fn color_edit_frame_setup<H: UiHost>(
     let draft = draft_model(cx);
     let error = error_model(cx);
 
-    let (row_height, control_height, popup_padding) = {
+    let (
+        row_height,
+        control_height,
+        popup_padding,
+        text_input_chrome,
+        text_input_text_style,
+        error_color,
+    ) = {
         let theme = Theme::global(&*cx.app);
         let style = EditorStyle::resolve(theme);
+        let (text_input_chrome, text_input_text_style) =
+            resolve_editor_text_field_style(theme, Size::default(), &ChromeRefinement::default());
         let popup_padding = theme
             .metric_by_key(EditorTokenKeys::COLOR_POPUP_PADDING)
             .unwrap_or(Px(8.0));
@@ -70,6 +84,9 @@ pub(super) fn color_edit_frame_setup<H: UiHost>(
                 .frame_chrome_small()
                 .control_outer_height(style.density.row_height),
             popup_padding,
+            text_input_chrome,
+            text_input_text_style,
+            theme.color_token("destructive"),
         )
     };
 
@@ -112,6 +129,9 @@ pub(super) fn color_edit_frame_setup<H: UiHost>(
         row_height,
         control_height,
         popup_padding,
+        text_input_chrome,
+        text_input_text_style,
+        error_color,
         current,
         current_hex,
         drag_drop_store,

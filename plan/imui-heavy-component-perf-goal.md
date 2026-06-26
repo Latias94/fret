@@ -5790,3 +5790,21 @@ popover overlay root solve tail.
   `target/fret-diag/color-edit-gradient-stop-popup-bundle-root-codex-20260625/1782327951194/bundle.schema2.json`
   仍然能看到 proof demo 的外层 `Scroll` / root `Stack` 才是 transition 阶段的重 owner，说明之前那条 bundle 的大头是壳层切换，不是 popup 本体。
 - Interpretation: 这条线已经证明 ColorEdit popup 的稳态本身很轻；下一步如果继续拆 ColorEdit，应当盯 proof-demo 外壳或更窄的 surface，而不是继续往 popup 细节上加刀。
+
+## 2026-06-26 ColorEdit Shared Text-Field Style Lift
+
+- 把 `ColorEdit` 主输入和 popup numeric 输入里重复的 `Theme` / text-field style 解析上移到了
+  `ColorEditFrameSetup`，再经由 frame -> popup request -> body -> numeric 单向下传。
+- 这次共享的不是业务逻辑，而是稳定的 text input chrome / text style / row height / error color
+  解析结果，目标是减少叶子层重复解析和保持后续切片更容易拆分。
+- 已过的轻量门：
+  `cargo fmt --all --check`
+  与
+  `cargo nextest run -p fret-ui-editor color_edit --no-fail-fast`。
+- 稳态 perf probe：
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-steady-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/color-edit-gradient-stop-popup-steady-codex-20260626 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`
+- 最新稳态 bundle：
+  `target/fret-diag/color-edit-gradient-stop-popup-steady-codex-20260626/1782473382025/bundle.schema2.json`
+  的 `diag stats` 还是很轻，`p95.us(total/layout/prepaint/paint)=207/24/91/93`，
+  `layout.engine_solve=0`，`paint.widget=0`。
+- 结论：这刀是结构收口，不是可观测的 steady-state 性能胜利。ColorEdit popup 这条线可以暂时收口，下一步应回到更重的 editor-controls / code-view / proof-demo 外壳 owner，而不是继续往这个已很轻的 popup 细节上加刀。

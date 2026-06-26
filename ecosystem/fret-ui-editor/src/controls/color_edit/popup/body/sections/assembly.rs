@@ -37,6 +37,10 @@ pub(in crate::controls::color_edit::popup::body) fn color_popup_body_sections<H:
         popup_runtime_options,
         runtime_options,
         effective_popup_options,
+        row_height,
+        text_input_chrome,
+        text_input_text_style,
+        error_color,
         popup_test_id,
         eyedropper_test_id,
     } = args;
@@ -98,6 +102,10 @@ pub(in crate::controls::color_edit::popup::body) fn color_popup_body_sections<H:
         effective_popup_options,
         show_alpha,
         enabled,
+        row_height,
+        text_input_chrome,
+        text_input_text_style,
+        error_color,
         popup_test_id.as_ref(),
     );
     let history_swatches = color_popup_history_swatches_section(

@@ -40,6 +40,8 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
             drag_threshold: setup.drag_threshold,
             test_ids: &setup.test_ids,
             control_height: setup.control_height,
+            text_input_chrome: setup.text_input_chrome.clone(),
+            text_input_text_style: setup.text_input_text_style.clone(),
         },
     );
     let input = children.input;
@@ -79,6 +81,10 @@ pub(super) fn color_edit_into_element_keyed<H: UiHost>(
             copy_options: setup.copy_options,
             popup_runtime_options: setup.popup_runtime_options.clone(),
             popup_padding: setup.popup_padding,
+            row_height: setup.row_height,
+            text_input_chrome: setup.text_input_chrome,
+            text_input_text_style: setup.text_input_text_style,
+            error_color: setup.error_color,
             test_ids: &setup.test_ids,
         },
     );

@@ -4,10 +4,7 @@ use fret_core::{Color, KeyCode, Px};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextInputProps};
-use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::{ChromeRefinement, Size};
-
-use crate::primitives::chrome::resolve_editor_text_field_style;
+use fret_ui::{ElementContext, UiHost};
 
 use super::model::{format_hex, parse_hex};
 
@@ -21,19 +18,14 @@ pub(super) struct ColorEditInputArgs {
     pub(super) focusable: bool,
     pub(super) test_id: Option<Arc<str>>,
     pub(super) control_height: Px,
+    pub(super) text_input_chrome: fret_ui::TextInputStyle,
+    pub(super) text_input_text_style: fret_core::TextStyle,
 }
 
 pub(super) fn color_hex_input<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     args: ColorEditInputArgs,
 ) -> AnyElement {
-    let (chrome, text_style) = {
-        let theme = Theme::global(&*cx.app);
-        let (chrome, text_style) =
-            resolve_editor_text_field_style(theme, Size::default(), &ChromeRefinement::default());
-        (chrome, text_style)
-    };
-
     // Keep the draft synced while not focused so external updates (undo, scripts) show up.
     let mut props = TextInputProps::new(args.draft.clone());
     props.layout = LayoutStyle {
@@ -48,8 +40,8 @@ pub(super) fn color_hex_input<H: UiHost>(
     props.enabled = args.enabled;
     props.focusable = args.focusable;
     props.test_id = args.test_id.clone();
-    props.chrome = chrome;
-    props.text_style = text_style;
+    props.chrome = args.text_input_chrome;
+    props.text_style = args.text_input_text_style;
 
     let input = cx.text_input(props);
     let input_id = input.id;

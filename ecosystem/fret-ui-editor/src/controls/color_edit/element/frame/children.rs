@@ -39,6 +39,8 @@ pub(super) struct ColorEditFrameChildrenArgs<'a> {
     pub(super) drag_threshold: Px,
     pub(super) test_ids: &'a ColorEditElementTestIds,
     pub(super) control_height: Px,
+    pub(super) text_input_chrome: fret_ui::TextInputStyle,
+    pub(super) text_input_text_style: fret_core::TextStyle,
 }
 
 pub(super) fn color_edit_frame_children<H: UiHost>(
@@ -57,6 +59,8 @@ pub(super) fn color_edit_frame_children<H: UiHost>(
             focusable: args.control.options.focusable,
             test_id: args.test_ids.input.clone(),
             control_height: args.control_height,
+            text_input_chrome: args.text_input_chrome,
+            text_input_text_style: args.text_input_text_style,
         },
     );
 
