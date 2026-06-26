@@ -4,8 +4,7 @@ use std::sync::Arc;
 use fret_core::{AttributedText, Color, Edges, Px, SemanticsRole, TextSpan};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
-    PressableProps, SemanticsDecoration, SpacingLength,
+    AnyElement, LayoutStyle, Length, Overflow, PressableA11y, PressableProps, SemanticsDecoration,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -172,19 +171,6 @@ fn file_tree_retained_row_layout(row_h: Px) -> LayoutStyle {
     layout
 }
 
-fn file_tree_row_content_props(theme: &Theme) -> FlexProps {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.size.height = Length::Fill;
-
-    FlexProps {
-        layout,
-        gap: SpacingLength::Px(MetricRef::space(Space::N2).resolve(theme)),
-        align: CrossAlign::Center,
-        ..FlexProps::default()
-    }
-}
-
 #[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -335,12 +321,8 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                 }
                 .into();
 
-                let row_content_props = file_tree_row_content_props(Theme::global(&*cx.app));
-
                 vec![cx.container(row_props, |cx| {
-                    vec![cx.flex(row_content_props, |cx| {
-                        vec![file_tree_row_text(cx, icon, entry.label.clone())]
-                    })]
+                    vec![file_tree_row_text(cx, icon, entry.label.clone())]
                 })]
             },
         )
@@ -652,13 +634,7 @@ mod tests {
         );
 
         let row_background = only_child_with_kind(&ui, &mut app, window, row_node, "Container");
-        let row_content = only_child_with_kind(&ui, &mut app, window, row_background, "Flex");
-        assert_eq!(
-            ui.debug_node_children(row_content).len(),
-            1,
-            "retained file-tree rows should collapse icon and label under the content Flex"
-        );
-        let row_text = only_child_with_kind(&ui, &mut app, window, row_content, "StyledText");
+        let row_text = only_child_with_kind(&ui, &mut app, window, row_background, "StyledText");
         assert_eq!(
             ui.debug_node_children(row_text).len(),
             0,
