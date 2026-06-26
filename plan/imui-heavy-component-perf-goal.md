@@ -59,6 +59,30 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-26 IMUI Proof Inspector Lazy Section Model Note
+
+- The review-only `imui_editor_proof_demo` inspector now owns section models inside the matching
+  Object/Material/Gradient/Advanced section renderers instead of wiring every model through the
+  inspector root on every search frame.
+- The inspector still computes section visibility first, then only builds the matched `PropertyGroup`
+  and its local model bindings. This keeps the filtered Gradient popup path from cloning Object,
+  Material, and Advanced model handles that cannot render under the current query.
+- Focused gates passed:
+  `cargo fmt -p fret-examples --check`,
+  `cargo nextest run -p fret-ui-editor inspector_panel buffered --no-fail-fast`,
+  `cargo nextest run -p fret-examples --test imui_editor_collection_modularization_surface --no-fail-fast`,
+  and `cargo nextest run -p fret-examples --test imui_editor_asset_ref_field_surface --no-fail-fast`.
+- Perf probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-filtered-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/imui-editor-proof-gradient-stop-color-popup-filtered-inspector-lazy-model-codex-20260626 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`.
+- Result bundle:
+  `target/fret-diag/imui-editor-proof-gradient-stop-color-popup-filtered-inspector-lazy-model-codex-20260626/1782491242005/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2467/1859/832/89/519/49/0`.
+  Compared with the previous TextField snapshot-prune run at `2553/1818/802/84/653`, this is a
+  small total-frame and paint win while layout remains in the same band.
+- Interpretation: keep this as a demo-local owner/model split. It reduces filtered search work
+  without changing `InspectorPanel` contracts or broader editor component policy. Rollback is local:
+  restore eager inspector-root model wiring and pass section model structs back into the renderers.
+
 ## 2026-06-26 TextField Non-Buffered Model Snapshot Prune Note
 
 - `TextField` now only clones the bound model text when the field is actually buffered. The

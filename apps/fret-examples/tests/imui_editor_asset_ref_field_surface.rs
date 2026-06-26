@@ -13,16 +13,24 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
         );
     }
 
-    for needle in [
+    for needle in ["render_editor_material_surface(cx, panel_cx)"] {
+        assert!(
+            inspector_source.contains(needle),
+            "editor inspector should route Material without eagerly wiring AssetRefField models; missing `{needle}`"
+        );
+    }
+
+    for unexpected in [
         "use super::asset_ref;",
         "asset_slot: asset_ref::asset_slot_model(cx),",
         "asset_action: asset_ref::asset_action_model(cx),",
         "asset_slot: models.asset_slot.clone(),",
         "asset_action: models.asset_action.clone(),",
+        "EditorMaterialModels {",
     ] {
         assert!(
-            inspector_source.contains(needle),
-            "editor inspector should own the AssetRefField model wiring; missing `{needle}`"
+            !inspector_source.contains(unexpected),
+            "editor inspector should no longer own AssetRefField model wiring; unexpected `{unexpected}`"
         );
     }
 
@@ -38,13 +46,19 @@ fn imui_editor_proof_demo_mounts_asset_ref_field_as_ui_shell() {
 
     for needle in [
         "use super::super::asset_ref;",
+        "fn editor_material_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorMaterialModels",
+        "asset_slot: asset_ref::asset_slot_model(cx),",
+        "asset_action: asset_ref::asset_action_model(cx),",
         "let material_show_all = panel_cx.matches(\"material\");",
         "asset_ref: material_show_all",
+        "let models = editor_material_models(cx);",
         "asset_ref::push_material_rows(",
+        "models.asset_slot.clone(),",
+        "models.asset_action.clone(),",
     ] {
         assert!(
             material_source.contains(needle),
-            "editor material owner should route AssetRefField rows through asset_ref; missing `{needle}`"
+            "editor material owner should own AssetRefField model wiring and route rows through asset_ref; missing `{needle}`"
         );
     }
 

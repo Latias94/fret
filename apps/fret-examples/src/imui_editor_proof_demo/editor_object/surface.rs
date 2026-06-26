@@ -14,6 +14,14 @@ use fret_ui_editor::controls::{
     TextFieldOutcome,
 };
 
+use super::super::editor_state::{
+    editor_demo_buffered_name_model, editor_demo_inline_rename_model,
+    editor_demo_inline_rename_outcome_model, editor_demo_name_assist_accepted_model,
+    editor_demo_name_assist_active_item_model, editor_demo_name_assist_dismissed_query_model,
+    editor_demo_name_assist_model, editor_demo_name_model, editor_demo_notes_model,
+    editor_demo_notes_outcome_model, editor_demo_password_model,
+    editor_demo_password_outcome_model,
+};
 use super::super::editor_text_assist::{
     editor_demo_name_assist_items, record_text_field_outcome, render_editor_name_assist_surface,
 };
@@ -42,6 +50,23 @@ pub struct EditorObjectModels {
 pub struct EditorObjectSurface {
     pub element: Option<AnyElement>,
     pub any_match: bool,
+}
+
+fn editor_object_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorObjectModels {
+    EditorObjectModels {
+        name: editor_demo_name_model(cx),
+        buffered_name: editor_demo_buffered_name_model(cx),
+        inline_rename: editor_demo_inline_rename_model(cx),
+        inline_rename_outcome: editor_demo_inline_rename_outcome_model(cx),
+        name_assist: editor_demo_name_assist_model(cx),
+        name_assist_dismissed_query: editor_demo_name_assist_dismissed_query_model(cx),
+        name_assist_active_item: editor_demo_name_assist_active_item_model(cx),
+        name_assist_accepted: editor_demo_name_assist_accepted_model(cx),
+        password: editor_demo_password_model(cx),
+        password_outcome: editor_demo_password_outcome_model(cx),
+        notes: editor_demo_notes_model(cx),
+        notes_outcome: editor_demo_notes_outcome_model(cx),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -137,19 +162,17 @@ impl EditorObjectVisibility {
 pub fn render_editor_object_surface(
     cx: &mut ElementContext<'_, KernelApp>,
     panel_cx: &InspectorPanelCx,
-    models: EditorObjectModels,
 ) -> EditorObjectSurface {
     let visibility = EditorObjectVisibility::from_panel(panel_cx);
     let any_match = visibility.any_match();
     let element = if any_match {
+        let models = editor_object_models(cx);
         Some(
             PropertyGroup::new("Object")
                 .options(PropertyGroupOptions {
+                    collapsible: false,
                     test_id: Some(Arc::from("imui-editor-proof.editor.group.object")),
                     header_test_id: Some(Arc::from("imui-editor-proof.editor.group.object.header")),
-                    content_test_id: Some(Arc::from(
-                        "imui-editor-proof.editor.group.object.content",
-                    )),
                     ..Default::default()
                 })
                 .into_element(

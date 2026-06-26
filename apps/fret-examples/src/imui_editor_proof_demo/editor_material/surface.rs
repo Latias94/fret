@@ -18,7 +18,11 @@ use fret_ui_editor::controls::{
 };
 
 use super::super::asset_ref;
-use super::super::editor_state::editor_material_shading_items;
+use super::super::editor_state::{
+    editor_demo_alpha_clip_model, editor_demo_base_color_model, editor_demo_cast_shadows_model,
+    editor_demo_drag_value_outcome_model, editor_demo_metallic_model, editor_demo_roughness_model,
+    editor_demo_shading_model, editor_demo_value_model, editor_material_shading_items,
+};
 use super::super::proof_helpers::{
     compact_edit_session_outcome_label, editor_fixed_decimals_presentation,
     editor_percent_presentation, editor_string_model_readout, proof_empty_state_text,
@@ -42,6 +46,33 @@ pub struct EditorMaterialModels {
 pub struct EditorMaterialSurface {
     pub element: Option<AnyElement>,
     pub any_match: bool,
+}
+
+fn editor_material_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorMaterialModels {
+    let roughness = editor_demo_roughness_model(cx);
+    let metallic = editor_demo_metallic_model(cx);
+
+    #[cfg(debug_assertions)]
+    {
+        debug_assert_ne!(
+            roughness.id(),
+            metallic.id(),
+            "Roughness/Metallic models must be distinct; otherwise sliders will sync unintentionally."
+        );
+    }
+
+    EditorMaterialModels {
+        opacity: editor_demo_value_model(cx),
+        opacity_outcome: editor_demo_drag_value_outcome_model(cx),
+        roughness,
+        metallic,
+        base_color: editor_demo_base_color_model(cx),
+        asset_slot: asset_ref::asset_slot_model(cx),
+        asset_action: asset_ref::asset_action_model(cx),
+        shading: editor_demo_shading_model(cx),
+        alpha_clip: editor_demo_alpha_clip_model(cx),
+        cast_shadows: editor_demo_cast_shadows_model(cx),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -94,20 +125,18 @@ impl EditorMaterialVisibility {
 pub fn render_editor_material_surface(
     cx: &mut ElementContext<'_, KernelApp>,
     panel_cx: &InspectorPanelCx,
-    models: EditorMaterialModels,
 ) -> EditorMaterialSurface {
     let visibility = EditorMaterialVisibility::from_panel(panel_cx);
     let any_match = visibility.any_match();
     let element = if any_match {
+        let models = editor_material_models(cx);
         Some(
             PropertyGroup::new("Material")
                 .options(PropertyGroupOptions {
+                    collapsible: false,
                     test_id: Some(Arc::from("imui-editor-proof.editor.group.material")),
                     header_test_id: Some(Arc::from(
                         "imui-editor-proof.editor.group.material.header",
-                    )),
-                    content_test_id: Some(Arc::from(
-                        "imui-editor-proof.editor.group.material.content",
                     )),
                     ..Default::default()
                 })

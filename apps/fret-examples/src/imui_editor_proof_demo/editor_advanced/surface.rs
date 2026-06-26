@@ -16,6 +16,11 @@ use fret_ui_editor::controls::{
     TransformEditOptions, Vec3Edit, VecEditAxisOutcome, VecEditOptions,
 };
 
+use super::super::editor_state::{
+    editor_demo_exposure_model, editor_demo_iterations_model, editor_demo_position_models,
+    editor_demo_position_outcome_model, editor_demo_rotation_models, editor_demo_scale_models,
+    editor_demo_transform_outcome_model,
+};
 use super::super::proof_helpers::{
     editor_fixed_decimals_presentation, editor_position_presentation, editor_string_model_readout,
     editor_transform_presentations, proof_empty_state_text, proof_optional_outcome_readout,
@@ -42,6 +47,28 @@ pub struct EditorAdvancedModels {
 pub struct EditorAdvancedSurface {
     pub element: Option<AnyElement>,
     pub any_match: bool,
+}
+
+fn editor_advanced_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorAdvancedModels {
+    let (pos_x, pos_y, pos_z) = editor_demo_position_models(cx);
+    let (rot_x, rot_y, rot_z) = editor_demo_rotation_models(cx);
+    let (scl_x, scl_y, scl_z) = editor_demo_scale_models(cx);
+
+    EditorAdvancedModels {
+        pos_x,
+        pos_y,
+        pos_z,
+        position_outcome: editor_demo_position_outcome_model(cx),
+        rot_x,
+        rot_y,
+        rot_z,
+        scl_x,
+        scl_y,
+        scl_z,
+        transform_outcome: editor_demo_transform_outcome_model(cx),
+        iterations: editor_demo_iterations_model(cx),
+        exposure: editor_demo_exposure_model(cx),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -78,19 +105,18 @@ impl EditorAdvancedVisibility {
 pub fn render_editor_advanced_surface(
     cx: &mut ElementContext<'_, KernelApp>,
     panel_cx: &InspectorPanelCx,
-    models: EditorAdvancedModels,
 ) -> EditorAdvancedSurface {
     let visibility = EditorAdvancedVisibility::from_panel(panel_cx);
-    let element = if visibility.any_match() {
+    let any_match = visibility.any_match();
+    let element = if any_match {
+        let models = editor_advanced_models(cx);
         Some(
             PropertyGroup::new("Advanced")
                 .options(PropertyGroupOptions {
+                    collapsible: false,
                     test_id: Some(Arc::from("imui-editor-proof.editor.group.advanced")),
                     header_test_id: Some(Arc::from(
                         "imui-editor-proof.editor.group.advanced.header",
-                    )),
-                    content_test_id: Some(Arc::from(
-                        "imui-editor-proof.editor.group.advanced.content",
                     )),
                     ..Default::default()
                 })
@@ -104,10 +130,7 @@ pub fn render_editor_advanced_surface(
         None
     };
 
-    EditorAdvancedSurface {
-        element,
-        any_match: visibility.any_match(),
-    }
+    EditorAdvancedSurface { element, any_match }
 }
 
 fn render_editor_advanced_rows(

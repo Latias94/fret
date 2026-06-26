@@ -12,7 +12,10 @@ use fret_ui_editor::composites::{
     OnGradientStopAction, PropertyGroup, PropertyGroupOptions,
 };
 
-use super::editor_state::GradientDemoStop;
+use super::editor_state::{
+    GradientDemoStop, editor_demo_gradient_angle_model, editor_demo_gradient_next_id_model,
+    editor_demo_gradient_stops_model,
+};
 
 #[derive(Clone)]
 pub(super) struct EditorGradientModels {
@@ -24,6 +27,14 @@ pub(super) struct EditorGradientModels {
 pub struct EditorGradientSurface {
     pub element: Option<AnyElement>,
     pub any_match: bool,
+}
+
+fn editor_gradient_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorGradientModels {
+    EditorGradientModels {
+        angle_degrees: editor_demo_gradient_angle_model(cx),
+        stops: editor_demo_gradient_stops_model(cx),
+        next_id: editor_demo_gradient_next_id_model(cx),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -57,19 +68,18 @@ impl EditorGradientVisibility {
 pub(super) fn render_editor_gradient_surface(
     cx: &mut ElementContext<'_, KernelApp>,
     panel_cx: &InspectorPanelCx,
-    models: EditorGradientModels,
 ) -> EditorGradientSurface {
     let visibility = EditorGradientVisibility::from_panel(panel_cx);
-    let element = if visibility.any_match() {
+    let any_match = visibility.any_match();
+    let element = if any_match {
+        let models = editor_gradient_models(cx);
         Some(
             PropertyGroup::new("Gradient")
                 .options(PropertyGroupOptions {
+                    collapsible: false,
                     test_id: Some(Arc::from("imui-editor-proof.editor.group.gradient")),
                     header_test_id: Some(Arc::from(
                         "imui-editor-proof.editor.group.gradient.header",
-                    )),
-                    content_test_id: Some(Arc::from(
-                        "imui-editor-proof.editor.group.gradient.content",
                     )),
                     ..Default::default()
                 })
@@ -83,10 +93,7 @@ pub(super) fn render_editor_gradient_surface(
         None
     };
 
-    EditorGradientSurface {
-        element,
-        any_match: visibility.any_match(),
-    }
+    EditorGradientSurface { element, any_match }
 }
 
 fn render_gradient_editor(

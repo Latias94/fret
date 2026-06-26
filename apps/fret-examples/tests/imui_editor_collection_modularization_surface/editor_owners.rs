@@ -22,13 +22,9 @@ pub(super) fn assert_editor_owner_split(
         "\"imui-editor-proof.editor.inspector\"",
         "\"imui-editor-proof.editor.search.list\"",
         "render_editor_object_surface(",
-        "EditorObjectModels {",
         "render_editor_material_surface(",
-        "EditorMaterialModels {",
         "render_editor_gradient_surface(",
-        "EditorGradientModels {",
         "render_editor_advanced_surface(",
-        "EditorAdvancedModels {",
         "let any_match =",
         "object_any_match || material_any_match || gradient_any_match || advanced_any_match;",
         "proof_empty_state_text(",
@@ -41,18 +37,28 @@ pub(super) fn assert_editor_owner_split(
     }
 
     assert!(
-        editor_inspector_source.contains("render_editor_object_surface(")
-            && editor_inspector_source.contains("EditorObjectModels {"),
-        "the demo-local editor inspector owner should route Object through the editor object owner"
+        editor_inspector_source.contains("render_editor_object_surface(cx, panel_cx)")
+            && !editor_inspector_source.contains("EditorObjectModels {"),
+        "the demo-local editor inspector owner should route Object through the editor object owner without eagerly constructing object models"
     );
 
     for needle in [
         "pub struct EditorObjectModels",
         "pub struct EditorObjectSurface",
+        "fn editor_object_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorObjectModels",
+        "EditorObjectModels {",
+        "editor_demo_name_model(cx)",
+        "editor_demo_buffered_name_model(cx)",
+        "editor_demo_inline_rename_model(cx)",
+        "editor_demo_name_assist_model(cx)",
         "pub fn render_editor_object_surface(",
         "EditorObjectVisibility",
+        "let any_match = visibility.any_match();",
+        "let models = editor_object_models(cx);",
         "fn render_editor_object_grid(",
         "PropertyGroup::new(\"Object\")",
+        "collapsible: false",
+        "\"imui-editor-proof.editor.group.object\"",
         "PropertyGrid::new().into_element",
         "PropertyRow::new()",
         "TextField::new(models.name.clone())",
@@ -68,7 +74,6 @@ pub(super) fn assert_editor_owner_split(
         "editor_text_assist_readout(",
         "committed_char_count_label(",
         "committed_line_count_label(",
-        "\"imui-editor-proof.editor.group.object\"",
         "\"imui-editor-proof.editor.object.name\"",
         "\"imui-editor-proof.editor.object.inline-rename\"",
         "\"imui-editor-proof.editor.object.buffered-name\"",
@@ -96,19 +101,28 @@ pub(super) fn assert_editor_owner_split(
     }
 
     assert!(
-        editor_inspector_source.contains("render_editor_advanced_surface(")
-            && editor_inspector_source.contains("EditorAdvancedModels {"),
-        "the demo-local editor inspector owner should route Advanced through the editor advanced owner"
+        editor_inspector_source.contains("render_editor_advanced_surface(cx, panel_cx)")
+            && !editor_inspector_source.contains("EditorAdvancedModels {"),
+        "the demo-local editor inspector owner should route Advanced through the editor advanced owner without eagerly constructing advanced models"
     );
 
     for needle in [
         "pub struct EditorAdvancedModels",
         "pub struct EditorAdvancedSurface",
+        "fn editor_advanced_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorAdvancedModels",
+        "EditorAdvancedModels {",
+        "editor_demo_position_models(cx)",
+        "editor_demo_rotation_models(cx)",
+        "editor_demo_scale_models(cx)",
         "pub fn render_editor_advanced_surface(",
         "struct EditorAdvancedVisibility",
         "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
-        "let element = if visibility.any_match() {",
+        "let any_match = visibility.any_match();",
+        "let element = if any_match {",
+        "let models = editor_advanced_models(cx);",
         "PropertyGroup::new(\"Advanced\")",
+        "collapsible: false",
+        "\"imui-editor-proof.editor.group.advanced\"",
         "Vec3Edit::from_presentation(",
         "TransformEdit::from_presentations(",
         "DragValue::new(",
@@ -138,10 +152,20 @@ pub(super) fn assert_editor_owner_split(
 
     for needle in [
         "pub(super) struct EditorGradientModels",
+        "fn editor_gradient_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorGradientModels",
+        "EditorGradientModels {",
+        "editor_demo_gradient_angle_model(cx)",
+        "editor_demo_gradient_stops_model(cx)",
+        "editor_demo_gradient_next_id_model(cx)",
         "pub(super) fn render_editor_gradient_surface(",
         "pub struct EditorGradientSurface",
         "EditorGradientVisibility",
+        "let any_match = visibility.any_match();",
+        "let element = if any_match {",
+        "let models = editor_gradient_models(cx);",
         "PropertyGroup::new(\"Gradient\")",
+        "collapsible: false",
+        "\"imui-editor-proof.editor.group.gradient\"",
         "fn render_gradient_editor(",
         "GradientEditor::new(bindings)",
         "fn remove_gradient_stop_action(",
@@ -161,11 +185,20 @@ pub(super) fn assert_editor_owner_split(
     for needle in [
         "pub struct EditorMaterialModels",
         "pub struct EditorMaterialSurface",
+        "fn editor_material_models(cx: &mut ElementContext<'_, KernelApp>) -> EditorMaterialModels",
+        "EditorMaterialModels {",
+        "editor_demo_value_model(cx)",
+        "editor_demo_roughness_model(cx)",
+        "editor_demo_metallic_model(cx)",
+        "asset_ref::asset_slot_model(cx)",
         "pub fn render_editor_material_surface(",
         "struct EditorMaterialVisibility",
         "fn from_panel(panel_cx: &InspectorPanelCx) -> Self",
         "let element = if any_match {",
+        "let models = editor_material_models(cx);",
         "PropertyGroup::new(\"Material\")",
+        "collapsible: false",
+        "\"imui-editor-proof.editor.group.material\"",
         "DragValue::from_presentation(",
         "record_drag_value_outcome(host, action_cx, &outcome_model, outcome);",
         "Slider::from_presentation(",
