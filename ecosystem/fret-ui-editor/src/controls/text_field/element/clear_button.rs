@@ -41,6 +41,10 @@ pub(super) fn text_field_clear_button_segments<H: UiHost>(
         buffered_state,
     } = args;
 
+    if !(clear_button && enabled) {
+        return Vec::new();
+    }
+
     let has_value = if let Some(draft) = draft.as_ref() {
         cx.read_model_ref(draft, Invalidation::Layout, |s| !s.is_empty())
             .unwrap_or(false)
@@ -48,7 +52,7 @@ pub(super) fn text_field_clear_button_segments<H: UiHost>(
         cx.read_model_ref(&model, Invalidation::Layout, |s| !s.is_empty())
             .unwrap_or(false)
     };
-    if !(clear_button && has_value && enabled) {
+    if !has_value {
         return Vec::new();
     }
 

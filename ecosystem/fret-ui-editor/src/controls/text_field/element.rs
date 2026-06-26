@@ -88,18 +88,23 @@ impl TextField {
         let focus_state = editor_text_entry_focus_state(cx);
         let draft = buffered.then(|| buffered::draft_model(cx));
         let buffered_state = buffered.then(|| buffered::buffered_state(cx));
-        let current_text = cx
-            .get_model_cloned(&model, Invalidation::Paint)
-            .unwrap_or_default();
 
-        if let (Some(draft), Some(buffered_state)) = (draft.as_ref(), buffered_state.as_ref()) {
+        let buffered_current_text = if let (Some(draft), Some(buffered_state)) =
+            (draft.as_ref(), buffered_state.as_ref())
+        {
+            let current_text = cx
+                .get_model_cloned(&model, Invalidation::Paint)
+                .unwrap_or_default();
             buffered::sync_draft_from_model_when_session_inactive(
                 cx,
                 draft,
                 buffered_state,
                 &current_text,
             );
-        }
+            Some(current_text)
+        } else {
+            None
+        };
 
         let (density, frame_chrome) = {
             let theme = Theme::global(&*cx.app);
@@ -129,7 +134,7 @@ impl TextField {
                         model: model.clone(),
                         draft: draft.clone(),
                         buffered_state: buffered_state.clone(),
-                        current_text,
+                        buffered_current_text,
                         draft_controller,
                         on_outcome: on_outcome.clone(),
                         submit_command: submit_command.clone(),

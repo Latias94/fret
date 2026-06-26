@@ -59,6 +59,32 @@ historical records remain in:
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
 
+## 2026-06-26 TextField Non-Buffered Model Snapshot Prune Note
+
+- `TextField` now only clones the bound model text when the field is actually buffered. The
+  non-buffered `TextAssistField` / inspector search path still binds the input directly to the
+  query model, but no longer prepares a buffered-session `current_text` snapshot that it cannot
+  use.
+- The optional clear segment now returns before reading the model when clear chrome is disabled or
+  the field is disabled. This keeps the default and disabled hot paths from paying a layout-phase
+  model read just to discover that no segment will be mounted.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor text_field_without_clear_button_keeps_input_directly_inside_frame --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor text_assist_field --no-fail-fast`,
+  `cargo nextest run -p fret-ui-editor inspector_panel --no-fail-fast`,
+  and `cargo nextest run -p fret-ui-editor buffered --no-fail-fast`.
+- Perf probe:
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-filtered-bundle.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/imui-editor-proof-gradient-stop-color-popup-filtered-textfield-lazy-codex-20260626 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-demo --bin imui_editor_proof_demo --release`.
+- Result bundle:
+  `target/fret-diag/imui-editor-proof-gradient-stop-color-popup-filtered-textfield-lazy-codex-20260626/1782485572230/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=2553/1818/802/84/653`.
+  Compared with the previous filtered note at `2479/2261us` total/layout, this is a layout win but
+  not a total-frame win because paint moved upward on the measured p95 frame.
+- Interpretation: keep this as a small fixed-cost prune for non-buffered search assist. The next
+  useful cut should not keep chasing `TextField` broadly; current evidence points back to
+  text/layout ownership in the proof surface and paint/text-prepare variance.
+
 ## 2026-06-25 Retained DataTable Fixed-Row Background Wrapper Removal Note
 
 - The retained `DataTable` fixed-row row chrome was flattened one layer further in

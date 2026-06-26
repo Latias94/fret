@@ -29,7 +29,7 @@ pub(super) struct TextFieldMultilineEntryArgs {
     pub(super) model: Model<String>,
     pub(super) draft: Option<Model<String>>,
     pub(super) buffered_state: Option<Arc<Mutex<BufferedTextFieldState>>>,
-    pub(super) current_text: String,
+    pub(super) buffered_current_text: Option<String>,
     pub(super) draft_controller: Option<TextFieldDraftController>,
     pub(super) on_outcome: Option<OnTextFieldOutcome>,
     pub(super) focus_state: Arc<Mutex<EditorTextEntryFocusState>>,
@@ -56,7 +56,7 @@ pub(super) fn text_field_multiline_entry<H: UiHost>(
         model,
         draft,
         buffered_state,
-        current_text,
+        buffered_current_text,
         draft_controller,
         on_outcome,
         focus_state,
@@ -100,11 +100,14 @@ pub(super) fn text_field_multiline_entry<H: UiHost>(
     let is_focused = cx.is_focused_element(area_id);
 
     if let (Some(draft), Some(buffered_state)) = (draft.as_ref(), buffered_state.as_ref()) {
+        let current_text = buffered_current_text
+            .as_deref()
+            .expect("buffered text field entry requires current model text");
         buffered::sync_buffered_text_field_session(
             cx,
             area_id,
             is_focused,
-            &current_text,
+            current_text,
             draft,
             buffered_state,
             blur_behavior,
@@ -125,6 +128,10 @@ pub(super) fn text_field_multiline_entry<H: UiHost>(
             },
         );
     }
+    debug_assert_eq!(
+        draft.is_some() && buffered_state.is_some(),
+        buffered_current_text.is_some()
+    );
 
     sync_text_field_focus_selection(
         cx,
