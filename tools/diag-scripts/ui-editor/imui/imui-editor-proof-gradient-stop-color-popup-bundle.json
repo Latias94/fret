@@ -1,0 +1,101 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-gradient-stop-color-popup-bundle",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui_editor",
+      "imui",
+      "gradient",
+      "color_edit",
+      "popup",
+      "regression",
+      "perf"
+    ],
+    "target_hints": [
+      "Uses the full imui_editor_proof_demo layout and the Gradient stop color editor.",
+      "Captures the open ColorEdit popup bundle through the root scroll viewport."
+    ],
+    "env_defaults": {
+      "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW": "1",
+      "FRET_IMUI_EDITOR_PRESET": "default"
+    }
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1440.0, "height_px": 1100.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.root.viewport" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.1.color.swatch"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "imui-editor-proof.root.viewport" },
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.1.color.swatch"
+      },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "imui-editor-proof.editor.gradient.stops.stop.1.color.swatch"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.1.color.popup"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.gradient.stops.stop.1.color.popup"
+        },
+        "padding_px": 8.0
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-editor-proof-gradient-stop-color-popup-open.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-gradient-stop-color-popup-open"
+    }
+  ]
+}
