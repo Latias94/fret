@@ -770,3 +770,24 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
 - This slice is still inside the editor-controls lane, but the remaining cost is now mostly the
   page stack and row ownership around the swatch surface rather than the checkerboard background
   itself.
+
+## 2026-06-27 Inspector Direct-Entry Sidebar Cache Opt-Out
+
+- The direct-entry inspector probe showed that the sidebar shell cache was a small net loss for
+  `PAGE_INSPECTOR_TORTURE`. A cache-off A/B run improved the hot band from
+  `p95 total/layout/solve/prepaint/paint = 2143/1608/602/214/321` to
+  `2115/1599/582/213/303`, with `layout.root_phases.roots(total/apply)=925/924`.
+- I turned that observation into a page-level policy in `apps/fret-ui-gallery/src/spec.rs`:
+  `page_sidebar_cache_policy(PAGE_INSPECTOR_TORTURE)` now returns `Uncached`, and
+  `apps/fret-ui-gallery/src/driver/render_flow.rs` consults that policy before enabling sidebar
+  shell caching.
+- Validation passed with:
+  - `cargo fmt --all`
+  - `cargo nextest run -p fret-ui-gallery --features gallery-dev --no-fail-fast inspector_torture_opts_out_of_sidebar_cache`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot`
+- The policy-backed rerun landed at
+  `p95 total/layout/solve/prepaint/paint = 2063/1597/565/195/271`, with the worst bundle
+  `target/fret-diag/inspector-direct-entry-sidebar-cache-policy-20260627/1782517919473/bundle.schema2.json`
+  and `layout.root_phases.roots(total/apply)=905/904`.
+- `cache_roots=1`, `cache.reused=0`, and `cache.replayed_ops=0` on the hot frame now confirm the
+  sidebar cache is out of the direct-entry path while the page keeps its existing shell shape.

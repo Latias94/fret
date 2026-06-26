@@ -248,6 +248,15 @@ mod tests {
 
     #[cfg(feature = "gallery-dev")]
     #[test]
+    fn inspector_torture_opts_out_of_sidebar_cache() {
+        assert_eq!(
+            page_sidebar_cache_policy(PAGE_INSPECTOR_TORTURE),
+            PageSidebarCachePolicy::Uncached
+        );
+    }
+
+    #[cfg(feature = "gallery-dev")]
+    #[test]
     fn editor_grade_pages_use_boundary_layout_containment_hint() {
         assert!(page_content_cache_contain_layout_when_bounds_known(
             PAGE_CODE_EDITOR_MVP
@@ -895,6 +904,20 @@ pub(crate) fn page_content_cache_policy(id: &str) -> PageContentCachePolicy {
         #[cfg(feature = "gallery-material3")]
         PAGE_MATERIAL3_TABS => PageContentCachePolicy::Uncached,
         _ => PageContentCachePolicy::Cacheable,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PageSidebarCachePolicy {
+    Cacheable,
+    Uncached,
+}
+
+pub(crate) fn page_sidebar_cache_policy(id: &str) -> PageSidebarCachePolicy {
+    match id {
+        #[cfg(feature = "gallery-dev")]
+        PAGE_INSPECTOR_TORTURE => PageSidebarCachePolicy::Uncached,
+        _ => PageSidebarCachePolicy::Cacheable,
     }
 }
 

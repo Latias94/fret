@@ -110,7 +110,15 @@ pub(super) fn begin_frame(
         .get_copied(&state.view_cache_cache_content)
         .unwrap_or(true);
 
-    let cache_sidebar = cache_shell;
+    let cache_sidebar = if cache_shell {
+        let selected_page = app
+            .models()
+            .get_cloned(&state.selected_page)
+            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        page_sidebar_cache_policy(selected_page.as_ref()) == PageSidebarCachePolicy::Cacheable
+    } else {
+        false
+    };
     let cache_content = cache_shell && cache_content;
 
     if state.ui.view_cache_enabled() != cache_enabled {
