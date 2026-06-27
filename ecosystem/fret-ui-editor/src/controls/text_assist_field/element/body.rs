@@ -69,7 +69,8 @@ impl TextAssistField {
         } else {
             controller.visible().len()
         };
-        let overlay_open = overlay_open_model(cx);
+        let overlay_open = matches!(options.surface, TextAssistFieldSurface::AnchoredOverlay)
+            .then(|| overlay_open_model(cx));
         let input_focused = cx.local_model(|| false);
         let was_input_focused = cx
             .get_model_copied(&input_focused, Invalidation::Paint)
@@ -81,13 +82,15 @@ impl TextAssistField {
             visible_count,
             was_input_focused,
         );
-        let prev_overlay_open = cx
-            .get_model_copied(&overlay_open, Invalidation::Layout)
-            .unwrap_or(false);
-        if prev_overlay_open != expanded {
-            let _ = cx.app.models_mut().update(&overlay_open, |value| {
-                *value = expanded;
-            });
+        if let Some(overlay_open) = overlay_open.as_ref() {
+            let prev_overlay_open = cx
+                .get_model_copied(overlay_open, Invalidation::Layout)
+                .unwrap_or(false);
+            if prev_overlay_open != expanded {
+                let _ = cx.app.models_mut().update(overlay_open, |value| {
+                    *value = expanded;
+                });
+            }
         }
 
         let rendered_panel = render_text_assist_panel(
@@ -131,7 +134,7 @@ impl TextAssistField {
         };
 
         let field = TextField::new(query_model.clone())
-            .options(field_options.clone())
+            .options(field_options)
             .into_element(cx);
         let is_input_focused = input_id_out
             .get()
@@ -152,7 +155,7 @@ impl TextAssistField {
             let _ = cx.app.models_mut().update(&input_focused, |value| {
                 *value = is_input_focused;
             });
-            cx.app.request_redraw(cx.window);
+            cx.request_animation_frame();
         }
 
         let mut inline_panel = None;
@@ -167,7 +170,9 @@ impl TextAssistField {
                         surface_height,
                         ..
                     } = rendered_panel;
-                    if let Some(input_id) = input_id_out.get() {
+                    if let (Some(input_id), Some(overlay_open)) =
+                        (input_id_out.get(), overlay_open.as_ref())
+                    {
                         request_text_assist_overlay(
                             cx,
                             input_id,

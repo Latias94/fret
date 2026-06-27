@@ -8,6 +8,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{current_bounds_for_element, with_element_cx};
 use fret_ui::{UiTree, declarative};
+use fret_ui_kit::OverlayController;
 use fret_ui_kit::headless::text_assist::TextAssistItem;
 
 use super::{
@@ -140,6 +141,113 @@ fn anchored_overlay_surface_without_panel_or_empty_label_returns_the_field_root(
 }
 
 #[test]
+fn anchored_overlay_opens_after_the_input_receives_focus() {
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let mut services = WrappingTextServices;
+
+    let query = app.models_mut().insert(String::from("ca"));
+    let dismissed_query = app.models_mut().insert(String::new());
+    let active_item_id = app.models_mut().insert(None::<Arc<str>>);
+    let items: Arc<[TextAssistItem]> = vec![
+        TextAssistItem::new("camera", "Camera"),
+        TextAssistItem::new("canvas", "Canvas"),
+    ]
+    .into();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(120.0)),
+    );
+
+    let mut input_node_id = None;
+    for frame in 0..3 {
+        let _ = ui.propagate_pending_model_changes(&mut app);
+        OverlayController::begin_frame(&mut app, window);
+        let query = query.clone();
+        let dismissed_query = dismissed_query.clone();
+        let active_item_id = active_item_id.clone();
+        let items = items.clone();
+        let root_node = declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-assist-focus-open",
+            move |cx| {
+                vec![
+                    TextAssistField::new(
+                        query.clone(),
+                        dismissed_query.clone(),
+                        active_item_id.clone(),
+                        items.clone(),
+                    )
+                    .options(TextAssistFieldOptions {
+                        field: TextFieldOptions {
+                            id_source: Some(Arc::from("text-assist-focus-open")),
+                            test_id: Some(Arc::from("cookbook.imui_editor_controls.assist")),
+                            ..Default::default()
+                        },
+                        surface: TextAssistFieldSurface::AnchoredOverlay,
+                        list_test_id: Some(Arc::from("cookbook.imui_editor_controls.assist.list")),
+                        item_test_id_prefix: Some(Arc::from(
+                            "cookbook.imui_editor_controls.assist.item",
+                        )),
+                        ..Default::default()
+                    })
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snapshot = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot");
+
+        if frame == 0 {
+            assert!(
+                snapshot_node_by_test_id(&snapshot, "cookbook.imui_editor_controls.assist.list")
+                    .is_none()
+            );
+            let input = snapshot_node_by_test_id(&snapshot, "cookbook.imui_editor_controls.assist")
+                .expect("assist input node");
+            input_node_id = Some(input.id);
+            ui.set_focus(Some(input.id));
+        } else if frame == 1 {
+            assert_eq!(
+                snapshot.focus, input_node_id,
+                "expected the assist input to keep focus after the transition"
+            );
+            assert!(
+                snapshot_node_by_test_id(&snapshot, "cookbook.imui_editor_controls.assist.list")
+                    .is_none()
+            );
+        } else {
+            assert_eq!(
+                snapshot.focus, input_node_id,
+                "expected the assist input to keep focus after the transition"
+            );
+            assert!(
+                snapshot_node_by_test_id(&snapshot, "cookbook.imui_editor_controls.assist.list")
+                    .is_some()
+            );
+        }
+
+        app.set_frame_id(fret_runtime::FrameId(app.frame_id().0.saturating_add(1)));
+    }
+}
+
+#[test]
 fn anchored_overlay_text_assist_field_keeps_the_same_outer_height_as_numeric_input() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
@@ -258,6 +366,16 @@ fn anchored_overlay_text_assist_field_keeps_the_same_outer_height_as_numeric_inp
         (assist_height - numeric_height).abs() <= 0.5,
         "assist field should match numeric input outer height: assist={assist_height} numeric={numeric_height}"
     );
+}
+
+fn snapshot_node_by_test_id<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    test_id: &str,
+) -> Option<&'a fret_core::SemanticsNode> {
+    snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(test_id))
 }
 
 #[test]
