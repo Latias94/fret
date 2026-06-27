@@ -35,6 +35,12 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
         Some("1"),
         "inspector direct-entry perf script should default the sidebar shell cache so the direct-entry measurement stays on the stabilized shell contract",
     );
+    assert_eq!(
+        env.get("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE")
+            .and_then(Value::as_str),
+        Some("0"),
+        "inspector direct-entry perf script should keep the inspector keep-alive budget at 0 so the steady scroll surface does not get widened by retained-window stress",
+    );
     assert!(
         !env.contains_key("FRET_UI_GALLERY_VIEW_CACHE"),
         "inspector direct-entry perf script should not silently enable global view-cache; shell cache policy is a separate measurement contract",
@@ -49,6 +55,13 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
                 .is_some_and(|hint| hint.contains("global view-cache remains opt-in"))
         }),
         "inspector direct-entry perf script should document that shell cache policy does not imply global view-cache activation",
+    );
+    assert!(
+        target_hints.iter().any(|hint| {
+            hint.as_str()
+                .is_some_and(|hint| hint.contains("keep-alive budget at 0"))
+        }),
+        "inspector direct-entry perf script should document that the direct-entry surface keeps keep-alive at 0",
     );
     assert!(
         script.contains("\"ui-gallery-inspector-root\"")

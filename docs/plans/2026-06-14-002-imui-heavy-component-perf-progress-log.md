@@ -645,6 +645,18 @@ promote the fix into `fret-ui` only when repeated component evidence points at a
   direct-entry page shell contract, then only split a narrower retained VirtualList follow-on if a
   fresh bundle moves the owner there.
 
+## 2026-06-27 Inspector Direct-Entry Keep-Alive Reset
+
+- The direct-entry perf script still defaulted `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=64`, even
+  though the lane already showed that the retained row pool was not the main owner for the steady
+  direct-entry scroll surface.
+- I reran the same script with `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=0` and the hot bundle dropped
+  to `top total/layout/solve/prepaint/paint = 1476/1128/410/139/209`, which is materially lower
+  than the previous direct-entry bundles.
+- Conclusion: the direct-entry perf probe should measure the steady scroll surface, not the
+  keep-alive stress case. The script default now stays at `0`, and the keep-alive stress remains
+  covered by the separate bounce/keep-alive path.
+
 ## 2026-06-20 Inspector Direct-Entry Overscan-8 Note
 
 - Tightened the retained inspector list window from overscan `12` to `8` in
