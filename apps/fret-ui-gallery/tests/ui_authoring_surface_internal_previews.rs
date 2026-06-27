@@ -1638,26 +1638,29 @@ fn gallery_inspector_torture_keeps_tight_virtual_list_overscan() {
 }
 
 #[test]
-fn gallery_inspector_torture_wraps_the_retained_list_in_a_stable_root_semantics_host() {
+fn gallery_inspector_torture_keeps_the_retained_list_root_semantics_layout_transparent() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/torture/inspector_torture.rs",
         &[
-            "letroot=cx.semantics_with_id(",
-            "SemanticsProps{role:fret_core::SemanticsRole::List,",
-            "test_id:Some(Arc::from(\"ui-gallery-inspector-root\")),",
-            "vec![list]",
+            "letroot_focus_id:Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));",
+            "letrow_focus_id=Rc::clone(&root_focus_id_for_rows);",
+            "if let Some(root_id) = row_focus_id.get() {",
+            "root_focus_id.set(Some(list.id));",
+            "letroot=list.attach_semantics(",
+            "SemanticsDecoration::default()",
+            ".role(fret_core::SemanticsRole::List)",
+            ".test_id(Arc::from(\"ui-gallery-inspector-root\"))",
             "vec![root]",
         ],
     );
 
     assert!(
-        !normalized.contains("cx.cached_subtree_with("),
-        "inspector_torture should not reintroduce an extra cached subtree wrapper around the retained list",
+        !normalized.contains("cx.semantics_with_id("),
+        "inspector_torture should not reintroduce an extra semantics layout wrapper around the retained list",
     );
     assert!(
-        !normalized
-            .contains("CachedSubtreeProps::default().contain_layout_when_bounds_known(true)"),
-        "inspector_torture should keep the retained list boundary direct even with the stable root semantics host",
+        !normalized.contains("SemanticsProps{role:fret_core::SemanticsRole::List,"),
+        "inspector_torture should keep the retained list semantics layout-transparent",
     );
 }
 

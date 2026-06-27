@@ -66,6 +66,31 @@ historical records remain in:
   landed at `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1580/1194/493/198/334/0/4`,
   down from the prior nav-body cache rerun at `2059/1532/565/245/298`.
 
+## 2026-06-27 Inspector Retained-List Root Focus Reattach
+
+- Replaced the old `cx.semantics_with_id(...)` wrapper in
+  `apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs` with
+  `list.attach_semantics(...)`, and used an internal `Rc<Cell<Option<GlobalElementId>>>` so row
+  focus callbacks can still re-target the stable retained-list root after activation.
+- I also checked the inspector-specific content-shell scroll hint path in `content.rs` and dropped
+  it, because `PAGE_INSPECTOR_TORTURE` already bypasses the outer content scroll shell on this page
+  and there was no live path left to optimize there.
+- Validation passed:
+  `cargo fmt --all --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_content_shell --test ui_authoring_surface_internal_previews --no-fail-fast`,
+  and `cargo nextest run -p fret-ui-gallery --test inspector_perf_surface --no-fail-fast`.
+- Perf probe (direct-entry):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/inspector-direct-entry-current-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/inspector-direct-entry-current-codex-20260627/1782576911629/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1516/1064/440/175/239`.
+- Comparison against the prior
+  `target/fret-diag/inspector-direct-entry-nav-known-content-size-20260627/1782522016567/bundle.schema2.json`
+  bundle: `1559/1128/477/177/255` -> `1516/1064/440/175/239`, with
+  `layout.root_phases.roots(apply)` dropping from `763us` to `701us`.
+- Conclusion: keep the retained-list root-focus reattachment. The content-shell inspector branch
+  was dead on this page, so it should stay out of the mainline path.
+
 ## 2026-06-27 Session Shell Stack Reflow Cut
 
 - Switched `ecosystem/fret-ui-editor/src/controls/session_shell.rs` from `cx.flex(...)` to
