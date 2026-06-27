@@ -204,6 +204,10 @@ pub(crate) fn content_view(
         #[cfg(feature = "gallery-dev")]
         if selected == PAGE_CODE_VIEW_TORTURE {
             scroll = scroll.viewport_focus_ring(false);
+            scroll = scroll.viewport_known_content_size(fret_core::Size::new(
+                Px(0.0),
+                CODE_VIEW_TORTURE_PREVIEW_HEIGHT,
+            ));
         }
         #[cfg(not(feature = "gallery-dev"))]
         let scroll = shadcn::ScrollArea::new([preview_panel])

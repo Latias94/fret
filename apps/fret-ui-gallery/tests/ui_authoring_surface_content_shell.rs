@@ -95,6 +95,22 @@ fn gallery_content_scroll_area_keeps_the_page_level_handle_without_a_nested_page
 }
 
 #[test]
+fn gallery_content_scroll_area_gives_code_view_torture_a_known_preview_height() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/content.rs",
+        &[
+            "if selected == PAGE_CODE_VIEW_TORTURE {",
+            "scroll=scroll.viewport_known_content_size(fret_core::Size::new(Px(0.0),CODE_VIEW_TORTURE_PREVIEW_HEIGHT));",
+        ],
+    );
+
+    assert!(
+        normalized.contains("scroll=scroll.viewport_focus_ring(false);"),
+        "code-view torture should keep the viewport focus-ring opt-out alongside the known content size",
+    );
+}
+
+#[test]
 fn gallery_sidebar_view_does_not_keep_an_extra_keyed_shell_wrapper() {
     let normalized = assert_normalized_markers_present(
         "src/driver/shell.rs",

@@ -94,6 +94,33 @@ historical records remain in:
   in `session_shell`, remove the `Stack` assertions, and rerun the same focused
   tests/perf probes.
 
+## 2026-06-27 Code-View Preview Height Hint
+
+- Added a fixed `viewport_known_content_size(...)` hint for `PAGE_CODE_VIEW_TORTURE` in
+  `apps/fret-ui-gallery/src/ui/content.rs` using the existing
+  `CODE_VIEW_TORTURE_PREVIEW_HEIGHT` constant.
+- Rationale: the code-view torture page already has a stable preview-panel height in the gallery
+  dev surface, so the content viewport can skip a deeper content-size probe on the transition path.
+- Validation passed:
+  `cargo fmt --all` and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_content_shell --test code_view_perf_surface --no-fail-fast`.
+- Perf probe (transition):
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-content-known-size-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/code-view-content-known-size-codex-20260627/1782557646702/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1892/1764/36/26/106/0/4`.
+  `diag stats --sort cpu_cycles --top 20` showed `layout.root_phases.request_build p95=743us`,
+  `roots.apply p95=505us`, and `layout.engine_solve p95=647us`.
+- Perf probe (direct-entry guard):
+  `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-content-known-size-direct-entry-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/code-view-content-known-size-direct-entry-codex-20260627/1782557778923/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=263/8/0/169/90/0/0`.
+- Interpretation: this is a modest but real cut on the transition probe, while the steady
+  direct-entry mount stays tiny. Rollback is local: remove the
+  `viewport_known_content_size(...)` call for `PAGE_CODE_VIEW_TORTURE` and rerun the same code-view
+  perf scripts.
+
 ## 2026-06-27 Visible-Only Fixed VirtualList Input Burst Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code again:
