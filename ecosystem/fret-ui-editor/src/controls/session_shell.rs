@@ -1,6 +1,6 @@
-use fret_core::{Axis, Px};
+use fret_core::Px;
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
+    AnyElement, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle, StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -48,14 +48,7 @@ pub(super) fn session_shell<H: UiHost>(
     layout: LayoutStyle,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    cx.flex(
-        FlexProps {
-            layout,
-            direction: Axis::Vertical,
-            ..Default::default()
-        },
-        move |_cx| children,
-    )
+    cx.stack_props(StackProps { layout }, move |_cx| children)
 }
 
 #[cfg(test)]
@@ -64,7 +57,7 @@ mod tests {
     use fret_ui::element::FlexItemStyle;
 
     #[test]
-    fn session_shell_layout_preserves_caller_flex_and_adds_control_min_height() {
+    fn session_shell_layout_preserves_caller_flex_item_and_adds_control_min_height() {
         let layout = LayoutStyle {
             size: SizeStyle {
                 width: Length::Auto,

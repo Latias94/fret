@@ -39,8 +39,8 @@ fn slider_uses_stable_session_shell_for_slide_and_typing_branches() {
         |cx| Slider::new(model, 0.0, 1.0).into_element(cx),
     );
 
-    let ElementKind::Flex(shell) = &element.kind else {
-        panic!("slider should mount slide/typing branches in a flex shell");
+    let ElementKind::Stack(shell) = &element.kind else {
+        panic!("slider should mount slide/typing branches in a stack shell");
     };
     let expected_min_height = {
         let style = EditorStyle::resolve(Theme::global(&app));
@@ -160,6 +160,7 @@ fn element_layout<'a>(element: &'a AnyElement, label: &str) -> &'a fret_ui::elem
     match &element.kind {
         ElementKind::Pressable(props) => &props.layout,
         ElementKind::Flex(props) => &props.layout,
+        ElementKind::Stack(props) => &props.layout,
         ElementKind::PointerRegion(_) => {
             let Some(child) = element.children.first() else {
                 panic!("{label} pointer region should contain a child");

@@ -44,8 +44,8 @@ fn drag_value_uses_stable_session_shell_for_scrub_and_typing_branches() {
         },
     );
 
-    let ElementKind::Flex(shell) = &element.kind else {
-        panic!("drag value should mount scrub/typing branches in a flex shell");
+    let ElementKind::Stack(shell) = &element.kind else {
+        panic!("drag value should mount scrub/typing branches in a stack shell");
     };
     let expected_min_height = {
         let style = EditorStyle::resolve(Theme::global(&app));
@@ -109,6 +109,7 @@ fn element_layout<'a>(element: &'a AnyElement, label: &str) -> &'a fret_ui::elem
     match &element.kind {
         ElementKind::Pressable(props) => &props.layout,
         ElementKind::Flex(props) => &props.layout,
+        ElementKind::Stack(props) => &props.layout,
         ElementKind::PointerRegion(_) => {
             let Some(child) = element.children.first() else {
                 panic!("{label} pointer region should contain a child");
@@ -122,7 +123,6 @@ fn element_layout<'a>(element: &'a AnyElement, label: &str) -> &'a fret_ui::elem
             element_layout(child, label)
         }
         ElementKind::Container(props) => &props.layout,
-        ElementKind::Stack(props) => &props.layout,
         ElementKind::TextInput(props) => &props.layout,
         other => panic!("{label} should expose layout props, got {other:?}"),
     }

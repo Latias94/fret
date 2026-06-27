@@ -66,6 +66,34 @@ historical records remain in:
   landed at `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1580/1194/493/198/334/0/4`,
   down from the prior nav-body cache rerun at `2059/1532/565/245/298`.
 
+## 2026-06-27 Session Shell Stack Reflow Cut
+
+- Switched `ecosystem/fret-ui-editor/src/controls/session_shell.rs` from `cx.flex(...)` to
+  `cx.stack_props(StackProps { layout }, ...)`.
+- Rationale: the `drag_value` / `slider` / `axis_drag_value` session branches are pure retained
+  overlays. A stack shell keeps the same mounted children without paying the flex container path.
+- Validation passed:
+  `cargo fmt --all` and `cargo nextest run -p fret-ui-editor session_shell --no-fail-fast`.
+- Perf probe (roughness typing):
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-session-stack-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+- Result bundle:
+  `target/fret-diag/editor-controls-session-stack-codex-20260627/1782556710490/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1288/1156/778/5/127/0/2`.
+  `diag stats --sort cpu_cycles --top 20` showed `layout.engine_solve p95=778us`,
+  `layout.root_phases.request_build p95=544us`, `roots.apply p95=368us`, and
+  `renderer.text_prepare.flush p95=520us`.
+- Perf probe (click-stress):
+  `target/release/fretboard-dev diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-session-stack-click-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+- Result bundle:
+  `target/fret-diag/editor-controls-session-stack-click-codex-20260627/1782556750961/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1266/1091/578/6/192/0/3`.
+  `diag stats --sort cpu_cycles --top 20` showed `layout.engine_solve p95=351us`,
+  `layout.root_phases.request_build p95=325us`, and `roots.apply p95=197us`.
+- Interpretation: this is a real shell-depth/layout-path win, not just a visual no-op. Keep this
+  shell pattern until another hotspot proves otherwise. Rollback is local: restore `cx.flex(...)`
+  in `session_shell`, remove the `Stack` assertions, and rerun the same focused
+  tests/perf probes.
+
 ## 2026-06-27 Visible-Only Fixed VirtualList Input Burst Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code again:
