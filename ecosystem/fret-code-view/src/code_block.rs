@@ -28,6 +28,12 @@ use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button
 use crate::prepare::{CodeBlockPrepareMode, CodeBlockPreparedState};
 use crate::syntax::syntax_color;
 
+#[derive(Clone, Copy)]
+enum CodeBlockInput<'a> {
+    Borrowed(&'a str),
+    Shared(&'a Arc<str>),
+}
+
 #[derive(Default)]
 struct CodeBlockTextCache {
     theme_revision: u64,
@@ -421,9 +427,9 @@ impl CodeBlock {
             self.windowed.is_none(),
             "CodeBlock::windowed(...) requires CodeBlock::into_element_windowed(...)"
         );
-        code_block_with_header_slots(
+        code_block_with_header_slots_impl(
             cx,
-            &self.code,
+            CodeBlockInput::Shared(&self.code),
             self.language.as_deref(),
             self.show_line_numbers,
             CodeBlockUiOptions {
@@ -444,6 +450,22 @@ impl CodeBlock {
                 disable_contextual_alternates: self.disable_contextual_alternates,
             },
             CodeBlockHeaderSlots::default().show_language(self.show_language_in_header),
+            CodeBlockPrepareMode::Full,
+            |cx, theme, prepared, options| {
+                render_code_block_body_non_windowed(
+                    cx,
+                    theme,
+                    prepared,
+                    options.wrap,
+                    options.show_scrollbar_x,
+                    options.scrollbar_x_on_hover,
+                    options.show_scrollbar_y,
+                    options.scrollbar_y_on_hover,
+                    options.max_height,
+                    options.disable_ligatures,
+                    options.disable_contextual_alternates,
+                )
+            },
         )
     }
 
@@ -453,9 +475,9 @@ impl CodeBlock {
         cx: &mut ElementContext<'_, H>,
     ) -> AnyElement {
         let windowed = self.windowed.unwrap_or_default();
-        code_block_with_header_slots_windowed(
+        code_block_with_header_slots_impl(
             cx,
-            &self.code,
+            CodeBlockInput::Shared(&self.code),
             self.language.as_deref(),
             self.show_line_numbers,
             CodeBlockUiOptions {
@@ -476,7 +498,13 @@ impl CodeBlock {
                 disable_contextual_alternates: self.disable_contextual_alternates,
             },
             CodeBlockHeaderSlots::default().show_language(self.show_language_in_header),
-            windowed,
+            match windowed.highlight_mode {
+                CodeBlockWindowedHighlightMode::Full => CodeBlockPrepareMode::Full,
+                CodeBlockWindowedHighlightMode::PlainIndexed => CodeBlockPrepareMode::LineIndexed,
+            },
+            move |cx, theme, prepared, options| {
+                render_code_block_body(cx, theme, prepared, options, windowed)
+            },
         )
     }
 
@@ -674,7 +702,7 @@ pub fn code_block_with_header_slots_windowed<H: UiHost + 'static>(
     };
     code_block_with_header_slots_impl(
         cx,
-        code,
+        CodeBlockInput::Borrowed(code),
         language,
         show_line_numbers,
         options,
@@ -697,7 +725,7 @@ pub fn code_block_with_header_slots_non_windowed<H: UiHost>(
 ) -> AnyElement {
     code_block_with_header_slots_impl(
         cx,
-        code,
+        CodeBlockInput::Borrowed(code),
         language,
         show_line_numbers,
         options,
@@ -724,7 +752,7 @@ pub fn code_block_with_header_slots_non_windowed<H: UiHost>(
 #[track_caller]
 fn code_block_with_header_slots_impl<H: UiHost, F>(
     cx: &mut ElementContext<'_, H>,
-    code: &str,
+    code: CodeBlockInput<'_>,
     language: Option<&str>,
     show_line_numbers: bool,
     options: CodeBlockUiOptions,
@@ -762,13 +790,21 @@ where
 
     let language = language.map(str::trim).filter(|s| !s.is_empty());
     let prepared = cx.slot_state(CodeBlockPreparedState::default, |st| {
-        st.prepare(code, language, show_line_numbers, prepare_mode);
+        match code {
+            CodeBlockInput::Borrowed(code) => {
+                st.prepare(code, language, show_line_numbers, prepare_mode);
+            }
+            CodeBlockInput::Shared(code) => {
+                st.prepare_arc(code, language, show_line_numbers, prepare_mode);
+            }
+        }
         st.prepared.clone()
     });
 
-    let copy_code = options
-        .show_copy_button
-        .then(|| Arc::<str>::from(code.to_string()));
+    let copy_code = options.show_copy_button.then(|| match code {
+        CodeBlockInput::Borrowed(code) => Arc::<str>::from(code),
+        CodeBlockInput::Shared(code) => Arc::clone(code),
+    });
     let feedback = cx.slot_state(CopyFeedbackRef::default, |st| st.clone());
     let needs_hover_tracking = code_block_needs_hover_tracking(options);
 

@@ -30,12 +30,32 @@ impl CodeBlockPreparedState {
             mode,
         ));
     }
+
+    pub(crate) fn prepare_arc(
+        &mut self,
+        code: &Arc<str>,
+        language: Option<&str>,
+        show_line_numbers: bool,
+        mode: CodeBlockPrepareMode,
+    ) {
+        let key = CodeBlockKey::new_arc(code, language, show_line_numbers, mode);
+        if self.key == key {
+            return;
+        }
+        self.key = key;
+        self.prepared = Arc::new(prepare_code_block(
+            code.as_ref(),
+            language,
+            show_line_numbers,
+            key.revision(),
+            mode,
+        ));
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 struct CodeBlockKey {
-    code_hash: u64,
-    code_len: usize,
+    code: CodeBlockCodeKey,
     language_hash: u64,
     language_len: usize,
     show_line_numbers: bool,
@@ -51,8 +71,29 @@ impl CodeBlockKey {
     ) -> Self {
         let language = language.unwrap_or("");
         Self {
-            code_hash: hash_value(code),
-            code_len: code.len(),
+            code: CodeBlockCodeKey::Borrowed {
+                hash: hash_value(code),
+                len: code.len(),
+            },
+            language_hash: hash_value(language),
+            language_len: language.len(),
+            show_line_numbers,
+            mode,
+        }
+    }
+
+    fn new_arc(
+        code: &Arc<str>,
+        language: Option<&str>,
+        show_line_numbers: bool,
+        mode: CodeBlockPrepareMode,
+    ) -> Self {
+        let language = language.unwrap_or("");
+        Self {
+            code: CodeBlockCodeKey::Shared {
+                ptr: Arc::as_ptr(code) as *const () as usize,
+                len: code.len(),
+            },
             language_hash: hash_value(language),
             language_len: language.len(),
             show_line_numbers,
@@ -62,13 +103,20 @@ impl CodeBlockKey {
 
     fn revision(&self) -> u64 {
         let mut h = DefaultHasher::new();
-        self.code_hash.hash(&mut h);
-        self.code_len.hash(&mut h);
-        self.language_hash.hash(&mut h);
-        self.language_len.hash(&mut h);
-        self.show_line_numbers.hash(&mut h);
-        self.mode.hash(&mut h);
+        self.hash(&mut h);
         h.finish()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum CodeBlockCodeKey {
+    Borrowed { hash: u64, len: usize },
+    Shared { ptr: usize, len: usize },
+}
+
+impl Default for CodeBlockCodeKey {
+    fn default() -> Self {
+        Self::Borrowed { hash: 0, len: 0 }
     }
 }
 
@@ -79,7 +127,7 @@ pub(crate) enum CodeBlockPrepareMode {
     LineIndexed,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(crate) struct PreparedCodeBlock {
     pub(crate) revision: u64,
     pub(crate) show_line_numbers: bool,
@@ -87,6 +135,19 @@ pub(crate) struct PreparedCodeBlock {
     pub(crate) max_line_columns: usize,
     pub(crate) syntax_highlights: Vec<&'static str>,
     pub(crate) lines: Vec<PreparedLine>,
+}
+
+impl Default for PreparedCodeBlock {
+    fn default() -> Self {
+        Self {
+            revision: 0,
+            show_line_numbers: false,
+            line_number_width: 0,
+            max_line_columns: 0,
+            syntax_highlights: Vec::new(),
+            lines: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -132,13 +193,14 @@ fn prepare_code_block(
     };
 
     for line in &mut lines {
-        let line_text = line.text;
         let global_range = line.range.clone();
 
         if mode == CodeBlockPrepareMode::LineIndexed {
-            prepared_lines.push(plain_prepared_line(line_text));
+            prepared_lines.push(plain_prepared_line(line.text));
             continue;
         }
+
+        let line_text = line.text;
 
         while span_i < spans.len() && spans[span_i].range.end <= global_range.start {
             span_i += 1;
@@ -215,15 +277,6 @@ fn estimated_line_columns(text: &str) -> usize {
         .sum()
 }
 
-fn plain_prepared_line(line_text: &str) -> PreparedLine {
-    PreparedLine {
-        segments: vec![PreparedSegment {
-            text: Arc::<str>::from(line_text),
-            highlight: None,
-        }],
-    }
-}
-
 fn coalesce_segments(
     segments: Vec<(String, Option<&'static str>)>,
 ) -> Vec<(String, Option<&'static str>)> {
@@ -263,6 +316,15 @@ fn safe_slice(text: &str, start: usize, end: usize) -> String {
             debug_assert!(false, "code slice is not aligned to UTF-8 boundaries");
             String::from_utf8_lossy(&text.as_bytes()[start..end]).into_owned()
         }
+    }
+}
+
+fn plain_prepared_line(line_text: &str) -> PreparedLine {
+    PreparedLine {
+        segments: vec![PreparedSegment {
+            text: Arc::<str>::from(line_text),
+            highlight: None,
+        }],
     }
 }
 
@@ -481,6 +543,21 @@ mod tests {
         assert_eq!(
             state.prepared.max_line_columns,
             "let wide = 12345;".chars().count()
+        );
+    }
+
+    #[test]
+    fn prepare_arc_reuses_the_shared_source_identity() {
+        let code = Arc::<str>::from("fn main() {}\nlet x = 1;");
+        let mut state = CodeBlockPreparedState::default();
+        state.prepare_arc(&code, Some("rust"), true, CodeBlockPrepareMode::LineIndexed);
+        let first = state.prepared.clone();
+
+        state.prepare_arc(&code, Some("rust"), true, CodeBlockPrepareMode::LineIndexed);
+
+        assert!(
+            Arc::ptr_eq(&state.prepared, &first),
+            "shared Arc input should short-circuit repeated preparation"
         );
     }
 }
