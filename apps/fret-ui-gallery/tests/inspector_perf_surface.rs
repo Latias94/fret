@@ -52,7 +52,8 @@ fn inspector_scroll_direct_entry_perf_script_starts_on_target_page_without_nav_s
     );
     assert!(
         script.contains("\"ui-gallery-inspector-root\"")
-            && script.contains("\"ui-gallery-inspector-row-0-label\""),
+            && script.contains("\"ui-gallery-inspector-row-0\"")
+            && !script.contains("\"ui-gallery-inspector-row-0-label\""),
         "inspector direct-entry perf script should wait for both the inspector root and first row anchor",
     );
     assert!(

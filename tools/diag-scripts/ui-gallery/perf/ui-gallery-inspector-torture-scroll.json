@@ -78,7 +78,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-inspector-row-0-label",
+          "id": "ui-gallery-inspector-row-0",
           "kind": "test_id"
         }
       },
@@ -87,7 +87,7 @@
     },
     {
       "target": {
-        "id": "ui-gallery-inspector-row-0-label",
+        "id": "ui-gallery-inspector-row-0",
         "kind": "test_id"
       },
       "type": "move_pointer"

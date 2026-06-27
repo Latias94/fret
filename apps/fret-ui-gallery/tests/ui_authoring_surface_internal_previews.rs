@@ -1336,8 +1336,6 @@ fn gallery_inspector_torture_uses_fixed_row_text_roles() {
             "label_color,",
             "value_color,",
             "ColorRef::Color(label_color)",
-            "letrow_label_test_id=inspector_row_label_test_id(index);",
-            ".test_id(row_label_test_id)",
         ],
     );
 
@@ -1364,7 +1362,6 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
         "src/ui/previews/gallery/torture/inspector_torture.rs",
         &[
             "fninspector_row_test_id(index:usize)->Arc<str>",
-            "fninspector_row_label_test_id(index:usize)->Arc<str>",
             "fninspector_row_semantics(",
             "label:Arc<str>,",
             "test_id:Arc<str>)",
@@ -1373,7 +1370,6 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
             "test_id:Some(test_id),",
             "selected_row_value==Some(index)",
             "letrow_test_id=inspector_row_test_id(index);",
-            "letrow_label_test_id=inspector_row_label_test_id(index);",
             "letlabel=Arc::<str>::from(format!(\"prop_{index}\"));",
             "letvalue=Arc::<str>::from(format!(\"value{index}\"));",
             "inspector_row_semantics(index,len,is_selected,label.clone(),row_test_id.clone())",
@@ -1381,13 +1377,13 @@ fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
             "cx.pressable_add_on_activate_focus(Arc::new(",
             "host.request_focus(root_id);",
             "row.test_id(row_test_id)",
-            "SemanticsDecoration::default().test_id(row_label_test_id)",
         ],
     );
 
     for forbidden in [
         "row.test_id(format!(\"ui-gallery-inspector-row-{index}-label\"))",
         "row.test_id(format!(\"ui-gallery-inspector-row-{index}\"))",
+        "fninspector_row_label_test_id(index:usize)->Arc<str>",
         "fninspector_row_value_test_id(index:usize)->Arc<str>",
     ] {
         assert!(
@@ -1434,12 +1430,10 @@ fn gallery_inspector_torture_keeps_row_shell_shrunk() {
             "letbackground_color=theme.color_token(\"background\")",
             "letrow_padding_left=Px(indent_px.0+row_gap_px.0*2.0)",
             "letrow_test_id=inspector_row_test_id(index);",
-            "letrow_label_test_id=inspector_row_label_test_id(index);",
             "letlabel=Arc::<str>::from(format!(\"prop_{index}\"));",
             "letvalue=Arc::<str>::from(format!(\"value{index}\"));",
             "letrow_content=inspector_row_label_value_text(",
             ".layout(LayoutRefinement::default().w_full().min_w_0())",
-            "SemanticsDecoration::default().test_id(row_label_test_id)",
             "chrome.background=Some(ifst.pressed{accent_color}else{row_background})",
             "chrome.layout.size.width=Length::Fill;",
             "chrome.layout.size.height=Length::Fill;",
@@ -1599,8 +1593,8 @@ fn gallery_inspector_torture_keeps_its_own_fixed_preview_shell() {
         "inspector_torture should keep the clipped fixed preview shell",
     );
     assert!(
-        source
-            .contains("selected == PAGE_INSPECTOR_TORTURE || selected == PAGE_DATA_TABLE_TORTURE"),
+        source.contains("selected == PAGE_INSPECTOR_TORTURE")
+            && source.contains("selected == PAGE_DATA_TABLE_TORTURE"),
         "inspector_torture should keep the heavy direct-entry preview-card bypass",
     );
 }

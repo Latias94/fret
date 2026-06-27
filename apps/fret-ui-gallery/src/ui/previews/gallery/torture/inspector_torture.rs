@@ -12,10 +12,6 @@ fn inspector_row_test_id(index: usize) -> Arc<str> {
     Arc::<str>::from(format!("ui-gallery-inspector-row-{index}"))
 }
 
-fn inspector_row_label_test_id(index: usize) -> Arc<str> {
-    Arc::<str>::from(format!("ui-gallery-inspector-row-{index}-label"))
-}
-
 fn inspector_row_label_value_text(
     cx: &mut AppComponentCx<'_>,
     text_style: fret_core::TextStyle,
@@ -149,7 +145,6 @@ pub(in crate::ui) fn preview_inspector_torture(
                 };
 
                 let row_test_id = inspector_row_test_id(index);
-                let row_label_test_id = inspector_row_label_test_id(index);
                 let label = Arc::<str>::from(format!("prop_{index}"));
                 let value = Arc::<str>::from(format!("value {index}"));
                 let row_content = inspector_row_label_value_text(
@@ -159,8 +154,7 @@ pub(in crate::ui) fn preview_inspector_torture(
                     value_color,
                     label.clone(),
                     value,
-                )
-                .attach_semantics(SemanticsDecoration::default().test_id(row_label_test_id));
+                );
 
                 let row = cx.pressable(
                     PressableProps {
