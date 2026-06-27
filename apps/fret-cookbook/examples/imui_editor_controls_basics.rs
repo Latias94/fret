@@ -32,7 +32,6 @@ const TEST_ID_ASSIST: &str = "cookbook.imui_editor_controls.assist";
 const TEST_ID_ASSIST_LIST: &str = "cookbook.imui_editor_controls.assist.list";
 const TEST_ID_SUMMARY: &str = "cookbook.imui_editor_controls.summary";
 const TEST_ID_INSPECTOR: &str = "cookbook.imui_editor_controls.inspector";
-const TEST_ID_GROUP: &str = "cookbook.imui_editor_controls.group";
 const TEST_ID_GRID: &str = "cookbook.imui_editor_controls.grid";
 
 struct ImUiEditorControlsBasicsView {
@@ -133,7 +132,6 @@ impl View for ImUiEditorControlsBasicsView {
                             PropertyGroup::new("Editor controls")
                                 .options(PropertyGroupOptions {
                                     collapsible: false,
-                                    test_id: Some(Arc::from(TEST_ID_GROUP)),
                                     ..Default::default()
                                 })
                                 .into_element(

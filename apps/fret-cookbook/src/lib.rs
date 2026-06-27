@@ -889,6 +889,8 @@ mod authoring_surface_policy_tests {
                 "fret_ui_kit::headless::text_assist",
                 "fret_imui::imui_raw(cx, |ui| {",
                 "ui.text(\"Editor controls and composites\")",
+                "TEST_ID_GROUP",
+                "cookbook.imui_editor_controls.group",
             ],
         );
     }
