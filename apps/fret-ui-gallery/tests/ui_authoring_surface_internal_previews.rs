@@ -1286,6 +1286,17 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
 }
 
 #[test]
+fn gallery_data_table_torture_keeps_the_table_out_of_an_outer_cached_subtree_shell() {
+    let source = read_path(&manifest_path(
+        "src/ui/previews/gallery/data/table_torture.rs",
+    ));
+    assert!(
+        !source.contains("cx.cached_subtree_with("),
+        "data_table_torture should not keep an outer cached_subtree shell around the table body",
+    );
+}
+
+#[test]
 fn gallery_data_grid_uses_table_cell_text_roles() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/data/data_grid.rs",

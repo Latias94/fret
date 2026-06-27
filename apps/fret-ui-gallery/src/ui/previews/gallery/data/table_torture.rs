@@ -282,160 +282,131 @@ pub(in crate::ui) fn preview_data_table_torture(
             .gap(Space::N2)
             .into_element(cx);
 
-            let state_for_table = state.clone();
-            let table = cx.cached_subtree_with(
-                CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
-                |cx| {
-                    let retained =
-                        std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
-                    let data_table = if retained {
-                        let mut t = shadcn::DataTable::new();
-                        if keep_alive > 0 {
-                            t = t.keep_alive(keep_alive);
-                        }
-                        t.overscan(overscan)
-                            .row_height(Px(32.0))
-                            .measure_rows(variable_height)
-                            .row_click_selection(false)
-                            .column_actions_menu(true)
-                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
-                            .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
-                                header_row_test_id: Some(Arc::<str>::from(
-                                    "ui-gallery-data-table-header-row",
-                                )),
-                                header_cell_test_id_prefix: Some(Arc::<str>::from(
-                                    "ui-gallery-data-table-header-",
-                                )),
-                                row_test_id_prefix: Some(Arc::<str>::from(
-                                    "ui-gallery-data-table-row-",
-                                )),
-                                row_cell_test_ids: false,
-                                ..Default::default()
-                            })
-                            .into_element_retained(
-                                cx,
-                                data.clone(),
-                                1,
-                                state_for_table.clone(),
-                                columns.clone(),
-                                |row, _index, _parent| RowKey(row.id),
-                                |col| Arc::<str>::from(col.id.as_ref()),
-                                move |cx, col, row| match col.id.as_ref() {
-                                    "name" => {
-                                        if variable_height && row.id % 15 == 0 {
-                                            ui::v_stack(|cx| {
-                                                vec![
-                                                    data_table_torture_cell_text(
-                                                        cx,
-                                                        row.name.clone(),
-                                                    ),
-                                                    doc_layout::control_readout_text(
-                                                        cx,
-                                                        format!(
-                                                            "Details: id={} cpu={} mem={}",
-                                                            row.id, row.cpu, row.mem_mb
-                                                        ),
-                                                    ),
-                                                ]
-                                            })
-                                            .gap(Space::N0)
-                                            .into_element(cx)
-                                        } else {
-                                            data_table_torture_cell_text(cx, row.name.clone())
-                                        }
-                                    }
-                                    "status" => {
-                                        data_table_torture_cell_text(cx, row.status.clone())
-                                    }
-                                    "cpu%" => {
-                                        data_table_torture_cell_text(cx, format!("{}%", row.cpu))
-                                    }
-                                    "mem_mb" => data_table_torture_cell_text(
-                                        cx,
-                                        format!("{} MB", row.mem_mb),
-                                    ),
-                                    _ => data_table_torture_cell_text(cx, "?"),
-                                },
-                            )
-                    } else {
-                        let mut t = shadcn::DataTable::new();
-                        if keep_alive > 0 {
-                            t = t.keep_alive(keep_alive);
-                        }
-                        t.overscan(overscan)
-                            .row_height(Px(32.0))
-                            .measure_rows(variable_height)
-                            .row_click_selection(false)
-                            .column_actions_menu(true)
-                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
-                            .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
-                                header_row_test_id: Some(Arc::<str>::from(
-                                    "ui-gallery-data-table-header-row",
-                                )),
-                                header_cell_test_id_prefix: Some(Arc::<str>::from(
-                                    "ui-gallery-data-table-header-",
-                                )),
-                                row_test_id_prefix: Some(Arc::<str>::from(
-                                    "ui-gallery-data-table-row-",
-                                )),
-                                row_cell_test_ids: false,
-                                ..Default::default()
-                            })
-                            .into_element(
-                                cx,
-                                data.clone(),
-                                1,
-                                state,
-                                columns.clone(),
-                                |row, _index, _parent| RowKey(row.id),
-                                |col| Arc::<str>::from(col.id.as_ref()),
-                                move |cx, col, row| match col.id.as_ref() {
-                                    "name" => {
-                                        if variable_height && row.id % 15 == 0 {
-                                            ui::v_stack(|cx| {
-                                                vec![
-                                                    data_table_torture_cell_text(
-                                                        cx,
-                                                        row.name.clone(),
-                                                    ),
-                                                    doc_layout::control_readout_text(
-                                                        cx,
-                                                        format!(
-                                                            "Details: id={} cpu={} mem={}",
-                                                            row.id, row.cpu, row.mem_mb
-                                                        ),
-                                                    ),
-                                                ]
-                                            })
-                                            .gap(Space::N0)
-                                            .into_element(cx)
-                                        } else {
-                                            data_table_torture_cell_text(cx, row.name.clone())
-                                        }
-                                    }
-                                    "status" => {
-                                        data_table_torture_cell_text(cx, row.status.clone())
-                                    }
-                                    "cpu%" => {
-                                        data_table_torture_cell_text(cx, format!("{}%", row.cpu))
-                                    }
-                                    "mem_mb" => data_table_torture_cell_text(
-                                        cx,
-                                        format!("{} MB", row.mem_mb),
-                                    ),
-                                    _ => data_table_torture_cell_text(cx, "?"),
-                                },
-                            )
-                    };
+            let retained = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
+            let data_table = if retained {
+                let mut t = shadcn::DataTable::new();
+                if keep_alive > 0 {
+                    t = t.keep_alive(keep_alive);
+                }
+                t.overscan(overscan)
+                    .row_height(Px(32.0))
+                    .measure_rows(variable_height)
+                    .row_click_selection(false)
+                    .column_actions_menu(true)
+                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                    .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                        header_row_test_id: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-row",
+                        )),
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                        row_cell_test_ids: false,
+                        ..Default::default()
+                    })
+                    .into_element_retained(
+                        cx,
+                        data.clone(),
+                        1,
+                        state.clone(),
+                        columns.clone(),
+                        |row, _index, _parent| RowKey(row.id),
+                        |col| Arc::<str>::from(col.id.as_ref()),
+                        move |cx, col, row| match col.id.as_ref() {
+                            "name" => {
+                                if variable_height && row.id % 15 == 0 {
+                                    ui::v_stack(|cx| {
+                                        vec![
+                                            data_table_torture_cell_text(cx, row.name.clone()),
+                                            doc_layout::control_readout_text(
+                                                cx,
+                                                format!(
+                                                    "Details: id={} cpu={} mem={}",
+                                                    row.id, row.cpu, row.mem_mb
+                                                ),
+                                            ),
+                                        ]
+                                    })
+                                    .gap(Space::N0)
+                                    .into_element(cx)
+                                } else {
+                                    data_table_torture_cell_text(cx, row.name.clone())
+                                }
+                            }
+                            "status" => data_table_torture_cell_text(cx, row.status.clone()),
+                            "cpu%" => data_table_torture_cell_text(cx, format!("{}%", row.cpu)),
+                            "mem_mb" => {
+                                data_table_torture_cell_text(cx, format!("{} MB", row.mem_mb))
+                            }
+                            _ => data_table_torture_cell_text(cx, "?"),
+                        },
+                    )
+            } else {
+                let mut t = shadcn::DataTable::new();
+                if keep_alive > 0 {
+                    t = t.keep_alive(keep_alive);
+                }
+                t.overscan(overscan)
+                    .row_height(Px(32.0))
+                    .measure_rows(variable_height)
+                    .row_click_selection(false)
+                    .column_actions_menu(true)
+                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                    .debug_ids(fret_ui_kit::declarative::table::TableDebugIds {
+                        header_row_test_id: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-row",
+                        )),
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "ui-gallery-data-table-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                        row_cell_test_ids: false,
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        data.clone(),
+                        1,
+                        state,
+                        columns.clone(),
+                        |row, _index, _parent| RowKey(row.id),
+                        |col| Arc::<str>::from(col.id.as_ref()),
+                        move |cx, col, row| match col.id.as_ref() {
+                            "name" => {
+                                if variable_height && row.id % 15 == 0 {
+                                    ui::v_stack(|cx| {
+                                        vec![
+                                            data_table_torture_cell_text(cx, row.name.clone()),
+                                            doc_layout::control_readout_text(
+                                                cx,
+                                                format!(
+                                                    "Details: id={} cpu={} mem={}",
+                                                    row.id, row.cpu, row.mem_mb
+                                                ),
+                                            ),
+                                        ]
+                                    })
+                                    .gap(Space::N0)
+                                    .into_element(cx)
+                                } else {
+                                    data_table_torture_cell_text(cx, row.name.clone())
+                                }
+                            }
+                            "status" => data_table_torture_cell_text(cx, row.status.clone()),
+                            "cpu%" => data_table_torture_cell_text(cx, format!("{}%", row.cpu)),
+                            "mem_mb" => {
+                                data_table_torture_cell_text(cx, format!("{} MB", row.mem_mb))
+                            }
+                            _ => data_table_torture_cell_text(cx, "?"),
+                        },
+                    )
+            };
 
-                    vec![
-                        data_table.attach_semantics(
-                            SemanticsDecoration::default()
-                                .role(fret_core::SemanticsRole::Group)
-                                .test_id("ui-gallery-data-table-torture-root"),
-                        ),
-                    ]
-                },
+            let table = data_table.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-data-table-torture-root"),
             );
 
             let mut container_props = decl_style::container_props(
