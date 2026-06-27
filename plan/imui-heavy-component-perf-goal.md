@@ -58,6 +58,13 @@ historical records remain in:
   default.
 - Earlier accepted optimizations were mixed: component policy/rendering seams, shared `fret-ui`
   mechanism optimizations, declarative text diff narrowing, and gallery cache-boundary policy.
+- The inspector direct-entry nav lane now has a measured win instead of a cache-only rerun. In
+  `apps/fret-ui-gallery/src/ui/nav.rs`, the nav scroll viewport now gets a computed
+  `known_content_size` from visible group/item counts and the fixed shadcn sidebar row metrics, so
+  `Scroll` can skip the deep extent probe on the steady path. The latest probe on
+  `target/fret-diag/inspector-direct-entry-nav-known-content-size-20260627/1782522016567/bundle.schema2.json`
+  landed at `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1580/1194/493/198/334/0/4`,
+  down from the prior nav-body cache rerun at `2059/1532/565/245/298`.
 
 ## 2026-06-27 Visible-Only Fixed VirtualList Input Burst Overscan Deferral
 
@@ -121,6 +128,31 @@ historical records remain in:
   cache root overhead outweighed any replay wins. The code was restored to the pre-experiment
   baseline. Next work should target a different retained-table hotspot instead of more cache
   placement on this same lane.
+
+## 2026-06-27 Inspector Nav Known Content Size Shortcut
+
+- Replaced the nav-body-only cache experiment in `apps/fret-ui-gallery/src/ui/nav.rs` with a
+  deterministic scroll extent hint. The sidebar nav already has fixed-height buttons and single-line
+  section labels, so the visible-group summary can compute an exact content height without forcing
+  `Scroll` to measure the full subtree on every steady frame.
+- The nav scroll viewport now calls `viewport_known_content_size(...)` with a content height derived
+  from visible group count, visible item count, `component.sidebar.menu_button.h`,
+  `component.text.sm_line_height`, `component.space.1`, and `component.space.4`.
+- Validation passed:
+  - `cargo fmt --all --check`
+  - `cargo nextest run -p fret-ui-gallery --features gallery-dev --no-fail-fast nav_body_cache_key_collapses_query_case_and_whitespace nav_body_content_height_accounts_for_groups_items_and_gaps inspector_torture_opts_out_of_sidebar_cache`
+- Perf probe:
+  - `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/inspector-direct-entry-nav-known-content-size-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  - `target/fret-diag/inspector-direct-entry-nav-known-content-size-20260627/1782522016567/bundle.schema2.json`
+  - `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1580/1194/493/198/334/0/4`
+  - `diag stats --sort cpu_cycles --top 20` reported `layout root phases p95 roots.apply=763us` and
+    `layout.engine_solve p95=477us`
+- Interpretation: this is the first nav slice that removes work from the `Scroll` lane instead of
+  just reshaping the subtree. Keep the cache-key test and the new content-height test as regression
+  anchors. Rollback is local: remove `nav_body_known_content_size(...)`, drop the
+  `viewport_known_content_size(...)` call, and restore the direct `collect_visible_nav_groups(query)`
+  build path if a later theme change invalidates the fixed-height assumption.
 
 ## 2026-06-27 IMUI Gradient Popup Filtered-Open Probe Normalization
 

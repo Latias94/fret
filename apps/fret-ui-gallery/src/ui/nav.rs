@@ -2,6 +2,10 @@ use super::*;
 use fret::AppComponentCx;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::declarative::{CachedSubtreeProps, style as decl_style};
+use fret_ui_kit::theme_tokens;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct NavVisibilitySummary {
@@ -16,6 +20,13 @@ pub(crate) struct NavVisibilitySummary {
 struct VisibleNavGroup {
     title: &'static str,
     items: Vec<&'static PageSpec>,
+}
+
+fn nav_body_cache_key(selected: &str, query: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    selected.hash(&mut hasher);
+    query.trim().to_ascii_lowercase().hash(&mut hasher);
+    hasher.finish()
 }
 
 pub(crate) fn matches_query(query: &str, item: &PageSpec) -> bool {
@@ -102,8 +113,7 @@ fn collect_visible_nav_groups(query: &str) -> Vec<VisibleNavGroup> {
     groups
 }
 
-pub(crate) fn nav_visibility_summary(query: &str) -> NavVisibilitySummary {
-    let groups = collect_visible_nav_groups(query);
+fn nav_visibility_summary_from_groups(groups: &[VisibleNavGroup]) -> NavVisibilitySummary {
     let mut summary = NavVisibilitySummary {
         visible_groups_count: groups.len() as u64,
         ..Default::default()
@@ -115,7 +125,7 @@ pub(crate) fn nav_visibility_summary(query: &str) -> NavVisibilitySummary {
             .saturating_add(group.title.len() as u64);
         summary.max_group_items_count = summary.max_group_items_count.max(group.items.len() as u64);
 
-        for item in group.items {
+        for item in group.items.iter().copied() {
             summary.visible_items_count = summary.visible_items_count.saturating_add(1);
             summary.visible_tags_count = summary
                 .visible_tags_count
@@ -141,6 +151,44 @@ pub(crate) fn nav_visibility_summary(query: &str) -> NavVisibilitySummary {
     summary
 }
 
+pub(crate) fn nav_visibility_summary(query: &str) -> NavVisibilitySummary {
+    nav_visibility_summary_from_groups(&collect_visible_nav_groups(query))
+}
+
+fn nav_body_content_height(
+    summary: NavVisibilitySummary,
+    title_height: Px,
+    item_gap: Px,
+    button_height: Px,
+    group_gap: Px,
+) -> Px {
+    if summary.visible_groups_count == 0 {
+        return Px(0.0);
+    }
+
+    let visible_groups = summary.visible_groups_count as f32;
+    let visible_items = summary.visible_items_count as f32;
+    let group_gaps = summary.visible_groups_count.saturating_sub(1) as f32;
+    Px(visible_groups * title_height.0
+        + visible_items * (button_height.0 + item_gap.0)
+        + group_gaps * group_gap.0)
+}
+
+fn nav_body_known_content_size(theme: &Theme, summary: NavVisibilitySummary) -> fret_core::Size {
+    let title_height = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let button_height = theme
+        .metric_by_key("component.sidebar.menu_button.h")
+        .unwrap_or(Px(32.0));
+    let item_gap = decl_style::space(theme, Space::N1);
+    let group_gap = decl_style::space(theme, Space::N4);
+    fret_core::Size::new(
+        Px(0.0),
+        nav_body_content_height(summary, title_height, item_gap, button_height, group_gap),
+    )
+}
+
 pub(crate) fn sidebar_view(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -149,6 +197,9 @@ pub(crate) fn sidebar_view(
     nav_query: Model<String>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
+    let visible_groups = collect_visible_nav_groups(query);
+    let nav_summary = nav_visibility_summary_from_groups(&visible_groups);
+    let known_content_size = nav_body_known_content_size(theme, nav_summary);
 
     let nav_scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
     let nav_query_changed = cx.slot_state(String::new, |last_query| {
@@ -193,11 +244,7 @@ pub(crate) fn sidebar_view(
                       nav_sections: &mut Vec<AnyElement>| {
         let group_sections = cx.keyed(title, |cx| {
             let mut group_items: Vec<AnyElement> = Vec::new();
-            for item in items {
-                if !matches_query(query, item) {
-                    continue;
-                }
-
+            for item in items.iter().copied() {
                 let is_selected = selected == item.id;
 
                 group_items.push(cx.keyed(item.id, |cx| {
@@ -226,15 +273,25 @@ pub(crate) fn sidebar_view(
         nav_sections.extend(group_sections);
     };
 
-    let mut nav_sections: Vec<AnyElement> = Vec::new();
-    for group in collect_visible_nav_groups(query) {
-        push_group(cx, group.title, &group.items, &mut nav_sections);
-    }
+    let nav_body = {
+        let nav_body_cache_key = nav_body_cache_key(selected, query);
+        cx.cached_subtree_with(
+            CachedSubtreeProps::default()
+                .contain_layout_when_bounds_known(true)
+                .cache_key(nav_body_cache_key),
+            move |cx| {
+                let mut nav_sections: Vec<AnyElement> = Vec::new();
+                for group in &visible_groups {
+                    push_group(cx, group.title, &group.items, &mut nav_sections);
+                }
 
-    let nav_body = ui::v_flex(move |_cx| nav_sections)
-        .layout(LayoutRefinement::default().w_full())
-        .gap(Space::N4)
-        .into_element(cx);
+                [ui::v_flex(move |_cx| nav_sections)
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4)
+                    .into_element(cx)]
+            },
+        )
+    };
     let nav_scroll = {
         let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
             nav_body
@@ -256,6 +313,7 @@ pub(crate) fn sidebar_view(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
                 )
                 .viewport_probe_unbounded(false)
+                .viewport_known_content_size(known_content_size)
                 .into_element(cx)
         };
         nav_scroll.test_id("ui-gallery-nav-scroll")
@@ -327,6 +385,18 @@ mod tests {
     }
 
     #[test]
+    fn nav_body_cache_key_collapses_query_case_and_whitespace() {
+        assert_eq!(
+            nav_body_cache_key(PAGE_BUTTON, "  Card  "),
+            nav_body_cache_key(PAGE_BUTTON, "card")
+        );
+        assert_ne!(
+            nav_body_cache_key(PAGE_BUTTON, "card"),
+            nav_body_cache_key(PAGE_CARD, "card")
+        );
+    }
+
+    #[test]
     fn nav_visibility_summary_counts_items_for_empty_query() {
         let summary = nav_visibility_summary("");
         let expected_items = PAGE_GROUPS
@@ -356,6 +426,20 @@ mod tests {
         assert!(filtered.visible_groups_count <= full.visible_groups_count);
         assert!(
             filtered.visible_string_bytes_estimate_total < full.visible_string_bytes_estimate_total
+        );
+    }
+
+    #[test]
+    fn nav_body_content_height_accounts_for_groups_items_and_gaps() {
+        let summary = NavVisibilitySummary {
+            visible_groups_count: 2,
+            visible_items_count: 5,
+            ..Default::default()
+        };
+
+        assert_eq!(
+            nav_body_content_height(summary, Px(20.0), Px(6.0), Px(32.0), Px(24.0)),
+            Px(254.0)
         );
     }
 }
