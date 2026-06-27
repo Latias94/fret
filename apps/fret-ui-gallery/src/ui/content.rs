@@ -754,7 +754,10 @@ fn page_preview(
     };
 
     #[cfg(feature = "gallery-dev")]
-    if selected == PAGE_INSPECTOR_TORTURE
+    // `code_view_torture` already returns a wrapped doc page from `preview_code_view_torture(...)`.
+    // Keep it out of the extra gallery preview card shell, matching the other heavy direct-entry pages.
+    if selected == PAGE_CODE_VIEW_TORTURE
+        || selected == PAGE_INSPECTOR_TORTURE
         || selected == PAGE_DATA_TABLE_TORTURE
         || selected == PAGE_FILE_TREE_TORTURE
     {

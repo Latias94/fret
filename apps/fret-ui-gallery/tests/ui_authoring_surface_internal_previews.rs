@@ -1478,6 +1478,26 @@ fn gallery_code_view_torture_keeps_page_preview_fixed_height_shell() {
 }
 
 #[test]
+fn gallery_code_view_torture_keeps_the_direct_entry_preview_card_bypass() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/content.rs",
+        &[
+            "if selected == PAGE_CODE_VIEW_TORTURE",
+            "|| selected == PAGE_INSPECTOR_TORTURE",
+            "|| selected == PAGE_DATA_TABLE_TORTURE",
+            "|| selected == PAGE_FILE_TREE_TORTURE",
+            "return body;",
+        ],
+    );
+
+    assert!(
+        !normalized
+            .contains("selected == PAGE_CODE_VIEW_TORTURE && selected == PAGE_INSPECTOR_TORTURE"),
+        "code_view_torture should keep the shared direct-entry preview-card bypass instead of reintroducing a special-case wrapper"
+    );
+}
+
+#[test]
 fn gallery_code_view_torture_can_disable_the_outer_content_scroll_shell() {
     let source = read_path(&manifest_path("src/ui/content.rs"));
 

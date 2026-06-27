@@ -121,6 +121,32 @@ historical records remain in:
   `viewport_known_content_size(...)` call for `PAGE_CODE_VIEW_TORTURE` and rerun the same code-view
   perf scripts.
 
+## 2026-06-27 Code-View Direct-Entry Preview Card Bypass
+
+- Removed the redundant outer preview-card wrapper for `PAGE_CODE_VIEW_TORTURE` in
+  `apps/fret-ui-gallery/src/ui/content.rs` by joining the existing direct-entry bypass with the
+  inspector/data-table/file-tree path. The page already returns a fully wrapped doc page from
+  `preview_code_view_torture(...)`, so the extra gallery preview card was just added shell depth.
+- Validation passed:
+  `cargo fmt --all` and
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --test ui_authoring_surface_content_shell --test code_view_perf_surface --no-fail-fast`.
+- Perf probe (direct-entry):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-direct-entry-card-bypass-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/code-view-direct-entry-card-bypass-codex-20260627/1782560982392/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=272/9/0/167/96/0/0`.
+  `diag stats --sort cpu_cycles --top 20` showed `layout.engine_solve=0`, `layout.nodes=0`,
+  `cache_roots=1`, and the remaining cost concentrated in paint/upload/finish.
+- Perf probe (transition):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/code-view-transition-card-bypass-codex-20260627 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/code-view-transition-card-bypass-codex-20260627/1782561282501/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1895/1759/36/23/113/0/3`,
+  down from the prior `2078/1926/41/26/126/0/3` transition bundle.
+- Interpretation: this is a small but real shell-depth win on both the steady mount and the
+  transition path. Rollback is local: remove `PAGE_CODE_VIEW_TORTURE` from the shared direct-entry
+  preview-card bypass in `apps/fret-ui-gallery/src/ui/content.rs`.
+
 ## 2026-06-27 Visible-Only Fixed VirtualList Input Burst Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code again:
@@ -234,6 +260,22 @@ historical records remain in:
   the older filtered all-setup p95 as the next optimization target. The heavy-component work should
   move back to a surface where the measured interaction window itself is heavy, such as
   editor-controls, code-view, or a freshly ranked ui-gallery heavy surface.
+
+## 2026-06-27 Editor Controls Row-Cache Experiment Rejected
+
+- Tried a row-level `ViewCache` boundary inside
+  `apps/fret-cookbook/examples/imui_editor_controls_basics.rs` around `PropertyGrid` rows, with
+  `contain_layout_when_bounds_known(true)` on the cache props.
+- The roughness typing probe improved:
+  `target/fret-diag/editor-controls-row-cache-roughness-only-codex-20260627/1782559908487/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=975/854/480/4/117`, down from the prior
+  roughness baseline at `1288/1156/778/5/127`.
+- The click-stress probe regressed:
+  `target/fret-diag/editor-controls-row-cache-roughness-only-click-codex-20260627/1782559928971/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint)=1659/1537/1244/14/245`, worse than the prior
+  `1345/1125/3/217` baseline.
+- Conclusion: the row-cache boundary is not a net win for this surface. The code was reverted, and
+  the next cut should target a different seam with less cross-interaction overhead.
 
 ## 2026-06-26 IMUI Proof Inspector Lazy Section Model Note
 
