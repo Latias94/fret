@@ -330,6 +330,30 @@ historical records remain in:
   useful paint/root boundary on this repro even though it costs layout nodes. Do not repeat this
   single-surface row flattening without evidence that the paint/text migration has been addressed.
 
+## 2026-06-28 Retained DataTable Single Hit-Test Mask Experiment Rejected
+
+- Tried replacing the fixed-row group `ManagedSurface` hit-test mask shape with a single
+  `cx.bounds()` rect on non-empty row groups, backed by a `ManagedSurfaceHitTestMask::Single(Rect)`
+  fast path. The goal was to avoid per-row `Vec<Rect>` allocation and per-cell mask scans while
+  preserving the existing row/root/paint boundary.
+- Focused guards passed before perf rejection:
+  `cargo fmt -p fret-ui --check`,
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo nextest run -p fret-ui managed_surface --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-kit retained_table_fixed_row_group_does_not_clone_children_for_layout_or_paint table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-managed-surface-single-hit-mask-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-managed-surface-single-hit-mask-codex-20260628/1782648223306/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2130/1704/498/208/233/0/0`,
+  versus the accepted child-vec removal bundle's `2097/1672/484/218/238/0/0`.
+- Attribution: paint/prepaint moved slightly down, but layout moved the wrong way:
+  `layout.root_phases.roots.apply` rose from `722us` to `765us`, request build rose from
+  `507us` to `529us`, and `layout.engine_solve` rose from `484us` to `498us`.
+- Decision: reject and leave no source change. On this retained DataTable repro, the per-row
+  hit-test mask allocation/scan is not the p95 owner. Do not reintroduce a single-rect mask fast path
+  for this surface unless a lower-level allocation profile proves the ownership has changed.
+
 ## 2026-06-27 Inspector Nav Known Content Size Shortcut
 
 - Replaced the nav-body-only cache experiment in `apps/fret-ui-gallery/src/ui/nav.rs` with a
