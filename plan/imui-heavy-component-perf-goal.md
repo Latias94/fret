@@ -458,6 +458,31 @@ historical records remain in:
   retained-table slice should target root apply/request-build ownership or retained row shell
   structure with evidence before editing.
 
+## 2026-06-28 Retained DataTable Inner ViewCache Boundary Experiment Rejected
+
+- Tried wrapping the retained shadcn `DataTable` inner table helper in a single
+  `ViewCacheProps::contain_layout_when_bounds_known(true)` boundary in
+  `ecosystem/fret-ui-shadcn/src/data_table.rs`. The goal was to move model-observation layout
+  invalidation below the outer shadcn table container without creating row-level cache roots.
+- Focused gates passed before perf rejection:
+  `cargo fmt -p fret-ui-shadcn --check`,
+  `cargo check -p fret-ui-shadcn --lib`, and
+  `cargo nextest run -p fret-ui-shadcn --test data_table_column_actions_menu --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-retained-inner-cache-boundary-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-retained-inner-cache-boundary-codex-20260628/1782662770310/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2280/1830/509/207/251/0/0`,
+  regressing from the accepted hover-watch bundle's `2095/1666/475/193/236/0/0` on
+  `target/fret-diag/data-table-retained-hover-paint-watch-codex-20260628/1782649094892/bundle.schema2.json`.
+- Attribution: `cache_roots=2`, `cache.reused=0`, `cache.replayed_ops=0`, worst-frame
+  `layout.nodes=177`, and `layout.root_phases.roots.apply=838us`, all worse than the accepted
+  hover-watch shape (`layout.nodes=176`, `roots.apply=738us`). The model-observation source still
+  dirtied the broad window/gallery root path, so this containment boundary did not produce useful
+  reuse or a p95 win.
+- Decision: reject and leave no source change. Do not repeat this single inner-table `ViewCache`
+  containment boundary without stronger view-cache reuse or dirty-boundary evidence.
+
 ## 2026-06-28 Code-View Initial Viewport Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code:
