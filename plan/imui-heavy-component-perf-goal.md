@@ -284,6 +284,52 @@ historical records remain in:
   rollback is local to restoring the temporary child collection in
   `ManagedSurfaceLayoutCx::layout_unplaced_children(...)`.
 
+## 2026-06-28 ManagedSurface Laid-Out State Experiment Rejected
+
+- Tried replacing `ManagedSurfaceLayoutCx`'s `laid_out: Vec<NodeId>` with a small internal state
+  machine (`None` / `Partial(SmallVec)` / `All`) so the common
+  `layout_unplaced_children(cx.bounds())` path would avoid pushing every child into `laid_out` after
+  the previous child-vec allocation cut.
+- Focused guards passed before perf rejection:
+  `cargo fmt -p fret-ui --check`,
+  `cargo nextest run -p fret-ui managed_surface laid_out_children --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_use_shared_hover_state table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-managed-surface-laidout-state-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-managed-surface-laidout-state-codex-20260628/1782645722800/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2203/1748/474/203/254/0/0`,
+  regressing from the accepted child-vec removal bundle's `2097/1672/484/218/238/0/0`.
+- Attribution: `layout.root_phases.roots.apply` rose from `722us` to `811us`, retained table
+  `VirtualList` inclusive layout rose from about `599us` to `670us`, and the row
+  `ManagedSurface` batch solve stayed in the same band (`91us` -> `103us`). The state-machine
+  branch shape did not translate into a perf win on this path, so the code was reverted.
+- Decision: do not reintroduce a `laid_out` state-machine shortcut without a lower-level allocation
+  profile that proves this bookkeeping is the owner. Keep the accepted child-vec removal only.
+
+## 2026-06-28 Retained DataTable Fixed Row Single-Surface Experiment Rejected
+
+- Tried flattening only the fixed-height, no-pointer-row-selection, single-center retained table
+  row path by attaching row semantics directly to the inner fixed-row `ManagedSurface` cell group.
+  The shared body-level hover model stayed intact, and multi-group/column-pinning rows stayed on
+  the existing outer row surface path.
+- Focused guards passed before perf rejection:
+  `cargo fmt -p fret-ui-kit --check` and
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_use_shared_hover_state retained_fixed_no_pointer_rows_use_single_managed_surface_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-retained-fixed-row-single-surface-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-retained-fixed-row-single-surface-codex-20260628/1782646887636/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2226/1635/481/193/398/0/0`,
+  versus the accepted child-vec removal bundle's `2097/1672/484/218/238/0/0`.
+- Attribution: the trial did reduce layout breadth (`layout.nodes=176 -> 143`) and total invalidation
+  nodes (`46060 -> 22792`), but paint moved the wrong way: `paint.nodes=63 -> 143`,
+  renderer text ops `204 -> 336`, and `paint p95=238us -> 398us`. `roots.apply` stayed effectively
+  flat (`722us -> 721us`), so the layout win did not become a total-frame win.
+- Decision: reject and leave no source change. The outer fixed-row `ManagedSurface` appears to be a
+  useful paint/root boundary on this repro even though it costs layout nodes. Do not repeat this
+  single-surface row flattening without evidence that the paint/text migration has been addressed.
+
 ## 2026-06-27 Inspector Nav Known Content Size Shortcut
 
 - Replaced the nav-body-only cache experiment in `apps/fret-ui-gallery/src/ui/nav.rs` with a
