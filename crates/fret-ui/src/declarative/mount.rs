@@ -2059,7 +2059,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                     && output.len == props.len
                     && output.items_revision == props.items_revision
                     && output.measure_mode == props.measure_mode
-                    && output.overscan == props.overscan
+                    && output.overscan == props.effective_overscan
                     && output.estimate_row_height == props.estimate_row_height
                     && output.gap == props.gap
                     && output.scroll_margin == props.scroll_margin
@@ -2103,7 +2103,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
 
                 let valid_window = |range: crate::virtual_list::VirtualRange| {
                     range.count == props.len
-                        && range.overscan == props.overscan
+                        && range.overscan == props.effective_overscan
                         && range.start_index <= range.end_index
                         && range.end_index < range.count
                 };
@@ -2118,7 +2118,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 let ideal_window_range =
                     state
                         .metrics
-                        .visible_range(offset_axis, viewport, props.overscan);
+                        .visible_range(offset_axis, viewport, props.effective_overscan);
                 let boundary_window = prepaint_window.and_then(|output| {
                     output.window_range.filter(|range| {
                         valid_window(*range)

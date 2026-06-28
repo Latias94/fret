@@ -4193,6 +4193,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
             struct VirtualListRangeSelection {
                 range: Option<crate::virtual_list::VirtualRange>,
+                effective_overscan: usize,
                 deferred_overscan_catchup: bool,
             }
 
@@ -4221,6 +4222,27 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                         options.overscan,
                     )
                 };
+                let initial_viewport_overscan_deferral = options.overscan > 0
+                    && viewport.0 > 0.0
+                    && len > 0
+                    && state.has_final_viewport
+                    && !state.initial_viewport_overscan_caught_up
+                    && matches!(
+                        (options.measure_mode, key_cache),
+                        (
+                            crate::element::VirtualListMeasureMode::Fixed
+                                | crate::element::VirtualListMeasureMode::Known,
+                            crate::element::VirtualListKeyCacheMode::VisibleOnly,
+                        )
+                    );
+                if initial_viewport_overscan_deferral {
+                    overscan_for_range = 0;
+                    state.initial_viewport_overscan_caught_up = true;
+                }
+                if options.overscan == 0 || len == 0 {
+                    state.initial_viewport_overscan_caught_up = false;
+                }
+
                 let deferred_overscan_catchup =
                     overscan_for_range < options.overscan && options.overscan > 0;
 
@@ -4464,6 +4486,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 state.render_window_range = range;
                 VirtualListRangeSelection {
                     range,
+                    effective_overscan: overscan_for_range,
                     deferred_overscan_catchup,
                 }
             });
@@ -4518,6 +4541,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     measure_mode: options.measure_mode,
                     key_cache,
                     overscan: options.overscan,
+                    effective_overscan: range_selection.effective_overscan,
                     keep_alive: options.keep_alive,
                     scroll_margin: options.scroll_margin,
                     gap: options.gap,

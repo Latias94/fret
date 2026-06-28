@@ -109,6 +109,137 @@ fn virtual_list_computes_visible_range_after_first_layout() {
 }
 
 #[test]
+fn virtual_list_visible_only_fixed_defers_first_viewport_overscan() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        list_element_id: &mut Option<crate::elements::GlobalElementId>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let mut layout = crate::element::LayoutStyle::default();
+        layout.size.width = crate::element::Length::Fill;
+        layout.size.height = crate::element::Length::Fill;
+        layout.overflow = crate::element::Overflow::Clip;
+
+        let mut options = crate::element::VirtualListOptions::fixed(Px(10.0), 3);
+        options.key_cache = crate::element::VirtualListKeyCacheMode::VisibleOnly;
+
+        let list = cx.virtual_list_keyed_with_layout(
+            layout,
+            100,
+            options,
+            scroll_handle,
+            |index| index as crate::ItemKey,
+            |cx, index| cx.keyed(index as crate::ItemKey, |cx| cx.text("row")),
+        );
+        *list_element_id = Some(list.id);
+        list
+    }
+
+    let read_list_props = |app: &mut TestHost, list_node| {
+        let props = app.with_global_mut(
+            crate::declarative::frame::ElementFrame::default,
+            |frame, _app| {
+                frame
+                    .windows
+                    .get(&window)
+                    .and_then(|w| w.instances.get(list_node))
+                    .cloned()
+            },
+        );
+        let crate::declarative::ElementInstance::VirtualList(props) =
+            props.expect("list instance exists").instance
+        else {
+            panic!("expected VirtualList instance");
+        };
+        props
+    };
+
+    // Frame 0: establish viewport. No rows are mounted because render has not yet observed the
+    // final viewport written by layout.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let list_node = ui.children(root)[0];
+    assert_eq!(ui.children(list_node).len(), 0);
+
+    // Frame 1: render the true visible window first. This avoids attaching the initial overscan
+    // rows in the same frame that first mounts the visible row set.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let list_node = ui.children(root)[0];
+    let props = read_list_props(&mut app, list_node);
+    assert_eq!(props.overscan, 3);
+    assert_eq!(props.effective_overscan, 0);
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4]
+    );
+    assert_eq!(ui.children(list_node).len(), 5);
+
+    // Frame 2: the requested overscan catches up through the existing deferred-frame path.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let list_node = ui.children(root)[0];
+    let props = read_list_props(&mut app, list_node);
+    assert_eq!(props.overscan, 3);
+    assert_eq!(props.effective_overscan, 3);
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4, 5, 6, 7]
+    );
+    assert_eq!(ui.children(list_node).len(), 8);
+}
+
+#[test]
 fn virtual_list_can_scroll_to_deep_index_then_to_end() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

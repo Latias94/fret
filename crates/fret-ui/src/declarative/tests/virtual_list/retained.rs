@@ -201,6 +201,152 @@ fn retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying
 }
 
 #[test]
+fn retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+
+        cx.view_cache(cache, move |cx| {
+            let list_layout = crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: crate::element::Length::Fill,
+                    height: crate::element::Length::Fill,
+                    ..Default::default()
+                },
+                overflow: crate::element::Overflow::Clip,
+                ..Default::default()
+            };
+
+            let mut options = crate::element::VirtualListOptions::fixed(Px(10.0), 3);
+            options.key_cache = crate::element::VirtualListKeyCacheMode::VisibleOnly;
+
+            let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
+                Arc::new(|i| i as crate::ItemKey);
+            let row: crate::windowed_surface_host::RetainedVirtualListRowFn<TestHost> =
+                Arc::new(|cx, _| cx.text("row"));
+
+            vec![cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                100,
+                options,
+                scroll_handle,
+                key_at,
+                row,
+            )]
+        })
+    }
+
+    let read_list_props = |app: &mut TestHost, list_node| {
+        let props = app.with_global_mut(
+            crate::declarative::frame::ElementFrame::default,
+            |frame, _app| {
+                frame
+                    .windows
+                    .get(&window)
+                    .and_then(|w| w.instances.get(list_node))
+                    .cloned()
+            },
+        );
+        let crate::declarative::ElementInstance::VirtualList(props) =
+            props.expect("list instance exists").instance
+        else {
+            panic!("expected VirtualList instance");
+        };
+        props
+    };
+
+    // Frame 0: establish viewport.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    assert_eq!(ui.children(list_node).len(), 0);
+
+    // Frame 1: mount only the true visible rows.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let props = read_list_props(&mut app, list_node);
+    assert_eq!(props.overscan, 3);
+    assert_eq!(props.effective_overscan, 0);
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4]
+    );
+    assert_eq!(ui.children(list_node).len(), 5);
+
+    // Frame 2: overscan catches up and retained reconciliation observes the same effective window.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let props = read_list_props(&mut app, list_node);
+    assert_eq!(props.overscan, 3);
+    assert_eq!(props.effective_overscan, 3);
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4, 5, 6, 7]
+    );
+    assert_eq!(ui.children(list_node).len(), 8);
+}
+
+#[test]
 fn retained_virtual_list_prefetches_window_before_escape_without_rerendering_cache_root() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

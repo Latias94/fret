@@ -377,6 +377,46 @@ historical records remain in:
 - Rollback is local: restore `.layout()` on the shared hovered-row `watch_model(...)` call and rerun
   the same focused `fret-ui-kit` tests plus the retained DataTable perf probe.
 
+## 2026-06-28 Code-View Initial Viewport Overscan Deferral
+
+- Reranked the current heavy surfaces before cutting code:
+  - retained DataTable direct filter/input surface reported
+    `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2279/1806/511/201/272/0/0`
+    on
+    `target/fret-diag/rerank-data-table-retained-codex-20260628b/1782649960641/bundle.schema2.json`.
+  - code-view transition reported `2400/2230/329/32/138/0/5` on
+    `target/fret-diag/rerank-code-view-transition-codex-20260628b/1782649960615/bundle.json`.
+  - inspector direct-entry scroll reported `1644/1261/469/166/217/0/4`.
+  - editor-controls click-stress reported `927/798/421/5/135/0/3`.
+- A temporary gallery-only `.overscan(1)` trial on `preview_code_view_torture(...)` confirmed the
+  owner: the code-view transition dropped to `1812/1677/31/24/111/0/3` on
+  `target/fret-diag/code-view-torture-overscan1-trial-codex-20260628/1782650471671/bundle.schema2.json`.
+  That policy-level trial was reverted before the formal fix.
+- Source cut: `crates/fret-ui` now treats the first render after a fixed/known-height
+  `VisibleOnly` virtual list has an authoritative viewport as a staged mount. The first render
+  uses `effective_overscan=0` so it mounts the true visible window; the next frame marks the nearest
+  view-cache root for a prefetch rerender and restores the caller-requested overscan. Layout,
+  prepaint, retained-host reconcile, and paint refresh checks validate the currently-mounted window
+  with `effective_overscan` while `overscan` remains the steady policy.
+- Focused guards passed:
+  `cargo fmt -p fret-ui --check` and
+  `cargo nextest run -p fret-ui virtual_list --no-fail-fast`.
+- Perf probe (transition):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/code-view-initial-viewport-overscan-defer-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/code-view-initial-viewport-overscan-defer-codex-20260628/1782653351982/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1643/1528/27/19/102/0/3`,
+  down from the same-session code-view transition rerank at `2400/2230/329/32/138/0/5` and better
+  than the temporary overscan-1 policy trial.
+- Steady scroll guard:
+  `target/fret-diag/code-view-initial-viewport-overscan-defer-wheel-guard-codex-20260628/1782653606657/bundle.schema2.json`
+  reported `967/831/19/28/116/0/4`, in the same band as the prior code-view steady wheel guard
+  (`942/787/22/31/124/0/0`), so steady overscan/prefetch behavior stays intact.
+- Rollback is local: remove `effective_overscan` and
+  `initial_viewport_overscan_caught_up`, restore `props.overscan` as the layout/prepaint/reconcile
+  validation value, drop the two new virtual-list tests, and rerun the same `fret-ui` virtual-list
+  gate plus the code-view transition and wheel guards.
+
 ## 2026-06-27 Inspector Nav Known Content Size Shortcut
 
 - Replaced the nav-body-only cache experiment in `apps/fret-ui-gallery/src/ui/nav.rs` with a

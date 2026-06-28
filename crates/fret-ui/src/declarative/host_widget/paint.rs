@@ -1807,11 +1807,11 @@ impl ElementHostWidget {
                                 fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
                             };
                             let offset = state.metrics.clamp_offset(handle_offset, viewport);
-                            let Some(range) =
-                                state
-                                    .metrics
-                                    .visible_range(offset, viewport, props.overscan)
-                            else {
+                            let Some(range) = state.metrics.visible_range(
+                                offset,
+                                viewport,
+                                props.effective_overscan,
+                            ) else {
                                 return false;
                             };
                             crate::virtual_list::virtual_list_needs_visible_range_refresh(

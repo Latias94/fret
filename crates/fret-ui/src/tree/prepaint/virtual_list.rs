@@ -23,7 +23,7 @@ impl<H: UiHost> UiTree<H> {
                             len: props.len,
                             items_revision: props.items_revision,
                             measure_mode: props.measure_mode,
-                            overscan: props.overscan,
+                            overscan: props.effective_overscan,
                             estimate_row_height: props.estimate_row_height,
                             gap: props.gap,
                             scroll_margin: props.scroll_margin,

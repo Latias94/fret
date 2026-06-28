@@ -80,7 +80,7 @@ impl<H: UiHost> UiTree<H> {
                         .or(state.window_range)
                         .filter(|r| {
                             r.count == props.len
-                                && r.overscan == props.overscan
+                                && r.overscan == props.effective_overscan
                                 && r.start_index <= r.end_index
                                 && r.end_index < r.count
                         })

@@ -2788,6 +2788,13 @@ pub struct VirtualListProps {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    /// Overscan actually used to build this frame's mounted window.
+    ///
+    /// `overscan` is the steady policy requested by the caller. `effective_overscan` may be lower
+    /// for one-shot tail-smoothing frames, such as the first render after a final viewport becomes
+    /// known. Layout, prepaint, and retained-host reconcile should use this value when validating
+    /// the currently mounted window.
+    pub effective_overscan: usize,
     /// Number of off-window items that a retained virtual-list host may keep alive for reuse.
     ///
     /// This is primarily consumed by retained/windowed host implementations (ADR 0177) so window
@@ -2914,6 +2921,7 @@ pub struct VirtualListState {
     pub(crate) render_window_range: Option<crate::virtual_list::VirtualRange>,
     pub(crate) last_scroll_direction_forward: Option<bool>,
     pub(crate) has_final_viewport: bool,
+    pub(crate) initial_viewport_overscan_caught_up: bool,
     pub(crate) deferred_scroll_offset_hint: Option<Px>,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,

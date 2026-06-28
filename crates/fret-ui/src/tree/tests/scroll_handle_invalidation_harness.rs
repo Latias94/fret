@@ -442,6 +442,7 @@ fn register_scroll_surface(
                     measure_mode: crate::element::VirtualListMeasureMode::Fixed,
                     key_cache: crate::element::VirtualListKeyCacheMode::AllKeys,
                     overscan: *overscan,
+                    effective_overscan: *overscan,
                     keep_alive: 0,
                     scroll_margin: Px(0.0),
                     gap: Px(0.0),

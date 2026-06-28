@@ -1527,7 +1527,7 @@ impl ElementHostWidget {
             .barrier_roots
             .reserve(layout_scratch.measured_updates.len());
         let mut should_defer_overscan_layout = false;
-        if !is_probe_layout && props.overscan > 0 && viewport.0 > 0.0 {
+        if !is_probe_layout && props.effective_overscan > 0 && viewport.0 > 0.0 {
             if deferred_scroll_consumed {
                 // On large scroll-to-item jumps, laying out the full overscan window in a single
                 // frame can create tail spikes. Prioritize the true visible window and let
@@ -1561,7 +1561,7 @@ impl ElementHostWidget {
                                 .saturating_add(1);
                             let threshold = prev_len
                                 .saturating_mul(4)
-                                .max(props.overscan.saturating_mul(8));
+                                .max(props.effective_overscan.saturating_mul(8));
                             now.start_index.abs_diff(prev.start_index) > threshold
                         }
                         _ => {
@@ -1710,7 +1710,7 @@ impl ElementHostWidget {
         child_layout_profile.merge_from(&child_layout_first_pass_profile);
 
         let window_range = if !is_probe_layout {
-            metrics.visible_range(offset, viewport, props.overscan)
+            metrics.visible_range(offset, viewport, props.effective_overscan)
         } else {
             None
         };
@@ -1798,7 +1798,7 @@ impl ElementHostWidget {
                 let mut b = CacheKeyBuilder::new();
                 b.write_u32(axis as u32);
                 b.write_u32(props.measure_mode as u32);
-                b.write_u64(props.overscan as u64);
+                b.write_u64(props.effective_overscan as u64);
                 b.write_px(props.estimate_row_height);
                 b.write_px(props.gap);
                 b.write_px(props.scroll_margin);
@@ -1869,7 +1869,7 @@ impl ElementHostWidget {
                     items_revision: props.items_revision,
                     prev_items_revision,
                     measure_mode: props.measure_mode,
-                    overscan: props.overscan,
+                    overscan: props.effective_overscan,
                     estimate_row_height: props.estimate_row_height,
                     gap: props.gap,
                     scroll_margin: props.scroll_margin,
@@ -1900,7 +1900,17 @@ impl ElementHostWidget {
         //
         // Layout still records window telemetry and updates `VirtualListState`, but should not
         // duplicate the scheduling side effects.
-        if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
+        if !is_probe_layout
+            && cx.tree.view_cache_enabled()
+            && props.effective_overscan < props.overscan
+        {
+            cx.tree.mark_nearest_view_cache_root_needs_rerender(
+                cx.node,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate,
+            );
+            needs_redraw = true;
+        } else if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
             needs_redraw = true;
         }
 
