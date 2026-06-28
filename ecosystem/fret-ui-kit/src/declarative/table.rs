@@ -1,14 +1,16 @@
 use fret_core::{
-    Axis, Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole, Size as CoreSize,
+    Axis, Color, Corners, CursorIcon, Edges, KeyCode, Point, Px, Rect, SemanticsRole,
+    Size as CoreSize,
 };
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, HoverRegionProps, LayoutStyle, Length, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RingPlacement, RingStyle, ScrollAxis,
-    ScrollProps, SemanticsDecoration, SemanticsProps, VirtualListOptions,
+    ScrollProps, SemanticsDecoration, SemanticsProps, VirtualListMeasureMode, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
+use fret_ui::virtual_list::VirtualListMetrics;
 use fret_ui::{
     ElementContext, ElementContextAccess, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy,
 };
@@ -211,6 +213,54 @@ fn table_body_row_layout(row_h: Px, measure_mode: TableRowMeasureMode) -> Layout
         layout.overflow = Overflow::Clip;
     }
     layout
+}
+
+fn retained_table_fixed_row_index_for_pointer(
+    row_h: Px,
+    row_count: usize,
+    vertical_scroll: &VirtualListScrollHandle,
+    bounds: Rect,
+    position: Point,
+) -> Option<usize> {
+    if row_count == 0 {
+        return None;
+    }
+
+    let mut metrics = VirtualListMetrics::default();
+    metrics.ensure_with_mode(
+        VirtualListMeasureMode::Fixed,
+        row_count,
+        row_h,
+        Px(0.0),
+        Px(0.0),
+    );
+
+    let viewport_h = Px(vertical_scroll.viewport_size().height.0.max(0.0));
+    if viewport_h.0 <= 0.0 {
+        return None;
+    }
+
+    let offset_y = Px(vertical_scroll.offset().y.0.max(0.0));
+    let offset_y = metrics.clamp_offset(offset_y, viewport_h);
+    let local_y = Px(position.y.0 - bounds.origin.y.0);
+
+    // Pointer positions can arrive in either viewport space or content space depending on which
+    // transform path produced the event, so evaluate both and prefer the one that matches the
+    // current visible window.
+    let idx_viewport = metrics.index_for_offset(Px(offset_y.0 + local_y.0));
+    let idx_content = metrics.index_for_offset(local_y);
+    let idx = if let Some(visible) = metrics.visible_range(offset_y, viewport_h, 0) {
+        let in_visible = |idx: usize| idx >= visible.start_index && idx <= visible.end_index;
+        match (in_visible(idx_viewport), in_visible(idx_content)) {
+            (true, false) => idx_viewport,
+            (false, true) => idx_content,
+            _ => idx_content,
+        }
+    } else {
+        idx_content
+    };
+
+    Some(idx.min(row_count.saturating_sub(1)))
 }
 
 fn table_scroll_fill_layout() -> LayoutStyle {
@@ -929,7 +979,7 @@ mod tests {
     }
 
     #[test]
-    fn retained_table_non_pointer_rows_attach_semantics_to_hover_root() {
+    fn retained_table_non_pointer_rows_use_shared_hover_state() {
         let start = SOURCE
             .rfind("fn table_virtualized_retained_v0_impl")
             .expect("expected retained table implementation in source");
@@ -938,39 +988,27 @@ mod tests {
             .find("\n#[allow(clippy::too_many_arguments)]\n#[track_caller]\nfn table_virtualized_impl")
             .expect("expected retained table implementation boundary");
         let retained_impl = &tail[..end];
-        let hover_root = ["let row = cx.", "hover_region("].concat();
-        let semantics_wrapper = ["cx.", "semantics_with_id("].concat();
-        let row_wrapper_semantics = [
-            semantics_wrapper.as_str(),
-            "\n                            SemanticsProps {\n                                layout: row_wrapper_layout,",
-        ]
-        .concat();
-
-        assert!(
-            retained_impl.contains(&hover_root),
-            "non-pointer retained rows should use the existing hover root as the row root"
-        );
-        assert!(
-            retained_impl.contains("active_element.set(Some(row.id));"),
-            "active descendant should target the hover row root, not a wrapper"
-        );
         assert!(
             retained_impl.contains(
-                ".role(SemanticsRole::ListItem)\n                            .selected(selected);"
+                "let hovered_row = if matches!(props.row_measure_mode, TableRowMeasureMode::Fixed)"
             ),
-            "row semantics should keep the ListItem role and selected state"
+            "fixed retained rows should install a shared hover model instead of a row hover root"
         );
         assert!(
-            retained_impl.contains("semantics = semantics.test_id(test_id);"),
-            "row debug ids should remain attached to the row semantics"
+            retained_impl.contains("Some(cx.local_model(|| None::<usize>))"),
+            "fixed retained rows should allocate a local hover model"
         );
         assert!(
-            retained_impl.contains("row.attach_semantics(semantics)"),
-            "row semantics should be layout-transparent"
+            retained_impl.contains("cx.pointer_region_on_pointer_move("),
+            "fixed retained rows should install body-level pointer hover tracking"
         );
         assert!(
-            !retained_impl.contains(&row_wrapper_semantics),
-            "non-pointer retained rows should not reintroduce a same-layout Semantics wrapper"
+            retained_impl.contains("retained_table_fixed_row_index_for_pointer("),
+            "fixed retained rows should compute hover indices from shared body pointer geometry"
+        );
+        assert!(
+            retained_impl.contains("hovered_row.as_ref()"),
+            "row rendering should read the shared hover index"
         );
     }
 
@@ -1678,6 +1716,7 @@ mod tests {
             measure_mode,
             selected_row,
             false,
+            true,
             TableDebugIds {
                 row_test_id_prefix: Some(Arc::<str>::from("retained-table-row-layout-row-")),
                 ..TableDebugIds::default()
@@ -1694,6 +1733,7 @@ mod tests {
         measure_mode: TableRowMeasureMode,
         selected_row: Option<RowKey>,
         optimize_grid_lines: bool,
+        pointer_row_selection: bool,
         debug_ids: TableDebugIds,
     ) {
         let mut state_value = TableState::default();
@@ -1733,6 +1773,7 @@ mod tests {
                             enable_column_grouping: false,
                             row_height: Some(Px(28.0)),
                             row_measure_mode: measure_mode,
+                            pointer_row_selection,
                             optimize_grid_lines,
                             ..TableViewProps::default()
                         },
@@ -1936,6 +1977,55 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        render_retained_table_for_row_layout_with_options(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            TableRowMeasureMode::Fixed,
+            None,
+            false,
+            false,
+            TableDebugIds {
+                row_test_id_prefix: Some(Arc::<str>::from("retained-table-row-layout-row-")),
+                row_cell_test_ids: false,
+                ..TableDebugIds::default()
+            },
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("ManagedSurface")
+        );
+        assert_ne!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("HoverRegion"),
+            "fixed retained rows without pointer selection should not keep a HoverRegion root"
+        );
+    }
+
+    #[test]
     fn table_virtualized_retained_measured_rows_do_not_force_row_clip() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2044,6 +2134,7 @@ mod tests {
             bounds,
             TableRowMeasureMode::Fixed,
             None,
+            true,
             true,
             TableDebugIds {
                 row_test_id_prefix: Some(Arc::<str>::from("retained-table-row-layout-row-")),
@@ -5780,6 +5871,15 @@ where
         data_index: usize,
     }
 
+    let pointer_row_selection_enabled = props.enable_row_selection && props.pointer_row_selection;
+    let hovered_row = if matches!(props.row_measure_mode, TableRowMeasureMode::Fixed)
+        && !pointer_row_selection_enabled
+    {
+        Some(cx.local_model(|| None::<usize>))
+    } else {
+        None
+    };
+
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
     let ring = theme
@@ -6445,6 +6545,7 @@ where
             let center_col_indices = center_col_indices.clone();
             let right_col_indices = right_col_indices.clone();
             let scroll_x = scroll_x.clone();
+            let hovered_row = hovered_row.clone();
             let active_index_for_row_builder = active_index.clone();
             let active_element_for_row_builder = active_element.clone();
             let anchor_index_for_row_builder = anchor_index.clone();
@@ -6487,8 +6588,7 @@ where
                     let focus_target = focus_target_for_row;
                     let single = props.single_row_selection;
                     let policy = props.pointer_row_selection_policy;
-                    let pointer_row_selection_enabled =
-                        props.enable_row_selection && props.pointer_row_selection;
+                    let hovered_row = hovered_row.clone();
                     let row_wrapper_layout = table_body_row_layout(row_h, props.row_measure_mode);
 
                     let render_row_visuals =
@@ -6680,6 +6780,33 @@ where
                                 render_row_visuals(cx, st.hovered, st.pressed)
                             },
                         )
+                    } else if let Some(hovered_row_model) = hovered_row.as_ref() {
+                        let hovered_row = cx
+                            .watch_model(hovered_row_model)
+                            .layout()
+                            .copied()
+                            .flatten();
+                        let mut row_surface = fret_ui::element::ManagedSurfaceProps::default();
+                        row_surface.layout = row_wrapper_layout;
+                        let row = cx.managed_surface(
+                            row_surface,
+                            |cx| {
+                                cx.layout_unplaced_children(cx.bounds());
+                            },
+                            |_| {},
+                            move |cx| render_row_visuals(cx, hovered_row == Some(i), false),
+                        );
+                        if active_index.get() == Some(i) {
+                            active_element.set(Some(row.id));
+                        }
+
+                        let mut semantics = SemanticsDecoration::default()
+                            .role(SemanticsRole::ListItem)
+                            .selected(selected);
+                        if let Some(test_id) = test_id {
+                            semantics = semantics.test_id(test_id);
+                        }
+                        row.attach_semantics(semantics)
                     } else {
                         let row = cx.hover_region(
                             HoverRegionProps {
@@ -6883,46 +7010,114 @@ where
                         false
                     }));
 
+                    if let Some(hovered_row) = hovered_row.as_ref() {
+                        let hovered_row = hovered_row.clone();
+                        let row_count = entries_for_list.len();
+                        let vertical_scroll_for_hover = vertical_scroll.clone();
+                        cx.pointer_region_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                            if !matches!(
+                                mv.pointer_type,
+                                fret_core::PointerType::Mouse
+                                    | fret_core::PointerType::Pen
+                                    | fret_core::PointerType::Unknown
+                            ) {
+                                return false;
+                            }
+
+                            let Some(next_hovered) = retained_table_fixed_row_index_for_pointer(
+                                row_h,
+                                row_count,
+                                &vertical_scroll_for_hover,
+                                host.bounds(),
+                                mv.position,
+                            ) else {
+                                let current = host.models_mut().get_cloned(&hovered_row).flatten();
+                                if current.is_some() {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&hovered_row, |value| *value = None);
+                                    host.request_redraw(action_cx.window);
+                                }
+                                return false;
+                            };
+
+                            let current = host.models_mut().get_cloned(&hovered_row).flatten();
+                            if current != Some(next_hovered) {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&hovered_row, |value| *value = Some(next_hovered));
+                                host.request_redraw(action_cx.window);
+                            }
+
+                            false
+                        }));
+                    }
+
                     vec![cx.flex(retained_table_body_column_props(), move |cx| {
-                        let body_list = cx.virtual_list_keyed_retained_with_layout(
-                            fill_layout,
-                            entries_for_list.len(),
-                            options,
-                            vertical_scroll,
-                            key_at,
-                            row,
-                        );
-                        let body = if table_has_single_center_group(
-                            left_col_indices.len(),
-                            center_col_indices.len(),
-                            right_col_indices.len(),
-                        ) {
-                            let mut wheel = fret_ui::element::WheelRegionProps::default();
-                            wheel.axis = ScrollAxis::X;
-                            wheel.scroll_handle = scroll_x.clone();
-                            wheel.layout = table_scroll_fill_layout();
-                            wheel.layout.overflow = Overflow::Clip;
-                            let body = table_wrap_horizontal_transform(
-                                cx,
-                                scroll_x.clone(),
-                                table_known_content_width_for_indices(
-                                    &col_widths,
-                                    center_col_indices.as_ref(),
-                                ),
-                                body_list,
+                        let build_body = |cx: &mut ElementContext<'_, H>| {
+                            let body_list = cx.virtual_list_keyed_retained_with_layout(
+                                fill_layout,
+                                entries_for_list.len(),
+                                options,
+                                vertical_scroll,
+                                key_at,
+                                row,
                             );
-                            let body = cx.wheel_region(wheel, |_| vec![body]);
-                            if let Some(test_id) = debug_body_test_id.clone() {
-                                body.test_id(test_id)
+                            let body = if table_has_single_center_group(
+                                left_col_indices.len(),
+                                center_col_indices.len(),
+                                right_col_indices.len(),
+                            ) {
+                                let mut wheel = fret_ui::element::WheelRegionProps::default();
+                                wheel.axis = ScrollAxis::X;
+                                wheel.scroll_handle = scroll_x.clone();
+                                wheel.layout = table_scroll_fill_layout();
+                                wheel.layout.overflow = Overflow::Clip;
+                                let body = table_wrap_horizontal_transform(
+                                    cx,
+                                    scroll_x.clone(),
+                                    table_known_content_width_for_indices(
+                                        &col_widths,
+                                        center_col_indices.as_ref(),
+                                    ),
+                                    body_list,
+                                );
+                                let body = cx.wheel_region(wheel, |_| vec![body]);
+                                if let Some(test_id) = debug_body_test_id.clone() {
+                                    body.test_id(test_id)
+                                } else {
+                                    body
+                                }
                             } else {
-                                body
-                            }
+                                if let Some(test_id) = debug_body_test_id.clone() {
+                                    body_list.test_id(test_id)
+                                } else {
+                                    body_list
+                                }
+                            };
+
+                            body
+                        };
+
+                        let body = if let Some(hovered_row) = hovered_row.as_ref() {
+                            cx.hover_region(
+                                HoverRegionProps {
+                                    layout: table_scroll_fill_layout(),
+                                },
+                                |cx, hovered| {
+                                    if !hovered {
+                                        let _ = cx.app.models_mut().update(hovered_row, |value| {
+                                            if value.is_some() {
+                                                *value = None;
+                                            }
+                                        });
+                                    }
+
+                                    vec![build_body(cx)]
+                                },
+                            )
                         } else {
-                            if let Some(test_id) = debug_body_test_id.clone() {
-                                body_list.test_id(test_id)
-                            } else {
-                                body_list
-                            }
+                            build_body(cx)
                         };
 
                         vec![header, body]
