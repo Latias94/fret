@@ -28,6 +28,7 @@ pub(crate) fn debug_virtual_list_layout_in_calls() -> usize {
 }
 
 const VIRTUALIZER_PX_SCALE: f32 = 64.0;
+pub(crate) const INITIAL_VIEWPORT_OVERSCAN_CATCHUP_STEP: usize = 3;
 
 fn px_to_units_u32(px: Px) -> u32 {
     let scaled = (px.0.max(0.0) * VIRTUALIZER_PX_SCALE).round();

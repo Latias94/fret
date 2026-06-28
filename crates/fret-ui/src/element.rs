@@ -2921,7 +2921,7 @@ pub struct VirtualListState {
     pub(crate) render_window_range: Option<crate::virtual_list::VirtualRange>,
     pub(crate) last_scroll_direction_forward: Option<bool>,
     pub(crate) has_final_viewport: bool,
-    pub(crate) initial_viewport_overscan_caught_up: bool,
+    pub(crate) initial_viewport_overscan_catchup: usize,
     pub(crate) deferred_scroll_offset_hint: Option<Px>,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,

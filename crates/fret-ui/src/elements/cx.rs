@@ -4226,7 +4226,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     && viewport.0 > 0.0
                     && len > 0
                     && state.has_final_viewport
-                    && !state.initial_viewport_overscan_caught_up
+                    && state.initial_viewport_overscan_catchup < options.overscan
                     && matches!(
                         (options.measure_mode, key_cache),
                         (
@@ -4236,11 +4236,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                         )
                     );
                 if initial_viewport_overscan_deferral {
-                    overscan_for_range = 0;
-                    state.initial_viewport_overscan_caught_up = true;
+                    overscan_for_range = state.initial_viewport_overscan_catchup;
+                    state.initial_viewport_overscan_catchup = options.overscan.min(
+                        state.initial_viewport_overscan_catchup.saturating_add(
+                            crate::virtual_list::INITIAL_VIEWPORT_OVERSCAN_CATCHUP_STEP,
+                        ),
+                    );
                 }
                 if options.overscan == 0 || len == 0 {
-                    state.initial_viewport_overscan_caught_up = false;
+                    state.initial_viewport_overscan_catchup = 0;
                 }
 
                 let deferred_overscan_catchup =

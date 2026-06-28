@@ -235,7 +235,7 @@ fn retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan() {
                 ..Default::default()
             };
 
-            let mut options = crate::element::VirtualListOptions::fixed(Px(10.0), 3);
+            let mut options = crate::element::VirtualListOptions::fixed(Px(10.0), 6);
             options.key_cache = crate::element::VirtualListKeyCacheMode::VisibleOnly;
 
             let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
@@ -305,7 +305,7 @@ fn retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan() {
     let cache_node = ui.children(root)[0];
     let list_node = ui.children(cache_node)[0];
     let props = read_list_props(&mut app, list_node);
-    assert_eq!(props.overscan, 3);
+    assert_eq!(props.overscan, 6);
     assert_eq!(props.effective_overscan, 0);
     assert_eq!(
         props
@@ -317,7 +317,8 @@ fn retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan() {
     );
     assert_eq!(ui.children(list_node).len(), 5);
 
-    // Frame 2: overscan catches up and retained reconciliation observes the same effective window.
+    // Frame 2: large overscan budgets catch up in a bounded step and retained reconciliation
+    // observes the same effective window.
     app.advance_frame();
     let root = render_root(
         &mut ui,
@@ -333,7 +334,7 @@ fn retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan() {
     let cache_node = ui.children(root)[0];
     let list_node = ui.children(cache_node)[0];
     let props = read_list_props(&mut app, list_node);
-    assert_eq!(props.overscan, 3);
+    assert_eq!(props.overscan, 6);
     assert_eq!(props.effective_overscan, 3);
     assert_eq!(
         props
@@ -344,6 +345,33 @@ fn retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan() {
         vec![0, 1, 2, 3, 4, 5, 6, 7]
     );
     assert_eq!(ui.children(list_node).len(), 8);
+
+    // Frame 3: the requested steady overscan is fully mounted.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "retained-visible-only-fixed-first-viewport-overscan",
+        |cx| vec![build_tree(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let props = read_list_props(&mut app, list_node);
+    assert_eq!(props.overscan, 6);
+    assert_eq!(props.effective_overscan, 6);
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    );
 }
 
 #[test]

@@ -77,6 +77,57 @@ historical records remain in:
   `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=729/624/368/2/107/0/1`, and the
   roughness typing perf probe stayed improved at `851/719/449/4/128/0/2`. The remaining work is
   still layout solve/root apply in the 56-58 node control shell, not the old scrub identity churn.
+- Code-view torture transition is now the heavier local surface after editor-controls fell below
+  1ms p95. A discarded scrollbar-shell experiment reduced very little tree shape and regressed /
+  stayed neutral, so the accepted cut moved into `VirtualList`: fixed/known + `VisibleOnly` lists now
+  catch up large first-viewport overscan budgets in bounded steps. The latest code-view transition
+  repeat=2 probe landed at
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1572/1452/31/18/104/0/13`, down from
+  the prior node-profile run at roughly `1631/1493/315/36/152/0/14`. The 53-node catch-up frame is
+  still present but no longer owns p95; the remaining worst frame is dominated by code-view text
+  prepare flush (`renderer.text_prepare.flush max=389us`, 45 blobs).
+
+## 2026-06-29 VirtualList Initial Overscan Staging
+
+- Source cut: `VirtualListState` now tracks an initial first-viewport overscan catch-up amount
+  instead of a boolean. For fixed/known `VisibleOnly` lists, the first render after the final
+  viewport is known still mounts only the true visible window, then catches up overscan by
+  `INITIAL_VIEWPORT_OVERSCAN_CATCHUP_STEP` (currently 3) each requested frame until the caller's
+  steady overscan is reached.
+- Rationale: large windowed surfaces such as code-view already defer initial overscan, but the
+  previous next frame jumped directly from `effective_overscan=0` to the full requested overscan.
+  That combined row attach, root apply, and renderer text prepare work into one catch-up spike.
+  Staging the catch-up keeps the visible-first behavior and spreads off-screen row work across
+  frames.
+- Rejected experiment: a code-view scrollbar chrome shell cut was tried first and discarded. It
+  reduced only a couple wrapper nodes and produced
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1853/1727/39/29/110/0/5`, worse than
+  the preceding code-view node-profile baseline. The active hotspot is not scrollbar chrome depth.
+- Coverage: `virtual_list_visible_only_fixed_defers_first_viewport_overscan` and
+  `retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan` now use overscan `6`
+  and assert the `0 -> 3 -> 6` effective-overscan sequence for both normal and retained hosts.
+- Validation gates:
+  `cargo fmt -p fret-ui --check`,
+  `cargo nextest run -p fret-ui virtual_list_visible_only_fixed_defers_first_viewport_overscan retained_visible_only_fixed_virtual_list_defers_first_viewport_overscan --no-fail-fast`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test code_view_perf_surface --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/code-view-vlist-staged-initial-overscan-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=24 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundles:
+  `target/fret-diag/code-view-vlist-staged-initial-overscan-codex-20260629/1782681904373-ui-gallery-code-view-torture-mount/bundle.schema2.json`
+  and
+  `target/fret-diag/code-view-vlist-staged-initial-overscan-codex-20260629/1782681908878-ui-gallery-code-view-torture-mount/bundle.schema2.json`
+  reported p95 totals of `1563/1452us` and `1572/1450us` respectively. `diag stats --sort time`
+  on the worst bundle shows the remaining top frame at 29 layout nodes with
+  `renderer.text_prepare.flush=389us`; the staged catch-up frame is now `887/771us` instead of the
+  previous `960/772us`-class secondary spike.
+- Interpretation: keep this as a small tail-smoothing mechanism win. It does not solve the
+  code-view text prepare flush; the next code-view slice should target row text pin/cache churn or
+  staged text preparation rather than more chrome shell cuts.
+- Rollback is local: restore `initial_viewport_overscan_caught_up: bool`, set
+  `overscan_for_range=0` once for initial viewport deferral, remove
+  `INITIAL_VIEWPORT_OVERSCAN_CATCHUP_STEP`, and relax the two VirtualList tests back to the old
+  `0 -> full overscan` sequence.
 
 ## 2026-06-29 Editor Session Hidden Branch Gate
 
