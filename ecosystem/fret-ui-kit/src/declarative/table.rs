@@ -6783,7 +6783,7 @@ where
                     } else if let Some(hovered_row_model) = hovered_row.as_ref() {
                         let hovered_row = cx
                             .watch_model(hovered_row_model)
-                            .layout()
+                            .invalidation(fret_ui::Invalidation::Paint)
                             .copied()
                             .flatten();
                         let mut row_surface = fret_ui::element::ManagedSurfaceProps::default();

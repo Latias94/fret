@@ -354,6 +354,29 @@ historical records remain in:
   hit-test mask allocation/scan is not the p95 owner. Do not reintroduce a single-rect mask fast path
   for this surface unless a lower-level allocation profile proves the ownership has changed.
 
+## 2026-06-28 Retained DataTable Hover Watch Paint Invalidation
+
+- Source cut: the fixed-height retained `DataTable` row path without pointer-row selection now
+  observes the shared hovered-row model with `Invalidation::Paint` instead of layout invalidation.
+  The hovered-row model only drives row background paint in this branch; row geometry, child
+  membership, and semantics do not depend on the hovered index.
+- Focused guards passed:
+  `cargo fmt -p fret-ui-kit --check` and
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_use_shared_hover_state table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-retained-hover-paint-watch-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-retained-hover-paint-watch-codex-20260628/1782649094892/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2095/1666/475/193/236/0/0`,
+  roughly flat but slightly better than the accepted managed-surface child-vec bundle's
+  `2097/1672/484/218/238/0/0`.
+- Attribution is mixed: `layout.engine_solve` moved down (`484us -> 475us`) and total p95 stayed
+  flat, while `layout.root_phases.roots.apply` nudged up (`722us -> 738us`) and request build stayed
+  in the same noise band (`507us -> 512us`). Keep this as a correctness-of-invalidation narrowing
+  rather than a major perf win.
+- Rollback is local: restore `.layout()` on the shared hovered-row `watch_model(...)` call and rerun
+  the same focused `fret-ui-kit` tests plus the retained DataTable perf probe.
+
 ## 2026-06-27 Inspector Nav Known Content Size Shortcut
 
 - Replaced the nav-body-only cache experiment in `apps/fret-ui-gallery/src/ui/nav.rs` with a
