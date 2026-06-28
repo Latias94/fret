@@ -598,17 +598,9 @@ pub(super) fn portal_geometry(
     portal_geometry_with_body(cx, models, PortalGeometryBody::ScrollRows(48))
 }
 
-pub(super) fn portal_geometry_trigger_only(
-    cx: &mut AppComponentCx<'_>,
-    models: &OverlayModels,
-) -> impl UiChild + use<> {
-    portal_geometry_with_body(cx, models, PortalGeometryBody::TriggerOnly)
-}
-
 #[derive(Clone, Copy)]
 enum PortalGeometryBody {
     ScrollRows(usize),
-    TriggerOnly,
 }
 
 fn portal_geometry_with_body(
@@ -679,7 +671,6 @@ fn portal_geometry_with_body(
                         .test_id("ui-gallery-portal-geometry-scroll-area"),
                 )
         }
-        PortalGeometryBody::TriggerOnly => popover,
     };
 
     shadcn::Card::new(vec![

@@ -5895,6 +5895,33 @@ popover overlay root solve tail.
 - Interpretation: this is measurement-surface hardening only. The next chrome cut should still be
   driven by fresh root/layout evidence, not by more registry churn.
 
+## 2026-06-28 Chrome Torture Fixed-Row Portal Geometry Prune
+
+- Split `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/layout.rs` so
+  `compose_body_fixed_rows(...)` now passes `include_portal_geometry = false` instead of selecting
+  `PortalGeometryMode::TriggerOnly`.
+- Removed `widgets::portal_geometry_trigger_only(...)` and the `PortalGeometryBody::TriggerOnly`
+  branch from `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`. The
+  `chrome_torture` fixed-row path now lands only the overlay rows and chrome controls.
+- Updated `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs` to lock the
+  boolean gate and the smaller widget-helper inventory. Validation passed with
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_overlay_preview_retains_intentional_raw_boundaries --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady-direct-entry.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/chrome-torture-fixed-rows-after-split-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=300 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/chrome-torture-fixed-rows-after-split-codex-20260628/1782622386711/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1783/1398/1069/172/219/0/2`.
+  `diag stats --sort cpu_cycles --top 20` showed `layout.engine_solve p95=1093us`,
+  `layout.root_phases.request_build p95=1206us`, `roots.apply p95=214us`, and no vlist or
+  cache-root churn.
+- Interpretation: the fixed-row chrome torture surface is thinner, but it is still dominated by
+  layout solve rather than overlay body scroll machinery. The next cut should target the remaining
+  `layout.engine_solve` / root-build work in the chrome torture shell, not reintroduce the old
+  portal-geometry split.
+- Rollback is local: restore `PortalGeometryMode::TriggerOnly` and
+  `portal_geometry_trigger_only(...)`, then re-enable the test expectations.
+
 ## 2026-06-24 Code-View Direct-Entry Registry Note
 
 - The code-view torture direct-entry measurement surface is now promoted as a suite-reachable

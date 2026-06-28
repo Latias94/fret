@@ -623,17 +623,14 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
             "fn row_end(_cx: &mut AppComponentCx<'_>, gap: Px, children: Vec<AnyElement>) -> impl UiChild + use<>",
             "pub(super) fn compose_body(cx: &mut AppComponentCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
             "pub(super) fn compose_body_fixed_rows(cx: &mut AppComponentCx<'_>, models: OverlayModels) -> impl UiChild + use<>",
-            "enum PortalGeometryMode {",
-            "fn compose_body_with_row_wrap(cx: &mut AppComponentCx<'_>, models: OverlayModels, wrap_rows: bool, portal_geometry_mode: PortalGeometryMode,) -> impl UiChild + use<>",
+            "fn compose_body_with_row_wrap(cx: &mut AppComponentCx<'_>, models: OverlayModels, wrap_rows: bool, include_portal_geometry: bool,) -> impl UiChild + use<>",
         ],
     );
     assert!(
         layout_normalized.contains(
-            "PortalGeometryMode::FullScroll=>widgets::portal_geometry(cx,&models).into_element(cx)"
-        ) && layout_normalized.contains(
-            "PortalGeometryMode::TriggerOnly=>widgets::portal_geometry_trigger_only(cx,&models).into_element(cx)"
+            "ifinclude_portal_geometry{ui::children![cx;underlay_row,menu_row,edge_row,overlays_row,modal_row,widgets::portal_geometry(cx,&models).into_element(cx),]}else{ui::children![cx;underlay_row,menu_row,edge_row,overlays_row,modal_row,]}"
         ),
-        "src/ui/previews/gallery/overlays/overlay/layout.rs should keep the fixed-row perf body on trigger-only portal geometry while the standalone preview keeps full portal geometry",
+        "src/ui/previews/gallery/overlays/overlay/layout.rs should gate portal geometry inclusion with a boolean flag instead of a separate mode enum",
     );
     assert_eq!(
         layout_normalized.matches("->implUiChild+use<>").count(),
@@ -661,22 +658,20 @@ fn gallery_overlay_preview_retains_intentional_raw_boundaries() {
             "pub(super) fn alert_dialog(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
             "pub(super) fn sheet(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
             "pub(super) fn portal_geometry(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<>",
-            "pub(super) fn portal_geometry_trigger_only(cx: &mut AppComponentCx<'_>, models: &OverlayModels,) -> impl UiChild + use<>",
             "fn portal_geometry_with_body(cx: &mut AppComponentCx<'_>, models: &OverlayModels, body: PortalGeometryBody,) -> impl UiChild + use<>",
         ],
     );
     assert_eq!(
         widgets_normalized.matches("->implUiChild+use<>").count(),
-        15,
+        14,
         "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep the typed widget-helper inventory",
     );
     assert!(
         widgets_normalized
             .contains("portal_geometry_with_body(cx,models,PortalGeometryBody::ScrollRows(48))")
-            && widgets_normalized
-                .contains("portal_geometry_with_body(cx,models,PortalGeometryBody::TriggerOnly)")
-            && widgets_normalized.contains("PortalGeometryBody::TriggerOnly=>popover"),
-        "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep standalone scroll rows and fixed-row trigger-only portal geometry explicit",
+            && !widgets_normalized.contains("PortalGeometryBody::TriggerOnly")
+            && !widgets_normalized.contains("portal_geometry_trigger_only"),
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs should keep only the scroll-row portal geometry variant",
     );
     assert!(
         widgets_normalized.contains(

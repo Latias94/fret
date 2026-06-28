@@ -37,27 +37,21 @@ pub(super) fn compose_body(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
 ) -> impl UiChild + use<> {
-    compose_body_with_row_wrap(cx, models, true, PortalGeometryMode::FullScroll)
+    compose_body_with_row_wrap(cx, models, true, true)
 }
 
 pub(super) fn compose_body_fixed_rows(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
 ) -> impl UiChild + use<> {
-    compose_body_with_row_wrap(cx, models, false, PortalGeometryMode::TriggerOnly)
-}
-
-#[derive(Clone, Copy)]
-enum PortalGeometryMode {
-    FullScroll,
-    TriggerOnly,
+    compose_body_with_row_wrap(cx, models, false, false)
 }
 
 fn compose_body_with_row_wrap(
     cx: &mut AppComponentCx<'_>,
     models: OverlayModels,
     wrap_rows: bool,
-    portal_geometry_mode: PortalGeometryMode,
+    include_portal_geometry: bool,
 ) -> impl UiChild + use<> {
     let _ = cx;
     ui::v_flex(move |cx| {
@@ -96,17 +90,24 @@ fn compose_body_with_row_wrap(
             row(cx, gap, children, wrap_rows)
         };
 
-        ui::children![cx;
-            underlay_row,
-            menu_row,
-            edge_row,
-            overlays_row,
-            modal_row,
-            match portal_geometry_mode {
-                PortalGeometryMode::FullScroll => widgets::portal_geometry(cx, &models).into_element(cx),
-                PortalGeometryMode::TriggerOnly => widgets::portal_geometry_trigger_only(cx, &models).into_element(cx),
-            },
-        ]
+        if include_portal_geometry {
+            ui::children![cx;
+                underlay_row,
+                menu_row,
+                edge_row,
+                overlays_row,
+                modal_row,
+                widgets::portal_geometry(cx, &models).into_element(cx),
+            ]
+        } else {
+            ui::children![cx;
+                underlay_row,
+                menu_row,
+                edge_row,
+                overlays_row,
+                modal_row,
+            ]
+        }
     })
     .gap(Space::N2)
     .layout(LayoutRefinement::default().w_full())
