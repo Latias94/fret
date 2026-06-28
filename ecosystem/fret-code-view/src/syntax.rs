@@ -1,7 +1,10 @@
 use fret_core::Color;
 use fret_ui_kit::ThemeTokenRead;
 
-pub(crate) fn syntax_color(theme: &(impl ThemeTokenRead + ?Sized), highlight: &str) -> Option<Color> {
+pub(crate) fn syntax_color(
+    theme: &(impl ThemeTokenRead + ?Sized),
+    highlight: &str,
+) -> Option<Color> {
     let mut cur = Some(highlight);
     while let Some(name) = cur {
         let mut key = String::with_capacity("color.syntax.".len() + name.len());
