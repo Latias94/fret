@@ -112,14 +112,12 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
     }
 
     pub fn layout_unplaced_children(&mut self, bounds: Rect) {
-        let children: Vec<NodeId> = self
-            .cx
-            .children
-            .iter()
-            .copied()
-            .filter(|child| !self.laid_out.contains(child))
-            .collect();
-        for child in children {
+        let child_count = self.cx.children.len();
+        for idx in 0..child_count {
+            let child = self.cx.children[idx];
+            if self.laid_out.contains(&child) {
+                continue;
+            }
             let _ = self.layout_child(child, bounds);
         }
     }

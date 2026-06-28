@@ -235,6 +235,55 @@ historical records remain in:
   baseline. Next work should target a different retained-table hotspot instead of more cache
   placement on this same lane.
 
+## 2026-06-28 Retained DataTable Row Hover Region Experiment Rejected
+
+- Tried replacing the fixed-height, no-pointer-row-selection retained row path in
+  `ecosystem/fret-ui-kit/src/declarative/table.rs` with per-row `HoverRegion` roots, removing the
+  body-level `pointer_region_on_pointer_move` shared hover model and the outer row
+  `ManagedSurface`.
+- Targeted guards passed before perf rejection:
+  `cargo fmt --all` and
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_use_row_hover_regions table_virtualized_retained_fixed_rows_without_pointer_selection_use_hover_region_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-row-hover-region-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-row-hover-region-codex-20260628/1782641579266/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2373/1755/518/198/420/0/0`.
+  The accepted visible-only input-overscan baseline stayed better at
+  `2287/1715/554/190/416/0/0` on
+  `target/fret-diag/data-table-visibleonly-input-overscan-defer-codex-20260627/1782493708781/bundle.json`.
+- Attribution: the trial reduced some node counts (`layout.nodes=175` on the worst frame) and
+  `roots.apply` to `820us`, but did not beat the accepted baseline (`roots.apply=775us`) and
+  increased total p95. The shared hover strategy is not the local owner on this repro.
+- Decision: reject and leave no source change. Do not repeat the per-row `HoverRegion` replacement
+  for this fixed retained DataTable path without a new geometry contract. The next useful
+  retained-table slice should target retained `VirtualList` root apply, fixed-row
+  `ManagedSurface` geometry ownership, or a narrower row materialization contract.
+
+## 2026-06-28 ManagedSurface Layout Child Vec Removal
+
+- Source cut: `crates/fret-ui/src/managed_surface.rs` now lets
+  `ManagedSurfaceLayoutCx::layout_unplaced_children(...)` walk `cx.children` by index instead of
+  allocating a temporary `Vec<NodeId>` for every call. This keeps the same layout order and
+  `laid_out` filtering, but removes a hot per-surface allocation from retained table rows and any
+  other managed-surface shell that just forwards all children to one bounds rect.
+- Guards passed:
+  `cargo fmt --all`,
+  `cargo nextest run -p fret-ui managed_surface --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_use_shared_hover_state table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-managed-surface-layout-no-child-vec-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-managed-surface-layout-no-child-vec-codex-20260628/1782644351538/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2097/1672/484/218/238/0/0`,
+  improving from the accepted visible-only input-overscan baseline
+  `2287/1715/554/190/416/0/0`.
+- Attribution: `layout.root_phases.roots.apply` dropped to `722us` from the prior `775us`
+  accepted baseline, `layout.engine_solve` p95 fell to `463us`, and the worst frame had
+  `layout.nodes=176` with `paint.nodes=63`. Keep this as a small shared mechanism optimization;
+  rollback is local to restoring the temporary child collection in
+  `ManagedSurfaceLayoutCx::layout_unplaced_children(...)`.
+
 ## 2026-06-27 Inspector Nav Known Content Size Shortcut
 
 - Replaced the nav-body-only cache experiment in `apps/fret-ui-gallery/src/ui/nav.rs` with a
