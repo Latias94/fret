@@ -252,6 +252,7 @@ pub use edges4::{Edges4, MarginEdge};
 pub use image_metadata::{ImageMetadata, ImageMetadataStore, with_image_metadata_store_mut};
 pub use image_sampling::ImageSamplingExt;
 pub use sizing::{Sizable, Size};
+pub use style::ThemeTokenRead;
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
     MetricRef, OverflowRefinement, OverrideSlot, PaddingRefinement, Radius, ShadowPreset,

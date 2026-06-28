@@ -21,7 +21,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space, ui,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
+    ThemeTokenRead, ui,
 };
 
 use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
@@ -1476,6 +1477,51 @@ impl CodeBlockWindowedLineRichCache {
     }
 }
 
+#[derive(Default)]
+struct CodeBlockLineRowThemeCache {
+    theme_revision: u64,
+    prepared_revision: u64,
+    disable_ligatures: bool,
+    disable_contextual_alternates: bool,
+    row_theme: Option<Arc<CodeBlockLineRowTheme>>,
+}
+
+impl CodeBlockLineRowThemeCache {
+    fn resolve<T: ThemeTokenRead + ?Sized>(
+        &mut self,
+        theme_revision: u64,
+        prepared_revision: u64,
+        disable_ligatures: bool,
+        disable_contextual_alternates: bool,
+        theme: &T,
+        prepared: &crate::prepare::PreparedCodeBlock,
+    ) -> Arc<CodeBlockLineRowTheme> {
+        let needs_rebuild = self.row_theme.is_none()
+            || self.theme_revision != theme_revision
+            || self.prepared_revision != prepared_revision
+            || self.disable_ligatures != disable_ligatures
+            || self.disable_contextual_alternates != disable_contextual_alternates;
+
+        if needs_rebuild {
+            self.theme_revision = theme_revision;
+            self.prepared_revision = prepared_revision;
+            self.disable_ligatures = disable_ligatures;
+            self.disable_contextual_alternates = disable_contextual_alternates;
+            self.row_theme = Some(Arc::new(CodeBlockLineRowTheme::new(
+                theme,
+                prepared,
+                disable_ligatures,
+                disable_contextual_alternates,
+            )));
+        }
+
+        self.row_theme
+            .as_ref()
+            .expect("row theme cache should always hold a value after resolve")
+            .clone()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct CodeBlockLineRowTheme {
     mono_size: Px,
@@ -1488,8 +1534,8 @@ struct CodeBlockLineRowTheme {
 }
 
 impl CodeBlockLineRowTheme {
-    fn new(
-        theme: &Theme,
+    fn new<T: ThemeTokenRead + ?Sized>(
+        theme: &T,
         prepared: &crate::prepare::PreparedCodeBlock,
         disable_ligatures: bool,
         disable_contextual_alternates: bool,
@@ -1591,12 +1637,16 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
 
     let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
-    let row_theme = Arc::new(CodeBlockLineRowTheme::new(
-        theme,
-        prepared.as_ref(),
-        disable_ligatures,
-        disable_contextual_alternates,
-    ));
+    let row_theme = cx.slot_state(CodeBlockLineRowThemeCache::default, |cache| {
+        cache.resolve(
+            theme_revision,
+            prepared_revision,
+            disable_ligatures,
+            disable_contextual_alternates,
+            theme,
+            prepared.as_ref(),
+        )
+    });
     let known_content_size = fret_core::Size::new(
         estimate_monospace_content_width_px(
             prepared.as_ref(),
@@ -2097,6 +2147,81 @@ mod tests {
         assert_eq!(rich.text.as_ref(), "let value = 1;");
         assert_eq!(rich.spans.len(), 1);
         assert_eq!("let value = 1;".len(), rich.spans[0].len);
+    }
+
+    #[test]
+    fn windowed_row_theme_cache_reuses_same_revision() {
+        use fret_ui::ThemeSnapshot;
+        use fret_ui::theme::{ThemeColors, ThemeMetrics};
+
+        let colors = ThemeColors {
+            surface_background: fret_core::Color::from_srgb_hex_rgb(0x24272e),
+            panel_background: fret_core::Color::from_srgb_hex_rgb(0x2b3038),
+            panel_border: fret_core::Color::from_srgb_hex_rgb(0x3a424d),
+            text_primary: fret_core::Color::from_srgb_hex_rgb(0xd7dee9),
+            text_muted: fret_core::Color::from_srgb_hex_rgb(0xaab3c2),
+            text_disabled: fret_core::Color::from_srgb_hex_rgb(0x7d8798),
+            accent: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            selection_background: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            selection_inactive_background: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            selection_window_inactive_background: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            hover_background: fret_core::Color::from_srgb_hex_rgb(0x363c46),
+            focus_ring: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            menu_background: fret_core::Color::from_srgb_hex_rgb(0x2b3038),
+            menu_border: fret_core::Color::from_srgb_hex_rgb(0x3a424d),
+            menu_item_hover: fret_core::Color::from_srgb_hex_rgb(0x363c46),
+            menu_item_selected: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            list_background: fret_core::Color::from_srgb_hex_rgb(0x2b3038),
+            list_border: fret_core::Color::from_srgb_hex_rgb(0x3a424d),
+            list_row_hover: fret_core::Color::from_srgb_hex_rgb(0x363c46),
+            list_row_selected: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            scrollbar_track: fret_core::Color::from_srgb_hex_rgb(0x1c1f25),
+            scrollbar_thumb: fret_core::Color::from_srgb_hex_rgb(0x4c5666),
+            scrollbar_thumb_hover: fret_core::Color::from_srgb_hex_rgb(0x5a687d),
+            viewport_selection_fill: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            viewport_selection_stroke: fret_core::Color::from_srgb_hex_rgb(0x3d8bff),
+            viewport_marker: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            viewport_drag_line_pan: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            viewport_drag_line_orbit: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            viewport_gizmo_x: fret_core::Color::from_srgb_hex_rgb(0xff0000),
+            viewport_gizmo_y: fret_core::Color::from_srgb_hex_rgb(0x00ff00),
+            viewport_gizmo_handle_background: fret_core::Color::from_srgb_hex_rgb(0x000000),
+            viewport_gizmo_handle_border: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            viewport_rotate_gizmo: fret_core::Color::from_srgb_hex_rgb(0x0000ff),
+        };
+        let metrics = ThemeMetrics {
+            radius_sm: Px(6.0),
+            radius_md: Px(8.0),
+            radius_lg: Px(10.0),
+            padding_sm: Px(8.0),
+            padding_md: Px(10.0),
+            scrollbar_width: Px(10.0),
+            font_size: Px(13.0),
+            mono_font_size: Px(13.0),
+            font_line_height: Px(16.0),
+            mono_font_line_height: Px(16.0),
+        };
+        let theme = ThemeSnapshot::from_baseline(colors, metrics, 7);
+        let mut prepared = crate::prepare::PreparedCodeBlock {
+            revision: 11,
+            ..Default::default()
+        };
+        prepared.syntax_highlights = vec!["keyword", "string"];
+        let prepared = &prepared;
+
+        let mut cache = CodeBlockLineRowThemeCache::default();
+        let first = cache.resolve(7, prepared.revision, true, true, &theme, prepared);
+        let same = cache.resolve(7, prepared.revision, true, true, &theme, prepared);
+        assert!(
+            Arc::ptr_eq(&first, &same),
+            "same theme/prepared revision should reuse the cached row theme"
+        );
+
+        let rebuilt = cache.resolve(8, prepared.revision, true, true, &theme, prepared);
+        assert!(
+            !Arc::ptr_eq(&first, &rebuilt),
+            "theme revision changes should rebuild the cached row theme"
+        );
     }
 
     #[test]
