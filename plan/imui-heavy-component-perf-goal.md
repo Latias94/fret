@@ -95,6 +95,15 @@ historical records remain in:
   `renderer.text_prepare.flush=378us` and text pin churn still high
   (`added/removed=158/130`), so this is a correctness fix plus a small row-shape cleanup rather
   than the final glyph/pin churn fix.
+- The next renderer-side code-view slice now merges contiguous padded glyph atlas uploads per page
+  before `queue.write_texture`, and removes stale pending uploads when an allocation is evicted
+  before flush. The repeat=2 probe is mixed at total frame level
+  (`1505/1388/...` then `1732/1587/...`, with zero CPU signal on the noisier run), but the direct
+  renderer text flush owner dropped from the previous `378us` to `352us` / `339us` while
+  `counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)` stayed
+  `45/0/274/158/116/158/130`. Treat this as a small upload-flush batching win, not as the final
+  code-view transition fix; the remaining owner is still row/text blob churn or staged text
+  preparation.
 
 ## 2026-06-29 Code-view Base Shaping Cache Keys
 
@@ -142,6 +151,50 @@ historical records remain in:
 - Rollback is local: restore `CodeBlockLineRowTheme::code_shaping`, pass it to
   `build_code_block_line_rich(...)`, put the shared code shaping back onto each generated
   `TextSpan`, and relax the structural tests that assert span shaping stays default.
+
+## 2026-06-29 Code-view Glyph Atlas Upload Merge
+
+- Source cut: `GlyphAtlas::flush_uploads(...)` now converts each page's pending glyph writes through
+  a `prepare_texture_uploads(...)` pass. The pass sorts pending writes by atlas row and merges only
+  same-format, same padded row, X-contiguous padded slots into one `queue.write_texture` call.
+  `PendingUpload` also records its allocation id and padded slot bounds, and glyph eviction removes
+  any stale pending upload for that allocation before the slot can be reused.
+- Rationale: the code-view transition mounts many fresh row glyphs into adjacent atlas slots. The
+  previous path submitted one small texture write per glyph. Contiguous padded slots are freshly
+  owned by the current pending writes, so batching their backing texture region reduces write-call
+  overhead without writing across old glyph allocations. The allocation-id eviction guard prevents a
+  pre-flush evicted glyph's stale upload from being sorted or merged after its slot is reused.
+- Coverage:
+  `pending_texture_uploads_merge_contiguous_padded_slots`,
+  `pending_texture_uploads_keep_distinct_padded_rows_separate`, and
+  `pending_texture_uploads_remove_evicted_allocation_before_merge` cover the merge, row separation,
+  and stale-pending removal invariants.
+- Validation gates:
+  `cargo fmt -p fret-render-wgpu --check`,
+  `cargo nextest run -p fret-render-wgpu pending_texture_uploads glyph_pin_keys prepare_for_scene --no-fail-fast`,
+  `cargo nextest run -p fret-render-wgpu text --no-fail-fast`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test code_view_perf_surface --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/code-view-atlas-upload-merge-evict-guard-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=24 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundles:
+  `target/fret-diag/code-view-atlas-upload-merge-evict-guard-codex-20260629/1782688913071/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1505/1388/41/15/102/0/11`
+  with `renderer.text_prepare.flush=352us`.
+  `target/fret-diag/code-view-atlas-upload-merge-evict-guard-codex-20260629/1782688917418/bundle.json`
+  was the repeat's worst overall at
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1732/1587/33/26/119/0/13`, with
+  `renderer.text_prepare.flush=339us` and zero reported CPU signal. Both runs kept
+  `counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)=45/0/274/158/116/158/130` on
+  the mounted row-text frame.
+- Interpretation: keep this as a renderer upload batching cleanup. The direct text flush owner
+  moved down from the previous row-shaping run's `378us`, but total p95 remains noisy and the
+  glyph/pin churn counts did not change. The next code-view slice should target row/text blob churn
+  or staged text preparation rather than more atlas upload call batching.
+- Rollback is local: restore `flush_uploads(...)` to write each pending upload directly, remove the
+  padded-slot and allocation-id fields from `PendingUpload`, remove
+  `prepare_texture_uploads(...)` / merge helpers / stale-pending removal, and delete the three
+  pending-upload tests.
 
 ## 2026-06-29 VirtualList Initial Overscan Staging
 

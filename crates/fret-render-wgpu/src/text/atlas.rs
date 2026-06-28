@@ -207,6 +207,10 @@ mod tests {
         FontFaceKey::new(1, 0, 0, false, 0)
     }
 
+    fn alloc_id(id: u32) -> etagere::AllocId {
+        etagere::AllocId::deserialize(id)
+    }
+
     #[test]
     fn glyph_pin_keys_deduplicate_by_bucket() {
         let [color, subpixel, mask] = GlyphKey::lookup_keys(face(), 42, 16.0f32.to_bits(), 0, 0);
@@ -243,6 +247,147 @@ mod tests {
         assert_eq!(mask.len(), 1);
         assert_eq!(color.len(), 1);
         assert_eq!(subpixel.len(), 1);
+    }
+
+    #[test]
+    fn pending_texture_uploads_merge_contiguous_padded_slots() {
+        let uploads = prepare_texture_uploads(vec![
+            PendingUpload {
+                alloc_id: alloc_id(1),
+                x: 1,
+                y: 1,
+                w: 2,
+                h: 2,
+                padded_x: 0,
+                padded_y: 0,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![1, 2, 3, 4],
+            },
+            PendingUpload {
+                alloc_id: alloc_id(2),
+                x: 5,
+                y: 1,
+                w: 2,
+                h: 2,
+                padded_x: 4,
+                padded_y: 0,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![5, 6, 7, 8],
+            },
+        ]);
+
+        assert_eq!(uploads.len(), 1);
+        let upload = &uploads[0];
+        assert_eq!(upload.origin.x, 0);
+        assert_eq!(upload.origin.y, 0);
+        assert_eq!(upload.extent.width, 8);
+        assert_eq!(upload.extent.height, 4);
+        assert_eq!(upload.bytes_per_row, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+
+        let stride = upload.bytes_per_row as usize;
+        assert_eq!(&upload.bytes[stride + 1..stride + 3], &[1, 2]);
+        assert_eq!(&upload.bytes[stride + 5..stride + 7], &[5, 6]);
+        assert_eq!(&upload.bytes[stride * 2 + 1..stride * 2 + 3], &[3, 4]);
+        assert_eq!(&upload.bytes[stride * 2 + 5..stride * 2 + 7], &[7, 8]);
+    }
+
+    #[test]
+    fn pending_texture_uploads_keep_distinct_padded_rows_separate() {
+        let uploads = prepare_texture_uploads(vec![
+            PendingUpload {
+                alloc_id: alloc_id(1),
+                x: 1,
+                y: 1,
+                w: 2,
+                h: 2,
+                padded_x: 0,
+                padded_y: 0,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![1, 2, 3, 4],
+            },
+            PendingUpload {
+                alloc_id: alloc_id(2),
+                x: 1,
+                y: 5,
+                w: 2,
+                h: 2,
+                padded_x: 0,
+                padded_y: 4,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![5, 6, 7, 8],
+            },
+        ]);
+
+        assert_eq!(uploads.len(), 2);
+        assert_eq!(uploads[0].origin.y, 1);
+        assert_eq!(uploads[1].origin.y, 5);
+    }
+
+    #[test]
+    fn pending_texture_uploads_remove_evicted_allocation_before_merge() {
+        let evicted = alloc_id(1);
+        let mut pending = vec![
+            PendingUpload {
+                alloc_id: evicted,
+                x: 1,
+                y: 1,
+                w: 2,
+                h: 2,
+                padded_x: 0,
+                padded_y: 0,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![9, 9, 9, 9],
+            },
+            PendingUpload {
+                alloc_id: alloc_id(2),
+                x: 1,
+                y: 1,
+                w: 2,
+                h: 2,
+                padded_x: 0,
+                padded_y: 0,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![1, 2, 3, 4],
+            },
+            PendingUpload {
+                alloc_id: alloc_id(3),
+                x: 5,
+                y: 1,
+                w: 2,
+                h: 2,
+                padded_x: 4,
+                padded_y: 0,
+                padded_w: 4,
+                padded_h: 4,
+                bytes_per_pixel: 1,
+                data: vec![5, 6, 7, 8],
+            },
+        ];
+
+        assert!(remove_pending_upload_for_alloc(&mut pending, evicted));
+        let uploads = prepare_texture_uploads(pending);
+
+        assert_eq!(uploads.len(), 1);
+        let upload = &uploads[0];
+        let stride = upload.bytes_per_row as usize;
+        assert_eq!(&upload.bytes[stride + 1..stride + 3], &[1, 2]);
+        assert_eq!(&upload.bytes[stride * 2 + 1..stride * 2 + 3], &[3, 4]);
+        assert!(
+            !upload.bytes.contains(&9),
+            "evicted pending upload data must not be merged into a later atlas write"
+        );
     }
 }
 
@@ -342,10 +487,15 @@ pub(super) struct GlyphAtlasEntry {
 
 #[derive(Debug)]
 struct PendingUpload {
+    alloc_id: etagere::AllocId,
     x: u32,
     y: u32,
     w: u32,
     h: u32,
+    padded_x: u32,
+    padded_y: u32,
+    padded_w: u32,
+    padded_h: u32,
     bytes_per_pixel: u32,
     data: Vec<u8>,
 }
@@ -399,6 +549,147 @@ impl PendingUpload {
             bytes,
         })
     }
+}
+
+fn remove_pending_upload_for_alloc(
+    pending: &mut Vec<PendingUpload>,
+    alloc_id: etagere::AllocId,
+) -> bool {
+    let before = pending.len();
+    pending.retain(|upload| upload.alloc_id != alloc_id);
+    pending.len() != before
+}
+
+fn pending_upload_data_len(upload: &PendingUpload) -> Option<usize> {
+    let bytes_per_row = upload.w.checked_mul(upload.bytes_per_pixel)?;
+    let len = (bytes_per_row as usize).checked_mul(upload.h as usize)?;
+    (len == upload.data.len()).then_some(len)
+}
+
+fn pending_upload_can_merge_with_run(run: &[PendingUpload], upload: &PendingUpload) -> bool {
+    let Some(last) = run.last() else {
+        return false;
+    };
+
+    last.bytes_per_pixel == upload.bytes_per_pixel
+        && last.padded_y == upload.padded_y
+        && last.padded_h == upload.padded_h
+        && run
+            .last()
+            .is_some_and(|last| last.padded_x.saturating_add(last.padded_w) == upload.padded_x)
+}
+
+fn prepare_texture_uploads(mut pending: Vec<PendingUpload>) -> Vec<PreparedTextureUpload> {
+    if pending.is_empty() {
+        return Vec::new();
+    }
+
+    // Each pending upload belongs to a freshly allocated glyph slot in a single atlas page. Merging
+    // only contiguous padded slots keeps writes inside newly owned texture regions.
+    pending.retain(|upload| pending_upload_data_len(upload).is_some());
+    pending.sort_by_key(|upload| {
+        (
+            upload.bytes_per_pixel,
+            upload.padded_y,
+            upload.padded_h,
+            upload.padded_x,
+            upload.padded_w,
+            upload.y,
+            upload.x,
+        )
+    });
+
+    let mut out = Vec::with_capacity(pending.len());
+    let mut run: Vec<PendingUpload> = Vec::new();
+    for upload in pending {
+        if !pending_upload_can_merge_with_run(&run, &upload) {
+            flush_pending_upload_run(&mut out, &mut run);
+        }
+        run.push(upload);
+    }
+    flush_pending_upload_run(&mut out, &mut run);
+    out
+}
+
+fn flush_pending_upload_run(out: &mut Vec<PreparedTextureUpload>, run: &mut Vec<PendingUpload>) {
+    if run.is_empty() {
+        return;
+    }
+
+    if run.len() == 1 {
+        if let Some(upload) = run.pop().and_then(PendingUpload::into_texture_upload) {
+            out.push(upload);
+        }
+        return;
+    }
+
+    let Some(upload) = merged_pending_upload(run.as_slice()) else {
+        for pending in run.drain(..) {
+            if let Some(upload) = pending.into_texture_upload() {
+                out.push(upload);
+            }
+        }
+        return;
+    };
+    run.clear();
+    out.push(upload);
+}
+
+fn merged_pending_upload(run: &[PendingUpload]) -> Option<PreparedTextureUpload> {
+    let first = run.first()?;
+    let run_x = first.padded_x;
+    let run_y = first.padded_y;
+    let run_h = first.padded_h;
+    let bytes_per_pixel = first.bytes_per_pixel;
+    let run_end_x = run.last()?.padded_x.checked_add(run.last()?.padded_w)?;
+    let run_w = run_end_x.checked_sub(run_x)?;
+    let bytes_per_row = run_w.checked_mul(bytes_per_pixel)?;
+    let len = (bytes_per_row as usize).checked_mul(run_h as usize)?;
+    let mut data = vec![0; len];
+
+    for upload in run {
+        if upload.bytes_per_pixel != bytes_per_pixel
+            || upload.padded_y != run_y
+            || upload.padded_h != run_h
+            || upload.x < run_x
+            || upload.y < run_y
+            || upload.x.checked_add(upload.w)? > run_end_x
+            || upload.y.checked_add(upload.h)? > run_y.checked_add(run_h)?
+        {
+            return None;
+        }
+
+        let src_row_bytes = upload.w.checked_mul(bytes_per_pixel)? as usize;
+        let dst_x_bytes = upload.x.checked_sub(run_x)?.checked_mul(bytes_per_pixel)? as usize;
+        let dst_y = upload.y.checked_sub(run_y)? as usize;
+        let dst_row_bytes = bytes_per_row as usize;
+        for row in 0..upload.h as usize {
+            let src0 = row.checked_mul(src_row_bytes)?;
+            let src1 = src0.checked_add(src_row_bytes)?;
+            let dst0 = dst_y
+                .checked_add(row)?
+                .checked_mul(dst_row_bytes)?
+                .checked_add(dst_x_bytes)?;
+            let dst1 = dst0.checked_add(src_row_bytes)?;
+            data.get_mut(dst0..dst1)?
+                .copy_from_slice(upload.data.get(src0..src1)?);
+        }
+    }
+
+    PendingUpload {
+        alloc_id: first.alloc_id,
+        x: run_x,
+        y: run_y,
+        w: run_w,
+        h: run_h,
+        padded_x: run_x,
+        padded_y: run_y,
+        padded_w: run_w,
+        padded_h: run_h,
+        bytes_per_pixel,
+        data,
+    }
+    .into_texture_upload()
 }
 
 fn align_upload_bytes_per_row(bytes_per_row: u32) -> u32 {
@@ -834,11 +1125,7 @@ impl GlyphAtlas {
 
     pub(super) fn flush_uploads(&mut self, queue: &wgpu::Queue) {
         for page in &mut self.pages {
-            for upload in std::mem::take(&mut page.pending) {
-                let Some(upload) = upload.into_texture_upload() else {
-                    continue;
-                };
-
+            for upload in prepare_texture_uploads(std::mem::take(&mut page.pending)) {
                 self.perf.uploads = self.perf.uploads.saturating_add(1);
                 self.perf.upload_bytes = self
                     .perf
@@ -1030,8 +1317,16 @@ impl GlyphAtlas {
 
     fn remove_glyph_entry(&mut self, key: GlyphKey) -> Option<GlyphAtlasEntry> {
         let entry = self.glyphs.remove(&key)?;
+        self.remove_pending_upload_for_entry(entry);
         self.release_entry_area(entry);
         Some(entry)
+    }
+
+    fn remove_pending_upload_for_entry(&mut self, entry: GlyphAtlasEntry) {
+        let page_idx = self.page_index(entry.page);
+        if let Some(page) = self.pages.get_mut(page_idx) {
+            remove_pending_upload_for_alloc(&mut page.pending, entry.alloc_id);
+        }
     }
 
     fn release_entry_area(&mut self, entry: GlyphAtlasEntry) {
@@ -1088,11 +1383,18 @@ impl GlyphAtlas {
         epoch: u64,
     ) -> GlyphAtlasEntry {
         let page = &mut self.pages[slot.page_index];
+        let padded_x = slot.x.saturating_sub(self.padding_px);
+        let padded_y = slot.y.saturating_sub(self.padding_px);
         page.pending.push(PendingUpload {
+            alloc_id: slot.alloc_id,
             x: slot.x,
             y: slot.y,
             w,
             h,
+            padded_x,
+            padded_y,
+            padded_w: padded.w_pad,
+            padded_h: padded.h_pad,
             bytes_per_pixel,
             data,
         });
