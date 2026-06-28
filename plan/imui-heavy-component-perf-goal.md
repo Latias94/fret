@@ -86,6 +86,62 @@ historical records remain in:
   the prior node-profile run at roughly `1631/1493/315/36/152/0/14`. The 53-node catch-up frame is
   still present but no longer owns p95; the remaining worst frame is dominated by code-view text
   prepare flush (`renderer.text_prepare.flush max=389us`, 45 blobs).
+- A follow-up code-view text-shaping slice fixed the renderer text cache keys so base
+  `TextStyle.features` / `TextStyle.axes` participate in blob, shape, measure, and measure-shaping
+  keys. This made it safe for windowed code-view rows to move shared `liga=0` / `calt=0` code
+  shaping out of every `TextSpan` and into the row base `TextStyle`. The latest repeat=2 probe
+  reported
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1562/1434/36/21/107/0/3` with
+  `renderer.text_prepare.flush=378us` and text pin churn still high
+  (`added/removed=158/130`), so this is a correctness fix plus a small row-shape cleanup rather
+  than the final glyph/pin churn fix.
+
+## 2026-06-29 Code-view Base Shaping Cache Keys
+
+- Source cut: `TextBlobKey`, `TextShapeKey`, `TextMeasureKey`, and `TextMeasureShapingKey` now
+  include fingerprinted base `TextStyle.features` and `TextStyle.axes`. The existing span shaping
+  fingerprint still covers per-span overrides; the new fields cover shaping policy that lives on the
+  base style.
+- Rationale: Parley shaping consumes both base style features/axes and span shaping overrides.
+  Before this cut, two texts that differed only by base style OpenType features or variation axes
+  could reuse the same blob/shape/measure cache entry. That correctness gap blocked moving shared
+  code shaping policy out of per-row spans.
+- Coverage: renderer text tests now assert that base style features/axes change blob and shape cache
+  keys, and that they also change text measurement keys.
+- Validation gates:
+  `cargo fmt -p fret-render-text -p fret-render-wgpu -p fret-code-view --check`,
+  `cargo nextest run -p fret-render-wgpu text_blob_key_includes_typography_fields text_measure_key_includes_base_style_shaping_fields --no-fail-fast`,
+  `cargo nextest run -p fret-render-text --no-fail-fast`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-gallery --test code_view_perf_surface --no-fail-fast`.
+- Rollback is local but should happen before rolling back the code-view row change: remove
+  `text_style_base_shaping_keys(...)`, drop the base feature/axis fields from the cache key structs,
+  and remove the added cache-key assertions.
+
+## 2026-06-29 Code-view Windowed Row Shaping Lift
+
+- Source cut: windowed code-view row themes now put the shared code shaping policy on the cached row
+  base `TextStyle`. Generated per-line `TextSpan`s now express only text length and paint
+  differences. `CodeBlockLineRowTheme::code_shaping` was removed.
+- Rationale: code-view rows in the windowed lane share the same monospace style and the same
+  code-shaping policy. Carrying `liga=0` / `calt=0` on every span makes each mounted row's rich text
+  heavier and increases span fingerprint work without adding per-segment expressiveness.
+- Coverage: code-view structural tests assert that row rich text keeps default span shaping, the row
+  theme owns the shared base text style features, and the line-rich cache does not rebuild or copy a
+  shared shaping style into every span.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/code-view-base-style-shaping-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=24 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/code-view-base-style-shaping-codex-20260629/1782686805205/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1562/1434/36/21/107/0/3`.
+  `diag stats` on the worst bundle showed `renderer.text_prepare.flush=378us` and
+  `counts(blobs/fast_reuse/pinned/prewarm/retained/added/removed)=45/0/274/158/116/158/130`.
+- Interpretation: keep the cut as a small code-view row-shape cleanup backed by the cache-key
+  correctness fix. It does not solve the current code-view hotspot; text prepare flush and
+  added/removed pin churn remain the next target.
+- Rollback is local: restore `CodeBlockLineRowTheme::code_shaping`, pass it to
+  `build_code_block_line_rich(...)`, put the shared code shaping back onto each generated
+  `TextSpan`, and relax the structural tests that assert span shaping stays default.
 
 ## 2026-06-29 VirtualList Initial Overscan Staging
 

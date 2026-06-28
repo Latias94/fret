@@ -1310,7 +1310,6 @@ fn build_code_block_line_rich(
     row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
     line_i: usize,
-    code_shaping: &TextShapingStyle,
 ) -> AttributedText {
     let Some(line) = prepared.lines.get(line_i) else {
         return AttributedText::new(Arc::<str>::from(""), Arc::<[TextSpan]>::from([]));
@@ -1324,11 +1323,11 @@ fn build_code_block_line_rich(
             Arc::clone(&seg.text),
             Arc::<[TextSpan]>::from([TextSpan {
                 len: seg.text.len(),
-                shaping: code_shaping.clone(),
                 paint: TextPaintStyle {
                     fg: seg.highlight.and_then(|h| row_theme.syntax_color(h)),
                     ..Default::default()
                 },
+                ..Default::default()
             }]),
         );
     }
@@ -1359,11 +1358,11 @@ fn build_code_block_line_rich(
         write_windowed_line_number_prefix(&mut text, prepared, line_i);
         spans.push(TextSpan {
             len: prefix_len,
-            shaping: code_shaping.clone(),
             paint: TextPaintStyle {
                 fg: Some(row_theme.muted_fg),
                 ..Default::default()
             },
+            ..Default::default()
         });
     }
 
@@ -1375,11 +1374,11 @@ fn build_code_block_line_rich(
         text.push_str(seg.text.as_ref());
         spans.push(TextSpan {
             len: seg.text.len(),
-            shaping: code_shaping.clone(),
             paint: TextPaintStyle {
                 fg: color,
                 ..Default::default()
             },
+            ..Default::default()
         });
     }
 
@@ -1457,7 +1456,7 @@ impl CodeBlockWindowedLineRichCache {
             return rich.clone();
         }
 
-        let rich = build_code_block_line_rich(row_theme, prepared, line_i, &row_theme.code_shaping);
+        let rich = build_code_block_line_rich(row_theme, prepared, line_i);
         self.entries.insert(line_i, (rich.clone(), tick));
         self.queue.push_back((line_i, tick));
 
@@ -1526,7 +1525,6 @@ impl CodeBlockLineRowThemeCache {
 struct CodeBlockLineRowTheme {
     mono_size: Px,
     mono_line_height: Px,
-    code_shaping: TextShapingStyle,
     text_style: TextStyle,
     fg: fret_core::Color,
     muted_fg: fret_core::Color,
@@ -1548,7 +1546,9 @@ impl CodeBlockLineRowTheme {
             .copied()
             .map(|highlight| (highlight, syntax_color(theme, highlight)))
             .collect::<HashMap<_, _>>();
-        let text_style = typography::as_control_text(TextStyle {
+        let code_shaping =
+            code_shaping_for_code_block_flags(disable_ligatures, disable_contextual_alternates);
+        let mut text_style = typography::as_control_text(TextStyle {
             font: FontId::monospace(),
             size: mono_size,
             weight: FontWeight::NORMAL,
@@ -1557,13 +1557,12 @@ impl CodeBlockLineRowTheme {
             letter_spacing_em: None,
             ..Default::default()
         });
-        let code_shaping =
-            code_shaping_for_code_block_flags(disable_ligatures, disable_contextual_alternates);
+        text_style.features = code_shaping.features.clone();
+        text_style.axes = code_shaping.axes.clone();
 
         Self {
             mono_size,
             mono_line_height,
-            code_shaping,
             text_style,
             fg: theme.color_token("foreground"),
             muted_fg: theme.color_token("muted-foreground"),
@@ -2098,15 +2097,13 @@ mod tests {
         let row_theme = CodeBlockLineRowTheme {
             mono_size: Px(10.0),
             mono_line_height: Px(14.0),
-            code_shaping: TextShapingStyle::default(),
             text_style: TextStyle::default(),
             fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
             muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
             syntax_colors: HashMap::new(),
         };
 
-        let rich =
-            build_code_block_line_rich(&row_theme, &prepared, 0, &TextShapingStyle::default());
+        let rich = build_code_block_line_rich(&row_theme, &prepared, 0);
 
         assert_eq!(rich.text.as_ref(), "  1  let value = 1;");
         assert_eq!(rich.spans.len(), 2);
@@ -2133,20 +2130,23 @@ mod tests {
         let row_theme = CodeBlockLineRowTheme {
             mono_size: Px(10.0),
             mono_line_height: Px(14.0),
-            code_shaping: TextShapingStyle::default(),
             text_style: TextStyle::default(),
             fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
             muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
             syntax_colors: HashMap::new(),
         };
 
-        let rich =
-            build_code_block_line_rich(&row_theme, &prepared, 0, &TextShapingStyle::default());
+        let rich = build_code_block_line_rich(&row_theme, &prepared, 0);
 
         assert!(Arc::ptr_eq(&rich.text, &text));
         assert_eq!(rich.text.as_ref(), "let value = 1;");
         assert_eq!(rich.spans.len(), 1);
         assert_eq!("let value = 1;".len(), rich.spans[0].len);
+        assert_eq!(
+            rich.spans[0].shaping,
+            TextShapingStyle::default(),
+            "shared row shaping should live on the base TextStyle, not every span"
+        );
     }
 
     #[test]
@@ -2215,6 +2215,22 @@ mod tests {
         assert!(
             Arc::ptr_eq(&first, &same),
             "same theme/prepared revision should reuse the cached row theme"
+        );
+        assert!(
+            first
+                .text_style
+                .features
+                .iter()
+                .any(|f| f.tag.as_ref() == "liga" && f.value == 0),
+            "windowed row theme should move code ligature policy into the shared base TextStyle"
+        );
+        assert!(
+            first
+                .text_style
+                .features
+                .iter()
+                .any(|f| f.tag.as_ref() == "calt" && f.value == 0),
+            "windowed row theme should move code contextual alternate policy into the shared base TextStyle"
         );
 
         let rebuilt = cache.resolve(8, prepared.revision, true, true, &theme, prepared);
@@ -2348,8 +2364,8 @@ mod tests {
             "windowed row theme should own the shared StyledText style"
         );
         assert!(
-            row_theme_section.contains("code_shaping: TextShapingStyle,"),
-            "windowed row theme should own the shared code shaping style"
+            !row_theme_section.contains("code_shaping: TextShapingStyle,"),
+            "windowed rows should carry shared code shaping on TextStyle rather than every span"
         );
 
         let render_row_section = CODE_BLOCK_RS
@@ -2372,8 +2388,8 @@ mod tests {
             .and_then(|section| section.split("#[derive(Debug, Clone)]").next())
             .expect("windowed line rich cache section should exist");
         assert!(
-            line_cache_section.contains("&row_theme.code_shaping"),
-            "windowed line rich cache should reuse the row theme shaping style"
+            !line_cache_section.contains("&row_theme.code_shaping"),
+            "windowed line rich cache should not copy shared code shaping into every span"
         );
         assert!(
             !line_cache_section.contains("code_shaping_for_code_block_flags("),
