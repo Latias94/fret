@@ -377,6 +377,63 @@ historical records remain in:
 - Rollback is local: restore `.layout()` on the shared hovered-row `watch_model(...)` call and rerun
   the same focused `fret-ui-kit` tests plus the retained DataTable perf probe.
 
+## 2026-06-28 Retained DataTable Column-Group Width Precompute Experiment Rejected
+
+- Tried precomputing retained fixed-row column-group layouts in
+  `ecosystem/fret-ui-kit/src/declarative/table.rs`: each group carried `col_indices`,
+  per-group `row_widths`, and `known_content_width`, so row rendering no longer converted
+  `col_indices` into row-width `Vec`s or re-summed the group width per row.
+- Focused guards passed before perf rejection:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit`, and
+  `cargo nextest run -p fret-ui-kit retained_table_fixed_row_widths_are_precomputed_per_column_group retained_table_non_pointer_rows_use_shared_hover_state table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled retained_table_fixed_row_group_does_not_clone_children_for_layout_or_paint --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-retained-row-widths-precomputed-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-retained-row-widths-precomputed-codex-20260628/1782655892525/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2131/1695/473/199/237/0/0`,
+  regressing from the accepted hover-watch bundle's `2095/1666/475/193/236/0/0`.
+- Attribution: `layout.engine_solve` stayed flat (`475us -> 473us`), but
+  `layout.root_phases.request_build` rose (`512us -> 557us`) and `roots.apply` rose
+  (`738us -> 766us`). The extra retained group snapshot/clone shape outweighed the removed
+  per-row width conversion on this repro.
+- Decision: reject and leave no source change. Do not repeat column-group width precompute in the
+  retained fixed-row helper without lower-level evidence that width-vector allocation has become the
+  owner. The next retained-table slice should use layout node profiling or root-apply attribution
+  rather than another row-helper allocation guess.
+
+## 2026-06-28 ScrollContentTransform Known-Extent Header Experiment Rejected
+
+- Node-profile evidence on
+  `target/fret-diag/data-table-retained-node-profile-codex-20260628/1782656534910/bundle.json`
+  pointed at the retained DataTable body `VirtualList` plus the horizontal scroll/transform shell.
+  The top profiled table nodes included a `Scroll` at
+  `ecosystem/fret-ui-kit/src/declarative/table.rs:325`, the retained `VirtualList` at the body root,
+  and row `ManagedSurface` children.
+- Tried adding optional `known_content_size` ownership to
+  `ScrollContentTransformProps`, so the single-center retained table header could use a
+  `ScrollContentTransform` instead of a full horizontal `Scroll` while still writing the shared
+  `ScrollHandle` viewport/content extent. The default transform behavior stayed non-owning, and
+  the retained body continued to use the same wheel-region + transform alignment path.
+- Focused guards passed before perf rejection:
+  `cargo fmt -p fret-ui -p fret-ui-kit --check`,
+  `cargo check -p fret-ui -p fret-ui-kit`,
+  `cargo nextest run -p fret-ui scroll_content_transform --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-kit retained_table_non_pointer_rows_use_shared_hover_state retained_table_body_column_uses_direct_flex_without_helper_container retained_table_fixed_row_group_does_not_clone_children_for_layout_or_paint table_virtualized_retained_fixed_rows_without_pointer_selection_use_managed_surface_root table_virtualized_retained_plain_rows_omit_background_wrapper table_virtualized_retained_plain_fixed_rows_can_inline_cell_padding table_virtualized_retained_selected_rows_paint_background_without_wrapper table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-header-transform-known-extent-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-header-transform-known-extent-codex-20260628/1782658330659/bundle.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2214/1763/510/218/233/0/0`,
+  regressing from the accepted hover-watch bundle's `2095/1666/475/193/236/0/0`.
+- Attribution: `layout.root_phases.request_build` rose (`512us -> 565us`) and
+  `layout.engine_solve` rose (`475us -> 510us`). `roots.apply` stayed in the same band
+  (`738us -> 798us`, still worse), so replacing the header `Scroll` with an extent-owning transform
+  did not remove enough work to offset the extra transform/handle sync path.
+- Decision: reject and leave no source change. Do not add `known_content_size` to
+  `ScrollContentTransformProps` for this table header use case without a broader mechanism design
+  that proves it reduces root build/apply instead of reshaping it.
+
 ## 2026-06-28 Code-View Initial Viewport Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code:
