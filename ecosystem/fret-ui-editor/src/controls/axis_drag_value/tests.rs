@@ -90,6 +90,55 @@ fn axis_drag_value_uses_stable_session_shell_for_scrub_and_typing_branches() {
     );
 }
 
+#[test]
+fn axis_drag_value_scrub_branch_keeps_identity_when_temporarily_disabled() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let model = app.models_mut().insert(1.25f64);
+
+    let active_id = render_axis_scrub_branch_id(&mut app, window, model.clone(), true);
+    let disabled_id = render_axis_scrub_branch_id(&mut app, window, model.clone(), false);
+    let restored_id = render_axis_scrub_branch_id(&mut app, window, model, true);
+
+    assert_eq!(
+        active_id, disabled_id,
+        "hiding typing-mode axis scrub should not replace the scrub root"
+    );
+    assert_eq!(
+        active_id, restored_id,
+        "returning to axis scrub should reuse the scrub root"
+    );
+}
+
+fn render_axis_scrub_branch_id(
+    app: &mut App,
+    window: AppWindowId,
+    model: fret_runtime::Model<f64>,
+    enabled: bool,
+) -> fret_ui::GlobalElementId {
+    fret_ui::elements::with_element_cx(
+        app,
+        window,
+        Rect::default(),
+        "axis-drag-value-scrub-identity",
+        |cx| {
+            let mut options = super::model::AxisDragValueOptions::default();
+            options.enabled = enabled;
+            AxisDragValue::new(
+                Arc::from("X"),
+                Color::from_srgb_hex_rgb(0xf2_59_59),
+                model,
+                Arc::new(|v| Arc::from(format!("{v:.2}"))),
+                Arc::new(|text| text.parse::<f64>().ok()),
+            )
+            .options(options)
+            .into_element(cx)
+            .children[0]
+                .id
+        },
+    )
+}
+
 fn assert_branch_is_fill(element: &AnyElement, label: &str) {
     let layout = element_layout(element, label);
     assert_eq!(layout.size.width, Length::Fill, "{label} width");

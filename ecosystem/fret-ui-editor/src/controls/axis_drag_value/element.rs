@@ -48,9 +48,9 @@ where
             .unwrap_or_default();
         let value_text = (self.format)(value);
 
-        let (mode, scrub_revision) = {
+        let mode = {
             let st = state.lock().unwrap_or_else(|e| e.into_inner());
-            (st.mode, st.scrub_revision)
+            st.mode
         };
         let typing = mode == AxisDragValueMode::Typing;
         let (prefix, suffix) = suppress_duplicate_chrome_affixes(
@@ -119,7 +119,6 @@ where
                 on_outcome: on_outcome.clone(),
                 value,
                 value_text: value_text.clone(),
-                scrub_revision,
                 mode,
                 layout: scrub_layout,
                 constraints: self.options.constraints,

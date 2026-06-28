@@ -23,7 +23,6 @@ pub(super) struct DragValueScrubElementArgs<T> {
     pub(super) layout: LayoutStyle,
     pub(super) scrub_enabled: bool,
     pub(super) constraints: NumericValueConstraints,
-    pub(super) scrub_revision: u64,
     pub(super) state: Arc<Mutex<DragValueState>>,
     pub(super) focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>>,
     pub(super) on_outcome: Option<OnDragValueOutcome>,
@@ -50,7 +49,6 @@ where
         layout,
         scrub_enabled,
         constraints,
-        scrub_revision,
         state,
         focus_handoff,
         on_outcome,
@@ -81,89 +79,79 @@ where
     scrub_opts.scrub_on_double_click = false;
     scrub_opts.constraints = constraints;
 
-    let state_for_scrub = state.clone();
-    let focus_handoff_for_scrub = focus_handoff.clone();
-    let on_outcome_for_scrub = on_outcome.clone();
-    let prefix_for_scrub_root = prefix.clone();
-    let suffix_for_scrub_root = suffix.clone();
-    cx.keyed(
-        ("fret-ui-editor.drag_value.scrub", scrub_revision),
-        move |cx| {
-            let prefix_for_scrub = prefix_for_scrub_root.clone();
-            let suffix_for_scrub = suffix_for_scrub_root.clone();
-            let state_for_scrub_record = state_for_scrub.clone();
-            let focus_handoff_for_double_click = focus_handoff_for_scrub.clone();
-            let on_outcome_for_scrub_commit = on_outcome_for_scrub.clone();
-            let on_outcome_for_scrub_cancel = on_outcome_for_scrub.clone();
-            DragValueCore::new(value, on_change_live)
-                .on_commit(Some(Arc::new(move |host, action_cx| {
-                    emit_drag_value_outcome(
-                        host,
-                        action_cx,
-                        on_outcome_for_scrub_commit.as_ref(),
-                        DragValueOutcome::Committed,
-                    );
-                })))
-                .on_cancel(Some(Arc::new(move |host, action_cx| {
-                    emit_drag_value_outcome(
-                        host,
-                        action_cx,
-                        on_outcome_for_scrub_cancel.as_ref(),
-                        DragValueOutcome::Canceled,
-                    );
-                })))
-                .a11y_label(value_text.clone())
-                .options(scrub_opts)
-                .into_element(cx, move |cx, resp| {
-                    // Record the scrub element id for focus restore from typing mode.
-                    let scrub_id = cx.root_id();
-                    let mut st = state_for_scrub_record
+    let state_for_scrub_record = state.clone();
+    let focus_handoff_for_double_click = focus_handoff.clone();
+    let on_outcome_for_scrub_commit = on_outcome.clone();
+    let on_outcome_for_scrub_cancel = on_outcome.clone();
+    let prefix_for_scrub = prefix.clone();
+    let suffix_for_scrub = suffix.clone();
+    DragValueCore::new(value, on_change_live)
+        .on_commit(Some(Arc::new(move |host, action_cx| {
+            emit_drag_value_outcome(
+                host,
+                action_cx,
+                on_outcome_for_scrub_commit.as_ref(),
+                DragValueOutcome::Committed,
+            );
+        })))
+        .on_cancel(Some(Arc::new(move |host, action_cx| {
+            emit_drag_value_outcome(
+                host,
+                action_cx,
+                on_outcome_for_scrub_cancel.as_ref(),
+                DragValueOutcome::Canceled,
+            );
+        })))
+        .a11y_label(value_text.clone())
+        .options(scrub_opts)
+        .into_element(cx, move |cx, resp| {
+            // Record the scrub element id for focus restore from typing mode.
+            let scrub_id = cx.root_id();
+            let mut st = state_for_scrub_record
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            st.scrub_id = Some(scrub_id);
+
+            let state_for_double_click = state_for_scrub_record.clone();
+            let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
+            cx.pressable_add_on_pointer_down(Arc::new(
+                move |host, action_cx, down: PointerDownCx| {
+                    if down.click_count < 2 {
+                        return PressablePointerDownResult::Continue;
+                    }
+
+                    let mut st = state_for_double_click
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    st.scrub_id = Some(scrub_id);
+                    st.mode = DragValueMode::Typing;
+                    {
+                        let mut handoff = focus_handoff_for_double_click
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        arm_numeric_text_entry_focus_handoff(&mut handoff);
+                    }
+                    host.request_redraw(action_cx.window);
+                    PressablePointerDownResult::SkipDefaultAndStopPropagation
+                },
+            ));
 
-                    let state_for_double_click = state_for_scrub_record.clone();
-                    let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
-                    cx.pressable_add_on_pointer_down(Arc::new(
-                        move |host, action_cx, down: PointerDownCx| {
-                            if down.click_count < 2 {
-                                return PressablePointerDownResult::Continue;
-                            }
-
-                            let mut st = state_for_double_click
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            st.mode = DragValueMode::Typing;
-                            {
-                                let mut handoff = focus_handoff_for_double_click
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                arm_numeric_text_entry_focus_handoff(&mut handoff);
-                            }
-                            host.request_redraw(action_cx.window);
-                            PressablePointerDownResult::SkipDefaultAndStopPropagation
-                        },
-                    ));
-
-                    let scrub_frame = drag_value_scrub_frame(
-                        cx,
-                        DragValueScrubFrameArgs {
-                            density,
-                            scrub_chrome,
-                            hovered: resp.hovered(),
-                            pressed: resp.dragging() || resp.pressed(),
-                            focused: resp.focused() || cx.is_focused_element(scrub_id),
-                            value_text: value_text.clone(),
-                            prefix: prefix_for_scrub.clone(),
-                            suffix: suffix_for_scrub.clone(),
-                            scrub_test_id: scrub_test_id.clone(),
-                            prefix_test_id: prefix_test_id.clone(),
-                            suffix_test_id: suffix_test_id.clone(),
-                            value_test_id: value_test_id.clone(),
-                        },
-                    );
-                    vec![scrub_frame]
-                })
-        },
-    )
+            let scrub_frame = drag_value_scrub_frame(
+                cx,
+                DragValueScrubFrameArgs {
+                    density,
+                    scrub_chrome,
+                    hovered: resp.hovered(),
+                    pressed: resp.dragging() || resp.pressed(),
+                    focused: resp.focused() || cx.is_focused_element(scrub_id),
+                    value_text: value_text.clone(),
+                    prefix: prefix_for_scrub.clone(),
+                    suffix: suffix_for_scrub.clone(),
+                    scrub_test_id: scrub_test_id.clone(),
+                    prefix_test_id: prefix_test_id.clone(),
+                    suffix_test_id: suffix_test_id.clone(),
+                    value_test_id: value_test_id.clone(),
+                },
+            );
+            vec![scrub_frame]
+        })
 }

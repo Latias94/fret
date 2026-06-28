@@ -8,7 +8,6 @@ pub(super) enum DragValueMode {
 pub(super) struct DragValueState {
     pub(super) mode: DragValueMode,
     pub(super) scrub_id: Option<fret_ui::GlobalElementId>,
-    pub(super) scrub_revision: u64,
 }
 
 impl Default for DragValueState {
@@ -16,7 +15,6 @@ impl Default for DragValueState {
         Self {
             mode: DragValueMode::Scrub,
             scrub_id: None,
-            scrub_revision: 0,
         }
     }
 }

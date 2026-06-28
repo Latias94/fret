@@ -190,7 +190,6 @@ where
 fn return_to_scrub(host: &mut dyn UiFocusActionHost, state: &Arc<Mutex<AxisDragValueState>>) {
     let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
     st.mode = super::super::model::AxisDragValueMode::Scrub;
-    st.scrub_revision = st.scrub_revision.wrapping_add(1);
     if let Some(scrub_id) = st.scrub_id {
         host.request_focus(scrub_id);
     }

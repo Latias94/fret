@@ -31,7 +31,6 @@ pub(super) struct AxisDragValueScrubElementArgs<T> {
     pub(super) on_outcome: Option<OnAxisDragValueOutcome>,
     pub(super) value: T,
     pub(super) value_text: Arc<str>,
-    pub(super) scrub_revision: u64,
     pub(super) mode: AxisDragValueMode,
     pub(super) layout: LayoutStyle,
     pub(super) constraints: NumericValueConstraints,
@@ -66,7 +65,6 @@ where
         on_outcome,
         value,
         value_text,
-        scrub_revision,
         mode,
         layout,
         constraints,
@@ -99,90 +97,85 @@ where
             host.request_redraw(action_cx.window);
         });
 
-    cx.keyed(
-        ("fret-ui-editor.axis_drag_value.scrub", scrub_revision),
-        move |cx| {
-            let state_for_scrub_record = state.clone();
-            let focus_handoff_for_double_click = focus_handoff.clone();
-            let prefix_for_scrub = prefix.clone();
-            let suffix_for_scrub = suffix.clone();
-            let on_outcome_for_scrub_commit = on_outcome.clone();
-            let on_outcome_for_scrub_cancel = on_outcome.clone();
-            let value_text_for_scrub = value_text.clone();
-            DragValueCore::new(value, on_change_live)
-                .on_commit(Some(Arc::new(move |host, action_cx| {
-                    emit_axis_drag_value_outcome(
-                        host,
-                        action_cx,
-                        on_outcome_for_scrub_commit.as_ref(),
-                        AxisDragValueOutcome::Committed,
-                    );
-                })))
-                .on_cancel(Some(Arc::new(move |host, action_cx| {
-                    emit_axis_drag_value_outcome(
-                        host,
-                        action_cx,
-                        on_outcome_for_scrub_cancel.as_ref(),
-                        AxisDragValueOutcome::Canceled,
-                    );
-                })))
-                .a11y_label(value_text.clone())
-                .options(scrub_opts)
-                .into_element(cx, move |cx, resp| {
-                    let scrub_id = cx.root_id();
-                    let mut st = state_for_scrub_record
+    let state_for_scrub_record = state.clone();
+    let focus_handoff_for_double_click = focus_handoff.clone();
+    let prefix_for_scrub = prefix.clone();
+    let suffix_for_scrub = suffix.clone();
+    let on_outcome_for_scrub_commit = on_outcome.clone();
+    let on_outcome_for_scrub_cancel = on_outcome.clone();
+    let value_text_for_scrub = value_text.clone();
+    DragValueCore::new(value, on_change_live)
+        .on_commit(Some(Arc::new(move |host, action_cx| {
+            emit_axis_drag_value_outcome(
+                host,
+                action_cx,
+                on_outcome_for_scrub_commit.as_ref(),
+                AxisDragValueOutcome::Committed,
+            );
+        })))
+        .on_cancel(Some(Arc::new(move |host, action_cx| {
+            emit_axis_drag_value_outcome(
+                host,
+                action_cx,
+                on_outcome_for_scrub_cancel.as_ref(),
+                AxisDragValueOutcome::Canceled,
+            );
+        })))
+        .a11y_label(value_text.clone())
+        .options(scrub_opts)
+        .into_element(cx, move |cx, resp| {
+            let scrub_id = cx.root_id();
+            let mut st = state_for_scrub_record
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            st.scrub_id = Some(scrub_id);
+
+            let state_for_double_click = state_for_scrub_record.clone();
+            let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
+            cx.pressable_add_on_pointer_down(Arc::new(
+                move |host, action_cx, down: PointerDownCx| {
+                    if down.click_count < 2 {
+                        return PressablePointerDownResult::Continue;
+                    }
+                    let mut st = state_for_double_click
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    st.scrub_id = Some(scrub_id);
+                    st.mode = AxisDragValueMode::Typing;
+                    st.seen_input_focus = false;
+                    {
+                        let mut handoff = focus_handoff_for_double_click
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        arm_numeric_text_entry_focus_handoff(&mut handoff);
+                    }
+                    host.request_redraw(action_cx.window);
+                    PressablePointerDownResult::SkipDefaultAndStopPropagation
+                },
+            ));
 
-                    let state_for_double_click = state_for_scrub_record.clone();
-                    let focus_handoff_for_double_click = focus_handoff_for_double_click.clone();
-                    cx.pressable_add_on_pointer_down(Arc::new(
-                        move |host, action_cx, down: PointerDownCx| {
-                            if down.click_count < 2 {
-                                return PressablePointerDownResult::Continue;
-                            }
-                            let mut st = state_for_double_click
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            st.mode = AxisDragValueMode::Typing;
-                            st.seen_input_focus = false;
-                            {
-                                let mut handoff = focus_handoff_for_double_click
-                                    .lock()
-                                    .unwrap_or_else(|e| e.into_inner());
-                                arm_numeric_text_entry_focus_handoff(&mut handoff);
-                            }
-                            host.request_redraw(action_cx.window);
-                            PressablePointerDownResult::SkipDefaultAndStopPropagation
-                        },
-                    ));
-
-                    let scrub_frame = axis_drag_value_scrub_frame(
-                        cx,
-                        AxisDragValueScrubFrameArgs {
-                            density,
-                            frame_chrome,
-                            hovered: resp.hovered(),
-                            pressed: resp.dragging() || resp.pressed(),
-                            focused: resp.focused() || cx.is_focused_element(scrub_id),
-                            enabled,
-                            axis_label: axis_label.clone(),
-                            axis_tint,
-                            value_text: value_text_for_scrub.clone(),
-                            prefix: prefix_for_scrub.clone(),
-                            suffix: suffix_for_scrub.clone(),
-                            reset_action: reset_action.clone(),
-                            scrub_test_id: scrub_test_id.clone(),
-                            scrub_axis_test_id: scrub_axis_test_id.clone(),
-                            scrub_value_test_id: scrub_value_test_id.clone(),
-                            scrub_prefix_test_id: scrub_prefix_test_id.clone(),
-                            scrub_suffix_test_id: scrub_suffix_test_id.clone(),
-                            scrub_reset_test_id: scrub_reset_test_id.clone(),
-                        },
-                    );
-                    vec![scrub_frame]
-                })
-        },
-    )
+            let scrub_frame = axis_drag_value_scrub_frame(
+                cx,
+                AxisDragValueScrubFrameArgs {
+                    density,
+                    frame_chrome,
+                    hovered: resp.hovered(),
+                    pressed: resp.dragging() || resp.pressed(),
+                    focused: resp.focused() || cx.is_focused_element(scrub_id),
+                    enabled,
+                    axis_label: axis_label.clone(),
+                    axis_tint,
+                    value_text: value_text_for_scrub.clone(),
+                    prefix: prefix_for_scrub.clone(),
+                    suffix: suffix_for_scrub.clone(),
+                    reset_action: reset_action.clone(),
+                    scrub_test_id: scrub_test_id.clone(),
+                    scrub_axis_test_id: scrub_axis_test_id.clone(),
+                    scrub_value_test_id: scrub_value_test_id.clone(),
+                    scrub_prefix_test_id: scrub_prefix_test_id.clone(),
+                    scrub_suffix_test_id: scrub_suffix_test_id.clone(),
+                    scrub_reset_test_id: scrub_reset_test_id.clone(),
+                },
+            );
+            vec![scrub_frame]
+        })
 }

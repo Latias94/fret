@@ -44,9 +44,9 @@ where
         .unwrap_or_default();
     let value_text = (format)(value);
 
-    let (mode, scrub_revision) = {
+    let mode = {
         let st = state.lock().unwrap_or_else(|e| e.into_inner());
-        (st.mode, st.scrub_revision)
+        st.mode
     };
 
     let typing = mode == DragValueMode::Typing;
@@ -86,7 +86,6 @@ where
             layout: scrub_layout,
             scrub_enabled: mode == DragValueMode::Scrub,
             constraints: options.constraints,
-            scrub_revision,
             state: state.clone(),
             focus_handoff: focus_handoff.clone(),
             on_outcome: on_outcome.clone(),

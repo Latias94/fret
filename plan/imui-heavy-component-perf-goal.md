@@ -65,6 +65,56 @@ historical records remain in:
   `target/fret-diag/inspector-direct-entry-nav-known-content-size-20260627/1782522016567/bundle.schema2.json`
   landed at `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1580/1194/493/198/334/0/4`,
   down from the prior nav-body cache rerun at `2059/1532/565/245/298`.
+- Editor-controls `DragValue` / `AxisDragValue` scrub roots now keep stable internal identity when
+  typing mode temporarily hides/disables the scrub branch. The roughness typing probe improved to
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=981/860/468/4/118/0/3`, while the
+  broader click-stress probe stayed neutral at `1391/1129/609/8/254/0/5`, so the next
+  editor-controls slice should target remaining layout solve / command-availability work rather
+  than more scrub revision churn.
+
+## 2026-06-29 DragValue Stable Scrub Identity
+
+- Removed the per-return `scrub_revision` state from `DragValue` and `AxisDragValue`, and stopped
+  wrapping their scrub `DragValueCore` owner in a revision-keyed internal scope. The outer
+  control-level keyed identity is still in place, so per-control state isolation remains keyed by
+  callsite / `id_source` and model id.
+- Rationale: the session shell already keeps scrub and typing branches mounted. Returning from
+  typing should restore focus to the same scrub root, not replace the whole scrub owner and its
+  helper-local state. `DragValueCore` already clears pointer state and commits any active session
+  when rendered disabled, so revision bumping was redundant for normal typing commit/cancel.
+- Coverage:
+  `drag_value_scrub_branch_keeps_identity_when_temporarily_disabled` and
+  `axis_drag_value_scrub_branch_keeps_identity_when_temporarily_disabled` now assert the scrub
+  branch root id is stable across enabled -> disabled -> enabled renders.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor drag_value axis_drag_value --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-editor session_shell drag_value axis_drag_value --no-fail-fast`.
+- Perf probe (roughness typing, clean repeat=3):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/editor-controls-scrub-stable-roughness-typing-clean-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+- Result bundle:
+  `target/fret-diag/editor-controls-scrub-stable-roughness-typing-clean-codex-20260629/1782669253998/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=981/860/468/4/118/0/3`,
+  down from the prior session-shell roughness record at `1288/1156/778/5/127/0/2`.
+- Attribution probe (same script with layout node profiling):
+  `target/fret-diag/editor-controls-scrub-stable-roughness-typing-codex-20260629/1782669104599/bundle.schema2.json`
+  reported `1059/934/548/4/132/0/2`. `diag stats --sort cpu_cycles --top 20` showed the
+  remaining hot frame in layout/root work (`layout.engine_solve p95=572us`,
+  `layout.root_phases.request_build p95=627us`, `roots.apply p95=373us`) and renderer text
+  first-prepare (`renderer.text_prepare.flush max=508us`).
+- Perf guard (broader click-stress) stayed neutral:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/editor-controls-scrub-stable-click-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+  produced
+  `target/fret-diag/editor-controls-scrub-stable-click-codex-20260629/1782669031011/bundle.schema2.json`
+  at `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1391/1129/609/8/254/0/5`,
+  essentially matching the pre-cut current probe `1390/1137/555/5/264/0/4`.
+- Interpretation: keep the cut as a scrub identity / typing-path stabilization win. It reduces the
+  focused roughness typing frame, but it does not solve the broader editor-controls click-stress
+  hotspot. The next editor-controls cut should target the remaining layout solve/root apply and
+  command-availability work visible in click-stress, not reintroduce scrub subtree replacement.
+- Rollback is local: restore `scrub_revision` to `DragValueState` and `AxisDragValueState`, bump it
+  on typing commit/cancel, pass it into scrub element args, wrap scrub `DragValueCore` construction
+  in the revision-keyed `cx.keyed(...)` scope again, and remove the two scrub-identity tests.
 
 ## 2026-06-27 Inspector Retained-List Root Focus Reattach
 

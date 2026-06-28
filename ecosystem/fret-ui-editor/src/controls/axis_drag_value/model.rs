@@ -37,7 +37,6 @@ pub struct AxisDragValueResetAction {
 pub(super) struct AxisDragValueState {
     pub(super) mode: AxisDragValueMode,
     pub(super) scrub_id: Option<fret_ui::GlobalElementId>,
-    pub(super) scrub_revision: u64,
     pub(super) seen_input_focus: bool,
 }
 
@@ -46,7 +45,6 @@ impl Default for AxisDragValueState {
         Self {
             mode: AxisDragValueMode::Scrub,
             scrub_id: None,
-            scrub_revision: 0,
             seen_input_focus: false,
         }
     }

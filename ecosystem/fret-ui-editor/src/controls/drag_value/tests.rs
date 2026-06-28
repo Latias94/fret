@@ -1,7 +1,11 @@
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use super::DragValue;
+use super::model::DragValueState;
+use super::scrub_element::{DragValueScrubElementArgs, drag_value_scrub_element};
 use crate::primitives::NumericPresentation;
+use crate::primitives::numeric_text_entry::NumericTextEntryFocusHandoffState;
 use crate::primitives::style::EditorStyle;
 use fret_app::App;
 use fret_core::{AppWindowId, Px, Rect};
@@ -85,6 +89,81 @@ fn drag_value_uses_stable_session_shell_for_scrub_and_typing_branches() {
         )),
         "inactive typing branch should not keep hover/pointer frame wrappers"
     );
+}
+
+#[test]
+fn drag_value_scrub_branch_keeps_identity_when_temporarily_disabled() {
+    let mut app = App::new();
+    let window = AppWindowId::default();
+    let model = app.models_mut().insert(1.25f64);
+    let state = Arc::new(Mutex::new(DragValueState::default()));
+    let focus_handoff = Arc::new(Mutex::new(NumericTextEntryFocusHandoffState::default()));
+
+    let active_id = render_scrub_branch_id(
+        &mut app,
+        window,
+        model.clone(),
+        state.clone(),
+        focus_handoff.clone(),
+        true,
+    );
+    let disabled_id = render_scrub_branch_id(
+        &mut app,
+        window,
+        model.clone(),
+        state.clone(),
+        focus_handoff.clone(),
+        false,
+    );
+    let restored_id = render_scrub_branch_id(&mut app, window, model, state, focus_handoff, true);
+
+    assert_eq!(
+        active_id, disabled_id,
+        "hiding typing-mode scrub should not replace the scrub root"
+    );
+    assert_eq!(
+        active_id, restored_id,
+        "returning to scrub should reuse the scrub root"
+    );
+}
+
+fn render_scrub_branch_id(
+    app: &mut App,
+    window: AppWindowId,
+    model: fret_runtime::Model<f64>,
+    state: Arc<Mutex<DragValueState>>,
+    focus_handoff: Arc<Mutex<NumericTextEntryFocusHandoffState>>,
+    scrub_enabled: bool,
+) -> fret_ui::GlobalElementId {
+    fret_ui::elements::with_element_cx(
+        app,
+        window,
+        Rect::default(),
+        "drag-value-scrub-identity",
+        |cx| {
+            drag_value_scrub_element(
+                cx,
+                DragValueScrubElementArgs {
+                    model,
+                    value: 1.25,
+                    value_text: Arc::from("1.25"),
+                    layout: Default::default(),
+                    scrub_enabled,
+                    constraints: Default::default(),
+                    state,
+                    focus_handoff,
+                    on_outcome: None,
+                    prefix: None,
+                    suffix: None,
+                    scrub_test_id: None,
+                    prefix_test_id: None,
+                    suffix_test_id: None,
+                    value_test_id: None,
+                },
+            )
+            .id
+        },
+    )
 }
 
 fn assert_branch_is_fill(element: &AnyElement, label: &str) {

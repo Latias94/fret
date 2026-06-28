@@ -92,7 +92,6 @@ where
             match outcome {
                 NumericInputOutcome::Committed | NumericInputOutcome::Canceled => {
                     st.mode = DragValueMode::Scrub;
-                    st.scrub_revision = st.scrub_revision.wrapping_add(1);
                     if let Some(scrub_id) = st.scrub_id {
                         host.request_focus(scrub_id);
                     }
