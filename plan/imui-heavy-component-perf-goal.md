@@ -434,6 +434,30 @@ historical records remain in:
   `ScrollContentTransformProps` for this table header use case without a broader mechanism design
   that proves it reduces root build/apply instead of reshaping it.
 
+## 2026-06-28 Fixed/Known VirtualList Direct Barrier Roots Experiment Rejected
+
+- Tried bypassing `VirtualListLayoutScratch.measured_updates` for fixed/known-height lists in
+  `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`. Measured lists kept the old
+  measure/update path; fixed/known lists generated `barrier_roots` directly from `props.visible_items`
+  and `cx.children`, including the existing overscan-layout deferral check.
+- Focused guards passed before perf rejection:
+  `cargo fmt -p fret-ui` and
+  `cargo nextest run -p fret-ui virtual_list --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-vlist-fixed-direct-barriers-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-vlist-fixed-direct-barriers-codex-20260628/1782659755969/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2113/1680/469/194/240/0/0`,
+  regressing from the accepted hover-watch bundle's `2095/1666/475/193/236/0/0`.
+- Attribution: the small `layout.engine_solve` movement (`475us -> 469us`) did not translate into a
+  frame win. `layout.root_phases.roots.apply` rose (`738us -> 764us`), `layout.nodes` stayed at
+  `176`, and paint/prepaint stayed effectively flat. The intermediate fixed/known measured-update
+  scratch is not the current retained DataTable p95 owner.
+- Decision: reject and leave no source change. Do not repeat this scratch-bypass slice without an
+  allocation profile showing `measured_updates` construction has become visible again. The next
+  retained-table slice should target root apply/request-build ownership or retained row shell
+  structure with evidence before editing.
+
 ## 2026-06-28 Code-View Initial Viewport Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code:
