@@ -1,7 +1,8 @@
 use super::{TextBlobKey, TextShapeKey, spans_paint_fingerprint};
 use fret_core::{
-    AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints, TextOverflow,
-    TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
+    AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints,
+    TextFontAxisSetting, TextFontFeatureSetting, TextOverflow, TextPaintStyle, TextShapingStyle,
+    TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_render_text::{
     ResolvedSpan, TextMeasureKey, paint_span_for_text_range, sanitize_spans_for_text,
@@ -312,6 +313,38 @@ fn text_blob_key_includes_typography_fields() {
     style.letter_spacing_em = Some(0.05);
     let k_tracking = TextBlobKey::new("hello", &style, constraints, 1);
     assert_ne!(k0, k_tracking);
+
+    let mut style = base.clone();
+    style.features.push(TextFontFeatureSetting {
+        tag: "liga".into(),
+        value: 0,
+    });
+    let k_feature = TextBlobKey::new("hello", &style, constraints, 1);
+    assert_ne!(
+        k0, k_feature,
+        "base style font features must participate in blob cache keys"
+    );
+    assert_ne!(
+        TextShapeKey::from_blob_key(&k0),
+        TextShapeKey::from_blob_key(&k_feature),
+        "base style font features must participate in shape cache keys"
+    );
+
+    let mut style = base.clone();
+    style.axes.push(TextFontAxisSetting {
+        tag: "wdth".into(),
+        value: 90.0,
+    });
+    let k_axis = TextBlobKey::new("hello", &style, constraints, 1);
+    assert_ne!(
+        k0, k_axis,
+        "base style font axes must participate in blob cache keys"
+    );
+    assert_ne!(
+        TextShapeKey::from_blob_key(&k0),
+        TextShapeKey::from_blob_key(&k_axis),
+        "base style font axes must participate in shape cache keys"
+    );
 }
 
 #[test]
@@ -727,6 +760,41 @@ fn text_measure_key_includes_width_for_wrap_grapheme() {
     assert_ne!(
         TextMeasureKey::new(&style, a, 7),
         TextMeasureKey::new(&style, b, 7)
+    );
+}
+
+#[test]
+fn text_measure_key_includes_base_style_shaping_fields() {
+    let constraints = TextConstraints {
+        max_width: Some(Px(120.0)),
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+    let base = TextStyle::default();
+    let k0 = TextMeasureKey::new(&base, constraints, 7);
+
+    let mut style = base.clone();
+    style.features.push(TextFontFeatureSetting {
+        tag: "liga".into(),
+        value: 0,
+    });
+    assert_ne!(
+        k0,
+        TextMeasureKey::new(&style, constraints, 7),
+        "base style font features must participate in measurement cache keys"
+    );
+
+    let mut style = base.clone();
+    style.axes.push(TextFontAxisSetting {
+        tag: "wdth".into(),
+        value: 90.0,
+    });
+    assert_ne!(
+        k0,
+        TextMeasureKey::new(&style, constraints, 7),
+        "base style font axes must participate in measurement cache keys"
     );
 }
 

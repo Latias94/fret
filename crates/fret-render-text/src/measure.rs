@@ -1,5 +1,6 @@
 use crate::cache_keys::{
     TextMeasureKey, TextMeasureShapingKey, hash_text, spans_shaping_fingerprint,
+    text_style_base_shaping_keys,
 };
 use crate::cache_tuning;
 use crate::geometry::{metrics_for_uniform_lines, metrics_from_wrapped_lines};
@@ -123,9 +124,12 @@ impl TextMeasureCaches {
             let allow_shaping_cache =
                 text.len() >= cache_tuning::measure_shaping_cache_min_text_len_bytes();
 
+            let (base_features_key, base_axes_key) = text_style_base_shaping_keys(style);
             let shaping_key = TextMeasureShapingKey {
                 text_hash,
                 text_len: text.len(),
+                base_features_key,
+                base_axes_key,
                 spans_shaping_key: 0,
                 font: style.font.clone(),
                 font_stack_key,
@@ -362,9 +366,12 @@ impl TextMeasureCaches {
             let allow_shaping_cache =
                 rich.text.len() >= cache_tuning::measure_shaping_cache_min_text_len_bytes();
 
+            let (base_features_key, base_axes_key) = text_style_base_shaping_keys(base_style);
             let shaping_key = TextMeasureShapingKey {
                 text_hash,
                 text_len: rich.text.len(),
+                base_features_key,
+                base_axes_key,
                 spans_shaping_key: spans_hash,
                 font: base_style.font.clone(),
                 font_stack_key,

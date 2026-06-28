@@ -7,10 +7,19 @@ use std::{
     sync::Arc,
 };
 
+pub(crate) fn text_style_base_shaping_keys(style: &TextStyle) -> (u64, u64) {
+    (
+        features_shaping_key(&style.features),
+        axes_shaping_key(&style.axes),
+    )
+}
+
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextBlobKey {
     text: Arc<str>,
+    base_features_key: u64,
+    base_axes_key: u64,
     spans_shaping_key: u64,
     spans_paint_key: u64,
     backend: u8,
@@ -82,8 +91,12 @@ impl TextBlobKey {
             (0, None, None, None, None, None)
         };
 
+        let (base_features_key, base_axes_key) = text_style_base_shaping_keys(style);
+
         Self {
             text: Arc::<str>::from(text),
+            base_features_key,
+            base_axes_key,
             spans_shaping_key: 0,
             spans_paint_key: 0,
             backend: 0,
@@ -147,6 +160,8 @@ impl TextBlobKey {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextShapeKey {
     text: Arc<str>,
+    base_features_key: u64,
+    base_axes_key: u64,
     spans_shaping_key: u64,
     backend: u8,
     font: fret_core::FontId,
@@ -176,6 +191,8 @@ impl TextShapeKey {
     pub fn from_blob_key(key: &TextBlobKey) -> Self {
         Self {
             text: key.text.clone(),
+            base_features_key: key.base_features_key,
+            base_axes_key: key.base_axes_key,
             spans_shaping_key: key.spans_shaping_key,
             backend: key.backend,
             font: key.font.clone(),
@@ -206,6 +223,8 @@ impl TextShapeKey {
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextMeasureKey {
+    base_features_key: u64,
+    base_axes_key: u64,
     font: fret_core::FontId,
     font_stack_key: u64,
     size_bits: u32,
@@ -266,7 +285,11 @@ impl TextMeasureKey {
             (0, None, None, None, None, None)
         };
 
+        let (base_features_key, base_axes_key) = text_style_base_shaping_keys(style);
+
         Self {
+            base_features_key,
+            base_axes_key,
             font: style.font.clone(),
             font_stack_key,
             size_bits: style.size.0.to_bits(),
@@ -303,6 +326,8 @@ impl TextMeasureKey {
 pub(crate) struct TextMeasureShapingKey {
     pub text_hash: u64,
     pub text_len: usize,
+    pub base_features_key: u64,
+    pub base_axes_key: u64,
     pub spans_shaping_key: u64,
     pub font: fret_core::FontId,
     pub font_stack_key: u64,
@@ -343,13 +368,27 @@ pub fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
             .letter_spacing_em
             .map(|v| v.to_bits())
             .hash(&mut hasher);
-        features_shaping_fingerprint(&mut hasher, &s.shaping.features);
-        axes_shaping_fingerprint(&mut hasher, &s.shaping.axes);
+        features_shaping_fingerprint_into(&mut hasher, &s.shaping.features);
+        axes_shaping_fingerprint_into(&mut hasher, &s.shaping.axes);
     }
     hasher.finish()
 }
 
-fn features_shaping_fingerprint(
+fn features_shaping_key(features: &[fret_core::TextFontFeatureSetting]) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    "fret.text.base.features.shaping.v1".hash(&mut hasher);
+    features_shaping_fingerprint_into(&mut hasher, features);
+    hasher.finish()
+}
+
+fn axes_shaping_key(axes: &[fret_core::TextFontAxisSetting]) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    "fret.text.base.axes.shaping.v1".hash(&mut hasher);
+    axes_shaping_fingerprint_into(&mut hasher, axes);
+    hasher.finish()
+}
+
+fn features_shaping_fingerprint_into(
     hasher: &mut std::collections::hash_map::DefaultHasher,
     features: &[fret_core::TextFontFeatureSetting],
 ) {
@@ -387,7 +426,7 @@ fn features_shaping_fingerprint(
     }
 }
 
-fn axes_shaping_fingerprint(
+fn axes_shaping_fingerprint_into(
     hasher: &mut std::collections::hash_map::DefaultHasher,
     axes: &[fret_core::TextFontAxisSetting],
 ) {
