@@ -483,6 +483,33 @@ historical records remain in:
 - Decision: reject and leave no source change. Do not repeat this single inner-table `ViewCache`
   containment boundary without stronger view-cache reuse or dirty-boundary evidence.
 
+## 2026-06-28 Retained DataTable Readout Keyed-Scope Experiment Rejected
+
+- Tried moving the gallery torture page's five `TableState` readout texts into a dedicated
+  `cx.keyed("data_table_torture_state_readouts", ...)` helper in
+  `apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs`. The goal was to move the
+  page-level `cx.watch_model(&state).layout()` observation off the broader data-table page identity
+  while keeping toolbar and table state wiring unchanged.
+- Focused gates passed before perf rejection:
+  `cargo fmt -p fret-ui-gallery --check`,
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-ui-gallery --features gallery-dev --test ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor gallery_data_table_torture_keeps_the_table_out_of_an_outer_cached_subtree_shell gallery_data_table_torture_can_disable_the_outer_content_scroll_shell --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change-direct.json --repeat 3 --warmup-frames 5 --dir target/fret-diag/data-table-readout-keyed-scope-codex-20260628 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Result bundle:
+  `target/fret-diag/data-table-readout-keyed-scope-codex-20260628/1782664638915/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=2189/1744/491/197/248/0/0`,
+  regressing from the accepted hover-watch bundle's `2095/1666/475/193/236/0/0`.
+- Attribution: `layout.nodes` stayed flat at `176`, while
+  `layout.root_phases.request_build` rose from `512us` to `522us`, `roots.apply` rose from
+  `738us` to `767us`, and `layout.engine_solve` rose from `475us` to `491us`. Moving this readout
+  observation into a keyed identity did not reduce the main retained-table dirty/apply path and
+  added a small identity/build cost.
+- Decision: reject and leave no source change. Do not repeat the gallery readout keyed-scope split
+  for this retained DataTable filter repro; the next slice should target lower-level root
+  request/apply ownership or table/toolbar state sync with direct evidence.
+
 ## 2026-06-28 Code-View Initial Viewport Overscan Deferral
 
 - Reranked the current heavy surfaces before cutting code:
