@@ -650,6 +650,34 @@
       ]
     },
     {
+      "id": "cookbook-imui-editor-controls-click-stress-perf",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress-perf.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
+      "suite_memberships": [
+        "perf-cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "editor-controls",
+        "imui",
+        "overlay",
+        "perf",
+        "stress"
+      ],
+      "target_hints": [
+        "Perf variant of the editor-controls click-stress path without screenshot capture.",
+        "Exercises repeated editor-control overlay open/dismiss interactions, roughness typing, search focus, and color popup open/dismiss.",
+        "Captures layout sidecar and bundle evidence after reset_diagnostics so screenshot transport does not pollute perf loops."
+      ]
+    },
+    {
       "id": "cookbook-imui-editor-controls-exposure-focus-stress",
       "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-exposure-focus-stress.json",
       "required_capabilities": [
@@ -731,6 +759,34 @@
       "target_hints": [
         "Proves DragValue typing test ids are published only while typing mode is active.",
         "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again."
+      ]
+    },
+    {
+      "id": "cookbook-imui-editor-controls-roughness-typing-perf",
+      "path": "tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing-perf.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "cookbook-diag",
+        "cookbook-imui"
+      ],
+      "suite_memberships": [
+        "perf-cookbook-imui-editor-controls-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.imui_editor_controls_basics",
+        "drag-value",
+        "editor-controls",
+        "imui",
+        "perf",
+        "typing"
+      ],
+      "target_hints": [
+        "Perf variant of the DragValue roughness typing path without screenshot capture.",
+        "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again.",
+        "Captures layout sidecar and bundle evidence so typing/session-shell regressions remain attributable in perf loops."
       ]
     },
     {

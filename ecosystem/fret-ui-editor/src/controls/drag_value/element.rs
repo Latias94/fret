@@ -72,18 +72,13 @@ where
         crate::controls::session_shell::session_shell_layout(options.layout, control_height);
     let active_branch_layout = crate::controls::session_shell::session_branch_layout();
 
-    let scrub_layout = if typing {
-        crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
-    } else {
-        active_branch_layout
-    };
     let scrub = drag_value_scrub_element(
         cx,
         DragValueScrubElementArgs {
             model: model.clone(),
             value,
             value_text: value_text.clone(),
-            layout: scrub_layout,
+            layout: active_branch_layout,
             scrub_enabled: mode == DragValueMode::Scrub,
             constraints: options.constraints,
             state: state.clone(),
@@ -97,10 +92,15 @@ where
             value_test_id: value_test_id.clone(),
         },
     );
+    let scrub = if typing {
+        crate::controls::session_shell::session_hidden_branch(cx, "scrub", scrub)
+    } else {
+        scrub
+    };
 
     let mut input_layout = active_branch_layout;
     if !typing {
-        input_layout = crate::controls::session_shell::hidden_session_branch_layout(input_layout);
+        input_layout = crate::controls::session_shell::inactive_session_child_layout(input_layout);
     }
 
     let input = drag_value_typing_input(
@@ -122,6 +122,11 @@ where
             on_outcome: on_outcome.clone(),
         },
     );
+    let input = if typing {
+        input
+    } else {
+        crate::controls::session_shell::session_hidden_branch(cx, "typing", input)
+    };
 
     // Render both: scrub stays mounted so focus can restore, input stays mounted so focus
     // requests have a stable target.

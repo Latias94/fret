@@ -1,6 +1,9 @@
+use std::hash::Hash;
+
 use fret_core::Px;
 use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle, StackProps,
+    AnyElement, InteractivityGateProps, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
+    StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -30,7 +33,7 @@ pub(super) fn session_branch_layout() -> LayoutStyle {
     }
 }
 
-pub(super) fn hidden_session_branch_layout(mut layout: LayoutStyle) -> LayoutStyle {
+pub(super) fn inactive_session_child_layout(mut layout: LayoutStyle) -> LayoutStyle {
     layout.size = SizeStyle {
         width: Length::Px(Px(0.0)),
         height: Length::Px(Px(0.0)),
@@ -49,6 +52,29 @@ pub(super) fn session_shell<H: UiHost>(
     children: Vec<AnyElement>,
 ) -> AnyElement {
     cx.stack_props(StackProps { layout }, move |_cx| children)
+}
+
+/// Keep an inactive session subtree mounted while removing it from layout, paint, hit-testing,
+/// focus traversal, and semantics.
+pub(super) fn session_hidden_branch<K, H>(
+    cx: &mut ElementContext<'_, H>,
+    key: K,
+    child: AnyElement,
+) -> AnyElement
+where
+    K: Hash,
+    H: UiHost,
+{
+    cx.keyed(("session-hidden-branch", key), |cx| {
+        cx.interactivity_gate_props(
+            InteractivityGateProps {
+                present: false,
+                interactive: false,
+                ..Default::default()
+            },
+            |_cx| vec![child],
+        )
+    })
 }
 
 #[cfg(test)]
@@ -111,8 +137,8 @@ mod tests {
     }
 
     #[test]
-    fn hidden_session_branch_is_absolute_zero_sized() {
-        let layout = hidden_session_branch_layout(session_branch_layout());
+    fn inactive_session_child_layout_is_absolute_zero_sized() {
+        let layout = inactive_session_child_layout(session_branch_layout());
 
         assert_eq!(layout.size.width, Length::Px(Px(0.0)));
         assert_eq!(layout.size.height, Length::Px(Px(0.0)));

@@ -92,16 +92,10 @@ where
         crate::controls::session_shell::session_shell_layout(options.layout, control_height);
     let active_branch_layout = crate::controls::session_shell::session_branch_layout();
 
-    let slider_layout = if typing {
-        crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
-    } else {
-        active_branch_layout
-    };
-
     let input_layout = if typing {
         active_branch_layout
     } else {
-        crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+        crate::controls::session_shell::inactive_session_child_layout(active_branch_layout)
     };
 
     let model_for_change = model.clone();
@@ -130,7 +124,7 @@ where
     let mut slider_el = cx.pressable(
         PressableProps {
             enabled: interactive_enabled,
-            layout: slider_layout,
+            layout: active_branch_layout,
             a11y: PressableA11y {
                 label: a11y_label,
                 ..Default::default()
@@ -195,6 +189,11 @@ where
     if let Some(test_id) = options.test_id.as_ref() {
         slider_el = slider_el.test_id(test_id.clone());
     }
+    let slider_el = if typing {
+        crate::controls::session_shell::session_hidden_branch(cx, "slider", slider_el)
+    } else {
+        slider_el
+    };
 
     let input = slider_typing_input(
         cx,
@@ -218,6 +217,11 @@ where
             active_typing_test_id,
         },
     );
+    let input = if typing {
+        input
+    } else {
+        crate::controls::session_shell::session_hidden_branch(cx, "typing", input)
+    };
 
     crate::controls::session_shell::session_shell(cx, shell_layout, vec![slider_el, input])
 }

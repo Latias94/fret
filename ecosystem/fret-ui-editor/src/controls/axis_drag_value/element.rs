@@ -99,15 +99,10 @@ where
             frame_chrome.control_outer_height(density.row_height),
         );
         let active_branch_layout = crate::controls::session_shell::session_branch_layout();
-        let scrub_layout = if typing {
-            crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
-        } else {
-            active_branch_layout
-        };
         let typing_layout = if typing {
             active_branch_layout
         } else {
-            crate::controls::session_shell::hidden_session_branch_layout(active_branch_layout)
+            crate::controls::session_shell::inactive_session_child_layout(active_branch_layout)
         };
 
         let scrub = axis_drag_value_scrub_element(
@@ -120,7 +115,7 @@ where
                 value,
                 value_text: value_text.clone(),
                 mode,
-                layout: scrub_layout,
+                layout: active_branch_layout,
                 constraints: self.options.constraints,
                 density,
                 frame_chrome,
@@ -138,6 +133,11 @@ where
                 scrub_reset_test_id: scrub_reset_test_id.clone(),
             },
         );
+        let scrub = if typing {
+            crate::controls::session_shell::session_hidden_branch(cx, "scrub", scrub)
+        } else {
+            scrub
+        };
         let typing_field = axis_drag_value_typing_element(
             cx,
             AxisDragValueTypingElementArgs {
@@ -173,6 +173,11 @@ where
                 typing_reset_test_id,
             },
         );
+        let typing_field = if typing {
+            typing_field
+        } else {
+            crate::controls::session_shell::session_hidden_branch(cx, "typing", typing_field)
+        };
 
         // Render both: scrub stays mounted so focus can restore, typing stays mounted so focus
         // requests have a stable target.

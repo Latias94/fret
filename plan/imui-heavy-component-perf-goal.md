@@ -71,6 +71,69 @@ historical records remain in:
   broader click-stress probe stayed neutral at `1391/1129/609/8/254/0/5`, so the next
   editor-controls slice should target remaining layout solve / command-availability work rather
   than more scrub revision churn.
+- Editor session inactive branches now use `InteractivityGate(present=false)` at the retained
+  branch boundary instead of relying only on absolute 0x0 hidden layout. Dedicated screenshot-free
+  perf scripts were promoted for this path. The current click-stress perf probe improved to
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=729/624/368/2/107/0/1`, and the
+  roughness typing perf probe stayed improved at `851/719/449/4/128/0/2`. The remaining work is
+  still layout solve/root apply in the 56-58 node control shell, not the old scrub identity churn.
+
+## 2026-06-29 Editor Session Hidden Branch Gate
+
+- Source cut: inactive `DragValue`, `AxisDragValue`, and `Slider` session branches are now wrapped
+  in a keyed `InteractivityGate` with `present=false` / `interactive=false`. Active branches stay
+  unwrapped, so the visible path does not gain an extra layout node. The inactive typing child root
+  still keeps the slim absolute 0x0 layout as a fallback under the gate.
+- Rationale: the previous hidden-branch strategy kept both session branches mounted, but hidden
+  branches could still leave more layout/paint work visible to the tree than needed. The framework
+  contract for `InteractivityGate(present=false)` is display-none style retention: the subtree stays
+  mounted while being removed from layout, paint, hit-testing, focus traversal, and semantics.
+- Coverage:
+  `drag_value_uses_stable_session_shell_for_scrub_and_typing_branches`,
+  `axis_drag_value_uses_stable_session_shell_for_scrub_and_typing_branches`, and
+  `slider_uses_stable_session_shell_for_slide_and_typing_branches` now assert that inactive
+  branches are absent-gated while still retaining their slim child root.
+- Promoted perf scripts:
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress-perf.json`
+  and
+  `tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing-perf.json`,
+  registered through `tools/diag-scripts/suites/perf-cookbook-imui-editor-controls-basics/suite.json`.
+  These keep the interaction assertions, layout sidecar, and bundle capture but intentionally omit
+  screenshot capture. The original screenshot-bearing scripts hit `capture_screenshot_timeout` on
+  this macOS run after interaction steps had completed, so screenshot transport should not be mixed
+  into perf attribution here.
+- Validation gates:
+  `cargo fmt -p fret-ui-editor --check`,
+  `cargo nextest run -p fret-ui-editor session_shell drag_value axis_drag_value slider --no-fail-fast`,
+  `python3 -m json.tool` on the two new scripts and suite manifest,
+  `cargo run -p fretboard-dev --release -- diag script validate` on both new scripts, and
+  `python3 tools/check_diag_scripts_registry.py`.
+- Perf probe (click-stress perf, repeat=2):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-click-stress-perf.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/editor-controls-hidden-branch-gate-click-perf-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+- Result bundle:
+  `target/fret-diag/editor-controls-hidden-branch-gate-click-perf-codex-20260629/1782672645580/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=729/624/368/2/107/0/1`,
+  down from the prior broader click-stress guard at `1391/1129/609/8/254/0/5`.
+  `diag stats --warmup-frames 5 --sort time` on the worst bundle still showed layout/root work as
+  the owner (`layout.engine_solve p95=242us`, `layout.root_phases.request_build p95=278us`,
+  `roots.apply p95=148us`).
+- Perf probe (roughness typing perf, repeat=2):
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/cookbook/imui-editor-controls-basics/cookbook-imui-editor-controls-roughness-typing-perf.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/editor-controls-hidden-branch-gate-roughness-perf-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-cookbook --release --features cookbook-imui,cookbook-diag --example imui_editor_controls_basics`
+- Result bundle:
+  `target/fret-diag/editor-controls-hidden-branch-gate-roughness-perf-codex-20260629/1782672665419/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=851/719/449/4/128/0/2`,
+  still better than the previous clean roughness typing record at `981/860/468/4/118/0/3`.
+  `diag stats --warmup-frames 5 --sort time` showed the remaining hot frame in layout solve/root
+  work, with text prepare flush eliminated from the warmed attribution window.
+- Interpretation: keep this cut. It changes the hidden branch from "mounted but geometrically
+  hidden" to "mounted but absent from the runtime interaction/layout surfaces", which matches the
+  intended session-shell contract and gives a measured click-stress win. This does not finish the
+  editor-controls performance lane; the next cut should target remaining root build/apply and
+  control-shell layout solve.
+- Rollback is local: remove `session_hidden_branch(...)`, pass `inactive_session_child_layout(...)`
+  directly to the inactive scrub/slider branch again, relax the branch tests back to zero-sized
+  layout checks, and remove the two `*-perf.json` scripts plus the
+  `perf-cookbook-imui-editor-controls-basics` suite registration.
 
 ## 2026-06-29 DragValue Stable Scrub Identity
 

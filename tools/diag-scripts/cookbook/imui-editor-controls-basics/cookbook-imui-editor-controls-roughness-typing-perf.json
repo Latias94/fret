@@ -1,0 +1,107 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook imui editor controls: roughness typing perf",
+    "tags": [
+      "cookbook",
+      "cookbook.imui_editor_controls_basics",
+      "imui",
+      "editor-controls",
+      "drag-value",
+      "typing",
+      "perf"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["cookbook-diag", "cookbook-imui"],
+    "target_hints": [
+      "Perf variant of the DragValue roughness typing path without screenshot capture.",
+      "Double-clicks the roughness drag value, commits a percent value, then verifies typing test ids are removed again.",
+      "Captures layout sidecar and bundle evidence so typing/session-shell regressions remain attributable in perf loops."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1000.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.roughness" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "cookbook.imui_editor_controls.roughness.typing.input"
+        }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.roughness" },
+      "button": "left",
+      "click_count": 2,
+      "stable_frames": 8,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "cookbook.imui_editor_controls.roughness.typing.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "cookbook-imui-editor-controls-roughness-typing-perf-active.layout"
+    },
+    {
+      "type": "set_text_value",
+      "target": {
+        "kind": "test_id",
+        "id": "cookbook.imui_editor_controls.roughness.typing.input"
+      },
+      "text": "68"
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_editor_controls.roughness.value" },
+        "text": "68%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "cookbook.imui_editor_controls.roughness.typing.input"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "cookbook-imui-editor-controls-roughness-typing-perf" }
+  ]
+}
