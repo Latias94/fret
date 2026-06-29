@@ -20,6 +20,58 @@ historical records remain in:
 - `docs/plans/2026-06-14-001-imui-heavy-component-perf-architecture-audit-plan.md`
 - `docs/plans/2026-06-14-002-imui-heavy-component-perf-progress-log.md`
 
+## 2026-06-29 Goal Reset and Closure Standard
+
+The lane is no longer an open-ended "make every heavy component faster" effort. The active goal is
+to close the current heavy-component performance lane under a concrete 120Hz readiness definition:
+
+1. Land the current renderer-side code-view glyph-kind lookup slice with a reproducible gate,
+   perf evidence, and a local rollback path.
+2. Rerun the priority heavy-surface ranking after that slice:
+   - code-view torture mount / scroll,
+   - editor-controls click-stress and roughness typing,
+   - searchable combobox long-list focused filter/select,
+   - inspector direct-entry,
+   - retained data-table / chrome / file-tree surfaces when they still rank above noise.
+3. Treat p95 frame cost as the main readiness signal, then audit repeatable max/worst frames.
+   A p95 pass is not enough if the worst frame has high CPU signal and a stable owner.
+4. If the remaining worst frames have low CPU signal and do not identify a repeatable Fret owner,
+   record them as scheduling/noise limits instead of widening the refactor.
+5. Move this lane to maintenance when the priority suite has no CPU-bound 120Hz blocker and every
+   kept optimization has repro / gate / evidence / rollback notes.
+
+The target is practical 120Hz readiness, not zero perf debt. On a 120Hz display the whole-frame
+budget is roughly 8.33ms, but Fret should keep dense UI CPU work well below that where possible so
+rendering, OS scheduling, and platform variance still have headroom. Local p95 values below the
+budget are therefore necessary but not sufficient; stable tail attribution still decides whether the
+lane can close.
+
+## 2026-06-29 Fearless Refactor Rules
+
+- Prefer the smallest reversible mechanism that removes a measured owner; do not add compatibility
+  shims for rejected structures unless an ADR or public contract requires them.
+- Remove stale shells, cache boundaries, and policy hooks when the current evidence shows they no
+  longer protect behavior or performance.
+- Keep `fret-ui` as mechanism/contract and keep component policy in ecosystem crates unless the
+  measured owner is a shared framework mechanism.
+- For each accepted cut, leave the three-pack: one repro, one gate, and one evidence bundle or stats
+  anchor. For each rejected cut, record the reason and the bundle that disproved it.
+- Stop broadening scope after the rerank pass unless a priority surface produces a repeatable,
+  CPU-bound 120Hz failure.
+
+## 2026-06-29 Remaining Work Estimate
+
+- Current renderer glyph-kind lookup cache slice: roughly 0.5-1 focused day to rerun small gates,
+  rerun the code-view perf probe, record the result here, and commit.
+- Current lane closure: roughly 3-5 focused development days if the rerank confirms code-view text /
+  renderer churn is the only remaining CPU-bound owner.
+- Cross-surface hardening with stable gates on the priority suite: roughly 1-2 weeks if platform or
+  tail-frame variance requires baseline seeding, threshold tuning, or one more renderer/text
+  architecture cut.
+
+These estimates assume continued slice discipline. If fresh rerank evidence exposes a new shared
+framework owner, create a narrow follow-on instead of reopening every historical experiment.
+
 ## Current Evidence
 
 - Command palette query/navigation is already inside the local 120Hz budget on the RTX4090 Windows
