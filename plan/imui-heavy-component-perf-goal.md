@@ -196,6 +196,48 @@ historical records remain in:
   `prepare_texture_uploads(...)` / merge helpers / stale-pending removal, and delete the three
   pending-upload tests.
 
+## 2026-06-29 Code-view Windowed Line Chunking
+
+- Source cut: the windowed `CodeBlock` lane now virtualizes fixed four-line chunks instead of one
+  `StyledText` node per line. The list uses `VirtualListOptions::known(...)` so the scroll extent
+  still reflects the real line count and the final partial chunk keeps its precise height.
+- Rationale: the previous windowed path reduced full-document work, but the first visible code
+  viewport still mounted roughly one text blob per visible line. Grouping adjacent read-only code
+  lines into bounded chunks reduces VirtualList child roots, `StyledText` layout nodes, paint nodes,
+  and renderer text ops without expanding `fret-ui`'s public virtualization contract.
+- Coverage:
+  `windowed_line_chunks_merge_contiguous_lines_into_one_rich_text`,
+  `windowed_line_chunks_keep_precise_count_overscan_and_tail_height`,
+  `code_block_windowed_chunks_keep_known_line_box_text_layout`, and
+  `code_block_windowed_list_keeps_visible_keys_with_limited_chunk_keep_alive` cover chunk text,
+  precise tail height, known-height virtualization, visible-only keys, and bounded keep-alive.
+- Validation gates:
+  `cargo fmt -p fret-code-view --check`,
+  `cargo nextest run -p fret-code-view code_block --no-fail-fast`,
+  `cargo nextest run -p fret-ui-gallery --test code_view_perf_surface --no-fail-fast`,
+  `cargo run -p fretboard-dev --release -- diag run tools/diag-scripts/ui-gallery/code-view/ui-gallery-code-view-scroll-refresh-pixels-changed.json --dir target/fret-diag/code-view-windowed-line-chunks-scroll-refresh-codex-20260629 --timeout-ms 300000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`, and
+  `cargo run -p fretboard-dev --release -- diag run tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-wheel-scroll-hit-changes.json --dir target/fret-diag/code-view-windowed-line-chunks-wheel-hit-codex-20260629 --timeout-ms 300000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/code-view-windowed-line-chunks-codex-20260629 --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=24 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundles:
+  `target/fret-diag/code-view-windowed-line-chunks-codex-20260629/1782691149156/bundle.schema2.json`
+  reported `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1485/1383/36/22/80/0/5`.
+  `target/fret-diag/code-view-windowed-line-chunks-codex-20260629/1782691153618/bundle.schema2.json`
+  was the repeat's worst overall at
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1558/1466/36/22/80/0/5`.
+  The mounted code-view frame now visits `layout.nodes=9` and `paint.nodes=39`, with renderer text
+  ops/blobs down to `25` from the previous `45`-op row path. The renderer glyph/pin churn counts
+  remain unchanged (`added/removed=158/130`), and `renderer.text_prepare.flush` stayed noisy at
+  `376-383us`.
+- Interpretation: keep this as a code-view tree/text-op depth reduction. It improves the component
+  shell shape and lowers paint work, but it does not solve glyph pin churn or atlas flush; the next
+  renderer-facing slice should target pin/retained glyph churn directly or avoid first-frame glyph
+  materialization through a more explicit prewarm contract.
+- Rollback is local: restore one virtual-list item per source line, replace
+  `CodeBlockWindowedChunkRichCache` with `CodeBlockWindowedLineRichCache`, switch
+  `VirtualListOptions::known(...)` back to `VirtualListOptions::fixed(row_h, overscan.max(1))`,
+  key rows directly by `i as u64`, and remove the chunk helper tests.
+
 ## 2026-06-29 VirtualList Initial Overscan Staging
 
 - Source cut: `VirtualListState` now tracks an initial first-viewport overscan catch-up amount

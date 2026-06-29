@@ -1285,6 +1285,7 @@ fn overlay_chrome<H: UiHost>(
 }
 
 const WINDOWED_LINE_NUMBER_SEPARATOR: &str = "  ";
+const WINDOWED_LINE_CHUNK_SIZE: usize = 4;
 
 fn decimal_digits(mut n: usize) -> usize {
     let mut digits = 1;
@@ -1385,6 +1386,92 @@ fn build_code_block_line_rich(
     AttributedText::new(Arc::<str>::from(text), spans)
 }
 
+fn windowed_line_chunk_count(line_count: usize) -> usize {
+    line_count.div_ceil(WINDOWED_LINE_CHUNK_SIZE)
+}
+
+fn windowed_line_chunk_start(chunk_i: usize) -> usize {
+    chunk_i.saturating_mul(WINDOWED_LINE_CHUNK_SIZE)
+}
+
+fn windowed_line_chunk_len(line_count: usize, chunk_i: usize) -> usize {
+    let start = windowed_line_chunk_start(chunk_i);
+    line_count
+        .saturating_sub(start)
+        .min(WINDOWED_LINE_CHUNK_SIZE)
+}
+
+fn windowed_line_chunk_height(row_h: Px, line_count: usize, chunk_i: usize) -> Px {
+    Px(row_h.0 * windowed_line_chunk_len(line_count, chunk_i).max(1) as f32)
+}
+
+fn windowed_line_chunk_overscan(line_overscan: usize) -> usize {
+    line_overscan
+        .max(1)
+        .div_ceil(WINDOWED_LINE_CHUNK_SIZE)
+        .max(1)
+}
+
+fn build_code_block_line_chunk_rich(
+    row_theme: &CodeBlockLineRowTheme,
+    prepared: &crate::prepare::PreparedCodeBlock,
+    chunk_i: usize,
+) -> AttributedText {
+    let start = windowed_line_chunk_start(chunk_i);
+    let len = windowed_line_chunk_len(prepared.lines.len(), chunk_i);
+    if len <= 1 {
+        return build_code_block_line_rich(row_theme, prepared, start);
+    }
+
+    let mut text = String::new();
+    let mut spans: Vec<TextSpan> = Vec::new();
+
+    for line_i in start..start + len {
+        if line_i > start {
+            text.push('\n');
+            spans.push(TextSpan {
+                len: 1,
+                ..Default::default()
+            });
+        }
+
+        let Some(line) = prepared.lines.get(line_i) else {
+            continue;
+        };
+
+        if prepared.show_line_numbers {
+            let prefix_start = text.len();
+            write_windowed_line_number_prefix(&mut text, prepared, line_i);
+            spans.push(TextSpan {
+                len: text.len().saturating_sub(prefix_start),
+                paint: TextPaintStyle {
+                    fg: Some(row_theme.muted_fg),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+        }
+
+        for seg in &line.segments {
+            if seg.text.is_empty() {
+                continue;
+            }
+            let color = seg.highlight.and_then(|h| row_theme.syntax_color(h));
+            text.push_str(seg.text.as_ref());
+            spans.push(TextSpan {
+                len: seg.text.len(),
+                paint: TextPaintStyle {
+                    fg: color,
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+        }
+    }
+
+    AttributedText::new(Arc::<str>::from(text), spans)
+}
+
 fn estimate_monospace_content_width_px(
     prepared: &crate::prepare::PreparedCodeBlock,
     row_theme: &CodeBlockLineRowTheme,
@@ -1406,7 +1493,7 @@ fn estimate_monospace_content_width_px(
 }
 
 #[derive(Default)]
-struct CodeBlockWindowedLineRichCache {
+struct CodeBlockWindowedChunkRichCache {
     theme_revision: u64,
     prepared_revision: u64,
     disable_ligatures: bool,
@@ -1417,7 +1504,7 @@ struct CodeBlockWindowedLineRichCache {
     queue: VecDeque<(usize, u64)>,
 }
 
-impl CodeBlockWindowedLineRichCache {
+impl CodeBlockWindowedChunkRichCache {
     #[allow(clippy::too_many_arguments)]
     fn resolve(
         &mut self,
@@ -1427,7 +1514,7 @@ impl CodeBlockWindowedLineRichCache {
         disable_contextual_alternates: bool,
         row_theme: &CodeBlockLineRowTheme,
         prepared: &crate::prepare::PreparedCodeBlock,
-        line_i: usize,
+        chunk_i: usize,
         max_entries: usize,
     ) -> AttributedText {
         let max_entries = max_entries.max(1);
@@ -1450,15 +1537,15 @@ impl CodeBlockWindowedLineRichCache {
         self.tick = self.tick.saturating_add(1);
         let tick = self.tick;
 
-        if let Some((rich, last_used)) = self.entries.get_mut(&line_i) {
+        if let Some((rich, last_used)) = self.entries.get_mut(&chunk_i) {
             *last_used = tick;
-            self.queue.push_back((line_i, tick));
+            self.queue.push_back((chunk_i, tick));
             return rich.clone();
         }
 
-        let rich = build_code_block_line_rich(row_theme, prepared, line_i);
-        self.entries.insert(line_i, (rich.clone(), tick));
-        self.queue.push_back((line_i, tick));
+        let rich = build_code_block_line_chunk_rich(row_theme, prepared, chunk_i);
+        self.entries.insert(chunk_i, (rich.clone(), tick));
+        self.queue.push_back((chunk_i, tick));
 
         while self.entries.len() > max_entries {
             let Some((victim, victim_tick)) = self.queue.pop_front() else {
@@ -1579,12 +1666,14 @@ fn render_code_block_line_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     row_theme: &CodeBlockLineRowTheme,
     rich: AttributedText,
+    line_count: usize,
 ) -> AnyElement {
     let code = cx.styled_text_props(StyledTextProps {
         layout: {
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Fill;
-            layout.size.height = Length::Px(row_theme.mono_line_height);
+            layout.size.height =
+                Length::Px(Px(row_theme.mono_line_height.0 * line_count.max(1) as f32));
             layout
         },
         rich,
@@ -1624,17 +1713,23 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     let prepared_revision = prepared.revision;
 
     let line_rich_cache = cx.slot_state(
-        || Rc::new(RefCell::new(CodeBlockWindowedLineRichCache::default())),
+        || Rc::new(RefCell::new(CodeBlockWindowedChunkRichCache::default())),
         |h| h.clone(),
     );
 
     let scroll_y_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
-    let mut list_options = VirtualListOptions::fixed(row_h, overscan.max(1));
+    let line_len = prepared.lines.len();
+    let len = windowed_line_chunk_count(line_len);
+    let chunk_overscan = windowed_line_chunk_overscan(overscan);
+    let mut list_options = VirtualListOptions::known(
+        Px(row_h.0 * WINDOWED_LINE_CHUNK_SIZE as f32),
+        chunk_overscan,
+        move |chunk_i| windowed_line_chunk_height(row_h, line_len, chunk_i),
+    );
     list_options.items_revision = prepared.revision;
     list_options.key_cache = VirtualListKeyCacheMode::VisibleOnly;
-    list_options.keep_alive = overscan.saturating_mul(8).max(32);
+    list_options.keep_alive = chunk_overscan.saturating_mul(8).max(32);
 
-    let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
     let row_theme = cx.slot_state(CodeBlockLineRowThemeCache::default, |cache| {
         cache.resolve(
@@ -1652,11 +1747,11 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
             row_theme.as_ref(),
             scrollbar_x_right_inset,
         ),
-        Px(row_h.0 * len.max(1) as f32),
+        Px(row_h.0 * line_len.max(1) as f32),
     );
     let row_theme_for_rows = Arc::clone(&row_theme);
     let line_rich_cache_for_rows = line_rich_cache.clone();
-    let max_cache_entries = (overscan.max(1)).saturating_mul(16).max(256);
+    let max_cache_entries = (chunk_overscan.max(1)).saturating_mul(16).max(128);
 
     let list_layout = {
         let mut layout = LayoutStyle::default();
@@ -1676,8 +1771,9 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         len,
         list_options,
         &scroll_y_handle,
-        |i| i as u64,
-        move |cx, i| {
+        |i| windowed_line_chunk_start(i) as u64,
+        move |cx, chunk_i| {
+            let line_count = windowed_line_chunk_len(prepared_for_rows.lines.len(), chunk_i);
             let rich = line_rich_cache_for_rows.borrow_mut().resolve(
                 theme_revision,
                 prepared_revision,
@@ -1685,10 +1781,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 disable_contextual_alternates,
                 row_theme_for_rows.as_ref(),
                 prepared_for_rows.as_ref(),
-                i,
+                chunk_i,
                 max_cache_entries,
             );
-            render_code_block_line_row(cx, row_theme_for_rows.as_ref(), rich)
+            render_code_block_line_row(cx, row_theme_for_rows.as_ref(), rich, line_count)
         },
     );
 
@@ -2150,6 +2246,73 @@ mod tests {
     }
 
     #[test]
+    fn windowed_line_chunks_merge_contiguous_lines_into_one_rich_text() {
+        let mut prepared = crate::prepare::PreparedCodeBlock {
+            show_line_numbers: true,
+            line_number_width: 2,
+            ..Default::default()
+        };
+        for text in ["fn main() {", "    let value = 1;", "}"] {
+            prepared.lines.push(crate::prepare::PreparedLine {
+                segments: vec![crate::prepare::PreparedSegment {
+                    text: Arc::<str>::from(text),
+                    highlight: None,
+                }],
+            });
+        }
+
+        let row_theme = CodeBlockLineRowTheme {
+            mono_size: Px(10.0),
+            mono_line_height: Px(14.0),
+            text_style: TextStyle::default(),
+            fg: fret_core::Color::from_srgb_hex_rgb(0xffffff),
+            muted_fg: fret_core::Color::from_srgb_hex_rgb(0x808080),
+            syntax_colors: HashMap::new(),
+        };
+
+        let rich = build_code_block_line_chunk_rich(&row_theme, &prepared, 0);
+
+        assert_eq!(
+            rich.text.as_ref(),
+            " 1  fn main() {\n 2      let value = 1;\n 3  }"
+        );
+        assert_eq!(
+            rich.text.matches('\n').count(),
+            2,
+            "a 3-line chunk should keep newline spans inside one StyledText blob"
+        );
+        assert_eq!(
+            rich.spans
+                .iter()
+                .filter(|span| span.paint.fg == Some(row_theme.muted_fg))
+                .count(),
+            3,
+            "each line number prefix should keep muted paint"
+        );
+    }
+
+    #[test]
+    fn windowed_line_chunks_keep_precise_count_overscan_and_tail_height() {
+        assert_eq!(WINDOWED_LINE_CHUNK_SIZE, 4);
+        assert_eq!(windowed_line_chunk_count(0), 0);
+        assert_eq!(windowed_line_chunk_count(1), 1);
+        assert_eq!(windowed_line_chunk_count(4), 1);
+        assert_eq!(windowed_line_chunk_count(5), 2);
+        assert_eq!(windowed_line_chunk_overscan(1), 1);
+        assert_eq!(windowed_line_chunk_overscan(4), 1);
+        assert_eq!(windowed_line_chunk_overscan(5), 2);
+
+        let row_h = Px(14.0);
+        assert_eq!(windowed_line_chunk_height(row_h, 10, 0), Px(56.0));
+        assert_eq!(windowed_line_chunk_height(row_h, 10, 1), Px(56.0));
+        assert_eq!(
+            windowed_line_chunk_height(row_h, 10, 2),
+            Px(28.0),
+            "tail chunk height should match the remaining real line count"
+        );
+    }
+
+    #[test]
     fn windowed_row_theme_cache_reuses_same_revision() {
         use fret_ui::ThemeSnapshot;
         use fret_ui::theme::{ThemeColors, ThemeMetrics};
@@ -2340,16 +2503,39 @@ mod tests {
     }
 
     #[test]
-    fn code_block_windowed_rows_keep_fixed_line_box_text_layout() {
+    fn code_block_windowed_chunks_keep_known_line_box_text_layout() {
+        let render_row_section = CODE_BLOCK_RS
+            .split("fn render_code_block_line_row")
+            .nth(1)
+            .and_then(|section| section.split("#[allow(clippy::too_many_arguments)]").next())
+            .expect("render_code_block_line_row section should exist");
         for marker in [
             "layout.size.width = Length::Fill;",
-            "layout.size.height = Length::Px(row_theme.mono_line_height);",
+            "row_theme.mono_line_height.0 * line_count.max(1) as f32",
         ] {
             assert!(
-                CODE_BLOCK_RS.contains(marker),
-                "windowed code rows should keep fixed line-box StyledText layout marker `{marker}`"
+                render_row_section.contains(marker),
+                "windowed code chunks should keep a fixed line-count-based StyledText layout marker `{marker}`"
             );
         }
+
+        let windowed_section = CODE_BLOCK_RS
+            .split("fn render_code_block_windowed_lines")
+            .nth(1)
+            .and_then(|section| {
+                section
+                    .split("let prepared_for_rows = prepared.clone();")
+                    .next()
+            })
+            .expect("render_code_block_windowed_lines options section should exist");
+        assert!(
+            windowed_section.contains("Px(row_h.0 * WINDOWED_LINE_CHUNK_SIZE as f32),"),
+            "windowed code chunks should use fixed-size chunk estimates"
+        );
+        assert!(
+            windowed_section.contains("windowed_line_chunk_height(row_h, line_len, chunk_i)"),
+            "windowed code chunks should preserve precise tail chunk height"
+        );
     }
 
     #[test]
@@ -2382,37 +2568,49 @@ mod tests {
             "windowed rows should not rebuild the same TextStyle for every mounted line"
         );
 
-        let line_cache_section = CODE_BLOCK_RS
-            .split("impl CodeBlockWindowedLineRichCache")
+        let chunk_cache_section = CODE_BLOCK_RS
+            .split("impl CodeBlockWindowedChunkRichCache")
             .nth(1)
             .and_then(|section| section.split("#[derive(Debug, Clone)]").next())
-            .expect("windowed line rich cache section should exist");
+            .expect("windowed chunk rich cache section should exist");
         assert!(
-            !line_cache_section.contains("&row_theme.code_shaping"),
-            "windowed line rich cache should not copy shared code shaping into every span"
+            !chunk_cache_section.contains("&row_theme.code_shaping"),
+            "windowed chunk rich cache should not copy shared code shaping into every span"
         );
         assert!(
-            !line_cache_section.contains("code_shaping_for_code_block_flags("),
-            "windowed line rich cache should not rebuild the same shaping style for every missed line"
+            !chunk_cache_section.contains("code_shaping_for_code_block_flags("),
+            "windowed chunk rich cache should not rebuild the same shaping style for every missed chunk"
         );
     }
 
     #[test]
-    fn code_block_windowed_list_keeps_visible_keys_with_limited_row_keep_alive() {
+    fn code_block_windowed_list_keeps_visible_keys_with_limited_chunk_keep_alive() {
         let windowed_section = CODE_BLOCK_RS
             .split("fn render_code_block_windowed_lines")
             .nth(1)
-            .and_then(|section| section.split("let len = prepared.lines.len();").next())
+            .and_then(|section| {
+                section
+                    .split("let prepared_for_rows = prepared.clone();")
+                    .next()
+            })
             .expect("render_code_block_windowed_lines options section should exist");
         assert!(
             windowed_section
                 .contains("list_options.key_cache = VirtualListKeyCacheMode::VisibleOnly;"),
-            "windowed code view should keep visible-only key caching instead of rebuilding all row keys"
+            "windowed code view should keep visible-only key caching instead of rebuilding all chunk keys"
+        );
+        assert!(
+            windowed_section.contains("let len = windowed_line_chunk_count(line_len);"),
+            "windowed code view should virtualize fixed-size line chunks instead of one text blob per line"
+        );
+        assert!(
+            windowed_section.contains("VirtualListOptions::known("),
+            "windowed chunks should use known heights so the tail chunk still preserves scroll extent"
         );
         assert!(
             windowed_section
-                .contains("list_options.keep_alive = overscan.saturating_mul(8).max(32);"),
-            "windowed code view should retain a bounded off-window row pool for scroll reuse"
+                .contains("list_options.keep_alive = chunk_overscan.saturating_mul(8).max(32);"),
+            "windowed code view should retain a bounded off-window chunk pool for scroll reuse"
         );
     }
 
