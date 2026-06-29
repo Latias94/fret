@@ -161,6 +161,13 @@ framework owner, create a narrow follow-on instead of reopening every historical
   the windowed-line-chunk worst bundle, frame 13 color/subpixel atlas misses dropped from
   `1877/1877` to `559/559`, while mask inserts and upload bytes stayed unchanged. Treat this as a
   lookup-pressure cut only; it does not solve glyph insert/upload, retained pin churn, or total p95.
+- The post glyph-kind heavy-surface rerank now puts DataTable and inspector/chrome layout-root work
+  above code-view on this machine. The current order is DataTable direct-entry view-cache filter at
+  `2304us` p95, inspector direct-entry at `2004us`, chrome direct-entry at `1745us`, code-view
+  mount at `1723us`, editor-controls click-stress at `1304us`, editor-controls roughness typing at
+  `878us`, combobox long-list at `308us`, and file-tree scroll at `149us`. DataTable's wall-time
+  owner is currently layout/root apply, but its rerank bundle reported zero CPU counters, so it
+  needs one repeat attribution pass before a fearless refactor cut is accepted.
 
 ## 2026-06-29 Code-view Base Shaping Cache Keys
 
@@ -335,6 +342,42 @@ framework owner, create a narrow follow-on instead of reopening every historical
 - Rollback is local: remove `glyph_kind_cache`, restore `prepared_glyph_lookup_keys(...)` to call
   `GlyphKey::lookup_keys(...)` without a hint, make `GlyphQuadKind` private again if no other
   module needs it, and delete the three hint-cache tests.
+
+## 2026-06-29 Post Glyph-Kind Heavy Surface Rerank
+
+The glyph-kind lookup slice closed the immediate renderer lookup-pressure experiment, so the lane
+was reranked across the priority heavy surfaces before choosing another refactor target. The rerank
+used p95 total frame cost as the sorting signal, then checked phase ownership and CPU signal before
+promoting a cut.
+
+| Rank | Surface | p95.us total/layout/solve/prepaint/paint/dispatch/hit_test | Evidence | Current read |
+| --- | --- | --- | --- | --- |
+| 1 | DataTable view-cache filter direct-entry | `2304/1951/471/83/295/0/0` | `target/fret-diag/rerank-data-table-direct-codex-20260629-post-glyph/1782730402115/bundle.json` | Layout/root apply is the wall-time owner; CPU counters were `0`, so rerun with attribution before cutting. |
+| 2 | Inspector direct-entry scroll | `2004/1334/462/269/401/0/4` | `target/fret-diag/rerank-inspector-direct-entry-codex-20260629-post-glyph/1782729074422/bundle.json` | Layout root apply is still visible at roughly `761us`; this is a plausible next shared-shell cut if it repeats. |
+| 3 | Chrome direct-entry | `1745/1381/1027/164/200/0/3` | `target/fret-diag/rerank-chrome-direct-entry-codex-20260629-post-glyph` | Layout request/build compute owns roughly `1030us`; compare with inspector before changing shared root mechanics. |
+| 4 | Code-view torture mount | `1723/1576/55/33/114/0/4` | `target/fret-diag/code-view-glyph-kind-lookup-content-hint-codex-20260629-rerun/1782728291365/bundle.json` | Lookup misses improved, but total p95 is no longer the top local surface. Keep code-view as renderer guard, not the next default cut. |
+| 5 | Editor-controls click-stress | `1304/1103/642/4/224/0/3` | `target/fret-diag/rerank-editor-controls-click-perf-codex-20260629-post-glyph` | Still layout-heavy but below the current top tier after hidden-branch/session-shell cuts. |
+| 6 | Editor-controls roughness typing | `878/739/458/5/138/0/2` | `target/fret-diag/rerank-editor-controls-roughness-perf-codex-20260629-post-glyph` | Below 1ms p95 locally; keep as a regression guard. |
+| 7 | Combobox long-list focused | `308/10/0/177/121/0/2` | `target/fret-diag/rerank-combobox-long-list-codex-20260629-post-glyph` | No longer a primary hotspot on this machine. |
+| 8 | File-tree scroll steady | `149/6/0/39/104/0/3` | `target/fret-diag/rerank-file-tree-codex-20260629-post-glyph` | Light guard only. |
+
+DataTable script note: the old
+`tools/diag-scripts/ui-gallery/perf/ui-gallery-data-table-torture-scroll-refresh.json` was a schema
+v1 nav-entry script and failed under the perf launch surface with `reason=no_semantics_snapshot` at
+step 0. It is being converted into a direct-entry steady scroll-refresh script so the perf probe
+starts on `data_table_torture`, warms the target page, resets diagnostics, and measures only the
+scroll window. The filter/input direct-entry script remains the stronger DataTable rerank surface,
+because it exercises retained virtual-list input shrink and layout root apply churn.
+
+Decision:
+
+- Do not broaden the renderer/code-view refactor just because code-view still has glyph pin churn;
+  it is now rank 4 locally and the glyph-kind cut already removed the measured lookup waste.
+- Next accepted cut should target DataTable only if a repeat with CPU attribution confirms the
+  layout/root owner. If DataTable remains wall-time-only noise, compare inspector and chrome and
+  pick the shared layout root/apply owner that repeats across both surfaces.
+- Keep editor-controls, combobox, and file-tree in the guard set, but do not spend the next
+  architecture cut there unless their p95 or worst-frame CPU signal regresses.
 
 ## 2026-06-29 VirtualList Initial Overscan Staging
 
