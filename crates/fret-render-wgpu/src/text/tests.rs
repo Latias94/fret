@@ -1215,6 +1215,58 @@ fn max_content_width_round_trip_does_not_force_wrapping_under_fractional_scale_f
 }
 
 #[test]
+fn prepared_mask_glyph_hits_reuse_cached_kind_before_color_and_subpixel_lookup() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    let fonts: Vec<Vec<u8>> = bundled_profile_face_blobs(fret_fonts::bootstrap_profile()).collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let style = TextStyle {
+        font: fret_core::FontId::family("Inter"),
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let mut style_with_feature = style.clone();
+    style_with_feature.features.push(TextFontFeatureSetting {
+        tag: "liga".into(),
+        value: 0,
+    });
+    let constraints = TextConstraints {
+        max_width: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+
+    let (seed_blob, _) = text.prepare("abc", &style, constraints);
+    let seed_keys = glyph_keys_for_blob(&text, seed_blob);
+    assert!(
+        seed_keys.iter().all(|key| key.is_mask()),
+        "test setup expects regular text glyphs to use the mask atlas"
+    );
+
+    text.begin_frame_diagnostics();
+    let (_hit_blob, _) = text.prepare("abc", &style_with_feature, constraints);
+    let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
+
+    assert!(
+        snap.mask_atlas.frame_hits >= 3,
+        "expected repeated letters to hit the populated mask atlas"
+    );
+    assert_eq!(
+        snap.color_atlas.frame_misses, 0,
+        "mask glyph-kind hints should avoid probing the empty color atlas first"
+    );
+    assert_eq!(
+        snap.subpixel_atlas.frame_misses, 0,
+        "mask glyph-kind hints should avoid probing the empty subpixel atlas first"
+    );
+}
+
+#[test]
 fn grapheme_wrapped_measure_attributed_matches_prepare_under_fractional_scale_factor() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);

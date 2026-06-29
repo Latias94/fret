@@ -5,6 +5,7 @@ use super::blob_state::TextBlobState;
 use super::face_cache::TextFaceCacheState;
 use super::font_runtime_state::TextFontRuntimeState;
 use super::frame_perf::TextFramePerfState;
+use super::glyph_kind_cache::TextGlyphKindLookupCache;
 use super::layout_cache_state::TextLayoutCacheState;
 use super::pin_state::TextPinState;
 use super::quality::{TextQualitySettings, TextQualityState};
@@ -45,6 +46,7 @@ pub(super) fn build_text_system(device: &wgpu::Device) -> TextSystem {
 
         pin_state: TextPinState::with_ring_len(3),
         face_cache: TextFaceCacheState::default(),
+        glyph_kind_cache: TextGlyphKindLookupCache::default(),
 
         frame_perf: TextFramePerfState::default(),
 

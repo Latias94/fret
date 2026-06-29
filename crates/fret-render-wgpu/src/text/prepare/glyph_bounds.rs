@@ -1,5 +1,6 @@
 use super::super::TextSystem;
 use super::super::atlas::GlyphKey;
+use super::super::glyph_kind_cache::GlyphKindLookupKey;
 use super::glyph_raster::prepared_glyph_lookup_keys;
 use fret_render_text::{FontFaceKey, ParleyGlyph};
 
@@ -15,8 +16,14 @@ impl TextSystem {
         y: i32,
         epoch: u64,
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
-        for glyph_key in prepared_glyph_lookup_keys(face_key, glyph_id, size_bits, x_bin, y_bin) {
+        let lookup_key = GlyphKindLookupKey::new(face_key, glyph_id, size_bits);
+        let hint = self.glyph_kind_cache.get(lookup_key);
+        for glyph_key in
+            prepared_glyph_lookup_keys(face_key, glyph_id, size_bits, x_bin, y_bin, hint)
+        {
             if let Some(hit) = self.lookup_prepared_glyph_bounds_for_key(glyph_key, x, y, epoch) {
+                self.glyph_kind_cache
+                    .insert(lookup_key, glyph_key.quad_kind());
                 return Some(hit);
             }
         }
@@ -48,7 +55,12 @@ impl TextSystem {
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
         let raster =
             self.render_prepared_glyph_raster(glyph, glyph_id, face_key, size_bits, x_bin, y_bin)?;
-        Some(self.commit_prepared_glyph_raster(raster, x, y, epoch))
+        let bounds = self.commit_prepared_glyph_raster(raster, x, y, epoch);
+        self.glyph_kind_cache.insert(
+            GlyphKindLookupKey::new(face_key, glyph.id(), size_bits),
+            bounds.0.quad_kind(),
+        );
+        Some(bounds)
     }
 
     pub(super) fn resolve_prepared_glyph_bounds(

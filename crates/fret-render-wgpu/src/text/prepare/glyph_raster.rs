@@ -1,4 +1,4 @@
-use super::super::atlas::GlyphKey;
+use super::super::atlas::{GlyphKey, GlyphQuadKind};
 use fret_render_text::FontFaceKey;
 
 pub(super) struct PreparedGlyphRaster {
@@ -76,8 +76,9 @@ pub(super) fn prepared_glyph_lookup_keys(
     size_bits: u32,
     x_bin: u8,
     y_bin: u8,
+    hint: Option<GlyphQuadKind>,
 ) -> [GlyphKey; 3] {
-    GlyphKey::lookup_keys(face_key, glyph_id, size_bits, x_bin, y_bin)
+    GlyphKey::lookup_keys_with_hint(face_key, glyph_id, size_bits, x_bin, y_bin, hint)
 }
 
 fn prepared_glyph_raster_from_image_with_placement(

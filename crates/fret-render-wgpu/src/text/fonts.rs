@@ -173,6 +173,7 @@ impl TextSystem {
         self.atlas_runtime.reset();
         self.pin_state.clear();
         self.face_cache.clear();
+        self.glyph_kind_cache.clear();
     }
 
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {

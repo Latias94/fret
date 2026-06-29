@@ -9,7 +9,7 @@ use std::{
 mod debug;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum GlyphQuadKind {
+pub(super) enum GlyphQuadKind {
     Mask,
     Color,
     Subpixel,
@@ -65,6 +65,7 @@ impl GlyphKey {
         )
     }
 
+    #[cfg(test)]
     pub(super) fn lookup_keys(
         font: FontFaceKey,
         glyph_id: u32,
@@ -74,6 +75,22 @@ impl GlyphKey {
     ) -> [Self; 3] {
         GLYPH_KEY_LOOKUP_KIND_ORDER
             .map(|kind| Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind))
+    }
+
+    pub(super) fn lookup_keys_with_hint(
+        font: FontFaceKey,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        hint: Option<GlyphQuadKind>,
+    ) -> [Self; 3] {
+        glyph_key_lookup_kind_order_with_hint(hint)
+            .map(|kind| Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind))
+    }
+
+    pub(super) fn quad_kind(self) -> GlyphQuadKind {
+        self.kind
     }
 
     #[cfg(any(test, not(target_arch = "wasm32")))]
@@ -199,6 +216,30 @@ fn glyph_image_content_metadata(
     }
 }
 
+fn glyph_key_lookup_kind_order_with_hint(hint: Option<GlyphQuadKind>) -> [GlyphQuadKind; 3] {
+    let Some(hint) = hint else {
+        return GLYPH_KEY_LOOKUP_KIND_ORDER;
+    };
+
+    match hint {
+        GlyphQuadKind::Color => [
+            GlyphQuadKind::Color,
+            GlyphQuadKind::Subpixel,
+            GlyphQuadKind::Mask,
+        ],
+        GlyphQuadKind::Subpixel => [
+            GlyphQuadKind::Subpixel,
+            GlyphQuadKind::Color,
+            GlyphQuadKind::Mask,
+        ],
+        GlyphQuadKind::Mask => [
+            GlyphQuadKind::Mask,
+            GlyphQuadKind::Color,
+            GlyphQuadKind::Subpixel,
+        ],
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,6 +288,31 @@ mod tests {
         assert_eq!(mask.len(), 1);
         assert_eq!(color.len(), 1);
         assert_eq!(subpixel.len(), 1);
+    }
+
+    #[test]
+    fn glyph_lookup_kind_hint_only_reorders_full_fallback_set() {
+        let fallback = glyph_key_lookup_kind_order_with_hint(None);
+        assert_eq!(fallback, GLYPH_KEY_LOOKUP_KIND_ORDER);
+
+        for hint in [
+            GlyphQuadKind::Mask,
+            GlyphQuadKind::Color,
+            GlyphQuadKind::Subpixel,
+        ] {
+            let order = glyph_key_lookup_kind_order_with_hint(Some(hint));
+            assert_eq!(order[0], hint);
+            for kind in [
+                GlyphQuadKind::Mask,
+                GlyphQuadKind::Color,
+                GlyphQuadKind::Subpixel,
+            ] {
+                assert!(
+                    order.contains(&kind),
+                    "lookup hint must not remove the {kind:?} fallback"
+                );
+            }
+        }
     }
 
     #[test]

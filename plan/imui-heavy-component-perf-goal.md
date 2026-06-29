@@ -156,6 +156,11 @@ framework owner, create a narrow follow-on instead of reopening every historical
   `45/0/274/158/116/158/130`. Treat this as a small upload-flush batching win, not as the final
   code-view transition fix; the remaining owner is still row/text blob churn or staged text
   preparation.
+- The current renderer-side glyph-kind lookup hint slice reduces empty atlas probing on code-view
+  mount frames without changing glyph identity, rasterization, or fallback coverage. Compared with
+  the windowed-line-chunk worst bundle, frame 13 color/subpixel atlas misses dropped from
+  `1877/1877` to `559/559`, while mask inserts and upload bytes stayed unchanged. Treat this as a
+  lookup-pressure cut only; it does not solve glyph insert/upload, retained pin churn, or total p95.
 
 ## 2026-06-29 Code-view Base Shaping Cache Keys
 
@@ -289,6 +294,47 @@ framework owner, create a narrow follow-on instead of reopening every historical
   `CodeBlockWindowedChunkRichCache` with `CodeBlockWindowedLineRichCache`, switch
   `VirtualListOptions::known(...)` back to `VirtualListOptions::fixed(row_h, overscan.max(1))`,
   key rows directly by `i as u64`, and remove the chunk helper tests.
+
+## 2026-06-29 Code-view Glyph Kind Lookup Hint
+
+- Source cut: `TextSystem` now keeps a small `TextGlyphKindLookupCache` keyed by
+  `(FontFaceKey, glyph_id, size_bits)`. Prepared glyph bounds lookup uses the cached
+  `GlyphQuadKind` only to reorder `GlyphKey` probing; the full color/subpixel/mask fallback set
+  stays intact. Successful atlas hits and fresh raster commits both write back the final
+  `quad_kind`, and font cache reset clears the hint cache.
+- Rationale: regular code-view text uses the mask atlas, but the previous prepared-glyph path
+  probed color and subpixel keys before finding the mask key on many already-prepared glyphs. The
+  hint key intentionally excludes subpixel bins because content kind is independent of the subpixel
+  slot; the actual `GlyphKey` still includes the bins, so atlas identity and placement remain
+  unchanged.
+- Coverage:
+  `glyph_kind_lookup_key_tracks_content_kind_not_subpixel_slot`,
+  `glyph_lookup_kind_hint_only_reorders_full_fallback_set`, and
+  `prepared_mask_glyph_hits_reuse_cached_kind_before_color_and_subpixel_lookup` cover hint-key
+  shape, fallback preservation, and the repeated mask-hit path avoiding empty color/subpixel probes.
+- Validation gates:
+  `cargo fmt -p fret-render-wgpu --check`,
+  `cargo nextest run -p fret-render-wgpu glyph_kind_lookup_key_tracks_content_kind_not_subpixel_slot glyph_lookup_kind_hint_only_reorders_full_fallback_set prepared_mask_glyph_hits_reuse_cached_kind_before_color_and_subpixel_lookup --no-fail-fast`,
+  and
+  `cargo nextest run -p fret-render-wgpu pending_texture_uploads glyph_pin_keys prepare_for_scene --no-fail-fast`.
+- Perf probe:
+  `cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/perf/ui-gallery-code-view-torture-mount.json --repeat 2 --warmup-frames 5 --dir target/fret-diag/code-view-glyph-kind-lookup-content-hint-codex-20260629-rerun --timeout-ms 600000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=24 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=50 --launch -- cargo run -p fret-ui-gallery --release --features gallery-dev`
+- Result bundle:
+  `target/fret-diag/code-view-glyph-kind-lookup-content-hint-codex-20260629-rerun/1782728291365/bundle.json`
+  was the repeat's worst overall and reported
+  `p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)=1723/1576/55/33/114/0/4`.
+  Compared with the windowed-line-chunk worst bundle
+  `target/fret-diag/code-view-windowed-line-chunks-codex-20260629/1782691153618/bundle.schema2.json`,
+  frame 12 color/subpixel misses dropped from `86/86` to `32/32`, frame 13 from `1877/1877` to
+  `559/559`, and frame 14 from `576/576` to `128/128`. Mask inserts, upload bytes, blob counts,
+  and scene ops stayed unchanged on those frames.
+- Interpretation: keep this as a renderer atlas lookup-pressure reduction. It avoids many empty
+  color/subpixel probes once glyph kind is known, but it is not a total-frame fix and does not
+  reduce true mask glyph insert/upload or the retained glyph pin churn. The next code-view cut
+  should still target row/text blob churn, retained pin churn, or staged text preparation.
+- Rollback is local: remove `glyph_kind_cache`, restore `prepared_glyph_lookup_keys(...)` to call
+  `GlyphKey::lookup_keys(...)` without a hint, make `GlyphQuadKind` private again if no other
+  module needs it, and delete the three hint-cache tests.
 
 ## 2026-06-29 VirtualList Initial Overscan Staging
 

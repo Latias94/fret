@@ -30,6 +30,7 @@ mod face_cache;
 mod font_runtime_state;
 mod fonts;
 mod frame_perf;
+mod glyph_kind_cache;
 mod layout_cache_state;
 mod measure;
 mod pin_state;
@@ -47,6 +48,7 @@ pub(crate) use self::blobs::TextBlobRenderData;
 use self::face_cache::TextFaceCacheState;
 use self::font_runtime_state::TextFontRuntimeState;
 use self::frame_perf::TextFramePerfState;
+use self::glyph_kind_cache::TextGlyphKindLookupCache;
 use self::layout_cache_state::TextLayoutCacheState;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
@@ -74,6 +76,7 @@ pub struct TextSystem {
 
     pin_state: TextPinState,
     face_cache: TextFaceCacheState,
+    glyph_kind_cache: TextGlyphKindLookupCache,
 
     frame_perf: TextFramePerfState,
 
