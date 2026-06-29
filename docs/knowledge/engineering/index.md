@@ -1,0 +1,18 @@
+---
+type: Current State
+title: Engineering Knowledge Index
+tags: fret,engineering-memory
+timestamp: 2026-06-30
+---
+
+# Engineering Knowledge Index
+
+This bundle records compact engineering continuity notes for long-running Fret architecture work.
+It is a sidecar for session recovery and subagent synthesis, not a replacement for ADRs, plans, or workstreams.
+
+## Current Pointers
+
+- [Current State](current-state.md)
+- [UI framework architecture goal handoff](sessions/2026-06-30-ui-framework-architecture-goal.md)
+- [UI framework audit findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
+- [Log](log.md)
