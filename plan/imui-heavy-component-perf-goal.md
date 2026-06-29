@@ -379,6 +379,26 @@ Decision:
 - Keep editor-controls, combobox, and file-tree in the guard set, but do not spend the next
   architecture cut there unless their p95 or worst-frame CPU signal regresses.
 
+## 2026-06-29 Closure Decision
+
+After the rerank and the follow-up CPU-attribution sweeps, the lane no longer has a repeatable
+CPU-bound 120Hz blocker on this machine:
+
+- the priority surfaces all sit well below the 8.33ms frame budget on the sampled runs,
+- the worst surviving top frames are layout-root / layout-engine work rather than a stable
+  renderer-side lookup or upload choke point,
+- `diag stats --sort cpu_cycles` kept reporting `cpu.us=0` and `cpu.cycles=0` on the sampled top
+  frames, so the gate did not expose a repeatable CPU-heavy owner to justify another fearless
+  refactor cut,
+- code-view's renderer glyph-kind lookup waste has already been removed as the top local lookup
+  issue, and
+- DataTable is now the highest local p95 surface, but the sampled rerank bundle still reads as
+  wall-time layout/root apply pressure rather than a confirmed CPU-bound blocker.
+
+This lane is therefore maintenance-ready. Do not reopen broad fearless refactors from this goal by
+default; if a future run shows a new repeatable non-zero CPU owner or a max-frame regression above
+budget, split a narrower follow-on instead.
+
 ## 2026-06-29 VirtualList Initial Overscan Staging
 
 - Source cut: `VirtualListState` now tracks an initial first-viewport overscan catch-up amount
