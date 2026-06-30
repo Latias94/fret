@@ -602,6 +602,20 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_uniform_bytes: u64,
     pub(super) renderer_instance_bytes: u64,
     pub(super) renderer_vertex_bytes: u64,
+    pub(super) renderer_geometry_upload_quad_instance_bytes: u64,
+    pub(super) renderer_geometry_upload_quad_instance_write_count: u64,
+    pub(super) renderer_geometry_upload_path_paint_bytes: u64,
+    pub(super) renderer_geometry_upload_path_paint_write_count: u64,
+    pub(super) renderer_geometry_upload_text_paint_bytes: u64,
+    pub(super) renderer_geometry_upload_text_paint_write_count: u64,
+    pub(super) renderer_geometry_upload_viewport_vertex_bytes: u64,
+    pub(super) renderer_geometry_upload_viewport_vertex_write_count: u64,
+    pub(super) renderer_geometry_upload_text_glyph_instance_bytes: u64,
+    pub(super) renderer_geometry_upload_text_glyph_instance_write_count: u64,
+    pub(super) renderer_geometry_upload_text_vertex_bytes: u64,
+    pub(super) renderer_geometry_upload_text_vertex_write_count: u64,
+    pub(super) renderer_geometry_upload_path_vertex_bytes: u64,
+    pub(super) renderer_geometry_upload_path_vertex_write_count: u64,
 
     pub(super) renderer_render_target_updates_ingest_unknown: u64,
     pub(super) renderer_render_target_updates_ingest_owned: u64,
@@ -664,6 +678,20 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_bind_group_switches: u64,
     pub(super) renderer_scissor_sets: u64,
     pub(super) renderer_scene_encoding_cache_misses: u64,
+    pub(super) renderer_scene_encoding_cache_miss_cold_start: u64,
+    pub(super) renderer_scene_encoding_cache_miss_format_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_viewport_size_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_scale_factor_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_scene_fingerprint_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_scene_ops_len_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_render_targets_generation_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_images_generation_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_text_atlas_revision_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_text_quality_key_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_materials_generation_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_material_paint_budget_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_material_distinct_budget_changed: u64,
+    pub(super) renderer_scene_encoding_cache_miss_custom_effects_generation_changed: u64,
     pub(super) renderer_material_quad_ops: u64,
     pub(super) renderer_material_sampled_quad_ops: u64,
     pub(super) renderer_material_distinct: u64,
@@ -3214,6 +3242,14 @@ impl BundleStatsReport {
                 || row.renderer_uniform_bytes > 0
                 || row.renderer_instance_bytes > 0
                 || row.renderer_vertex_bytes > 0
+                || row.renderer_geometry_upload_quad_instance_bytes > 0
+                || row.renderer_geometry_upload_path_paint_bytes > 0
+                || row.renderer_geometry_upload_text_paint_bytes > 0
+                || row.renderer_geometry_upload_viewport_vertex_bytes > 0
+                || row.renderer_geometry_upload_text_glyph_instance_bytes > 0
+                || row.renderer_geometry_upload_text_vertex_bytes > 0
+                || row.renderer_geometry_upload_path_vertex_bytes > 0
+                || row.renderer_scene_encoding_cache_misses > 0
                 || row.renderer_encode_scene_stack_us > 0
                 || row.renderer_encode_scene_clip_us > 0
                 || row.renderer_encode_scene_mask_us > 0
@@ -3284,6 +3320,32 @@ impl BundleStatsReport {
                         row.renderer_vertex_bytes,
                     ));
                 }
+                if row.renderer_geometry_upload_quad_instance_bytes > 0
+                    || row.renderer_geometry_upload_path_paint_bytes > 0
+                    || row.renderer_geometry_upload_text_paint_bytes > 0
+                    || row.renderer_geometry_upload_viewport_vertex_bytes > 0
+                    || row.renderer_geometry_upload_text_glyph_instance_bytes > 0
+                    || row.renderer_geometry_upload_text_vertex_bytes > 0
+                    || row.renderer_geometry_upload_path_vertex_bytes > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.upload.bytes(quad/path_paint/text_paint/viewport/text_glyph/text_vertex/path_vertex)={}/{}/{}/{}/{}/{}/{} writes={}/{}/{}/{}/{}/{}/{}",
+                        row.renderer_geometry_upload_quad_instance_bytes,
+                        row.renderer_geometry_upload_path_paint_bytes,
+                        row.renderer_geometry_upload_text_paint_bytes,
+                        row.renderer_geometry_upload_viewport_vertex_bytes,
+                        row.renderer_geometry_upload_text_glyph_instance_bytes,
+                        row.renderer_geometry_upload_text_vertex_bytes,
+                        row.renderer_geometry_upload_path_vertex_bytes,
+                        row.renderer_geometry_upload_quad_instance_write_count,
+                        row.renderer_geometry_upload_path_paint_write_count,
+                        row.renderer_geometry_upload_text_paint_write_count,
+                        row.renderer_geometry_upload_viewport_vertex_write_count,
+                        row.renderer_geometry_upload_text_glyph_instance_write_count,
+                        row.renderer_geometry_upload_text_vertex_write_count,
+                        row.renderer_geometry_upload_path_vertex_write_count,
+                    ));
+                }
                 line.push_str(&format!(
                     " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
                     row.renderer_encode_scene_stack_us,
@@ -3303,6 +3365,26 @@ impl BundleStatsReport {
                     row.renderer_encode_scene_text_setup_us,
                     row.renderer_encode_scene_text_glyphs_us,
                 ));
+                if row.renderer_scene_encoding_cache_misses > 0 {
+                    line.push_str(&format!(
+                        " renderer.scene_cache.misses(total/cold/format/viewport/scale/scene_fp/ops_len/targets/images/text_atlas/text_quality/materials/paint_budget/distinct_budget/custom_effects)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                        row.renderer_scene_encoding_cache_misses,
+                        row.renderer_scene_encoding_cache_miss_cold_start,
+                        row.renderer_scene_encoding_cache_miss_format_changed,
+                        row.renderer_scene_encoding_cache_miss_viewport_size_changed,
+                        row.renderer_scene_encoding_cache_miss_scale_factor_changed,
+                        row.renderer_scene_encoding_cache_miss_scene_fingerprint_changed,
+                        row.renderer_scene_encoding_cache_miss_scene_ops_len_changed,
+                        row.renderer_scene_encoding_cache_miss_render_targets_generation_changed,
+                        row.renderer_scene_encoding_cache_miss_images_generation_changed,
+                        row.renderer_scene_encoding_cache_miss_text_atlas_revision_changed,
+                        row.renderer_scene_encoding_cache_miss_text_quality_key_changed,
+                        row.renderer_scene_encoding_cache_miss_materials_generation_changed,
+                        row.renderer_scene_encoding_cache_miss_material_paint_budget_changed,
+                        row.renderer_scene_encoding_cache_miss_material_distinct_budget_changed,
+                        row.renderer_scene_encoding_cache_miss_custom_effects_generation_changed,
+                    ));
+                }
                 line.push_str(&format!(
                     " renderer.encode.text(us/transform/emit/flush)={}/{}/{}",
                     row.renderer_encode_scene_text_glyph_transform_us,
@@ -6956,6 +7038,62 @@ impl BundleStatsReport {
                     Value::from(row.renderer_vertex_bytes),
                 );
                 obj.insert(
+                    "renderer_geometry_upload_quad_instance_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_quad_instance_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_quad_instance_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_quad_instance_write_count),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_path_paint_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_path_paint_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_path_paint_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_path_paint_write_count),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_text_paint_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_text_paint_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_text_paint_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_text_paint_write_count),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_viewport_vertex_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_viewport_vertex_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_viewport_vertex_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_viewport_vertex_write_count),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_text_glyph_instance_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_text_glyph_instance_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_text_glyph_instance_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_text_glyph_instance_write_count),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_text_vertex_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_text_vertex_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_text_vertex_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_text_vertex_write_count),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_path_vertex_bytes".to_string(),
+                    Value::from(row.renderer_geometry_upload_path_vertex_bytes),
+                );
+                obj.insert(
+                    "renderer_geometry_upload_path_vertex_write_count".to_string(),
+                    Value::from(row.renderer_geometry_upload_path_vertex_write_count),
+                );
+                obj.insert(
                     "renderer_encode_scene_stack_us".to_string(),
                     Value::from(row.renderer_encode_scene_stack_us),
                 );
@@ -7070,6 +7208,88 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_encode_scene_flushes".to_string(),
                     Value::from(row.renderer_encode_scene_flushes),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_misses".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_misses),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_cold_start".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_miss_cold_start),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_format_changed".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_miss_format_changed),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_viewport_size_changed".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_miss_viewport_size_changed),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_scale_factor_changed".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_miss_scale_factor_changed),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_scene_fingerprint_changed".to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_scene_fingerprint_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_scene_ops_len_changed".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_miss_scene_ops_len_changed),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_render_targets_generation_changed"
+                        .to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_render_targets_generation_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_images_generation_changed".to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_images_generation_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_text_atlas_revision_changed".to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_text_atlas_revision_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_text_quality_key_changed".to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_text_quality_key_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_materials_generation_changed".to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_materials_generation_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_material_paint_budget_changed"
+                        .to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_material_paint_budget_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_material_distinct_budget_changed"
+                        .to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_material_distinct_budget_changed,
+                    ),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_miss_custom_effects_generation_changed"
+                        .to_string(),
+                    Value::from(
+                        row.renderer_scene_encoding_cache_miss_custom_effects_generation_changed,
+                    ),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),

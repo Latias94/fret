@@ -98,7 +98,10 @@ pub use types::{BlurQualityCounters, BlurQualitySnapshot};
 pub use types::{
     CustomEffectV3SourceDegradationCounters, EffectDegradationCounters, EffectDegradationSnapshot,
 };
-pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
+pub use types::{
+    GeometryUploadPerfSnapshot, IntermediatePerfSnapshot, RenderPerfSnapshot,
+    SceneEncodingCacheMissHistogramSnapshot, SvgPerfSnapshot,
+};
 use uniform_resources::UniformResources;
 use util::*;
 

@@ -1978,6 +1978,12 @@ mod service_tests {
         perf.prepare_text_fast_scene_bucket_reuses = 2;
         perf.prepare_text_pinned_glyph_keys = 77;
         perf.instance_bytes = 2048;
+        perf.geometry_upload.quad_instance_bytes = 128;
+        perf.geometry_upload.quad_instance_write_count = 1;
+        perf.geometry_upload.text_vertex_bytes = 256;
+        perf.geometry_upload.text_vertex_write_count = 2;
+        perf.scene_encoding_cache_miss_histogram.scene_fingerprint_changed = 3;
+        perf.scene_encoding_cache_miss_histogram.text_quality_key_changed = 1;
         perf.encode_scene_text_ops = 17;
         let sample = fret_render::RendererPerfFrameSample {
             tick_id: 7,
@@ -2003,6 +2009,18 @@ mod service_tests {
         assert_eq!(stats.renderer_prepare_text_fast_scene_bucket_reuses, 2);
         assert_eq!(stats.renderer_prepare_text_pinned_glyph_keys, 77);
         assert_eq!(stats.renderer_instance_bytes, 2048);
+        assert_eq!(stats.renderer_geometry_upload_quad_instance_bytes, 128);
+        assert_eq!(stats.renderer_geometry_upload_quad_instance_write_count, 1);
+        assert_eq!(stats.renderer_geometry_upload_text_vertex_bytes, 256);
+        assert_eq!(stats.renderer_geometry_upload_text_vertex_write_count, 2);
+        assert_eq!(
+            stats.renderer_scene_encoding_cache_miss_scene_fingerprint_changed,
+            3
+        );
+        assert_eq!(
+            stats.renderer_scene_encoding_cache_miss_text_quality_key_changed,
+            1
+        );
         assert_eq!(stats.renderer_encode_scene_text_ops, 17);
     }
 

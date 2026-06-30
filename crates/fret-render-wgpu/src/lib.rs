@@ -55,7 +55,10 @@ pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{BlurQualityCounters, BlurQualitySnapshot};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use renderer::{EffectDegradationCounters, EffectDegradationSnapshot};
-pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
+pub use renderer::{
+    GeometryUploadPerfSnapshot, IntermediatePerfSnapshot, RenderPerfSnapshot,
+    SceneEncodingCacheMissHistogramSnapshot, SvgPerfSnapshot,
+};
 pub use surface::SurfaceState;
 pub use svg::{
     SvgAlphaMask, SvgRgbaImage, SvgTextBridgeDiagnosticsSnapshot,

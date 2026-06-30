@@ -909,6 +909,64 @@ fn bundle_stats_from_json_with_options_and_filter(
                 .and_then(|m| m.get("renderer_vertex_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_geometry_upload_quad_instance_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_quad_instance_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_quad_instance_write_count = stats
+                .and_then(|m| m.get("renderer_geometry_upload_quad_instance_write_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_path_paint_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_path_paint_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_path_paint_write_count = stats
+                .and_then(|m| m.get("renderer_geometry_upload_path_paint_write_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_text_paint_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_text_paint_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_text_paint_write_count = stats
+                .and_then(|m| m.get("renderer_geometry_upload_text_paint_write_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_viewport_vertex_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_viewport_vertex_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_viewport_vertex_write_count = stats
+                .and_then(|m| m.get("renderer_geometry_upload_viewport_vertex_write_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_text_glyph_instance_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_text_glyph_instance_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_text_glyph_instance_write_count = stats
+                .and_then(|m| {
+                    m.get("renderer_geometry_upload_text_glyph_instance_write_count")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_text_vertex_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_text_vertex_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_text_vertex_write_count = stats
+                .and_then(|m| m.get("renderer_geometry_upload_text_vertex_write_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_path_vertex_bytes = stats
+                .and_then(|m| m.get("renderer_geometry_upload_path_vertex_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_geometry_upload_path_vertex_write_count = stats
+                .and_then(|m| m.get("renderer_geometry_upload_path_vertex_write_count"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_encode_scene_stack_us = stats
                 .and_then(|m| m.get("renderer_encode_scene_stack_us"))
                 .and_then(|v| v.as_u64())
@@ -1289,6 +1347,94 @@ fn bundle_stats_from_json_with_options_and_filter(
                 .unwrap_or(0);
             let renderer_scene_encoding_cache_misses = stats
                 .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_cold_start = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_miss_cold_start"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_format_changed = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_miss_format_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_viewport_size_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_viewport_size_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_scale_factor_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_scale_factor_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_scene_fingerprint_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_scene_fingerprint_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_scene_ops_len_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_scene_ops_len_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_render_targets_generation_changed = stats
+                .and_then(|m| {
+                    m.get(
+                        "renderer_scene_encoding_cache_miss_render_targets_generation_changed",
+                    )
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_images_generation_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_images_generation_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_text_atlas_revision_changed = stats
+                .and_then(|m| {
+                    m.get(
+                        "renderer_scene_encoding_cache_miss_text_atlas_revision_changed",
+                    )
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_text_quality_key_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_text_quality_key_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_materials_generation_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_materials_generation_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_material_paint_budget_changed = stats
+                .and_then(|m| {
+                    m.get("renderer_scene_encoding_cache_miss_material_paint_budget_changed")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_material_distinct_budget_changed = stats
+                .and_then(|m| {
+                    m.get(
+                        "renderer_scene_encoding_cache_miss_material_distinct_budget_changed",
+                    )
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_miss_custom_effects_generation_changed = stats
+                .and_then(|m| {
+                    m.get(
+                        "renderer_scene_encoding_cache_miss_custom_effects_generation_changed",
+                    )
+                })
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_material_quad_ops = stats
@@ -2734,6 +2880,20 @@ fn bundle_stats_from_json_with_options_and_filter(
                 renderer_uniform_bytes,
                 renderer_instance_bytes,
                 renderer_vertex_bytes,
+                renderer_geometry_upload_quad_instance_bytes,
+                renderer_geometry_upload_quad_instance_write_count,
+                renderer_geometry_upload_path_paint_bytes,
+                renderer_geometry_upload_path_paint_write_count,
+                renderer_geometry_upload_text_paint_bytes,
+                renderer_geometry_upload_text_paint_write_count,
+                renderer_geometry_upload_viewport_vertex_bytes,
+                renderer_geometry_upload_viewport_vertex_write_count,
+                renderer_geometry_upload_text_glyph_instance_bytes,
+                renderer_geometry_upload_text_glyph_instance_write_count,
+                renderer_geometry_upload_text_vertex_bytes,
+                renderer_geometry_upload_text_vertex_write_count,
+                renderer_geometry_upload_path_vertex_bytes,
+                renderer_geometry_upload_path_vertex_write_count,
                 renderer_encode_scene_stack_us,
                 renderer_encode_scene_clip_us,
                 renderer_encode_scene_mask_us,
@@ -2825,6 +2985,20 @@ fn bundle_stats_from_json_with_options_and_filter(
                 renderer_bind_group_switches,
                 renderer_scissor_sets,
                 renderer_scene_encoding_cache_misses,
+                renderer_scene_encoding_cache_miss_cold_start,
+                renderer_scene_encoding_cache_miss_format_changed,
+                renderer_scene_encoding_cache_miss_viewport_size_changed,
+                renderer_scene_encoding_cache_miss_scale_factor_changed,
+                renderer_scene_encoding_cache_miss_scene_fingerprint_changed,
+                renderer_scene_encoding_cache_miss_scene_ops_len_changed,
+                renderer_scene_encoding_cache_miss_render_targets_generation_changed,
+                renderer_scene_encoding_cache_miss_images_generation_changed,
+                renderer_scene_encoding_cache_miss_text_atlas_revision_changed,
+                renderer_scene_encoding_cache_miss_text_quality_key_changed,
+                renderer_scene_encoding_cache_miss_materials_generation_changed,
+                renderer_scene_encoding_cache_miss_material_paint_budget_changed,
+                renderer_scene_encoding_cache_miss_material_distinct_budget_changed,
+                renderer_scene_encoding_cache_miss_custom_effects_generation_changed,
                 renderer_material_quad_ops,
                 renderer_material_sampled_quad_ops,
                 renderer_material_distinct,

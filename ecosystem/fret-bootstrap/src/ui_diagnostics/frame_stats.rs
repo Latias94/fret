@@ -802,9 +802,65 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_vertex_bytes: u64,
     #[serde(default)]
+    pub renderer_geometry_upload_quad_instance_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_quad_instance_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_path_paint_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_path_paint_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_text_paint_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_text_paint_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_viewport_vertex_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_viewport_vertex_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_text_glyph_instance_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_text_glyph_instance_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_text_vertex_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_text_vertex_write_count: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_path_vertex_bytes: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_path_vertex_write_count: u64,
+    #[serde(default)]
     pub renderer_scene_encoding_cache_hits: u64,
     #[serde(default)]
     pub renderer_scene_encoding_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_cold_start: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_format_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_viewport_size_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_scale_factor_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_scene_fingerprint_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_scene_ops_len_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_render_targets_generation_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_images_generation_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_text_atlas_revision_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_text_quality_key_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_materials_generation_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_material_paint_budget_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_material_distinct_budget_changed: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_custom_effects_generation_changed: u64,
     #[serde(default)]
     pub renderer_material_quad_ops: u64,
     #[serde(default)]
@@ -1519,8 +1575,36 @@ impl UiFrameStatsV1 {
             renderer_uniform_bytes: 0,
             renderer_instance_bytes: 0,
             renderer_vertex_bytes: 0,
+            renderer_geometry_upload_quad_instance_bytes: 0,
+            renderer_geometry_upload_quad_instance_write_count: 0,
+            renderer_geometry_upload_path_paint_bytes: 0,
+            renderer_geometry_upload_path_paint_write_count: 0,
+            renderer_geometry_upload_text_paint_bytes: 0,
+            renderer_geometry_upload_text_paint_write_count: 0,
+            renderer_geometry_upload_viewport_vertex_bytes: 0,
+            renderer_geometry_upload_viewport_vertex_write_count: 0,
+            renderer_geometry_upload_text_glyph_instance_bytes: 0,
+            renderer_geometry_upload_text_glyph_instance_write_count: 0,
+            renderer_geometry_upload_text_vertex_bytes: 0,
+            renderer_geometry_upload_text_vertex_write_count: 0,
+            renderer_geometry_upload_path_vertex_bytes: 0,
+            renderer_geometry_upload_path_vertex_write_count: 0,
             renderer_scene_encoding_cache_hits: 0,
             renderer_scene_encoding_cache_misses: 0,
+            renderer_scene_encoding_cache_miss_cold_start: 0,
+            renderer_scene_encoding_cache_miss_format_changed: 0,
+            renderer_scene_encoding_cache_miss_viewport_size_changed: 0,
+            renderer_scene_encoding_cache_miss_scale_factor_changed: 0,
+            renderer_scene_encoding_cache_miss_scene_fingerprint_changed: 0,
+            renderer_scene_encoding_cache_miss_scene_ops_len_changed: 0,
+            renderer_scene_encoding_cache_miss_render_targets_generation_changed: 0,
+            renderer_scene_encoding_cache_miss_images_generation_changed: 0,
+            renderer_scene_encoding_cache_miss_text_atlas_revision_changed: 0,
+            renderer_scene_encoding_cache_miss_text_quality_key_changed: 0,
+            renderer_scene_encoding_cache_miss_materials_generation_changed: 0,
+            renderer_scene_encoding_cache_miss_material_paint_budget_changed: 0,
+            renderer_scene_encoding_cache_miss_material_distinct_budget_changed: 0,
+            renderer_scene_encoding_cache_miss_custom_effects_generation_changed: 0,
             renderer_material_quad_ops: 0,
             renderer_material_sampled_quad_ops: 0,
             renderer_material_distinct: 0,
@@ -1811,8 +1895,59 @@ impl UiFrameStatsV1 {
         self.renderer_uniform_bytes = sample.perf.uniform_bytes;
         self.renderer_instance_bytes = sample.perf.instance_bytes;
         self.renderer_vertex_bytes = sample.perf.vertex_bytes;
+        let geometry_upload = sample.perf.geometry_upload;
+        self.renderer_geometry_upload_quad_instance_bytes = geometry_upload.quad_instance_bytes;
+        self.renderer_geometry_upload_quad_instance_write_count =
+            geometry_upload.quad_instance_write_count;
+        self.renderer_geometry_upload_path_paint_bytes = geometry_upload.path_paint_bytes;
+        self.renderer_geometry_upload_path_paint_write_count =
+            geometry_upload.path_paint_write_count;
+        self.renderer_geometry_upload_text_paint_bytes = geometry_upload.text_paint_bytes;
+        self.renderer_geometry_upload_text_paint_write_count =
+            geometry_upload.text_paint_write_count;
+        self.renderer_geometry_upload_viewport_vertex_bytes =
+            geometry_upload.viewport_vertex_bytes;
+        self.renderer_geometry_upload_viewport_vertex_write_count =
+            geometry_upload.viewport_vertex_write_count;
+        self.renderer_geometry_upload_text_glyph_instance_bytes =
+            geometry_upload.text_glyph_instance_bytes;
+        self.renderer_geometry_upload_text_glyph_instance_write_count =
+            geometry_upload.text_glyph_instance_write_count;
+        self.renderer_geometry_upload_text_vertex_bytes = geometry_upload.text_vertex_bytes;
+        self.renderer_geometry_upload_text_vertex_write_count =
+            geometry_upload.text_vertex_write_count;
+        self.renderer_geometry_upload_path_vertex_bytes = geometry_upload.path_vertex_bytes;
+        self.renderer_geometry_upload_path_vertex_write_count =
+            geometry_upload.path_vertex_write_count;
         self.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
         self.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
+        let miss_histogram = sample.perf.scene_encoding_cache_miss_histogram;
+        self.renderer_scene_encoding_cache_miss_cold_start = miss_histogram.cold_start;
+        self.renderer_scene_encoding_cache_miss_format_changed = miss_histogram.format_changed;
+        self.renderer_scene_encoding_cache_miss_viewport_size_changed =
+            miss_histogram.viewport_size_changed;
+        self.renderer_scene_encoding_cache_miss_scale_factor_changed =
+            miss_histogram.scale_factor_changed;
+        self.renderer_scene_encoding_cache_miss_scene_fingerprint_changed =
+            miss_histogram.scene_fingerprint_changed;
+        self.renderer_scene_encoding_cache_miss_scene_ops_len_changed =
+            miss_histogram.scene_ops_len_changed;
+        self.renderer_scene_encoding_cache_miss_render_targets_generation_changed =
+            miss_histogram.render_targets_generation_changed;
+        self.renderer_scene_encoding_cache_miss_images_generation_changed =
+            miss_histogram.images_generation_changed;
+        self.renderer_scene_encoding_cache_miss_text_atlas_revision_changed =
+            miss_histogram.text_atlas_revision_changed;
+        self.renderer_scene_encoding_cache_miss_text_quality_key_changed =
+            miss_histogram.text_quality_key_changed;
+        self.renderer_scene_encoding_cache_miss_materials_generation_changed =
+            miss_histogram.materials_generation_changed;
+        self.renderer_scene_encoding_cache_miss_material_paint_budget_changed =
+            miss_histogram.material_paint_budget_changed;
+        self.renderer_scene_encoding_cache_miss_material_distinct_budget_changed =
+            miss_histogram.material_distinct_budget_changed;
+        self.renderer_scene_encoding_cache_miss_custom_effects_generation_changed =
+            miss_histogram.custom_effects_generation_changed;
         self.renderer_material_quad_ops = sample.perf.material_quad_ops;
         self.renderer_material_sampled_quad_ops = sample.perf.material_sampled_quad_ops;
         self.renderer_material_distinct = sample.perf.material_distinct;

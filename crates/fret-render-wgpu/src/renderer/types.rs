@@ -416,6 +416,128 @@ impl BlurQualitySnapshot {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct GeometryUploadPerfSnapshot {
+    pub quad_instance_bytes: u64,
+    pub quad_instance_write_count: u64,
+    pub path_paint_bytes: u64,
+    pub path_paint_write_count: u64,
+    pub text_paint_bytes: u64,
+    pub text_paint_write_count: u64,
+    pub viewport_vertex_bytes: u64,
+    pub viewport_vertex_write_count: u64,
+    pub text_glyph_instance_bytes: u64,
+    pub text_glyph_instance_write_count: u64,
+    pub text_vertex_bytes: u64,
+    pub text_vertex_write_count: u64,
+    pub path_vertex_bytes: u64,
+    pub path_vertex_write_count: u64,
+}
+
+impl GeometryUploadPerfSnapshot {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.quad_instance_bytes = self
+            .quad_instance_bytes
+            .saturating_add(other.quad_instance_bytes);
+        self.quad_instance_write_count = self
+            .quad_instance_write_count
+            .saturating_add(other.quad_instance_write_count);
+        self.path_paint_bytes = self.path_paint_bytes.saturating_add(other.path_paint_bytes);
+        self.path_paint_write_count = self
+            .path_paint_write_count
+            .saturating_add(other.path_paint_write_count);
+        self.text_paint_bytes = self.text_paint_bytes.saturating_add(other.text_paint_bytes);
+        self.text_paint_write_count = self
+            .text_paint_write_count
+            .saturating_add(other.text_paint_write_count);
+        self.viewport_vertex_bytes = self
+            .viewport_vertex_bytes
+            .saturating_add(other.viewport_vertex_bytes);
+        self.viewport_vertex_write_count = self
+            .viewport_vertex_write_count
+            .saturating_add(other.viewport_vertex_write_count);
+        self.text_glyph_instance_bytes = self
+            .text_glyph_instance_bytes
+            .saturating_add(other.text_glyph_instance_bytes);
+        self.text_glyph_instance_write_count = self
+            .text_glyph_instance_write_count
+            .saturating_add(other.text_glyph_instance_write_count);
+        self.text_vertex_bytes = self
+            .text_vertex_bytes
+            .saturating_add(other.text_vertex_bytes);
+        self.text_vertex_write_count = self
+            .text_vertex_write_count
+            .saturating_add(other.text_vertex_write_count);
+        self.path_vertex_bytes = self
+            .path_vertex_bytes
+            .saturating_add(other.path_vertex_bytes);
+        self.path_vertex_write_count = self
+            .path_vertex_write_count
+            .saturating_add(other.path_vertex_write_count);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SceneEncodingCacheMissHistogramSnapshot {
+    pub cold_start: u64,
+    pub format_changed: u64,
+    pub viewport_size_changed: u64,
+    pub scale_factor_changed: u64,
+    pub scene_fingerprint_changed: u64,
+    pub scene_ops_len_changed: u64,
+    pub render_targets_generation_changed: u64,
+    pub images_generation_changed: u64,
+    pub text_atlas_revision_changed: u64,
+    pub text_quality_key_changed: u64,
+    pub materials_generation_changed: u64,
+    pub material_paint_budget_changed: u64,
+    pub material_distinct_budget_changed: u64,
+    pub custom_effects_generation_changed: u64,
+}
+
+impl SceneEncodingCacheMissHistogramSnapshot {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.cold_start = self.cold_start.saturating_add(other.cold_start);
+        self.format_changed = self.format_changed.saturating_add(other.format_changed);
+        self.viewport_size_changed = self
+            .viewport_size_changed
+            .saturating_add(other.viewport_size_changed);
+        self.scale_factor_changed = self
+            .scale_factor_changed
+            .saturating_add(other.scale_factor_changed);
+        self.scene_fingerprint_changed = self
+            .scene_fingerprint_changed
+            .saturating_add(other.scene_fingerprint_changed);
+        self.scene_ops_len_changed = self
+            .scene_ops_len_changed
+            .saturating_add(other.scene_ops_len_changed);
+        self.render_targets_generation_changed = self
+            .render_targets_generation_changed
+            .saturating_add(other.render_targets_generation_changed);
+        self.images_generation_changed = self
+            .images_generation_changed
+            .saturating_add(other.images_generation_changed);
+        self.text_atlas_revision_changed = self
+            .text_atlas_revision_changed
+            .saturating_add(other.text_atlas_revision_changed);
+        self.text_quality_key_changed = self
+            .text_quality_key_changed
+            .saturating_add(other.text_quality_key_changed);
+        self.materials_generation_changed = self
+            .materials_generation_changed
+            .saturating_add(other.materials_generation_changed);
+        self.material_paint_budget_changed = self
+            .material_paint_budget_changed
+            .saturating_add(other.material_paint_budget_changed);
+        self.material_distinct_budget_changed = self
+            .material_distinct_budget_changed
+            .saturating_add(other.material_distinct_budget_changed);
+        self.custom_effects_generation_changed = self
+            .custom_effects_generation_changed
+            .saturating_add(other.custom_effects_generation_changed);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RenderPerfSnapshot {
     pub frames: u64,
 
@@ -726,6 +848,7 @@ pub struct RenderPerfSnapshot {
     pub uniform_bytes: u64,
     pub instance_bytes: u64,
     pub vertex_bytes: u64,
+    pub geometry_upload: GeometryUploadPerfSnapshot,
 
     pub scene_encoding_cache_hits: u64,
     pub scene_encoding_cache_misses: u64,
@@ -734,6 +857,7 @@ pub struct RenderPerfSnapshot {
     /// This is intended for diagnostics bundles and trace logs. It should not be treated as a
     /// stable API surface.
     pub scene_encoding_cache_last_miss_reasons: u64,
+    pub scene_encoding_cache_miss_histogram: SceneEncodingCacheMissHistogramSnapshot,
 
     // Tier B materials (ADR 0235) observability (best-effort).
     pub material_quad_ops: u64,
@@ -960,10 +1084,12 @@ pub(super) struct RenderPerfStats {
     pub(super) uniform_bytes: u64,
     pub(super) instance_bytes: u64,
     pub(super) vertex_bytes: u64,
+    pub(super) geometry_upload: GeometryUploadPerfSnapshot,
 
     pub(super) scene_encoding_cache_hits: u64,
     pub(super) scene_encoding_cache_misses: u64,
     pub(super) scene_encoding_cache_last_miss_reasons: u64,
+    pub(super) scene_encoding_cache_miss_histogram: SceneEncodingCacheMissHistogramSnapshot,
 
     pub(super) material_quad_ops: u64,
     pub(super) material_sampled_quad_ops: u64,

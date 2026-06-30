@@ -23,6 +23,11 @@ Related:
 - New renderer-aware baselines should also carry payload contract fields:
   `renderer_instance_bytes` and `renderer_encode_scene_text_ops` in `measured_*`, `threshold_seed`, and `thresholds`
   when `threshold_surface` includes `ui-renderer-payload`, `renderer-payload`, `renderer`, or `all`.
+- Renderer diagnostics now also expose attribution-only geometry upload streams and scene encoding miss-reason histograms:
+  `renderer_geometry_upload_*_{bytes,write_count}` and `renderer_scene_encoding_cache_miss_*`. These are available in
+  `diag stats` top rows and as `top_renderer_*` fields in `diag perf` JSON/repeat summaries for U7 dirty-upload and
+  scene-chunk follow-up gates; they are not required in existing checked-in payload baselines until a baseline is
+  intentionally re-seeded with a new policy.
 - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
   enforces those payload fields for renderer-aware threshold surfaces; missing payload measurements, threshold seeds,
   or hard thresholds are contract failures.

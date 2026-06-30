@@ -2293,6 +2293,104 @@
       "unit": "id"
     },
     {
+      "key": "renderer_geometry_upload_path_paint_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_path_paint_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_path_vertex_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_path_vertex_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_quad_instance_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_quad_instance_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_text_glyph_instance_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_text_glyph_instance_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_text_paint_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_text_paint_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_text_vertex_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_text_vertex_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_viewport_vertex_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_viewport_vertex_write_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_image_upload_bytes",
       "kind": "counter",
       "scope": "frame",
@@ -2588,6 +2686,104 @@
     },
     {
       "key": "renderer_scene_encoding_cache_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_cold_start",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_custom_effects_generation_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_format_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_images_generation_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_material_distinct_budget_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_material_paint_budget_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_materials_generation_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_render_targets_generation_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_scale_factor_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_scene_ops_len_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_text_atlas_revision_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_text_quality_key_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_encoding_cache_miss_viewport_size_changed",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",

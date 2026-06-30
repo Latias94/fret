@@ -50,7 +50,67 @@ pub(super) fn record_scene_encoding_cache_frame_result(
             frame_perf.scene_encoding_cache_misses =
                 frame_perf.scene_encoding_cache_misses.saturating_add(1);
             frame_perf.scene_encoding_cache_last_miss_reasons = miss_reasons;
+            record_scene_encoding_cache_miss_histogram(
+                &mut frame_perf.scene_encoding_cache_miss_histogram,
+                miss_reasons,
+            );
         }
+    }
+}
+
+fn record_scene_encoding_cache_miss_histogram(
+    histogram: &mut SceneEncodingCacheMissHistogramSnapshot,
+    reasons: u64,
+) {
+    if (reasons & SCENE_ENCODING_CACHE_MISS_COLD_START) != 0 {
+        histogram.cold_start = histogram.cold_start.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_FORMAT_CHANGED) != 0 {
+        histogram.format_changed = histogram.format_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_VIEWPORT_SIZE_CHANGED) != 0 {
+        histogram.viewport_size_changed = histogram.viewport_size_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_SCALE_FACTOR_CHANGED) != 0 {
+        histogram.scale_factor_changed = histogram.scale_factor_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_SCENE_FINGERPRINT_CHANGED) != 0 {
+        histogram.scene_fingerprint_changed = histogram.scene_fingerprint_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_SCENE_OPS_LEN_CHANGED) != 0 {
+        histogram.scene_ops_len_changed = histogram.scene_ops_len_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_RENDER_TARGETS_GENERATION_CHANGED) != 0 {
+        histogram.render_targets_generation_changed = histogram
+            .render_targets_generation_changed
+            .saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_IMAGES_GENERATION_CHANGED) != 0 {
+        histogram.images_generation_changed = histogram.images_generation_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_ATLAS_REVISION_CHANGED) != 0 {
+        histogram.text_atlas_revision_changed =
+            histogram.text_atlas_revision_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_QUALITY_KEY_CHANGED) != 0 {
+        histogram.text_quality_key_changed = histogram.text_quality_key_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_MATERIALS_GENERATION_CHANGED) != 0 {
+        histogram.materials_generation_changed =
+            histogram.materials_generation_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_MATERIAL_PAINT_BUDGET_CHANGED) != 0 {
+        histogram.material_paint_budget_changed =
+            histogram.material_paint_budget_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_MATERIAL_DISTINCT_BUDGET_CHANGED) != 0 {
+        histogram.material_distinct_budget_changed =
+            histogram.material_distinct_budget_changed.saturating_add(1);
+    }
+    if (reasons & SCENE_ENCODING_CACHE_MISS_CUSTOM_EFFECTS_GENERATION_CHANGED) != 0 {
+        histogram.custom_effects_generation_changed = histogram
+            .custom_effects_generation_changed
+            .saturating_add(1);
     }
 }
 
@@ -253,6 +313,35 @@ mod tests {
         assert_eq!(
             perf.scene_encoding_cache_last_miss_reasons,
             SCENE_ENCODING_CACHE_MISS_TEXT_QUALITY_KEY_CHANGED
+        );
+        assert_eq!(
+            perf.scene_encoding_cache_miss_histogram
+                .text_quality_key_changed,
+            1
+        );
+
+        let mut next = base;
+        next.scene_fingerprint = 9;
+        next.scene_ops_len = 3;
+        record_scene_encoding_cache_frame_result(
+            Some(base),
+            next,
+            false,
+            true,
+            false,
+            &tracing::Span::none(),
+            &mut perf,
+        );
+        assert_eq!(perf.scene_encoding_cache_misses, 2);
+        assert_eq!(
+            perf.scene_encoding_cache_miss_histogram
+                .scene_fingerprint_changed,
+            1
+        );
+        assert_eq!(
+            perf.scene_encoding_cache_miss_histogram
+                .scene_ops_len_changed,
+            1
         );
     }
 }

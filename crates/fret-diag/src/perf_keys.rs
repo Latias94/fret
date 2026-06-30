@@ -1571,6 +1571,62 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     ),
     count_key("renderer_draw_calls", PerfKeyAggregate::Max),
     id_key("renderer_frame_id"),
+    byte_key(
+        "renderer_geometry_upload_path_paint_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_path_paint_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_path_vertex_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_path_vertex_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_quad_instance_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_quad_instance_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_text_glyph_instance_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_text_glyph_instance_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_text_paint_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_text_paint_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_text_vertex_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_text_vertex_write_count",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
+        "renderer_geometry_upload_viewport_vertex_bytes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_viewport_vertex_write_count",
+        PerfKeyAggregate::Max,
+    ),
     byte_key("renderer_image_upload_bytes", PerfKeyAggregate::Max),
     byte_key("renderer_intermediate_budget_bytes", PerfKeyAggregate::Max),
     byte_key(
@@ -1711,6 +1767,62 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     ),
     count_key(
         "renderer_scene_encoding_cache_misses",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_cold_start",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_custom_effects_generation_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_format_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_images_generation_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_material_distinct_budget_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_material_paint_budget_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_materials_generation_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_render_targets_generation_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_scale_factor_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_scene_ops_len_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_text_atlas_revision_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_text_quality_key_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_encoding_cache_miss_viewport_size_changed",
         PerfKeyAggregate::Max,
     ),
     count_key("renderer_scissor_sets", PerfKeyAggregate::Max),
@@ -2350,6 +2462,9 @@ mod tests {
             "renderer_prepare_text_us",
             "renderer_prepare_svg_us",
             "renderer_instance_bytes",
+            "renderer_geometry_upload_quad_instance_bytes",
+            "renderer_geometry_upload_text_vertex_write_count",
+            "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
             "renderer_encode_scene_text_ops",
             "renderer_render_target_updates_ingest_gpu_copy",
             "renderer_svg_mask_atlas_capacity_px",

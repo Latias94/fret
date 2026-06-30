@@ -114,6 +114,90 @@ pub(crate) fn push_perf_json_row(
     let top_renderer_uniform_bytes = top.map(|r| r.renderer_uniform_bytes).unwrap_or(0);
     let top_renderer_instance_bytes = top.map(|r| r.renderer_instance_bytes).unwrap_or(0);
     let top_renderer_vertex_bytes = top.map(|r| r.renderer_vertex_bytes).unwrap_or(0);
+    let top_renderer_geometry_upload_quad_instance_bytes = top
+        .map(|r| r.renderer_geometry_upload_quad_instance_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_quad_instance_write_count = top
+        .map(|r| r.renderer_geometry_upload_quad_instance_write_count)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_path_paint_bytes = top
+        .map(|r| r.renderer_geometry_upload_path_paint_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_path_paint_write_count = top
+        .map(|r| r.renderer_geometry_upload_path_paint_write_count)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_text_paint_bytes = top
+        .map(|r| r.renderer_geometry_upload_text_paint_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_text_paint_write_count = top
+        .map(|r| r.renderer_geometry_upload_text_paint_write_count)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_viewport_vertex_bytes = top
+        .map(|r| r.renderer_geometry_upload_viewport_vertex_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_viewport_vertex_write_count = top
+        .map(|r| r.renderer_geometry_upload_viewport_vertex_write_count)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_text_glyph_instance_bytes = top
+        .map(|r| r.renderer_geometry_upload_text_glyph_instance_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_text_glyph_instance_write_count = top
+        .map(|r| r.renderer_geometry_upload_text_glyph_instance_write_count)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_text_vertex_bytes = top
+        .map(|r| r.renderer_geometry_upload_text_vertex_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_text_vertex_write_count = top
+        .map(|r| r.renderer_geometry_upload_text_vertex_write_count)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_path_vertex_bytes = top
+        .map(|r| r.renderer_geometry_upload_path_vertex_bytes)
+        .unwrap_or(0);
+    let top_renderer_geometry_upload_path_vertex_write_count = top
+        .map(|r| r.renderer_geometry_upload_path_vertex_write_count)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_cold_start = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_cold_start)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_format_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_format_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_viewport_size_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_viewport_size_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_scale_factor_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_scale_factor_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_scene_fingerprint_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_scene_fingerprint_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_scene_ops_len_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_scene_ops_len_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_render_targets_generation_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_render_targets_generation_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_images_generation_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_images_generation_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_text_atlas_revision_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_text_atlas_revision_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_text_quality_key_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_text_quality_key_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_materials_generation_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_materials_generation_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_material_paint_budget_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_material_paint_budget_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_material_distinct_budget_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_material_distinct_budget_changed)
+        .unwrap_or(0);
+    let top_renderer_scene_encoding_cache_miss_custom_effects_generation_changed = top
+        .map(|r| r.renderer_scene_encoding_cache_miss_custom_effects_generation_changed)
+        .unwrap_or(0);
     let top_renderer_encode_scene_text_ops =
         top.map(|r| r.renderer_encode_scene_text_ops).unwrap_or(0);
     let top_renderer_svg_raster_cache_misses =
@@ -257,6 +341,34 @@ pub(crate) fn push_perf_json_row(
         "top_renderer_uniform_bytes": top_renderer_uniform_bytes,
         "top_renderer_instance_bytes": top_renderer_instance_bytes,
         "top_renderer_vertex_bytes": top_renderer_vertex_bytes,
+        "top_renderer_geometry_upload_quad_instance_bytes": top_renderer_geometry_upload_quad_instance_bytes,
+        "top_renderer_geometry_upload_quad_instance_write_count": top_renderer_geometry_upload_quad_instance_write_count,
+        "top_renderer_geometry_upload_path_paint_bytes": top_renderer_geometry_upload_path_paint_bytes,
+        "top_renderer_geometry_upload_path_paint_write_count": top_renderer_geometry_upload_path_paint_write_count,
+        "top_renderer_geometry_upload_text_paint_bytes": top_renderer_geometry_upload_text_paint_bytes,
+        "top_renderer_geometry_upload_text_paint_write_count": top_renderer_geometry_upload_text_paint_write_count,
+        "top_renderer_geometry_upload_viewport_vertex_bytes": top_renderer_geometry_upload_viewport_vertex_bytes,
+        "top_renderer_geometry_upload_viewport_vertex_write_count": top_renderer_geometry_upload_viewport_vertex_write_count,
+        "top_renderer_geometry_upload_text_glyph_instance_bytes": top_renderer_geometry_upload_text_glyph_instance_bytes,
+        "top_renderer_geometry_upload_text_glyph_instance_write_count": top_renderer_geometry_upload_text_glyph_instance_write_count,
+        "top_renderer_geometry_upload_text_vertex_bytes": top_renderer_geometry_upload_text_vertex_bytes,
+        "top_renderer_geometry_upload_text_vertex_write_count": top_renderer_geometry_upload_text_vertex_write_count,
+        "top_renderer_geometry_upload_path_vertex_bytes": top_renderer_geometry_upload_path_vertex_bytes,
+        "top_renderer_geometry_upload_path_vertex_write_count": top_renderer_geometry_upload_path_vertex_write_count,
+        "top_renderer_scene_encoding_cache_miss_cold_start": top_renderer_scene_encoding_cache_miss_cold_start,
+        "top_renderer_scene_encoding_cache_miss_format_changed": top_renderer_scene_encoding_cache_miss_format_changed,
+        "top_renderer_scene_encoding_cache_miss_viewport_size_changed": top_renderer_scene_encoding_cache_miss_viewport_size_changed,
+        "top_renderer_scene_encoding_cache_miss_scale_factor_changed": top_renderer_scene_encoding_cache_miss_scale_factor_changed,
+        "top_renderer_scene_encoding_cache_miss_scene_fingerprint_changed": top_renderer_scene_encoding_cache_miss_scene_fingerprint_changed,
+        "top_renderer_scene_encoding_cache_miss_scene_ops_len_changed": top_renderer_scene_encoding_cache_miss_scene_ops_len_changed,
+        "top_renderer_scene_encoding_cache_miss_render_targets_generation_changed": top_renderer_scene_encoding_cache_miss_render_targets_generation_changed,
+        "top_renderer_scene_encoding_cache_miss_images_generation_changed": top_renderer_scene_encoding_cache_miss_images_generation_changed,
+        "top_renderer_scene_encoding_cache_miss_text_atlas_revision_changed": top_renderer_scene_encoding_cache_miss_text_atlas_revision_changed,
+        "top_renderer_scene_encoding_cache_miss_text_quality_key_changed": top_renderer_scene_encoding_cache_miss_text_quality_key_changed,
+        "top_renderer_scene_encoding_cache_miss_materials_generation_changed": top_renderer_scene_encoding_cache_miss_materials_generation_changed,
+        "top_renderer_scene_encoding_cache_miss_material_paint_budget_changed": top_renderer_scene_encoding_cache_miss_material_paint_budget_changed,
+        "top_renderer_scene_encoding_cache_miss_material_distinct_budget_changed": top_renderer_scene_encoding_cache_miss_material_distinct_budget_changed,
+        "top_renderer_scene_encoding_cache_miss_custom_effects_generation_changed": top_renderer_scene_encoding_cache_miss_custom_effects_generation_changed,
         "top_renderer_encode_scene_text_ops": top_renderer_encode_scene_text_ops,
         "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
         "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
@@ -295,6 +407,12 @@ mod tests {
         let mut report = BundleStatsReport::default();
         report.top.push(BundleStatsSnapshotRow {
             total_time_us: 100,
+            renderer_geometry_upload_quad_instance_bytes: 128,
+            renderer_geometry_upload_quad_instance_write_count: 1,
+            renderer_geometry_upload_text_vertex_bytes: 256,
+            renderer_geometry_upload_text_vertex_write_count: 2,
+            renderer_scene_encoding_cache_miss_scene_fingerprint_changed: 3,
+            renderer_scene_encoding_cache_miss_text_quality_key_changed: 1,
             code_editor_paint_perf: Some(BundleStatsCodeEditorPaintPerf {
                 rows_painted: 20,
                 rows_scene_replayed: 15,
@@ -343,5 +461,29 @@ mod tests {
         );
         assert_eq!(rows[0]["top_code_editor_torture_autoscroll_us"], 5);
         assert_eq!(rows[0]["top_code_editor_torture_overlay_us"], 23);
+        assert_eq!(
+            rows[0]["top_renderer_geometry_upload_quad_instance_bytes"],
+            128
+        );
+        assert_eq!(
+            rows[0]["top_renderer_geometry_upload_quad_instance_write_count"],
+            1
+        );
+        assert_eq!(
+            rows[0]["top_renderer_geometry_upload_text_vertex_bytes"],
+            256
+        );
+        assert_eq!(
+            rows[0]["top_renderer_geometry_upload_text_vertex_write_count"],
+            2
+        );
+        assert_eq!(
+            rows[0]["top_renderer_scene_encoding_cache_miss_scene_fingerprint_changed"],
+            3
+        );
+        assert_eq!(
+            rows[0]["top_renderer_scene_encoding_cache_miss_text_quality_key_changed"],
+            1
+        );
     }
 }

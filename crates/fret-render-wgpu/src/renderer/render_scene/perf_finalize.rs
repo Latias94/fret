@@ -415,6 +415,8 @@ impl Renderer {
             .instance_bytes
             .saturating_add(frame_perf.instance_bytes);
         perf.vertex_bytes = perf.vertex_bytes.saturating_add(frame_perf.vertex_bytes);
+        perf.geometry_upload
+            .saturating_add_assign(frame_perf.geometry_upload);
         perf.scene_encoding_cache_hits = perf
             .scene_encoding_cache_hits
             .saturating_add(frame_perf.scene_encoding_cache_hits);
@@ -425,6 +427,8 @@ impl Renderer {
             perf.scene_encoding_cache_last_miss_reasons =
                 frame_perf.scene_encoding_cache_last_miss_reasons;
         }
+        perf.scene_encoding_cache_miss_histogram
+            .saturating_add_assign(frame_perf.scene_encoding_cache_miss_histogram);
         perf.material_quad_ops = perf
             .material_quad_ops
             .saturating_add(frame_perf.material_quad_ops);
@@ -676,10 +680,12 @@ impl Renderer {
             uniform_bytes: frame_perf.uniform_bytes,
             instance_bytes: frame_perf.instance_bytes,
             vertex_bytes: frame_perf.vertex_bytes,
+            geometry_upload: frame_perf.geometry_upload,
             scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
             scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
             scene_encoding_cache_last_miss_reasons: frame_perf
                 .scene_encoding_cache_last_miss_reasons,
+            scene_encoding_cache_miss_histogram: frame_perf.scene_encoding_cache_miss_histogram,
             material_quad_ops: frame_perf.material_quad_ops,
             material_sampled_quad_ops: frame_perf.material_sampled_quad_ops,
             material_distinct: frame_perf.material_distinct,
