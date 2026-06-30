@@ -1406,7 +1406,11 @@ impl<H: UiHost> UiTree<H> {
                                             {
                                                 return Some(record.element);
                                             }
-                                            node = self.nodes.get(node).and_then(|n| n.parent)?;
+                                            node = pointer_chain_snapshot
+                                                .parent
+                                                .get(node)
+                                                .copied()
+                                                .flatten()?;
                                         }
                                     },
                                 );
