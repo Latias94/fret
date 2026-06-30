@@ -88,6 +88,14 @@ impl<T: crate::tree::BoundarySceneFragmentDebug> crate::tree::BoundarySceneFragm
     fn boundary_scene_fragment_entry_count(&self) -> usize {
         self.payload.boundary_scene_fragment_entry_count()
     }
+
+    fn boundary_scene_fragment_chunk_count(&self) -> usize {
+        usize::from(!self.chunk.is_empty())
+    }
+
+    fn boundary_scene_fragment_fingerprint(&self) -> u64 {
+        self.chunk.fingerprint()
+    }
 }
 
 /// Precomputed hosted resource references extracted from retained `SceneOp`s.
@@ -207,11 +215,13 @@ pub(crate) trait UiCanvasPrepaintHost {
     fn output_any(&self, ty: TypeId) -> Option<&dyn Any>;
     fn output_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
     fn set_scene_fragment_box(&mut self, ty: TypeId, value: Box<dyn Any>);
-    fn set_scene_fragment_box_with_entry_count(
+    fn set_scene_fragment_box_with_debug_counts(
         &mut self,
         ty: TypeId,
         value: Box<dyn Any>,
         entry_count: usize,
+        chunk_count: usize,
+        fingerprint: u64,
     );
     fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any>;
     fn scene_fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
@@ -280,15 +290,22 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
         self.cx.tree.set_scene_fragment_box(self.cx.node, ty, value);
     }
 
-    fn set_scene_fragment_box_with_entry_count(
+    fn set_scene_fragment_box_with_debug_counts(
         &mut self,
         ty: TypeId,
         value: Box<dyn Any>,
         entry_count: usize,
+        chunk_count: usize,
+        fingerprint: u64,
     ) {
-        self.cx
-            .tree
-            .set_scene_fragment_box_with_entry_count(self.cx.node, ty, value, entry_count);
+        self.cx.tree.set_scene_fragment_box_with_debug_counts(
+            self.cx.node,
+            ty,
+            value,
+            entry_count,
+            chunk_count,
+            fingerprint,
+        );
     }
 
     fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any> {
@@ -368,10 +385,14 @@ impl<'a> CanvasPrepaintCx<'a> {
         value: T,
     ) {
         let entry_count = value.boundary_scene_fragment_entry_count();
-        self.host.set_scene_fragment_box_with_entry_count(
+        let chunk_count = value.boundary_scene_fragment_chunk_count();
+        let fingerprint = value.boundary_scene_fragment_fingerprint();
+        self.host.set_scene_fragment_box_with_debug_counts(
             TypeId::of::<T>(),
             Box::new(value),
             entry_count,
+            chunk_count,
+            fingerprint,
         );
     }
 

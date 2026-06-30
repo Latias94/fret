@@ -227,14 +227,18 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         value: T,
     ) {
-        let entry_count = value.boundary_scene_fragment_entry_count();
+        let metadata = super::view_boundary::BoundaryTypedOutputDebugMetadata {
+            entry_count: value.boundary_scene_fragment_entry_count(),
+            chunk_count: value.boundary_scene_fragment_chunk_count(),
+            fingerprint: value.boundary_scene_fragment_fingerprint(),
+        };
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
         boundary
             .frame_products
             .scene_fragment
-            .set_fragment_with_entry_count(value, entry_count);
+            .set_fragment_with_debug_metadata(value, metadata);
     }
 
     pub(crate) fn set_scene_fragment_box(&mut self, node: NodeId, ty: TypeId, value: Box<dyn Any>) {
@@ -247,20 +251,27 @@ impl<H: UiHost> UiTree<H> {
             .set_fragment_box(ty, value);
     }
 
-    pub(crate) fn set_scene_fragment_box_with_entry_count(
+    pub(crate) fn set_scene_fragment_box_with_debug_counts(
         &mut self,
         node: NodeId,
         ty: TypeId,
         value: Box<dyn Any>,
         entry_count: usize,
+        chunk_count: usize,
+        fingerprint: u64,
     ) {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
+        let metadata = super::view_boundary::BoundaryTypedOutputDebugMetadata {
+            entry_count,
+            chunk_count,
+            fingerprint,
+        };
         boundary
             .frame_products
             .scene_fragment
-            .set_fragment_box_with_entry_count(ty, value, entry_count);
+            .set_fragment_box_with_debug_metadata(ty, value, metadata);
     }
 
     pub(crate) fn scene_fragment<T: Any>(&self, node: NodeId) -> Option<&T> {

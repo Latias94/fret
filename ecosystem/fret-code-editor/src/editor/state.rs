@@ -355,6 +355,28 @@ impl fret_ui::tree::BoundarySceneFragmentDebug for RowSceneReplayPlan {
     fn boundary_scene_fragment_entry_count(&self) -> usize {
         self.entries.len()
     }
+
+    fn boundary_scene_fragment_chunk_count(&self) -> usize {
+        self.entries
+            .iter()
+            .filter(|entry| !entry.retained.chunk.is_empty())
+            .count()
+    }
+
+    fn boundary_scene_fragment_fingerprint(&self) -> u64 {
+        const MIX: u64 = 0x9E37_79B9_7F4A_7C15;
+
+        self.entries
+            .iter()
+            .filter(|entry| !entry.retained.chunk.is_empty())
+            .fold(0, |fingerprint, entry| {
+                let row = entry.row as u64;
+                let chunk = entry.retained.chunk.fingerprint();
+                fingerprint
+                    .rotate_left(7)
+                    .wrapping_add(chunk ^ row.wrapping_mul(MIX))
+            })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

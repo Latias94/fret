@@ -29,6 +29,9 @@ state for prepaint-to-paint handoff.
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`
   - adds `debug.boundaries[].scene_fragment_owner`, `scene_fragment_slots`, and
     `scene_fragment_entries`.
+  - the U7 convergence slice extends those boundary diagnostics with `scene_fragment_chunks` and
+    `scene_fragment_fingerprint` so retained chunks can be tracked before renderer chunk encoding
+    reuse replaces the flat `Scene` bridge.
 - `ecosystem/fret-code-editor/src/editor/state.rs`
   - splits row-scene replay payload from the runtime fragment carrier.
 - `ecosystem/fret-code-editor/src/editor/mod.rs`

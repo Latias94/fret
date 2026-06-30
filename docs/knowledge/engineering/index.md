@@ -17,4 +17,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [UI framework audit findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
 - [U7 renderer scene/upload observability](progress/2026-07-01-u7-renderer-scene-upload-observability.md)
 - [U7 scene chunk compatibility bridge](progress/2026-07-01-u7-scene-chunk-compatibility-bridge.md)
+- [U7 boundary scene chunk diagnostics](progress/2026-07-01-u7-boundary-scene-chunk-diagnostics.md)
 - [Log](log.md)

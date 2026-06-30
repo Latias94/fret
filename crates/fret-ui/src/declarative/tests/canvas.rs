@@ -417,6 +417,8 @@ fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
     );
     assert_eq!(boundary.scene_fragment_slots, 1);
     assert_eq!(boundary.scene_fragment_entries, 1);
+    assert_eq!(boundary.scene_fragment_chunks, 0);
+    assert_eq!(boundary.scene_fragment_fingerprint, 0);
     assert_eq!(boundary.scene_fragment_used_entries, 1);
     assert_eq!(boundary.scene_fragment_rejected_entries, 0);
     assert_eq!(boundary.scene_fragment_reject_reason, None);
@@ -455,6 +457,8 @@ fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
         .expect("expected canvas boundary stats after repaint");
     assert_eq!(boundary.scene_fragment_slots, 1);
     assert_eq!(boundary.scene_fragment_entries, 2);
+    assert_eq!(boundary.scene_fragment_chunks, 0);
+    assert_eq!(boundary.scene_fragment_fingerprint, 0);
     assert_eq!(boundary.scene_fragment_used_entries, 2);
     assert_eq!(boundary.scene_fragment_rejected_entries, 0);
 
@@ -555,6 +559,13 @@ fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
             .any(|op| matches!(op, SceneOp::Text { .. })),
         "paint should replay the prepaint-prepared text op"
     );
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|boundary| boundary.scene_fragment_entries == 1)
+        .expect("expected text scene fragment boundary stats");
+    assert_eq!(boundary.scene_fragment_chunks, 1);
+    assert_ne!(boundary.scene_fragment_fingerprint, 0);
 }
 
 #[test]

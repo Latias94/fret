@@ -3311,6 +3311,8 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
                                     "scene_fragment_owner": "view_boundary_scene_fragment_state",
                                     "scene_fragment_slots": 1,
                                     "scene_fragment_entries": 0,
+                                    "scene_fragment_chunks": 2,
+                                    "scene_fragment_fingerprint": 57005,
                                     "scene_fragment_used_entries": 0,
                                     "scene_fragment_rejected_entries": 0,
                                     "build_outcome": "rebuilt",

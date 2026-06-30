@@ -25,6 +25,8 @@ pub struct UiDebugBoundaryStats {
     pub scene_fragment_owner: &'static str,
     pub scene_fragment_slots: usize,
     pub scene_fragment_entries: usize,
+    pub scene_fragment_chunks: usize,
+    pub scene_fragment_fingerprint: u64,
     pub scene_fragment_used_entries: usize,
     pub scene_fragment_rejected_entries: usize,
     pub scene_fragment_reject_reason: Option<&'static str>,

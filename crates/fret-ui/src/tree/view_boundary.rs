@@ -5,6 +5,14 @@ use std::sync::Arc;
 
 pub trait BoundarySceneFragmentDebug: Any {
     fn boundary_scene_fragment_entry_count(&self) -> usize;
+
+    fn boundary_scene_fragment_chunk_count(&self) -> usize {
+        0
+    }
+
+    fn boundary_scene_fragment_fingerprint(&self) -> u64 {
+        0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -384,18 +392,22 @@ impl BoundarySceneFragmentState {
         self.outputs.set_box(ty, value);
     }
 
-    pub(super) fn set_fragment_with_entry_count<T: Any>(&mut self, value: T, entry_count: usize) {
-        self.outputs.set_with_entry_count(value, entry_count);
+    pub(super) fn set_fragment_with_debug_metadata<T: Any>(
+        &mut self,
+        value: T,
+        metadata: BoundaryTypedOutputDebugMetadata,
+    ) {
+        self.outputs.set_with_debug_metadata(value, metadata);
     }
 
-    pub(super) fn set_fragment_box_with_entry_count(
+    pub(super) fn set_fragment_box_with_debug_metadata(
         &mut self,
         ty: TypeId,
         value: Box<dyn Any>,
-        entry_count: usize,
+        metadata: BoundaryTypedOutputDebugMetadata,
     ) {
         self.outputs
-            .set_box_with_entry_count(ty, value, entry_count);
+            .set_box_with_debug_metadata(ty, value, metadata);
     }
 
     pub(super) fn fragment<T: Any>(&self) -> Option<&T> {
@@ -420,6 +432,14 @@ impl BoundarySceneFragmentState {
 
     pub(super) fn entry_count(&self) -> usize {
         self.outputs.entry_count()
+    }
+
+    pub(super) fn chunk_count(&self) -> usize {
+        self.outputs.chunk_count()
+    }
+
+    pub(super) fn fingerprint(&self) -> u64 {
+        self.outputs.fingerprint()
     }
 
     pub(super) fn record_used_entries(&mut self, count: usize) {
@@ -447,7 +467,14 @@ impl BoundarySceneFragmentState {
 #[derive(Default)]
 struct BoundaryTypedOutputs {
     key: Option<PaintCacheKey>,
-    values: Vec<(TypeId, Box<dyn Any>, usize)>,
+    values: Vec<(TypeId, Box<dyn Any>, BoundaryTypedOutputDebugMetadata)>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(in crate::tree) struct BoundaryTypedOutputDebugMetadata {
+    pub(in crate::tree) entry_count: usize,
+    pub(in crate::tree) chunk_count: usize,
+    pub(in crate::tree) fingerprint: u64,
 }
 
 impl BoundaryTypedOutputs {
@@ -466,22 +493,31 @@ impl BoundaryTypedOutputs {
     }
 
     fn set_box(&mut self, ty: TypeId, value: Box<dyn Any>) {
-        self.set_box_with_entry_count(ty, value, 0);
+        self.set_box_with_debug_metadata(ty, value, BoundaryTypedOutputDebugMetadata::default());
     }
 
-    fn set_with_entry_count<T: Any>(&mut self, value: T, entry_count: usize) {
-        self.set_box_with_entry_count(TypeId::of::<T>(), Box::new(value), entry_count);
+    fn set_with_debug_metadata<T: Any>(
+        &mut self,
+        value: T,
+        metadata: BoundaryTypedOutputDebugMetadata,
+    ) {
+        self.set_box_with_debug_metadata(TypeId::of::<T>(), Box::new(value), metadata);
     }
 
-    fn set_box_with_entry_count(&mut self, ty: TypeId, value: Box<dyn Any>, entry_count: usize) {
-        if let Some((_, existing, existing_entry_count)) =
+    fn set_box_with_debug_metadata(
+        &mut self,
+        ty: TypeId,
+        value: Box<dyn Any>,
+        metadata: BoundaryTypedOutputDebugMetadata,
+    ) {
+        if let Some((_, existing, existing_metadata)) =
             self.values.iter_mut().find(|(id, _, _)| *id == ty)
         {
             *existing = value;
-            *existing_entry_count = entry_count;
+            *existing_metadata = metadata;
             return;
         }
-        self.values.push((ty, value, entry_count));
+        self.values.push((ty, value, metadata));
     }
 
     fn get<T: Any>(&self) -> Option<&T> {
@@ -515,8 +551,21 @@ impl BoundaryTypedOutputs {
     fn entry_count(&self) -> usize {
         self.values
             .iter()
-            .map(|(_, _, entry_count)| *entry_count)
+            .map(|(_, _, metadata)| metadata.entry_count)
             .sum()
+    }
+
+    fn chunk_count(&self) -> usize {
+        self.values
+            .iter()
+            .map(|(_, _, metadata)| metadata.chunk_count)
+            .sum()
+    }
+
+    fn fingerprint(&self) -> u64 {
+        self.values.iter().fold(0, |fingerprint, (_, _, metadata)| {
+            fingerprint ^ metadata.fingerprint
+        })
     }
 }
 
@@ -771,6 +820,8 @@ impl<H: UiHost> UiTree<H> {
                 },
                 scene_fragment_slots: state.frame_products.scene_fragment.slot_count(),
                 scene_fragment_entries: state.frame_products.scene_fragment.entry_count(),
+                scene_fragment_chunks: state.frame_products.scene_fragment.chunk_count(),
+                scene_fragment_fingerprint: state.frame_products.scene_fragment.fingerprint(),
                 scene_fragment_used_entries: state.frame_products.scene_fragment.used_entries(),
                 scene_fragment_rejected_entries: state
                     .frame_products
@@ -1050,7 +1101,14 @@ mod boundary_frame_products_tests {
         state
             .frame_products
             .scene_fragment
-            .set_fragment_with_entry_count("fragment", 3);
+            .set_fragment_with_debug_metadata(
+                "fragment",
+                BoundaryTypedOutputDebugMetadata {
+                    entry_count: 3,
+                    chunk_count: 2,
+                    fingerprint: 0xF00D,
+                },
+            );
         state.frame_products.scene_fragment.record_used_entries(2);
         state
             .frame_products
@@ -1061,6 +1119,8 @@ mod boundary_frame_products_tests {
             Some(&"fragment")
         );
         assert_eq!(state.frame_products.scene_fragment.entry_count(), 3);
+        assert_eq!(state.frame_products.scene_fragment.chunk_count(), 2);
+        assert_eq!(state.frame_products.scene_fragment.fingerprint(), 0xF00D);
         assert_eq!(state.frame_products.scene_fragment.used_entries(), 2);
         assert_eq!(state.frame_products.scene_fragment.rejected_entries(), 1);
         assert_eq!(

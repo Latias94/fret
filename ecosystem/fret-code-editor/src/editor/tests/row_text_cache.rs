@@ -302,6 +302,63 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     assert_eq!(reason, None);
 }
 
+#[test]
+fn row_scene_replay_plan_reports_scene_chunk_debug_metadata() {
+    use fret_ui::tree::BoundarySceneFragmentDebug;
+
+    let empty = RowSceneReplayPlan {
+        frame_seq: 9,
+        entries: std::collections::VecDeque::from([RowSceneReplayPlanEntry {
+            row: 0,
+            retained: test_retained_row_scene_fragment(0),
+            local_bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(16.0))),
+        }]),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
+    };
+    assert_eq!(empty.boundary_scene_fragment_entry_count(), 1);
+    assert_eq!(empty.boundary_scene_fragment_chunk_count(), 0);
+    assert_eq!(empty.boundary_scene_fragment_fingerprint(), 0);
+
+    let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(16.0)));
+    let fg = Color {
+        r: 0.2,
+        g: 0.8,
+        b: 0.3,
+        a: 1.0,
+    };
+    let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Quad {
+        order: DrawOrder(2),
+        rect,
+        background: fret_core::Paint::Solid(fg).into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    }]));
+    let chunk_fingerprint = chunk.fingerprint();
+    let mut retained = (*test_retained_row_scene_fragment(1)).clone();
+    retained.chunk = chunk;
+    let plan = RowSceneReplayPlan {
+        frame_seq: 9,
+        entries: std::collections::VecDeque::from([RowSceneReplayPlanEntry {
+            row: 1,
+            retained: Arc::new(retained),
+            local_bounds: rect,
+        }]),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
+    };
+
+    assert_eq!(plan.boundary_scene_fragment_entry_count(), 1);
+    assert_eq!(plan.boundary_scene_fragment_chunk_count(), 1);
+    assert_ne!(plan.boundary_scene_fragment_fingerprint(), 0);
+    assert_ne!(
+        plan.boundary_scene_fragment_fingerprint(),
+        chunk_fingerprint,
+        "row-scene diagnostics include row identity, not only chunk bytes"
+    );
+}
+
 #[cfg(feature = "syntax-rust")]
 #[test]
 fn prepaint_row_scene_replay_plan_aggregates_hosted_resources_once() {

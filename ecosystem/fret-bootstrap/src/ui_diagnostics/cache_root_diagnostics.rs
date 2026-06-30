@@ -73,6 +73,10 @@ pub struct UiBoundaryDiagnosticsV1 {
     pub scene_fragment_owner: String,
     pub scene_fragment_slots: usize,
     pub scene_fragment_entries: usize,
+    #[serde(default)]
+    pub scene_fragment_chunks: usize,
+    #[serde(default)]
+    pub scene_fragment_fingerprint: u64,
     pub scene_fragment_used_entries: usize,
     pub scene_fragment_rejected_entries: usize,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -124,6 +128,8 @@ impl UiBoundaryDiagnosticsV1 {
             scene_fragment_owner: boundary.scene_fragment_owner.to_string(),
             scene_fragment_slots: boundary.scene_fragment_slots,
             scene_fragment_entries: boundary.scene_fragment_entries,
+            scene_fragment_chunks: boundary.scene_fragment_chunks,
+            scene_fragment_fingerprint: boundary.scene_fragment_fingerprint,
             scene_fragment_used_entries: boundary.scene_fragment_used_entries,
             scene_fragment_rejected_entries: boundary.scene_fragment_rejected_entries,
             scene_fragment_reject_reason: boundary
@@ -476,6 +482,8 @@ mod cache_root_boundary_tests {
             scene_fragment_owner: "view_boundary_scene_fragment_state",
             scene_fragment_slots: 1,
             scene_fragment_entries: 7,
+            scene_fragment_chunks: 3,
+            scene_fragment_fingerprint: 0xCAFE_BABE,
             scene_fragment_used_entries: 5,
             scene_fragment_rejected_entries: 2,
             scene_fragment_reject_reason: Some("rect_mismatch"),
@@ -535,6 +543,8 @@ mod cache_root_boundary_tests {
         );
         assert_eq!(boundary.scene_fragment_slots, 1);
         assert_eq!(boundary.scene_fragment_entries, 7);
+        assert_eq!(boundary.scene_fragment_chunks, 3);
+        assert_eq!(boundary.scene_fragment_fingerprint, 0xCAFE_BABE);
         assert_eq!(boundary.scene_fragment_used_entries, 5);
         assert_eq!(boundary.scene_fragment_rejected_entries, 2);
         assert_eq!(
