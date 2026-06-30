@@ -105,7 +105,7 @@ fn collect_live_retained_keep_alive_roots<H: UiHost>(
 }
 
 fn element_resolves_live_attached_node<H: UiHost>(
-    ui: &UiTree<H>,
+    ui: &mut UiTree<H>,
     window_state: &crate::elements::WindowElementState,
     element: GlobalElementId,
 ) -> bool {
@@ -115,7 +115,7 @@ fn element_resolves_live_attached_node<H: UiHost>(
 }
 
 fn collect_keep_alive_view_cache_elements_in_place<H: UiHost>(
-    ui: &UiTree<H>,
+    ui: &mut UiTree<H>,
     window_state: &crate::elements::WindowElementState,
     out: &mut HashSet<GlobalElementId>,
     visited_roots: &mut HashSet<GlobalElementId>,
@@ -623,7 +623,8 @@ where
             // inconsistencies before applying invalidations that may need to propagate across cache-root
             // boundaries.
             if ui.view_cache_enabled() {
-                let _ = ui.repair_parent_pointers_from_layer_roots();
+                let repaired = ui.repair_parent_pointers_from_layer_roots();
+                ui.debug_record_parent_pointer_repair(repaired);
             }
 
             apply_pending_invalidations(ui, &mut pending_invalidations);
@@ -779,6 +780,9 @@ where
                         }
                     }
                 }
+                ui.debug_record_gc_view_cache_reachability_nodes(
+                    reachable_from_view_cache_roots.len().min(u64::MAX as usize) as u64,
+                );
                 reachable_from_view_cache_roots_active = true;
             }
             window_state.retain_nodes(|id, entry| {
@@ -818,6 +822,9 @@ where
                             )
                         }
                     });
+                    ui.debug_record_gc_layer_reachability_nodes(
+                        reachable_from_layers.len().min(u64::MAX as usize) as u64,
+                    );
                     reachable_from_layers_computed = true;
                     decision = gc_node_retention_decision(
                         *id,
@@ -845,6 +852,7 @@ where
                 false
             });
 
+            ui.debug_record_gc_stale_candidates(stale.len().min(u32::MAX as usize) as u32);
             for record in &stale {
                 window_state.forget_view_cache_subtree_elements(record.element);
             }
@@ -930,6 +938,7 @@ where
                 }
 
                 let removed = ui.remove_subtree(services, node);
+                ui.debug_record_gc_stale_removed(removed.len().min(u32::MAX as usize) as u32);
                 app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                     let window_frame = frame.windows.entry(window).or_default();
                     let any_removed = !removed.is_empty();
@@ -1145,7 +1154,8 @@ where
             });
 
             if ui.view_cache_enabled() {
-                let _ = ui.repair_parent_pointers_from_layer_roots();
+                let repaired = ui.repair_parent_pointers_from_layer_roots();
+                ui.debug_record_parent_pointer_repair(repaired);
             }
 
             apply_pending_invalidations(ui, &mut pending_invalidations);
@@ -1266,6 +1276,9 @@ where
                     }
                 }
 
+                ui.debug_record_gc_view_cache_reachability_nodes(
+                    reachable_from_view_cache_roots.len().min(u64::MAX as usize) as u64,
+                );
                 reachable_from_view_cache_roots_active = true;
             }
             window_state.retain_nodes(|id, entry| {
@@ -1305,6 +1318,9 @@ where
                             )
                         }
                     });
+                    ui.debug_record_gc_layer_reachability_nodes(
+                        reachable_from_layers.len().min(u64::MAX as usize) as u64,
+                    );
                     reachable_from_layers_computed = true;
                     decision = gc_node_retention_decision(
                         *id,
@@ -1332,6 +1348,7 @@ where
                 false
             });
 
+            ui.debug_record_gc_stale_candidates(stale.len().min(u32::MAX as usize) as u32);
             for record in &stale {
                 window_state.forget_view_cache_subtree_elements(record.element);
             }
@@ -1417,6 +1434,7 @@ where
                 }
 
                 let removed = ui.remove_subtree(services, node);
+                ui.debug_record_gc_stale_removed(removed.len().min(u32::MAX as usize) as u32);
                 app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                     let window_frame = frame.windows.entry(window).or_default();
                     let any_removed = !removed.is_empty();
@@ -3625,7 +3643,7 @@ mod tests {
         let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
         let mut stack: Vec<GlobalElementId> = Vec::new();
         collect_keep_alive_view_cache_elements_in_place(
-            &ui,
+            &mut ui,
             &window_state,
             &mut keep_alive_view_cache_elements,
             &mut visited_roots,

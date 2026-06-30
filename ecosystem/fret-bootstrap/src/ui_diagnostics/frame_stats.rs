@@ -11,6 +11,18 @@ pub struct UiFrameStatsV1 {
     pub element_children_vec_pool_misses: u32,
     #[serde(default)]
     pub element_children_vec_pool_grow_events: u32,
+    #[serde(default)]
+    pub identity_resolve_seeded_hits: u32,
+    #[serde(default)]
+    pub identity_resolve_seeded_stale: u32,
+    #[serde(default)]
+    pub identity_resolve_fallback_scans: u32,
+    #[serde(default)]
+    pub identity_resolve_fallback_scan_nodes: u64,
+    #[serde(default)]
+    pub identity_resolve_fallback_hits: u32,
+    #[serde(default)]
+    pub identity_resolve_fallback_misses: u32,
     /// UI thread CPU time spent since the previous snapshot (approx frame CPU time).
     ///
     /// This is intended to distinguish "real work" from schedule noise: if wall time spikes but
@@ -314,6 +326,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub dispatch_post_dispatch_snapshot_time_us: u64,
     #[serde(default)]
+    pub dispatch_snapshot_cache_hits: u32,
+    #[serde(default)]
+    pub dispatch_snapshot_cache_misses: u32,
+    #[serde(default)]
+    pub dispatch_snapshot_builds: u32,
+    #[serde(default)]
+    pub dispatch_snapshot_built_nodes: u64,
+    #[serde(default)]
+    pub dispatch_snapshot_cache_invalidations: u32,
+    #[serde(default)]
     pub window_runtime_snapshot_focus_repair_time_us: u64,
     #[serde(default)]
     pub window_runtime_snapshot_input_context_time_us: u64,
@@ -373,6 +395,18 @@ pub struct UiFrameStatsV1 {
     pub layout_fast_path_taken: bool,
     #[serde(default)]
     pub layout_invalidations_count: u32,
+    #[serde(default)]
+    pub parent_pointer_repair_passes: u32,
+    #[serde(default)]
+    pub parent_pointer_repairs: u32,
+    #[serde(default)]
+    pub gc_reachability_layer_nodes: u64,
+    #[serde(default)]
+    pub gc_reachability_view_cache_nodes: u64,
+    #[serde(default)]
+    pub gc_stale_candidates: u32,
+    #[serde(default)]
+    pub gc_stale_removed: u32,
     #[serde(default)]
     pub model_change_invalidation_roots: u32,
     #[serde(default)]
@@ -905,6 +939,12 @@ impl UiFrameStatsV1 {
             element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
             element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
             element_children_vec_pool_grow_events: stats.element_children_vec_pool_grow_events,
+            identity_resolve_seeded_hits: stats.identity_resolve_seeded_hits,
+            identity_resolve_seeded_stale: stats.identity_resolve_seeded_stale,
+            identity_resolve_fallback_scans: stats.identity_resolve_fallback_scans,
+            identity_resolve_fallback_scan_nodes: stats.identity_resolve_fallback_scan_nodes,
+            identity_resolve_fallback_hits: stats.identity_resolve_fallback_hits,
+            identity_resolve_fallback_misses: stats.identity_resolve_fallback_misses,
             ui_thread_cpu_time_us: cpu.delta_time_us,
             ui_thread_cpu_total_time_us: cpu.total_time_us,
             ui_thread_cpu_cycle_time_delta_cycles: cpu.delta_cycles,
@@ -1183,6 +1223,11 @@ impl UiFrameStatsV1 {
             dispatch_post_dispatch_snapshot_time_us: stats
                 .dispatch_post_dispatch_snapshot_time
                 .as_micros() as u64,
+            dispatch_snapshot_cache_hits: stats.dispatch_snapshot_cache_hits,
+            dispatch_snapshot_cache_misses: stats.dispatch_snapshot_cache_misses,
+            dispatch_snapshot_builds: stats.dispatch_snapshot_builds,
+            dispatch_snapshot_built_nodes: stats.dispatch_snapshot_built_nodes,
+            dispatch_snapshot_cache_invalidations: stats.dispatch_snapshot_cache_invalidations,
             window_runtime_snapshot_focus_repair_time_us: stats
                 .window_runtime_snapshot_focus_repair_time
                 .as_micros() as u64,
@@ -1243,6 +1288,12 @@ impl UiFrameStatsV1 {
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
             layout_fast_path_taken: stats.layout_fast_path_taken,
             layout_invalidations_count: stats.layout_invalidations_count,
+            parent_pointer_repair_passes: stats.parent_pointer_repair_passes,
+            parent_pointer_repairs: stats.parent_pointer_repairs,
+            gc_reachability_layer_nodes: stats.gc_reachability_layer_nodes,
+            gc_reachability_view_cache_nodes: stats.gc_reachability_view_cache_nodes,
+            gc_stale_candidates: stats.gc_stale_candidates,
+            gc_stale_removed: stats.gc_stale_removed,
             model_change_invalidation_roots: stats.model_change_invalidation_roots,
             model_change_models: stats.model_change_models,
             model_change_observation_edges: stats.model_change_observation_edges,

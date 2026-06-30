@@ -53,7 +53,7 @@ impl<H: UiHost> UiTree<H> {
         false
     }
 
-    pub(crate) fn focus_or_pending_focus_target_in_subtree(&self, root: NodeId) -> bool {
+    pub(crate) fn focus_or_pending_focus_target_in_subtree(&mut self, root: NodeId) -> bool {
         if self
             .focus
             .is_some_and(|focus| self.is_descendant(root, focus))

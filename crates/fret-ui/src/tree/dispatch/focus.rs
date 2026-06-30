@@ -92,7 +92,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn resolve_requested_focus(
-        &self,
+        &mut self,
         app: &mut H,
         requested_focus: Option<NodeId>,
         requested_focus_target: Option<crate::GlobalElementId>,

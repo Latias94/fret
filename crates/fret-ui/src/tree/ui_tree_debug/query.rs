@@ -260,6 +260,145 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats
     }
 
+    pub(crate) fn debug_record_identity_seeded_hit(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_seeded_hits = self
+            .debug_stats
+            .identity_resolve_seeded_hits
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_identity_seeded_stale(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_seeded_stale = self
+            .debug_stats
+            .identity_resolve_seeded_stale
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_identity_fallback_scan(&mut self, nodes_scanned: u64, hit: bool) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.identity_resolve_fallback_scans = self
+            .debug_stats
+            .identity_resolve_fallback_scans
+            .saturating_add(1);
+        self.debug_stats.identity_resolve_fallback_scan_nodes = self
+            .debug_stats
+            .identity_resolve_fallback_scan_nodes
+            .saturating_add(nodes_scanned);
+        if hit {
+            self.debug_stats.identity_resolve_fallback_hits = self
+                .debug_stats
+                .identity_resolve_fallback_hits
+                .saturating_add(1);
+        } else {
+            self.debug_stats.identity_resolve_fallback_misses = self
+                .debug_stats
+                .identity_resolve_fallback_misses
+                .saturating_add(1);
+        }
+    }
+
+    pub(crate) fn debug_record_parent_pointer_repair(&mut self, repaired: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.parent_pointer_repair_passes = self
+            .debug_stats
+            .parent_pointer_repair_passes
+            .saturating_add(1);
+        self.debug_stats.parent_pointer_repairs = self
+            .debug_stats
+            .parent_pointer_repairs
+            .saturating_add(repaired);
+    }
+
+    pub(crate) fn debug_record_gc_layer_reachability_nodes(&mut self, nodes: u64) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.gc_reachability_layer_nodes = self
+            .debug_stats
+            .gc_reachability_layer_nodes
+            .saturating_add(nodes);
+    }
+
+    pub(crate) fn debug_record_gc_view_cache_reachability_nodes(&mut self, nodes: u64) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.gc_reachability_view_cache_nodes = self
+            .debug_stats
+            .gc_reachability_view_cache_nodes
+            .saturating_add(nodes);
+    }
+
+    pub(crate) fn debug_record_gc_stale_candidates(&mut self, candidates: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.gc_stale_candidates = self
+            .debug_stats
+            .gc_stale_candidates
+            .saturating_add(candidates);
+    }
+
+    pub(crate) fn debug_record_gc_stale_removed(&mut self, removed: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.gc_stale_removed =
+            self.debug_stats.gc_stale_removed.saturating_add(removed);
+    }
+
+    pub(crate) fn debug_record_dispatch_snapshot_cache_hit(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dispatch_snapshot_cache_hits = self
+            .debug_stats
+            .dispatch_snapshot_cache_hits
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_dispatch_snapshot_cache_miss(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dispatch_snapshot_cache_misses = self
+            .debug_stats
+            .dispatch_snapshot_cache_misses
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_dispatch_snapshot_build(&mut self, nodes: u64) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dispatch_snapshot_builds =
+            self.debug_stats.dispatch_snapshot_builds.saturating_add(1);
+        self.debug_stats.dispatch_snapshot_built_nodes = self
+            .debug_stats
+            .dispatch_snapshot_built_nodes
+            .saturating_add(nodes);
+    }
+
+    pub(crate) fn debug_record_dispatch_snapshot_cache_invalidation(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dispatch_snapshot_cache_invalidations = self
+            .debug_stats
+            .dispatch_snapshot_cache_invalidations
+            .saturating_add(1);
+    }
+
     pub(crate) fn debug_set_element_children_vec_pool_stats(
         &mut self,
         reuses: u32,

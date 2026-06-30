@@ -26,7 +26,7 @@ impl<H: UiHost> UiTree<H> {
     /// This is the authoritative element-to-node query when callers already have access to the
     /// current `UiTree` and need a node that is still attached to an active layer tree.
     pub fn live_attached_node_for_element(
-        &self,
+        &mut self,
         app: &mut H,
         element: GlobalElementId,
     ) -> Option<NodeId> {

@@ -707,6 +707,18 @@ pub(crate) const DISPATCH_POST_DISPATCH_SNAPSHOT_TIME_US: PerfKey = timing_key(
     "dispatch_post_dispatch_snapshot_time_us",
     PerfKeyAggregate::P95,
 );
+pub(crate) const DISPATCH_SNAPSHOT_CACHE_HITS: PerfKey =
+    count_key("dispatch_snapshot_cache_hits", PerfKeyAggregate::Max);
+pub(crate) const DISPATCH_SNAPSHOT_CACHE_MISSES: PerfKey =
+    count_key("dispatch_snapshot_cache_misses", PerfKeyAggregate::Max);
+pub(crate) const DISPATCH_SNAPSHOT_BUILDS: PerfKey =
+    count_key("dispatch_snapshot_builds", PerfKeyAggregate::Max);
+pub(crate) const DISPATCH_SNAPSHOT_BUILT_NODES: PerfKey =
+    count_key("dispatch_snapshot_built_nodes", PerfKeyAggregate::Max);
+pub(crate) const DISPATCH_SNAPSHOT_CACHE_INVALIDATIONS: PerfKey = count_key(
+    "dispatch_snapshot_cache_invalidations",
+    PerfKeyAggregate::Max,
+);
 pub(crate) const DISPATCH_EVENTS: PerfKey = count_key("dispatch_events", PerfKeyAggregate::Max);
 pub(crate) const DISPATCH_POINTER_EVENTS: PerfKey =
     count_key("dispatch_pointer_events", PerfKeyAggregate::Max);
@@ -1229,6 +1241,11 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     DISPATCH_SYNTH_HOVER_OBSERVER_TIME_US,
     DISPATCH_CURSOR_EFFECT_TIME_US,
     DISPATCH_POST_DISPATCH_SNAPSHOT_TIME_US,
+    DISPATCH_SNAPSHOT_CACHE_HITS,
+    DISPATCH_SNAPSHOT_CACHE_MISSES,
+    DISPATCH_SNAPSHOT_BUILDS,
+    DISPATCH_SNAPSHOT_BUILT_NODES,
+    DISPATCH_SNAPSHOT_CACHE_INVALIDATIONS,
     DISPATCH_EVENTS,
     DISPATCH_POINTER_EVENTS,
     DISPATCH_TIMER_EVENTS,
@@ -1317,6 +1334,10 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     count_key("element_children_vec_pool_reuses", PerfKeyAggregate::Max),
     byte_key("frame_arena_capacity_estimate_bytes", PerfKeyAggregate::Max),
     count_key("frame_arena_grow_events", PerfKeyAggregate::Max),
+    count_key("gc_reachability_layer_nodes", PerfKeyAggregate::Max),
+    count_key("gc_reachability_view_cache_nodes", PerfKeyAggregate::Max),
+    count_key("gc_stale_candidates", PerfKeyAggregate::Max),
+    count_key("gc_stale_removed", PerfKeyAggregate::Max),
     count_key("global_change_globals", PerfKeyAggregate::Max),
     count_key("global_change_invalidation_roots", PerfKeyAggregate::Max),
     count_key("global_change_observation_edges", PerfKeyAggregate::Max),
@@ -1336,6 +1357,15 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     ),
     count_key("hover_hover_region_target_changes", PerfKeyAggregate::Max),
     count_key("hover_pressable_target_changes", PerfKeyAggregate::Max),
+    count_key("identity_resolve_seeded_hits", PerfKeyAggregate::Max),
+    count_key("identity_resolve_seeded_stale", PerfKeyAggregate::Max),
+    count_key("identity_resolve_fallback_scans", PerfKeyAggregate::Max),
+    count_key(
+        "identity_resolve_fallback_scan_nodes",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("identity_resolve_fallback_hits", PerfKeyAggregate::Max),
+    count_key("identity_resolve_fallback_misses", PerfKeyAggregate::Max),
     count_key("invalidation_walk_calls", PerfKeyAggregate::Max),
     count_key("invalidation_walk_calls_focus", PerfKeyAggregate::Max),
     count_key(
@@ -1366,6 +1396,8 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     count_key("model_change_models", PerfKeyAggregate::Max),
     count_key("model_change_observation_edges", PerfKeyAggregate::Max),
     count_key("model_change_unobserved_models", PerfKeyAggregate::Max),
+    count_key("parent_pointer_repair_passes", PerfKeyAggregate::Max),
+    count_key("parent_pointer_repairs", PerfKeyAggregate::Max),
     count_key(
         "paint_text_prepare_reason_blob_missing",
         PerfKeyAggregate::Max,
@@ -2252,6 +2284,13 @@ mod tests {
             "layout_time_us",
             "frame_arena_capacity_estimate_bytes",
             "element_children_vec_pool_grow_events",
+            "identity_resolve_fallback_scans",
+            "identity_resolve_fallback_scan_nodes",
+            "parent_pointer_repairs",
+            "gc_reachability_layer_nodes",
+            "gc_stale_removed",
+            "dispatch_snapshot_cache_misses",
+            "dispatch_snapshot_built_nodes",
             "layout_pending_barrier_relayouts_time_us",
             "layout_repair_view_cache_bounds_time_us",
             "layout_contained_view_cache_roots_time_us",

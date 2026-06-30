@@ -331,7 +331,7 @@ fn node_is_in_open_modal_layer<H: UiHost>(
 }
 
 fn visible_closing_popover_has_modal_restore_target<H: UiHost>(
-    ui: &UiTree<H>,
+    ui: &mut UiTree<H>,
     app: &mut H,
     window: AppWindowId,
 ) -> bool {

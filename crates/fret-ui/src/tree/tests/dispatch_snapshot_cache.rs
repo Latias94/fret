@@ -3,6 +3,7 @@ use super::*;
 #[test]
 fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
     let root = ui.create_node(TestStack);
     let child_a = ui.create_node(TestStack);
     ui.set_root(root);
@@ -25,6 +26,11 @@ fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes()
     assert!(Arc::ptr_eq(&snapshot_a.parent, &snapshot_b.parent));
     assert!(Arc::ptr_eq(&snapshot_a.pre, &snapshot_b.pre));
     assert!(Arc::ptr_eq(&snapshot_a.post, &snapshot_b.post));
+    let stats = ui.debug_stats();
+    assert_eq!(stats.dispatch_snapshot_cache_misses, 1);
+    assert_eq!(stats.dispatch_snapshot_cache_hits, 1);
+    assert_eq!(stats.dispatch_snapshot_builds, 1);
+    assert_eq!(stats.dispatch_snapshot_built_nodes, 2);
 
     let child_b = ui.create_node(TestStack);
     ui.set_children(root, vec![child_a, child_b]);
@@ -37,4 +43,9 @@ fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes()
 
     assert!(!Arc::ptr_eq(&snapshot_a.nodes, &snapshot_c.nodes));
     assert!(snapshot_c.pre.get(child_b).is_some());
+    let stats = ui.debug_stats();
+    assert!(stats.dispatch_snapshot_cache_invalidations >= 1);
+    assert_eq!(stats.dispatch_snapshot_cache_misses, 2);
+    assert_eq!(stats.dispatch_snapshot_builds, 2);
+    assert_eq!(stats.dispatch_snapshot_built_nodes, 5);
 }

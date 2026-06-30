@@ -23,6 +23,18 @@ pub struct UiDebugFrameStats {
     pub element_children_vec_pool_misses: u32,
     /// Number of reused child-element vectors that had to grow capacity to satisfy a request.
     pub element_children_vec_pool_grow_events: u32,
+    /// Seeded element-to-node resolves that found a live attached node without scanning.
+    pub identity_resolve_seeded_hits: u32,
+    /// Seeded element-to-node resolves where the seed was missing, stale, or detached.
+    pub identity_resolve_seeded_stale: u32,
+    /// Element-to-node resolves that fell back to scanning retained nodes.
+    pub identity_resolve_fallback_scans: u32,
+    /// Retained nodes inspected by element-to-node fallback scans.
+    pub identity_resolve_fallback_scan_nodes: u64,
+    /// Element-to-node fallback scans that found a live attached node.
+    pub identity_resolve_fallback_hits: u32,
+    /// Element-to-node fallback scans that found no live attached node.
+    pub identity_resolve_fallback_misses: u32,
     /// Total time spent in event dispatch during the current frame.
     ///
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
@@ -138,6 +150,16 @@ pub struct UiDebugFrameStats {
     /// Total wall time spent publishing post-dispatch window integration snapshots (input context,
     /// command availability) during dispatch.
     pub dispatch_post_dispatch_snapshot_time: Duration,
+    /// Dispatch snapshot cache lookups satisfied by a retained snapshot.
+    pub dispatch_snapshot_cache_hits: u32,
+    /// Dispatch snapshot cache lookups that had to build a fresh snapshot.
+    pub dispatch_snapshot_cache_misses: u32,
+    /// Dispatch snapshots built during the current frame.
+    pub dispatch_snapshot_builds: u32,
+    /// Nodes copied into dispatch snapshots built during the current frame.
+    pub dispatch_snapshot_built_nodes: u64,
+    /// Dispatch snapshot cache invalidations during the current frame.
+    pub dispatch_snapshot_cache_invalidations: u32,
     /// Total wall time spent repairing focus/routing state while publishing window runtime snapshots.
     pub window_runtime_snapshot_focus_repair_time: Duration,
     /// Total wall time spent building and publishing window input-context snapshots.
@@ -358,6 +380,18 @@ pub struct UiDebugFrameStats {
     pub layout_subtree_dirty_agg_rebuild_nodes: u32,
     /// Count of validation failures observed during the current frame.
     pub layout_subtree_dirty_agg_validation_failures: u32,
+    /// Parent-pointer repair passes run from authoritative layer roots.
+    pub parent_pointer_repair_passes: u32,
+    /// Parent pointers rewritten by repair passes during this frame.
+    pub parent_pointer_repairs: u32,
+    /// Nodes marked reachable from layer or root liveness roots while preparing GC.
+    pub gc_reachability_layer_nodes: u64,
+    /// Nodes marked reachable from view-cache reuse roots or recorded memberships while preparing GC.
+    pub gc_reachability_view_cache_nodes: u64,
+    /// Stale window-state node entries selected for removal by GC.
+    pub gc_stale_candidates: u32,
+    /// Retained nodes actually removed by stale-entry GC sweeps.
+    pub gc_stale_removed: u32,
     /// Unique nodes observed as invalidation roots for model changes during the current frame.
     pub model_change_invalidation_roots: u32,
     /// Count of changed models consumed for propagation during the current frame.

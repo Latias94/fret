@@ -35,6 +35,12 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.frame_arena_grow_events = 0;
         self.debug_stats.element_children_vec_pool_reuses = 0;
         self.debug_stats.element_children_vec_pool_misses = 0;
+        self.debug_stats.identity_resolve_seeded_hits = 0;
+        self.debug_stats.identity_resolve_seeded_stale = 0;
+        self.debug_stats.identity_resolve_fallback_scans = 0;
+        self.debug_stats.identity_resolve_fallback_scan_nodes = 0;
+        self.debug_stats.identity_resolve_fallback_hits = 0;
+        self.debug_stats.identity_resolve_fallback_misses = 0;
         self.debug_stats.dispatch_time = Duration::default();
         self.debug_stats.dispatch_inner_body_time = Duration::default();
         self.debug_stats.dispatch_pointer_events = u32::default();
@@ -88,6 +94,11 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dispatch_synth_hover_observer_time = Duration::default();
         self.debug_stats.dispatch_cursor_effect_time = Duration::default();
         self.debug_stats.dispatch_post_dispatch_snapshot_time = Duration::default();
+        self.debug_stats.dispatch_snapshot_cache_hits = 0;
+        self.debug_stats.dispatch_snapshot_cache_misses = 0;
+        self.debug_stats.dispatch_snapshot_builds = 0;
+        self.debug_stats.dispatch_snapshot_built_nodes = 0;
+        self.debug_stats.dispatch_snapshot_cache_invalidations = 0;
         self.debug_stats.window_runtime_snapshot_focus_repair_time = Duration::default();
         self.debug_stats.window_runtime_snapshot_input_context_time = Duration::default();
         self.debug_stats
@@ -187,6 +198,12 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.layout_subtree_dirty_agg_rebuild_nodes = 0;
         self.debug_stats
             .layout_subtree_dirty_agg_validation_failures = 0;
+        self.debug_stats.parent_pointer_repair_passes = 0;
+        self.debug_stats.parent_pointer_repairs = 0;
+        self.debug_stats.gc_reachability_layer_nodes = 0;
+        self.debug_stats.gc_reachability_view_cache_nodes = 0;
+        self.debug_stats.gc_stale_candidates = 0;
+        self.debug_stats.gc_stale_removed = 0;
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;

@@ -2902,15 +2902,20 @@ impl<H: UiHost> UiTree<H> {
                         }
 
                         let mut dismissed_any = false;
-                        for layer_id in self.visible_layers_in_paint_order() {
-                            let Some(layer) = self.layers.get(layer_id) else {
+                        let visible_layer_ids: Vec<_> =
+                            self.visible_layers_in_paint_order().collect();
+                        for layer_id in visible_layer_ids {
+                            let Some((layer_root, scroll_dismiss_elements)) = self
+                                .layers
+                                .get(layer_id)
+                                .map(|layer| (layer.root, layer.scroll_dismiss_elements.clone()))
+                            else {
                                 continue;
                             };
-                            if layer.scroll_dismiss_elements.is_empty() {
+                            if scroll_dismiss_elements.is_empty() {
                                 continue;
                             }
-                            let should_dismiss = layer
-                                .scroll_dismiss_elements
+                            let dismiss_nodes: Vec<NodeId> = scroll_dismiss_elements
                                 .iter()
                                 .copied()
                                 .filter_map(|element| {
@@ -2920,12 +2925,15 @@ impl<H: UiHost> UiTree<H> {
                                         element,
                                     )
                                 })
+                                .collect();
+                            let should_dismiss = dismiss_nodes
+                                .into_iter()
                                 .any(|node| self.is_descendant(scroll_target, node));
                             if !should_dismiss {
                                 continue;
                             }
                             let Some(root_element) =
-                                self.nodes.get(layer.root).and_then(|n| n.element)
+                                self.nodes.get(layer_root).and_then(|n| n.element)
                             else {
                                 continue;
                             };

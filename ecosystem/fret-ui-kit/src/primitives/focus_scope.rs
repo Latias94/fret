@@ -122,7 +122,7 @@ pub fn should_restore_focus_for_non_modal_overlay<H: UiHost>(
 /// - If `trigger` is missing or no longer resolves, we can fall back to `restore_focus` as long as
 ///   it still belongs to some live layer.
 pub fn resolve_restore_focus_node<H: UiHost>(
-    ui: &UiTree<H>,
+    ui: &mut UiTree<H>,
     app: &mut H,
     window: AppWindowId,
     trigger: Option<GlobalElementId>,
@@ -357,12 +357,12 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, other).expect("other node");
 
         assert_eq!(
-            resolve_restore_focus_node(&ui, &mut app, window, Some(trigger), Some(other_node)),
+            resolve_restore_focus_node(&mut ui, &mut app, window, Some(trigger), Some(other_node)),
             Some(trigger_node)
         );
 
         assert_eq!(
-            resolve_restore_focus_node(&ui, &mut app, window, None, Some(other_node)),
+            resolve_restore_focus_node(&mut ui, &mut app, window, None, Some(other_node)),
             Some(other_node)
         );
     }
@@ -427,7 +427,7 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, other).expect("other node");
 
         assert_eq!(
-            resolve_restore_focus_node(&ui, &mut app, window, Some(trigger), Some(other_node)),
+            resolve_restore_focus_node(&mut ui, &mut app, window, Some(trigger), Some(other_node)),
             Some(other_node)
         );
     }

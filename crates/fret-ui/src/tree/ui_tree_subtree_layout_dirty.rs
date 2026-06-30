@@ -558,6 +558,7 @@ impl<H: UiHost> UiTree<H> {
                 // the subsequent subtree-count rebuild can propagate along the most plausible
                 // ancestry chain.
                 let repaired_parents = self.repair_parent_pointers_from_layer_roots();
+                self.debug_record_parent_pointer_repair(repaired_parents);
                 if repaired_parents > 0 {
                     tracing::warn!(
                         node = ?id,

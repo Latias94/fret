@@ -75,6 +75,7 @@ fn model_change_invalidates_bound_text_input() {
 fn seeded_live_node_resolution_ignores_stale_detached_node_entry() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
 
     let element = crate::elements::GlobalElementId(4242);
     let root = ui.create_node(TestStack);
@@ -89,12 +90,23 @@ fn seeded_live_node_resolution_ignores_stale_detached_node_entry() {
         Some(live_node),
         "expected seeded live-node resolution to fall back from a stale detached node to the live attached node for the same element"
     );
+
+    let stats = ui.debug_stats();
+    assert_eq!(stats.identity_resolve_seeded_stale, 1);
+    assert_eq!(stats.identity_resolve_fallback_scans, 1);
+    assert_eq!(stats.identity_resolve_fallback_hits, 1);
+    assert_eq!(stats.identity_resolve_fallback_misses, 0);
+    assert!(
+        stats.identity_resolve_fallback_scan_nodes >= 1,
+        "fallback scan pressure must be visible before stable-handle migration"
+    );
 }
 
 #[test]
 fn seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_node_exists() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
 
     let element = crate::elements::GlobalElementId(4343);
     let detached = ui.create_node_for_element(element, TestStack);
@@ -104,6 +116,36 @@ fn seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_no
         Some(detached),
         "expected reusable seeded-node resolution to reuse the retained detached seed when no live attached node exists for the element"
     );
+
+    let stats = ui.debug_stats();
+    assert_eq!(stats.identity_resolve_seeded_stale, 1);
+    assert_eq!(stats.identity_resolve_fallback_scans, 1);
+    assert_eq!(stats.identity_resolve_fallback_hits, 0);
+    assert_eq!(stats.identity_resolve_fallback_misses, 1);
+}
+
+#[test]
+fn seeded_live_node_resolution_records_seed_hit_without_fallback_scan() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+
+    let element = crate::elements::GlobalElementId(4444);
+    let root = ui.create_node(TestStack);
+    let live_node = ui.create_node_for_element(element, TestStack);
+
+    ui.set_root(root);
+    ui.add_child(root, live_node);
+
+    assert_eq!(
+        ui.resolve_live_attached_node_for_element_seeded(element, Some(live_node)),
+        Some(live_node)
+    );
+
+    let stats = ui.debug_stats();
+    assert_eq!(stats.identity_resolve_seeded_hits, 1);
+    assert_eq!(stats.identity_resolve_seeded_stale, 0);
+    assert_eq!(stats.identity_resolve_fallback_scans, 0);
 }
 
 #[test]

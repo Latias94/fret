@@ -62,6 +62,7 @@ impl<H: UiHost> UiTree<H> {
         self.dispatch_snapshot_cache.clear();
         self.focus_traversal_availability_cache = None;
         self.command_availability_interest_cache = None;
+        self.debug_record_dispatch_snapshot_cache_invalidation();
         #[cfg(feature = "diagnostics")]
         {
             self.debug_dispatch_snapshot = None;
@@ -95,9 +96,11 @@ impl<H: UiHost> UiTree<H> {
         {
             let mut snapshot = entry.snapshot.clone();
             snapshot.frame_id = frame_id;
+            self.debug_record_dispatch_snapshot_cache_hit();
             return snapshot;
         }
 
+        self.debug_record_dispatch_snapshot_cache_miss();
         let snapshot = self.build_dispatch_snapshot_for_layer_roots(
             frame_id,
             active_layer_roots,
@@ -118,7 +121,10 @@ impl<H: UiHost> UiTree<H> {
     ///
     /// This is a mechanism-layer API. It does not change dispatch behavior by itself.
     #[allow(dead_code)]
-    pub(in crate::tree) fn build_dispatch_snapshot(&self, frame_id: FrameId) -> UiDispatchSnapshot {
+    pub(in crate::tree) fn build_dispatch_snapshot(
+        &mut self,
+        frame_id: FrameId,
+    ) -> UiDispatchSnapshot {
         let (active_layer_roots, barrier_root) = self.active_input_layers();
         self.build_dispatch_snapshot_for_layer_roots(
             frame_id,
@@ -129,7 +135,7 @@ impl<H: UiHost> UiTree<H> {
 
     #[allow(dead_code)]
     pub(in crate::tree) fn build_dispatch_snapshot_for_layer_roots(
-        &self,
+        &mut self,
         frame_id: FrameId,
         active_layer_roots: &[NodeId],
         barrier_root: Option<NodeId>,
@@ -188,6 +194,8 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+
+        self.debug_record_dispatch_snapshot_build(nodes.len().min(u64::MAX as usize) as u64);
 
         UiDispatchSnapshot {
             frame_id,

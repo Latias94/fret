@@ -99,7 +99,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn live_bound_scroll_handle_nodes(
-        &self,
+        &mut self,
         app: &mut H,
         window: AppWindowId,
         handle_key: usize,
@@ -125,7 +125,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn live_nodes_for_element(
-        &self,
+        &mut self,
         app: &mut H,
         window: AppWindowId,
         element: GlobalElementId,
@@ -158,7 +158,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn resolve_live_attached_node_for_element(
-        &self,
+        &mut self,
         app: &mut H,
         window: Option<AppWindowId>,
         element: GlobalElementId,
@@ -185,7 +185,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn resolve_live_attached_node_for_element_seeded(
-        &self,
+        &mut self,
         element: GlobalElementId,
         seeded: Option<NodeId>,
     ) -> Option<NodeId> {
@@ -193,17 +193,29 @@ impl<H: UiHost> UiTree<H> {
             && self.nodes.get(node).and_then(|entry| entry.element) == Some(element)
             && self.node_is_attached_to_layer_tree(node)
         {
+            self.debug_record_identity_seeded_hit();
             return Some(node);
         }
 
-        self.nodes.iter().find_map(|(node, entry)| {
-            (entry.element == Some(element) && self.node_is_attached_to_layer_tree(node))
-                .then_some(node)
-        })
+        if seeded.is_some() {
+            self.debug_record_identity_seeded_stale();
+        }
+
+        let mut nodes_scanned: u64 = 0;
+        for (node, entry) in self.nodes.iter() {
+            nodes_scanned = nodes_scanned.saturating_add(1);
+            if entry.element == Some(element) && self.node_is_attached_to_layer_tree(node) {
+                self.debug_record_identity_fallback_scan(nodes_scanned, true);
+                return Some(node);
+            }
+        }
+
+        self.debug_record_identity_fallback_scan(nodes_scanned, false);
+        None
     }
 
     pub(crate) fn resolve_reusable_node_for_element_seeded(
-        &self,
+        &mut self,
         element: GlobalElementId,
         seeded: Option<NodeId>,
     ) -> Option<NodeId> {
@@ -212,7 +224,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn extend_live_bound_scroll_handle_invalidations(
-        &self,
+        &mut self,
         app: &mut H,
         requests: &[crate::widget::ScrollHandleInvalidationRequest],
         out: &mut Vec<(NodeId, Invalidation)>,
@@ -228,7 +240,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn extend_live_scroll_target_invalidations(
-        &self,
+        &mut self,
         app: &mut H,
         requests: &[GlobalElementId],
         out: &mut Vec<(NodeId, Invalidation)>,

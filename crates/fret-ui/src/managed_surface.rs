@@ -122,7 +122,7 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
         }
     }
 
-    pub fn focus_in_subtree(&self) -> bool {
+    pub fn focus_in_subtree(&mut self) -> bool {
         self.cx
             .tree
             .focus_or_pending_focus_target_in_subtree(self.cx.node)

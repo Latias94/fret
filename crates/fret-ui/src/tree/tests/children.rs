@@ -51,6 +51,7 @@ fn set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_desce
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
 
     let root = ui.create_node(TestStack);
     let parent = ui.create_node(TestStack);
@@ -70,6 +71,14 @@ fn set_children_same_children_repairs_parent_pointers_and_reconnects_dirty_desce
     for id in [root, parent, child] {
         ui.test_clear_node_invalidations(id);
     }
+
+    ui.test_set_node_parent(child, None);
+    let repaired = ui.repair_parent_pointers_from_layer_roots();
+    ui.debug_record_parent_pointer_repair(repaired);
+
+    let stats = ui.debug_stats();
+    assert_eq!(stats.parent_pointer_repair_passes, 1);
+    assert_eq!(stats.parent_pointer_repairs, 1);
 
     ui.test_set_node_parent(child, None);
     ui.test_set_layout_invalidation(child, true);

@@ -127,6 +127,256 @@
       "unit": "us"
     },
     {
+      "key": "layout_request_build_roots_take_engine_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots.take_engine",
+      "unit": "us"
+    },
+    {
+      "key": "layout_request_build_roots_phase1_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots.phase1",
+      "unit": "us"
+    },
+    {
+      "key": "layout_request_build_roots_phase2_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots.phase2",
+      "unit": "us"
+    },
+    {
+      "key": "layout_request_build_roots_phase2_clean_geometry_proof_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots.phase2.clean_geometry_proof",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_clean_geometry_proof_boundaries",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_clean_geometry_proof_leaf_shortcut_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_node_state_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_contract_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_record_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_contract_eval_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_origin_only_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_text_metrics_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_child_prev_bounds_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_proof_emit_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_apply_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_clean_geometry_apply_fallback_layouts",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_clean_geometry_apply_fallback_layouts_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_apply_fallback_layouts_top_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_clean_geometry_apply_fallback_layouts_top_kind",
+      "kind": "label",
+      "scope": "frame",
+      "suggested_aggregate": "none",
+      "unit": "label"
+    },
+    {
+      "key": "layout_clean_geometry_scroll_side_effect_fast_paths",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_clean_geometry_apply_paint_fingerprint_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_request_build_roots_phase2_compute_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots.phase2.compute",
+      "unit": "us"
+    },
+    {
+      "key": "layout_request_build_roots_put_engine_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots.put_engine",
+      "unit": "us"
+    },
+    {
       "key": "layout_pending_barrier_relayouts_time_us",
       "kind": "timing",
       "scope": "frame",
@@ -199,6 +449,24 @@
       "suggested_aggregate": "p95",
       "trace_category": "layout",
       "trace_event": "layout.roots",
+      "unit": "us"
+    },
+    {
+      "key": "layout_roots_apply_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.roots.apply",
+      "unit": "us"
+    },
+    {
+      "key": "layout_roots_flush_viewport_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.roots.flush_viewport",
       "unit": "us"
     },
     {
@@ -357,6 +625,15 @@
       "suggested_aggregate": "p95",
       "trace_category": "paint",
       "trace_event": "paint.widget",
+      "unit": "us"
+    },
+    {
+      "key": "paint_canvas_on_paint_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.canvas_on_paint",
       "unit": "us"
     },
     {
@@ -756,6 +1033,41 @@
       "unit": "us"
     },
     {
+      "key": "dispatch_snapshot_cache_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_snapshot_cache_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_snapshot_builds",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_snapshot_built_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_snapshot_cache_invalidations",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "dispatch_events",
       "kind": "counter",
       "scope": "frame",
@@ -1016,6 +1328,13 @@
     },
     {
       "key": "renderer_prepare_text_scene_text_blobs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_prepare_text_fast_scene_bucket_reuses",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",
@@ -1344,6 +1663,34 @@
       "unit": "count"
     },
     {
+      "key": "gc_reachability_layer_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "gc_reachability_view_cache_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "gc_stale_candidates",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "gc_stale_removed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "global_change_globals",
       "kind": "counter",
       "scope": "frame",
@@ -1408,6 +1755,48 @@
     },
     {
       "key": "hover_pressable_target_changes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_seeded_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_seeded_stale",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_fallback_scans",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_fallback_scan_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_fallback_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "identity_resolve_fallback_misses",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",
@@ -1534,6 +1923,20 @@
     },
     {
       "key": "model_change_unobserved_models",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "parent_pointer_repair_passes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "parent_pointer_repairs",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",
