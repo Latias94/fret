@@ -350,10 +350,24 @@ impl<H: UiHost> UiTree<H> {
                 let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
                 let global_items =
                     global_observations.as_slice().len().min(u32::MAX as usize) as u32;
-                self.observed_in_layout
-                    .record(node, observations.as_slice());
-                self.observed_globals_in_layout
-                    .record(node, global_observations.as_slice());
+                let (model_record_stats, global_record_stats) = if self.debug_enabled {
+                    (
+                        Some(
+                            self.observed_in_layout
+                                .record_with_stats(node, observations.as_slice()),
+                        ),
+                        Some(
+                            self.observed_globals_in_layout
+                                .record_with_stats(node, global_observations.as_slice()),
+                        ),
+                    )
+                } else {
+                    self.observed_in_layout
+                        .record(node, observations.as_slice());
+                    self.observed_globals_in_layout
+                        .record(node, global_observations.as_slice());
+                    (None, None)
+                };
                 if let Some(obs_started) = obs_started {
                     self.debug_stats.layout_observation_record_time = self
                         .debug_stats
@@ -369,6 +383,12 @@ impl<H: UiHost> UiTree<H> {
                         .debug_stats
                         .layout_observation_record_globals_items
                         .saturating_add(global_items);
+                    if let Some(model_record_stats) = model_record_stats {
+                        self.debug_record_model_observation_index_record(model_record_stats);
+                    }
+                    if let Some(global_record_stats) = global_record_stats {
+                        self.debug_record_global_observation_index_record(global_record_stats);
+                    }
                 }
             }
             if let Some((prev, next, layout_before, layout_after)) =
@@ -634,10 +654,24 @@ impl<H: UiHost> UiTree<H> {
             let obs_started = self.debug_enabled.then(Instant::now);
             let model_items = observations.as_slice().len().min(u32::MAX as usize) as u32;
             let global_items = global_observations.as_slice().len().min(u32::MAX as usize) as u32;
-            self.observed_in_layout
-                .record(node, observations.as_slice());
-            self.observed_globals_in_layout
-                .record(node, global_observations.as_slice());
+            let (model_record_stats, global_record_stats) = if self.debug_enabled {
+                (
+                    Some(
+                        self.observed_in_layout
+                            .record_with_stats(node, observations.as_slice()),
+                    ),
+                    Some(
+                        self.observed_globals_in_layout
+                            .record_with_stats(node, global_observations.as_slice()),
+                    ),
+                )
+            } else {
+                self.observed_in_layout
+                    .record(node, observations.as_slice());
+                self.observed_globals_in_layout
+                    .record(node, global_observations.as_slice());
+                (None, None)
+            };
             if let Some(obs_started) = obs_started {
                 self.debug_stats.layout_observation_record_time = self
                     .debug_stats
@@ -653,6 +687,12 @@ impl<H: UiHost> UiTree<H> {
                     .debug_stats
                     .layout_observation_record_globals_items
                     .saturating_add(global_items);
+                if let Some(model_record_stats) = model_record_stats {
+                    self.debug_record_model_observation_index_record(model_record_stats);
+                }
+                if let Some(global_record_stats) = global_record_stats {
+                    self.debug_record_global_observation_index_record(global_record_stats);
+                }
             }
         }
 

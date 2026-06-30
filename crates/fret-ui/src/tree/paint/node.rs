@@ -753,9 +753,20 @@ impl<H: UiHost> UiTree<H> {
             tracing::enabled!(tracing::Level::TRACE),
             || tracing::trace_span!("fret.ui.paint_node.record_observations", node = ?node),
             || {
-                self.observed_in_paint.record(node, observations.as_slice());
-                self.observed_globals_in_paint
-                    .record(node, global_observations.as_slice());
+                if self.debug_enabled {
+                    let model_record_stats = self
+                        .observed_in_paint
+                        .record_with_stats(node, observations.as_slice());
+                    let global_record_stats = self
+                        .observed_globals_in_paint
+                        .record_with_stats(node, global_observations.as_slice());
+                    self.debug_record_model_observation_index_record(model_record_stats);
+                    self.debug_record_global_observation_index_record(global_record_stats);
+                } else {
+                    self.observed_in_paint.record(node, observations.as_slice());
+                    self.observed_globals_in_paint
+                        .record(node, global_observations.as_slice());
+                }
             },
         );
         if let Some(obs_elapsed) = obs_elapsed {

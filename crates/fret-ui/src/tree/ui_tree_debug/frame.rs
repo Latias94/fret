@@ -198,6 +198,13 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.layout_subtree_dirty_agg_rebuild_nodes = 0;
         self.debug_stats
             .layout_subtree_dirty_agg_validation_failures = 0;
+        self.debug_stats.dirty_frontier_layout_nodes_max = self.invalidated_layout_nodes;
+        self.debug_stats.dirty_frontier_paint_nodes_max = self.invalidated_paint_nodes;
+        self.debug_stats.dirty_frontier_hit_test_nodes_max = self.invalidated_hit_test_nodes;
+        self.debug_stats.dirty_frontier_boundaries_max =
+            self.dirty_boundaries.len().min(u32::MAX as usize) as u32;
+        self.debug_stats.dirty_frontier_boundaries_at_layout_start = 0;
+        self.debug_stats.dirty_frontier_contained_candidates = 0;
         self.debug_stats.parent_pointer_repair_passes = 0;
         self.debug_stats.parent_pointer_repairs = 0;
         self.debug_stats.gc_reachability_layer_nodes = 0;
@@ -208,10 +215,16 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;
         self.debug_stats.model_change_unobserved_models = 0;
+        self.debug_stats.model_observation_index_edges_added = 0;
+        self.debug_stats.model_observation_index_edges_removed = 0;
+        self.debug_stats.model_observation_index_edges_mask_changed = 0;
         self.debug_stats.global_change_invalidation_roots = 0;
         self.debug_stats.global_change_globals = 0;
         self.debug_stats.global_change_observation_edges = 0;
         self.debug_stats.global_change_unobserved_globals = 0;
+        self.debug_stats.global_observation_index_edges_added = 0;
+        self.debug_stats.global_observation_index_edges_removed = 0;
+        self.debug_stats.global_observation_index_edges_mask_changed = 0;
         self.debug_stats.invalidation_walk_nodes = 0;
         self.debug_stats.invalidation_walk_calls = 0;
         self.debug_stats.invalidation_walk_nodes_model_change = 0;

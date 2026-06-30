@@ -46,15 +46,52 @@ pub(super) struct ObservationIndex {
     pub(super) by_model: HashMap<ModelId, HashMap<NodeId, ObservationMask>>,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(in crate::tree) struct ObservationIndexRecordStats {
+    pub(super) edges_added: u32,
+    pub(super) edges_removed: u32,
+    pub(super) edges_mask_changed: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(in crate::tree) struct ObservationIndexRemoveStats {
+    pub(super) removed: bool,
+    pub(super) edges: u32,
+}
+
 impl ObservationIndex {
     pub(super) fn record(&mut self, node: NodeId, observations: &[(ModelId, Invalidation)]) {
+        let _ = self.record_inner(node, observations, false);
+    }
+
+    pub(super) fn record_with_stats(
+        &mut self,
+        node: NodeId,
+        observations: &[(ModelId, Invalidation)],
+    ) -> ObservationIndexRecordStats {
+        self.record_inner(node, observations, true)
+    }
+
+    fn record_inner(
+        &mut self,
+        node: NodeId,
+        observations: &[(ModelId, Invalidation)],
+        collect_stats: bool,
+    ) -> ObservationIndexRecordStats {
         if observations.is_empty() {
-            self.remove_node(node);
-            return;
+            let removed = self.remove_node(node);
+            if collect_stats {
+                return ObservationIndexRecordStats {
+                    edges_removed: removed.edges,
+                    ..Default::default()
+                };
+            }
+            return ObservationIndexRecordStats::default();
         }
 
         let entry = self.by_node.entry(node).or_default();
 
+        let prev_entries = collect_stats.then(|| entry.clone());
         let mut prev_models = SmallCopyList::<ModelId, 8>::default();
         for (model, _) in entry.iter() {
             prev_models.push(*model);
@@ -87,12 +124,18 @@ impl ObservationIndex {
         for (model, mask) in entry.iter().copied() {
             self.by_model.entry(model).or_default().insert(node, mask);
         }
+
+        prev_entries
+            .as_ref()
+            .map(|prev_entries| observation_record_stats(prev_entries, entry))
+            .unwrap_or_default()
     }
 
-    pub(super) fn remove_node(&mut self, node: NodeId) {
+    pub(super) fn remove_node(&mut self, node: NodeId) -> ObservationIndexRemoveStats {
         let Some(prev) = self.by_node.remove(&node) else {
-            return;
+            return ObservationIndexRemoveStats::default();
         };
+        let edges = prev.len().min(u32::MAX as usize) as u32;
         for (model, _) in &prev {
             if let Some(nodes) = self.by_model.get_mut(model) {
                 nodes.remove(&node);
@@ -100,6 +143,10 @@ impl ObservationIndex {
                     self.by_model.remove(model);
                 }
             }
+        }
+        ObservationIndexRemoveStats {
+            removed: true,
+            edges,
         }
     }
 }
@@ -112,13 +159,37 @@ pub(super) struct GlobalObservationIndex {
 
 impl GlobalObservationIndex {
     pub(super) fn record(&mut self, node: NodeId, observations: &[(TypeId, Invalidation)]) {
+        let _ = self.record_inner(node, observations, false);
+    }
+
+    pub(super) fn record_with_stats(
+        &mut self,
+        node: NodeId,
+        observations: &[(TypeId, Invalidation)],
+    ) -> ObservationIndexRecordStats {
+        self.record_inner(node, observations, true)
+    }
+
+    fn record_inner(
+        &mut self,
+        node: NodeId,
+        observations: &[(TypeId, Invalidation)],
+        collect_stats: bool,
+    ) -> ObservationIndexRecordStats {
         if observations.is_empty() {
-            self.remove_node(node);
-            return;
+            let removed = self.remove_node(node);
+            if collect_stats {
+                return ObservationIndexRecordStats {
+                    edges_removed: removed.edges,
+                    ..Default::default()
+                };
+            }
+            return ObservationIndexRecordStats::default();
         }
 
         let entry = self.by_node.entry(node).or_default();
 
+        let prev_entries = collect_stats.then(|| entry.clone());
         let mut prev_globals = SmallCopyList::<TypeId, 8>::default();
         for (global, _) in entry.iter() {
             prev_globals.push(*global);
@@ -151,12 +222,18 @@ impl GlobalObservationIndex {
         for (global, mask) in entry.iter().copied() {
             self.by_global.entry(global).or_default().insert(node, mask);
         }
+
+        prev_entries
+            .as_ref()
+            .map(|prev_entries| observation_record_stats(prev_entries, entry))
+            .unwrap_or_default()
     }
 
-    pub(super) fn remove_node(&mut self, node: NodeId) {
+    pub(super) fn remove_node(&mut self, node: NodeId) -> ObservationIndexRemoveStats {
         let Some(prev) = self.by_node.remove(&node) else {
-            return;
+            return ObservationIndexRemoveStats::default();
         };
+        let edges = prev.len().min(u32::MAX as usize) as u32;
         for (global, _) in &prev {
             if let Some(nodes) = self.by_global.get_mut(global) {
                 nodes.remove(&node);
@@ -165,5 +242,40 @@ impl GlobalObservationIndex {
                 }
             }
         }
+        ObservationIndexRemoveStats {
+            removed: true,
+            edges,
+        }
+    }
+}
+
+fn observation_record_stats<T: PartialEq>(
+    prev: &[(T, ObservationMask)],
+    next: &[(T, ObservationMask)],
+) -> ObservationIndexRecordStats {
+    let mut edges_added = 0u32;
+    let mut edges_removed = 0u32;
+    let mut edges_mask_changed = 0u32;
+
+    for (id, mask) in next {
+        match prev.iter().find(|(prev_id, _)| prev_id == id) {
+            Some((_, prev_mask)) if prev_mask != mask => {
+                edges_mask_changed = edges_mask_changed.saturating_add(1);
+            }
+            Some(_) => {}
+            None => edges_added = edges_added.saturating_add(1),
+        }
+    }
+
+    for (id, _) in prev {
+        if !next.iter().any(|(next_id, _)| next_id == id) {
+            edges_removed = edges_removed.saturating_add(1);
+        }
+    }
+
+    ObservationIndexRecordStats {
+        edges_added,
+        edges_removed,
+        edges_mask_changed,
     }
 }

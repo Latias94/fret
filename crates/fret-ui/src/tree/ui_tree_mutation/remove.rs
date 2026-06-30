@@ -395,10 +395,14 @@ impl<H: UiHost> UiTree<H> {
             }
             self.nodes.remove(node);
             self.remove_view_boundary_state(node);
-            self.observed_in_layout.remove_node(node);
-            self.observed_in_paint.remove_node(node);
-            self.observed_globals_in_layout.remove_node(node);
-            self.observed_globals_in_paint.remove_node(node);
+            let layout_model_removed = self.observed_in_layout.remove_node(node);
+            let paint_model_removed = self.observed_in_paint.remove_node(node);
+            let layout_global_removed = self.observed_globals_in_layout.remove_node(node);
+            let paint_global_removed = self.observed_globals_in_paint.remove_node(node);
+            self.debug_record_model_observation_index_remove_stats(layout_model_removed);
+            self.debug_record_model_observation_index_remove_stats(paint_model_removed);
+            self.debug_record_global_observation_index_remove_stats(layout_global_removed);
+            self.debug_record_global_observation_index_remove_stats(paint_global_removed);
             removed.push(node);
         }
         if removed.len() != removed_before {

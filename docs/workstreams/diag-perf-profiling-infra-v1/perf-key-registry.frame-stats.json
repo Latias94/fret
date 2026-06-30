@@ -1663,6 +1663,48 @@
       "unit": "count"
     },
     {
+      "key": "dirty_frontier_boundaries_at_layout_start",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dirty_frontier_boundaries_max",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dirty_frontier_contained_candidates",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dirty_frontier_hit_test_nodes_max",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dirty_frontier_layout_nodes_max",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dirty_frontier_paint_nodes_max",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "gc_reachability_layer_nodes",
       "kind": "counter",
       "scope": "frame",
@@ -1713,6 +1755,27 @@
     },
     {
       "key": "global_change_unobserved_globals",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "global_observation_index_edges_added",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "global_observation_index_edges_mask_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "global_observation_index_edges_removed",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",
@@ -1923,6 +1986,27 @@
     },
     {
       "key": "model_change_unobserved_models",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "model_observation_index_edges_added",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "model_observation_index_edges_mask_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "model_observation_index_edges_removed",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",

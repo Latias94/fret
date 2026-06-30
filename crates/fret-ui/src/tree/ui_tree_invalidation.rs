@@ -48,6 +48,7 @@ impl<H: UiHost> UiTree<H> {
                 self.invalidated_hit_test_nodes = self.invalidated_hit_test_nodes.saturating_sub(1);
             }
         }
+        self.debug_refresh_dirty_frontier_max();
     }
 
     pub(in crate::tree) fn bump_command_availability_revision(&mut self) {

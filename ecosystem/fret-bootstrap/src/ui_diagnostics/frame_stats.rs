@@ -396,6 +396,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_invalidations_count: u32,
     #[serde(default)]
+    pub dirty_frontier_layout_nodes_max: u32,
+    #[serde(default)]
+    pub dirty_frontier_paint_nodes_max: u32,
+    #[serde(default)]
+    pub dirty_frontier_hit_test_nodes_max: u32,
+    #[serde(default)]
+    pub dirty_frontier_boundaries_max: u32,
+    #[serde(default)]
+    pub dirty_frontier_boundaries_at_layout_start: u32,
+    #[serde(default)]
+    pub dirty_frontier_contained_candidates: u32,
+    #[serde(default)]
     pub parent_pointer_repair_passes: u32,
     #[serde(default)]
     pub parent_pointer_repairs: u32,
@@ -416,6 +428,12 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub model_change_unobserved_models: u32,
     #[serde(default)]
+    pub model_observation_index_edges_added: u32,
+    #[serde(default)]
+    pub model_observation_index_edges_removed: u32,
+    #[serde(default)]
+    pub model_observation_index_edges_mask_changed: u32,
+    #[serde(default)]
     pub global_change_invalidation_roots: u32,
     #[serde(default)]
     pub global_change_globals: u32,
@@ -423,6 +441,12 @@ pub struct UiFrameStatsV1 {
     pub global_change_observation_edges: u32,
     #[serde(default)]
     pub global_change_unobserved_globals: u32,
+    #[serde(default)]
+    pub global_observation_index_edges_added: u32,
+    #[serde(default)]
+    pub global_observation_index_edges_removed: u32,
+    #[serde(default)]
+    pub global_observation_index_edges_mask_changed: u32,
     #[serde(default)]
     pub invalidation_walk_nodes: u32,
     #[serde(default)]
@@ -1288,6 +1312,13 @@ impl UiFrameStatsV1 {
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
             layout_fast_path_taken: stats.layout_fast_path_taken,
             layout_invalidations_count: stats.layout_invalidations_count,
+            dirty_frontier_layout_nodes_max: stats.dirty_frontier_layout_nodes_max,
+            dirty_frontier_paint_nodes_max: stats.dirty_frontier_paint_nodes_max,
+            dirty_frontier_hit_test_nodes_max: stats.dirty_frontier_hit_test_nodes_max,
+            dirty_frontier_boundaries_max: stats.dirty_frontier_boundaries_max,
+            dirty_frontier_boundaries_at_layout_start: stats
+                .dirty_frontier_boundaries_at_layout_start,
+            dirty_frontier_contained_candidates: stats.dirty_frontier_contained_candidates,
             parent_pointer_repair_passes: stats.parent_pointer_repair_passes,
             parent_pointer_repairs: stats.parent_pointer_repairs,
             gc_reachability_layer_nodes: stats.gc_reachability_layer_nodes,
@@ -1298,10 +1329,18 @@ impl UiFrameStatsV1 {
             model_change_models: stats.model_change_models,
             model_change_observation_edges: stats.model_change_observation_edges,
             model_change_unobserved_models: stats.model_change_unobserved_models,
+            model_observation_index_edges_added: stats.model_observation_index_edges_added,
+            model_observation_index_edges_removed: stats.model_observation_index_edges_removed,
+            model_observation_index_edges_mask_changed: stats
+                .model_observation_index_edges_mask_changed,
             global_change_invalidation_roots: stats.global_change_invalidation_roots,
             global_change_globals: stats.global_change_globals,
             global_change_observation_edges: stats.global_change_observation_edges,
             global_change_unobserved_globals: stats.global_change_unobserved_globals,
+            global_observation_index_edges_added: stats.global_observation_index_edges_added,
+            global_observation_index_edges_removed: stats.global_observation_index_edges_removed,
+            global_observation_index_edges_mask_changed: stats
+                .global_observation_index_edges_mask_changed,
             invalidation_walk_nodes: stats.invalidation_walk_nodes,
             invalidation_walk_calls: stats.invalidation_walk_calls,
             invalidation_walk_nodes_model_change: stats.invalidation_walk_nodes_model_change,

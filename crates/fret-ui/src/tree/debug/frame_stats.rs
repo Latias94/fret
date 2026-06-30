@@ -380,6 +380,18 @@ pub struct UiDebugFrameStats {
     pub layout_subtree_dirty_agg_rebuild_nodes: u32,
     /// Count of validation failures observed during the current frame.
     pub layout_subtree_dirty_agg_validation_failures: u32,
+    /// Maximum number of retained nodes carrying layout invalidation at once during this frame.
+    pub dirty_frontier_layout_nodes_max: u32,
+    /// Maximum number of retained nodes carrying paint invalidation at once during this frame.
+    pub dirty_frontier_paint_nodes_max: u32,
+    /// Maximum number of retained nodes carrying hit-test invalidation at once during this frame.
+    pub dirty_frontier_hit_test_nodes_max: u32,
+    /// Maximum number of dirty view-boundary roots queued at once during this frame.
+    pub dirty_frontier_boundaries_max: u32,
+    /// Dirty view-boundary roots present after detached followups are pruned at layout start.
+    pub dirty_frontier_boundaries_at_layout_start: u32,
+    /// Contained view-cache boundary candidates considered for follow-up relayout this frame.
+    pub dirty_frontier_contained_candidates: u32,
     /// Parent-pointer repair passes run from authoritative layer roots.
     pub parent_pointer_repair_passes: u32,
     /// Parent pointers rewritten by repair passes during this frame.
@@ -400,6 +412,12 @@ pub struct UiDebugFrameStats {
     pub model_change_observation_edges: u32,
     /// Count of changed models with no observation edges.
     pub model_change_unobserved_models: u32,
+    /// Model dependency edges added to observation indexes during this frame.
+    pub model_observation_index_edges_added: u32,
+    /// Model dependency edges removed from observation indexes during this frame.
+    pub model_observation_index_edges_removed: u32,
+    /// Model dependency edges whose invalidation mask changed during this frame.
+    pub model_observation_index_edges_mask_changed: u32,
     /// Unique nodes observed as invalidation roots for global changes during the current frame.
     pub global_change_invalidation_roots: u32,
     /// Count of changed globals consumed for propagation during the current frame.
@@ -408,6 +426,12 @@ pub struct UiDebugFrameStats {
     pub global_change_observation_edges: u32,
     /// Count of changed globals with no observation edges.
     pub global_change_unobserved_globals: u32,
+    /// Global dependency edges added to observation indexes during this frame.
+    pub global_observation_index_edges_added: u32,
+    /// Global dependency edges removed from observation indexes during this frame.
+    pub global_observation_index_edges_removed: u32,
+    /// Global dependency edges whose invalidation mask changed during this frame.
+    pub global_observation_index_edges_mask_changed: u32,
     /// Total nodes visited across invalidation walks during the current frame.
     pub invalidation_walk_nodes: u32,
     /// Total invalidation walks performed during the current frame.

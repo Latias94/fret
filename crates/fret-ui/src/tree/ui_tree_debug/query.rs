@@ -260,6 +260,44 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats
     }
 
+    pub(crate) fn debug_refresh_dirty_frontier_max(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dirty_frontier_layout_nodes_max = self
+            .debug_stats
+            .dirty_frontier_layout_nodes_max
+            .max(self.invalidated_layout_nodes);
+        self.debug_stats.dirty_frontier_paint_nodes_max = self
+            .debug_stats
+            .dirty_frontier_paint_nodes_max
+            .max(self.invalidated_paint_nodes);
+        self.debug_stats.dirty_frontier_hit_test_nodes_max = self
+            .debug_stats
+            .dirty_frontier_hit_test_nodes_max
+            .max(self.invalidated_hit_test_nodes);
+        self.debug_stats.dirty_frontier_boundaries_max = self
+            .debug_stats
+            .dirty_frontier_boundaries_max
+            .max(self.dirty_boundaries.len().min(u32::MAX as usize) as u32);
+    }
+
+    pub(crate) fn debug_record_dirty_frontier_layout_start(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dirty_frontier_boundaries_at_layout_start =
+            self.dirty_boundaries.len().min(u32::MAX as usize) as u32;
+    }
+
+    pub(crate) fn debug_record_dirty_frontier_contained_candidates(&mut self, candidates: usize) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.dirty_frontier_contained_candidates =
+            candidates.min(u32::MAX as usize) as u32;
+    }
+
     pub(crate) fn debug_record_identity_seeded_hit(&mut self) {
         if !self.debug_enabled {
             return;
@@ -397,6 +435,86 @@ impl<H: UiHost> UiTree<H> {
             .debug_stats
             .dispatch_snapshot_cache_invalidations
             .saturating_add(1);
+    }
+
+    pub(in crate::tree) fn debug_record_model_observation_index_record(
+        &mut self,
+        stats: ObservationIndexRecordStats,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.model_observation_index_edges_added = self
+            .debug_stats
+            .model_observation_index_edges_added
+            .saturating_add(stats.edges_added);
+        self.debug_stats.model_observation_index_edges_removed = self
+            .debug_stats
+            .model_observation_index_edges_removed
+            .saturating_add(stats.edges_removed);
+        self.debug_stats.model_observation_index_edges_mask_changed = self
+            .debug_stats
+            .model_observation_index_edges_mask_changed
+            .saturating_add(stats.edges_mask_changed);
+    }
+
+    pub(in crate::tree) fn debug_record_model_observation_index_remove(&mut self, edges: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.model_observation_index_edges_removed = self
+            .debug_stats
+            .model_observation_index_edges_removed
+            .saturating_add(edges);
+    }
+
+    pub(in crate::tree) fn debug_record_model_observation_index_remove_stats(
+        &mut self,
+        stats: ObservationIndexRemoveStats,
+    ) {
+        if stats.removed {
+            self.debug_record_model_observation_index_remove(stats.edges);
+        }
+    }
+
+    pub(in crate::tree) fn debug_record_global_observation_index_record(
+        &mut self,
+        stats: ObservationIndexRecordStats,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.global_observation_index_edges_added = self
+            .debug_stats
+            .global_observation_index_edges_added
+            .saturating_add(stats.edges_added);
+        self.debug_stats.global_observation_index_edges_removed = self
+            .debug_stats
+            .global_observation_index_edges_removed
+            .saturating_add(stats.edges_removed);
+        self.debug_stats.global_observation_index_edges_mask_changed = self
+            .debug_stats
+            .global_observation_index_edges_mask_changed
+            .saturating_add(stats.edges_mask_changed);
+    }
+
+    pub(in crate::tree) fn debug_record_global_observation_index_remove(&mut self, edges: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.global_observation_index_edges_removed = self
+            .debug_stats
+            .global_observation_index_edges_removed
+            .saturating_add(edges);
+    }
+
+    pub(in crate::tree) fn debug_record_global_observation_index_remove_stats(
+        &mut self,
+        stats: ObservationIndexRemoveStats,
+    ) {
+        if stats.removed {
+            self.debug_record_global_observation_index_remove(stats.edges);
+        }
     }
 
     pub(crate) fn debug_set_element_children_vec_pool_stats(

@@ -151,7 +151,11 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     assert!(!ui.nodes[boundary].invalidation.layout);
     assert_eq!(ui.nodes[boundary].subtree_layout_dirty_count, 0);
     assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 0);
-    assert_eq!(ui.debug_stats().view_cache_contained_relayouts, 1);
+    let stats = ui.debug_stats();
+    assert_eq!(stats.view_cache_contained_relayouts, 1);
+    assert_eq!(stats.dirty_frontier_boundaries_max, 1);
+    assert_eq!(stats.dirty_frontier_boundaries_at_layout_start, 1);
+    assert_eq!(stats.dirty_frontier_contained_candidates, 1);
 }
 
 #[test]

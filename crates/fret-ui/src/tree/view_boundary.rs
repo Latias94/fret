@@ -502,6 +502,7 @@ impl<H: UiHost> UiTree<H> {
         };
         boundary.dirty.mark(source, detail);
         self.dirty_boundaries.insert(node);
+        self.debug_refresh_dirty_frontier_max();
     }
 
     pub(in crate::tree) fn clear_boundary_layout_dirty(&mut self, node: NodeId) {
@@ -509,6 +510,7 @@ impl<H: UiHost> UiTree<H> {
             boundary.dirty.clear();
         }
         self.dirty_boundaries.remove(&node);
+        self.debug_refresh_dirty_frontier_max();
     }
 
     #[cfg(test)]

@@ -40,3 +40,16 @@ U4 explorer `019f1627-edfc-7001-be3e-8ef1d98c076e` recommends starting with coun
 - Add `UiDebugFrameStats` fields for identity seeded hit/stale, fallback scans/nodes/hit/miss, parent pointer repair, GC reachability/stale removals, dirty frontier breadth, dispatch snapshot cache hit/miss/build/invalidation, and model/global observation churn.
 - Instrument first in `tree/layout/state.rs`, `declarative/mount.rs`, `tree/dispatch_snapshot.rs`, `tree/observation.rs`, and debug stats export paths.
 - Do not remove fallback scans or introduce `StableNodeHandle` in the first U4 slice. Keep fallback scans as counted temporary correctness paths, then gate them toward zero after warmup.
+
+U4 follow-up explorer `019f167a-2cb3-7dd0-bffe-889f9be0f2ff` narrowed the remaining observability gap:
+
+- Dirty frontier breadth should be recorded at `view_boundary.rs::mark_boundary_layout_dirty`, layout start after detached followups are pruned, and contained view-cache candidate collection. It should not duplicate `layout_subtree_dirty_agg_*`, which measures parent-chain maintenance cost rather than frontier width.
+- Model/global observation churn should be reported by `ObservationIndex::record()` / `GlobalObservationIndex::record()` deltas at layout/paint recording points, without changing the existing `model_change_*` and `global_change_*` propagation baseline semantics.
+- The minimum useful fields are dirty boundary max/layout-start/contained-candidate counts and model/global observation edge added/removed/mask-changed counts.
+
+U5 explorer `019f167a-817e-7ba3-9dbd-35815bc40c4b` recommends making the next implementation slice a `DirtyViewFrontier` ownership wrapper:
+
+- Replace raw ownership of `UiTree::dirty_boundaries: HashSet<NodeId>` with a frontier type that stores `ViewId`/boundary vocabulary and exposes small NodeId bridge methods for v1 retained-node compatibility.
+- Start with `view_boundary.rs` write points, then update reads in `ui_tree_subtree_layout_dirty.rs`, `layout/entrypoints.rs`, and `ui_tree_debug/frame.rs`.
+- Do not start U5 by moving dispatch snapshots, interaction/prepaint caches, paint recording, or scene chunks; those are larger follow-on slices for U5/U7 and would touch focus/overlay/renderer contracts.
+- After this slice, update ADR 0165 and ADR 0327 implementation alignment evidence but keep the status partially aligned until entity-first `ViewId` and frame products are fully migrated.

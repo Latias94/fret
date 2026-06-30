@@ -278,6 +278,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
+            if pass_kind == LayoutPassKind::Final {
+                self.debug_record_dirty_frontier_layout_start();
+            }
         }
 
         let trace_layout = tracing::enabled!(tracing::Level::TRACE);
@@ -2001,6 +2004,7 @@ impl<H: UiHost> UiTree<H> {
         if candidates.is_empty() {
             return;
         }
+        self.debug_record_dirty_frontier_contained_candidates(candidates.len());
 
         let candidate_set: std::collections::HashSet<NodeId> = candidates.iter().copied().collect();
         let mut scheduled_followups: std::collections::HashSet<NodeId> =

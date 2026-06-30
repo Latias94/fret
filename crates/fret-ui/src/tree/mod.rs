@@ -96,7 +96,10 @@ pub(crate) use debug::{
 use frame_arena::FrameArenaScratch;
 use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
 use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStackKey};
-use observation::{GlobalObservationIndex, ObservationIndex, ObservationMask};
+use observation::{
+    GlobalObservationIndex, ObservationIndex, ObservationIndexRecordStats,
+    ObservationIndexRemoveStats, ObservationMask,
+};
 use profiling::{
     LayoutNodeProfileConfig, LayoutNodeProfileState, MeasureNodeProfileConfig,
     MeasureNodeProfileState, ScrollLayoutKindProfileScope,
