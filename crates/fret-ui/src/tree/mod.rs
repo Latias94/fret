@@ -136,7 +136,8 @@ use small_list::{SmallCopyList, SmallNodeList};
 pub use view_boundary::BoundarySceneFragmentDebug;
 use view_boundary::{DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryState};
 
-pub(crate) use dispatch_snapshot::{UiDispatchSnapshot, UiDispatchSnapshotCacheEntry};
+use dispatch_snapshot::DispatchSnapshotFrameProductState;
+pub(crate) use dispatch_snapshot::UiDispatchSnapshot;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct NodePaintPassthrough {
@@ -365,8 +366,7 @@ pub struct UiTree<H: UiHost> {
     pending_barrier_relayouts: Vec<NodeId>,
     pending_declarative_window_snapshot_roots: HashSet<NodeId>,
     pending_post_layout_window_runtime_snapshot_refine: bool,
-    dispatch_snapshot_generation: u64,
-    dispatch_snapshot_cache: Vec<UiDispatchSnapshotCacheEntry>,
+    dispatch_snapshot_products: DispatchSnapshotFrameProductState,
     command_availability_revision: u64,
     last_window_command_action_availability_snapshot_signature:
         Option<WindowCommandActionAvailabilitySnapshotSignature>,

@@ -11,9 +11,60 @@ pub(crate) struct UiDispatchSnapshotCacheKey {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct UiDispatchSnapshotCacheEntry {
+struct UiDispatchSnapshotCacheEntry {
     key: UiDispatchSnapshotCacheKey,
     snapshot: UiDispatchSnapshot,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(in crate::tree) struct DispatchSnapshotFrameProductState {
+    generation: u64,
+    cache: Vec<UiDispatchSnapshotCacheEntry>,
+}
+
+impl DispatchSnapshotFrameProductState {
+    pub(in crate::tree) fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    #[cfg(test)]
+    pub(in crate::tree) fn cached_entry_count(&self) -> usize {
+        self.cache.len()
+    }
+
+    fn invalidate(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+        self.cache.clear();
+    }
+
+    fn cache_key(
+        &self,
+        window: Option<AppWindowId>,
+        active_layer_roots: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> UiDispatchSnapshotCacheKey {
+        UiDispatchSnapshotCacheKey {
+            generation: self.generation,
+            window,
+            active_layer_roots: active_layer_roots.to_vec(),
+            barrier_root,
+        }
+    }
+
+    fn get(&self, key: &UiDispatchSnapshotCacheKey) -> Option<UiDispatchSnapshot> {
+        self.cache
+            .iter()
+            .find(|entry| entry.key == *key)
+            .map(|entry| entry.snapshot.clone())
+    }
+
+    fn insert(&mut self, key: UiDispatchSnapshotCacheKey, snapshot: UiDispatchSnapshot) {
+        if self.cache.len() >= DISPATCH_SNAPSHOT_CACHE_CAPACITY {
+            self.cache.remove(0);
+        }
+        self.cache
+            .push(UiDispatchSnapshotCacheEntry { key, snapshot });
+    }
 }
 
 /// A per-window, per-frame snapshot used to answer correctness-critical containment queries
@@ -58,8 +109,7 @@ impl UiDispatchSnapshot {
 
 impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn invalidate_dispatch_snapshot_cache(&mut self) {
-        self.dispatch_snapshot_generation = self.dispatch_snapshot_generation.wrapping_add(1);
-        self.dispatch_snapshot_cache.clear();
+        self.dispatch_snapshot_products.invalidate();
         self.focus_traversal_availability_cache = None;
         self.command_availability_interest_cache = None;
         self.debug_record_dispatch_snapshot_cache_invalidation();
@@ -74,12 +124,8 @@ impl<H: UiHost> UiTree<H> {
         active_layer_roots: &[NodeId],
         barrier_root: Option<NodeId>,
     ) -> UiDispatchSnapshotCacheKey {
-        UiDispatchSnapshotCacheKey {
-            generation: self.dispatch_snapshot_generation,
-            window: self.window,
-            active_layer_roots: active_layer_roots.to_vec(),
-            barrier_root,
-        }
+        self.dispatch_snapshot_products
+            .cache_key(self.window, active_layer_roots, barrier_root)
     }
 
     pub(in crate::tree) fn cached_dispatch_snapshot_for_layer_roots(
@@ -89,12 +135,7 @@ impl<H: UiHost> UiTree<H> {
         barrier_root: Option<NodeId>,
     ) -> UiDispatchSnapshot {
         let key = self.dispatch_snapshot_cache_key(active_layer_roots, barrier_root);
-        if let Some(entry) = self
-            .dispatch_snapshot_cache
-            .iter()
-            .find(|entry| entry.key == key)
-        {
-            let mut snapshot = entry.snapshot.clone();
+        if let Some(mut snapshot) = self.dispatch_snapshot_products.get(&key) {
             snapshot.frame_id = frame_id;
             self.debug_record_dispatch_snapshot_cache_hit();
             return snapshot;
@@ -106,14 +147,8 @@ impl<H: UiHost> UiTree<H> {
             active_layer_roots,
             barrier_root,
         );
-        if self.dispatch_snapshot_cache.len() >= DISPATCH_SNAPSHOT_CACHE_CAPACITY {
-            self.dispatch_snapshot_cache.remove(0);
-        }
-        self.dispatch_snapshot_cache
-            .push(UiDispatchSnapshotCacheEntry {
-                key,
-                snapshot: snapshot.clone(),
-            });
+        self.dispatch_snapshot_products
+            .insert(key, snapshot.clone());
         snapshot
     }
 
@@ -207,5 +242,15 @@ impl<H: UiHost> UiTree<H> {
             pre: Arc::new(pre),
             post: Arc::new(post),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_dispatch_snapshot_frame_product_generation(&self) -> u64 {
+        self.dispatch_snapshot_products.generation()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_dispatch_snapshot_frame_product_cached_entries(&self) -> usize {
+        self.dispatch_snapshot_products.cached_entry_count()
     }
 }

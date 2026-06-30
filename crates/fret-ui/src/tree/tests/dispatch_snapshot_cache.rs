@@ -31,6 +31,16 @@ fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes()
     assert_eq!(stats.dispatch_snapshot_cache_hits, 1);
     assert_eq!(stats.dispatch_snapshot_builds, 1);
     assert_eq!(stats.dispatch_snapshot_built_nodes, 2);
+    let initial_generation = ui.test_dispatch_snapshot_frame_product_generation();
+    assert!(
+        initial_generation > 0,
+        "structure setup should advance the dispatch snapshot frame-product generation"
+    );
+    assert_eq!(
+        ui.test_dispatch_snapshot_frame_product_cached_entries(),
+        1,
+        "dispatch snapshot cache entries should be owned by the frame-product state"
+    );
 
     let child_b = ui.create_node(TestStack);
     ui.set_children(root, vec![child_a, child_b]);
@@ -48,4 +58,13 @@ fn dispatch_snapshot_cache_reuses_forest_across_frames_until_structure_changes()
     assert_eq!(stats.dispatch_snapshot_cache_misses, 2);
     assert_eq!(stats.dispatch_snapshot_builds, 2);
     assert_eq!(stats.dispatch_snapshot_built_nodes, 5);
+    assert!(
+        ui.test_dispatch_snapshot_frame_product_generation() > initial_generation,
+        "structure invalidation should advance the dispatch snapshot frame-product generation"
+    );
+    assert_eq!(
+        ui.test_dispatch_snapshot_frame_product_cached_entries(),
+        1,
+        "structure invalidation should clear stale frame-product snapshots before rebuilding"
+    );
 }

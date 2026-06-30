@@ -903,7 +903,7 @@ impl<H: UiHost> UiTree<H> {
 
         WindowFocusTraversalAvailabilityCacheKey {
             frame_id,
-            dispatch_snapshot_generation: self.dispatch_snapshot_generation,
+            dispatch_snapshot_generation: self.dispatch_snapshot_products.generation(),
             window: dispatch_snapshot.window,
             active_layer_roots: dispatch_snapshot.active_layer_roots.clone(),
             barrier_root: dispatch_snapshot.barrier_root,
