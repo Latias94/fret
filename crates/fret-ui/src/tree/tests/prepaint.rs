@@ -114,7 +114,7 @@ fn prepaint_interaction_cache_replay_translates_records_when_cache_root_moves() 
     );
 
     app.advance_frame();
-    ui.hit_test_path_cache = None;
+    ui.clear_hit_test_path_cache();
     let moved_bounds = Rect::new(
         Point::new(Px(100.0), Px(0.0)),
         Size::new(Px(20.0), Px(20.0)),

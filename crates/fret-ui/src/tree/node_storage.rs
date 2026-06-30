@@ -248,12 +248,6 @@ mod tests {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(super) struct HitTestPathCache {
-    pub(super) layer_root: NodeId,
-    pub(super) path: Vec<NodeId>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(super) struct PrepaintHitTestCache {
     pub(super) render_transform_inv: Option<Transform2D>,

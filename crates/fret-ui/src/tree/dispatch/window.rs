@@ -976,7 +976,7 @@ impl<H: UiHost> UiTree<H> {
                 let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
                     self.hit_test_layers_cached_with_root(hit_test_layer_roots, pos)
                 } else {
-                    self.hit_test_path_cache = None;
+                    self.clear_hit_test_path_cache();
                     self.hit_test_layers_cached_with_root(hit_test_layer_roots, pos)
                 };
                 let hit_layer_root = hit.map(|(root, _hit)| root);
@@ -1344,7 +1344,7 @@ impl<H: UiHost> UiTree<H> {
                         let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
                             self.hit_test_layers_cached(hit_test_layer_roots, pos)
                         } else {
-                            self.hit_test_path_cache = None;
+                            self.clear_hit_test_path_cache();
                             self.hit_test_layers_cached(hit_test_layer_roots, pos)
                         };
 
@@ -3229,7 +3229,7 @@ impl<H: UiHost> UiTree<H> {
                 /* commit_scroll_handle_baselines */ true,
             );
 
-            self.hit_test_path_cache = None;
+            self.clear_hit_test_path_cache();
             let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
 
             let mut hit_for_hover = hit;

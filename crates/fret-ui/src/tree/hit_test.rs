@@ -1,8 +1,103 @@
 use super::*;
 
+#[derive(Debug, Default, Clone)]
+pub(super) struct HitTestPathRoutingCacheState {
+    /// Window-owned primary pointer routing path cache.
+    ///
+    /// Secondary hit tests suspend publication so occlusion/hover probes cannot replace the
+    /// primary pointer route with a probe-specific layer root.
+    entry: Option<HitTestPathCache>,
+    suspension_depth: u32,
+}
+
+#[derive(Debug, Clone)]
+struct HitTestPathCache {
+    layer_root: NodeId,
+    path: Vec<NodeId>,
+}
+
+impl HitTestPathRoutingCacheState {
+    fn clear(&mut self) {
+        self.entry = None;
+    }
+
+    fn begin_suspended_query(&mut self) {
+        self.suspension_depth = self.suspension_depth.saturating_add(1);
+    }
+
+    fn end_suspended_query(&mut self) {
+        self.suspension_depth = self.suspension_depth.saturating_sub(1);
+    }
+
+    fn suspended(&self) -> bool {
+        self.suspension_depth > 0
+    }
+
+    fn take_for_query(&mut self) -> Option<HitTestPathCache> {
+        if self.suspended() {
+            None
+        } else {
+            self.entry.take()
+        }
+    }
+
+    fn restore_for_query(&mut self, entry: HitTestPathCache) {
+        if !self.suspended() {
+            self.entry = Some(entry);
+        }
+    }
+
+    fn clear_after_query(&mut self) {
+        if !self.suspended() {
+            self.clear();
+        }
+    }
+
+    fn clear_layer_after_query(&mut self, layer_root: NodeId) {
+        if !self.suspended()
+            && self
+                .entry
+                .as_ref()
+                .is_some_and(|entry| entry.layer_root == layer_root)
+        {
+            self.clear();
+        }
+    }
+
+    fn set_after_query(&mut self, layer_root: NodeId, path: Vec<NodeId>) {
+        if !self.suspended() {
+            self.entry = Some(HitTestPathCache { layer_root, path });
+        }
+    }
+
+    #[cfg(test)]
+    fn has_entry_for_layer(&self, layer_root: NodeId) -> bool {
+        self.entry
+            .as_ref()
+            .is_some_and(|entry| entry.layer_root == layer_root)
+    }
+}
+
 impl<H: UiHost> UiTree<H> {
     pub(super) fn hit_test(&self, root: NodeId, position: Point) -> Option<NodeId> {
         self.hit_test_node(root, position)
+    }
+
+    pub(super) fn clear_hit_test_path_cache(&mut self) {
+        self.hit_test_path_cache.clear();
+    }
+
+    pub(super) fn begin_suspended_hit_test_path_cache_query(&mut self) {
+        self.hit_test_path_cache.begin_suspended_query();
+    }
+
+    pub(super) fn end_suspended_hit_test_path_cache_query(&mut self) {
+        self.hit_test_path_cache.end_suspended_query();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_hit_test_path_cache_has_entry_for_layer(&self, layer_root: NodeId) -> bool {
+        self.hit_test_path_cache.has_entry_for_layer(layer_root)
     }
 
     pub(super) fn hit_test_layers_cached_with_root(
@@ -18,11 +113,11 @@ impl<H: UiHost> UiTree<H> {
             || tracing::trace_span!("fret.ui.hit_test.layers", layers_len),
             || {
                 if layers.is_empty() {
-                    self.hit_test_path_cache = None;
+                    self.hit_test_path_cache.clear_after_query();
                     return None;
                 }
 
-                if let Some(cache) = self.hit_test_path_cache.take()
+                if let Some(cache) = self.hit_test_path_cache.take_for_query()
                     && !cache.path.is_empty()
                 {
                     for &root in layers {
@@ -60,7 +155,7 @@ impl<H: UiHost> UiTree<H> {
                                     self.debug_stats.hit_test_path_cache_hits =
                                         self.debug_stats.hit_test_path_cache_hits.saturating_add(1);
                                 }
-                                self.hit_test_path_cache = Some(cache);
+                                self.hit_test_path_cache.restore_for_query(cache);
                                 return Some((root, hit));
                             }
 
@@ -83,7 +178,7 @@ impl<H: UiHost> UiTree<H> {
                         }
                     }
 
-                    self.hit_test_path_cache = None;
+                    self.hit_test_path_cache.clear_after_query();
                     return None;
                 }
 
@@ -94,7 +189,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                self.hit_test_path_cache = None;
+                self.hit_test_path_cache.clear_after_query();
                 None
             },
         );
@@ -528,13 +623,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn update_hit_test_path_cache(&mut self, layer_root: NodeId, hit: Option<NodeId>) {
         let Some(hit) = hit else {
-            if self
-                .hit_test_path_cache
-                .as_ref()
-                .is_some_and(|c| c.layer_root == layer_root)
-            {
-                self.hit_test_path_cache = None;
-            }
+            self.hit_test_path_cache.clear_layer_after_query(layer_root);
             return;
         };
 
@@ -548,14 +637,12 @@ impl<H: UiHost> UiTree<H> {
             current = self.nodes.get(id).and_then(|n| n.parent);
         }
         if path_rev.last().copied() != Some(layer_root) {
-            self.hit_test_path_cache = None;
+            self.hit_test_path_cache.clear_after_query();
             return;
         }
         path_rev.reverse();
-        self.hit_test_path_cache = Some(super::HitTestPathCache {
-            layer_root,
-            path: path_rev,
-        });
+        self.hit_test_path_cache
+            .set_after_query(layer_root, path_rev);
     }
 
     fn try_hit_test_along_cached_path(&self, path: &[NodeId], position: Point) -> Option<NodeId> {

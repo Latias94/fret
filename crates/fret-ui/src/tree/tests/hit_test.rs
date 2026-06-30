@@ -733,6 +733,10 @@ fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
         ui.hit_test_layers_cached(&layers, Point::new(Px(75.0), Px(75.0))),
         Some(base_leaf),
     );
+    assert!(
+        ui.test_hit_test_path_cache_has_entry_for_layer(base_root),
+        "cached routing path should be owned by the window hit-test routing cache state"
+    );
     assert_eq!(
         ui.hit_test_layers_cached(&layers, Point::new(Px(76.0), Px(76.0))),
         Some(base_leaf),
@@ -742,6 +746,77 @@ fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
         ui.hit_test_layers_cached(&layers, Point::new(Px(25.0), Px(25.0))),
         Some(overlay_leaf),
         "overlay root should win when it hits before the base root"
+    );
+}
+
+#[test]
+fn hit_test_path_routing_cache_clear_api_drops_entry() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.set_children(root, vec![leaf]);
+
+    for id in [root, leaf] {
+        ui.nodes[id].bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+    }
+
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(10.0), Px(10.0))),
+        Some(leaf)
+    );
+    assert!(ui.test_hit_test_path_cache_has_entry_for_layer(root));
+
+    ui.clear_hit_test_path_cache();
+    assert!(!ui.test_hit_test_path_cache_has_entry_for_layer(root));
+}
+
+#[test]
+fn suspended_hit_test_path_routing_cache_query_does_not_replace_primary_entry() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+
+    let base_root = ui.create_node(TestStack);
+    let base_leaf = ui.create_node(TestStack);
+    ui.set_root(base_root);
+    ui.set_children(base_root, vec![base_leaf]);
+
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_leaf = ui.create_node(TestStack);
+    ui.set_children(overlay_root, vec![overlay_leaf]);
+
+    for id in [base_root, base_leaf] {
+        ui.nodes[id].bounds =
+            Rect::new(Point::new(Px(60.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    }
+    for id in [overlay_root, overlay_leaf] {
+        ui.nodes[id].bounds =
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    }
+
+    assert_eq!(
+        ui.hit_test_layers_cached(&[base_root], Point::new(Px(65.0), Px(5.0))),
+        Some(base_leaf)
+    );
+    assert!(ui.test_hit_test_path_cache_has_entry_for_layer(base_root));
+
+    ui.begin_suspended_hit_test_path_cache_query();
+    assert_eq!(
+        ui.hit_test_layers_cached(&[overlay_root], Point::new(Px(5.0), Px(5.0))),
+        Some(overlay_leaf)
+    );
+    ui.end_suspended_hit_test_path_cache_query();
+
+    assert!(
+        ui.test_hit_test_path_cache_has_entry_for_layer(base_root),
+        "secondary/suspended hit-test queries must not replace the primary routing cache entry"
+    );
+    assert!(
+        !ui.test_hit_test_path_cache_has_entry_for_layer(overlay_root),
+        "secondary/suspended hit-test queries must not publish their own path cache entry"
     );
 }
 

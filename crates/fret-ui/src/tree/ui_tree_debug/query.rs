@@ -876,7 +876,7 @@ impl<H: UiHost> UiTree<H> {
 
         // Avoid leaking a stale cached path into diagnostics queries. Pointer routing already
         // manages when the cache is eligible for reuse (e.g. move vs click).
-        self.hit_test_path_cache = None;
+        self.clear_hit_test_path_cache();
 
         let hit = self.hit_test_layers_cached(&active_roots, position);
         UiDebugHitTest {

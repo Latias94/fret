@@ -14,7 +14,7 @@ impl<H: UiHost> Default for UiTree<H> {
             active_touch_drag_target: HashMap::new(),
             last_pointer_move_hit: HashMap::new(),
             touch_pointer_down_outside_candidates: HashMap::new(),
-            hit_test_path_cache: None,
+            hit_test_path_cache: HitTestPathRoutingCacheState::default(),
             hit_test_bounds_trees: bounds_tree::HitTestBoundsTrees::default(),
             last_internal_drag_target: None,
             window: None,

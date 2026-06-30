@@ -11,10 +11,9 @@ impl<H: UiHost> UiTree<H> {
             return None;
         }
 
-        let saved = self.hit_test_path_cache.take();
-        self.hit_test_path_cache = None;
+        self.begin_suspended_hit_test_path_cache_query();
         let hit = self.hit_test_layers_cached(roots, position);
-        self.hit_test_path_cache = saved;
+        self.end_suspended_hit_test_path_cache_query();
         hit
     }
 

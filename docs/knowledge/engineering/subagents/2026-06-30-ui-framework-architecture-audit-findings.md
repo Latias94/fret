@@ -60,3 +60,13 @@ U5 implementation-risk explorer `019f16b7-57cb-70f2-9232-a5e7a760e802` reviewed 
 - The recommended first-slice API is `DirtyViewFrontier { views: HashSet<ViewId> }` with ViewId-native iteration plus explicitly named v1 boundary-node bridge methods such as `mark_boundary_node_v1`, `clear_boundary_node_v1`, and `iter_boundary_nodes_v1`.
 - The highest-risk behavior is frontier/state synchronization after initial mount, main-pass layout consumption, detached boundary pruning, contained relayout, notify propagation, and hover-edge dirtying. Focused tests should cover view-cache contained relayout, detached dirty roots, notify ancestor propagation, hover edges, and layout dirty harness schema metrics.
 - ADR 0165 should remain `Partially aligned`; ADR 0327 should remain `Aligned (with known gaps)`. This slice moves dirty frontier ownership toward ViewId/boundary vocabulary but does not land entity-first `ViewId`, dispatch snapshot ownership, paint recording ownership, or scene chunks.
+
+U5 input/dispatch snapshot audit subagent `019f181e-fe0a-72c0-ba7c-79cf3a60ccf3` concluded `UiInputArbitrationSnapshot`, `UiDispatchSnapshot`, focus/capture state, command availability caches, and layer policy flags should stay window/layer-forest owned for now. They can span multiple layer roots, so forcing them into a single boundary product would hide the real invalidation scope.
+
+U5 semantics audit subagent `019f181f-9af6-7741-93ae-7c5dd821f1fb` concluded the final `SemanticsSnapshot` and AccessKit update must remain window-owned because roots, barriers, focus/capture, and relation normalization are global. The safe boundary-owned cut is only reusable clean semantics subtree products/ranges.
+
+U5 hit-test path cache audit subagent `019f1853-0640-79d2-8e19-8411b52ef258` concluded `hit_test_path_cache` is not boundary-owned:
+
+- The cache payload is keyed by a `layer_root`, but validity depends on the window's active layer roots, modal barriers, pointer occlusion policy, event type, and whether the query is a primary pointer route or a secondary hover/occlusion probe.
+- A boundary product would make the owner look more local than the invalidation contract really is, increasing the risk that future routing changes reuse a path across the wrong layer forest.
+- The recommended cut is a window-owned `HitTestPathRoutingCacheState` with explicit clear, suspend, and update APIs. Secondary hit tests should suspend publication so they cannot replace the primary pointer-route cache entry.

@@ -121,11 +121,12 @@ pub use debug::{
     UiDebugSetLayerVisibleWrite,
 };
 
+use hit_test::HitTestPathRoutingCacheState;
 use layers::UiLayer;
 pub use layers::{OverlayRootOptions, UiLayerId};
 use node_storage::{
-    ChildrenWritePolicy, HitTestPathCache, Node, NodeMeasureCache, NodeMeasureCacheKey,
-    PrepaintHitTestCache, ViewCacheFlags,
+    ChildrenWritePolicy, Node, NodeMeasureCache, NodeMeasureCacheKey, PrepaintHitTestCache,
+    ViewCacheFlags,
 };
 pub use paint_cache::PaintCachePolicy;
 use paint_cache::{PaintCacheEntry, PaintCacheKey, PaintCacheState};
@@ -320,7 +321,7 @@ pub struct UiTree<H: UiHost> {
     active_touch_drag_target: HashMap<PointerId, GlobalElementId>,
     last_pointer_move_hit: HashMap<PointerId, Option<NodeId>>,
     touch_pointer_down_outside_candidates: HashMap<PointerId, TouchPointerDownOutsideCandidate>,
-    hit_test_path_cache: Option<HitTestPathCache>,
+    hit_test_path_cache: HitTestPathRoutingCacheState,
     hit_test_bounds_trees: bounds_tree::HitTestBoundsTrees,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
