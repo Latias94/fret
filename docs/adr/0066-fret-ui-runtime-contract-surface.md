@@ -67,7 +67,9 @@ deterministically:
   imports of raw runtime seams unless the file is explicitly classified as advanced or compat.
 - `ecosystem/fret-ui-headless` and `ecosystem/fret-ui-kit` are the intended owners for pure
   behavior kernels and policy vocabulary such as dismissal reason mapping, focus trap/restore,
-  roving focus, typeahead, and recipe chrome defaults.
+  roving navigation policies, typeahead matching/buffer strategy, and recipe chrome defaults.
+  The runtime may retain composite focus traversal mechanisms such as `RovingFlex` / `Roving*`
+  hook contexts when they only forward interaction facts and delegate decisions to component hooks.
 
 ### 2) Stability tiers (how to “lock” contracts)
 

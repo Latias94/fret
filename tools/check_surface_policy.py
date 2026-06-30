@@ -166,6 +166,9 @@ POLICY_CODED_EXPORT_TERMS: tuple[str, ...] = (
     "ResizablePanelGroup",
 )
 
+# Terms in this list are denied from root/default authoring surfaces. Some of them, such as
+# `RovingFocus` and `Typeahead`, may still appear inside `crates/fret-ui` mechanism members when
+# the runtime only forwards interaction facts and component crates own the policy.
 MECHANISM_ROOT_EXPORT_CLASSIFICATIONS: dict[str, str] = {}
 
 MECHANISM_PUBLIC_MEMBER_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (

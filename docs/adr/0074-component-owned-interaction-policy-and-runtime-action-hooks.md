@@ -118,6 +118,13 @@ Component code should implement these behaviors via action hooks (ADR 0074):
 - `ElementContext::{pressable_*, layer_interaction_*, roving_*}`
 - `fret-ui-kit::declarative::action_hooks::ActionHooksExt` (recommended convenience layer)
 
+The retained `Roving*` runtime names are a mechanism retention, not a policy exception. The runtime
+owns the focusable item discovery, key-event trigger point, focus request, and handler context
+shape. Component/headless crates own APG/Radix navigation policy, typeahead buffer/matching policy,
+selection writes, and menu/listbox/radio-specific fallbacks. Source-policy gates therefore reject
+`RovingFocus` / `Typeahead` from the `fret-ui` root/default authoring surface while allowing the
+mechanism members in `crates/fret-ui/src/action.rs` and `crates/fret-ui/src/element.rs`.
+
 ## Consequences
 
 ### Benefits

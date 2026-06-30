@@ -105,7 +105,12 @@ Radix-style open/close auto-focus hooks should likewise come from
 
 ### Roving Selection Writes
 
-Roving navigation (Arrow/Home/End) is a runtime mechanism; “what it means” is component-owned.
+Roving traversal is retained in the runtime only as a composite focus mechanism: discover the
+container's interactive items, forward key/typeahead facts, request focus for the returned index,
+and call component hooks.
+
+Roving navigation policy (Arrow/Home/End, entry fallback, disabled-item skipping) and “what active
+means” are component-owned.
 
 Attach a `roving_on_active_change` hook to write selection models (tabs, radio, listbox, menu).
 

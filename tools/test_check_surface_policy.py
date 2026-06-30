@@ -224,6 +224,47 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertEqual("mechanism-root-policy-vocabulary", violations[0].rule)
             self.assertIn("ResizablePanelGroupStyle", violations[0].source)
 
+    def test_roving_typeahead_root_exports_are_rejected_but_mechanism_members_are_allowed(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "crates/fret-ui/src/lib.rs",
+                """
+                pub use element::RovingFocusProps;
+                pub use action::RovingTypeaheadCx;
+                """,
+            )
+            write(
+                root / "crates/fret-ui/src/action.rs",
+                """
+                pub struct RovingTypeaheadCx;
+                pub type OnRovingTypeahead = ();
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[
+                    POLICY.SurfacePath(
+                        "crates/fret-ui/src/lib.rs",
+                        "mechanism_crate_root",
+                        "fixture mechanism root",
+                    )
+                ],
+            )
+
+            self.assertEqual(2, len(violations))
+            self.assertTrue(
+                all(v.rule == "mechanism-root-policy-vocabulary" for v in violations)
+            )
+            self.assertTrue(any("RovingFocusProps" in v.source for v in violations))
+            self.assertTrue(any("RovingTypeaheadCx" in v.source for v in violations))
+
     def test_scroll_dismiss_public_mechanism_member_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
