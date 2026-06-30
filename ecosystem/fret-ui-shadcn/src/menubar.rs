@@ -8,7 +8,7 @@ use fret_core::{
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
-use fret_ui::action::{ActionCx, OnCloseAutoFocus, OnOpenAutoFocus, UiActionHost};
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
@@ -26,6 +26,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
+use fret_ui_kit::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
@@ -4238,8 +4239,8 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::{Effect, FrameId, WindowPendingActionPayloadService};
-    use fret_ui::action::OnOpenAutoFocus;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::primitives::focus_scope::OnOpenAutoFocus;
     use std::sync::Arc;
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};

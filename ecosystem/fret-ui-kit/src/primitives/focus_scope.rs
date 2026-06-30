@@ -12,6 +12,10 @@ use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::{IntoUiElement, collect_children};
 
+pub use fret_ui::action::{
+    FocusHandoffRequestCx as AutoFocusRequestCx, OnCloseFocusHandoff as OnCloseAutoFocus,
+    OnOpenFocusHandoff as OnOpenAutoFocus,
+};
 pub use fret_ui::element::FocusScopeProps;
 
 /// Convenience helper for building a trapped focus scope (Tab/Shift+Tab loops within the subtree).

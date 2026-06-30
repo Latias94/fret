@@ -6,7 +6,7 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::GlobalElementId;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus, OnSelectableTextActivateSpan};
+use fret_ui::action::OnSelectableTextActivateSpan;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, GridProps, GridTrackSizing,
     LayoutStyle, Length, MainAlign, RenderTransformProps, SemanticFlexProps, SemanticsDecoration,
@@ -19,6 +19,7 @@ use fret_ui::{
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
+use fret_ui_kit::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::typography::scope_description_text;
 use fret_ui_kit::{

@@ -7,7 +7,6 @@
 //! - installing a timer handler for submenu focus/close delays
 //! - producing a DismissableLayer pointer-move observer for submenu grace intent
 
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -21,6 +20,7 @@ use crate::primitives::dismissable_layer;
 use crate::primitives::dismissable_layer::{
     DismissReason, OnDismissRequest, OnDismissiblePointerMove,
 };
+use crate::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use crate::primitives::menu::sub;
 use crate::primitives::portal_inherited;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};

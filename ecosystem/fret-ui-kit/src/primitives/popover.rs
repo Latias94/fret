@@ -19,12 +19,12 @@ use std::sync::Arc;
 use crate::primitives::dismissable_layer::{DismissReason, OnDismissRequest};
 use fret_core::{Px, Rect};
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{AnyElement, Elements, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
+use crate::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 
 use crate::primitives::dialog as dialog_prim;

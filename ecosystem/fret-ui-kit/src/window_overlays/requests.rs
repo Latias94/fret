@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use fret_core::{Color, Px};
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 
 use crate::primitives::dismissable_layer::{OnDismissRequest, OnDismissiblePointerMove};
+use crate::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 
 use super::{
     DEFAULT_VISIBLE_TOASTS, ToastPosition, ToastStore, ToastVariant, toast_layer_root_name,

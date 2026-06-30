@@ -13,10 +13,7 @@ use fret_core::time::Duration;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
-use fret_ui::action::{
-    ActionCx, OnCloseAutoFocus, OnOpenAutoFocus, PressablePointerUpResult, UiActionHost,
-    UiPointerActionHost,
-};
+use fret_ui::action::{ActionCx, PressablePointerUpResult, UiActionHost, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
@@ -35,6 +32,7 @@ use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::context_menu as menu;
 use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
+use fret_ui_kit::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;

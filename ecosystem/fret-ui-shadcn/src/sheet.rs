@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, FontWeight, Px, TextOverflow, TextWrap};
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, MarginEdge,
     MarginEdges, Overflow, PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
@@ -23,6 +22,7 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
+use fret_ui_kit::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,

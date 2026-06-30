@@ -795,7 +795,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     request.on_open_auto_focus = Some(Arc::new(
         |_host: &mut dyn fret_ui::action::UiFocusActionHost,
          _action_cx: fret_ui::action::ActionCx,
-         req: &mut fret_ui::action::AutoFocusRequestCx| {
+         req: &mut crate::primitives::focus_scope::AutoFocusRequestCx| {
             req.prevent_default();
         },
     ));

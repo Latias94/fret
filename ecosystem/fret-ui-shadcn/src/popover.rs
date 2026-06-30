@@ -7,7 +7,6 @@ use crate::direction::LayoutDirection;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Edges, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextWrap};
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, HoverRegionProps,
     InteractivityGateProps, LayoutStyle, Length, OpacityProps, Overflow, PressableProps, RowProps,
@@ -20,7 +19,9 @@ use fret_ui_kit::declarative::{primary_pointer_can_hover, scheduling, style as d
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
-use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
+use fret_ui_kit::primitives::focus_scope::{
+    self as focus_scope_prim, OnCloseAutoFocus, OnOpenAutoFocus,
+};
 use fret_ui_kit::primitives::hover_intent::HoverIntentConfig;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;

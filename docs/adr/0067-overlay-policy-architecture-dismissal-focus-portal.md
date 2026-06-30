@@ -111,6 +111,9 @@ Modal surfaces:
 - Initial focus is explicitly set by policy (runtime clears focus on barrier install).
 - Auto-focus behavior is customizable by policy via Radix-like hooks (open/close auto focus may
   `preventDefault` to take control of focus movement).
+- Runtime exposes this as a generic focus handoff mechanism (`FocusHandoffRequestCx`,
+  `OnOpenFocusHandoff`, `OnCloseFocusHandoff`); Radix-named aliases (`AutoFocusRequestCx`,
+  `OnOpenAutoFocus`, `OnCloseAutoFocus`) live in `fret-ui-kit`'s `focus_scope` primitive.
 
 Non-modal surfaces:
 

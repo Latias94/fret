@@ -11,7 +11,8 @@ use std::sync::Mutex;
 
 use crate::prelude::Model;
 use crate::primitives::dismissable_layer::{DismissReason, OnDismissRequest};
-use fret_ui::action::{OnActivate, OnCloseAutoFocus};
+use crate::primitives::focus_scope::OnCloseAutoFocus;
+use fret_ui::action::OnActivate;
 use fret_ui::elements::GlobalElementId;
 
 /// Open-change reasons aligned with Base UI combobox semantics.

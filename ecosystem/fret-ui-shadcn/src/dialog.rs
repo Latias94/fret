@@ -7,7 +7,6 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
 use fret_ui::GlobalElementId;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
@@ -25,6 +24,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
+use fret_ui_kit::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{

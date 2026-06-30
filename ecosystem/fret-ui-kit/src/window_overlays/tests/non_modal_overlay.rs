@@ -48,7 +48,7 @@ fn non_modal_overlay_open_auto_focus_handler_can_prevent_default_focus() {
             )]
         });
 
-    let on_open_auto_focus: fret_ui::action::OnOpenAutoFocus =
+    let on_open_auto_focus: crate::primitives::focus_scope::OnOpenAutoFocus =
         Arc::new(|_host, _cx, req| req.prevent_default());
 
     // Second frame: mount a non-modal overlay and suppress default initial focus.

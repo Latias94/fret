@@ -17,7 +17,6 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, Elements, InsetStyle, LayoutStyle, Length, PositionStyle,
     PressableA11y, PressableProps, SizeStyle,
@@ -27,6 +26,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::primitives::dismissable_layer::{DismissReason, DismissRequestCx, OnDismissRequest};
+use crate::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use crate::primitives::trigger_a11y;
 use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 

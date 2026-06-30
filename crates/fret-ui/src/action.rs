@@ -104,16 +104,16 @@ impl Default for LayerInteractionLastRequest {
     }
 }
 
-/// Context passed to auto-focus handlers.
+/// Context passed to focus handoff handlers.
 ///
-/// This mirrors the DOM/Radix contract where `onOpenAutoFocus` / `onCloseAutoFocus` may "prevent
-/// default" to take full control of focus movement.
+/// The runtime only models the prevent-default handoff mechanism. Component layers may expose this
+/// as Radix-style auto-focus policy through their own aliases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AutoFocusRequestCx {
+pub struct FocusHandoffRequestCx {
     default_prevented: bool,
 }
 
-impl AutoFocusRequestCx {
+impl FocusHandoffRequestCx {
     pub fn new() -> Self {
         Self {
             default_prevented: false,
@@ -129,7 +129,7 @@ impl AutoFocusRequestCx {
     }
 }
 
-impl Default for AutoFocusRequestCx {
+impl Default for FocusHandoffRequestCx {
     fn default() -> Self {
         Self::new()
     }
@@ -736,11 +736,11 @@ pub(crate) struct PressableHoverActionHooks {
 pub type OnLayerInteractionRequest =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &mut LayerInteractionRequestCx) + 'static>;
 
-pub type OnOpenAutoFocus =
-    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
+pub type OnOpenFocusHandoff =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut FocusHandoffRequestCx) + 'static>;
 
-pub type OnCloseAutoFocus =
-    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
+pub type OnCloseFocusHandoff =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut FocusHandoffRequestCx) + 'static>;
 
 /// Pointer move observer hook for `LayerInteractionRoot`.
 ///

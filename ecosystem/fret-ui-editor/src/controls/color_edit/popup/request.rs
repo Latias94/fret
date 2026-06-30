@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use fret_core::{Color, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::OnCloseAutoFocus;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SizeStyle};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui_kit::primitives::focus_scope::OnCloseAutoFocus;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 

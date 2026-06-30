@@ -282,6 +282,36 @@ class SurfacePolicyTests(unittest.TestCase):
                 )
             )
 
+    def test_auto_focus_public_action_hook_is_rejected_in_mechanism_crate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "crates/fret-ui/src/action.rs",
+                """
+                pub struct AutoFocusRequestCx;
+
+                pub type OnOpenAutoFocus = ();
+                pub type OnCloseAutoFocus = ();
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(3, len(violations))
+            self.assertTrue(
+                all(
+                    v.rule
+                    == "mechanism-public-member-policy-vocabulary:auto-focus-action-hook"
+                    for v in violations
+                )
+            )
+
     def test_classified_surface_paths_must_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -41,7 +41,7 @@ invoked by the runtime when an interaction happens.
 The runtime provides:
 
 - the *trigger point* (e.g. “pressable activated”, “layer interaction requested”, “roving active
-  changed”)
+  changed”, “focus handoff requested”)
 - the *reason* (e.g. keyboard vs pointer, Escape vs outside press)
 - a small action context (`ActionCx`) that can write models, dispatch commands, request focus, etc.
 
@@ -99,6 +99,10 @@ Then register dismissal handlers through the component-layer Radix alias
 - close on outside press
 - restore focus to a trigger when appropriate
 
+Radix-style open/close auto-focus hooks should likewise come from
+`fret_ui_kit::primitives::focus_scope`; `crates/fret-ui` only exposes the generic
+`FocusHandoff*` mechanism names.
+
 ### Roving Selection Writes
 
 Roving navigation (Arrow/Home/End) is a runtime mechanism; “what it means” is component-owned.
@@ -131,6 +135,7 @@ Runtime-owned shortcut fields were removed to keep `crates/fret-ui` mechanism-on
 - `PressableProps` shortcut model writes (toggle/set variants)
 - `RovingFocusProps` shortcut selection/typeahead fields
 - runtime-owned Dismiss naming on action hooks
+- runtime-owned AutoFocus naming on focus handoff hooks
 
 New/updated components should use action hooks instead.
 

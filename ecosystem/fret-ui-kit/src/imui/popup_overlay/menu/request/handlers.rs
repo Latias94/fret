@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use fret_ui::action::OnCloseAutoFocus;
-
 use super::super::policy::ImUiPopupMenuPolicyState;
 use crate::imui::menu_family_controls::ImUiMenubarPolicyState;
 use crate::primitives::dismissable_layer::{DismissReason, OnDismissRequest};
+use crate::primitives::focus_scope::{AutoFocusRequestCx, OnCloseAutoFocus};
 
 pub(super) fn popup_menu_on_dismiss_request(
     preserve_focus_outside_while_submenu_open: bool,
@@ -44,7 +43,7 @@ pub(super) fn popup_menu_on_close_auto_focus(
         Arc::new(
             move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                   _acx,
-                  req: &mut fret_ui::action::AutoFocusRequestCx| {
+                  req: &mut AutoFocusRequestCx| {
                 let suppress = host
                     .models_mut()
                     .read(&suppress_close_auto_focus, |value| *value)

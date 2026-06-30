@@ -16,7 +16,6 @@ use std::collections::HashMap;
 
 use fret_runtime::Model;
 use fret_runtime::ModelId;
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{AnyElement, Elements, LayoutStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -24,6 +23,7 @@ use fret_ui::{ElementContext, UiHost};
 use crate::declarative::ModelWatchExt;
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::dialog::DialogOptions;
+use crate::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 use crate::primitives::trigger_a11y;
 use crate::{IntoUiElement, OverlayPresence, OverlayRequest, collect_children};
 

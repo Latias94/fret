@@ -2,7 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_runtime::Model;
-use fret_ui::action::OnCloseAutoFocus;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle,
 };
@@ -21,6 +20,7 @@ use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
 use fret_ui_kit::primitives::controllable_state;
+use fret_ui_kit::primitives::focus_scope::OnCloseAutoFocus;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;

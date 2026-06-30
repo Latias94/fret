@@ -7,8 +7,7 @@ use fret_core::{
 };
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_ui::action::{
-    ActionCx, AutoFocusRequestCx, OnCloseAutoFocus, UiActionHost, UiActionHostAdapter,
-    UiActionHostExt, UiFocusActionHost,
+    ActionCx, UiActionHost, UiActionHostAdapter, UiActionHostExt, UiFocusActionHost,
 };
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
@@ -19,7 +18,9 @@ use fret_ui::{Invalidation, UiHost, UiTree};
 use crate::primitives::dismissable_layer::{
     self as dismissable_layer_prim, DismissReason, DismissRequestCx,
 };
-use crate::primitives::focus_scope as focus_scope_prim;
+use crate::primitives::focus_scope::{
+    self as focus_scope_prim, AutoFocusRequestCx, OnCloseAutoFocus,
+};
 
 mod toast_render;
 

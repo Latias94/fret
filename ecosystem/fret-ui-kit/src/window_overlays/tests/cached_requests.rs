@@ -611,16 +611,17 @@ fn owned_cached_modal_prune_runs_close_auto_focus_before_teardown() {
     let mut underlay_id: Option<GlobalElementId> = None;
     let mut focusable_id: Option<GlobalElementId> = None;
 
-    let on_close_auto_focus: fret_ui::action::OnCloseAutoFocus = Arc::new(move |host, _cx, req| {
-        calls_for_handler.fetch_add(1, Ordering::SeqCst);
-        let target = *underlay_for_handler
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
-        if let Some(target) = target {
-            host.request_focus(target);
-        }
-        req.prevent_default();
-    });
+    let on_close_auto_focus: crate::primitives::focus_scope::OnCloseAutoFocus =
+        Arc::new(move |host, _cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let target = *underlay_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            if let Some(target) = target {
+                host.request_focus(target);
+            }
+            req.prevent_default();
+        });
 
     // Frame 1: mount an owned modal and focus inside it.
     begin_frame(&mut app, window);

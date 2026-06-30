@@ -688,7 +688,7 @@ fn modal_close_auto_focus_handler_can_prevent_default_restore() {
         });
     let modal_focusable = modal_focusable.expect("modal focusable element id");
 
-    let on_close_auto_focus: fret_ui::action::OnCloseAutoFocus =
+    let on_close_auto_focus: crate::primitives::focus_scope::OnCloseAutoFocus =
         Arc::new(|_host, _cx, req| req.prevent_default());
 
     // Second frame: mount modal and focus inside.

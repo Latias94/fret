@@ -10,7 +10,6 @@ use fret_core::{
     Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextAlign, Transform2D,
 };
 use fret_runtime::{Model, ModelStore, TickId};
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
     PointerRegionProps, RenderTransformProps, SemanticsDecoration, SizeStyle,
@@ -27,6 +26,7 @@ pub use crate::sheet::{
     SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
 use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
+use fret_ui_kit::primitives::focus_scope::{OnCloseAutoFocus, OnOpenAutoFocus};
 
 pub type DrawerDirection = DrawerSide;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
