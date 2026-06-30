@@ -52,9 +52,8 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn bump_command_availability_revision(&mut self) {
-        self.command_availability_revision = self.command_availability_revision.wrapping_add(1);
-        self.focus_traversal_availability_cache = None;
-        self.command_availability_interest_cache = None;
+        self.command_routing_snapshots
+            .bump_command_availability_revision();
     }
 
     pub(in crate::tree) fn mark_invalidation_local_with_detail(

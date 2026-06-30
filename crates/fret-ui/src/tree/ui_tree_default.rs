@@ -61,10 +61,7 @@ impl<H: UiHost> Default for UiTree<H> {
             pending_declarative_window_snapshot_roots: HashSet::new(),
             pending_post_layout_window_runtime_snapshot_refine: false,
             dispatch_snapshot_products: DispatchSnapshotFrameProductState::default(),
-            command_availability_revision: 0,
-            last_window_command_action_availability_snapshot_signature: None,
-            focus_traversal_availability_cache: None,
-            command_availability_interest_cache: None,
+            command_routing_snapshots: CommandRoutingSnapshotState::default(),
             #[cfg(debug_assertions)]
             debug_last_declarative_render_root_frame_id: None,
             debug_enabled: false,

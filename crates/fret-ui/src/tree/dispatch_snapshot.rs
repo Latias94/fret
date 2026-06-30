@@ -110,8 +110,7 @@ impl UiDispatchSnapshot {
 impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn invalidate_dispatch_snapshot_cache(&mut self) {
         self.dispatch_snapshot_products.invalidate();
-        self.focus_traversal_availability_cache = None;
-        self.command_availability_interest_cache = None;
+        self.command_routing_snapshots.invalidate_cached_routes();
         self.debug_record_dispatch_snapshot_cache_invalidation();
         #[cfg(feature = "diagnostics")]
         {

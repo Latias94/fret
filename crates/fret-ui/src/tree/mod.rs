@@ -298,6 +298,79 @@ pub(in crate::tree) struct WindowCommandAvailabilityInterestCache {
     pub(in crate::tree) by_node: HashMap<NodeId, commands::DeclarativeCommandAvailabilityInterest>,
 }
 
+#[derive(Debug, Default)]
+pub(in crate::tree) struct CommandRoutingSnapshotState {
+    command_availability_revision: u64,
+    action_availability_signature: Option<WindowCommandActionAvailabilitySnapshotSignature>,
+    focus_traversal_availability: Option<WindowFocusTraversalAvailabilityCacheEntry>,
+    command_availability_interest: Option<WindowCommandAvailabilityInterestCache>,
+}
+
+impl CommandRoutingSnapshotState {
+    pub(in crate::tree) fn command_availability_revision(&self) -> u64 {
+        self.command_availability_revision
+    }
+
+    pub(in crate::tree) fn bump_command_availability_revision(&mut self) {
+        self.command_availability_revision = self.command_availability_revision.wrapping_add(1);
+        self.invalidate_cached_routes();
+    }
+
+    pub(in crate::tree) fn invalidate_cached_routes(&mut self) {
+        self.focus_traversal_availability = None;
+        self.command_availability_interest = None;
+    }
+
+    pub(in crate::tree) fn action_availability_signature(
+        &self,
+    ) -> Option<&WindowCommandActionAvailabilitySnapshotSignature> {
+        self.action_availability_signature.as_ref()
+    }
+
+    pub(in crate::tree) fn set_action_availability_signature(
+        &mut self,
+        signature: WindowCommandActionAvailabilitySnapshotSignature,
+    ) {
+        self.action_availability_signature = Some(signature);
+    }
+
+    pub(in crate::tree) fn clear_action_availability_signature(&mut self) {
+        self.action_availability_signature = None;
+    }
+
+    pub(in crate::tree) fn focus_traversal_availability(
+        &self,
+    ) -> Option<&WindowFocusTraversalAvailabilityCacheEntry> {
+        self.focus_traversal_availability.as_ref()
+    }
+
+    pub(in crate::tree) fn set_focus_traversal_availability(
+        &mut self,
+        entry: WindowFocusTraversalAvailabilityCacheEntry,
+    ) {
+        self.focus_traversal_availability = Some(entry);
+    }
+
+    pub(in crate::tree) fn command_availability_interest(
+        &self,
+    ) -> Option<&WindowCommandAvailabilityInterestCache> {
+        self.command_availability_interest.as_ref()
+    }
+
+    pub(in crate::tree) fn command_availability_interest_mut(
+        &mut self,
+    ) -> Option<&mut WindowCommandAvailabilityInterestCache> {
+        self.command_availability_interest.as_mut()
+    }
+
+    pub(in crate::tree) fn reset_command_availability_interest(
+        &mut self,
+        cache: WindowCommandAvailabilityInterestCache,
+    ) {
+        self.command_availability_interest = Some(cache);
+    }
+}
+
 /// Retained UI tree and per-window interaction state machine.
 ///
 /// `UiTree` owns the widget/node graph for a single window and is responsible for:
@@ -368,11 +441,7 @@ pub struct UiTree<H: UiHost> {
     pending_declarative_window_snapshot_roots: HashSet<NodeId>,
     pending_post_layout_window_runtime_snapshot_refine: bool,
     dispatch_snapshot_products: DispatchSnapshotFrameProductState,
-    command_availability_revision: u64,
-    last_window_command_action_availability_snapshot_signature:
-        Option<WindowCommandActionAvailabilitySnapshotSignature>,
-    focus_traversal_availability_cache: Option<WindowFocusTraversalAvailabilityCacheEntry>,
-    command_availability_interest_cache: Option<WindowCommandAvailabilityInterestCache>,
+    command_routing_snapshots: CommandRoutingSnapshotState,
 
     #[cfg(debug_assertions)]
     debug_last_declarative_render_root_frame_id: Option<FrameId>,

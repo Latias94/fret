@@ -925,7 +925,9 @@ impl<H: UiHost> UiTree<H> {
             barrier_root: dispatch_snapshot.barrier_root,
             scope_root,
             resolved_scope_root,
-            command_availability_revision: self.command_availability_revision,
+            command_availability_revision: self
+                .command_routing_snapshots
+                .command_availability_revision(),
             layout_ready,
             inspection_active: self.inspection_active,
         }
@@ -945,7 +947,9 @@ impl<H: UiHost> UiTree<H> {
             dispatch_snapshot,
             scope_root,
         );
-        if let Some(entry) = &self.focus_traversal_availability_cache
+        if let Some(entry) = self
+            .command_routing_snapshots
+            .focus_traversal_availability()
             && entry.key == key
         {
             return (entry.availability, entry.needs_layout_refine);
@@ -960,8 +964,8 @@ impl<H: UiHost> UiTree<H> {
                 command,
                 window,
             );
-        self.focus_traversal_availability_cache =
-            Some(WindowFocusTraversalAvailabilityCacheEntry {
+        self.command_routing_snapshots
+            .set_focus_traversal_availability(WindowFocusTraversalAvailabilityCacheEntry {
                 key,
                 availability,
                 needs_layout_refine,
@@ -1318,30 +1322,37 @@ impl<H: UiHost> UiTree<H> {
     ) -> DeclarativeCommandAvailabilityInterest {
         let key = WindowCommandAvailabilityInterestCacheKey {
             frame_id,
-            command_availability_revision: self.command_availability_revision,
+            command_availability_revision: self
+                .command_routing_snapshots
+                .command_availability_revision(),
             window: self.window,
         };
 
         if self
-            .command_availability_interest_cache
-            .as_ref()
+            .command_routing_snapshots
+            .command_availability_interest()
             .is_none_or(|cache| cache.key != key)
         {
-            self.command_availability_interest_cache =
-                Some(WindowCommandAvailabilityInterestCache {
+            self.command_routing_snapshots
+                .reset_command_availability_interest(WindowCommandAvailabilityInterestCache {
                     key,
                     by_node: HashMap::new(),
                 });
         }
 
-        if let Some(cache) = self.command_availability_interest_cache.as_ref()
+        if let Some(cache) = self
+            .command_routing_snapshots
+            .command_availability_interest()
             && let Some(interest) = cache.by_node.get(&node)
         {
             return interest.clone();
         }
 
         let interest = self.declarative_node_command_availability_interest(app, node);
-        if let Some(cache) = self.command_availability_interest_cache.as_mut() {
+        if let Some(cache) = self
+            .command_routing_snapshots
+            .command_availability_interest_mut()
+        {
             cache.by_node.insert(node, interest.clone());
         }
         interest
@@ -1752,7 +1763,8 @@ impl<H: UiHost> UiTree<H> {
         command_set: WindowCommandActionAvailabilityCommandSetSignature,
     ) {
         let Some(window) = self.window else {
-            self.last_window_command_action_availability_snapshot_signature = None;
+            self.command_routing_snapshots
+                .clear_action_availability_signature();
             return;
         };
 
@@ -1760,7 +1772,8 @@ impl<H: UiHost> UiTree<H> {
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
         else {
-            self.last_window_command_action_availability_snapshot_signature = None;
+            self.command_routing_snapshots
+                .clear_action_availability_signature();
             return;
         };
         let (_active_input_layers, input_barrier_root) = self.active_input_layers();
@@ -1808,15 +1821,17 @@ impl<H: UiHost> UiTree<H> {
                     .then_some(frame_id),
             },
             commands: command_set.clone(),
-            command_availability_revision: self.command_availability_revision,
+            command_availability_revision: self
+                .command_routing_snapshots
+                .command_availability_revision(),
             input_ctx: WindowCommandActionAvailabilityInputSignature::from(input_ctx),
             key_contexts: next_key_contexts.clone(),
             command_registry_revision,
             menu_bar_present,
         };
         if self
-            .last_window_command_action_availability_snapshot_signature
-            .as_ref()
+            .command_routing_snapshots
+            .action_availability_signature()
             .is_some_and(|prev| prev == &snapshot_signature)
         {
             return;
@@ -2007,7 +2022,8 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
         }
-        self.last_window_command_action_availability_snapshot_signature = Some(snapshot_signature);
+        self.command_routing_snapshots
+            .set_action_availability_signature(snapshot_signature);
     }
 
     pub(in crate::tree) fn refine_pending_window_runtime_snapshots_after_layout(
@@ -2033,7 +2049,8 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         if had_pending_refine || had_attached_pending {
-            self.last_window_command_action_availability_snapshot_signature = None;
+            self.command_routing_snapshots
+                .clear_action_availability_signature();
         }
         self.publish_window_runtime_snapshots(app);
     }
