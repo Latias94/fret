@@ -134,7 +134,9 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
-pub use view_boundary::BoundarySceneFragmentDebug;
+pub use view_boundary::{
+    BoundarySceneChunkManifest, BoundarySceneFragmentChunk, BoundarySceneFragmentDebug,
+};
 use view_boundary::{DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryState};
 
 use dispatch_snapshot::DispatchSnapshotFrameProductState;

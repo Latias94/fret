@@ -227,10 +227,13 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         value: T,
     ) {
+        let mut chunks = super::view_boundary::BoundarySceneChunkManifest::default();
+        value.append_boundary_scene_fragment_chunks(&mut chunks);
         let metadata = super::view_boundary::BoundaryTypedOutputDebugMetadata {
             entry_count: value.boundary_scene_fragment_entry_count(),
             chunk_count: value.boundary_scene_fragment_chunk_count(),
             fingerprint: value.boundary_scene_fragment_fingerprint(),
+            chunks,
         };
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
@@ -259,6 +262,7 @@ impl<H: UiHost> UiTree<H> {
         entry_count: usize,
         chunk_count: usize,
         fingerprint: u64,
+        chunks: super::view_boundary::BoundarySceneChunkManifest,
     ) {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
@@ -267,6 +271,7 @@ impl<H: UiHost> UiTree<H> {
             entry_count,
             chunk_count,
             fingerprint,
+            chunks,
         };
         boundary
             .frame_products
@@ -308,6 +313,24 @@ impl<H: UiHost> UiTree<H> {
             .frame_products
             .scene_fragment
             .fragment_any_mut(ty)
+    }
+
+    /// Return the boundary-owned retained scene chunks published for `node` in the current
+    /// prepaint key.
+    ///
+    /// This is a mechanism-level diagnostic/bridge API. Rendering still uses the flat `Scene`
+    /// compatibility path until renderer chunk encoding consumes the manifest directly.
+    pub fn scene_fragment_chunk_manifest(
+        &self,
+        node: NodeId,
+    ) -> Option<super::view_boundary::BoundarySceneChunkManifest> {
+        Some(
+            self.view_boundaries
+                .get(node)?
+                .frame_products
+                .scene_fragment
+                .chunk_manifest(),
+        )
     }
 
     pub(crate) fn record_scene_fragment_used_entries(&mut self, node: NodeId, count: usize) {

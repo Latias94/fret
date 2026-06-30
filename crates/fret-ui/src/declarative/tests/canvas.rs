@@ -537,6 +537,7 @@ fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
         },
     );
     ui.set_root(node);
+    let canvas_node = ui.children(node)[0];
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     assert_eq!(
@@ -566,6 +567,16 @@ fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
         .expect("expected text scene fragment boundary stats");
     assert_eq!(boundary.scene_fragment_chunks, 1);
     assert_ne!(boundary.scene_fragment_fingerprint, 0);
+    let manifest = ui
+        .scene_fragment_chunk_manifest(canvas_node)
+        .expect("expected canvas scene fragment chunk manifest");
+    assert_eq!(manifest.len(), 1);
+    assert_eq!(
+        manifest.chunks()[0].fingerprint(),
+        boundary.scene_fragment_fingerprint
+    );
+    assert_eq!(manifest.chunks()[0].local_bounds(), bounds);
+    assert_eq!(manifest.chunks()[0].scene_origin(), bounds.origin);
 }
 
 #[test]

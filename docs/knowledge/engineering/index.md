@@ -18,4 +18,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 renderer scene/upload observability](progress/2026-07-01-u7-renderer-scene-upload-observability.md)
 - [U7 scene chunk compatibility bridge](progress/2026-07-01-u7-scene-chunk-compatibility-bridge.md)
 - [U7 boundary scene chunk diagnostics](progress/2026-07-01-u7-boundary-scene-chunk-diagnostics.md)
+- [U7 boundary scene chunk manifest](progress/2026-07-01-u7-boundary-scene-chunk-manifest.md)
 - [Log](log.md)

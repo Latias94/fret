@@ -96,6 +96,17 @@ impl<T: crate::tree::BoundarySceneFragmentDebug> crate::tree::BoundarySceneFragm
     fn boundary_scene_fragment_fingerprint(&self) -> u64 {
         self.chunk.fingerprint()
     }
+
+    fn append_boundary_scene_fragment_chunks(
+        &self,
+        out: &mut crate::tree::BoundarySceneChunkManifest,
+    ) {
+        out.push(crate::tree::BoundarySceneFragmentChunk::new(
+            self.chunk.clone(),
+            self.local_bounds,
+            self.scene_origin,
+        ));
+    }
 }
 
 /// Precomputed hosted resource references extracted from retained `SceneOp`s.
@@ -222,6 +233,7 @@ pub(crate) trait UiCanvasPrepaintHost {
         entry_count: usize,
         chunk_count: usize,
         fingerprint: u64,
+        chunks: crate::tree::BoundarySceneChunkManifest,
     );
     fn scene_fragment_any(&self, ty: TypeId) -> Option<&dyn Any>;
     fn scene_fragment_any_mut(&mut self, ty: TypeId) -> Option<&mut dyn Any>;
@@ -297,6 +309,7 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
         entry_count: usize,
         chunk_count: usize,
         fingerprint: u64,
+        chunks: crate::tree::BoundarySceneChunkManifest,
     ) {
         self.cx.tree.set_scene_fragment_box_with_debug_counts(
             self.cx.node,
@@ -305,6 +318,7 @@ impl<'a, 'b, H: UiHost> UiCanvasPrepaintHost for UiCanvasPrepaintHostAdapter<'a,
             entry_count,
             chunk_count,
             fingerprint,
+            chunks,
         );
     }
 
@@ -387,12 +401,15 @@ impl<'a> CanvasPrepaintCx<'a> {
         let entry_count = value.boundary_scene_fragment_entry_count();
         let chunk_count = value.boundary_scene_fragment_chunk_count();
         let fingerprint = value.boundary_scene_fragment_fingerprint();
+        let mut chunks = crate::tree::BoundarySceneChunkManifest::default();
+        value.append_boundary_scene_fragment_chunks(&mut chunks);
         self.host.set_scene_fragment_box_with_debug_counts(
             TypeId::of::<T>(),
             Box::new(value),
             entry_count,
             chunk_count,
             fingerprint,
+            chunks,
         );
     }
 

@@ -377,6 +377,23 @@ impl fret_ui::tree::BoundarySceneFragmentDebug for RowSceneReplayPlan {
                     .wrapping_add(chunk ^ row.wrapping_mul(MIX))
             })
     }
+
+    fn append_boundary_scene_fragment_chunks(
+        &self,
+        out: &mut fret_ui::tree::BoundarySceneChunkManifest,
+    ) {
+        for entry in self
+            .entries
+            .iter()
+            .filter(|entry| !entry.retained.chunk.is_empty())
+        {
+            out.push(fret_ui::tree::BoundarySceneFragmentChunk::new(
+                entry.retained.chunk.clone(),
+                entry.local_bounds,
+                entry.retained.origin_for_local_bounds(entry.local_bounds),
+            ));
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

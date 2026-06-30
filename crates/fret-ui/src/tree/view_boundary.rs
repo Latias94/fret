@@ -13,6 +13,72 @@ pub trait BoundarySceneFragmentDebug: Any {
     fn boundary_scene_fragment_fingerprint(&self) -> u64 {
         0
     }
+
+    fn append_boundary_scene_fragment_chunks(&self, _out: &mut BoundarySceneChunkManifest) {}
+}
+
+#[derive(Debug, Clone)]
+pub struct BoundarySceneFragmentChunk {
+    chunk: fret_core::SceneChunk,
+    local_bounds: Rect,
+    scene_origin: Point,
+}
+
+impl BoundarySceneFragmentChunk {
+    pub fn new(chunk: fret_core::SceneChunk, local_bounds: Rect, scene_origin: Point) -> Self {
+        Self {
+            chunk,
+            local_bounds,
+            scene_origin,
+        }
+    }
+
+    pub fn chunk(&self) -> &fret_core::SceneChunk {
+        &self.chunk
+    }
+
+    pub fn local_bounds(&self) -> Rect {
+        self.local_bounds
+    }
+
+    pub fn scene_origin(&self) -> Point {
+        self.scene_origin
+    }
+
+    pub fn fingerprint(&self) -> u64 {
+        self.chunk.fingerprint()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BoundarySceneChunkManifest {
+    chunks: Vec<BoundarySceneFragmentChunk>,
+}
+
+impl BoundarySceneChunkManifest {
+    pub fn push(&mut self, chunk: BoundarySceneFragmentChunk) {
+        if !chunk.chunk.is_empty() {
+            self.chunks.push(chunk);
+        }
+    }
+
+    pub fn chunks(&self) -> &[BoundarySceneFragmentChunk] {
+        &self.chunks
+    }
+
+    pub fn len(&self) -> usize {
+        self.chunks.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.chunks.is_empty()
+    }
+
+    pub fn fingerprint(&self) -> u64 {
+        self.chunks
+            .iter()
+            .fold(0, |fingerprint, chunk| fingerprint ^ chunk.fingerprint())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -442,6 +508,10 @@ impl BoundarySceneFragmentState {
         self.outputs.fingerprint()
     }
 
+    pub(super) fn chunk_manifest(&self) -> BoundarySceneChunkManifest {
+        self.outputs.chunk_manifest()
+    }
+
     pub(super) fn record_used_entries(&mut self, count: usize) {
         self.used_entries = self.used_entries.saturating_add(count);
     }
@@ -470,11 +540,12 @@ struct BoundaryTypedOutputs {
     values: Vec<(TypeId, Box<dyn Any>, BoundaryTypedOutputDebugMetadata)>,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone)]
 pub(in crate::tree) struct BoundaryTypedOutputDebugMetadata {
     pub(in crate::tree) entry_count: usize,
     pub(in crate::tree) chunk_count: usize,
     pub(in crate::tree) fingerprint: u64,
+    pub(in crate::tree) chunks: BoundarySceneChunkManifest,
 }
 
 impl BoundaryTypedOutputs {
@@ -556,6 +627,10 @@ impl BoundaryTypedOutputs {
     }
 
     fn chunk_count(&self) -> usize {
+        let manifest = self.chunk_manifest();
+        if !manifest.is_empty() {
+            return manifest.len();
+        }
         self.values
             .iter()
             .map(|(_, _, metadata)| metadata.chunk_count)
@@ -566,6 +641,16 @@ impl BoundaryTypedOutputs {
         self.values.iter().fold(0, |fingerprint, (_, _, metadata)| {
             fingerprint ^ metadata.fingerprint
         })
+    }
+
+    fn chunk_manifest(&self) -> BoundarySceneChunkManifest {
+        let mut manifest = BoundarySceneChunkManifest::default();
+        for (_, _, metadata) in &self.values {
+            for chunk in metadata.chunks.chunks() {
+                manifest.push(chunk.clone());
+            }
+        }
+        manifest
     }
 }
 
@@ -971,6 +1056,7 @@ mod dirty_view_frontier_tests {
 #[cfg(test)]
 mod boundary_frame_products_tests {
     use super::*;
+    use fret_core::{DrawOrder, Edges};
 
     fn node(id: u64) -> NodeId {
         NodeId::from(slotmap::KeyData::from_ffi(id))
@@ -1098,6 +1184,20 @@ mod boundary_frame_products_tests {
         assert_eq!(reused[1].label.as_deref(), Some("child"));
 
         state.frame_products.scene_fragment.begin_fragment(key);
+        let chunk = fret_core::SceneChunk::from_ops(Arc::from([SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+            background: Color::TRANSPARENT.into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: Color::TRANSPARENT.into(),
+            corner_radii: Corners::all(Px(0.0)),
+        }]));
+        let mut chunks = BoundarySceneChunkManifest::default();
+        chunks.push(BoundarySceneFragmentChunk::new(
+            chunk.clone(),
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+            Point::default(),
+        ));
         state
             .frame_products
             .scene_fragment
@@ -1105,8 +1205,9 @@ mod boundary_frame_products_tests {
                 "fragment",
                 BoundaryTypedOutputDebugMetadata {
                     entry_count: 3,
-                    chunk_count: 2,
+                    chunk_count: 1,
                     fingerprint: 0xF00D,
+                    chunks,
                 },
             );
         state.frame_products.scene_fragment.record_used_entries(2);
@@ -1119,8 +1220,11 @@ mod boundary_frame_products_tests {
             Some(&"fragment")
         );
         assert_eq!(state.frame_products.scene_fragment.entry_count(), 3);
-        assert_eq!(state.frame_products.scene_fragment.chunk_count(), 2);
+        assert_eq!(state.frame_products.scene_fragment.chunk_count(), 1);
         assert_eq!(state.frame_products.scene_fragment.fingerprint(), 0xF00D);
+        let manifest = state.frame_products.scene_fragment.chunk_manifest();
+        assert_eq!(manifest.len(), 1);
+        assert_eq!(manifest.chunks()[0].fingerprint(), chunk.fingerprint());
         assert_eq!(state.frame_products.scene_fragment.used_entries(), 2);
         assert_eq!(state.frame_products.scene_fragment.rejected_entries(), 1);
         assert_eq!(

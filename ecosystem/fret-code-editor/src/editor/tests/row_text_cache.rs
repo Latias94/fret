@@ -319,8 +319,12 @@ fn row_scene_replay_plan_reports_scene_chunk_debug_metadata() {
     assert_eq!(empty.boundary_scene_fragment_entry_count(), 1);
     assert_eq!(empty.boundary_scene_fragment_chunk_count(), 0);
     assert_eq!(empty.boundary_scene_fragment_fingerprint(), 0);
+    let mut empty_manifest = fret_ui::tree::BoundarySceneChunkManifest::default();
+    empty.append_boundary_scene_fragment_chunks(&mut empty_manifest);
+    assert!(empty_manifest.is_empty());
 
-    let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(16.0)));
+    let retained_bounds = Rect::new(Point::new(Px(0.0), Px(16.0)), Size::new(Px(80.0), Px(16.0)));
+    let replay_bounds = Rect::new(Point::new(Px(4.0), Px(32.0)), Size::new(Px(80.0), Px(16.0)));
     let fg = Color {
         r: 0.2,
         g: 0.8,
@@ -329,7 +333,7 @@ fn row_scene_replay_plan_reports_scene_chunk_debug_metadata() {
     };
     let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Quad {
         order: DrawOrder(2),
-        rect,
+        rect: retained_bounds,
         background: fret_core::Paint::Solid(fg).into(),
         border: Edges::all(Px(0.0)),
         border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -338,12 +342,14 @@ fn row_scene_replay_plan_reports_scene_chunk_debug_metadata() {
     let chunk_fingerprint = chunk.fingerprint();
     let mut retained = (*test_retained_row_scene_fragment(1)).clone();
     retained.chunk = chunk;
+    retained.local_bounds = retained_bounds;
+    retained.origin = Point::new(Px(10.0), Px(20.0));
     let plan = RowSceneReplayPlan {
         frame_seq: 9,
         entries: std::collections::VecDeque::from([RowSceneReplayPlanEntry {
             row: 1,
             retained: Arc::new(retained),
-            local_bounds: rect,
+            local_bounds: replay_bounds,
         }]),
         hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
         hosted_resources_touched: false,
@@ -356,6 +362,15 @@ fn row_scene_replay_plan_reports_scene_chunk_debug_metadata() {
         plan.boundary_scene_fragment_fingerprint(),
         chunk_fingerprint,
         "row-scene diagnostics include row identity, not only chunk bytes"
+    );
+    let mut manifest = fret_ui::tree::BoundarySceneChunkManifest::default();
+    plan.append_boundary_scene_fragment_chunks(&mut manifest);
+    assert_eq!(manifest.len(), 1);
+    assert_eq!(manifest.chunks()[0].fingerprint(), chunk_fingerprint);
+    assert_eq!(manifest.chunks()[0].local_bounds(), replay_bounds);
+    assert_eq!(
+        manifest.chunks()[0].scene_origin(),
+        Point::new(Px(14.0), Px(36.0))
     );
 }
 
