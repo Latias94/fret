@@ -53,3 +53,10 @@ U5 explorer `019f167a-817e-7ba3-9dbd-35815bc40c4b` recommends making the next im
 - Start with `view_boundary.rs` write points, then update reads in `ui_tree_subtree_layout_dirty.rs`, `layout/entrypoints.rs`, and `ui_tree_debug/frame.rs`.
 - Do not start U5 by moving dispatch snapshots, interaction/prepaint caches, paint recording, or scene chunks; those are larger follow-on slices for U5/U7 and would touch focus/overlay/renderer contracts.
 - After this slice, update ADR 0165 and ADR 0327 implementation alignment evidence but keep the status partially aligned until entity-first `ViewId` and frame products are fully migrated.
+
+U5 implementation-risk explorer `019f16b7-57cb-70f2-9232-a5e7a760e802` reviewed the dirty-frontier call sites during the first implementation slice:
+
+- Dirty frontier writes are already concentrated through `mark_boundary_layout_dirty`, `clear_boundary_layout_dirty`, and `remove_view_boundary_state`; the fragile reads are detached pruning, contained relayout candidate collection, subtree-dirty coverage checks, and debug dirty-view snapshot/export.
+- The recommended first-slice API is `DirtyViewFrontier { views: HashSet<ViewId> }` with ViewId-native iteration plus explicitly named v1 boundary-node bridge methods such as `mark_boundary_node_v1`, `clear_boundary_node_v1`, and `iter_boundary_nodes_v1`.
+- The highest-risk behavior is frontier/state synchronization after initial mount, main-pass layout consumption, detached boundary pruning, contained relayout, notify propagation, and hover-edge dirtying. Focused tests should cover view-cache contained relayout, detached dirty roots, notify ancestor propagation, hover edges, and layout dirty harness schema metrics.
+- ADR 0165 should remain `Partially aligned`; ADR 0327 should remain `Aligned (with known gaps)`. This slice moves dirty frontier ownership toward ViewId/boundary vocabulary but does not land entity-first `ViewId`, dispatch snapshot ownership, paint recording ownership, or scene chunks.

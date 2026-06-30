@@ -1706,21 +1706,14 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn prune_detached_layout_followups(&mut self) {
-        let retained_dirty_boundaries: std::collections::HashSet<NodeId> = self
-            .dirty_boundaries
-            .iter()
-            .copied()
-            .filter(|&root| self.node_is_attached_to_layer_tree(root))
-            .collect();
         let detached: Vec<NodeId> = self
-            .dirty_boundaries
-            .difference(&retained_dirty_boundaries)
-            .copied()
+            .dirty_view_frontier
+            .iter_boundary_nodes_v1()
+            .filter(|&root| !self.node_is_attached_to_layer_tree(root))
             .collect();
         for root in detached {
             self.clear_boundary_layout_dirty(root);
         }
-        self.dirty_boundaries = retained_dirty_boundaries;
         self.pending_barrier_relayouts = self
             .pending_barrier_relayouts
             .iter()
@@ -1986,9 +1979,9 @@ impl<H: UiHost> UiTree<H> {
         // relayout the ancestor; it will already relayout the subtree.
         //
         // Hot path: avoid scanning the whole node store. Boundary invalidations are tracked in
-        // `dirty_boundaries`, so we can restrict this pass to the subset that actually changed.
+        // the dirty view frontier, so we can restrict this pass to the subset that actually changed.
         let mut candidates: Vec<NodeId> = Vec::with_capacity(16);
-        for &id in &self.dirty_boundaries {
+        for id in self.dirty_view_frontier.iter_boundary_nodes_v1() {
             let Some(node) = self.nodes.get(id) else {
                 continue;
             };

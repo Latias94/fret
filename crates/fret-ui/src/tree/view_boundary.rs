@@ -1,5 +1,6 @@
 use super::*;
 use std::any::{Any, TypeId};
+use std::collections::HashSet;
 
 pub trait BoundarySceneFragmentDebug: Any {
     fn boundary_scene_fragment_entry_count(&self) -> usize;
@@ -15,6 +16,42 @@ impl BoundaryId {
 
     pub(super) fn node(self) -> NodeId {
         self.0
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct DirtyViewFrontier {
+    views: HashSet<ViewId>,
+}
+
+impl DirtyViewFrontier {
+    pub(super) fn mark_boundary_node_v1(&mut self, node: NodeId) -> bool {
+        self.views.insert(ViewId::from(node))
+    }
+
+    pub(super) fn clear_boundary_node_v1(&mut self, node: NodeId) -> bool {
+        self.views.remove(&ViewId::from(node))
+    }
+
+    #[cfg(test)]
+    pub(super) fn contains_boundary_node_v1(&self, node: NodeId) -> bool {
+        self.views.contains(&ViewId::from(node))
+    }
+
+    pub(super) fn is_empty(&self) -> bool {
+        self.views.is_empty()
+    }
+
+    pub(super) fn len(&self) -> usize {
+        self.views.len()
+    }
+
+    pub(super) fn iter_views(&self) -> impl Iterator<Item = ViewId> + '_ {
+        self.views.iter().copied()
+    }
+
+    pub(super) fn iter_boundary_nodes_v1(&self) -> impl Iterator<Item = NodeId> + '_ {
+        self.iter_views().map(NodeId::from)
     }
 }
 
@@ -433,7 +470,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn remove_view_boundary_state(&mut self, node: NodeId) {
         self.view_boundaries.remove(node);
         self.retained_paint_cache_entries.remove(node);
-        self.dirty_boundaries.remove(&node);
+        self.dirty_view_frontier.clear_boundary_node_v1(node);
     }
 
     pub(in crate::tree) fn paint_cache_entry_for_node(
@@ -501,7 +538,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         boundary.dirty.mark(source, detail);
-        self.dirty_boundaries.insert(node);
+        self.dirty_view_frontier.mark_boundary_node_v1(node);
         self.debug_refresh_dirty_frontier_max();
     }
 
@@ -509,7 +546,7 @@ impl<H: UiHost> UiTree<H> {
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
             boundary.dirty.clear();
         }
-        self.dirty_boundaries.remove(&node);
+        self.dirty_view_frontier.clear_boundary_node_v1(node);
         self.debug_refresh_dirty_frontier_max();
     }
 
@@ -647,6 +684,16 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
+    pub(crate) fn test_dirty_view_frontier_empty(&self) -> bool {
+        self.dirty_view_frontier.is_empty()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_dirty_view_frontier_len(&self) -> usize {
+        self.dirty_view_frontier.len()
+    }
+
+    #[cfg(test)]
     pub(crate) fn test_view_boundary_paint_cache_has_entry(&self, node: NodeId) -> bool {
         self.view_boundaries
             .get(node)
@@ -668,5 +715,40 @@ impl<H: UiHost> UiTree<H> {
     #[cfg(test)]
     pub(crate) fn test_retained_paint_recording_ops_len(&self) -> usize {
         self.paint_cache.retained_recording_ops_len()
+    }
+}
+
+#[cfg(test)]
+mod dirty_view_frontier_tests {
+    use super::*;
+    use slotmap::Key;
+
+    fn node(id: u64) -> NodeId {
+        NodeId::from(slotmap::KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn dirty_view_frontier_coalesces_views_and_keeps_v1_node_bridge_explicit() {
+        let first = node(1);
+        let second = node(2);
+        let mut frontier = DirtyViewFrontier::default();
+
+        assert!(frontier.mark_boundary_node_v1(first));
+        assert!(!frontier.mark_boundary_node_v1(first));
+        assert!(frontier.mark_boundary_node_v1(second));
+
+        assert_eq!(frontier.len(), 2);
+        assert!(frontier.contains_boundary_node_v1(first));
+        let mut views: Vec<ViewId> = frontier.iter_views().collect();
+        views.sort_by_key(|view| view.0.data().as_ffi());
+        assert_eq!(views, vec![ViewId::from(first), ViewId::from(second)]);
+
+        let mut bridge_nodes: Vec<NodeId> = frontier.iter_boundary_nodes_v1().collect();
+        bridge_nodes.sort_by_key(|id| id.data().as_ffi());
+        assert_eq!(bridge_nodes, vec![first, second]);
+
+        assert!(frontier.clear_boundary_node_v1(first));
+        assert!(!frontier.clear_boundary_node_v1(first));
+        assert_eq!(frontier.len(), 1);
     }
 }

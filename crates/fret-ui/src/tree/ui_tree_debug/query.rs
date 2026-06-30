@@ -279,7 +279,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dirty_frontier_boundaries_max = self
             .debug_stats
             .dirty_frontier_boundaries_max
-            .max(self.dirty_boundaries.len().min(u32::MAX as usize) as u32);
+            .max(self.dirty_view_frontier.len().min(u32::MAX as usize) as u32);
     }
 
     pub(crate) fn debug_record_dirty_frontier_layout_start(&mut self) {
@@ -287,7 +287,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_stats.dirty_frontier_boundaries_at_layout_start =
-            self.dirty_boundaries.len().min(u32::MAX as usize) as u32;
+            self.dirty_view_frontier.len().min(u32::MAX as usize) as u32;
     }
 
     pub(crate) fn debug_record_dirty_frontier_contained_candidates(&mut self, candidates: usize) {

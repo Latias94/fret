@@ -417,8 +417,9 @@ impl<H: UiHost> UiTree<H> {
                 self.update_invalidation_counters(prev, next);
                 // Main-pass layout can consume a boundary's scheduling-only layout dirty marker
                 // before the contained-relayout pass ever looks at it (for example, initial mount
-                // or ancestor-driven layout). Keep `dirty_boundaries` aligned with authoritative
-                // layout state so clean cache roots do not remain queued across stable frames.
+                // or ancestor-driven layout). Keep the dirty view frontier aligned with
+                // authoritative layout state so clean cache roots do not remain queued across
+                // stable frames.
                 self.clear_boundary_dirty_tracking_if_clean(node);
             }
             self.recompute_paint_geometry_fingerprint(node);

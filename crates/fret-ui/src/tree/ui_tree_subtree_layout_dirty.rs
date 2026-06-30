@@ -215,12 +215,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let total = self.node_subtree_layout_dirty_count(node);
-        if total == 0 || self.dirty_boundaries.is_empty() {
+        if total == 0 || self.dirty_view_frontier.is_empty() {
             return false;
         }
 
         let mut contained_roots: Vec<NodeId> = Vec::new();
-        for &root in &self.dirty_boundaries {
+        for root in self.dirty_view_frontier.iter_boundary_nodes_v1() {
             let Some(entry) = self.nodes.get(root) else {
                 continue;
             };
@@ -280,7 +280,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         // Always keep boundary dirty roots discoverable, even if subtree aggregation is
-        // disabled. Contained view-cache relayouts use `dirty_boundaries` as their entry set.
+        // disabled. Contained view-cache relayouts use the dirty view frontier as their entry set.
         if after
             && self.view_cache_active()
             && let Some(n) = self.nodes.get(node)

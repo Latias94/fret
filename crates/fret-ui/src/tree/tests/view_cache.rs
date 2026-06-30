@@ -197,7 +197,7 @@ fn descendant_layout_invalidation_marks_contained_view_cache_root_dirty() {
         ui.test_clear_node_invalidations(id);
     }
     assert!(
-        ui.dirty_boundaries.is_empty(),
+        ui.test_dirty_view_frontier_empty(),
         "stable frames must not carry contained-relayout boundary candidates from the initial mount"
     );
 

@@ -446,13 +446,13 @@ fn append_metrics(
         observed,
         prefix,
         "debug.dirty_cache_roots_count",
-        ui.dirty_boundaries.len() as f32,
+        ui.test_dirty_view_frontier_len() as f32,
     );
     set_metric(
         observed,
         prefix,
         "debug.dirty_boundaries_count",
-        ui.dirty_boundaries.len() as f32,
+        ui.test_dirty_view_frontier_len() as f32,
     );
     set_metric(
         observed,

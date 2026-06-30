@@ -134,7 +134,7 @@ use shortcuts::{
 };
 use small_list::{SmallCopyList, SmallNodeList};
 pub use view_boundary::BoundarySceneFragmentDebug;
-use view_boundary::{PaintCacheEntryState, ViewBoundaryState};
+use view_boundary::{DirtyViewFrontier, PaintCacheEntryState, ViewBoundaryState};
 
 pub(crate) use dispatch_snapshot::{UiDispatchSnapshot, UiDispatchSnapshotCacheEntry};
 
@@ -445,7 +445,7 @@ pub struct UiTree<H: UiHost> {
     view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
     retained_paint_cache_entries: slotmap::SecondaryMap<NodeId, PaintCacheEntryState>,
 
-    dirty_boundaries: HashSet<NodeId>,
+    dirty_view_frontier: DirtyViewFrontier,
     last_redraw_request_tick: Option<TickId>,
 
     propagation_depth_generation: u32,

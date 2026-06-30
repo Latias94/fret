@@ -202,7 +202,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dirty_frontier_paint_nodes_max = self.invalidated_paint_nodes;
         self.debug_stats.dirty_frontier_hit_test_nodes_max = self.invalidated_hit_test_nodes;
         self.debug_stats.dirty_frontier_boundaries_max =
-            self.dirty_boundaries.len().min(u32::MAX as usize) as u32;
+            self.dirty_view_frontier.len().min(u32::MAX as usize) as u32;
         self.debug_stats.dirty_frontier_boundaries_at_layout_start = 0;
         self.debug_stats.dirty_frontier_contained_candidates = 0;
         self.debug_stats.parent_pointer_repair_passes = 0;
@@ -324,16 +324,17 @@ impl<H: UiHost> UiTree<H> {
             self.debug_text_constraints_measured.clear();
             self.debug_text_constraints_prepared.clear();
         }
-        let mut dirty_roots: Vec<NodeId> = self.dirty_boundaries.iter().copied().collect();
-        dirty_roots.sort_by_key(|id| id.data().as_ffi());
-        for root in dirty_roots {
+        let mut dirty_views: Vec<ViewId> = self.dirty_view_frontier.iter_views().collect();
+        dirty_views.sort_by_key(|view| view.0.data().as_ffi());
+        for view in dirty_views {
+            let root = NodeId::from(view);
             let element = self.nodes.get(root).and_then(|n| n.element);
             let (source, detail) = self.boundary_layout_dirty_reason(root).unwrap_or((
                 UiDebugInvalidationSource::Other,
                 UiDebugInvalidationDetail::Unknown,
             ));
             self.debug_dirty_views.push(UiDebugDirtyView {
-                view: ViewId(root),
+                view,
                 element,
                 source,
                 detail,
