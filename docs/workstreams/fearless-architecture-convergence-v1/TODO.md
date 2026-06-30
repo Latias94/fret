@@ -1,7 +1,7 @@
 # Fearless Architecture Convergence v1 - TODO
 
 Status: Active
-Last updated: 2026-05-25
+Last updated: 2026-06-30
 
 ## FAC-M0 - Scope And Contract Freeze
 
@@ -59,3 +59,25 @@ Last updated: 2026-05-25
   Validation: `python3 tools/check_workstream_catalog.py`; `python3 tools/check_layering.py`
   Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, `WORKSTREAM.json`
   Handoff: Remaining work must be in narrow owner lanes, not this coordinator.
+
+## FAC-M4 - 2026 UI Framework Convergence
+
+- [x] FAC-090 [owner=codex] [deps=FAC-080] [scope=docs/golden-architecture.md,docs/runtime-contract-matrix.md,docs/ui-closure-map.md,docs/adr,docs/plans]
+  Goal: Freeze the 2026 convergence owner map from the implementation-ready plan without reopening
+  closed broad lanes.
+  Validation: `python3 tools/check_layering.py`; `python3 tools/check_workstream_catalog.py`;
+  `git diff --check`
+  Evidence: `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`,
+  `docs/golden-architecture.md`, `docs/runtime-contract-matrix.md`, `docs/ui-closure-map.md`,
+  `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+  Handoff: Execute the plan as narrow units. Start with source-policy gates, then identity/dirty
+  graph metrics before deleting compatibility paths.
+
+- [ ] FAC-100 [owner=codex] [deps=FAC-090] [scope=tools,docs/dependency-policy.md]
+  Goal: Add a source-policy gate that catches mechanism/policy drift and default app import leaks
+  that dependency layering cannot see.
+  Validation: `python3 tools/check_surface_policy.py`; focused unit tests for the checker; existing
+  layering/profile gates.
+  Evidence: `tools/check_surface_policy.py`, `tools/test_check_surface_policy.py`
+  Handoff: Keep this gate heuristic and allowlist-backed in v1; do not scan the whole repo with
+  blanket `fret_ui`/`fret_core` denies.

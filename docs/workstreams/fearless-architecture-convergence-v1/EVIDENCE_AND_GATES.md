@@ -1,7 +1,7 @@
 # Fearless Architecture Convergence v1 - Evidence and Gates
 
 Status: Active
-Last updated: 2026-05-25
+Last updated: 2026-06-30
 
 ## Canonical Gates
 
@@ -18,6 +18,11 @@ Last updated: 2026-05-25
 - `git diff --check`
   - Proves touched files have no whitespace errors.
 
+## Planned Gates
+
+- `python3 tools/check_surface_policy.py`
+  - Will prove source responsibility policy after FAC-100 lands.
+
 ## Evidence Anchors
 
 - `docs/workstreams/fearless-architecture-convergence-v1/DESIGN.md`
@@ -27,6 +32,30 @@ Last updated: 2026-05-25
 - `crates/fret-ui/src/lib.rs`
 - `ecosystem/fret-node/Cargo.toml`
 - `ecosystem/fret-node/src/lib.rs`
+- `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`
+- `docs/golden-architecture.md`
+- `docs/runtime-contract-matrix.md`
+- `docs/ui-closure-map.md`
+- `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+
+## 2026-06-30 - UI framework convergence contract freeze
+
+Claim to verify:
+
+- The current convergence plan has one owner map for default app authoring, runtime mechanisms,
+  interaction policy, dirty views, frame boundaries, renderer chunks, text/glyph budgets, and
+  consumption profiles.
+- ADR 0066, ADR 0165, and ADR 0327 name the current breakable/refactor direction without reopening
+  closed broad lanes.
+- Remaining implementation-heavy work is delegated to narrow plan units and gates, not hidden in
+  this coordinator.
+
+Fresh validation:
+
+- Pending for the implementation slice:
+  - `python3 tools/check_layering.py`
+  - `python3 tools/check_workstream_catalog.py`
+  - `git diff --check`
 
 ## 2026-05-25 - Retained public surface first slice
 

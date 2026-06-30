@@ -30,6 +30,40 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 - `gpui-component/crates/ui` (policy + recipes) ≈ `ecosystem/fret-ui-kit` (infra) +
   `ecosystem/fret-ui-shadcn` (taxonomy + recipes)
 
+## 2026 convergence addendum
+
+The active convergence plan is
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
+This addendum defines the runtime contract posture that plan implements.
+
+`crates/fret-ui` should stay broad internally but narrow publicly:
+
+- **Stable mechanism:** IDs, element hosting, layout vocabulary, routing, focus/capture, layer
+  roots, outside-interaction observation, geometry queries, dirty propagation, `ViewBoundary`
+  ownership, prepaint products, and scene-fragment emission.
+- **Compatibility:** retained-widget authoring exports, cache-root-first dirty-view aliases,
+  hash-keyed identity repair paths, and flat-scene replay bridges while their replacements are
+  being proven.
+- **Out of scope:** Dialog/Popover/Menu/Tooltip policy names, Radix/shadcn recipe vocabulary,
+  focus trap/restore policy, dismissal reason mapping, hover-intent policy, and recipe chrome
+  defaults.
+
+The convergence target is GPUI-aligned but Fret-owned:
+
+- `ViewId` is the primary maintainer vocabulary for dirty views; cache-root IDs are a compatibility
+  mapping until entity-first view identity is complete.
+- `ViewBoundary` owns phase products: layout results, prepaint state, hitbox inputs, dispatch
+  slices, semantics bounds, text-layout indexes, and `SceneFragment` records.
+- `GlobalElementId` remains useful for authoring/debug identity, but retained-node repair must be
+  measured through stable-handle diagnostics before hash fallback paths are deleted.
+- Renderer-facing work should prefer retained scene chunks, resource-generation keys, render-plan
+  reuse, and dirty upload ranges over whole-scene encode/upload when a local edit is observable.
+
+Source-policy gates are part of this contract. Passing dependency layering is necessary but not
+sufficient: default tutorials, scaffold templates, and first-contact app examples must not import
+raw `fret_ui`, raw `fret_core`, `UiTree`, `FnDriver`, retained widget contexts, or advanced preludes
+unless they are explicitly classified as advanced/compat surfaces.
+
 ## Contracts (P0)
 
 ### Event routing, focus, capture, and semantics

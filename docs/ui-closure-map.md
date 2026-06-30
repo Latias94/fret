@@ -63,6 +63,38 @@ Key invariants:
 
 ---
 
+## Current Convergence Closure Target
+
+The active fearless-refactor plan is
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
+This closure map should be read through that plan when deciding what to break, delete, or gate.
+
+Must-be-true outcomes for the next convergence pass:
+
+- Default app surfaces teach `fret::app::prelude::*`, `View`, `AppUi`, `LocalState`, typed actions,
+  data/effects helpers, and `notify`; they do not teach raw `UiTree`, retained widgets, or
+  low-level driver seams.
+- `crates/fret-ui` exposes generic mechanisms for layers, focus, capture, outside interactions,
+  dirty propagation, frame phases, and geometry; policy-coded overlay/component vocabulary lives in
+  ecosystem crates.
+- Dirty work is attributable by `ViewId` / `ViewBoundary`, with cache-root-first behavior treated as
+  a compatibility mapping rather than the final runtime model.
+- Prepaint products, hit-testing inputs, dispatch snapshots, semantics bounds, text-layout indexes,
+  and scene fragments are owned by boundaries where the current code still keeps them tree-wide or
+  node-local.
+- Renderer/text costs for local edits are bounded by scene chunks, render-plan reuse, dirty upload
+  ranges, and explicit text/glyph/wasm cache budgets.
+
+High-risk compatibility paths that need either deletion or an explicit retention gate:
+
+- hash-keyed retained identity fallback scans without stable-handle diagnostics,
+- parent repair and GC reachability work that can scale with the active retained tree,
+- flat `Scene` bridges used as the only replay unit for local text/caret/selection changes,
+- `fret-ui` public names that encode Dialog/Popover/Menu/Tooltip/dismissal policy,
+- first-party examples that make advanced/manual assembly look like the default app path.
+
+---
+
 ## Coordinate Spaces (The Non-Negotiables)
 
 ### Units and DPI

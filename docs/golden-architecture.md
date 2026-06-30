@@ -71,6 +71,49 @@ Hard rules: see `docs/dependency-policy.md` and ADR 0037.
 
 ---
 
+## 2026 Architecture Convergence Contract
+
+The active fearless-refactor target is
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
+Use that plan as the implementation contract for convergence work, while ADRs remain the authority
+for hard-to-change behavior.
+
+Target vocabulary:
+
+```text
+App authors:
+  FretApp -> View -> AppUi -> LocalState/actions/data/effects -> notify
+
+Runtime maintainers:
+  ViewId -> ViewBoundary -> dirty frontier -> prepaint frame products
+  -> SceneFragment -> renderer plan reuse -> dirty GPU uploads
+```
+
+Owner map for active convergence work:
+
+| Area | Owner layer | Contract anchor |
+| --- | --- | --- |
+| Default app authoring | `ecosystem/fret`, `crates/fretboard`, cookbook/examples | `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md` |
+| Runtime mechanisms | `crates/fret-ui` | `docs/adr/0066-fret-ui-runtime-contract-surface.md` |
+| Dirty views / notify | `crates/fret-ui` internals, app facade call sites | `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md` |
+| Frame phases / boundary ownership | `crates/fret-ui` internals | `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md` |
+| Interaction policy | `ecosystem/fret-ui-headless`, `ecosystem/fret-ui-kit`, recipe crates | `docs/adr/0066-fret-ui-runtime-contract-surface.md` |
+| Scene chunks / renderer plan reuse | `crates/fret-core`, `crates/fret-render-core`, `crates/fret-render-wgpu` | `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md` plus renderer ADRs |
+| Text/glyph/cache budgets | `crates/fret-render-text`, `crates/fret-render-wgpu` | `docs/adr/0143-text-layout-cache-boundary-and-glyph-residency.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md` |
+| Consumption profiles | `ecosystem/fret`, `crates/fret-framework`, portable contract crates | `docs/crate-usage-guide.md`, `docs/repo-structure.md` |
+
+Breakage policy:
+
+- Breaking transitional or experimental public names is acceptable when the replacement aligns with
+  the owner map above.
+- `crates/fret-ui` portability, backend independence, and mechanism-vs-policy ownership are not
+  breakable without ADR updates.
+- Old retained, hash-keyed, flat-scene, or node-level compatibility paths need an explicit
+  retention reason and a gate; otherwise the convergence work should delete them after replacement
+  evidence exists.
+
+---
+
 ## Module Index
 
 Each section below answers:

@@ -9,7 +9,7 @@ Upstream sources:
 - Zed: https://github.com/zed-industries/zed
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Accepted (v1 cache-root-first; MVP2 implementation in progress)
+Status: Accepted (v1 cache-root-first implemented; ViewId-first convergence active)
 
 ## Context
 
@@ -62,6 +62,15 @@ The runtime provides:
 
 - `cx.notify()` for the "current view" (v1: current/nearest cache root).
 - `cx.notify(view_id)` (optional extension; can be introduced later without breaking the v1 default).
+
+2026 convergence update:
+
+- `ViewId` is now the primary target vocabulary for new runtime work. Cache-root identity remains the
+  compatibility mapping used by the current implementation until entity-first view identity lands.
+- Diagnostics and gates should speak in dirty views / dirty boundaries even when the backing data is
+  still cache-root-first.
+- Any hash-keyed retained identity fallback, parent repair, or node-level invalidation path that
+  survives the migration needs explicit metrics and a retention reason.
 
 Semantics:
 
@@ -163,8 +172,12 @@ Cons:
 1) v1: implement `notify()` as "mark nearest cache root dirty" and gate view-cache reuse on that dirtiness.
 2) Track `dirty_views` per window (cache-root IDs in v1) and coalesce redraw scheduling at the driver boundary.
 3) Add diagnostics counters and inspector exposure (ADR 0159): list dirty views + last notify source (debug-only).
-4) Optional: introduce a more explicit `ViewId` model (entity-first, GPUI-like) in a breaking-change window; keep v1
-   behavior as a compatibility layer where possible.
+4) Introduce a more explicit `ViewId` model (entity-first, GPUI-like) in the active breaking-change
+   window; keep v1 cache-root behavior as a compatibility mapping only where it is still required
+   by existing gates.
+5) Add architecture metrics before replacing identity paths: fallback scan count, seeded-handle hit
+   rate, stale-handle repairs, parent repair count, GC reachability breadth, dirty frontier size,
+   and dispatch snapshot reuse/miss reasons.
 
 ## References
 

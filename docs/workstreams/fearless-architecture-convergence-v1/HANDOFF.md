@@ -1,12 +1,25 @@
 # Fearless Architecture Convergence v1 - Handoff
 
-Updated: 2026-05-25
+Updated: 2026-06-30
 
 ## Current State
 
 This coordinator lane is active but should now be read mostly as the first-open owner map. It has
 mapped the six fearless cuts, landed the retained public-surface first slice, and opened the five
 narrow follow-on lanes for the remaining cuts.
+
+The 2026 UI framework convergence plan now extends this coordinator as the current owner map for
+new fearless refactor work:
+
+- plan: `docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`
+- contract index: `docs/golden-architecture.md`
+- runtime contract checklist: `docs/runtime-contract-matrix.md`
+- closure map: `docs/ui-closure-map.md`
+- ADR overlay: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+
+Do not reopen the closed broad Frame Pipeline v2 lane. Treat it as evidence and start narrow
+follow-ons for ViewId-first dirty ownership, scene chunks, renderer dirty uploads, and text/glyph
+budget gates.
 
 ## Owner Lanes
 
@@ -36,6 +49,5 @@ were not introduced by the retained public-surface slice.
 
 ## Next Step
 
-Either close out `docs/workstreams/retained-public-surface-exit-v1/` after final review, or continue
-with `NLA-010` in `docs/workstreams/fret-node-low-level-adapter-v1/` to introduce the first named
-canvas/viewport adapter seam.
+Execute FAC-100 / plan U2: add the responsibility source-policy checker before broader runtime
+deletions. Then use identity/dirty graph metrics as the first runtime migration guardrail.

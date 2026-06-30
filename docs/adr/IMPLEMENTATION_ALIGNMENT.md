@@ -23,7 +23,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-05-30
+- Last updated: 2026-06-30
 - ADR count (numbered): 328
 
 - Aligned: 119
@@ -32,6 +32,19 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Not audited: 51
 - Not implemented: 6
 - Partially aligned: 37
+
+## 2026 Convergence Overlay
+
+The current fearless convergence plan is
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md`.
+It does not supersede the matrix rows below; it narrows the next implementation cut for accepted
+contracts whose broad workstreams are already closed or partially aligned.
+
+| ADR | Current convergence interpretation |
+| --- | --- |
+| [`0066-fret-ui-runtime-contract-surface.md`](0066-fret-ui-runtime-contract-surface.md) | Still aligned with known gaps. The new breakable surface is public vocabulary responsibility: policy-coded runtime names and default app imports of raw runtime seams should be blocked by source-policy gates before more ecosystem breadth lands. |
+| [`0165-dirty-views-and-notify-gpui-aligned.md`](0165-dirty-views-and-notify-gpui-aligned.md) | Still partially aligned. v1 cache-root-first `notify` remains implemented, but new work should move diagnostics and ownership toward entity-first `ViewId`, stable handles, dirty frontier metrics, and cache-root compatibility mapping. |
+| [`0327-frame-pipeline-v2-and-view-boundaries.md`](0327-frame-pipeline-v2-and-view-boundaries.md) | Still aligned with known gaps. The broad lane is closed; new work should be narrow follow-ons for boundary-owned frame products, retained scene chunks, renderer dirty uploads, and text/glyph budget gates. |
 
 ## Matrix
 

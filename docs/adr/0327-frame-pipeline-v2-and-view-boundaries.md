@@ -11,6 +11,12 @@ is tracked in `docs/adr/IMPLEMENTATION_ALIGNMENT.md` and
 closeout is recorded in
 `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md`.
 
+Convergence note (2026-06-30): new runtime work should not reopen the closed broad Frame Pipeline
+v2 lane. The active convergence plan
+`docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md` uses this ADR as the
+contract anchor for narrower follow-ons: ViewId-first dirty ownership, boundary-owned frame
+products, retained scene chunks, renderer dirty uploads, and text/glyph budget gates.
+
 ## Context
 
 Fret currently combines several valid but partially overlapping runtime ideas:
@@ -173,6 +179,16 @@ M4R validates the second, non-code-editor proof surface through
 `ui-gallery-view-cache-toggle-perf-steady`. That surface exercises shared view-cache reuse and
 paint-cache replay, emits canonical `debug.boundaries[]` plus cache-root `layout_dependency`
 diagnostics, and confirms the live `contained_layout` schema field was not reintroduced.
+
+The next convergence step is to move remaining tree-wide or node-local side products under
+boundary ownership where feasible:
+
+- dirty phase bits and reuse rejection reasons,
+- prepaint-derived geometry state,
+- hitbox and input-handler snapshot slices,
+- semantics bounds and accessibility reachability inputs,
+- text-layout indexes used by editor-like surfaces,
+- `SceneFragment` records that can be replayed or encoded independently.
 
 ### 3. Layout containment is a dependency contract
 

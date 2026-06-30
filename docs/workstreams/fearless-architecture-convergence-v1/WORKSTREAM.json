@@ -3,9 +3,9 @@
   "slug": "fearless-architecture-convergence-v1",
   "title": "Fearless Architecture Convergence v1",
   "status": "active",
-  "updated": "2026-05-25",
+  "updated": "2026-06-30",
   "scope_kind": "execution",
-  "problem": "Coordinate the six fearless architecture cuts without reopening closed broad lanes or mixing runtime mechanisms, ecosystem policy, low-level adapters, and launch posture into one unreviewable refactor.",
+  "problem": "Coordinate fearless architecture convergence without reopening closed broad lanes or mixing runtime mechanisms, ecosystem policy, low-level adapters, renderer/text budgets, app facade posture, and teaching surfaces into one unreviewable refactor.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -26,13 +26,17 @@
     {
       "role": "next",
       "path": "docs/workstreams/fearless-architecture-convergence-v1/HANDOFF.md"
+    },
+    {
+      "role": "plan",
+      "path": "docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md"
     }
   ],
   "repro": {
-    "summary": "Start with the retained public-surface exit because it is the smallest cross-cutting contract change and proves the new retained-vs-declarative boundary.",
+    "summary": "Start 2026 convergence execution with contract freeze plus source-policy gates before runtime compatibility deletion.",
     "commands": [
-      "cargo test -p fret-ui retained_widget_authoring_exports_are_compat_feature_gated",
-      "cargo check -p fret-node --features compat-retained-canvas"
+      "python3 tools/check_layering.py",
+      "python3 tools/check_workstream_catalog.py"
     ]
   },
   "gates": [
@@ -62,7 +66,11 @@
     "docs/workstreams/fearless-architecture-convergence-v1/TODO.md",
     "docs/workstreams/fearless-architecture-convergence-v1/MILESTONES.md",
     "docs/workstreams/fearless-architecture-convergence-v1/EVIDENCE_AND_GATES.md",
-    "docs/workstreams/fearless-architecture-convergence-v1/HANDOFF.md"
+    "docs/workstreams/fearless-architecture-convergence-v1/HANDOFF.md",
+    "docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md",
+    "docs/golden-architecture.md",
+    "docs/runtime-contract-matrix.md",
+    "docs/ui-closure-map.md"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
@@ -71,7 +79,7 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this coordinator while the six cuts are being split into owner lanes. Each implementation-heavy slice should live in its own narrow workstream or existing active lane."
+    "notes": "Continue this coordinator as the current owner map. Each implementation-heavy slice should live in a narrow plan unit, follow-on workstream, or existing active lane; closed broad lanes stay evidence-only."
   },
   "lane_slug": "framework-boundaries"
 }

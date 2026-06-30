@@ -59,6 +59,16 @@ deterministically:
 - dismissal rules, focus trap/restore policies,
 - per-component default values (row heights, padding, delays) beyond minimal deterministic defaults.
 
+2026 convergence update:
+
+- Runtime public names that encode component policy are migration targets, even when their current
+  implementation is technically portable.
+- New source-policy gates should reject policy-coded `fret-ui` public exports and first-contact app
+  imports of raw runtime seams unless the file is explicitly classified as advanced or compat.
+- `ecosystem/fret-ui-headless` and `ecosystem/fret-ui-kit` are the intended owners for pure
+  behavior kernels and policy vocabulary such as dismissal reason mapping, focus trap/restore,
+  roving focus, typeahead, and recipe chrome defaults.
+
 ### 2) Stability tiers (how to “lock” contracts)
 
 To keep the runtime usable but clean, we classify public runtime APIs as:
@@ -66,6 +76,10 @@ To keep the runtime usable but clean, we classify public runtime APIs as:
 - **Stable**: relied on by `fret-components-*`; changes require ADR update + migration plan.
 - **Experimental**: allowed to churn; must be behind a feature flag or clearly marked.
 - **Compatibility**: legacy retained widgets (temporary); must be feature-gated and delete-planned.
+
+The active convergence work treats these tiers as enforceable source policy, not just prose.
+Dependency layering checks remain necessary, but they do not prove responsibility ownership.
+Mechanism-vs-policy drift must be caught by a dedicated public-surface/import checker.
 
 ### 3) Stable runtime contracts (P0) — contract table
 
