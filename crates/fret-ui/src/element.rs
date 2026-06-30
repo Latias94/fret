@@ -11,7 +11,8 @@ use fret_core::{
 use fret_runtime::{CommandId, DragKindId, Model};
 use std::sync::Arc;
 
-use crate::{ResizablePanelGroupStyle, SvgSource, TextAreaStyle, TextInputStyle};
+use crate::resizable_panel_group::ResizablePanelGroupStyle;
+use crate::{SvgSource, TextAreaStyle, TextInputStyle};
 
 /// Declarative element tree node (ephemeral per frame), keyed by a stable `GlobalElementId`.
 ///

@@ -6,7 +6,8 @@ use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, ResizablePanelGroupProps, SemanticsProps,
 };
-use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
+use fret_ui::resizable_panel_group::ResizablePanelGroupStyle;
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;

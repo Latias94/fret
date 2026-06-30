@@ -64,6 +64,11 @@ sufficient: default tutorials, scaffold templates, and first-contact app example
 raw `fret_ui`, raw `fret_core`, `UiTree`, `FnDriver`, retained widget contexts, or advanced preludes
 unless they are explicitly classified as advanced/compat surfaces.
 
+The root `fret-ui` public surface is intentionally narrower than the runtime's internal mechanism
+modules. Resizable split chrome now stays on the explicit
+`fret_ui::resizable_panel_group::ResizablePanelGroupStyle` mechanism path; the root no longer
+re-exports it, and component-layer defaults remain in `ecosystem/fret-ui-kit` recipes.
+
 ## Contracts (P0)
 
 ### Event routing, focus, capture, and semantics

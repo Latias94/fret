@@ -27,7 +27,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
                 model.clone(),
             );
             props.min_px = vec![Px(10.0)];
-            props.chrome = crate::ResizablePanelGroupStyle {
+            props.chrome = crate::resizable_panel_group::ResizablePanelGroupStyle {
                 hit_thickness: Px(10.0),
                 ..Default::default()
             };

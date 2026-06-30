@@ -50,7 +50,7 @@ pub(crate) mod strict_runtime;
 /// Stable key type used by keyed element APIs (e.g. lists and cached subtrees).
 pub type ItemKey = u64;
 #[allow(dead_code)]
-pub(crate) mod resizable_panel_group;
+pub mod resizable_panel_group;
 #[allow(dead_code)]
 pub(crate) mod resizable_split;
 #[allow(dead_code)]
@@ -80,7 +80,6 @@ pub use fixed_split::FixedSplit;
 pub use frame_cx::{UiFrameContext, UiFrameCx};
 pub use host::UiHost;
 pub use pending_shortcut::PendingShortcutOverlayState;
-pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
 pub use text::{TextAreaStyle, TextInputInsertFilter, TextInputStyle};
@@ -135,5 +134,15 @@ mod public_surface_policy_tests {
                 "retained widget authoring export must stay behind compat-retained-widgets: {forbidden}"
             );
         }
+    }
+
+    #[test]
+    fn resizable_chrome_style_is_not_root_exported() {
+        let public_surface = public_surface_before_tests();
+        assert!(public_surface.contains("pub mod resizable_panel_group;"));
+        assert!(
+            !public_surface.contains("pub use resizable_panel_group::ResizablePanelGroupStyle;"),
+            "resizable chrome style must stay on the explicit mechanism module path"
+        );
     }
 }

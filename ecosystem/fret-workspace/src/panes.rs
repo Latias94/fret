@@ -9,7 +9,8 @@ use fret_ui::element::{
     Length, PointerRegionProps, PositionStyle, ResizablePanelGroupProps, ViewCacheProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementContext, Invalidation, ResizablePanelGroupStyle, Theme, UiHost};
+use fret_ui::resizable_panel_group::ResizablePanelGroupStyle;
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::commands::{
     pane_activate_command, pane_move_active_tab_to_command, pane_split_command,

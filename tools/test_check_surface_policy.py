@@ -195,7 +195,7 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertEqual("mechanism-root-policy-vocabulary", violations[0].rule)
             self.assertIn("Dialog", violations[0].message)
 
-    def test_classified_transitional_fret_ui_root_export_is_allowed(self) -> None:
+    def test_resizable_chrome_style_root_export_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write(
@@ -220,7 +220,9 @@ class SurfacePolicyTests(unittest.TestCase):
                 ],
             )
 
-            self.assertEqual([], violations)
+            self.assertEqual(1, len(violations))
+            self.assertEqual("mechanism-root-policy-vocabulary", violations[0].rule)
+            self.assertIn("ResizablePanelGroupStyle", violations[0].source)
 
     def test_classified_surface_paths_must_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

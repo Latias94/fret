@@ -1,5 +1,6 @@
 use fret_core::Px;
-use fret_ui::{ResizablePanelGroupStyle, Theme};
+use fret_ui::Theme;
+use fret_ui::resizable_panel_group::ResizablePanelGroupStyle;
 
 /// Component-layer default chrome for the runtime `ResizablePanelGroup` mechanism.
 ///

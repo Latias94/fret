@@ -165,12 +165,7 @@ POLICY_CODED_EXPORT_TERMS: tuple[str, ...] = (
     "ResizablePanelGroup",
 )
 
-MECHANISM_ROOT_EXPORT_CLASSIFICATIONS: dict[str, str] = {
-    "ResizablePanelGroupStyle": (
-        "transitional compat: legacy split/panel chrome vocabulary remains root-exported until U6 "
-        "moves or demotes policy-coded sizing names"
-    ),
-}
+MECHANISM_ROOT_EXPORT_CLASSIFICATIONS: dict[str, str] = {}
 
 
 def _read_text(path: Path) -> str:

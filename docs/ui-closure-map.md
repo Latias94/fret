@@ -77,6 +77,9 @@ Must-be-true outcomes for the next convergence pass:
 - `crates/fret-ui` exposes generic mechanisms for layers, focus, capture, outside interactions,
   dirty propagation, frame phases, and geometry; policy-coded overlay/component vocabulary lives in
   ecosystem crates.
+- Runtime mechanism submodules may expose low-level configuration types when component layers need
+  them, but `crates/fret-ui` root exports stay narrower: resizable split chrome is available via
+  `fret_ui::resizable_panel_group::ResizablePanelGroupStyle`, not as a root policy-style export.
 - Dirty work is attributable by `ViewId` / `ViewBoundary`, with cache-root-first behavior treated as
   a compatibility mapping rather than the final runtime model.
 - Prepaint products, hit-testing inputs, dispatch snapshots, semantics bounds, text-layout indexes,
