@@ -1,9 +1,9 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
+use crate::primitives::dismissable_layer::OnDismissRequest;
 use fret_runtime::Model;
 use fret_ui::GlobalElementId;
-use fret_ui::action::OnDismissRequest;
 use fret_ui::element::AnyElement;
 
 use super::super::layout::{PopupModalPalette, PopupModalPanelLayout};

@@ -2284,7 +2284,7 @@ fn dock_drag_closes_menu_like_overlay_and_disables_pointer_move_observers() {
         bounds,
         open.clone(),
     );
-    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+    let on_pointer_move: crate::primitives::dismissable_layer::OnDismissiblePointerMove =
         Arc::new(|_host, _cx, _mv| false);
     request_dismissible_popover_for_window(
         &mut app,
@@ -2353,7 +2353,7 @@ fn dock_drag_closes_menu_like_overlay_and_disables_pointer_move_observers() {
         bounds,
         open.clone(),
     );
-    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+    let on_pointer_move: crate::primitives::dismissable_layer::OnDismissiblePointerMove =
         Arc::new(|_host, _cx, _mv| false);
     request_dismissible_popover_for_window(
         &mut app,

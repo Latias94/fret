@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use fret_core::{AppWindowId, NodeId};
 
 use crate::UiHost;
-use crate::action::DismissibleActionHooks;
+use crate::action::LayerInteractionActionHooks;
 use crate::widget::Invalidation;
 
 use fret_runtime::{ModelId, TimerToken};
@@ -374,7 +374,7 @@ pub fn take_element_state<H: UiHost, S: Any>(
 }
 
 /// Returns `true` if the given element currently has an `on_pointer_move` hook installed for
-/// `DismissibleLayer`.
+/// `LayerInteractionRoot`.
 ///
 /// This is intended for diagnostics and cross-crate UI policy tests.
 pub fn dismissible_has_pointer_move_handler<H: UiHost>(
@@ -383,9 +383,9 @@ pub fn dismissible_has_pointer_move_handler<H: UiHost>(
     element: GlobalElementId,
 ) -> bool {
     with_window_state(app, window, |st| {
-        let key = (element, TypeId::of::<DismissibleActionHooks>());
+        let key = (element, TypeId::of::<LayerInteractionActionHooks>());
         st.state_any_ref(&key)
-            .and_then(|any| any.downcast_ref::<DismissibleActionHooks>())
+            .and_then(|any| any.downcast_ref::<LayerInteractionActionHooks>())
             .is_some_and(|hooks| hooks.on_pointer_move.is_some())
     })
 }

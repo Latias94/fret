@@ -12,7 +12,6 @@ use std::sync::OnceLock;
 
 use fret_core::{Edges, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, Overflow, ScrollAxis, ScrollProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -21,6 +20,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::{controllable_state, model_watch::ModelWatchExt as _};
 use fret_ui_kit::overlay;
 use fret_ui_kit::overlay_controller;
+use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 use fret_ui_kit::primitives::menu as menu_primitive;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;

@@ -18,13 +18,13 @@ use fret_runtime::{CommandId, Effect, FrameId, Model, ModelId, ModelUpdateError,
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    ActionRouteHooks, CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks,
-    KeyActionHooks, OnActivate, OnActivateFocus, OnCommand, OnCommandAvailability,
-    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel,
-    OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
-    OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead,
-    OnSelectableTextActivateSpan, OnTimer, OnWheel, PointerActionHooks, PressableActionHooks,
-    PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
+    ActionRouteHooks, CommandActionHooks, CommandAvailabilityActionHooks, KeyActionHooks,
+    LayerInteractionActionHooks, OnActivate, OnActivateFocus, OnCommand, OnCommandAvailability,
+    OnKeyDown, OnLayerInteractionPointerMove, OnLayerInteractionRequest, OnPinchGesture,
+    OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
+    OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate,
+    OnRovingTypeahead, OnSelectableTextActivateSpan, OnTimer, OnWheel, PointerActionHooks,
+    PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
     SelectableTextActionHooks, TimerActionHooks,
 };
 use crate::canvas::{
@@ -3413,30 +3413,30 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
-    /// Register a component-owned dismiss handler for the current dismissible root element.
+    /// Register a component-owned interaction handler for the current layer interaction root.
     ///
     /// This is intended for overlay policy code that composes
-    /// `render_dismissible_root_with_hooks(...)` and
+    /// `render_layer_interaction_root_with_hooks(...)` and
     /// wants full control over dismissal semantics (ADR 0074).
-    pub fn dismissible_on_dismiss_request(&mut self, handler: OnDismissRequest) {
-        self.root_state(DismissibleActionHooks::default, |hooks| {
-            hooks.on_dismiss_request = Some(handler);
+    pub fn layer_interaction_on_request(&mut self, handler: OnLayerInteractionRequest) {
+        self.root_state(LayerInteractionActionHooks::default, |hooks| {
+            hooks.on_request = Some(handler);
         });
     }
 
-    /// Register a component-owned pointer-move observer for the current dismissible root element.
+    /// Register a component-owned pointer-move observer for the current layer interaction root.
     ///
     /// This is used for overlay policies that need global pointer movement (e.g. submenu
     /// safe-hover corridors) without making the overlay hit-testable outside its content.
-    pub fn dismissible_on_pointer_move(&mut self, handler: OnDismissiblePointerMove) {
-        self.root_state(DismissibleActionHooks::default, |hooks| {
+    pub fn layer_interaction_on_pointer_move(&mut self, handler: OnLayerInteractionPointerMove) {
+        self.root_state(LayerInteractionActionHooks::default, |hooks| {
             hooks.on_pointer_move = Some(handler);
         });
     }
 
-    pub fn dismissible_add_on_dismiss_request(&mut self, handler: OnDismissRequest) {
-        self.root_state(DismissibleActionHooks::default, |hooks| {
-            hooks.on_dismiss_request = match hooks.on_dismiss_request.clone() {
+    pub fn layer_interaction_add_on_request(&mut self, handler: OnLayerInteractionRequest) {
+        self.root_state(LayerInteractionActionHooks::default, |hooks| {
+            hooks.on_request = match hooks.on_request.clone() {
                 None => Some(handler),
                 Some(prev) => {
                     let next = handler.clone();
@@ -3449,8 +3449,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
-    pub fn dismissible_add_on_pointer_move(&mut self, handler: OnDismissiblePointerMove) {
-        self.root_state(DismissibleActionHooks::default, |hooks| {
+    pub fn layer_interaction_add_on_pointer_move(
+        &mut self,
+        handler: OnLayerInteractionPointerMove,
+    ) {
+        self.root_state(LayerInteractionActionHooks::default, |hooks| {
             hooks.on_pointer_move = match hooks.on_pointer_move.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -3463,14 +3466,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
-    pub fn dismissible_clear_on_dismiss_request(&mut self) {
-        self.root_state(DismissibleActionHooks::default, |hooks| {
-            hooks.on_dismiss_request = None;
+    pub fn layer_interaction_clear_on_request(&mut self) {
+        self.root_state(LayerInteractionActionHooks::default, |hooks| {
+            hooks.on_request = None;
         });
     }
 
-    pub fn dismissible_clear_on_pointer_move(&mut self) {
-        self.root_state(DismissibleActionHooks::default, |hooks| {
+    pub fn layer_interaction_clear_on_pointer_move(&mut self) {
+        self.root_state(LayerInteractionActionHooks::default, |hooks| {
             hooks.on_pointer_move = None;
         });
     }

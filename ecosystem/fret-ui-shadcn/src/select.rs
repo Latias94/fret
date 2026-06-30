@@ -6,7 +6,7 @@ use crate::test_id::{attach_test_id, attach_test_id_suffix, test_id_slug};
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{Effect, Model, TimerToken};
-use fret_ui::action::{ActionCx, OnDismissRequest};
+use fret_ui::action::ActionCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
@@ -32,6 +32,7 @@ use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
+use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;

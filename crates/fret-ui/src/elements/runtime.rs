@@ -1789,7 +1789,7 @@ impl WindowElementState {
             ));
             self.touch_state_key((
                 element,
-                TypeId::of::<crate::action::DismissibleActionHooks>(),
+                TypeId::of::<crate::action::LayerInteractionActionHooks>(),
             ));
             self.touch_state_key((element, TypeId::of::<crate::action::PointerActionHooks>()));
             self.touch_state_key((element, TypeId::of::<crate::action::KeyActionHooks>()));

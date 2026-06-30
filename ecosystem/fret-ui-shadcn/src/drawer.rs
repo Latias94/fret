@@ -10,7 +10,7 @@ use fret_core::{
     Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextAlign, Transform2D,
 };
 use fret_runtime::{Model, ModelStore, TickId};
-use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
     PointerRegionProps, RenderTransformProps, SemanticsDecoration, SizeStyle,
@@ -26,6 +26,7 @@ pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetModalMode as DrawerModalMode,
     SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
+use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 
 pub type DrawerDirection = DrawerSide;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -2878,13 +2879,13 @@ mod tests {
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
-    use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
     use fret_ui::elements::{
         GlobalElementId, current_bounds_for_element, visual_bounds_for_element,
     };
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+    use fret_ui_kit::primitives::dismissable_layer::DismissReason;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
     fn scene_contains_full_window_solid_quad(

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::action::{DismissReason, DismissRequestCx, OnDismissRequest};
+
+use crate::primitives::dismissable_layer::{DismissReason, DismissRequestCx, OnDismissRequest};
 
 pub(super) fn modal_dismiss_request(
     open: Model<bool>,

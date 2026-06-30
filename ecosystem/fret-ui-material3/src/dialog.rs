@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::{ActionId, Model};
-use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
+use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     MarginEdge, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
@@ -21,6 +21,9 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
+use fret_ui_kit::primitives::dismissable_layer::{
+    DismissReason, DismissRequestCx, OnDismissRequest,
+};
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{
     ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,

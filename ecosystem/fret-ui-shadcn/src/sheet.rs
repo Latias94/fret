@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, FontWeight, Px, TextOverflow, TextWrap};
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, MarginEdge,
     MarginEdges, Overflow, PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
@@ -21,6 +21,7 @@ use fret_ui_kit::declarative::{
     occlusion_insets_or_zero, safe_area_insets_or_zero, viewport_queries,
 };
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
@@ -632,15 +633,15 @@ impl Sheet {
                     Some(Arc::new(
                         move |host: &mut dyn fret_ui::action::UiActionHost,
                               action_cx: fret_ui::action::ActionCx,
-                              req: &mut fret_ui::action::DismissRequestCx| {
+                              req: &mut fret_ui_kit::primitives::dismissable_layer::DismissRequestCx| {
                             if let Some(user) = user.as_ref() {
                                 user(host, action_cx, req);
                             }
                             if !req.default_prevented()
                                 && matches!(
                                     req.reason,
-                                    fret_ui::action::DismissReason::OutsidePress { .. }
-                                        | fret_ui::action::DismissReason::FocusOutside
+                                    fret_ui_kit::primitives::dismissable_layer::DismissReason::OutsidePress { .. }
+                                        | fret_ui_kit::primitives::dismissable_layer::DismissReason::FocusOutside
                                 )
                             {
                                 req.prevent_default();
@@ -2206,11 +2207,11 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::UiTree;
-    use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::declarative::text as decl_text;
+    use fret_ui_kit::primitives::dismissable_layer::DismissReason;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
     fn contains_plain_text(el: &AnyElement, needle: &str) -> bool {

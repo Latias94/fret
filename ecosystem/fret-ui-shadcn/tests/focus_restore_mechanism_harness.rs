@@ -7,10 +7,11 @@ use fret_mechanism_harness::{
 };
 use fret_runtime::{Effect, Model};
 use fret_ui::ElementContext;
-use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
+use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::primitives::dismissable_layer::{DismissReason, OnDismissRequest};
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;

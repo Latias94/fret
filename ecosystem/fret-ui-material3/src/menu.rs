@@ -1061,10 +1061,12 @@ pub(crate) fn material_menu_submenu_panel_tree<H: UiHost>(
                 cx.root_id(),
                 submenu_ctx_for_panel.cfg,
             );
-            cx.dismissible_add_on_pointer_move(menu_primitive::root::submenu_pointer_move_handler(
-                child_models.clone(),
-                submenu_ctx_for_panel.cfg,
-            ));
+            cx.layer_interaction_add_on_pointer_move(
+                menu_primitive::root::submenu_pointer_move_handler(
+                    child_models.clone(),
+                    submenu_ctx_for_panel.cfg,
+                ),
+            );
             *nested_models_cell_for_panel.borrow_mut() = Some(child_models.clone());
 
             let child_open_value = cx

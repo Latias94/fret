@@ -275,7 +275,7 @@ pub(super) fn hover_card(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 }
 
 pub(super) fn popover(cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> impl UiChild + use<> {
-    use fret_ui::action::OnDismissRequest;
+    use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 
     let popover_open = models.popover_open.clone();
     let dialog_open = models.dialog_open.clone();

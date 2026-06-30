@@ -1493,7 +1493,7 @@ fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_att
         "baseline snapshot should not report a modal before overlay attachment"
     );
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut text,
@@ -1581,7 +1581,7 @@ fn render_dismissible_root_parent_attach_commits_window_snapshot_after_root_atta
         "baseline snapshot should not report text-input focus before the detached root is attached"
     );
 
-    let attached_root = crate::declarative::render_dismissible_root_with_hooks(
+    let attached_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut text,
@@ -2726,7 +2726,7 @@ fn dismissible_root_recreates_nodes_after_layer_removal() {
     ui.set_root(base_root);
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut text,
@@ -2742,7 +2742,7 @@ fn dismissible_root_recreates_nodes_after_layer_removal() {
     assert!(ui.debug_node_bounds(overlay_root).is_none());
 
     app.advance_frame();
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut text,

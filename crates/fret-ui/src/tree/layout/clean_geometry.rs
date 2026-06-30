@@ -1453,7 +1453,7 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::InteractivityGate(_)
             | crate::declarative::frame::ElementInstance::HitTestGate(_)
             | crate::declarative::frame::ElementInstance::FocusTraversalGate(_)
-            | crate::declarative::frame::ElementInstance::DismissibleLayer(_) => {
+            | crate::declarative::frame::ElementInstance::LayerInteractionRoot(_) => {
                 Ok(CleanGeometryNodeContract::pure(
                     CleanGeometryChildBoundsStrategy::PreserveLocalOrigins,
                 ))

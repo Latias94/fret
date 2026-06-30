@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::render_root;
 use crate::UiHost;
-use crate::action::{ActivateReason, DismissReason};
+use crate::action::{ActivateReason, LayerInteractionReason};
 use crate::element::{AnyElement, CrossAlign, Length, MainAlign, TextInputProps};
 use crate::elements::{ContinuousFrames, ElementContext};
 use crate::test_host::TestHost;

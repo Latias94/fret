@@ -36,7 +36,7 @@ impl ElementHostWidget {
             | ElementInstance::FractionalRenderTransform(_)
             | ElementInstance::Anchored(_) => SemanticsHookKind::RootGeneric,
             ElementInstance::Flex(_)
-            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::LayerInteractionRoot(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::FocusTraversalGate(_)
@@ -473,7 +473,7 @@ impl ElementHostWidget {
                 }
             }
             ElementInstance::Flex(_)
-            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::LayerInteractionRoot(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::FocusTraversalGate(_)

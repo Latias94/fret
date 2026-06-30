@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use crate::primitives::dismissable_layer::DismissReason;
 use fret_core::{Point, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::action::DismissReason;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::OverlayPresence;

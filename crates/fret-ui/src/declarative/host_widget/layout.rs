@@ -74,7 +74,7 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(_) => false,
             ElementInstance::HitTestGate(_) => false,
             ElementInstance::FocusTraversalGate(_) => false,
-            ElementInstance::DismissibleLayer(_) => false,
+            ElementInstance::LayerInteractionRoot(_) => false,
             ElementInstance::ForegroundScope(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
@@ -103,7 +103,7 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
             ElementInstance::HitTestGate(p) => p.hit_test,
             ElementInstance::FocusTraversalGate(_) => true,
-            ElementInstance::DismissibleLayer(_) => true,
+            ElementInstance::LayerInteractionRoot(_) => true,
             ElementInstance::ForegroundScope(_) => true,
             ElementInstance::EffectLayer(_) => true,
             ElementInstance::BackdropSourceGroup(_) => true,
@@ -189,7 +189,7 @@ impl ElementHostWidget {
             ElementInstance::TextInputRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ExternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
-            ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::LayerInteractionRoot(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ForegroundScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -938,7 +938,7 @@ impl ElementHostWidget {
 
                 desired
             }
-            ElementInstance::DismissibleLayer(props) => {
+            ElementInstance::LayerInteractionRoot(props) => {
                 let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
                 let base = cx.bounds;
 

@@ -165,11 +165,11 @@ fn escape_cancels_dock_drag_and_does_not_dismiss_overlays() {
         &mut app,
         window,
         overlay_element,
-        crate::action::DismissibleActionHooks::default,
+        crate::action::LayerInteractionActionHooks::default,
         |hooks| {
             let dismissed = dismissed.clone();
-            hooks.on_dismiss_request = Some(Arc::new(move |host, _cx, req| {
-                assert_eq!(req.reason, crate::action::DismissReason::Escape);
+            hooks.on_request = Some(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, crate::action::LayerInteractionReason::Escape);
                 let _ = host.models_mut().update(&dismissed, |v| *v = true);
             }));
         },

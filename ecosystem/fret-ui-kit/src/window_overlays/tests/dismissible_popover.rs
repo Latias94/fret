@@ -887,11 +887,12 @@ fn dismissible_popover_focus_outside_routes_through_dismiss_handler() {
     let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
         Arc::new(std::sync::Mutex::new(None));
     let reason_cell_for_handler = reason_cell.clone();
-    let handler: fret_ui::action::OnDismissRequest = Arc::new(move |_host, _cx, req| {
-        let mut lock = reason_cell_for_handler.lock().unwrap();
-        *lock = Some(req.reason);
-        req.prevent_default();
-    });
+    let handler: crate::primitives::dismissable_layer::OnDismissRequest =
+        Arc::new(move |_host, _cx, req| {
+            let mut lock = reason_cell_for_handler.lock().unwrap();
+            *lock = Some(req.reason);
+            req.prevent_default();
+        });
 
     // Third frame: focus-outside should route through the dismiss handler. The handler chooses not
     // to close `open`, mirroring Radix `preventDefault` behavior.

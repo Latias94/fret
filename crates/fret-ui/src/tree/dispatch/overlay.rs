@@ -74,8 +74,8 @@ impl<H: UiHost> UiTree<H> {
                 app,
                 window,
                 root_element,
-                crate::action::DismissibleActionHooks::default,
-                |hooks| hooks.on_dismiss_request.clone(),
+                crate::action::LayerInteractionActionHooks::default,
+                |hooks| hooks.on_request.clone(),
             );
             let Some(hook) = hook else {
                 if barrier_root == Some(layer.root) {
@@ -89,8 +89,9 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 element: root_element,
             };
-            let mut req =
-                crate::action::DismissRequestCx::new(crate::action::DismissReason::Escape);
+            let mut req = crate::action::LayerInteractionRequestCx::new(
+                crate::action::LayerInteractionReason::Escape,
+            );
             hook(
                 &mut host,
                 crate::action::ActionCx {

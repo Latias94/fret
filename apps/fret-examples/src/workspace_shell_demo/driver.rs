@@ -782,7 +782,7 @@ impl WorkspaceShellDemoDriver {
                             },
                         );
 
-                        let dismiss_handler: fret_ui::action::OnDismissRequest =
+                        let dismiss_handler: fret_ui_kit::primitives::dismissable_layer::OnDismissRequest =
                             Arc::new(move |host, _acx, _req| {
                             let _ = host.models_mut().update(&prompt_model, |p| *p = None);
                             let _ = host.models_mut().update(&open_model, |v| *v = false);

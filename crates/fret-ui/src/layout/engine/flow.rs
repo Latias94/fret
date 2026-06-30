@@ -392,7 +392,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
-            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::LayerInteractionRoot(_)
             | ElementInstance::Anchored(_)
             | ElementInstance::Stack(_)),
         ) if tree.children_ref(node).is_empty() => {
@@ -643,7 +643,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
-            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::LayerInteractionRoot(_)
             | ElementInstance::Anchored(_)
             | ElementInstance::Stack(_)),
         ) if !tree.children_ref(node).is_empty()

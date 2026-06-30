@@ -537,7 +537,7 @@ impl ElementHostWidget {
                     None,
                 );
             }
-            ElementInstance::DismissibleLayer(props) => {
+            ElementInstance::LayerInteractionRoot(props) => {
                 paint_children_clipped_if(
                     cx,
                     matches!(props.layout.overflow, Overflow::Clip),

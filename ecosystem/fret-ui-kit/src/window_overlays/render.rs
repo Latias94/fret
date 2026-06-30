@@ -7,8 +7,8 @@ use fret_core::{
 };
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_ui::action::{
-    ActionCx, AutoFocusRequestCx, DismissReason, DismissRequestCx, OnCloseAutoFocus, UiActionHost,
-    UiActionHostAdapter, UiActionHostExt, UiFocusActionHost,
+    ActionCx, AutoFocusRequestCx, OnCloseAutoFocus, UiActionHost, UiActionHostAdapter,
+    UiActionHostExt, UiFocusActionHost,
 };
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
@@ -16,7 +16,9 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
 
-use crate::primitives::dismissable_layer as dismissable_layer_prim;
+use crate::primitives::dismissable_layer::{
+    self as dismissable_layer_prim, DismissReason, DismissRequestCx,
+};
 use crate::primitives::focus_scope as focus_scope_prim;
 
 mod toast_render;
@@ -900,7 +902,7 @@ pub fn render<H: UiHost + 'static>(
         let children = req.children;
         let open_now_for_hooks = open_now;
 
-        let root = declarative::render_dismissible_root_with_hooks(
+        let root = declarative::render_layer_interaction_root_with_hooks(
             ui,
             app,
             services,
@@ -917,7 +919,7 @@ pub fn render<H: UiHost + 'static>(
                 // the layer should be click-through and should not participate in Escape routing
                 // or dismissal observer passes.
                 if open_now_for_hooks {
-                    cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
+                    cx.layer_interaction_on_request(on_dismiss_request.unwrap_or_else(|| {
                         Arc::new(
                             move |host: &mut dyn UiActionHost,
                                   _cx: ActionCx,
@@ -1179,7 +1181,7 @@ pub fn render<H: UiHost + 'static>(
         let children = req.children;
         let open_now_for_hooks = open_now;
 
-        let root = declarative::render_dismissible_root_with_hooks(
+        let root = declarative::render_layer_interaction_root_with_hooks(
             ui,
             app,
             services,
@@ -1192,10 +1194,10 @@ pub fn render<H: UiHost + 'static>(
                 // or dismissal observer passes.
                 if open_now_for_hooks {
                     if let Some(on_pointer_move) = on_pointer_move {
-                        cx.dismissible_on_pointer_move(on_pointer_move);
+                        cx.layer_interaction_on_pointer_move(on_pointer_move);
                     }
                     let on_dismiss_request = on_dismiss_request_for_root.clone();
-                    cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
+                    cx.layer_interaction_on_request(on_dismiss_request.unwrap_or_else(|| {
                         Arc::new(
                             move |host: &mut dyn UiActionHost,
                                   _cx: ActionCx,
@@ -1688,7 +1690,7 @@ pub fn render<H: UiHost + 'static>(
         let interactive = req.interactive && open_now;
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
-        let root = fret_ui::declarative::render_dismissible_root_with_hooks(
+        let root = fret_ui::declarative::render_layer_interaction_root_with_hooks(
             ui,
             app,
             services,
@@ -1697,7 +1699,7 @@ pub fn render<H: UiHost + 'static>(
             &req.root_name,
             move |cx| {
                 if let Some(on_pointer_move) = on_pointer_move {
-                    cx.dismissible_on_pointer_move(on_pointer_move);
+                    cx.layer_interaction_on_pointer_move(on_pointer_move);
                 }
                 let subtree = cx.view_cache_keep_alive(
                     overlay_keep_alive_view_cache_props(),
@@ -1781,7 +1783,7 @@ pub fn render<H: UiHost + 'static>(
         let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
-        let root = declarative::render_dismissible_root_with_hooks(
+        let root = declarative::render_layer_interaction_root_with_hooks(
             ui,
             app,
             services,
@@ -1790,10 +1792,10 @@ pub fn render<H: UiHost + 'static>(
             &req.root_name,
             move |cx| {
                 if let Some(on_dismiss_request) = on_dismiss_request {
-                    cx.dismissible_on_dismiss_request(on_dismiss_request);
+                    cx.layer_interaction_on_request(on_dismiss_request);
                 }
                 if let Some(on_pointer_move) = on_pointer_move {
-                    cx.dismissible_on_pointer_move(on_pointer_move);
+                    cx.layer_interaction_on_pointer_move(on_pointer_move);
                 }
                 let subtree = cx.view_cache_keep_alive(
                     overlay_keep_alive_view_cache_props(),
@@ -1896,7 +1898,7 @@ pub fn render<H: UiHost + 'static>(
         let container_aria_label = req.container_aria_label.clone();
         let custom_aria_label = req.custom_aria_label.clone();
         let toaster_key = req.id;
-        let root = declarative::render_dismissible_root_with_hooks(
+        let root = declarative::render_layer_interaction_root_with_hooks(
             ui,
             app,
             services,

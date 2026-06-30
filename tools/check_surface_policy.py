@@ -174,6 +174,13 @@ MECHANISM_PUBLIC_MEMBER_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], st
         re.compile(r"\bpub\s+fn\s+\w*scroll_dismiss\w*\b"),
         "`fret-ui` public layer APIs must use mechanism vocabulary such as `scroll_observer`, not scroll-dismiss policy names",
     ),
+    (
+        "dismiss-action-hook",
+        re.compile(
+            r"\bpub\s+(enum|struct|type)\s+(DismissReason|DismissRequestCx|OnDismissRequest|OnDismissiblePointerMove)\b"
+        ),
+        "`fret-ui` action hook APIs must use mechanism vocabulary such as `LayerInteraction*`; Radix dismiss naming belongs in `fret-ui-kit`",
+    ),
 )
 
 

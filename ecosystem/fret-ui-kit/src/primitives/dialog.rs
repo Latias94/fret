@@ -17,9 +17,7 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::action::{
-    DismissReason, DismissRequestCx, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus,
-};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, Elements, InsetStyle, LayoutStyle, Length, PositionStyle,
     PressableA11y, PressableProps, SizeStyle,
@@ -28,6 +26,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
+use crate::primitives::dismissable_layer::{DismissReason, DismissRequestCx, OnDismissRequest};
 use crate::primitives::trigger_a11y;
 use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 
@@ -580,7 +579,7 @@ pub fn request_modal_dialog<H: UiHost>(cx: &mut ElementContext<'_, H>, request: 
 mod tests {
     use super::*;
 
-    use fret_ui::action::DismissReason;
+    use crate::primitives::dismissable_layer::DismissReason;
     use std::sync::Arc;
 
     use fret_app::App;

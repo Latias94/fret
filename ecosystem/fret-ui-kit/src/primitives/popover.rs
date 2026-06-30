@@ -16,9 +16,10 @@
 
 use std::sync::Arc;
 
+use crate::primitives::dismissable_layer::{DismissReason, OnDismissRequest};
 use fret_core::{Px, Rect};
 use fret_runtime::Model;
-use fret_ui::action::{DismissReason, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{AnyElement, Elements, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -657,6 +658,7 @@ pub fn request_popover<H: UiHost>(cx: &mut ElementContext<'_, H>, request: Overl
 mod tests {
     use super::*;
 
+    use crate::primitives::dismissable_layer::DismissReason;
     use fret_app::App;
     use fret_core::Event;
     use fret_core::{
@@ -668,7 +670,6 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_ui::UiTree;
-    use fret_ui::action::DismissReason;
     use fret_ui::element::{
         AnyElement, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
         SizeStyle,
@@ -853,8 +854,9 @@ mod tests {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
-        let handler: OnDismissRequest =
-            Arc::new(|_host, _cx, _req: &mut fret_ui::action::DismissRequestCx| {});
+        let handler: OnDismissRequest = Arc::new(
+            |_host, _cx, _req: &mut crate::primitives::dismissable_layer::DismissRequestCx| {},
+        );
         let req = popover_request_with_dismiss_handler(
             GlobalElementId(0x123),
             GlobalElementId(0x123),

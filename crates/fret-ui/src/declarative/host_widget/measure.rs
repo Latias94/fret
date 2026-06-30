@@ -709,7 +709,7 @@ impl ElementHostWidget {
             ElementInstance::ScrollContentTransform(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
-            ElementInstance::DismissibleLayer(props) => {
+            ElementInstance::LayerInteractionRoot(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
             ElementInstance::Anchored(props) => {

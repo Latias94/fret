@@ -46,7 +46,7 @@ pub enum PressablePointerUpResult {
 
 /// Why an overlay is requesting dismissal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DismissReason {
+pub enum LayerInteractionReason {
     Escape,
     OutsidePress {
         pointer: Option<OutsidePressCx>,
@@ -65,13 +65,13 @@ pub enum DismissReason {
 /// This mirrors the DOM/Radix contract where `onInteractOutside` / `onPointerDownOutside` /
 /// `onFocusOutside` may "prevent default" to keep the overlay open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DismissRequestCx {
-    pub reason: DismissReason,
+pub struct LayerInteractionRequestCx {
+    pub reason: LayerInteractionReason,
     default_prevented: bool,
 }
 
-impl DismissRequestCx {
-    pub fn new(reason: DismissReason) -> Self {
+impl LayerInteractionRequestCx {
+    pub fn new(reason: LayerInteractionReason) -> Self {
         Self {
             reason,
             default_prevented: false,
@@ -88,13 +88,13 @@ impl DismissRequestCx {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct DismissibleLastDismissRequest {
+pub(crate) struct LayerInteractionLastRequest {
     pub tick_id: TickId,
-    pub reason: Option<DismissReason>,
+    pub reason: Option<LayerInteractionReason>,
     pub default_prevented: bool,
 }
 
-impl Default for DismissibleLastDismissRequest {
+impl Default for LayerInteractionLastRequest {
     fn default() -> Self {
         Self {
             tick_id: TickId(0),
@@ -733,8 +733,8 @@ pub(crate) struct PressableHoverActionHooks {
     pub on_hover_change: Option<OnHoverChange>,
 }
 
-pub type OnDismissRequest =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &mut DismissRequestCx) + 'static>;
+pub type OnLayerInteractionRequest =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &mut LayerInteractionRequestCx) + 'static>;
 
 pub type OnOpenAutoFocus =
     Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
@@ -742,17 +742,17 @@ pub type OnOpenAutoFocus =
 pub type OnCloseAutoFocus =
     Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
 
-/// Pointer move observer hook for `DismissibleLayer`.
+/// Pointer move observer hook for `LayerInteractionRoot`.
 ///
-/// This is intentionally `UiActionHost` (not `UiPointerActionHost`) so dismissible roots can
+/// This is intentionally `UiActionHost` (not `UiPointerActionHost`) so layer interaction roots can
 /// observe pointer movement without participating in hit-testing or capture.
-pub type OnDismissiblePointerMove =
+pub type OnLayerInteractionPointerMove =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, PointerMoveCx) -> bool + 'static>;
 
 #[derive(Default)]
-pub(crate) struct DismissibleActionHooks {
-    pub on_dismiss_request: Option<OnDismissRequest>,
-    pub on_pointer_move: Option<OnDismissiblePointerMove>,
+pub(crate) struct LayerInteractionActionHooks {
+    pub on_request: Option<OnLayerInteractionRequest>,
+    pub on_pointer_move: Option<OnLayerInteractionPointerMove>,
 }
 
 pub type OnTextInputRegionTextInput =

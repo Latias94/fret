@@ -1,19 +1,19 @@
 use super::ElementHostWidget;
-use crate::declarative::frame::DismissibleLayerProps;
+use crate::declarative::frame::LayerInteractionRootProps;
 use crate::declarative::prelude::*;
 
 pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut crate::widget::ObserverCx<'_, H>,
     window: AppWindowId,
-    props: DismissibleLayerProps,
+    props: LayerInteractionRootProps,
     event: &Event,
 ) {
     if !props.enabled {
         return;
     }
 
-    struct DismissibleHookHost<'a, H: UiHost> {
+    struct LayerInteractionHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
@@ -21,7 +21,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
         notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
-    impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
+    impl<H: UiHost> action::UiActionHost for LayerInteractionHookHost<'_, H> {
         fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
             self.app.models_mut()
         }
@@ -91,27 +91,28 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                 &mut *cx.app,
                 window,
                 this.element,
-                crate::action::DismissibleActionHooks::default,
-                |hooks| hooks.on_dismiss_request.clone(),
+                crate::action::LayerInteractionActionHooks::default,
+                |hooks| hooks.on_request.clone(),
             );
 
             if let Some(h) = hook {
-                let mut host = DismissibleHookHost {
+                let mut host = LayerInteractionHookHost {
                     app: &mut *cx.app,
                     window,
                     element: this.element,
                     notify_requested: &mut cx.notify_requested,
                     notify_requested_location: &mut cx.notify_requested_location,
                 };
-                let mut req = action::DismissRequestCx::new(DismissReason::OutsidePress {
-                    pointer: Some(action::OutsidePressCx {
-                        pointer_id: *pointer_id,
-                        pointer_type: *pointer_type,
-                        button: *button,
-                        modifiers: *modifiers,
-                        click_count: *click_count,
-                    }),
-                });
+                let mut req =
+                    action::LayerInteractionRequestCx::new(LayerInteractionReason::OutsidePress {
+                        pointer: Some(action::OutsidePressCx {
+                            pointer_id: *pointer_id,
+                            pointer_type: *pointer_type,
+                            button: *button,
+                            modifiers: *modifiers,
+                            click_count: *click_count,
+                        }),
+                    });
                 h(
                     &mut host,
                     action::ActionCx {
@@ -127,7 +128,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                     &mut *cx.app,
                     window,
                     this.element,
-                    crate::action::DismissibleLastDismissRequest::default,
+                    crate::action::LayerInteractionLastRequest::default,
                     |st| {
                         st.tick_id = tick_id;
                         st.reason = Some(reason);
@@ -156,7 +157,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                 &mut *cx.app,
                 window,
                 this.element,
-                crate::action::DismissibleActionHooks::default,
+                crate::action::LayerInteractionActionHooks::default,
                 |hooks| hooks.on_pointer_move.clone(),
             );
             let Some(h) = hook else {
@@ -183,7 +184,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                 pointer_type: *pointer_type,
             };
 
-            let mut host = DismissibleHookHost {
+            let mut host = LayerInteractionHookHost {
                 app: &mut *cx.app,
                 window,
                 element: this.element,
@@ -212,14 +213,14 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,
-    props: DismissibleLayerProps,
+    props: LayerInteractionRootProps,
     event: &Event,
 ) {
     if !props.enabled {
         return;
     }
 
-    struct DismissibleHookHost<'a, H: UiHost> {
+    struct LayerInteractionHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
@@ -227,7 +228,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
-    impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
+    impl<H: UiHost> action::UiActionHost for LayerInteractionHookHost<'_, H> {
         fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
             self.app.models_mut()
         }
@@ -294,19 +295,20 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 &mut *cx.app,
                 window,
                 this.element,
-                crate::action::DismissibleActionHooks::default,
-                |hooks| hooks.on_dismiss_request.clone(),
+                crate::action::LayerInteractionActionHooks::default,
+                |hooks| hooks.on_request.clone(),
             );
 
             if let Some(h) = hook {
-                let mut host = DismissibleHookHost {
+                let mut host = LayerInteractionHookHost {
                     app: &mut *cx.app,
                     window,
                     element: this.element,
                     notify_requested: &mut cx.notify_requested,
                     notify_requested_location: &mut cx.notify_requested_location,
                 };
-                let mut req = action::DismissRequestCx::new(DismissReason::Escape);
+                let mut req =
+                    action::LayerInteractionRequestCx::new(LayerInteractionReason::Escape);
                 h(
                     &mut host,
                     action::ActionCx {
@@ -322,7 +324,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     &mut *cx.app,
                     window,
                     this.element,
-                    crate::action::DismissibleLastDismissRequest::default,
+                    crate::action::LayerInteractionLastRequest::default,
                     |st| {
                         st.tick_id = tick_id;
                         st.reason = Some(reason);
@@ -352,7 +354,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 &mut *cx.app,
                 window,
                 this.element,
-                crate::action::DismissibleActionHooks::default,
+                crate::action::LayerInteractionActionHooks::default,
                 |hooks| hooks.on_pointer_move.clone(),
             );
 
@@ -380,7 +382,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 pointer_type: *pointer_type,
             };
 
-            let mut host = DismissibleHookHost {
+            let mut host = LayerInteractionHookHost {
                 app: &mut *cx.app,
                 window,
                 element: this.element,

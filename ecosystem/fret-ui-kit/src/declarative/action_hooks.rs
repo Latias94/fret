@@ -353,14 +353,14 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
 
     fn dismissible_close_bool(&mut self, open: &Model<bool>) {
         let open = open.clone();
-        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _req| {
+        self.layer_interaction_add_on_request(Arc::new(move |host, _cx, _req| {
             let _ = host.models_mut().update(&open, |v| *v = false);
         }));
     }
 
     fn dismissible_close_bool_weak(&mut self, open: &WeakModel<bool>) {
         let open = open.clone();
-        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _req| {
+        self.layer_interaction_add_on_request(Arc::new(move |host, _cx, _req| {
             let _ = host.update_weak_model(&open, |v| *v = false);
         }));
     }

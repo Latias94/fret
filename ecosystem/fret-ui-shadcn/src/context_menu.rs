@@ -14,8 +14,8 @@ use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
 use fret_ui::action::{
-    ActionCx, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus, PressablePointerUpResult,
-    UiActionHost, UiPointerActionHost,
+    ActionCx, OnCloseAutoFocus, OnOpenAutoFocus, PressablePointerUpResult, UiActionHost,
+    UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
@@ -34,6 +34,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::context_menu as menu;
+use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
@@ -7394,11 +7395,15 @@ mod tests {
         );
         let mut services = FakeServices;
 
-        let reason_cell: Arc<Mutex<Option<fret_ui::action::DismissReason>>> =
-            Arc::new(Mutex::new(None));
+        let reason_cell: Arc<
+            Mutex<Option<fret_ui_kit::primitives::dismissable_layer::DismissReason>>,
+        > = Arc::new(Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
         let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
-            if matches!(req.reason, fret_ui::action::DismissReason::FocusOutside) {
+            if matches!(
+                req.reason,
+                fret_ui_kit::primitives::dismissable_layer::DismissReason::FocusOutside
+            ) {
                 let mut lock = reason_cell_for_handler.lock().unwrap();
                 *lock = Some(req.reason);
                 req.prevent_default();
@@ -7501,7 +7506,7 @@ mod tests {
         );
         assert_eq!(
             *reason_cell.lock().unwrap(),
-            Some(fret_ui::action::DismissReason::FocusOutside)
+            Some(fret_ui_kit::primitives::dismissable_layer::DismissReason::FocusOutside)
         );
     }
 

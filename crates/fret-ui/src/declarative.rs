@@ -12,7 +12,7 @@ pub(crate) use host_widget::text_input_props_text_change_invalidation;
 pub(crate) use mount::node_contains_in_window_frame;
 pub(crate) use mount::node_for_element_in_window_frame;
 pub(crate) use mount::with_window_frame;
-pub use mount::{RenderRootContext, render_dismissible_root_with_hooks, render_root};
+pub use mount::{RenderRootContext, render_layer_interaction_root_with_hooks, render_root};
 
 #[cfg(test)]
 mod tests;

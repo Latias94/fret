@@ -4,11 +4,11 @@ use std::sync::Arc;
 
 use fret_core::{Color, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::action::DismissReason;
 use fret_ui::element::{AnchoredProps, LayoutStyle, Length, SizeStyle};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::OverlayPresence;
+use fret_ui_kit::primitives::dismissable_layer::DismissReason;
 use fret_ui_kit::primitives::{popper, tooltip as radix_tooltip};
 
 use panel::color_tooltip_panel;

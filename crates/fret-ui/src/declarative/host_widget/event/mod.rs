@@ -149,7 +149,7 @@ impl ElementHostWidget {
             ElementInstance::WheelRegion(props) => {
                 let _ = wheel_region::handle_wheel_region(self, cx, window, props, event);
             }
-            ElementInstance::DismissibleLayer(props) => {
+            ElementInstance::LayerInteractionRoot(props) => {
                 dismissible::handle_dismissible_layer(self, cx, window, props, event);
             }
             ElementInstance::Pressable(props) => {
@@ -196,7 +196,7 @@ impl ElementHostWidget {
             return;
         };
 
-        if let ElementInstance::DismissibleLayer(props) = instance {
+        if let ElementInstance::LayerInteractionRoot(props) = instance {
             dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
         }
     }

@@ -221,15 +221,21 @@ pub enum TooltipOpenChangeReason {
 }
 
 fn tooltip_open_change_reason_from_dismiss_reason(
-    reason: fret_ui::action::DismissReason,
+    reason: fret_ui_kit::primitives::dismissable_layer::DismissReason,
 ) -> TooltipOpenChangeReason {
     match reason {
-        fret_ui::action::DismissReason::Escape => TooltipOpenChangeReason::EscapeKey,
-        fret_ui::action::DismissReason::OutsidePress { .. } => {
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::Escape => {
+            TooltipOpenChangeReason::EscapeKey
+        }
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::OutsidePress { .. } => {
             TooltipOpenChangeReason::OutsidePress
         }
-        fret_ui::action::DismissReason::FocusOutside => TooltipOpenChangeReason::FocusOutside,
-        fret_ui::action::DismissReason::Scroll => TooltipOpenChangeReason::Scroll,
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::FocusOutside => {
+            TooltipOpenChangeReason::FocusOutside
+        }
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::Scroll => {
+            TooltipOpenChangeReason::Scroll
+        }
     }
 }
 
@@ -2276,7 +2282,7 @@ mod tests {
 
     #[test]
     fn tooltip_open_change_reason_mapping_covers_dismiss_reasons() {
-        use fret_ui::action::DismissReason;
+        use fret_ui_kit::primitives::dismissable_layer::DismissReason;
 
         assert_eq!(
             tooltip_open_change_reason_from_dismiss_reason(DismissReason::Escape),

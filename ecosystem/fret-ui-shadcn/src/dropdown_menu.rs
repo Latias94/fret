@@ -10,9 +10,7 @@ use crate::test_id::test_id_slug;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::{
-    ActionCx, OnActivate, OnDismissRequest, PressablePointerDownResult, UiActionHost,
-};
+use fret_ui::action::{ActionCx, OnActivate, PressablePointerDownResult, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableKeyActivation, PressableProps, RingStyle, RovingFlexProps,
@@ -30,6 +28,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::dismissable_layer::OnDismissRequest;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -2482,7 +2481,7 @@ fn render_dropdown_submenu_panel_tree<H: UiHost>(
                 cx.root_id(),
                 style_for_panel.submenu_cfg,
             );
-            cx.dismissible_add_on_pointer_move(menu::root::submenu_pointer_move_handler(
+            cx.layer_interaction_add_on_pointer_move(menu::root::submenu_pointer_move_handler(
                 child_submenu_models.clone(),
                 style_for_panel.submenu_cfg,
             ));

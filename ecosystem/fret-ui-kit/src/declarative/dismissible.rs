@@ -3,12 +3,12 @@ use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::{IntoUiElement, collect_children};
 
-pub use fret_ui::action::DismissReason;
+pub use crate::primitives::dismissable_layer::DismissReason;
 
 /// Render a full-window dismissible root that provides Escape + outside-press dismissal hooks.
 ///
-/// This is a small wrapper over `fret-ui`'s `render_dismissible_root_with_hooks(...)` so component
-/// crates can depend on `fret-ui-kit` as the stable policy surface (ADR 0067).
+/// This is a small wrapper over `fret-ui`'s `render_layer_interaction_root_with_hooks(...)` so
+/// component crates can depend on `fret-ui-kit` as the stable policy surface (ADR 0067).
 pub fn render_dismissible_root_with_hooks<H: UiHost + 'static, I, T>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -22,7 +22,7 @@ where
     I: IntoIterator<Item = T>,
     T: IntoUiElement<H>,
 {
-    fret_ui::declarative::render_dismissible_root_with_hooks(
+    fret_ui::declarative::render_layer_interaction_root_with_hooks(
         ui,
         app,
         services,

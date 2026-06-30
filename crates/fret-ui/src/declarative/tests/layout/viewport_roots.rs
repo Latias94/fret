@@ -3503,7 +3503,7 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
     );
     ui.set_root(base);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -3584,7 +3584,7 @@ fn overlay_root_scroll_precomputes_child_flow_islands() {
     );
     ui.set_root(base);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,

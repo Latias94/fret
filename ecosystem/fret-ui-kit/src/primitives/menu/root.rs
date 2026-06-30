@@ -7,9 +7,7 @@
 //! - installing a timer handler for submenu focus/close delays
 //! - producing a DismissableLayer pointer-move observer for submenu grace intent
 
-use fret_ui::action::{
-    DismissReason, OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
-};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -20,6 +18,9 @@ use fret_ui_headless::entry_focus::{EntryFocusOpenModality, EntryFocusTargets};
 use std::sync::Arc;
 
 use crate::primitives::dismissable_layer;
+use crate::primitives::dismissable_layer::{
+    DismissReason, OnDismissRequest, OnDismissiblePointerMove,
+};
 use crate::primitives::menu::sub;
 use crate::primitives::portal_inherited;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
@@ -430,8 +431,9 @@ mod tests {
 
         let window = AppWindowId::default();
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
-        let handler: OnDismissRequest =
-            Arc::new(|_host, _cx, _req: &mut fret_ui::action::DismissRequestCx| {});
+        let handler: OnDismissRequest = Arc::new(
+            |_host, _cx, _req: &mut crate::primitives::dismissable_layer::DismissRequestCx| {},
+        );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let req = dismissible_menu_request_with_modal_and_dismiss_handler(

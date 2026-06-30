@@ -11,9 +11,10 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use crate::primitives::dismissable_layer::OnDismissiblePointerMove;
 use fret_core::{Modifiers, MouseButton, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{CommandId, Effect, FrameId, Model, TimerToken};
-use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
@@ -744,18 +745,18 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     );
     request.root_name = Some(overlay_root_name);
     request.dismissible_on_pointer_move = on_pointer_move;
-    let on_dismiss_request: fret_ui::action::OnDismissRequest = Arc::new({
+    let on_dismiss_request: crate::primitives::dismissable_layer::OnDismissRequest = Arc::new({
         let value_model = value_model.clone();
         let root_state = root_state.clone();
         let trigger_states = trigger_states.clone();
         move |host: &mut dyn fret_ui::action::UiActionHost,
               action_cx: fret_ui::action::ActionCx,
-              req: &mut fret_ui::action::DismissRequestCx| {
+              req: &mut crate::primitives::dismissable_layer::DismissRequestCx| {
             if req.default_prevented() {
                 return;
             }
 
-            if req.reason == fret_ui::action::DismissReason::Escape {
+            if req.reason == crate::primitives::dismissable_layer::DismissReason::Escape {
                 let selected = host
                     .models_mut()
                     .read(&value_model, |v| v.clone())

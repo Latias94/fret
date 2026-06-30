@@ -83,15 +83,21 @@ pub enum CommandDialogOpenChangeReason {
 }
 
 fn command_dialog_open_change_reason_from_dismiss_reason(
-    reason: fret_ui::action::DismissReason,
+    reason: fret_ui_kit::primitives::dismissable_layer::DismissReason,
 ) -> CommandDialogOpenChangeReason {
     match reason {
-        fret_ui::action::DismissReason::Escape => CommandDialogOpenChangeReason::EscapeKey,
-        fret_ui::action::DismissReason::OutsidePress { .. } => {
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::Escape => {
+            CommandDialogOpenChangeReason::EscapeKey
+        }
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::OutsidePress { .. } => {
             CommandDialogOpenChangeReason::OutsidePress
         }
-        fret_ui::action::DismissReason::FocusOutside => CommandDialogOpenChangeReason::FocusOut,
-        fret_ui::action::DismissReason::Scroll => CommandDialogOpenChangeReason::None,
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::FocusOutside => {
+            CommandDialogOpenChangeReason::FocusOut
+        }
+        fret_ui_kit::primitives::dismissable_layer::DismissReason::Scroll => {
+            CommandDialogOpenChangeReason::None
+        }
     }
 }
 
@@ -4973,7 +4979,7 @@ mod tests {
 
     #[test]
     fn command_dialog_open_change_reason_maps_dismiss_reasons() {
-        use fret_ui::action::DismissReason;
+        use fret_ui_kit::primitives::dismissable_layer::DismissReason;
 
         assert_eq!(
             command_dialog_open_change_reason_from_dismiss_reason(DismissReason::Escape),

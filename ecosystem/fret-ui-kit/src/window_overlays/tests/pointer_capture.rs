@@ -941,7 +941,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
     );
 
     // Add a foreign overlay layer that can independently capture a separate pointer id.
-    let foreign_overlay_root = fret_ui::declarative::render_dismissible_root_with_hooks(
+    let foreign_overlay_root = fret_ui::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,

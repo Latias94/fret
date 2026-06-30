@@ -237,7 +237,8 @@ The runtime provides trigger points; components provide policy.
 Runtime hook surfaces (registered during rendering via `ElementContext`):
 
 - `pressable_on_activate` (and `*_add_*`/`*_clear_*`)
-- `dismissible_on_dismiss_request`
+- `layer_interaction_on_request`
+- `layer_interaction_on_pointer_move`
 - `pointer_region_on_pointer_{down,move,up}`
 - `roving_on_{active_change,typeahead,navigate}`
 - `key_on_key_down_for` (per-element key handling)
@@ -246,6 +247,8 @@ Component-layer convenience:
 
 - Prefer `fret_ui_kit::declarative::action_hooks::ActionHooksExt` for common policies:
   - toggle/set models, dispatch commands, close overlays, roving selection writes, typeahead rules.
+- Prefer `fret_ui_kit::primitives::dismissable_layer` when authoring Radix/DismissableLayer-shaped
+  overlay policy (`OnDismissRequest`, `DismissReason`, `DismissRequestCx`).
 
 ## Semantics / a11y (what you can set today)
 

@@ -456,7 +456,7 @@ fn non_modal_overlay_does_not_request_pointer_move_observer_while_closing() {
     ui.set_root(base);
 
     let trigger = GlobalElementId(0xdead);
-    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+    let on_pointer_move: crate::primitives::dismissable_layer::OnDismissiblePointerMove =
         Arc::new(|_host, _cx, _move| false);
 
     // First frame: open the overlay so we know it would normally request pointer-move observers.

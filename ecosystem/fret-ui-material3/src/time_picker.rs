@@ -17,8 +17,7 @@ use fret_core::{
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{
-    ActionCx, DismissReason, DismissRequestCx, OnActivate, OnDismissRequest, PointerDownCx,
-    PointerMoveCx, PointerUpCx, UiPointerActionHost,
+    ActionCx, OnActivate, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length,
@@ -29,6 +28,9 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
+use fret_ui_kit::primitives::dismissable_layer::{
+    DismissReason, DismissRequestCx, OnDismissRequest,
+};
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 use time::Time;

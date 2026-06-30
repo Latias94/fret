@@ -1,6 +1,6 @@
 use super::frame::layout_style_for_instance;
 use super::frame::{
-    DismissibleLayerProps, ElementFrame, ElementInstance, ElementRecord, WindowFrame,
+    ElementFrame, ElementInstance, ElementRecord, LayerInteractionRootProps, WindowFrame,
 };
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
@@ -252,7 +252,7 @@ impl<'a, H: UiHost + 'static> RenderRootContext<'a, H> {
         )
     }
 
-    pub fn render_dismissible_root_with_hooks<I>(
+    pub fn render_layer_interaction_root_with_hooks<I>(
         self,
         root_name: &str,
         render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -260,7 +260,7 @@ impl<'a, H: UiHost + 'static> RenderRootContext<'a, H> {
     where
         I: IntoIterator<Item = AnyElement>,
     {
-        crate::declarative::render_dismissible_root_with_hooks(
+        crate::declarative::render_layer_interaction_root_with_hooks(
             self.ui,
             self.app,
             self.services,
@@ -475,8 +475,8 @@ where
             );
             cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
             cx.sync_focused_element_from_focused_node(focused);
-            cx.dismissible_clear_on_dismiss_request();
-            cx.dismissible_clear_on_pointer_move();
+            cx.layer_interaction_clear_on_request();
+            cx.layer_interaction_clear_on_pointer_move();
             let built = render(&mut cx);
             let children = cx.collect_children(built);
             validate_element_tree_unique_ids_or_log(
@@ -989,7 +989,7 @@ where
 ///   Call `UiTree::commit_pending_declarative_window_runtime_snapshots(...)` after attachment when
 ///   same-frame window-level consumers must observe the rebuilt root immediately.
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissible_root_with_hooks<H, I>(
+pub fn render_layer_interaction_root_with_hooks<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -1002,11 +1002,11 @@ where
     H: UiHost + 'static,
     I: IntoIterator<Item = AnyElement>,
 {
-    render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
+    render_layer_interaction_root_impl(ui, app, services, window, bounds, root_name, render)
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_dismissible_root_impl<H: UiHost + 'static, F, I>(
+fn render_layer_interaction_root_impl<H: UiHost + 'static, F, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -1045,8 +1045,8 @@ where
             );
             cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
             cx.sync_focused_element_from_focused_node(focused);
-            cx.dismissible_clear_on_dismiss_request();
-            cx.dismissible_clear_on_pointer_move();
+            cx.layer_interaction_clear_on_request();
+            cx.layer_interaction_clear_on_pointer_move();
             let built = render(&mut cx);
             cx.collect_children(built)
         });
@@ -1107,8 +1107,8 @@ where
                         root_node,
                         ElementRecord {
                             element: root_id,
-                            instance: ElementInstance::DismissibleLayer(
-                                DismissibleLayerProps::default(),
+                            instance: ElementInstance::LayerInteractionRoot(
+                                LayerInteractionRootProps::default(),
                             ),
                             inherited_foreground: None,
                             inherited_text_style: None,
@@ -2584,7 +2584,7 @@ fn paint_passthrough_for_instance(
             props.layout,
             inherited_foreground,
         )),
-        ElementInstance::DismissibleLayer(props) => Some(paint_passthrough_for_layout(
+        ElementInstance::LayerInteractionRoot(props) => Some(paint_passthrough_for_layout(
             props.layout,
             inherited_foreground,
         )),

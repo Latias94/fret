@@ -20,13 +20,15 @@ use fret_core::{
 };
 use fret_runtime::{FrameId, Model};
 use fret_ui::UiTree;
-use fret_ui::action::{DismissReason, UiActionHostAdapter};
+use fret_ui::action::UiActionHostAdapter;
 use fret_ui::element::{
     ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
     PressableProps, ScrollAxis, SizeStyle, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
+
+use crate::primitives::dismissable_layer::DismissReason;
 
 mod hover;
 mod pointer_capture;

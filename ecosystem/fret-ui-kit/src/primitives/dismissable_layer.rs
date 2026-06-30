@@ -17,10 +17,12 @@ use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::IntoUiElement;
 
+pub use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 pub use fret_ui::action::{
-    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, UiActionHost,
+    LayerInteractionReason as DismissReason, LayerInteractionRequestCx as DismissRequestCx,
+    OnLayerInteractionPointerMove as OnDismissiblePointerMove,
+    OnLayerInteractionRequest as OnDismissRequest,
 };
-pub use fret_ui::action::{OnDismissiblePointerMove, PointerMoveCx};
 
 /// Render a full-window dismissable root that provides Escape + outside-press dismissal hooks.
 ///
@@ -46,9 +48,9 @@ where
 
 /// Installs an `on_dismiss_request` handler for the current dismissable root.
 ///
-/// This is a naming-aligned wrapper around `ElementContext::dismissible_on_dismiss_request`.
+/// This is a Radix-named wrapper around the runtime layer-interaction request hook.
 pub fn on_dismiss_request<H: UiHost>(cx: &mut ElementContext<'_, H>, handler: OnDismissRequest) {
-    cx.dismissible_on_dismiss_request(handler);
+    cx.layer_interaction_on_request(handler);
 }
 
 /// Installs an `on_pointer_move` observer for the current dismissable root.
@@ -59,7 +61,7 @@ pub fn on_pointer_move<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     handler: OnDismissiblePointerMove,
 ) {
-    cx.dismissible_on_pointer_move(handler);
+    cx.layer_interaction_on_pointer_move(handler);
 }
 
 /// Convenience builder for an `OnDismissRequest` handler.

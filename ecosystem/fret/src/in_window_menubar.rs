@@ -12,7 +12,7 @@ use fret_runtime::{
     WhenExpr, WindowCommandGatingSnapshot, best_effort_snapshot_for_window_with_input_ctx_fallback,
     format_sequence,
 };
-use fret_ui::action::{ActionCx, OnCommand, OnDismissRequest, OnTimer, UiActionHost};
+use fret_ui::action::{ActionCx, OnCommand, OnTimer, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
@@ -26,6 +26,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
+use fret_ui_kit::primitives::dismissable_layer::{DismissReason, OnDismissRequest};
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
@@ -1520,7 +1521,7 @@ fn request_menu_overlay<H: UiHost>(
 
     let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, req| {
         let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-        if matches!(req.reason, fret_ui::action::DismissReason::Escape) {
+        if matches!(req.reason, DismissReason::Escape) {
             arm_pending_menubar_focus(host, acx.window, &pending_focus, trigger_id);
         } else {
             let _ = host

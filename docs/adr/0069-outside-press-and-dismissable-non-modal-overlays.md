@@ -49,9 +49,10 @@ Additionally, some **non-modal** overlays (notably Radix-style menus) need an ex
     pass.
   - importantly, menus still need *global pointer movement* outside the overlay subtree for
     policies like Radix Menu “safe hover corridor” between a submenu trigger and its submenu. In
-    Fret this is modeled as an opt-in **pointer-move observer** on the dismissible root (see
-    `DismissibleActionHooks::on_pointer_move`) and a per-layer `wants_pointer_move_events` flag,
-    and it must continue to run even when hit-tested pointer dispatch is suppressed by occlusion.
+    Fret this is modeled as an opt-in **pointer-move observer** on the runtime layer interaction
+    root (see `LayerInteractionActionHooks::on_pointer_move`) and a per-layer
+    `wants_pointer_move_events` flag, and it must continue to run even when hit-tested pointer
+    dispatch is suppressed by occlusion.
 
 ### Outside press observer pass
 
@@ -118,7 +119,10 @@ matrix of per-component runtime toggles.
 Radix allows dismissal callbacks (e.g. `onPointerDownOutside`, `onInteractOutside`,
 `onEscapeKeyDown`) to "prevent default" and keep the overlay open.
 
-In Fret, the overlay substrate expresses this outcome via an optional dismiss handler:
+In Fret, the component overlay substrate expresses this outcome via an optional dismiss handler.
+The runtime mechanism underneath is the layer-interaction hook (`OnLayerInteractionRequest` /
+`LayerInteractionRequestCx` / `LayerInteractionReason`), while
+`fret-ui-kit::primitives::dismissable_layer` exposes the Radix-named aliases:
 
 - `OnDismissRequest` receives a mutable `DismissRequestCx { reason, ... }`.
 - Handlers may call `req.prevent_default()` to keep the overlay open.

@@ -40,7 +40,8 @@ invoked by the runtime when an interaction happens.
 
 The runtime provides:
 
-- the *trigger point* (e.g. “pressable activated”, “dismiss requested”, “roving active changed”)
+- the *trigger point* (e.g. “pressable activated”, “layer interaction requested”, “roving active
+  changed”)
 - the *reason* (e.g. keyboard vs pointer, Escape vs outside press)
 - a small action context (`ActionCx`) that can write models, dispatch commands, request focus, etc.
 
@@ -53,7 +54,8 @@ The component provides:
 Runtime plumbing is in `crates/fret-ui/src/action.rs` and exposed via `ElementContext` helpers:
 
 - `ElementContext::pressable_on_activate(...)`
-- `ElementContext::dismissible_on_dismiss_request(...)`
+- `ElementContext::layer_interaction_on_request(...)`
+- `ElementContext::layer_interaction_on_pointer_move(...)`
 - `ElementContext::roving_on_active_change(...)`
 - `ElementContext::roving_on_typeahead(...)`
 - `ElementContext::pointer_region_on_pointer_down(...)` (for context menus, drag start, etc.)
@@ -90,7 +92,8 @@ This attaches a `pressable_on_activate` hook, rather than using runtime shortcut
 ### Close an Overlay on Dismiss
 
 Overlays should be created via `fret-ui-kit` overlay policy code (e.g. `window_overlays`).
-Then register dismissal handlers via `dismissible_on_dismiss_request`:
+Then register dismissal handlers through the component-layer Radix alias
+`fret_ui_kit::primitives::dismissable_layer`:
 
 - close on Escape
 - close on outside press
@@ -121,12 +124,13 @@ Prefer capturing `WeakModel<T>` and upgrading opportunistically, e.g. via:
 - `fret_ui::action::UiActionHostExt::update_weak_model(...)`
 - `ActionHooksExt::*_weak(...)` helpers in `ecosystem/fret-ui-kit` (`fret_ui_kit::declarative::action_hooks`)
 
-## Transitional APIs
+## Removed Runtime Shortcuts
 
-Some runtime-owned shortcut fields remain temporarily for compatibility, but are deprecated:
+Runtime-owned shortcut fields were removed to keep `crates/fret-ui` mechanism-only:
 
 - `PressableProps` shortcut model writes (toggle/set variants)
 - `RovingFocusProps` shortcut selection/typeahead fields
+- runtime-owned Dismiss naming on action hooks
 
 New/updated components should use action hooks instead.
 

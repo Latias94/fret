@@ -2,13 +2,17 @@
 
 Status: Accepted
 
-## Implementation Status (as of 2025-12-29)
+## Implementation Status (as of 2026-07-01)
 
 The action-hook mechanism and its initial migrations are implemented:
 
 - Runtime provides `UiActionHost` + `ActionCx` and hook plumbing in `crates/fret-ui`.
 - Components use `fret-ui-kit::declarative::action_hooks::ActionHooksExt` helpers.
-- Outside-press observer and dismissal are expressed via hooks (ADR 0069) instead of runtime model writes.
+- Outside-press observer and dismissal are expressed via layer-interaction hooks (ADR 0069)
+  instead of runtime model writes.
+- Runtime hook names intentionally use mechanism vocabulary (`LayerInteraction*`). Radix/Dismiss
+  vocabulary is exposed only by the component-layer alias in
+  `fret-ui-kit::primitives::dismissable_layer`.
 
 ## Context
 
@@ -59,15 +63,22 @@ We standardize terminology so the boundary stays clear in code and docs:
 - **Action hook**: a runtime mechanism that triggers component-owned logic in response to input.
 - **Activate**: the unified “click/press” semantic (pointer click or keyboard activation via
   Enter/Space).
-- **Dismiss request**: a request to close an overlay, with an explicit reason.
+- **Layer interaction request**: a runtime request emitted by a layer interaction root, with an
+  explicit reason. Component layers may interpret that request as overlay dismissal.
+- **Dismiss request**: the Radix/component-layer alias for a layer interaction request when the
+  policy surface is modeling `DismissableLayer` behavior.
 
 Identifiers (locked):
 
 - Host surface for handlers: `UiActionHost`
 - Handler context type: `ActionCx`
 - Pressable handler: `on_activate`
-- Dismissible handler: `on_dismiss_request`
-- Dismiss reasons: `DismissReason::{Escape, OutsidePress { pointer: Option<OutsidePressCx> }}`
+- Runtime layer interaction handler: `ElementContext::layer_interaction_on_request`
+- Runtime layer interaction context and reasons:
+  `LayerInteractionRequestCx` and
+  `LayerInteractionReason::{Escape, OutsidePress { pointer: Option<OutsidePressCx> }, ...}`
+- Component-layer Radix alias:
+  `fret-ui-kit::primitives::dismissable_layer::{OnDismissRequest, DismissRequestCx, DismissReason}`
 
 ### 2) Introduce runtime “action hooks” (mechanism) for component-owned policies
 
@@ -76,8 +87,8 @@ dispatch without encoding policy into `fret-ui`.
 
 Conceptually:
 
-- Component code registers an element-local handler (e.g. “on click”, “on dismiss”, “on key nav”)
-  in the **element state store** (ADR 0028) keyed by `GlobalElementId`.
+- Component code registers an element-local handler (e.g. “on click”, “on layer interaction”,
+  “on key nav”) in the **element state store** (ADR 0028) keyed by `GlobalElementId`.
 - During event dispatch, the runtime:
   - determines *what happened* (click, Escape, outside press, key navigation intent),
   - invokes the registered handler if present,
@@ -104,7 +115,7 @@ contract surface mechanism-only (ADR 0066):
 
 Component code should implement these behaviors via action hooks (ADR 0074):
 
-- `ElementCx::{pressable_*, dismissible_*, roving_*}`
+- `ElementContext::{pressable_*, layer_interaction_*, roving_*}`
 - `fret-ui-kit::declarative::action_hooks::ActionHooksExt` (recommended convenience layer)
 
 ## Consequences
@@ -129,7 +140,8 @@ Component code should implement these behaviors via action hooks (ADR 0074):
 
 1) Add action-hook substrate (Experimental) + tests in `fret-ui`. (done)
 2) Implement component-layer helpers in `fret-ui-kit`: (done)
-   - `pressable_toggle(...)`, `pressable_set(...)`, `dismissible(...)`, roving helpers.
+   - `pressable_toggle(...)`, `pressable_set(...)`, layer-interaction/dismiss aliases, roving
+     helpers.
 3) Migrate `fret-ui-shadcn` usage off runtime shortcut props. (done)
 4) Replace runtime-owned dismissal policy with `fret-ui-kit/window_overlays` policy that composes runtime layers + outside-press observer. (done)
 5) Deprecate and remove legacy shortcut props (Compatibility → removed) once no longer used. (done)

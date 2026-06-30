@@ -22,11 +22,11 @@ fn escape_dismisses_topmost_overlay_without_focus() {
         &mut app,
         window,
         overlay_element,
-        crate::action::DismissibleActionHooks::default,
+        crate::action::LayerInteractionActionHooks::default,
         |hooks| {
             let dismissed = dismissed.clone();
-            hooks.on_dismiss_request = Some(Arc::new(move |host, _cx, req| {
-                assert_eq!(req.reason, crate::action::DismissReason::Escape);
+            hooks.on_request = Some(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, crate::action::LayerInteractionReason::Escape);
                 let _ = host.models_mut().update(&dismissed, |v| *v = true);
             }));
         },
@@ -78,11 +78,11 @@ fn escape_dismisses_only_the_topmost_overlay() {
         &mut app,
         window,
         overlay_a_element,
-        crate::action::DismissibleActionHooks::default,
+        crate::action::LayerInteractionActionHooks::default,
         |hooks| {
             let dismissed_a = dismissed_a.clone();
-            hooks.on_dismiss_request = Some(Arc::new(move |host, _cx, req| {
-                assert_eq!(req.reason, crate::action::DismissReason::Escape);
+            hooks.on_request = Some(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, crate::action::LayerInteractionReason::Escape);
                 let _ = host.models_mut().update(&dismissed_a, |v| *v = true);
             }));
         },
@@ -97,11 +97,11 @@ fn escape_dismisses_only_the_topmost_overlay() {
         &mut app,
         window,
         overlay_b_element,
-        crate::action::DismissibleActionHooks::default,
+        crate::action::LayerInteractionActionHooks::default,
         |hooks| {
             let dismissed_b = dismissed_b.clone();
-            hooks.on_dismiss_request = Some(Arc::new(move |host, _cx, req| {
-                assert_eq!(req.reason, crate::action::DismissReason::Escape);
+            hooks.on_request = Some(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, crate::action::LayerInteractionReason::Escape);
                 let _ = host.models_mut().update(&dismissed_b, |v| *v = true);
             }));
         },

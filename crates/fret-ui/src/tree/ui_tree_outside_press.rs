@@ -148,7 +148,7 @@ impl<H: UiHost> UiTree<H> {
                     app,
                     window,
                     root_element,
-                    crate::action::DismissibleLastDismissRequest::default,
+                    crate::action::LayerInteractionLastRequest::default,
                     |st| {
                         st.tick_id = tick_id;
                         st.reason = None;
@@ -181,12 +181,12 @@ impl<H: UiHost> UiTree<H> {
                     app,
                     window,
                     root_element,
-                    crate::action::DismissibleLastDismissRequest::default,
+                    crate::action::LayerInteractionLastRequest::default,
                     |st| {
                         st.tick_id == tick_id
                             && matches!(
                                 st.reason,
-                                Some(crate::action::DismissReason::OutsidePress { .. })
+                                Some(crate::action::LayerInteractionReason::OutsidePress { .. })
                             )
                             && st.default_prevented
                     },

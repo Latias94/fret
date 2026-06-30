@@ -635,7 +635,7 @@ impl<H: UiHost> UiTree<H> {
     /// Finalize a declarative rebuild that mounted a detached root and only later attached it to
     /// the retained tree.
     ///
-    /// `render_dismissible_root_with_hooks(...)` can rebuild an overlay/portal root before the
+    /// `render_layer_interaction_root_with_hooks(...)` can rebuild an overlay/portal root before the
     /// caller attaches that root to a layer or parent. In that case the helper defers the window
     /// snapshot commit until the root is actually attached. Call this after `push_overlay_root`,
     /// `set_children`, or another attach operation that makes the returned root authoritative for

@@ -16,7 +16,6 @@ pub(crate) use fret_runtime::{
     DragSessionId, Effect, EffectSink, FrameId, GlobalsHost, KeyChord, ModelHost, ModelId,
     ModelStore, ModelsHost, PlatformCapabilities, ShareSheetToken, TickId, TimeHost, TimerToken,
 };
-pub(crate) use fret_ui::action::{DismissReason, DismissRequestCx, OnDismissRequest};
 pub(crate) use fret_ui::declarative::render_root;
 pub(crate) use fret_ui::element::Length;
 pub(crate) use fret_ui::tree::PointerOcclusion;
@@ -30,6 +29,9 @@ pub(crate) use fret_ui_kit::imui::{
     PopupModalOptions, SameLineOptions, ScrollOptions, SelectableOptions, SliderOptions,
     SpacingOptions, SwitchOptions, TableColumn, TableColumnPin, TableOptions, VerticalOptions,
     VirtualListMeasureMode, VirtualListOptions, VirtualListScrollHandle, WindowOptions,
+};
+pub(crate) use fret_ui_kit::primitives::dismissable_layer::{
+    DismissReason, DismissRequestCx, OnDismissRequest,
 };
 pub(crate) use fret_ui_kit::{OverlayPresence, OverlayRequest};
 

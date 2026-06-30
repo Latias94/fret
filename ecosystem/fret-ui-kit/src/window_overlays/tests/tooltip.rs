@@ -46,12 +46,12 @@ fn run_tooltip_observer_fixture(name: &str) {
 
     begin_frame(&mut app, window);
 
-    let on_dismiss_request: Option<fret_ui::action::OnDismissRequest> = fx
+    let on_dismiss_request: Option<crate::primitives::dismissable_layer::OnDismissRequest> = fx
         .has_dismiss_request
         .then_some(Arc::new(|_host, _cx, _req| {}));
-    let on_pointer_move: Option<fret_ui::action::OnDismissiblePointerMove> = fx
-        .has_pointer_move
-        .then_some(Arc::new(|_host, _cx, _move| false));
+    let on_pointer_move: Option<crate::primitives::dismissable_layer::OnDismissiblePointerMove> =
+        fx.has_pointer_move
+            .then_some(Arc::new(|_host, _cx, _move| false));
 
     // Install a tooltip layer (possibly closing: present=true, open=false).
     let tooltip_id = GlobalElementId(0x44);

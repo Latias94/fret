@@ -1049,7 +1049,7 @@ impl<H: UiHost> UiTree<H> {
                                         app,
                                         window,
                                         root_element,
-                                        crate::action::DismissibleLastDismissRequest::default,
+                                        crate::action::LayerInteractionLastRequest::default,
                                         |st| {
                                             st.tick_id = tick_id;
                                             st.reason = None;
@@ -1077,13 +1077,13 @@ impl<H: UiHost> UiTree<H> {
                                         app,
                                         window,
                                         root_element,
-                                        crate::action::DismissibleLastDismissRequest::default,
+                                        crate::action::LayerInteractionLastRequest::default,
                                         |st| {
                                             st.tick_id == tick_id
                                                 && matches!(
                                                     st.reason,
                                                     Some(
-                                                        crate::action::DismissReason::OutsidePress {
+                                                        crate::action::LayerInteractionReason::OutsidePress {
                                                             ..
                                                         }
                                                     )
@@ -2556,8 +2556,8 @@ impl<H: UiHost> UiTree<H> {
                                 app,
                                 window,
                                 element,
-                                crate::action::DismissibleActionHooks::default,
-                                |hooks| hooks.on_dismiss_request.clone(),
+                                crate::action::LayerInteractionActionHooks::default,
+                                |hooks| hooks.on_request.clone(),
                             )
                         })
                         .is_some()
@@ -2945,8 +2945,8 @@ impl<H: UiHost> UiTree<H> {
                                 app,
                                 window,
                                 root_element,
-                                crate::action::DismissibleActionHooks::default,
-                                |hooks| hooks.on_dismiss_request.clone(),
+                                crate::action::LayerInteractionActionHooks::default,
+                                |hooks| hooks.on_request.clone(),
                             );
                             let Some(hook) = hook else {
                                 continue;
@@ -2956,8 +2956,8 @@ impl<H: UiHost> UiTree<H> {
                                 window,
                                 element: root_element,
                             };
-                            let mut req = crate::action::DismissRequestCx::new(
-                                crate::action::DismissReason::Scroll,
+                            let mut req = crate::action::LayerInteractionRequestCx::new(
+                                crate::action::LayerInteractionReason::Scroll,
                             );
                             hook(
                                 &mut host,

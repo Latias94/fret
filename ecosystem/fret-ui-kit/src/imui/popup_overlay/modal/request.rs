@@ -1,5 +1,5 @@
+use crate::primitives::dismissable_layer::OnDismissRequest;
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 

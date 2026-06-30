@@ -60,7 +60,7 @@ pub(crate) enum ElementInstance {
     TextInputRegion(crate::element::TextInputRegionProps),
     InternalDragRegion(crate::element::InternalDragRegionProps),
     ExternalDragRegion(crate::element::ExternalDragRegionProps),
-    DismissibleLayer(DismissibleLayerProps),
+    LayerInteractionRoot(LayerInteractionRootProps),
     RovingFlex(crate::element::RovingFlexProps),
     Stack(StackProps),
     Spacer(SpacerProps),
@@ -114,7 +114,7 @@ impl ElementInstance {
             Self::TextInputRegion(_) => "TextInputRegion",
             Self::InternalDragRegion(_) => "InternalDragRegion",
             Self::ExternalDragRegion(_) => "ExternalDragRegion",
-            Self::DismissibleLayer(_) => "DismissibleLayer",
+            Self::LayerInteractionRoot(_) => "LayerInteractionRoot",
             Self::RovingFlex(_) => "RovingFlex",
             Self::Stack(_) => "Stack",
             Self::Spacer(_) => "Spacer",
@@ -155,21 +155,21 @@ pub(crate) struct ElementRecord {
 }
 
 #[derive(Clone)]
-pub(crate) struct DismissibleLayerProps {
+pub(crate) struct LayerInteractionRootProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
 }
 
-impl std::fmt::Debug for DismissibleLayerProps {
+impl std::fmt::Debug for LayerInteractionRootProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut out = f.debug_struct("DismissibleLayerProps");
+        let mut out = f.debug_struct("LayerInteractionRootProps");
         out.field("layout", &self.layout)
             .field("enabled", &self.enabled)
             .finish()
     }
 }
 
-impl Default for DismissibleLayerProps {
+impl Default for LayerInteractionRootProps {
     fn default() -> Self {
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Fill;
@@ -575,7 +575,7 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
         ElementInstance::TextInputRegion(p) => p.layout,
         ElementInstance::InternalDragRegion(p) => p.layout,
         ElementInstance::ExternalDragRegion(p) => p.layout,
-        ElementInstance::DismissibleLayer(p) => p.layout,
+        ElementInstance::LayerInteractionRoot(p) => p.layout,
         ElementInstance::RovingFlex(p) => p.flex.layout,
         ElementInstance::Stack(p) => p.layout,
         ElementInstance::Spacer(p) => p.layout,

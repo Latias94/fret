@@ -2164,7 +2164,7 @@ impl NavigationMenu {
                         let safe_corridor_for_overlay_pointer_move = safe_corridor.clone();
                         let safe_corridor_for_overlay_layout = safe_corridor.clone();
                         let safe_corridor_for_content_hover = safe_corridor.clone();
-                        let on_pointer_move: fret_ui::action::OnDismissiblePointerMove = Arc::new(
+                        let on_pointer_move: fret_ui_kit::primitives::dismissable_layer::OnDismissiblePointerMove = Arc::new(
                             move |_host: &mut dyn fret_ui::action::UiActionHost,
                                   _acx: fret_ui::action::ActionCx,
                                   mv: fret_ui::action::PointerMoveCx| {

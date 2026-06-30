@@ -2,7 +2,7 @@
 
 pub(super) use crate::UiHost;
 pub(super) use crate::action;
-pub(super) use crate::action::{ActivateReason, DismissReason, KeyDownCx};
+pub(super) use crate::action::{ActivateReason, KeyDownCx, LayerInteractionReason};
 pub(super) use crate::element::{
     AnyElement, CompositeGroupProps, ContainerProps, CrossAlign, EffectLayerProps, ElementKind,
     ExternalDragRegionProps, FlexProps, FocusScopeProps, HoverRegionProps, InternalDragRegionProps,

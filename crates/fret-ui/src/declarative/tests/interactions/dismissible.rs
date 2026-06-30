@@ -45,7 +45,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
 
     let moves = app.models_mut().insert(0u32);
     let moves_for_hook = moves.clone();
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -53,7 +53,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
         bounds,
         "dismissible-pointer-move-observer",
         move |cx| {
-            cx.dismissible_on_pointer_move(Arc::new(move |host, _acx, _mv| {
+            cx.layer_interaction_on_pointer_move(Arc::new(move |host, _acx, _mv| {
                 let _ = host
                     .models_mut()
                     .update(&moves_for_hook, |v: &mut u32| *v = v.saturating_add(1));
@@ -103,7 +103,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
 }
 
 #[test]
-fn dismissible_on_dismiss_request_hook_runs_on_escape() {
+fn layer_interaction_on_request_hook_runs_on_escape() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -117,7 +117,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
     let base_root = ui.create_node(FillStack);
     ui.set_root(base_root);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -126,8 +126,8 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
         "dismissible-hook-escape",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
-                assert_eq!(req.reason, DismissReason::Escape);
+            cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, LayerInteractionReason::Escape);
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);
@@ -164,7 +164,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
 }
 
 #[test]
-fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
+fn layer_interaction_on_request_hook_runs_on_outside_press_observer() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -179,7 +179,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
     let base_root = ui.create_node(FillStack);
     ui.set_root(base_root);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -188,9 +188,9 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         "dismissible-hook-outside-press",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
+            cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
                 match req.reason {
-                    DismissReason::OutsidePress { pointer: Some(cx) } => {
+                    LayerInteractionReason::OutsidePress { pointer: Some(cx) } => {
                         assert_eq!(cx.pointer_id, fret_core::PointerId(0));
                         assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
                         assert_eq!(cx.button, MouseButton::Left);
@@ -331,7 +331,7 @@ fn layer_scroll_observer_ignores_stale_detached_node_entry() {
         handle.max_offset()
     );
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -340,8 +340,8 @@ fn layer_scroll_observer_ignores_stale_detached_node_entry() {
         "dismissible-scroll-dismiss-overlay",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
-                assert_eq!(req.reason, DismissReason::Scroll);
+            cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, LayerInteractionReason::Scroll);
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);
@@ -403,7 +403,7 @@ fn dismissible_outside_press_prevent_default_keeps_focus() {
     let base_root = ui.create_node(FillStack);
     ui.set_root(base_root);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -411,8 +411,8 @@ fn dismissible_outside_press_prevent_default_keeps_focus() {
         bounds,
         "dismissible-outside-press-prevent-default-keeps-focus",
         |cx| {
-            cx.dismissible_on_dismiss_request(Arc::new(move |_host, _cx, req| {
-                if matches!(req.reason, DismissReason::OutsidePress { .. }) {
+            cx.layer_interaction_on_request(Arc::new(move |_host, _cx, req| {
+                if matches!(req.reason, LayerInteractionReason::OutsidePress { .. }) {
                     req.prevent_default();
                 }
             }));
@@ -471,7 +471,7 @@ fn dismissible_outside_press_without_prevent_default_clears_focus() {
     let base_root = ui.create_node(FillStack);
     ui.set_root(base_root);
 
-    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+    let overlay_root = crate::declarative::render_layer_interaction_root_with_hooks(
         &mut ui,
         &mut app,
         &mut services,
@@ -479,7 +479,7 @@ fn dismissible_outside_press_without_prevent_default_clears_focus() {
         bounds,
         "dismissible-outside-press-without-prevent-default-clears-focus",
         |cx| {
-            cx.dismissible_on_dismiss_request(Arc::new(move |_host, _cx, _req| {}));
+            cx.layer_interaction_on_request(Arc::new(move |_host, _cx, _req| {}));
 
             let mut props = crate::element::PressableProps {
                 enabled: true,

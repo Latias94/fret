@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
+use crate::primitives::dismissable_layer::OnDismissiblePointerMove;
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, Model};
-use fret_ui::action::OnDismissiblePointerMove;
 use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 

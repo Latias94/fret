@@ -43,13 +43,14 @@ overlay-layer-level contract to express the Radix outcome precisely.
 
 ## Decision
 
-We model "close tooltip on scroll" as an opt-in **overlay-layer dismissal contract**:
+We model "close tooltip on scroll" as an opt-in **overlay-layer scroll observation contract**:
 
-1) An overlay layer may register one or more **scroll-dismiss elements** (`GlobalElementId`s).
+1) An overlay layer may register one or more **scroll-observer elements** (`GlobalElementId`s).
 2) When a wheel/scroll gesture is consumed by a scrollable element, the runtime identifies the
    **scroll target node** (the scrollable node that stopped propagation for the wheel event).
-3) Any visible overlay layer that has at least one registered scroll-dismiss element whose current
-   node is a descendant of the scroll target node is dismissed.
+3) Any visible overlay layer that has at least one registered scroll-observer element whose current
+   node is a descendant of the scroll target node emits the existing layer-interaction scroll
+   signal; component policy decides whether that signal closes the overlay.
 
 This matches the Radix semantic check:
 
@@ -68,10 +69,11 @@ close behavior remains component policy.
 
 ### Dismiss hooks
 
-Dismissal uses the existing dismissible-root contract (ADR 0069 / ADR 0067):
+Dismissal uses the existing layer-interaction-root contract (ADR 0069 / ADR 0067):
 
-- overlay roots are rendered via `render_dismissible_root_with_hooks(...)`
-- component/policy code installs an `OnDismissRequest` handler on that dismissible root
+- runtime overlay roots are rendered via `render_layer_interaction_root_with_hooks(...)`
+- component/policy code installs an `OnDismissRequest` handler through
+  `fret-ui-kit::primitives::dismissable_layer`
 - scroll dismissal invokes the handler with `DismissReason::Scroll`
 
 ## Consequences

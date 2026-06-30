@@ -251,6 +251,37 @@ class SurfacePolicyTests(unittest.TestCase):
             )
             self.assertIn("scroll_dismiss", violations[0].source)
 
+    def test_dismiss_public_action_hook_is_rejected_in_mechanism_crate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "crates/fret-ui/src/action.rs",
+                """
+                pub enum DismissReason {
+                    Escape,
+                }
+
+                pub type OnDismissRequest = ();
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(2, len(violations))
+            self.assertTrue(
+                all(
+                    v.rule
+                    == "mechanism-public-member-policy-vocabulary:dismiss-action-hook"
+                    for v in violations
+                )
+            )
+
     def test_classified_surface_paths_must_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

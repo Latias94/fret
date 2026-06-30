@@ -2,15 +2,14 @@ use std::time::Duration;
 
 use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
-use fret_ui::action::{
-    OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
-};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::headless::presence::PresenceOutput;
 use crate::headless::transition::TransitionOutput;
+use crate::primitives::dismissable_layer::{OnDismissRequest, OnDismissiblePointerMove};
 use crate::primitives::presence;
 use crate::window_overlays;
 
