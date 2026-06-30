@@ -4070,6 +4070,10 @@ fn snapshot_cache_root_stats(
                     .and_then(|v| v.get("prepaint_owner"))
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
+                boundary_hit_test_bounds_owner: boundary
+                    .and_then(|v| v.get("hit_test_bounds_owner"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 boundary_interaction_cache_owner: boundary
                     .and_then(|v| v.get("interaction_cache_owner"))
                     .and_then(|v| v.as_str())

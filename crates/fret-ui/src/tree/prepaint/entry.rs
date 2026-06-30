@@ -8,7 +8,7 @@ impl<H: UiHost> UiTree<H> {
     ) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
-            self.hit_test_bounds_trees.clear();
+            self.clear_hit_test_bounds_frame_products();
             return;
         }
 
@@ -45,7 +45,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 self.interaction_cache.begin_frame();
-                self.hit_test_bounds_trees.begin_frame(app.frame_id());
+                self.begin_hit_test_bounds_frame(app.frame_id());
 
                 let theme_revision = Theme::global(&*app).revision();
                 let mut interaction_inputs = inputs.into_interaction_inputs(theme_revision);
@@ -59,10 +59,9 @@ impl<H: UiHost> UiTree<H> {
                     let end = self.interaction_cache.records.len();
 
                     if hit_testable {
-                        let records = &self.interaction_cache.records[start..end];
-                        let nodes = &self.nodes;
-                        self.hit_test_bounds_trees
-                            .rebuild_for_layer_from_records(root, records, nodes);
+                        self.rebuild_hit_test_bounds_for_layer_from_interaction_range(
+                            root, start, end,
+                        );
                     }
                 }
 
@@ -85,7 +84,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn prepaint_after_layout_stable_frame(&mut self, app: &mut H) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
-            self.hit_test_bounds_trees.clear();
+            self.clear_hit_test_bounds_frame_products();
             return;
         }
 
@@ -114,14 +113,14 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.interaction_records = 0;
                 }
 
-                self.hit_test_bounds_trees.begin_frame(app.frame_id());
+                self.begin_hit_test_bounds_frame(app.frame_id());
 
                 let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
                 for layer_id in layers {
                     let root = self.layers[layer_id].root;
                     let hit_testable = self.layers[layer_id].hit_testable;
                     if hit_testable {
-                        self.hit_test_bounds_trees.reuse_for_layer(root);
+                        self.reuse_hit_test_bounds_for_layer(root);
                     }
                 }
             },

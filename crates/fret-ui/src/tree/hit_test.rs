@@ -27,8 +27,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     for &root in layers {
                         if root == cache.layer_root {
-                            let bounds_tree_enabled =
-                                self.hit_test_bounds_trees.layer_enabled(root);
+                            let bounds_tree_enabled = self.hit_test_bounds_tree_layer_enabled(root);
 
                             if !bounds_tree_enabled
                                 && cache.path.first().copied() == Some(root)
@@ -272,10 +271,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_enabled,
             trace_enabled,
             || tracing::trace_span!("fret.ui.hit_test.bounds_tree_query", root = ?root),
-            || {
-                self.hit_test_bounds_trees
-                    .query(root, position, self.debug_enabled)
-            },
+            || self.query_hit_test_bounds_tree(root, position, self.debug_enabled),
         );
         if let Some(elapsed) = elapsed {
             self.debug_stats.hit_test_bounds_tree_query_time += elapsed;

@@ -113,6 +113,7 @@ pub(super) struct ViewBoundaryState {
 pub(super) struct BoundaryFrameProducts {
     pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
+    pub(super) hit_test_bounds: bounds_tree::BoundaryHitTestBoundsState,
     pub(super) interaction_cache: BoundaryInteractionCacheState,
     pub(super) scene_fragment: BoundarySceneFragmentState,
     pub(super) paint_cache: BoundaryPaintCacheState,
@@ -669,6 +670,11 @@ impl<H: UiHost> UiTree<H> {
                     ViewBoundaryKind::ViewCacheRoot => "view_cache",
                 },
                 prepaint_owner: "view_boundary_prepaint_state",
+                hit_test_bounds_owner: if state.frame_products.hit_test_bounds.has_frame_product() {
+                    "view_boundary_hit_test_bounds_state"
+                } else {
+                    "none"
+                },
                 interaction_cache_owner: if state.frame_products.interaction_cache.has_entry() {
                     "view_boundary_interaction_cache_state"
                 } else {
@@ -874,6 +880,12 @@ mod boundary_frame_products_tests {
         state.frame_products.prepaint.begin_outputs(key);
         state.frame_products.prepaint.set_output(42u32);
         assert_eq!(state.frame_products.prepaint.output::<u32>(), Some(&42));
+
+        state
+            .frame_products
+            .hit_test_bounds
+            .reuse_for_frame(FrameId(1));
+        assert!(state.frame_products.hit_test_bounds.has_frame_product());
 
         state
             .frame_products

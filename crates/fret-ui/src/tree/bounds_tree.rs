@@ -15,31 +15,35 @@ fn hit_test_bounds_tree_min_records() -> usize {
 #[derive(Debug, Default)]
 pub(super) struct HitTestBoundsTrees {
     frame_id: Option<FrameId>,
-    layers: Vec<LayerBoundsTree>,
     clip_stack: Vec<(NodeId, Option<Rect>, Transform2D)>,
     leaves: Vec<Leaf>,
+    search_stack: Vec<usize>,
+    level: Vec<usize>,
+    next_level: Vec<usize>,
 }
 
 impl HitTestBoundsTrees {
     pub(super) fn clear(&mut self) {
         self.frame_id = None;
-        for layer in &mut self.layers {
-            layer.used_this_frame = false;
-            layer.enabled = false;
-            layer.tree.clear_keep_alloc();
-        }
+        self.clip_stack.clear();
+        self.leaves.clear();
+        self.search_stack.clear();
+        self.level.clear();
+        self.next_level.clear();
     }
 
-    pub(super) fn begin_frame(&mut self, frame_id: FrameId) {
+    pub(super) fn begin_frame(&mut self, frame_id: FrameId) -> bool {
         if hit_test_bounds_tree_disabled() {
             self.clear();
-            return;
+            return false;
         }
 
         self.frame_id = Some(frame_id);
-        for layer in &mut self.layers {
-            layer.used_this_frame = false;
-        }
+        true
+    }
+
+    fn frame_active(&self) -> bool {
+        self.frame_id.is_some() && !hit_test_bounds_tree_disabled()
     }
 
     pub(super) fn rebuild_for_layer_from_records<H: UiHost>(
@@ -47,20 +51,19 @@ impl HitTestBoundsTrees {
         layer_root: NodeId,
         records: &[prepaint::InteractionRecord],
         nodes: &SlotMap<NodeId, Node<H>>,
+        layer: &mut BoundaryHitTestBoundsState,
     ) {
-        if hit_test_bounds_tree_disabled() {
+        let Some(frame_id) = self.frame_id else {
+            layer.clear();
             return;
-        }
+        };
+
         if records.len() < hit_test_bounds_tree_min_records() {
-            let layer = self.layer_mut(layer_root);
-            layer.enabled = false;
-            layer.tree.clear_keep_alloc();
+            layer.disable_for_frame(frame_id);
             return;
         }
         if records.first().is_none_or(|r| r.node != layer_root) {
-            let layer = self.layer_mut(layer_root);
-            layer.enabled = false;
-            layer.tree.clear_keep_alloc();
+            layer.disable_for_frame(frame_id);
             return;
         }
 
@@ -142,28 +145,21 @@ impl HitTestBoundsTrees {
 
         let disabled_or_empty = disabled || self.leaves.is_empty();
 
-        let mut tree = {
-            let layer = self.layer_mut(layer_root);
-            std::mem::take(&mut layer.tree)
-        };
+        let mut tree = layer.take_tree_for_rebuild(frame_id);
 
         if disabled_or_empty {
             tree.clear_keep_alloc();
-            let layer = self.layer_mut(layer_root);
-            layer.enabled = false;
-            layer.tree = tree;
+            layer.finish_rebuild(frame_id, false, tree);
             return;
         }
 
-        tree.rebuild_from_leaves(&mut self.leaves);
-        let layer = self.layer_mut(layer_root);
-        layer.enabled = true;
-        layer.tree = tree;
+        tree.rebuild_from_leaves(&mut self.leaves, &mut self.level, &mut self.next_level);
+        layer.finish_rebuild(frame_id, true, tree);
     }
 
     pub(super) fn query(
         &mut self,
-        layer_root: NodeId,
+        layer: Option<&BoundaryHitTestBoundsState>,
         position: Point,
         collect_stats: bool,
     ) -> (HitTestBoundsTreeQuery, HitTestBoundsTreeQueryStats) {
@@ -173,25 +169,22 @@ impl HitTestBoundsTrees {
                 HitTestBoundsTreeQueryStats::default(),
             );
         };
-        let layer = self
-            .layers
-            .iter_mut()
-            .find(|l| l.used_this_frame && l.frame_id == Some(frame_id) && l.root == layer_root);
         let Some(layer) = layer else {
             return (
                 HitTestBoundsTreeQuery::Disabled,
                 HitTestBoundsTreeQueryStats::default(),
             );
         };
-        if !layer.enabled {
+        if !layer.enabled_for_frame(frame_id) {
             return (
                 HitTestBoundsTreeQuery::Disabled,
                 HitTestBoundsTreeQueryStats::default(),
             );
         }
-        let (hit, stats) = layer
-            .tree
-            .find_max_containing_point(position, collect_stats);
+        let (hit, stats) =
+            layer
+                .tree
+                .find_max_containing_point(position, collect_stats, &mut self.search_stack);
         let query = match hit {
             Some(hit) => HitTestBoundsTreeQuery::Hit(hit),
             None => HitTestBoundsTreeQuery::Miss,
@@ -199,63 +192,115 @@ impl HitTestBoundsTrees {
         (query, stats)
     }
 
-    pub(super) fn reuse_for_layer(&mut self, layer_root: NodeId) {
-        if hit_test_bounds_tree_disabled() {
-            return;
-        }
-
+    pub(super) fn reuse_for_layer(&mut self, layer: &mut BoundaryHitTestBoundsState) {
         let Some(frame_id) = self.frame_id else {
             return;
         };
 
-        if let Some(layer) = self.layers.iter_mut().find(|l| l.root == layer_root) {
-            layer.used_this_frame = true;
-            layer.frame_id = Some(frame_id);
-            return;
+        if layer.can_reuse_for_stable_frame() {
+            layer.reuse_for_frame(frame_id);
         }
-
-        let mut layer = LayerBoundsTree::new(layer_root);
-        layer.used_this_frame = true;
-        layer.frame_id = Some(frame_id);
-        self.layers.push(layer);
     }
 
-    pub(super) fn layer_enabled(&self, layer_root: NodeId) -> bool {
+    pub(super) fn layer_enabled(&self, layer: Option<&BoundaryHitTestBoundsState>) -> bool {
         if hit_test_bounds_tree_disabled() {
             return false;
         }
         let Some(frame_id) = self.frame_id else {
             return false;
         };
-        self.layers.iter().any(|layer| {
-            layer.used_this_frame
-                && layer.frame_id == Some(frame_id)
-                && layer.root == layer_root
-                && layer.enabled
-        })
+        layer.is_some_and(|layer| layer.enabled_for_frame(frame_id))
+    }
+}
+
+impl<H: UiHost> UiTree<H> {
+    pub(in crate::tree) fn clear_hit_test_bounds_frame_products(&mut self) {
+        self.hit_test_bounds_trees.clear();
+        for (_, boundary) in self.view_boundaries.iter_mut() {
+            boundary.frame_products.hit_test_bounds.clear();
+        }
     }
 
-    fn layer_mut(&mut self, layer_root: NodeId) -> &mut LayerBoundsTree {
-        let frame_id = self.frame_id;
+    pub(in crate::tree) fn begin_hit_test_bounds_frame(&mut self, frame_id: FrameId) {
+        if !self.hit_test_bounds_trees.begin_frame(frame_id) {
+            self.clear_hit_test_bounds_frame_products();
+            return;
+        }
 
-        let idx = match self.layers.iter().position(|l| l.root == layer_root) {
-            Some(idx) => idx,
-            None => match self.layers.iter().position(|l| !l.used_this_frame) {
-                Some(reuse) => {
-                    self.layers[reuse].root = layer_root;
-                    reuse
-                }
-                None => {
-                    self.layers.push(LayerBoundsTree::new(layer_root));
-                    self.layers.len() - 1
-                }
-            },
+        for (_, boundary) in self.view_boundaries.iter_mut() {
+            boundary.frame_products.hit_test_bounds.mark_unused();
+        }
+    }
+
+    pub(in crate::tree) fn rebuild_hit_test_bounds_for_layer_from_interaction_range(
+        &mut self,
+        layer_root: NodeId,
+        start: usize,
+        end: usize,
+    ) {
+        if !self.hit_test_bounds_trees.frame_active() || self.nodes.get(layer_root).is_none() {
+            return;
+        }
+
+        let has_existing_boundary = self.view_boundaries.contains_key(layer_root);
+        let is_rebuild_candidate = {
+            let records = &self.interaction_cache.records[start..end];
+            records.len() >= hit_test_bounds_tree_min_records()
+                && records
+                    .first()
+                    .is_some_and(|record| record.node == layer_root)
         };
+        if !has_existing_boundary && !is_rebuild_candidate {
+            return;
+        }
 
-        let layer = &mut self.layers[idx];
-        layer.used_this_frame = true;
-        layer.frame_id = frame_id;
-        layer
+        let _ = self.ensure_view_boundary_state(layer_root);
+        let records = &self.interaction_cache.records[start..end];
+        let nodes = &self.nodes;
+        let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
+        let Some(boundary) = self.view_boundaries.get_mut(layer_root) else {
+            return;
+        };
+        hit_test_bounds_trees.rebuild_for_layer_from_records(
+            layer_root,
+            records,
+            nodes,
+            &mut boundary.frame_products.hit_test_bounds,
+        );
+    }
+
+    pub(in crate::tree) fn reuse_hit_test_bounds_for_layer(&mut self, layer_root: NodeId) {
+        if !self.hit_test_bounds_trees.frame_active() || self.nodes.get(layer_root).is_none() {
+            return;
+        }
+
+        let Some(boundary) = self.view_boundaries.get_mut(layer_root) else {
+            return;
+        };
+        let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
+        hit_test_bounds_trees.reuse_for_layer(&mut boundary.frame_products.hit_test_bounds);
+    }
+
+    pub(in crate::tree) fn hit_test_bounds_tree_layer_enabled(&self, layer_root: NodeId) -> bool {
+        let layer = self
+            .view_boundaries
+            .get(layer_root)
+            .map(|boundary| &boundary.frame_products.hit_test_bounds);
+        self.hit_test_bounds_trees.layer_enabled(layer)
+    }
+
+    pub(in crate::tree) fn query_hit_test_bounds_tree(
+        &mut self,
+        layer_root: NodeId,
+        position: Point,
+        collect_stats: bool,
+    ) -> (HitTestBoundsTreeQuery, HitTestBoundsTreeQueryStats) {
+        let layer = self
+            .view_boundaries
+            .get(layer_root)
+            .map(|boundary| &boundary.frame_products.hit_test_bounds);
+        let hit_test_bounds_trees = &mut self.hit_test_bounds_trees;
+        hit_test_bounds_trees.query(layer, position, collect_stats)
     }
 }
 
@@ -273,23 +318,70 @@ pub(super) struct HitTestBoundsTreeQueryStats {
 }
 
 #[derive(Debug)]
-struct LayerBoundsTree {
-    root: NodeId,
+pub(in crate::tree) struct BoundaryHitTestBoundsState {
     frame_id: Option<FrameId>,
-    used_this_frame: bool,
+    product_initialized: bool,
     enabled: bool,
     tree: BoundsTree,
 }
 
-impl LayerBoundsTree {
-    fn new(root: NodeId) -> Self {
+impl Default for BoundaryHitTestBoundsState {
+    fn default() -> Self {
         Self {
-            root,
             frame_id: None,
-            used_this_frame: false,
+            product_initialized: false,
             enabled: false,
             tree: BoundsTree::default(),
         }
+    }
+}
+
+impl BoundaryHitTestBoundsState {
+    pub(in crate::tree) fn clear(&mut self) {
+        self.frame_id = None;
+        self.product_initialized = false;
+        self.enabled = false;
+        self.tree.clear_keep_alloc();
+    }
+
+    pub(in crate::tree) fn mark_unused(&mut self) {
+        self.frame_id = None;
+    }
+
+    pub(in crate::tree) fn has_frame_product(&self) -> bool {
+        self.frame_id.is_some()
+    }
+
+    fn can_reuse_for_stable_frame(&self) -> bool {
+        self.product_initialized
+    }
+
+    fn enabled_for_frame(&self, frame_id: FrameId) -> bool {
+        self.frame_id == Some(frame_id) && self.enabled
+    }
+
+    fn disable_for_frame(&mut self, frame_id: FrameId) {
+        self.product_initialized = true;
+        self.frame_id = Some(frame_id);
+        self.enabled = false;
+        self.tree.clear_keep_alloc();
+    }
+
+    fn take_tree_for_rebuild(&mut self, frame_id: FrameId) -> BoundsTree {
+        self.product_initialized = true;
+        self.frame_id = Some(frame_id);
+        std::mem::take(&mut self.tree)
+    }
+
+    fn finish_rebuild(&mut self, frame_id: FrameId, enabled: bool, tree: BoundsTree) {
+        self.product_initialized = true;
+        self.frame_id = Some(frame_id);
+        self.enabled = enabled;
+        self.tree = tree;
+    }
+
+    pub(in crate::tree) fn reuse_for_frame(&mut self, frame_id: FrameId) {
+        self.frame_id = Some(frame_id);
     }
 }
 
@@ -298,9 +390,6 @@ struct BoundsTree {
     nodes: Vec<TreeNode>,
     root: Option<usize>,
     max_leaf: Option<usize>,
-    search_stack: Vec<usize>,
-    level: Vec<usize>,
-    next_level: Vec<usize>,
 }
 
 impl BoundsTree {
@@ -308,12 +397,14 @@ impl BoundsTree {
         self.nodes.clear();
         self.root = None;
         self.max_leaf = None;
-        self.search_stack.clear();
-        self.level.clear();
-        self.next_level.clear();
     }
 
-    fn rebuild_from_leaves(&mut self, leaves: &mut [Leaf]) {
+    fn rebuild_from_leaves(
+        &mut self,
+        leaves: &mut [Leaf],
+        level: &mut Vec<usize>,
+        next_level: &mut Vec<usize>,
+    ) {
         self.clear_keep_alloc();
         if leaves.is_empty() {
             return;
@@ -343,12 +434,12 @@ impl BoundsTree {
         }
         self.max_leaf = max_leaf.map(|(_, idx)| idx);
 
-        self.level.clear();
-        self.level.extend(0..self.nodes.len());
+        level.clear();
+        level.extend(0..self.nodes.len());
 
-        while self.level.len() > 1 {
-            self.next_level.clear();
-            for chunk in self.level.chunks(MAX_CHILDREN) {
+        while level.len() > 1 {
+            next_level.clear();
+            for chunk in level.chunks(MAX_CHILDREN) {
                 let mut bounds = self.nodes[chunk[0]].bounds;
                 let mut max_order = self.nodes[chunk[0]].max_order;
                 for &child in &chunk[1..] {
@@ -368,19 +459,20 @@ impl BoundsTree {
                     max_order,
                     kind: TreeNodeKind::Internal { children },
                 });
-                self.next_level.push(idx);
+                next_level.push(idx);
             }
 
-            std::mem::swap(&mut self.level, &mut self.next_level);
+            std::mem::swap(level, next_level);
         }
 
-        self.root = self.level.first().copied();
+        self.root = level.first().copied();
     }
 
     fn find_max_containing_point(
-        &mut self,
+        &self,
         point: Point,
         collect_stats: bool,
+        search_stack: &mut Vec<usize>,
     ) -> (Option<NodeId>, HitTestBoundsTreeQueryStats) {
         let Some(root) = self.root else {
             return (None, HitTestBoundsTreeQueryStats::default());
@@ -399,8 +491,8 @@ impl BoundsTree {
             }
         }
 
-        self.search_stack.clear();
-        self.search_stack.push(root);
+        search_stack.clear();
+        search_stack.push(root);
         if collect_stats {
             stats.nodes_pushed = stats.nodes_pushed.saturating_add(1);
         }
@@ -408,7 +500,7 @@ impl BoundsTree {
         let mut best_order: u32 = 0;
         let mut best_node: Option<NodeId> = None;
 
-        while let Some(idx) = self.search_stack.pop() {
+        while let Some(idx) = search_stack.pop() {
             if collect_stats {
                 stats.nodes_visited = stats.nodes_visited.saturating_add(1);
             }
@@ -434,7 +526,7 @@ impl BoundsTree {
                         if self.nodes[child].max_order > best_order
                             && rect_contains_point(self.nodes[child].bounds, point)
                         {
-                            self.search_stack.push(child);
+                            search_stack.push(child);
                             if collect_stats {
                                 stats.nodes_pushed = stats.nodes_pushed.saturating_add(1);
                             }
