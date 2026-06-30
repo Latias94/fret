@@ -772,14 +772,30 @@ impl<H: UiHost> UiTree<H> {
 
         let default_root = barrier_root.unwrap_or(base_root);
         let start = self.focus.unwrap_or(default_root);
-        let (mut availability, _) =
-            self.command_availability_from_node(app, &input_ctx, start, command, None);
+        let (mut availability, _) = self.command_availability_from_node(
+            app,
+            &input_ctx,
+            &dispatch_snapshot,
+            start,
+            command,
+            None,
+        );
         // When focus lives in a non-default layer (e.g. a non-modal overlay), we still want
         // widget-scoped command availability to fall back to the default root so global shortcuts
         // and menus remain usable.
-        if availability == CommandAvailability::NotHandled && start != default_root {
+        if availability == CommandAvailability::NotHandled
+            && start != default_root
+            && !dispatch_snapshot.is_descendant(default_root, start)
+        {
             availability = self
-                .command_availability_from_node(app, &input_ctx, default_root, command, None)
+                .command_availability_from_node(
+                    app,
+                    &input_ctx,
+                    &dispatch_snapshot,
+                    default_root,
+                    command,
+                    None,
+                )
                 .0;
         }
 
@@ -1145,13 +1161,21 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
+        dispatch_snapshot: &UiDispatchSnapshot,
         start: NodeId,
         command: &CommandId,
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let mut node_id = start;
         loop {
-            let (availability, parent) = self.command_availability_at_node(
+            let Some(parent) = Self::dispatch_snapshot_parent_for_node(
+                dispatch_snapshot,
+                node_id,
+                "command availability bubble",
+            ) else {
+                break;
+            };
+            let availability = self.command_availability_at_node(
                 app,
                 input_ctx,
                 node_id,
@@ -1174,6 +1198,29 @@ impl<H: UiHost> UiTree<H> {
         (CommandAvailability::NotHandled, None)
     }
 
+    fn dispatch_snapshot_parent_for_node(
+        snapshot: &UiDispatchSnapshot,
+        node: NodeId,
+        context: &'static str,
+    ) -> Option<Option<NodeId>> {
+        if snapshot.pre.get(node).is_none() {
+            debug_assert!(
+                false,
+                "{context}: node missing from dispatch snapshot (node={node:?}, frame_id={:?}, window={:?})",
+                snapshot.frame_id, snapshot.window
+            );
+            return None;
+        }
+        Some(snapshot.parent.get(node).copied().flatten())
+    }
+
+    fn dispatch_command_source_node_in_snapshot(
+        snapshot: &UiDispatchSnapshot,
+        source_node: Option<NodeId>,
+    ) -> Option<NodeId> {
+        source_node.filter(|&node| snapshot.pre.get(node).is_some())
+    }
+
     fn command_availability_at_node(
         &mut self,
         app: &mut H,
@@ -1181,7 +1228,7 @@ impl<H: UiHost> UiTree<H> {
         node_id: NodeId,
         command: &CommandId,
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
-    ) -> (CommandAvailability, Option<NodeId>) {
+    ) -> CommandAvailability {
         self.command_availability_at_node_with_interest_route(
             app,
             input_ctx,
@@ -1200,8 +1247,7 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         route: CommandAvailabilityInterestRoute,
         mut publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
-    ) -> (CommandAvailability, Option<NodeId>) {
-        let parent = self.nodes.get(node_id).and_then(|n| n.parent);
+    ) -> CommandAvailability {
         let may_handle = if let Some(cache) = publication_cache.as_mut() {
             self.declarative_node_may_handle_command_availability(
                 app,
@@ -1216,7 +1262,7 @@ impl<H: UiHost> UiTree<H> {
             )
         };
         if !may_handle {
-            return (CommandAvailability::NotHandled, parent);
+            return CommandAvailability::NotHandled;
         }
 
         #[cfg(test)]
@@ -1236,7 +1282,7 @@ impl<H: UiHost> UiTree<H> {
             widget.command_availability(&mut cx, command)
         });
 
-        (availability, parent)
+        availability
     }
 
     fn declarative_node_may_handle_command_availability(
@@ -1378,6 +1424,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
+        dispatch_snapshot: &UiDispatchSnapshot,
         start: NodeId,
         command: &CommandId,
         route: &'static str,
@@ -1389,8 +1436,14 @@ impl<H: UiHost> UiTree<H> {
         } else {
             None
         };
-        let (availability, resolved_node) =
-            self.command_availability_from_node(app, input_ctx, start, command, publication_cache);
+        let (availability, resolved_node) = self.command_availability_from_node(
+            app,
+            input_ctx,
+            dispatch_snapshot,
+            start,
+            command,
+            publication_cache,
+        );
         if let Some(start_time) = start_time {
             self.debug_record_command_availability_hotspot(
                 app,
@@ -1469,7 +1522,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            let (availability, _) = self.command_availability_at_node_with_interest_route(
+            let availability = self.command_availability_at_node_with_interest_route(
                 app,
                 input_ctx,
                 node,
@@ -1531,6 +1584,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
+        dispatch_snapshot: &UiDispatchSnapshot,
         command: &CommandId,
     ) -> (CommandAvailability, Option<NodeId>) {
         let Some(window) = self.window else {
@@ -1540,7 +1594,13 @@ impl<H: UiHost> UiTree<H> {
         let roots = crate::elements::action_route_fallback_roots(app, window);
         let (availability, resolved_node, _) = self
             .command_availability_in_action_route_fallback_root_elements(
-                app, input_ctx, command, window, roots, None,
+                app,
+                input_ctx,
+                dispatch_snapshot,
+                command,
+                window,
+                roots,
+                None,
             );
         (availability, resolved_node)
     }
@@ -1549,6 +1609,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
+        dispatch_snapshot: &UiDispatchSnapshot,
         command: &CommandId,
         window: AppWindowId,
         roots: impl IntoIterator<Item = GlobalElementId>,
@@ -1565,6 +1626,7 @@ impl<H: UiHost> UiTree<H> {
             let (availability, resolved_node) = self.command_availability_from_node(
                 app,
                 input_ctx,
+                dispatch_snapshot,
                 node,
                 command,
                 publication_cache.as_deref_mut(),
@@ -1592,6 +1654,7 @@ impl<H: UiHost> UiTree<H> {
         command: &CommandId,
         route: &'static str,
         window: AppWindowId,
+        dispatch_snapshot: &UiDispatchSnapshot,
         publication_cache: Option<&mut CommandAvailabilityPublicationCache>,
     ) -> (CommandAvailability, Option<NodeId>) {
         let start_time = if self.debug_enabled {
@@ -1604,6 +1667,7 @@ impl<H: UiHost> UiTree<H> {
             self.command_availability_in_action_route_fallback_root_elements(
                 app,
                 input_ctx,
+                dispatch_snapshot,
                 command,
                 active_window,
                 roots,
@@ -1717,7 +1781,8 @@ impl<H: UiHost> UiTree<H> {
 
         let default_root = barrier_root.unwrap_or(base_root);
         let focus = self.focus;
-        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
+        let focus_in_default_root =
+            focus.is_some_and(|n| dispatch_snapshot.is_descendant(default_root, n));
         let start = focus.unwrap_or(default_root);
         let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
         let menu_bar_present = app
@@ -1829,6 +1894,7 @@ impl<H: UiHost> UiTree<H> {
                     let (mut availability, _) = self.timed_command_availability_from_node(
                         app,
                         input_ctx,
+                        &dispatch_snapshot,
                         start,
                         &id,
                         "focused_or_default",
@@ -1844,6 +1910,7 @@ impl<H: UiHost> UiTree<H> {
                             .timed_command_availability_from_node(
                                 app,
                                 input_ctx,
+                                &dispatch_snapshot,
                                 default_root,
                                 &id,
                                 "default_root_fallback",
@@ -1877,6 +1944,7 @@ impl<H: UiHost> UiTree<H> {
                                 &id,
                                 "action_route_fallback_roots",
                                 window,
+                                &dispatch_snapshot,
                                 Some(&mut publication_cache),
                             )
                             .0;
@@ -2076,13 +2144,20 @@ impl<H: UiHost> UiTree<H> {
                 crate::GlobalElementId(element),
             )
         });
+        let source_node =
+            Self::dispatch_command_source_node_in_snapshot(&dispatch_snapshot, source_node);
 
         let start = source_node.or(focus).unwrap_or(default_root);
         let start_in_default_root =
-            start == default_root || self.is_descendant(default_root, start);
+            start == default_root || dispatch_snapshot.is_descendant(default_root, start);
         let descendant_fallback_route = if barrier_root.is_none() {
-            let (availability, route_node) =
-                self.command_availability_in_action_route_fallback_roots(app, &input_ctx, command);
+            let (availability, route_node) = self
+                .command_availability_in_action_route_fallback_roots(
+                    app,
+                    &input_ctx,
+                    &dispatch_snapshot,
+                    command,
+                );
             if availability == CommandAvailability::Available {
                 route_node
             } else {
@@ -2111,9 +2186,7 @@ impl<H: UiHost> UiTree<H> {
                     notify_requested,
                     notify_requested_location,
                     stop_bubbling,
-                    parent,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let window = tree.window;
                     let focus = tree.focus;
                     let mut cx = CommandCx {
@@ -2138,7 +2211,6 @@ impl<H: UiHost> UiTree<H> {
                         cx.notify_requested,
                         cx.notify_requested_location,
                         cx.stop_propagation,
-                        parent,
                     )
                 });
 
@@ -2199,6 +2271,13 @@ impl<H: UiHost> UiTree<H> {
                     break;
                 }
 
+                let Some(parent) = Self::dispatch_snapshot_parent_for_node(
+                    &dispatch_snapshot,
+                    node_id,
+                    "command dispatch bubble",
+                ) else {
+                    break;
+                };
                 node_id = match parent {
                     Some(parent) => parent,
                     None => break,

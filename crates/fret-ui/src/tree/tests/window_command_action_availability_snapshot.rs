@@ -1344,6 +1344,63 @@ fn action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback() {
 }
 
 #[test]
+fn action_availability_snapshot_uses_dispatch_snapshot_parent_not_retained_parent() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
+    let detached_handler = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let (_active_roots, barrier_root) = ui.active_input_layers();
+    let (active_focus_roots, focus_barrier_root) = ui.active_focus_layers();
+    let barrier_root = focus_barrier_root.or(barrier_root);
+    let snapshot = ui.cached_dispatch_snapshot_for_layer_roots(
+        app.frame_id(),
+        &active_focus_roots,
+        barrier_root,
+    );
+    assert!(snapshot.pre.get(leaf).is_some());
+    assert!(snapshot.pre.get(detached_handler).is_none());
+
+    ui.test_set_node_parent(leaf, Some(detached_handler));
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        query_count, 0,
+        "snapshot publication must not query availability through retained parents outside the dispatch snapshot"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(false)
+    );
+}
+
+#[test]
 fn action_availability_no_focus_subtree_fallback_scans_each_node_once_per_command() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

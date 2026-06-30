@@ -121,6 +121,51 @@ fn command_availability_falls_back_to_default_root_when_focus_in_other_layer() {
 }
 
 #[test]
+fn command_availability_uses_dispatch_snapshot_parent_not_retained_parent() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let cmd = CommandId::from("test.cmd");
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(AvailabilityWidget {
+        command: cmd.clone(),
+        result: CommandAvailability::NotHandled,
+    });
+    let detached_handler = ui.create_node(AvailabilityWidget {
+        command: cmd.clone(),
+        result: CommandAvailability::Available,
+    });
+
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    let (_active_roots, barrier_root) = ui.active_input_layers();
+    let (active_focus_roots, focus_barrier_root) = ui.active_focus_layers();
+    let barrier_root = focus_barrier_root.or(barrier_root);
+    let snapshot = ui.cached_dispatch_snapshot_for_layer_roots(
+        app.frame_id(),
+        &active_focus_roots,
+        barrier_root,
+    );
+    assert!(snapshot.pre.get(leaf).is_some());
+    assert!(snapshot.pre.get(detached_handler).is_none());
+
+    ui.test_set_node_parent(leaf, Some(detached_handler));
+
+    assert_eq!(
+        ui.command_availability(&mut app, &cmd),
+        CommandAvailability::NotHandled,
+        "command availability must not bubble through retained parents that are outside the dispatch snapshot"
+    );
+}
+
+#[test]
 fn dispatch_command_falls_back_to_default_root_when_focus_in_other_layer() {
     #[derive(Debug)]
     struct HandleCommandWidget {
