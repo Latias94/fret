@@ -524,11 +524,7 @@ fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
                         .cloned()
                     {
                         p.touch_hosted_resources(&fragment.hosted_resources);
-                        p.scene().replay_ops_translated_with_text_blob_ids(
-                            fragment.ops.as_ref(),
-                            Point::new(Px(0.0), Px(0.0)),
-                            fragment.hosted_resources.text_blob_ids(),
-                        );
+                        fragment.replay_translated_into(p.scene(), Point::new(Px(0.0), Px(0.0)));
                         seen.store(fragment.payload.entries, Ordering::SeqCst);
                         p.record_scene_fragment_used_entries(1);
                     }

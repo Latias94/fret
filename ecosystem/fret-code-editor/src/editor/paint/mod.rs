@@ -510,7 +510,7 @@ pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
         origin,
         geom.clone(),
         row_scene_is_rich,
-        fragment.ops.as_ref().to_vec(),
+        fragment.ops().to_vec(),
         row_scene_syntax_replay_key,
         text_cache_max_entries,
         scene::RowSceneStoreSource::PrepaintEdge,

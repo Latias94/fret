@@ -28,6 +28,9 @@ Related:
   `diag stats` top rows and as `top_renderer_*` fields in `diag perf` JSON/repeat summaries for U7 dirty-upload and
   scene-chunk follow-up gates; they are not required in existing checked-in payload baselines until a baseline is
   intentionally re-seeded with a new policy.
+- Portable retained scene fragments now have a core `SceneChunk` carrier. Existing baselines still observe flat
+  `Scene` encoding and full stream uploads; chunk encode reuse, chunk dirty counts, and dirty GPU range upload
+  thresholds should only be required after those renderer paths are intentionally wired and baselines are re-seeded.
 - `python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
   enforces those payload fields for renderer-aware threshold surfaces; missing payload measurements, threshold seeds,
   or hard thresholds are contract failures.

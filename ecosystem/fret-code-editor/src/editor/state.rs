@@ -275,7 +275,7 @@ pub(super) struct RowSceneRetainedFragment {
     pub(super) origin: Point,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
-    pub(super) ops: Arc<[SceneOp]>,
+    pub(super) chunk: fret_core::SceneChunk,
     pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
 }
 

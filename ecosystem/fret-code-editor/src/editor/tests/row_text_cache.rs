@@ -200,7 +200,7 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
             preedit: None,
         },
         is_rich: false,
-        ops: Arc::from(Vec::<SceneOp>::new()),
+        chunk: fret_core::SceneChunk::default(),
         hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
     })
 }
@@ -246,7 +246,7 @@ fn retained_row_scene_origin_preserves_bounds_offset() {
             preedit: None,
         },
         is_rich: false,
-        ops: Arc::from(Vec::<SceneOp>::new()),
+        chunk: fret_core::SceneChunk::default(),
         hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
     };
 
@@ -362,15 +362,15 @@ fn prepaint_row_scene_replay_plan_aggregates_hosted_resources_once() {
             .row_rect(content_bounds, row)
             .expect("test row should be visible");
         let text_blob = test_text_blob_id((row + 1) as u64);
-        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Text {
+        let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Text {
             order: DrawOrder(2),
             origin: rect.origin,
             text: text_blob,
             paint: fret_core::Paint::Solid(fg).into(),
             outline: None,
             shadow: None,
-        }]);
-        let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+        }]));
+        let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(chunk.ops());
         st.row_scene_cache.insert(
             row,
             (
@@ -391,7 +391,7 @@ fn prepaint_row_scene_replay_plan_aggregates_hosted_resources_once() {
                             preedit: None,
                         },
                         is_rich: false,
-                        ops,
+                        chunk,
                         hosted_resources,
                     }),
                     syntax_replay_key: None,
@@ -559,7 +559,7 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
             if let Some((old, _)) = st.row_scene_cache.remove(&row) {
                 st.row_scene_cache_scene_ops_len_total = st
                     .row_scene_cache_scene_ops_len_total
-                    .saturating_sub(old.retained.ops.len() as u64);
+                    .saturating_sub(old.retained.chunk.ops_len() as u64);
             }
         }
         st.baseline_measure_cache = None;
@@ -731,14 +731,14 @@ fn prepaint_row_scene_replay_plan_reuses_stable_window_plan() {
             st.font_stack_key,
         );
         let row_scene_key = RowSceneKey::plain(row_geom_key.clone(), fg);
-        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Quad {
+        let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Quad {
             order: DrawOrder(2),
             rect,
             background: fret_core::Paint::Solid(fg).into(),
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
-        }]);
+        }]));
         st.row_scene_cache.insert(
             row,
             (
@@ -760,9 +760,9 @@ fn prepaint_row_scene_replay_plan_reuses_stable_window_plan() {
                         },
                         is_rich: false,
                         hosted_resources: fret_ui::canvas::CanvasHostedResources::from_scene_ops(
-                            ops.as_ref(),
+                            chunk.ops(),
                         ),
-                        ops,
+                        chunk,
                     }),
                     syntax_replay_key: None,
                 },
@@ -1109,14 +1109,14 @@ fn prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit(
             st.font_stack_key,
         );
         let row_scene_key = RowSceneKey::plain(row_geom_key.clone(), fg);
-        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Quad {
+        let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Quad {
             order: DrawOrder(2),
             rect,
             background: fret_core::Paint::Solid(fg).into(),
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
-        }]);
+        }]));
         st.row_scene_cache.insert(
             row,
             (
@@ -1138,9 +1138,9 @@ fn prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit(
                         },
                         is_rich: false,
                         hosted_resources: fret_ui::canvas::CanvasHostedResources::from_scene_ops(
-                            ops.as_ref(),
+                            chunk.ops(),
                         ),
-                        ops,
+                        chunk,
                     }),
                     syntax_replay_key: None,
                 },
@@ -1337,15 +1337,15 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
         has_preedit: false,
         preedit: None,
     };
-    let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Quad {
+    let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Quad {
         order: DrawOrder(2),
         rect: content_bounds,
         background: fret_core::Paint::Solid(fg).into(),
         border: Edges::all(Px(0.0)),
         border_paint: fret_core::Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
-    }]);
-    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+    }]));
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(chunk.ops());
     st.row_scene_cache.insert(
         0,
         (
@@ -1357,7 +1357,7 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
                     origin: content_bounds.origin,
                     geom,
                     is_rich: true,
-                    ops,
+                    chunk,
                     hosted_resources,
                 }),
                 syntax_replay_key: Some(syntax_replay_key),
@@ -1491,7 +1491,7 @@ fn prepaint_row_scene_replay_plan_rejects_plain_rows_when_fg_changes() {
                         preedit: None,
                     },
                     is_rich: false,
-                    ops: Arc::from(Vec::<SceneOp>::new()),
+                    chunk: fret_core::SceneChunk::default(),
                     hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
                 }),
                 syntax_replay_key: None,

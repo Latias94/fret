@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use fret_core::scene::{Paint, PaintBindingV1};
+use fret_core::scene::{Paint, PaintBindingV1, SceneChunk};
 use fret_core::{
     AttributedText, Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, FontId,
     FontWeight, Point, Px, Rect, Scene, SceneOp, SvgFit, TextConstraints, TextMetrics,
@@ -31,7 +31,7 @@ pub struct CanvasHostedResourceTouchCounts {
 #[derive(Debug, Clone)]
 pub struct CanvasSceneFragment<T> {
     pub payload: T,
-    pub ops: Arc<[SceneOp]>,
+    pub chunk: SceneChunk,
     pub hosted_resources: CanvasHostedResources,
     pub local_bounds: Rect,
     pub scene_origin: Point,
@@ -45,13 +45,40 @@ impl<T> CanvasSceneFragment<T> {
         local_bounds: Rect,
         scene_origin: Point,
     ) -> Self {
+        let chunk = SceneChunk::from_ops(ops);
+        Self::from_chunk(payload, chunk, hosted_resources, local_bounds, scene_origin)
+    }
+
+    pub fn from_chunk(
+        payload: T,
+        chunk: SceneChunk,
+        hosted_resources: CanvasHostedResources,
+        local_bounds: Rect,
+        scene_origin: Point,
+    ) -> Self {
         Self {
             payload,
-            ops,
+            chunk,
             hosted_resources,
             local_bounds,
             scene_origin,
         }
+    }
+
+    pub fn ops(&self) -> &[SceneOp] {
+        self.chunk.ops()
+    }
+
+    pub fn text_blob_ids(&self) -> &[fret_core::TextBlobId] {
+        self.chunk.text_blob_ids()
+    }
+
+    pub fn fingerprint(&self) -> u64 {
+        self.chunk.fingerprint()
+    }
+
+    pub fn replay_translated_into(&self, scene: &mut Scene, delta: Point) {
+        self.chunk.replay_translated_into(scene, delta);
     }
 }
 
@@ -386,9 +413,15 @@ impl<'a> CanvasPrepaintCx<'a> {
             scene: Scene::default(),
         };
         let payload = prepare(&mut painter);
-        let ops: Arc<[SceneOp]> = Arc::from(painter.scene.ops().to_vec());
-        let hosted_resources = CanvasHostedResources::from_scene_ops(ops.as_ref());
-        CanvasSceneFragment::new(payload, ops, hosted_resources, local_bounds, scene_origin)
+        let chunk = SceneChunk::from_scene(&painter.scene);
+        let hosted_resources = CanvasHostedResources::from_scene_ops(chunk.ops());
+        CanvasSceneFragment::from_chunk(
+            payload,
+            chunk,
+            hosted_resources,
+            local_bounds,
+            scene_origin,
+        )
     }
 
     /// Run a closure with a scratch prepaint painter.
@@ -456,9 +489,15 @@ impl<'a> CanvasPrepaintPainter<'a> {
         local_bounds: Rect,
         scene_origin: Point,
     ) -> CanvasSceneFragment<T> {
-        let ops: Arc<[SceneOp]> = Arc::from(self.scene.ops().to_vec());
-        let hosted_resources = CanvasHostedResources::from_scene_ops(ops.as_ref());
-        CanvasSceneFragment::new(payload, ops, hosted_resources, local_bounds, scene_origin)
+        let chunk = SceneChunk::from_scene(&self.scene);
+        let hosted_resources = CanvasHostedResources::from_scene_ops(chunk.ops());
+        CanvasSceneFragment::from_chunk(
+            payload,
+            chunk,
+            hosted_resources,
+            local_bounds,
+            scene_origin,
+        )
     }
 
     /// Access UI services and the scratch scene backing this prepaint fragment.

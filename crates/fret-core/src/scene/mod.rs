@@ -6,6 +6,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
+mod chunk;
 mod composite;
 mod fingerprint;
 mod image_object_fit;
@@ -16,6 +17,7 @@ mod shadow;
 mod stroke;
 mod validate;
 
+pub use chunk::SceneChunk;
 pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
@@ -1396,6 +1398,57 @@ mod tests {
         assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
         assert!(matches!(scene.ops()[3], SceneOp::PopTransform));
         assert_eq!(scene.text_blob_ids(), &[first, second]);
+    }
+
+    #[test]
+    fn scene_chunk_replay_matches_flat_replay_and_keeps_text_blob_index() {
+        let first = text_blob_id(1);
+        let second = text_blob_id(2);
+        let ops = std::sync::Arc::<[SceneOp]>::from(vec![
+            text_op(first),
+            SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+                background: Paint::Solid(Color::TRANSPARENT).into(),
+                border: Edges::all(Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::all(Px(0.0)),
+            },
+            text_op(second),
+        ]);
+        let chunk = SceneChunk::from_ops(std::sync::Arc::clone(&ops));
+
+        let mut flat = Scene::default();
+        flat.replay_ops(ops.as_ref());
+        let mut replayed = Scene::default();
+        chunk.replay_into(&mut replayed);
+
+        assert_eq!(chunk.ops_len(), 3);
+        assert_eq!(chunk.text_blob_ids(), &[first, second]);
+        assert_eq!(chunk.fingerprint(), flat.fingerprint());
+        assert_eq!(replayed.ops_len(), flat.ops_len());
+        assert!(matches!(replayed.ops()[0], SceneOp::Text { text, .. } if text == first));
+        assert!(matches!(replayed.ops()[1], SceneOp::Quad { .. }));
+        assert!(matches!(replayed.ops()[2], SceneOp::Text { text, .. } if text == second));
+        assert_eq!(replayed.text_blob_ids(), flat.text_blob_ids());
+        assert_eq!(replayed.fingerprint(), flat.fingerprint());
+    }
+
+    #[test]
+    fn scene_chunk_translated_replay_wraps_ops_and_keeps_chunk_fingerprint_stable() {
+        let first = text_blob_id(1);
+        let ops = std::sync::Arc::<[SceneOp]>::from(vec![text_op(first)]);
+        let chunk = SceneChunk::from_ops(std::sync::Arc::clone(&ops));
+        let chunk_fingerprint = chunk.fingerprint();
+
+        let mut scene = Scene::default();
+        chunk.replay_translated_into(&mut scene, Point::new(Px(2.0), Px(3.0)));
+
+        assert_eq!(chunk.fingerprint(), chunk_fingerprint);
+        assert_eq!(scene.ops_len(), 3);
+        assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
+        assert!(matches!(scene.ops()[2], SceneOp::PopTransform));
+        assert_eq!(scene.text_blob_ids(), &[first]);
     }
 
     #[test]

@@ -471,11 +471,10 @@ pub(super) fn replay_row_scene_plan_entry(
         }
     }
     let replay_started = st.paint_perf_enabled.then(Instant::now);
-    painter.scene().replay_ops_translated_with_text_blob_ids(
-        entry.retained.ops.as_ref(),
-        replay_delta,
-        entry.retained.hosted_resources.text_blob_ids(),
-    );
+    entry
+        .retained
+        .chunk
+        .replay_translated_into(painter.scene(), replay_delta);
     if let Some(started) = replay_started {
         add_paint_perf_elapsed(
             &mut st.paint_perf_frame.us_row_scene_replay_ops,
@@ -581,11 +580,10 @@ pub(super) fn try_replay_row_scene_cache_fast_syntax(
                         );
                     }
                     let replay_started = st.paint_perf_enabled.then(Instant::now);
-                    painter.scene().replay_ops_translated_with_text_blob_ids(
-                        cached.retained.ops.as_ref(),
-                        replay_delta,
-                        cached.retained.hosted_resources.text_blob_ids(),
-                    );
+                    cached
+                        .retained
+                        .chunk
+                        .replay_translated_into(painter.scene(), replay_delta);
                     if let Some(started) = replay_started {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_replay_ops,
@@ -708,11 +706,10 @@ pub(super) fn try_replay_row_scene_cache(
                         );
                     }
                     let replay_started = st.paint_perf_enabled.then(Instant::now);
-                    painter.scene().replay_ops_translated_with_text_blob_ids(
-                        cached.retained.ops.as_ref(),
-                        replay_delta,
-                        cached.retained.hosted_resources.text_blob_ids(),
-                    );
+                    cached
+                        .retained
+                        .chunk
+                        .replay_translated_into(painter.scene(), replay_delta);
                     if let Some(started) = replay_started {
                         add_paint_perf_elapsed(
                             &mut st.paint_perf_frame.us_row_scene_replay_ops,
@@ -808,15 +805,15 @@ pub(super) fn store_row_scene_cache(
     st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
     let tick = st.row_scene_cache_tick;
     let ops_len = ops.len() as u64;
-    let ops: Arc<[SceneOp]> = Arc::from(ops);
-    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+    let chunk = fret_core::SceneChunk::from_ops(Arc::from(ops));
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(chunk.ops());
     let retained = Arc::new(RowSceneRetainedFragment {
         content,
         local_bounds,
         origin,
         geom,
         is_rich,
-        ops,
+        chunk,
         hosted_resources,
     });
 
@@ -834,7 +831,7 @@ pub(super) fn store_row_scene_cache(
     if let Some((old, _)) = replaced {
         st.row_scene_cache_scene_ops_len_total = st
             .row_scene_cache_scene_ops_len_total
-            .saturating_sub(old.retained.ops.len() as u64);
+            .saturating_sub(old.retained.chunk.ops_len() as u64);
     }
     st.row_scene_cache_scene_ops_len_total = st
         .row_scene_cache_scene_ops_len_total
@@ -858,7 +855,7 @@ pub(super) fn store_row_scene_cache(
             if let Some((old, _)) = st.row_scene_cache.remove(&victim) {
                 st.row_scene_cache_scene_ops_len_total = st
                     .row_scene_cache_scene_ops_len_total
-                    .saturating_sub(old.retained.ops.len() as u64);
+                    .saturating_sub(old.retained.chunk.ops_len() as u64);
             }
             st.cache_stats.row_scene_evictions =
                 st.cache_stats.row_scene_evictions.saturating_add(1);
@@ -940,15 +937,15 @@ pub(super) fn store_row_scene_cache(
     st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
     let tick = st.row_scene_cache_tick;
     let ops_len = ops.len() as u64;
-    let ops: Arc<[SceneOp]> = Arc::from(ops);
-    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+    let chunk = fret_core::SceneChunk::from_ops(Arc::from(ops));
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(chunk.ops());
     let retained = Arc::new(RowSceneRetainedFragment {
         content,
         local_bounds,
         origin,
         geom,
         is_rich,
-        ops,
+        chunk,
         hosted_resources,
     });
 
@@ -965,7 +962,7 @@ pub(super) fn store_row_scene_cache(
     if let Some((old, _)) = replaced {
         st.row_scene_cache_scene_ops_len_total = st
             .row_scene_cache_scene_ops_len_total
-            .saturating_sub(old.retained.ops.len() as u64);
+            .saturating_sub(old.retained.chunk.ops_len() as u64);
     }
     st.row_scene_cache_scene_ops_len_total = st
         .row_scene_cache_scene_ops_len_total
@@ -989,7 +986,7 @@ pub(super) fn store_row_scene_cache(
             if let Some((old, _)) = st.row_scene_cache.remove(&victim) {
                 st.row_scene_cache_scene_ops_len_total = st
                     .row_scene_cache_scene_ops_len_total
-                    .saturating_sub(old.retained.ops.len() as u64);
+                    .saturating_sub(old.retained.chunk.ops_len() as u64);
             }
             st.cache_stats.row_scene_evictions =
                 st.cache_stats.row_scene_evictions.saturating_add(1);
