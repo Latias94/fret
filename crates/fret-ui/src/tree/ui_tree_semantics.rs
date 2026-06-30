@@ -384,34 +384,46 @@ impl<H: UiHost> UiTree<H> {
                         if can_reuse_previous_snapshot
                             && !ancestor_rebuilt
                             && subtree_semantics_dirty_count == 0
-                            && let (Some(previous_nodes), Some(previous_ranges)) =
-                                (previous_nodes, previous_ranges.as_ref())
-                            && let Some((start, end)) = previous_ranges.get(&id).copied()
-                            && let Some(previous_root) = previous_nodes.get(start)
                         {
-                            if previous_root.parent == parent && previous_root.bounds == bounds {
-                                nodes.extend(previous_nodes[start..end].iter().cloned());
+                            if self.view_boundaries.get(id).is_some_and(|boundary| {
+                                boundary
+                                    .frame_products
+                                    .semantics
+                                    .reuse_subtree(parent, bounds, &mut nodes)
+                            }) {
                                 continue;
                             }
 
-                            if previous_root.parent == parent
-                                && previous_root.bounds.size == bounds.size
+                            if let (Some(previous_nodes), Some(previous_ranges)) =
+                                (previous_nodes, previous_ranges.as_ref())
+                                && let Some((start, end)) = previous_ranges.get(&id).copied()
+                                && let Some(previous_root) = previous_nodes.get(start)
                             {
-                                let dx = bounds.origin.x - previous_root.bounds.origin.x;
-                                let dy = bounds.origin.y - previous_root.bounds.origin.y;
-                                for previous in &previous_nodes[start..end] {
-                                    let mut reused = previous.clone();
-                                    reused.bounds.origin = Point::new(
-                                        reused.bounds.origin.x + dx,
-                                        reused.bounds.origin.y + dy,
-                                    );
-                                    nodes.push(reused);
+                                if previous_root.parent == parent && previous_root.bounds == bounds
+                                {
+                                    nodes.extend(previous_nodes[start..end].iter().cloned());
+                                    continue;
                                 }
-                                continue;
-                            }
 
-                            if previous_root.bounds != bounds {
-                                node_geometry_changed = true;
+                                if previous_root.parent == parent
+                                    && previous_root.bounds.size == bounds.size
+                                {
+                                    let dx = bounds.origin.x - previous_root.bounds.origin.x;
+                                    let dy = bounds.origin.y - previous_root.bounds.origin.y;
+                                    for previous in &previous_nodes[start..end] {
+                                        let mut reused = previous.clone();
+                                        reused.bounds.origin = Point::new(
+                                            reused.bounds.origin.x + dx,
+                                            reused.bounds.origin.y + dy,
+                                        );
+                                        nodes.push(reused);
+                                    }
+                                    continue;
+                                }
+
+                                if previous_root.bounds != bounds {
+                                    node_geometry_changed = true;
+                                }
                             }
                         }
 
@@ -632,7 +644,7 @@ impl<H: UiHost> UiTree<H> {
         let t_relations = relations_elapsed;
 
         let nodes_len = nodes.len();
-        self.semantics = Some(Arc::new(SemanticsSnapshot {
+        let snapshot = Arc::new(SemanticsSnapshot {
             window,
             roots,
             barrier_root,
@@ -640,7 +652,12 @@ impl<H: UiHost> UiTree<H> {
             focus,
             captured,
             nodes,
-        }));
+        });
+        self.publish_boundary_semantics_products(
+            Arc::clone(&snapshot),
+            can_reuse_previous_snapshot,
+        );
+        self.semantics = Some(snapshot);
         self.semantics_dirty = false;
         if self.semantics_dirty_all || !can_reuse_previous_snapshot {
             self.clear_all_semantics_dirty_tracking();
@@ -666,6 +683,34 @@ impl<H: UiHost> UiTree<H> {
                 relations_ms = t_relations.map(|d| d.as_millis()),
                 "semantics snapshot built"
             );
+        }
+    }
+
+    fn publish_boundary_semantics_products(
+        &mut self,
+        snapshot: Arc<SemanticsSnapshot>,
+        can_reuse_previous_snapshot: bool,
+    ) {
+        if !can_reuse_previous_snapshot {
+            for (_, boundary) in self.view_boundaries.iter_mut() {
+                boundary.frame_products.semantics.clear();
+            }
+        }
+
+        if self.view_boundaries.is_empty() {
+            return;
+        }
+
+        let ranges = semantics_subtree_ranges(&snapshot);
+        for (id, boundary) in self.view_boundaries.iter_mut() {
+            if let Some((start, end)) = ranges.get(&id).copied() {
+                boundary
+                    .frame_products
+                    .semantics
+                    .set_subtree(Arc::clone(&snapshot), start, end);
+            } else {
+                boundary.frame_products.semantics.clear();
+            }
         }
     }
 

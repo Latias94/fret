@@ -203,6 +203,81 @@ fn semantics_snapshot_reuses_clean_subtrees_between_dirty_refreshes() {
 }
 
 #[test]
+fn semantics_subtree_reuse_product_is_owned_by_view_boundary_state() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    ui.set_root(root);
+
+    let boundary_calls = Arc::new(AtomicUsize::new(0));
+    let boundary = ui.create_node(CountingSemantics {
+        label: "boundary",
+        calls: boundary_calls.clone(),
+    });
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    let boundary_leaf_calls = Arc::new(AtomicUsize::new(0));
+    let boundary_leaf = ui.create_node(CountingSemantics {
+        label: "boundary-leaf",
+        calls: boundary_leaf_calls.clone(),
+    });
+    let dirty_calls = Arc::new(AtomicUsize::new(0));
+    let dirty_sibling = ui.create_node(CountingSemantics {
+        label: "dirty",
+        calls: dirty_calls.clone(),
+    });
+
+    ui.add_child(root, boundary);
+    ui.add_child(boundary, boundary_leaf);
+    ui.add_child(root, dirty_sibling);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(boundary_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(boundary_leaf_calls.load(Ordering::Relaxed), 1);
+    assert!(ui.test_view_boundary_semantics_has_subtree(boundary));
+    let boundary_stats = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|stats| stats.id == boundary)
+        .expect("boundary diagnostics");
+    assert_eq!(
+        boundary_stats.semantics_subtree_owner,
+        "view_boundary_semantics_state"
+    );
+
+    ui.mark_invalidation_with_source(
+        dirty_sibling,
+        Invalidation::Paint,
+        UiDebugInvalidationSource::Notify,
+    );
+    assert!(ui.request_semantics_snapshot_if_dirty());
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        boundary_calls.load(Ordering::Relaxed),
+        1,
+        "clean boundary root should replay from the boundary-owned semantics subtree product"
+    );
+    assert_eq!(
+        boundary_leaf_calls.load(Ordering::Relaxed),
+        1,
+        "clean boundary descendants should replay from the boundary-owned semantics subtree product"
+    );
+    assert_eq!(dirty_calls.load(Ordering::Relaxed), 2);
+}
+
+#[test]
 fn semantics_snapshot_exposes_focus_barrier_root_independently_of_pointer_barrier() {
     let mut app = crate::test_host::TestHost::new();
 

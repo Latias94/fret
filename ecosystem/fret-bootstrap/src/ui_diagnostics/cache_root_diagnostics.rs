@@ -66,6 +66,8 @@ pub struct UiBoundaryDiagnosticsV1 {
     #[serde(default)]
     pub hit_test_bounds_owner: String,
     #[serde(default)]
+    pub semantics_subtree_owner: String,
+    #[serde(default)]
     pub interaction_cache_owner: String,
     pub paint_cache_owner: String,
     pub scene_fragment_owner: String,
@@ -116,6 +118,7 @@ impl UiBoundaryDiagnosticsV1 {
                 .and_then(|detail| detail.as_str().map(str::to_string)),
             prepaint_owner: boundary.prepaint_owner.to_string(),
             hit_test_bounds_owner: boundary.hit_test_bounds_owner.to_string(),
+            semantics_subtree_owner: boundary.semantics_subtree_owner.to_string(),
             interaction_cache_owner: boundary.interaction_cache_owner.to_string(),
             paint_cache_owner: boundary.paint_cache_owner.to_string(),
             scene_fragment_owner: boundary.scene_fragment_owner.to_string(),
@@ -140,6 +143,7 @@ impl UiBoundaryDiagnosticsV1 {
         truncate_opt_string_bytes(&mut out.layout_dirty_detail, max_debug_string_bytes);
         truncate_string_bytes(&mut out.prepaint_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.hit_test_bounds_owner, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.semantics_subtree_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.interaction_cache_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.paint_cache_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.scene_fragment_owner, max_debug_string_bytes);
@@ -466,6 +470,7 @@ mod cache_root_boundary_tests {
             source: "view_cache",
             prepaint_owner: "view_boundary_prepaint_state",
             hit_test_bounds_owner: "view_boundary_hit_test_bounds_state",
+            semantics_subtree_owner: "view_boundary_semantics_state",
             interaction_cache_owner: "view_boundary_interaction_cache_state",
             paint_cache_owner: "view_boundary_paint_cache_state",
             scene_fragment_owner: "view_boundary_scene_fragment_state",
@@ -511,6 +516,10 @@ mod cache_root_boundary_tests {
         assert_eq!(
             boundary.hit_test_bounds_owner,
             "view_boundary_hit_test_bounds_state"
+        );
+        assert_eq!(
+            boundary.semantics_subtree_owner,
+            "view_boundary_semantics_state"
         );
         assert_eq!(
             boundary.interaction_cache_owner,

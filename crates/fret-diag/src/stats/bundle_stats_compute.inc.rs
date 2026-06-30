@@ -4074,6 +4074,10 @@ fn snapshot_cache_root_stats(
                     .and_then(|v| v.get("hit_test_bounds_owner"))
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
+                boundary_semantics_subtree_owner: boundary
+                    .and_then(|v| v.get("semantics_subtree_owner"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 boundary_interaction_cache_owner: boundary
                     .and_then(|v| v.get("interaction_cache_owner"))
                     .and_then(|v| v.as_str())

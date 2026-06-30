@@ -2146,6 +2146,7 @@ pub(super) struct BundleStatsCacheRoot {
     pub(super) boundary_layout_outcome: Option<String>,
     pub(super) boundary_prepaint_owner: Option<String>,
     pub(super) boundary_hit_test_bounds_owner: Option<String>,
+    pub(super) boundary_semantics_subtree_owner: Option<String>,
     pub(super) boundary_interaction_cache_owner: Option<String>,
     pub(super) boundary_paint_outcome: Option<String>,
 }
@@ -2158,6 +2159,7 @@ fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
         || c.boundary_layout_outcome.is_some()
         || c.boundary_prepaint_owner.is_some()
         || c.boundary_hit_test_bounds_owner.is_some()
+        || c.boundary_semantics_subtree_owner.is_some()
         || c.boundary_interaction_cache_owner.is_some()
         || c.boundary_paint_outcome.is_some();
     if !has_boundary {
@@ -2184,6 +2186,9 @@ fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
     if let Some(value) = c.boundary_hit_test_bounds_owner.as_deref() {
         s.push_str(&format!(" hit_test_bounds={value}"));
     }
+    if let Some(value) = c.boundary_semantics_subtree_owner.as_deref() {
+        s.push_str(&format!(" semantics={value}"));
+    }
     if let Some(value) = c.boundary_interaction_cache_owner.as_deref() {
         s.push_str(&format!(" interaction={value}"));
     }
@@ -2201,6 +2206,7 @@ fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleSta
         || c.boundary_layout_outcome.is_some()
         || c.boundary_prepaint_owner.is_some()
         || c.boundary_hit_test_bounds_owner.is_some()
+        || c.boundary_semantics_subtree_owner.is_some()
         || c.boundary_interaction_cache_owner.is_some()
         || c.boundary_paint_outcome.is_some();
     if !has_boundary {
@@ -2250,6 +2256,13 @@ fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleSta
     boundary.insert(
         "hit_test_bounds_owner".to_string(),
         c.boundary_hit_test_bounds_owner
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "semantics_subtree_owner".to_string(),
+        c.boundary_semantics_subtree_owner
             .clone()
             .map(Value::from)
             .unwrap_or(Value::Null),

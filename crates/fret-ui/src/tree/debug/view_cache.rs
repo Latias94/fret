@@ -19,6 +19,7 @@ pub struct UiDebugBoundaryStats {
     pub source: &'static str,
     pub prepaint_owner: &'static str,
     pub hit_test_bounds_owner: &'static str,
+    pub semantics_subtree_owner: &'static str,
     pub interaction_cache_owner: &'static str,
     pub paint_cache_owner: &'static str,
     pub scene_fragment_owner: &'static str,

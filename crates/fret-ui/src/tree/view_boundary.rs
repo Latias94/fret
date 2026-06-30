@@ -1,6 +1,7 @@
 use super::*;
 use std::any::{Any, TypeId};
 use std::collections::HashSet;
+use std::sync::Arc;
 
 pub trait BoundarySceneFragmentDebug: Any {
     fn boundary_scene_fragment_entry_count(&self) -> usize;
@@ -114,6 +115,7 @@ pub(super) struct BoundaryFrameProducts {
     pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
     pub(super) hit_test_bounds: bounds_tree::BoundaryHitTestBoundsState,
+    pub(super) semantics: BoundarySemanticsState,
     pub(super) interaction_cache: BoundaryInteractionCacheState,
     pub(super) scene_fragment: BoundarySceneFragmentState,
     pub(super) paint_cache: BoundaryPaintCacheState,
@@ -156,6 +158,12 @@ pub(in crate::tree) struct BoundaryInteractionCacheState {
 }
 
 #[derive(Default)]
+pub(in crate::tree) struct BoundarySemanticsState {
+    snapshot: Option<Arc<SemanticsSnapshot>>,
+    range: Option<(usize, usize)>,
+}
+
+#[derive(Default)]
 pub(in crate::tree) struct PaintCacheEntryState {
     entry: Option<PaintCacheEntry>,
 }
@@ -195,6 +203,72 @@ impl BoundaryPaintCacheState {
 
     pub(super) fn has_entry(&self) -> bool {
         self.entry.is_some()
+    }
+}
+
+impl BoundarySemanticsState {
+    pub(super) fn set_subtree(
+        &mut self,
+        snapshot: Arc<SemanticsSnapshot>,
+        start: usize,
+        end: usize,
+    ) {
+        if start >= end || end > snapshot.nodes.len() {
+            self.clear();
+            return;
+        }
+        self.snapshot = Some(snapshot);
+        self.range = Some((start, end));
+    }
+
+    pub(super) fn clear(&mut self) {
+        self.snapshot = None;
+        self.range = None;
+    }
+
+    pub(super) fn reuse_subtree(
+        &self,
+        parent: Option<NodeId>,
+        bounds: Rect,
+        nodes: &mut Vec<SemanticsNode>,
+    ) -> bool {
+        let Some(snapshot) = self.snapshot.as_ref() else {
+            return false;
+        };
+        let Some((start, end)) = self.range else {
+            return false;
+        };
+        let Some(range) = snapshot.nodes.get(start..end) else {
+            return false;
+        };
+        let Some(previous_root) = range.first() else {
+            return false;
+        };
+        if previous_root.parent != parent {
+            return false;
+        }
+
+        if previous_root.bounds == bounds {
+            nodes.extend(range.iter().cloned());
+            return true;
+        }
+
+        if previous_root.bounds.size == bounds.size {
+            let dx = bounds.origin.x - previous_root.bounds.origin.x;
+            let dy = bounds.origin.y - previous_root.bounds.origin.y;
+            nodes.extend(range.iter().cloned().map(|mut reused| {
+                reused.bounds.origin =
+                    Point::new(reused.bounds.origin.x + dx, reused.bounds.origin.y + dy);
+                reused
+            }));
+            return true;
+        }
+
+        false
+    }
+
+    pub(super) fn has_subtree(&self) -> bool {
+        self.snapshot.is_some() && self.range.is_some()
     }
 }
 
@@ -675,6 +749,11 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     "none"
                 },
+                semantics_subtree_owner: if state.frame_products.semantics.has_subtree() {
+                    "view_boundary_semantics_state"
+                } else {
+                    "none"
+                },
                 interaction_cache_owner: if state.frame_products.interaction_cache.has_entry() {
                     "view_boundary_interaction_cache_state"
                 } else {
@@ -776,6 +855,13 @@ impl<H: UiHost> UiTree<H> {
         self.view_boundaries
             .get(node)
             .is_some_and(|state| state.frame_products.interaction_cache.has_entry())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_view_boundary_semantics_has_subtree(&self, node: NodeId) -> bool {
+        self.view_boundaries
+            .get(node)
+            .is_some_and(|state| state.frame_products.semantics.has_subtree())
     }
 
     #[cfg(test)]
@@ -898,6 +984,67 @@ mod boundary_frame_products_tests {
                 end: 2,
             });
         assert!(state.frame_products.interaction_cache.has_entry());
+
+        let snapshot = Arc::new(SemanticsSnapshot {
+            nodes: vec![
+                SemanticsNode {
+                    id: node(1),
+                    parent: None,
+                    role: SemanticsRole::Generic,
+                    bounds: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+                    flags: Default::default(),
+                    test_id: None,
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("boundary".to_string()),
+                    value: None,
+                    extra: Default::default(),
+                    text_selection: None,
+                    text_composition: None,
+                    actions: Default::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                    inline_spans: Vec::new(),
+                },
+                SemanticsNode {
+                    id: node(2),
+                    parent: Some(node(1)),
+                    role: SemanticsRole::Generic,
+                    bounds: Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+                    flags: Default::default(),
+                    test_id: None,
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("child".to_string()),
+                    value: None,
+                    extra: Default::default(),
+                    text_selection: None,
+                    text_composition: None,
+                    actions: Default::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                    inline_spans: Vec::new(),
+                },
+            ],
+            ..Default::default()
+        });
+        state
+            .frame_products
+            .semantics
+            .set_subtree(Arc::clone(&snapshot), 0, 2);
+        assert!(state.frame_products.semantics.has_subtree());
+        let mut reused = Vec::new();
+        assert!(state.frame_products.semantics.reuse_subtree(
+            None,
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+            &mut reused
+        ));
+        assert_eq!(reused.len(), 2);
+        assert_eq!(reused[1].label.as_deref(), Some("child"));
 
         state.frame_products.scene_fragment.begin_fragment(key);
         state
