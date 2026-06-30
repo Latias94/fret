@@ -158,6 +158,76 @@ anyhow = "1"
     )
 }
 
+pub(super) fn workbench_lite_template_cargo_toml_public(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    version: &str,
+) -> String {
+    workbench_lite_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::Published { version },
+    )
+}
+
+pub(super) fn workbench_lite_template_cargo_toml_repo(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    workspace_prefix: &str,
+) -> String {
+    workbench_lite_template_cargo_toml_with(
+        package_name,
+        opts,
+        DependencySpec::WorkspacePath { workspace_prefix },
+    )
+}
+
+fn workbench_lite_template_cargo_toml_with(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    deps: DependencySpec<'_>,
+) -> String {
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn", "command-palette"];
+    match opts.icon_pack {
+        IconPack::Lucide => {
+            kit_features.push("icons");
+            kit_features.push("preload-icon-svgs");
+        }
+        IconPack::Radix => {
+            // Radix icons are installed via an explicit dependency + install hook (no `fret` feature).
+        }
+        IconPack::None => {}
+    }
+
+    let kit_features = kit_features
+        .into_iter()
+        .map(|f| format!("\"{f}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
+        deps.radix_dependency_line()
+    } else {
+        String::new()
+    };
+    let fret_dep = deps.fret_dependency_line(&kit_features);
+
+    format!(
+        r#"[package]
+name = "{package_name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+{fret_dep}
+{radix_dep}
+
+[workspace]
+"#
+    )
+}
+
 pub(super) fn simple_todo_template_cargo_toml_public(
     package_name: &str,
     opts: ScaffoldOptions,
@@ -919,6 +989,508 @@ __BUILDER_SUFFIX__        .run()
         .replace("__PACKAGE_NAME__", package_name)
 }
 
+pub(super) fn workbench_lite_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
+    let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
+        "app"
+    } else {
+        "_app"
+    };
+    let install_icons = match opts.icon_pack {
+        IconPack::Radix => {
+            r#"    fret_icons_radix::app::install(app);
+"#
+        }
+        IconPack::Lucide | IconPack::None => "",
+    };
+
+    const TEMPLATE: &str = r#"use std::sync::Arc;
+
+use fret::app::LocalState;
+use fret::app::prelude::*;
+use fret::style::{ColorRef, Radius, Space, Theme, ThemeSnapshot};
+
+mod act {
+    fret::actions!([
+        OpenSettings = "__PACKAGE_NAME__.workbench.settings.open.v1",
+        SaveSettings = "__PACKAGE_NAME__.workbench.settings.save.v1",
+        CancelSettings = "__PACKAGE_NAME__.workbench.settings.cancel.v1",
+        SubmitJob = "__PACKAGE_NAME__.workbench.job.submit.v1",
+        ResetJob = "__PACKAGE_NAME__.workbench.job.reset.v1"
+    ]);
+}
+
+const TEST_ID_ROOT: &str = "workbench_lite.root";
+const TEST_ID_SIDEBAR: &str = "workbench_lite.sidebar";
+const TEST_ID_COMMAND: &str = "workbench_lite.command";
+const TEST_ID_SETTINGS: &str = "workbench_lite.settings";
+const TEST_ID_DIALOG: &str = "workbench_lite.settings.dialog";
+const TEST_ID_PROJECT_INPUT: &str = "workbench_lite.settings.project";
+const TEST_ID_OWNER_INPUT: &str = "workbench_lite.settings.owner";
+const TEST_ID_SAVE_SETTINGS: &str = "workbench_lite.settings.save";
+const TEST_ID_CANCEL_SETTINGS: &str = "workbench_lite.settings.cancel";
+const TEST_ID_PROMPT_INPUT: &str = "workbench_lite.prompt";
+const TEST_ID_SUBMIT: &str = "workbench_lite.submit";
+const TEST_ID_STATUS: &str = "workbench_lite.status";
+const TEST_ID_CONTENT: &str = "workbench_lite.content";
+
+#[derive(Clone)]
+struct WorkItem {
+    id: u64,
+    title: Arc<str>,
+    state: Arc<str>,
+}
+
+struct WorkbenchLocals {
+    settings_open: LocalState<bool>,
+    project_name: LocalState<String>,
+    owner_name: LocalState<String>,
+    prompt: LocalState<String>,
+    submitted: LocalState<u32>,
+    jobs: LocalState<Vec<WorkItem>>,
+}
+
+impl WorkbenchLocals {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            settings_open: cx.state().local_init(|| false),
+            project_name: cx.state().local_init(|| "Fret Studio".to_string()),
+            owner_name: cx.state().local_init(|| "UI Platform".to_string()),
+            prompt: cx.state().local::<String>(),
+            submitted: cx.state().local_init(|| 0u32),
+            jobs: cx.state().local_init(|| vec![
+                WorkItem {
+                    id: 1,
+                    title: Arc::from("Audit command routing"),
+                    state: Arc::from("Ready"),
+                },
+                WorkItem {
+                    id: 2,
+                    title: Arc::from("Review settings surface"),
+                    state: Arc::from("Draft"),
+                },
+                WorkItem {
+                    id: 3,
+                    title: Arc::from("Prepare release notes"),
+                    state: Arc::from("Queued"),
+                },
+            ]),
+        }
+    }
+
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        cx.actions()
+            .local(&self.settings_open)
+            .set::<act::OpenSettings>(true);
+
+        cx.actions()
+            .locals_with((&self.settings_open, &self.project_name, &self.owner_name))
+            .on::<act::SaveSettings>(|tx, (settings_open, project_name, owner_name)| {
+                let project = tx.value(&project_name).trim().to_string();
+                let owner = tx.value(&owner_name).trim().to_string();
+                if project.is_empty() || owner.is_empty() {
+                    return false;
+                }
+                tx.set(&project_name, project)
+                    && tx.set(&owner_name, owner)
+                    && tx.set(&settings_open, false)
+            });
+
+        cx.actions()
+            .local(&self.settings_open)
+            .set::<act::CancelSettings>(false);
+
+        cx.actions()
+            .locals_with((&self.prompt, &self.submitted, &self.jobs))
+            .on::<act::SubmitJob>(|tx, (prompt, submitted, jobs)| {
+                let text = tx.value(&prompt).trim().to_string();
+                if text.is_empty() {
+                    return false;
+                }
+
+                let submitted_count = tx.value(&submitted).saturating_add(1);
+                let ok = tx.set(&submitted, submitted_count);
+                let ok = tx.update(&jobs, |items| {
+                    items.insert(
+                        0,
+                        WorkItem {
+                            id: 100 + submitted_count as u64,
+                            title: Arc::from(text),
+                            state: Arc::from("Submitted"),
+                        },
+                    );
+                }) && ok;
+                tx.set(&prompt, String::new()) && ok
+            });
+
+        cx.actions()
+            .locals_with((&self.prompt, &self.submitted))
+            .on::<act::ResetJob>(|tx, (prompt, submitted)| {
+                tx.set(&prompt, String::new()) && tx.set(&submitted, 0)
+            });
+    }
+}
+
+struct WorkbenchView;
+
+impl View for WorkbenchView {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
+        Self
+    }
+
+    fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let theme = Theme::global(cx.app()).snapshot();
+        let locals = WorkbenchLocals::new(cx);
+        locals.bind_actions(cx);
+
+        let project_name = locals.project_name.layout_value(cx);
+        let owner_name = locals.owner_name.layout_value(cx);
+        let prompt = locals.prompt.layout_value(cx);
+        let submitted = locals.submitted.layout_value(cx);
+        let jobs = locals.jobs.layout_value(cx);
+        let can_submit = !prompt.trim().is_empty();
+
+        let sidebar = sidebar_panel(&theme, &project_name, &owner_name);
+        let item_count = jobs.len();
+        let content = content_panel(&theme, &locals, jobs, submitted, can_submit);
+        let settings = settings_dialog(cx, &locals);
+
+        let shell = ui::h_flex(|cx| {
+            ui::children![
+                cx;
+                sidebar,
+                ui::v_flex(|cx| {
+                    ui::children![cx; content, status_bar(&theme, submitted, item_count)]
+                })
+                .gap(Space::N3)
+                .flex_1()
+                .min_w_0()
+                .h_full(),
+                settings,
+            ]
+        })
+        .gap(Space::N4)
+        .w_full()
+        .h_full();
+
+        ui::single(
+            cx,
+            ui::container(|cx| ui::single(cx, shell))
+                .bg(ColorRef::Color(theme.color_token("muted")))
+                .p(Space::N4)
+                .w_full()
+                .h_full()
+                .test_id(TEST_ID_ROOT),
+        )
+    }
+}
+
+fn sidebar_panel(theme: &ThemeSnapshot, project_name: &str, owner_name: &str) -> impl UiChild {
+    let project_name = project_name.to_string();
+    let owner_name = owner_name.to_string();
+    let muted = theme.color_token("muted-foreground");
+
+    ui::v_flex(move |cx| {
+        ui::children![
+            cx;
+            ui::v_flex(move |cx| {
+                ui::children![
+                    cx;
+                    ui::text(project_name.clone()).font_semibold(),
+                    ui::text(owner_name.clone())
+                        .text_sm()
+                        .text_color(ColorRef::Color(muted)),
+                ]
+            })
+            .gap(Space::N1),
+            shadcn::Separator::new(),
+            shadcn::Button::new("Command palette")
+                .variant(shadcn::ButtonVariant::Outline)
+                .action("app.command_palette")
+                .test_id(TEST_ID_COMMAND),
+            shadcn::Button::new("Settings")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .action(act::OpenSettings)
+                .test_id(TEST_ID_SETTINGS),
+            ui::v_flex(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::Badge::new("Workbench")
+                        .variant(shadcn::BadgeVariant::Secondary),
+                    shadcn::Badge::new("Public app facade")
+                        .variant(shadcn::BadgeVariant::Outline),
+                ]
+            })
+            .gap(Space::N2),
+        ]
+    })
+    .gap(Space::N4)
+    .w_px(Px(220.0))
+    .h_full()
+    .rounded(Radius::Lg)
+    .border_1()
+    .border_color(ColorRef::Color(theme.color_token("border")))
+    .bg(ColorRef::Color(theme.color_token("background")))
+    .p(Space::N4)
+    .test_id(TEST_ID_SIDEBAR)
+}
+
+fn content_panel(
+    theme: &ThemeSnapshot,
+    locals: &WorkbenchLocals,
+    jobs: Vec<WorkItem>,
+    submitted: u32,
+    can_submit: bool,
+) -> impl UiChild {
+    let muted = theme.color_token("muted-foreground");
+    let rows_theme = theme.clone();
+    let item_count = jobs.len();
+
+    let prompt_input = shadcn::Input::new(&locals.prompt)
+        .a11y_label("Workbench prompt")
+        .placeholder("Describe the next job")
+        .submit_action(act::SubmitJob)
+        .test_id(TEST_ID_PROMPT_INPUT);
+
+    let submit_row = ui::h_flex(move |cx| {
+        ui::children![
+            cx;
+            prompt_input,
+            shadcn::Button::new("Submit")
+                .action(act::SubmitJob)
+                .disabled(!can_submit)
+                .test_id(TEST_ID_SUBMIT),
+            shadcn::Button::new("Reset")
+                .variant(shadcn::ButtonVariant::Outline)
+                .action(act::ResetJob),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .w_full();
+
+    let rows = ui::v_flex(move |cx| {
+        let rows_theme = rows_theme.clone();
+        ui::for_each_keyed(cx, jobs.iter(), |job| job.id, move |job| {
+            work_item_row(rows_theme.clone(), job.clone())
+        })
+    })
+    .gap(Space::N2)
+    .w_full();
+
+    let summary = if submitted == 0 {
+        "No simulated submissions yet.".to_string()
+    } else {
+        format!("{submitted} simulated submission{}.", if submitted == 1 { "" } else { "s" })
+    };
+
+    let body = ui::v_flex(move |cx| {
+        ui::children![
+            cx;
+            ui::h_flex(move |cx| {
+                ui::children![
+                    cx;
+                    ui::v_flex(move |cx| {
+                        ui::children![
+                            cx;
+                            shadcn::card_title("Operations queue"),
+                            ui::text(summary)
+                                .text_sm()
+                                .text_color(ColorRef::Color(muted)),
+                        ]
+                    })
+                    .gap(Space::N1)
+                    .flex_1()
+                    .min_w_0(),
+                    shadcn::Badge::new(format!("{} items", item_count))
+                        .variant(shadcn::BadgeVariant::Secondary),
+                ]
+            })
+            .gap(Space::N3)
+            .items_center()
+            .justify_between()
+            .w_full(),
+            submit_row,
+            rows,
+        ]
+    })
+    .gap(Space::N4)
+    .w_full();
+
+    shadcn::card(move |cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title("Workbench Lite"),
+                    shadcn::card_description(
+                        "A second-hour app slice with commands, settings, content, and status.",
+                    ),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::single(cx, body)),
+        ]
+    })
+    .ui()
+    .w_full()
+    .h_full()
+    .test_id(TEST_ID_CONTENT)
+}
+
+fn work_item_row(theme: ThemeSnapshot, job: WorkItem) -> impl UiChild {
+    let title = job.title.clone();
+    let state = job.state.clone();
+    let border = theme.color_token("border");
+    let background = theme.color_token("background");
+
+    ui::h_flex(move |cx| {
+        ui::children![
+            cx;
+            ui::text(title.clone())
+                .text_sm()
+                .flex_1()
+                .min_w_0(),
+            shadcn::Badge::new(state.clone())
+                .variant(shadcn::BadgeVariant::Outline),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .w_full()
+    .rounded(Radius::Md)
+    .border_1()
+    .border_color(ColorRef::Color(border))
+    .bg(ColorRef::Color(background))
+    .p(Space::N3)
+}
+
+fn status_bar(theme: &ThemeSnapshot, submitted: u32, item_count: usize) -> impl UiChild {
+    let muted = theme.color_token("muted-foreground");
+    let border = theme.color_token("border");
+    let background = theme.color_token("background");
+    let summary = format!("{item_count} queued / {submitted} submitted");
+
+    ui::h_flex(move |cx| {
+        ui::children![
+            cx;
+            ui::text("Ready")
+                .text_sm()
+                .text_color(ColorRef::Color(muted)),
+            ui::text(summary.clone())
+                .text_sm()
+                .text_color(ColorRef::Color(muted)),
+        ]
+    })
+    .gap(Space::N3)
+    .items_center()
+    .justify_between()
+    .w_full()
+    .rounded(Radius::Md)
+    .border_1()
+    .border_color(ColorRef::Color(border))
+    .bg(ColorRef::Color(background))
+    .px_3()
+    .py_2()
+    .test_id(TEST_ID_STATUS)
+}
+
+fn settings_dialog(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> impl UiChild + use<> {
+    let open_for_cancel = locals.settings_open.clone();
+    let project_name = locals.project_name.clone();
+    let owner_name = locals.owner_name.clone();
+
+    shadcn::Dialog::new(&locals.settings_open).into_element_in(
+        cx,
+        move |cx| {
+            shadcn::Button::new("Settings")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .action(act::OpenSettings)
+                .into_element(cx)
+        },
+        move |cx| {
+            let fields = ui::v_flex(|cx| {
+                ui::children![
+                    cx;
+                    ui::v_flex(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::Label::new("Project"),
+                            shadcn::Input::new(&project_name)
+                                .a11y_label("Project")
+                                .placeholder("Project name")
+                                .test_id(TEST_ID_PROJECT_INPUT),
+                        ]
+                    })
+                    .gap(Space::N1),
+                    ui::v_flex(|cx| {
+                        ui::children![
+                            cx;
+                            shadcn::Label::new("Owner"),
+                            shadcn::Input::new(&owner_name)
+                                .a11y_label("Owner")
+                                .placeholder("Team or person")
+                                .submit_action(act::SaveSettings)
+                                .test_id(TEST_ID_OWNER_INPUT),
+                        ]
+                    })
+                    .gap(Space::N1),
+                ]
+            })
+            .gap(Space::N3)
+            .w_full();
+
+            shadcn::DialogContent::new([
+                shadcn::DialogHeader::new([
+                    shadcn::DialogTitle::new("Workbench settings").into_element_in(cx),
+                    shadcn::DialogDescription::new("Edit the visible project label and owner.")
+                        .into_element_in(cx),
+                ])
+                .into_element_in(cx),
+                fields.into_element(cx),
+                shadcn::DialogFooter::new([
+                    shadcn::Button::new("Cancel")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .action(act::CancelSettings)
+                        .test_id(TEST_ID_CANCEL_SETTINGS)
+                        .into_element_in(cx),
+                    shadcn::Button::new("Save")
+                        .action(act::SaveSettings)
+                        .test_id(TEST_ID_SAVE_SETTINGS)
+                        .into_element_in(cx),
+                ])
+                .into_element_in(cx),
+                shadcn::DialogClose::new(open_for_cancel)
+                    .into_element_in(cx)
+                    .test_id("workbench_lite.settings.close"),
+            ])
+            .show_close_button(false)
+            .into_element_in(cx)
+            .test_id(TEST_ID_DIALOG)
+        },
+    )
+}
+
+fn install_app(__INSTALL_APP_BINDING__: &mut App) {
+__INSTALL_ICONS__
+    // Register app-owned globals, commands, services, etc.
+}
+
+fn main() -> anyhow::Result<()> {
+    FretApp::new("__PACKAGE_NAME__")
+        .window("__PACKAGE_NAME__", (980.0, 620.0))
+        .setup(install_app)
+        .view::<WorkbenchView>()?
+        .run()
+        .map_err(anyhow::Error::from)
+}
+"#;
+
+    TEMPLATE
+        .replace("__INSTALL_APP_BINDING__", install_app_binding)
+        .replace("__INSTALL_ICONS__", install_icons)
+        .replace("__PACKAGE_NAME__", package_name)
+}
+
 pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
     let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
         "app"
@@ -1533,6 +2105,56 @@ cargo run --release
     )
 }
 
+pub(super) fn workbench_lite_template_readme_md(
+    package_name: &str,
+    opts: ScaffoldOptions,
+    new_bin_name: &str,
+) -> String {
+    let icons_line = match opts.icon_pack {
+        IconPack::Lucide => "- Icons: enabled (default Lucide pack)\n",
+        IconPack::Radix => "- Icons: Radix (via `fret-icons-radix` dependency)\n",
+        IconPack::None => "- Icons: disabled\n",
+    };
+
+    format!(
+        r#"# {package_name}
+
+Generated by `{new_bin_name} new workbench-lite`.
+
+## Run
+
+```bash
+cargo run
+```
+
+## Common commands
+
+```bash
+cargo fmt
+cargo clippy -- -D warnings
+cargo run --release
+```
+
+## Notes
+
+- Theme: shadcn new-york-v4 (Slate / Light)
+{icons_line}- Command palette: enabled (Cmd/Ctrl+Shift+P)
+- Ladder position: second-hour starter after `hello` -> `simple-todo` -> `todo`.
+- Authoring surface: `use fret::app::prelude::*;` plus explicit `fret::style` imports for styling nouns.
+- App slices: command palette button, settings dialog, content pane, status bar, and simulated submit flow.
+- State: view-owned `LocalState<T>` only. The submit flow is intentionally synchronous so the starter does not require mutation runtime setup.
+- Dialog policy stays in the shadcn recipe layer; the template keeps raw runtime and manual assembly imports out of generated app code.
+- Stable diagnostics selectors are in `src/main.rs` as `TEST_ID_*` constants.
+
+## Next steps
+
+- Replace the simulated submit flow with a cookbook mutation recipe when you need real async work.
+- Split the side bar and content pane into app-local modules once the file stops fitting on one screen.
+- Move to an explicit workspace/docking starter only when editor-grade shell ownership is the point.
+"#
+    )
+}
+
 pub(super) fn empty_template_readme_md(package_name: &str, new_bin_name: &str) -> String {
     format!(
         r#"# {package_name}
@@ -1848,6 +2470,64 @@ mod tests {
         assert!(src.contains("let builder = FretApp::new(\"todo-app\")"));
         assert!(src.contains("generated_assets::mount(builder)?"));
         assert!(!src.contains(".asset_dir(\"assets\")"));
+    }
+
+    #[test]
+    fn workbench_lite_template_uses_public_app_facade_only() {
+        let src = workbench_lite_template_main_rs("workbench-lite-app", opts());
+        assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("use fret::app::LocalState;"));
+        assert!(src.contains("use fret::style::{ColorRef, Radius, Space, Theme, ThemeSnapshot};"));
+        assert!(src.contains("struct WorkbenchLocals {"));
+        assert!(src.contains("struct WorkbenchView;"));
+        assert!(src.contains("impl View for WorkbenchView"));
+        assert!(src.contains(".view::<WorkbenchView>()?"));
+        assert!(src.contains(".action(\"app.command_palette\")"));
+        assert!(src.contains("shadcn::Dialog::new(&locals.settings_open).into_element_in("));
+        assert!(src.contains("shadcn::DialogContent::new(["));
+        assert!(src.contains("TEST_ID_DIALOG"));
+        assert!(src.contains("TEST_ID_PROMPT_INPUT"));
+        assert!(src.contains("TEST_ID_SUBMIT"));
+        assert!(src.contains("TEST_ID_STATUS"));
+        assert!(src.contains("TEST_ID_CONTENT"));
+        assert!(src.contains(".locals_with((&self.prompt, &self.submitted, &self.jobs))"));
+        assert!(src.contains(".on::<act::SubmitJob>(|tx, (prompt, submitted, jobs)| {"));
+        assert!(src.contains("ui::for_each_keyed(cx, jobs.iter(), |job| job.id, move |job| {"));
+        assert!(!src.contains(&format!("use {}::", "fret_ui")));
+        assert!(!src.contains(&format!("use {}::", "fret_core")));
+        assert!(!src.contains(&format!("{}Driver", "Fn")));
+        assert!(!src.contains(&format!("{}Tree", "Ui")));
+        assert!(!src.contains(&format!("{}Context", "Element")));
+        assert!(!src.contains(&format!("fret::{}::prelude::*", "advanced")));
+        assert!(!src.contains("fret_cookbook::scaffold::"));
+        assert!(!src.contains("fret_mutation"));
+
+        let into_element_count = src.matches(".into_element(cx)").count();
+        assert!(
+            into_element_count <= 3,
+            "expected <= 3 explicit `.into_element(cx)` calls, got {into_element_count}"
+        );
+    }
+
+    #[test]
+    fn workbench_lite_template_cargo_toml_enables_command_palette_without_state() {
+        let toml = workbench_lite_template_cargo_toml_repo("workbench-lite-app", opts(), ".");
+        assert!(toml.contains("\"command-palette\""));
+        assert!(toml.contains("\"desktop\""));
+        assert!(toml.contains("\"shadcn\""));
+        assert!(!toml.contains("\"state\""));
+        assert!(!toml.contains("fret-query"));
+        assert!(!toml.contains("fret-selector"));
+        assert!(!toml.contains("fret-mutation"));
+    }
+
+    #[test]
+    fn workbench_lite_readme_documents_second_hour_position() {
+        let readme = workbench_lite_template_readme_md("workbench-lite-app", opts(), "fretboard");
+        assert!(readme.contains("Generated by `fretboard new workbench-lite`."));
+        assert!(readme.contains("Ladder position: second-hour starter"));
+        assert!(readme.contains("command palette button, settings dialog, content pane"));
+        assert!(readme.contains("keeps raw runtime and manual assembly imports out"));
     }
 
     #[test]

@@ -351,6 +351,7 @@ mod tests {
         assert!(help.contains("hello"));
         assert!(help.contains("simple-todo"));
         assert!(help.contains("todo"));
+        assert!(help.contains("workbench-lite"));
     }
 
     #[test]

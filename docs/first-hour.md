@@ -85,8 +85,38 @@ Memorize the default app surface before you start editing:
 ### Path taxonomy
 
 - **Default**: `hello`, `simple-todo`, `todo`
+- **Second-hour**: `workbench-lite`
 - **Comparison**: `simple_todo_v2_target`
 - **Advanced**: gallery, viewport/interop, docking, renderer-heavy demos
+
+## 2.5) When the todo app is too small
+
+After the first-hour path, use the second-hour scaffold before copying advanced demos:
+
+```bash
+cargo run -p fretboard -- new workbench-lite --name my-workbench
+cargo run --manifest-path my-workbench/Cargo.toml
+```
+
+Repo-local maintainer equivalent:
+
+```bash
+cargo run -p fretboard-dev -- new workbench-lite --name my-workbench
+cargo run --manifest-path local/my-workbench/Cargo.toml
+```
+
+`workbench-lite` stays on the same public app facade:
+
+- `use fret::app::prelude::*;`
+- explicit `fret::style::{...}` imports for style nouns
+- `LocalState<T>` for view-owned state
+- typed actions for command, settings, and submit intents
+- shadcn recipe components for the settings dialog and app chrome
+
+It includes a command palette button, settings dialog, status bar, content pane, and simulated
+submit flow. It intentionally does not import `fret_ui`, `fret_core`, `FnDriver`, `UiTree`, or the
+advanced prelude. Replace its simulated submit flow with a cookbook mutation recipe only when real
+background work is the point.
 
 ## 3) The three things you should learn first
 

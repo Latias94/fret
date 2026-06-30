@@ -106,6 +106,10 @@ Desktop-first quick start:
 - If you want a single dependency for a native desktop app, use `fret` (ecosystem-level batteries-included wrapper).
 - If you are onboarding a new app author, pair it with the default ladder: `hello` → `simple-todo` → `todo`.
   Treat `todo` as the richer third-rung product baseline, not as a replacement for the first two starters.
+- If the first real app needs more than a todo list, use `workbench-lite` as the second-hour public
+  app scaffold before copying advanced demos. It still depends on `fret`, uses
+  `fret::app::prelude::*`, and keeps settings/dialog/command/status/content composition on the
+  app facade.
 
 Web/wasm quick start:
 
@@ -196,6 +200,11 @@ style refinement, and a11y/test-id/semantics refinements. New styling nouns, com
 environment/adaptive helpers, router/docking/editor ecosystems, activation bridges, raw model
 hooks, and low-level mechanism types must stay on explicit modules unless the Golden Path budget is
 deliberately revised.
+
+The `workbench-lite` scaffold is the current second-hour reference for that budget. It demonstrates
+command palette integration, settings dialog policy, a content pane, status bar, and simulated
+submit flow while keeping style nouns on explicit `fret::style` imports and keeping raw runtime
+imports out of generated app code.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.

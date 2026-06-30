@@ -18,6 +18,8 @@ pub enum NewTemplateContract {
     SimpleTodo(ScaffoldTodoCommandArgs),
     /// Create the golden-path todo starter with selector/query follow-up wiring.
     Todo(ScaffoldTodoCommandArgs),
+    /// Create the second-hour workbench starter app.
+    WorkbenchLite(ScaffoldWorkbenchLiteCommandArgs),
 }
 
 #[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
@@ -69,6 +71,18 @@ pub struct ScaffoldTodoCommandArgs {
     /// Generate the default UI assets cache/bundle stub.
     #[arg(long = "ui-assets")]
     pub ui_assets: bool,
+}
+
+#[derive(Debug, Clone, Args, PartialEq, Eq, Default)]
+pub struct ScaffoldWorkbenchLiteCommandArgs {
+    #[command(flatten)]
+    pub output: ScaffoldOutputArgs,
+    /// Icon pack to wire into the generated app.
+    #[arg(long, value_enum, conflicts_with = "no_icons")]
+    pub icons: Option<ScaffoldIconPackValue>,
+    /// Disable icons in the generated app.
+    #[arg(long, conflicts_with = "icons")]
+    pub no_icons: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]

@@ -10,11 +10,11 @@ related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.
 
 - Goal: execute the implementation-ready fearless refactor plan for Fret's UI framework architecture convergence.
 - Branch: `feat/ui-framework-convergence` from local `main` after the planning commit.
-- Last verified: U2 passed `python3 -m unittest tools/test_check_surface_policy.py`, `python3 tools/check_surface_policy.py`, `python3 tools/check_layering.py`, `python3 tools/check_consumption_profiles.py`, `python3 -m py_compile tools/check_surface_policy.py tools/test_check_surface_policy.py`, and `git diff --check`.
-- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, and U2 source-policy gate.
-- In progress: U3 second-hour public app ladder.
+- Last verified: U3 first slice passed `cargo fmt --all --check`, `cargo nextest run -p fretboard scaffold`, `python3 tools/check_surface_policy.py`, `python3 tools/check_layering.py`, `python3 tools/check_consumption_profiles.py`, and `git diff --check`.
+- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, and U3 first slice (`workbench-lite` public scaffold).
+- In progress: U4 identity and dirty graph observability planning.
 - Blocked: no blocking issue. Runtime implementation is intentionally deferred to follow-on execution.
-- Next action: start U3 by adding/promoting a public `workbench-lite` ladder slice from the API workbench prototype, then add settings dialog and second-hour docs/gates without raw runtime imports.
+- Next action: start U4 with counters/diagnostics for identity fallback scans, parent pointer repair, GC reachability, dispatch snapshot cache, observation churn, and dirty frontier breadth before introducing `StableNodeHandle`.
 
 # Citations
 

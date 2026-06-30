@@ -10,6 +10,7 @@ mod wizard;
 use self::contracts::{
     NewCommandArgs, NewTemplateContract, ScaffoldEmptyCommandArgs, ScaffoldHelloCommandArgs,
     ScaffoldIconArgs, ScaffoldIconPackValue, ScaffoldOutputArgs, ScaffoldTodoCommandArgs,
+    ScaffoldWorkbenchLiteCommandArgs,
 };
 use fs::{
     ensure_dir_is_new_or_empty, sanitize_package_name, workspace_prefix_from_out_dir,
@@ -22,6 +23,8 @@ use templates::{
     simple_todo_template_cargo_toml_repo, simple_todo_template_main_rs,
     simple_todo_template_readme_md, template_gitignore, todo_template_cargo_toml_public,
     todo_template_cargo_toml_repo, todo_template_main_rs, todo_template_readme_md,
+    workbench_lite_template_cargo_toml_public, workbench_lite_template_cargo_toml_repo,
+    workbench_lite_template_main_rs, workbench_lite_template_readme_md,
 };
 
 pub fn run_public_new_contract(args: NewCommandArgs) -> Result<(), String> {
@@ -49,6 +52,7 @@ fn run_new_contract_with_mode(mode: &NewMode, args: NewCommandArgs) -> Result<()
         NewTemplateContract::Hello(args) => run_hello_contract(mode, args),
         NewTemplateContract::SimpleTodo(args) => run_simple_todo_contract(mode, args),
         NewTemplateContract::Todo(args) => run_todo_contract(mode, args),
+        NewTemplateContract::WorkbenchLite(args) => run_workbench_lite_contract(mode, args),
     }
 }
 
@@ -141,6 +145,29 @@ impl NewMode {
             }
         }
     }
+
+    fn workbench_lite_template_cargo_toml(
+        &self,
+        package_name: &str,
+        opts: ScaffoldOptions,
+        out_dir: &Path,
+    ) -> Result<String, String> {
+        match self {
+            Self::Public { .. } => Ok(workbench_lite_template_cargo_toml_public(
+                package_name,
+                opts,
+                env!("CARGO_PKG_VERSION"),
+            )),
+            Self::Repo { workspace_root } => {
+                let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+                Ok(workbench_lite_template_cargo_toml_repo(
+                    package_name,
+                    opts,
+                    &workspace_prefix,
+                ))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,6 +176,7 @@ enum NewTemplate {
     Hello,
     SimpleTodo,
     Todo,
+    WorkbenchLite,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -216,6 +244,26 @@ fn run_hello_contract(mode: &NewMode, args: ScaffoldHelloCommandArgs) -> Result<
     )
 }
 
+fn run_workbench_lite_contract(
+    mode: &NewMode,
+    args: ScaffoldWorkbenchLiteCommandArgs,
+) -> Result<(), String> {
+    let ScaffoldWorkbenchLiteCommandArgs {
+        output,
+        icons,
+        no_icons,
+    } = args;
+    let (out_dir, package_name, run_check) =
+        resolve_scaffold_output(mode, output, "workbench-lite-app")?;
+    init_workbench_lite_at(
+        mode,
+        &out_dir,
+        &package_name,
+        scaffold_options_from_workbench_args(icons, no_icons),
+        run_check,
+    )
+}
+
 fn resolve_scaffold_output(
     mode: &NewMode,
     args: ScaffoldOutputArgs,
@@ -246,6 +294,56 @@ fn icon_pack_from_args(args: &ScaffoldIconArgs) -> IconPack {
         ScaffoldIconPackValue::Radix => IconPack::Radix,
         ScaffoldIconPackValue::None => IconPack::None,
     }
+}
+
+fn scaffold_options_from_workbench_args(
+    icons: Option<ScaffoldIconPackValue>,
+    no_icons: bool,
+) -> ScaffoldOptions {
+    let icon_args = ScaffoldIconArgs {
+        icons,
+        no_icons,
+        command_palette: true,
+    };
+    scaffold_options_from_icon_args(icon_args, false)
+}
+
+fn init_workbench_lite_at(
+    mode: &NewMode,
+    out_dir: &Path,
+    package_name: &str,
+    opts: ScaffoldOptions,
+    run_check: bool,
+) -> Result<(), String> {
+    ensure_dir_is_new_or_empty(out_dir)?;
+
+    let cargo_toml = mode.workbench_lite_template_cargo_toml(package_name, opts, out_dir)?;
+    write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+    write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
+
+    let src_dir = out_dir.join("src");
+    std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
+    write_new_file(
+        &src_dir.join("main.rs"),
+        &workbench_lite_template_main_rs(package_name, opts),
+    )?;
+    write_new_file(
+        &out_dir.join("README.md"),
+        &workbench_lite_template_readme_md(package_name, opts, mode.bin_name()),
+    )?;
+
+    maybe_cargo_check(out_dir, run_check)?;
+
+    println!(
+        "Initialized workbench-lite template at: {}",
+        out_dir.display()
+    );
+    println!("Next:");
+    println!(
+        "  cargo run --manifest-path {}",
+        out_dir.join("Cargo.toml").display()
+    );
+    Ok(())
 }
 
 fn init_simple_todo_at(
@@ -513,6 +611,9 @@ mod tests {
                 init_simple_todo_at(mode, &out_dir, case.package_name, case.opts, false)
             }
             NewTemplate::Todo => init_todo_at(mode, &out_dir, case.package_name, case.opts, false),
+            NewTemplate::WorkbenchLite => {
+                init_workbench_lite_at(mode, &out_dir, case.package_name, case.opts, false)
+            }
         };
 
         result.unwrap_or_else(|err| {
@@ -642,6 +743,15 @@ mod tests {
                     ui_assets: false,
                 },
             },
+            ScaffoldCompileCase {
+                template: NewTemplate::WorkbenchLite,
+                package_name: "workbench-lite-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: true,
+                    ui_assets: false,
+                },
+            },
         ];
 
         for case in cases {
@@ -683,6 +793,15 @@ mod tests {
                     icon_pack: IconPack::Radix,
                     command_palette: true,
                     ui_assets: true,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::WorkbenchLite,
+                package_name: "workbench-lite-radix",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Radix,
+                    command_palette: true,
+                    ui_assets: false,
                 },
             },
         ];

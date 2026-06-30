@@ -51,12 +51,20 @@ In this repository, the public-surface equivalent is `cargo run -p fretboard -- 
    - Note: this template opts into `fret` feature `state` (selector/query helpers), and its
      generated README calls out the first deletable slices if you want to collapse back toward
      `simple-todo`.
+4. `workbench-lite` (template) — second-hour app slice after the default ladder. It proves command
+   palette integration, a settings dialog, content pane, status bar, and a simulated submit flow
+   without importing raw runtime seams.
+   - Generate: `fretboard new workbench-lite --name my-workbench`
+   - Note: this template keeps `use fret::app::prelude::*` as the app surface and imports style
+     nouns explicitly from `fret::style`. It enables the command-palette feature but intentionally
+     does not enable selector/query/mutation features.
 
 ## 0.1) Surface taxonomy
 
 Use these labels consistently:
 
 - **Default**: first-contact templates and stable cookbook lessons
+- **Second-hour**: copyable public app slices such as `workbench-lite`
 - **Comparison**: evidence-oriented side-by-side samples that help evaluate ergonomics, not onboarding
 - **Advanced**: gallery, interop, renderer, docking, and maintainer-oriented surfaces
 
