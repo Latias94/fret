@@ -1845,12 +1845,12 @@ pub fn render<H: UiHost + 'static>(
             );
 
             if interactive {
-                ui.set_layer_scroll_dismiss_elements(
+                ui.set_layer_scroll_observer_elements(
                     entry.layer,
                     req.trigger.into_iter().collect(),
                 );
             } else {
-                ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
+                ui.set_layer_scroll_observer_elements(entry.layer, Vec::new());
             }
         });
         let _ = ui.commit_pending_declarative_window_runtime_snapshots(app, root);

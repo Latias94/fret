@@ -224,6 +224,33 @@ class SurfacePolicyTests(unittest.TestCase):
             self.assertEqual("mechanism-root-policy-vocabulary", violations[0].rule)
             self.assertIn("ResizablePanelGroupStyle", violations[0].source)
 
+    def test_scroll_dismiss_public_mechanism_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "crates/fret-ui/src/tree/layers/impls.rs",
+                """
+                impl UiTree {
+                    pub fn set_layer_scroll_dismiss_elements(&mut self) {}
+                }
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertEqual(
+                "mechanism-public-member-policy-vocabulary:scroll-dismiss",
+                violations[0].rule,
+            )
+            self.assertIn("scroll_dismiss", violations[0].source)
+
     def test_classified_surface_paths_must_exist(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -60,9 +60,11 @@ This matches the Radix semantic check:
 
 The UI runtime exposes a per-layer property:
 
-- `UiTree::set_layer_scroll_dismiss_elements(layer, Vec<GlobalElementId>)`
+- `UiTree::set_layer_scroll_observer_elements(layer, Vec<GlobalElementId>)`
 
 Overlay policy code sets this for tooltip layers by registering the tooltip trigger's `GlobalElementId`.
+The runtime name is intentionally observer-oriented; translating the scroll signal into tooltip
+close behavior remains component policy.
 
 ### Dismiss hooks
 

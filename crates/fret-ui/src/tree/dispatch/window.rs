@@ -2851,13 +2851,13 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or(false);
 
                     if is_scroll_target {
-                        struct ScrollDismissHookHost<'a, H: crate::UiHost> {
+                        struct ScrollObserverHookHost<'a, H: crate::UiHost> {
                             app: &'a mut H,
                             window: AppWindowId,
                             element: crate::GlobalElementId,
                         }
 
-                        impl<H: crate::UiHost> crate::action::UiActionHost for ScrollDismissHookHost<'_, H> {
+                        impl<H: crate::UiHost> crate::action::UiActionHost for ScrollObserverHookHost<'_, H> {
                             fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
                                 self.app.models_mut()
                             }
@@ -2909,17 +2909,17 @@ impl<H: UiHost> UiTree<H> {
                         let visible_layer_ids: Vec<_> =
                             self.visible_layers_in_paint_order().collect();
                         for layer_id in visible_layer_ids {
-                            let Some((layer_root, scroll_dismiss_elements)) = self
+                            let Some((layer_root, scroll_observer_elements)) = self
                                 .layers
                                 .get(layer_id)
-                                .map(|layer| (layer.root, layer.scroll_dismiss_elements.clone()))
+                                .map(|layer| (layer.root, layer.scroll_observer_elements.clone()))
                             else {
                                 continue;
                             };
-                            if scroll_dismiss_elements.is_empty() {
+                            if scroll_observer_elements.is_empty() {
                                 continue;
                             }
-                            let dismiss_nodes: Vec<NodeId> = scroll_dismiss_elements
+                            let observed_nodes: Vec<NodeId> = scroll_observer_elements
                                 .iter()
                                 .copied()
                                 .filter_map(|element| {
@@ -2930,10 +2930,10 @@ impl<H: UiHost> UiTree<H> {
                                     )
                                 })
                                 .collect();
-                            let should_dismiss = dismiss_nodes
+                            let observed_scroll_target = observed_nodes
                                 .into_iter()
                                 .any(|node| self.is_descendant(scroll_target, node));
-                            if !should_dismiss {
+                            if !observed_scroll_target {
                                 continue;
                             }
                             let Some(root_element) =
@@ -2951,7 +2951,7 @@ impl<H: UiHost> UiTree<H> {
                             let Some(hook) = hook else {
                                 continue;
                             };
-                            let mut host = ScrollDismissHookHost {
+                            let mut host = ScrollObserverHookHost {
                                 app,
                                 window,
                                 element: root_element,

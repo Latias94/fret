@@ -46,9 +46,11 @@ pub(in crate::tree) struct UiLayer {
     pub(in crate::tree) wants_pointer_down_outside_events: bool,
     pub(in crate::tree) consume_pointer_down_outside_events: bool,
     pub(in crate::tree) pointer_down_outside_branches: Vec<NodeId>,
-    /// Elements that should cause this overlay to dismiss when they are inside the scroll-event
-    /// target (Radix Tooltip "close on scroll" outcome).
-    pub(in crate::tree) scroll_dismiss_elements: Vec<crate::GlobalElementId>,
+    /// Elements observed by this layer's scroll hook when they are inside the scroll-event target.
+    ///
+    /// The runtime owns only the observation mechanism; component-layer policy decides whether a
+    /// matching scroll observation closes an overlay or performs another action.
+    pub(in crate::tree) scroll_observer_elements: Vec<crate::GlobalElementId>,
     pub(in crate::tree) wants_pointer_move_events: bool,
     pub(in crate::tree) wants_timer_events: bool,
 }

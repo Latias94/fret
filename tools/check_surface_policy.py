@@ -3,7 +3,8 @@
 
 This gate complements dependency layering. It catches source-level drift that cargo metadata cannot
 see: default authoring paths importing raw runtime seams, advanced/manual seams being used without
-classification, and `fret-ui` root exports growing policy-coded names.
+classification, `fret-ui` root exports growing policy-coded names, and policy-coded vocabulary
+returning to selected public mechanism APIs.
 """
 
 from __future__ import annotations
@@ -167,6 +168,14 @@ POLICY_CODED_EXPORT_TERMS: tuple[str, ...] = (
 
 MECHANISM_ROOT_EXPORT_CLASSIFICATIONS: dict[str, str] = {}
 
+MECHANISM_PUBLIC_MEMBER_FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    (
+        "scroll-dismiss",
+        re.compile(r"\bpub\s+fn\s+\w*scroll_dismiss\w*\b"),
+        "`fret-ui` public layer APIs must use mechanism vocabulary such as `scroll_observer`, not scroll-dismiss policy names",
+    ),
+)
+
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
@@ -311,6 +320,28 @@ def _scan_mechanism_root(root: Path, spec: SurfacePath) -> list[SurfaceViolation
     return violations
 
 
+def _scan_mechanism_public_members(root: Path) -> list[SurfaceViolation]:
+    path = root / "crates/fret-ui/src"
+    if not path.exists():
+        return []
+    violations: list[SurfaceViolation] = []
+    for source_path in _iter_source_files(path):
+        for line_no, line in _code_lines_for_scan(source_path, _read_text(source_path)):
+            for name, pattern, message in MECHANISM_PUBLIC_MEMBER_FORBIDDEN_PATTERNS:
+                if not pattern.search(line):
+                    continue
+                violations.append(
+                    SurfaceViolation(
+                        rule=f"mechanism-public-member-policy-vocabulary:{name}",
+                        path=source_path,
+                        line_no=line_no,
+                        message=message,
+                        source=line.strip(),
+                    )
+                )
+    return violations
+
+
 def _validate_surface_specs(specs: Sequence[SurfacePath]) -> list[SurfaceViolation]:
     violations: list[SurfaceViolation] = []
     for spec in specs:
@@ -390,6 +421,7 @@ def check_surface_policy(
 
     for spec in mechanism_root_surfaces:
         violations.extend(_scan_mechanism_root(root, spec))
+    violations.extend(_scan_mechanism_public_members(root))
 
     return violations
 

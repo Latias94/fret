@@ -232,7 +232,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
 }
 
 #[test]
-fn dismissible_scroll_dismiss_ignores_stale_detached_node_entry() {
+fn layer_scroll_observer_ignores_stale_detached_node_entry() {
     use crate::elements::NodeEntry;
     use std::cell::Cell;
     use std::rc::Rc;
@@ -351,7 +351,7 @@ fn dismissible_scroll_dismiss_ignores_stale_detached_node_entry() {
     );
     let layer = ui.push_overlay_root(overlay_root, false);
     ui.set_layer_visible(layer, true);
-    ui.set_layer_scroll_dismiss_elements(layer, vec![scroll_element]);
+    ui.set_layer_scroll_observer_elements(layer, vec![scroll_element]);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     let stale_detached = ui.create_node_for_element(scroll_element, DetachedDummy);

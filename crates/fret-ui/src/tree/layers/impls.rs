@@ -149,7 +149,7 @@ impl<H: UiHost> UiTree<H> {
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
-            scroll_dismiss_elements: Vec::new(),
+            scroll_observer_elements: Vec::new(),
             wants_pointer_move_events: false,
             wants_timer_events: true,
         });
@@ -181,7 +181,7 @@ impl<H: UiHost> UiTree<H> {
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
-            scroll_dismiss_elements: Vec::new(),
+            scroll_observer_elements: Vec::new(),
             wants_pointer_move_events: false,
             wants_timer_events: false,
         });
@@ -431,12 +431,12 @@ impl<H: UiHost> UiTree<H> {
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
-    /// Register elements that should dismiss this overlay when a scroll event targets an ancestor
-    /// of any element's current node.
+    /// Register elements observed by this layer when a scroll event targets an ancestor of any
+    /// element's current node.
     ///
-    /// This is intended for Radix-aligned tooltip behavior: when the tooltip trigger is scrolled,
-    /// the tooltip should close (Radix closes when `event.target.contains(trigger)` on scroll).
-    pub fn set_layer_scroll_dismiss_elements(
+    /// This is a mechanism-only scroll observation hook. Tooltip/popover policy may convert a
+    /// matching observation into close behavior in the component layer.
+    pub fn set_layer_scroll_observer_elements(
         &mut self,
         layer: UiLayerId,
         elements: Vec<crate::GlobalElementId>,
@@ -444,10 +444,10 @@ impl<H: UiHost> UiTree<H> {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
-        if l.scroll_dismiss_elements == elements {
+        if l.scroll_observer_elements == elements {
             return;
         }
-        l.scroll_dismiss_elements = elements;
+        l.scroll_observer_elements = elements;
         self.request_post_layout_window_runtime_snapshot_refine_if_layout_active();
     }
 
