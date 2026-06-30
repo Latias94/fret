@@ -156,11 +156,18 @@ pub enum PaintCachePolicy {
 }
 
 #[derive(Debug, Default)]
-pub(super) struct PaintCacheState {
-    pub(super) generation: u64,
+pub(super) struct WindowPaintReplayState {
+    generation: u64,
     previous_frame: PreviousFramePaintRecording,
-    pub(super) source_generation: u64,
-    pub(super) target_generation: u64,
+    source_generation: u64,
+    target_generation: u64,
+    hits: u32,
+    misses: u32,
+    replayed_ops: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct WindowPaintReplayStats {
     pub(super) hits: u32,
     pub(super) misses: u32,
     pub(super) replayed_ops: u32,
@@ -238,7 +245,7 @@ struct PreviousFramePaintRecordingRanges {
     text_blobs: std::ops::Range<usize>,
 }
 
-impl PaintCacheState {
+impl WindowPaintReplayState {
     pub(super) fn begin_frame(&mut self) {
         self.source_generation = self.generation;
         self.target_generation = self.generation.saturating_add(1);
@@ -249,6 +256,31 @@ impl PaintCacheState {
 
     pub(super) fn finish_frame(&mut self) {
         self.generation = self.target_generation;
+    }
+
+    pub(super) fn source_generation(&self) -> u64 {
+        self.source_generation
+    }
+
+    pub(super) fn target_generation(&self) -> u64 {
+        self.target_generation
+    }
+
+    pub(super) fn stats(&self) -> WindowPaintReplayStats {
+        WindowPaintReplayStats {
+            hits: self.hits,
+            misses: self.misses,
+            replayed_ops: self.replayed_ops,
+        }
+    }
+
+    pub(super) fn record_hit(&mut self, replayed_ops: u32) {
+        self.hits = self.hits.saturating_add(1);
+        self.replayed_ops = self.replayed_ops.saturating_add(replayed_ops);
+    }
+
+    pub(super) fn record_miss(&mut self) {
+        self.misses = self.misses.saturating_add(1);
     }
 
     pub(super) fn invalidate_recording(&mut self) {

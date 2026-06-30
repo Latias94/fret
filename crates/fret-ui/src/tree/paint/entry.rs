@@ -162,9 +162,9 @@ impl<H: UiHost> UiTree<H> {
 
                 let cache_enabled = self.paint_cache_enabled();
                 if cache_enabled {
-                    self.paint_cache.begin_frame();
+                    self.window_paint_replay.begin_frame();
                 } else {
-                    self.paint_cache.invalidate_recording();
+                    self.window_paint_replay.invalidate_recording();
                 }
 
                 if let Some(window) = self.window {
@@ -320,11 +320,12 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if cache_enabled {
-                    self.paint_cache.finish_frame();
+                    self.window_paint_replay.finish_frame();
                     if self.debug_enabled {
-                        self.debug_stats.paint_cache_hits = self.paint_cache.hits;
-                        self.debug_stats.paint_cache_misses = self.paint_cache.misses;
-                        self.debug_stats.paint_cache_replayed_ops = self.paint_cache.replayed_ops;
+                        let stats = self.window_paint_replay.stats();
+                        self.debug_stats.paint_cache_hits = stats.hits;
+                        self.debug_stats.paint_cache_misses = stats.misses;
+                        self.debug_stats.paint_cache_replayed_ops = stats.replayed_ops;
                     }
                 }
 

@@ -53,7 +53,7 @@ impl<H: UiHost> UiTree<H> {
     ///   sharing a single `Scene` across multiple `UiTree`s is not compatible with paint-cache
     ///   ingestion unless each tree records into an isolated scene.
     pub fn ingest_paint_cache_source(&mut self, scene: &mut Scene) {
-        self.paint_cache.ingest_previous_frame_scene(scene);
+        self.window_paint_replay.ingest_previous_frame_scene(scene);
     }
 
     pub(in crate::tree) fn view_cache_active(&self) -> bool {

@@ -878,7 +878,7 @@ impl<H: UiHost> UiTree<H> {
 
     #[cfg(test)]
     pub(crate) fn test_retained_paint_recording_ops_len(&self) -> usize {
-        self.paint_cache.retained_recording_ops_len()
+        self.window_paint_replay.retained_recording_ops_len()
     }
 }
 

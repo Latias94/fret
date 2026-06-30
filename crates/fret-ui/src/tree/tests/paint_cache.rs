@@ -175,7 +175,7 @@ fn paint_cache_side_store_entry_migrates_when_node_becomes_view_boundary() {
 }
 
 #[test]
-fn previous_frame_paint_recording_ingests_scene_and_clears_when_recording_invalidates() {
+fn window_paint_replay_ingests_scene_and_clears_when_recording_invalidates() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));
@@ -216,7 +216,7 @@ fn previous_frame_paint_recording_ingests_scene_and_clears_when_recording_invali
 }
 
 #[test]
-fn previous_frame_paint_recording_replay_preserves_text_blob_side_index() {
+fn window_paint_replay_preserves_text_blob_side_index() {
     let mut app = crate::test_host::TestHost::new();
 
     let paints = Arc::new(AtomicUsize::new(0));

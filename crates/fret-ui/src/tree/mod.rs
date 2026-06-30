@@ -129,7 +129,7 @@ use node_storage::{
     ViewCacheFlags,
 };
 pub use paint_cache::PaintCachePolicy;
-use paint_cache::{PaintCacheEntry, PaintCacheKey, PaintCacheState};
+use paint_cache::{PaintCacheEntry, PaintCacheKey, WindowPaintReplayState};
 use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
@@ -510,7 +510,7 @@ pub struct UiTree<H: UiHost> {
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
-    paint_cache: PaintCacheState,
+    window_paint_replay: WindowPaintReplayState,
     interaction_cache: prepaint::InteractionCacheState,
     view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
     retained_paint_cache_entries: slotmap::SecondaryMap<NodeId, PaintCacheEntryState>,

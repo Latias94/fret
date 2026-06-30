@@ -141,7 +141,7 @@ impl<H: UiHost> UiTree<H> {
                 || tracing::trace_span!("fret.ui.paint_node.cache_hit_check", node = ?node),
                 || {
                     let prev = prev_cache?;
-                    if prev.generation != self.paint_cache.source_generation {
+                    if prev.generation != self.window_paint_replay.source_generation() {
                         return None;
                     }
                     if prev.key != key {
@@ -154,7 +154,10 @@ impl<H: UiHost> UiTree<H> {
                         return None;
                     }
 
-                    if !self.paint_cache.is_entry_replayable_in_previous_frame(prev) {
+                    if !self
+                        .window_paint_replay
+                        .is_entry_replayable_in_previous_frame(prev)
+                    {
                         return None;
                     }
 
@@ -227,7 +230,7 @@ impl<H: UiHost> UiTree<H> {
                     },
                     |span| {
                         let replayed_ops = self
-                            .paint_cache
+                            .window_paint_replay
                             .replay_previous_frame_entry_translated(scene, entry, delta)
                             .expect("entry was validated before paint-cache replay");
                         span.record("ops", replayed_ops as u64);
@@ -245,7 +248,7 @@ impl<H: UiHost> UiTree<H> {
                 self.set_paint_cache_entry_for_node(
                     node,
                     PaintCacheEntry {
-                        generation: self.paint_cache.target_generation,
+                        generation: self.window_paint_replay.target_generation(),
                         key,
                         origin: bounds.origin,
                         start: start as u32,
@@ -414,17 +417,14 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);
-                self.paint_cache.replayed_ops = self
-                    .paint_cache
-                    .replayed_ops
-                    .saturating_add(replayed_ops as u32);
+                self.window_paint_replay.record_hit(replayed_ops as u32);
                 return;
             }
             if replay_allowed_by_hit_test_only_gate
                 && self.debug_enabled
                 && prev_cache.is_some_and(|prev| {
-                    prev.generation == self.paint_cache.source_generation && prev.key != key
+                    prev.generation == self.window_paint_replay.source_generation()
+                        && prev.key != key
                 })
             {
                 self.debug_stats
@@ -433,7 +433,7 @@ impl<H: UiHost> UiTree<H> {
                     .paint_cache_hit_test_only_replay_rejected_key_mismatch
                     .saturating_add(1);
             }
-            self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
+            self.window_paint_replay.record_miss();
         }
 
         // Clear the "dirty" flag before invoking widget paint so that paint-triggered invalidations
@@ -777,7 +777,7 @@ impl<H: UiHost> UiTree<H> {
         }
         if cache_enabled {
             let entry = PaintCacheEntry {
-                generation: self.paint_cache.target_generation,
+                generation: self.window_paint_replay.target_generation(),
                 key,
                 origin: bounds.origin,
                 start: start as u32,
@@ -847,12 +847,13 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
             if let Some(previous_entry) = self.paint_cache_entry_for_node(id)
-                && let Some(next_entry) = self.paint_cache.rebase_entry_from_replayed_parent(
-                    parent_previous_entry,
-                    parent_current_start,
-                    parent_current_text_blob_start,
-                    previous_entry,
-                )
+                && let Some(next_entry) =
+                    self.window_paint_replay.rebase_entry_from_replayed_parent(
+                        parent_previous_entry,
+                        parent_current_start,
+                        parent_current_text_blob_start,
+                        previous_entry,
+                    )
             {
                 self.set_paint_cache_entry_for_node(id, next_entry);
             }
