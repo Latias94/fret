@@ -60,6 +60,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/check_layering.py")],
     )
     _run_checked(
+        "Surface responsibility policy",
+        [py, str(repo_root / "tools/check_surface_policy.py")],
+    )
+    _run_checked(
         "Execution surface policy",
         [py, str(repo_root / "tools/check_execution_surface.py")],
     )

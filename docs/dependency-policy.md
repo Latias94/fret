@@ -42,5 +42,6 @@ desktop-first now, wasm/WebGPU later, and a clean split between UI contracts and
 ## Drift Checks
 
 - Validate crate layering and forbid backend leakage: `python3 tools/check_layering.py`
+- Validate source-level responsibility drift: `python3 tools/check_surface_policy.py`
 - Validate ADR ID uniqueness: `python3 tools/check_adr_numbers.py`
 - Validate minimal consumption profiles: `python3 tools/check_consumption_profiles.py`

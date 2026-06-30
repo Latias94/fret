@@ -187,13 +187,9 @@ let rows = ui::v_flex(|cx| {
 });
 ```
 
-If you already have an iterator that yields `AnyElement`, collect it with `.elements()`:
-
-```rust
-use fret_ui::element::AnyElementIterExt;
-
-let rows = prebuilt_rows.into_iter().elements();
-```
+If you already have an iterator that yields type-erased children, treat that as a component or
+advanced boundary instead of a first-hour pattern. Move that helper onto an explicit component lane
+and keep the default app path on keyed helpers or typed children.
 
 If you truly need manual sink-style collection, keep `*_build(...)` as an explicit advanced escape
 hatch rather than the default keyed-list story:
