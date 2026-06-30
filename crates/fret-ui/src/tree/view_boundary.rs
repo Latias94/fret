@@ -106,6 +106,11 @@ pub(super) struct ViewBoundaryState {
     pub(super) parent: Option<BoundaryId>,
     pub(super) kind: ViewBoundaryKind,
     pub(super) layout_dependencies: BoundaryLayoutDependencies,
+    pub(super) frame_products: BoundaryFrameProducts,
+}
+
+#[derive(Default)]
+pub(super) struct BoundaryFrameProducts {
     pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
     pub(super) scene_fragment: BoundarySceneFragmentState,
@@ -123,10 +128,7 @@ impl ViewBoundaryState {
                 ViewBoundaryKind::Node
             },
             layout_dependencies: BoundaryLayoutDependencies::from_view_cache_flags(flags),
-            dirty: BoundaryDirtyState::default(),
-            prepaint: BoundaryPrepaintState::default(),
-            scene_fragment: BoundarySceneFragmentState::default(),
-            paint_cache: BoundaryPaintCacheState::default(),
+            frame_products: BoundaryFrameProducts::default(),
         }
     }
 
@@ -445,7 +447,7 @@ impl<H: UiHost> UiTree<H> {
             .remove(node)
             .and_then(|mut state| state.take_entry())
         {
-            state.paint_cache.set_entry(entry);
+            state.frame_products.paint_cache.set_entry(entry);
         }
         Some(state)
     }
@@ -479,7 +481,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<PaintCacheEntry> {
         self.view_boundaries
             .get(node)
-            .and_then(|state| state.paint_cache.entry())
+            .and_then(|state| state.frame_products.paint_cache.entry())
             .or_else(|| {
                 self.retained_paint_cache_entries
                     .get(node)
@@ -496,7 +498,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
-            boundary.paint_cache.set_entry(entry);
+            boundary.frame_products.paint_cache.set_entry(entry);
             return;
         }
         if !self.retained_paint_cache_entries.contains_key(node) {
@@ -510,7 +512,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub(in crate::tree) fn clear_paint_cache_entry_for_node(&mut self, node: NodeId) {
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
-            boundary.paint_cache.clear();
+            boundary.frame_products.paint_cache.clear();
         } else {
             self.retained_paint_cache_entries.remove(node);
         }
@@ -522,7 +524,7 @@ impl<H: UiHost> UiTree<H> {
         delta: Point,
     ) {
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
-            boundary.paint_cache.translate_origin(delta);
+            boundary.frame_products.paint_cache.translate_origin(delta);
         } else if let Some(state) = self.retained_paint_cache_entries.get_mut(node) {
             state.translate_origin(delta);
         }
@@ -537,14 +539,14 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.dirty.mark(source, detail);
+        boundary.frame_products.dirty.mark(source, detail);
         self.dirty_view_frontier.mark_boundary_node_v1(node);
         self.debug_refresh_dirty_frontier_max();
     }
 
     pub(in crate::tree) fn clear_boundary_layout_dirty(&mut self, node: NodeId) {
         if let Some(boundary) = self.view_boundaries.get_mut(node) {
-            boundary.dirty.clear();
+            boundary.frame_products.dirty.clear();
         }
         self.dirty_view_frontier.clear_boundary_node_v1(node);
         self.debug_refresh_dirty_frontier_max();
@@ -554,7 +556,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn boundary_layout_dirty(&self, node: NodeId) -> bool {
         self.view_boundaries
             .get(node)
-            .is_some_and(|state| state.dirty.is_dirty())
+            .is_some_and(|state| state.frame_products.dirty.is_dirty())
     }
 
     pub(in crate::tree) fn boundary_layout_dirty_reason(
@@ -563,7 +565,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<(UiDebugInvalidationSource, UiDebugInvalidationDetail)> {
         self.view_boundaries
             .get(node)
-            .and_then(|state| state.dirty.reason())
+            .and_then(|state| state.frame_products.dirty.reason())
     }
 
     fn nearest_parent_view_boundary(&self, node: NodeId) -> Option<BoundaryId> {
@@ -627,26 +629,40 @@ impl<H: UiHost> UiTree<H> {
                     ViewBoundaryKind::ViewCacheRoot => "view_cache",
                 },
                 prepaint_owner: "view_boundary_prepaint_state",
-                paint_cache_owner: if state.paint_cache.has_entry() {
+                paint_cache_owner: if state.frame_products.paint_cache.has_entry() {
                     "view_boundary_paint_cache_state"
                 } else {
                     "none"
                 },
-                scene_fragment_owner: if state.scene_fragment.slot_count() > 0 {
+                scene_fragment_owner: if state.frame_products.scene_fragment.slot_count() > 0 {
                     "view_boundary_scene_fragment_state"
                 } else {
                     "none"
                 },
-                scene_fragment_slots: state.scene_fragment.slot_count(),
-                scene_fragment_entries: state.scene_fragment.entry_count(),
-                scene_fragment_used_entries: state.scene_fragment.used_entries(),
-                scene_fragment_rejected_entries: state.scene_fragment.rejected_entries(),
-                scene_fragment_reject_reason: state.scene_fragment.last_reject_reason(),
+                scene_fragment_slots: state.frame_products.scene_fragment.slot_count(),
+                scene_fragment_entries: state.frame_products.scene_fragment.entry_count(),
+                scene_fragment_used_entries: state.frame_products.scene_fragment.used_entries(),
+                scene_fragment_rejected_entries: state
+                    .frame_products
+                    .scene_fragment
+                    .rejected_entries(),
+                scene_fragment_reject_reason: state
+                    .frame_products
+                    .scene_fragment
+                    .last_reject_reason(),
                 layout_dependency: state.layout_dependencies.parent.as_debug_str(),
                 layout_definite: state.layout_dependencies.layout_definite,
-                layout_dirty: state.dirty.is_dirty(),
-                layout_dirty_source: state.dirty.reason().map(|(source, _)| source),
-                layout_dirty_detail: state.dirty.reason().map(|(_, detail)| detail),
+                layout_dirty: state.frame_products.dirty.is_dirty(),
+                layout_dirty_source: state
+                    .frame_products
+                    .dirty
+                    .reason()
+                    .map(|(source, _)| source),
+                layout_dirty_detail: state
+                    .frame_products
+                    .dirty
+                    .reason()
+                    .map(|(_, detail)| detail),
             })
             .collect();
         out.sort_by_key(|stats| stats.id.data().as_ffi());
@@ -668,7 +684,11 @@ impl<H: UiHost> UiTree<H> {
 
     #[cfg(test)]
     pub(crate) fn test_view_boundary_prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
-        self.view_boundaries.get(node)?.prepaint.output::<T>()
+        self.view_boundaries
+            .get(node)?
+            .frame_products
+            .prepaint
+            .output::<T>()
     }
 
     #[cfg(test)]
@@ -697,7 +717,7 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn test_view_boundary_paint_cache_has_entry(&self, node: NodeId) -> bool {
         self.view_boundaries
             .get(node)
-            .is_some_and(|state| state.paint_cache.has_entry())
+            .is_some_and(|state| state.frame_products.paint_cache.has_entry())
     }
 
     #[cfg(test)]
@@ -750,5 +770,89 @@ mod dirty_view_frontier_tests {
         assert!(frontier.clear_boundary_node_v1(first));
         assert!(!frontier.clear_boundary_node_v1(first));
         assert_eq!(frontier.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod boundary_frame_products_tests {
+    use super::*;
+
+    fn node(id: u64) -> NodeId {
+        NodeId::from(slotmap::KeyData::from_ffi(id))
+    }
+
+    fn paint_cache_key() -> PaintCacheKey {
+        PaintCacheKey::new(
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(10.0))),
+            1,
+            1.0,
+            1,
+            crate::tree::paint_style::PaintStyleState::default(),
+            None,
+            Transform2D::IDENTITY,
+        )
+    }
+
+    #[test]
+    fn boundary_frame_products_own_boundary_dirty_prepaint_scene_and_paint_cache_state() {
+        let mut state = ViewBoundaryState::new_runtime(
+            BoundaryId::from_node(node(1)),
+            None,
+            ViewCacheFlags {
+                enabled: true,
+                layout_definite: true,
+                ..Default::default()
+            },
+        );
+        let key = paint_cache_key();
+
+        state.frame_products.dirty.mark(
+            UiDebugInvalidationSource::Notify,
+            UiDebugInvalidationDetail::NotifyCall,
+        );
+        assert_eq!(
+            state.frame_products.dirty.reason(),
+            Some((
+                UiDebugInvalidationSource::Notify,
+                UiDebugInvalidationDetail::NotifyCall,
+            ))
+        );
+
+        state.frame_products.prepaint.begin_outputs(key);
+        state.frame_products.prepaint.set_output(42u32);
+        assert_eq!(state.frame_products.prepaint.output::<u32>(), Some(&42));
+
+        state.frame_products.scene_fragment.begin_fragment(key);
+        state
+            .frame_products
+            .scene_fragment
+            .set_fragment_with_entry_count("fragment", 3);
+        state.frame_products.scene_fragment.record_used_entries(2);
+        state
+            .frame_products
+            .scene_fragment
+            .record_rejected_entries(1, "test");
+        assert_eq!(
+            state.frame_products.scene_fragment.fragment::<&str>(),
+            Some(&"fragment")
+        );
+        assert_eq!(state.frame_products.scene_fragment.entry_count(), 3);
+        assert_eq!(state.frame_products.scene_fragment.used_entries(), 2);
+        assert_eq!(state.frame_products.scene_fragment.rejected_entries(), 1);
+        assert_eq!(
+            state.frame_products.scene_fragment.last_reject_reason(),
+            Some("test")
+        );
+
+        state.frame_products.paint_cache.set_entry(PaintCacheEntry {
+            generation: 1,
+            key,
+            origin: Point::default(),
+            start: 0,
+            end: 1,
+            text_blob_start: 0,
+            text_blob_end: 0,
+        });
+        assert!(state.frame_products.paint_cache.has_entry());
     }
 }

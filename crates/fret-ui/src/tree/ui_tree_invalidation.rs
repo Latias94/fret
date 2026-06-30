@@ -147,7 +147,7 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.prepaint.begin_outputs(key);
+        boundary.frame_products.prepaint.begin_outputs(key);
     }
 
     pub(in crate::tree) fn begin_scene_fragment_for_node(
@@ -158,14 +158,14 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.scene_fragment.begin_fragment(key);
+        boundary.frame_products.scene_fragment.begin_fragment(key);
     }
 
     pub(crate) fn set_prepaint_output<T: Any>(&mut self, node: NodeId, value: T) {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.prepaint.set_output(value);
+        boundary.frame_products.prepaint.set_output(value);
     }
 
     pub(crate) fn set_prepaint_output_box(
@@ -177,22 +177,31 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.prepaint.set_output_box(ty, value);
+        boundary.frame_products.prepaint.set_output_box(ty, value);
     }
 
     pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
-        self.view_boundaries.get(node)?.prepaint.output::<T>()
+        self.view_boundaries
+            .get(node)?
+            .frame_products
+            .prepaint
+            .output::<T>()
     }
 
     pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
         self.view_boundaries
             .get_mut(node)?
+            .frame_products
             .prepaint
             .output_mut::<T>()
     }
 
     pub(crate) fn prepaint_output_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
-        self.view_boundaries.get(node)?.prepaint.output_any(ty)
+        self.view_boundaries
+            .get(node)?
+            .frame_products
+            .prepaint
+            .output_any(ty)
     }
 
     pub(crate) fn prepaint_output_any_mut(
@@ -202,6 +211,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<&mut dyn Any> {
         self.view_boundaries
             .get_mut(node)?
+            .frame_products
             .prepaint
             .output_any_mut(ty)
     }
@@ -210,7 +220,7 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.scene_fragment.set_fragment(value);
+        boundary.frame_products.scene_fragment.set_fragment(value);
     }
 
     pub(crate) fn set_scene_fragment_debug<T: crate::tree::BoundarySceneFragmentDebug>(
@@ -223,6 +233,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         boundary
+            .frame_products
             .scene_fragment
             .set_fragment_with_entry_count(value, entry_count);
     }
@@ -231,7 +242,10 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.ensure_view_boundary_state(node) else {
             return;
         };
-        boundary.scene_fragment.set_fragment_box(ty, value);
+        boundary
+            .frame_products
+            .scene_fragment
+            .set_fragment_box(ty, value);
     }
 
     pub(crate) fn set_scene_fragment_box_with_entry_count(
@@ -245,6 +259,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         boundary
+            .frame_products
             .scene_fragment
             .set_fragment_box_with_entry_count(ty, value, entry_count);
     }
@@ -252,6 +267,7 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn scene_fragment<T: Any>(&self, node: NodeId) -> Option<&T> {
         self.view_boundaries
             .get(node)?
+            .frame_products
             .scene_fragment
             .fragment::<T>()
     }
@@ -259,6 +275,7 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn scene_fragment_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
         self.view_boundaries
             .get_mut(node)?
+            .frame_products
             .scene_fragment
             .fragment_mut::<T>()
     }
@@ -266,6 +283,7 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn scene_fragment_any(&self, node: NodeId, ty: TypeId) -> Option<&dyn Any> {
         self.view_boundaries
             .get(node)?
+            .frame_products
             .scene_fragment
             .fragment_any(ty)
     }
@@ -277,6 +295,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<&mut dyn Any> {
         self.view_boundaries
             .get_mut(node)?
+            .frame_products
             .scene_fragment
             .fragment_any_mut(ty)
     }
@@ -285,7 +304,10 @@ impl<H: UiHost> UiTree<H> {
         let Some(boundary) = self.view_boundaries.get_mut(node) else {
             return;
         };
-        boundary.scene_fragment.record_used_entries(count);
+        boundary
+            .frame_products
+            .scene_fragment
+            .record_used_entries(count);
     }
 
     pub(crate) fn record_scene_fragment_rejected_entries(
@@ -298,6 +320,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         boundary
+            .frame_products
             .scene_fragment
             .record_rejected_entries(count, reason);
     }

@@ -309,6 +309,7 @@ fn canvas_prepaint_output_is_visible_to_canvas_paint() {
         },
     );
     ui.set_root(node);
+    let canvas_node = ui.children(node)[0];
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     let mut scene = Scene::default();
@@ -325,7 +326,7 @@ fn canvas_prepaint_output_is_visible_to_canvas_paint() {
     );
 
     app.advance_frame();
-    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.invalidate(canvas_node, crate::widget::Invalidation::Paint);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(
@@ -335,7 +336,7 @@ fn canvas_prepaint_output_is_visible_to_canvas_paint() {
     );
 
     app.advance_frame();
-    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.invalidate(canvas_node, crate::widget::Invalidation::Paint);
     ui.layout_all(&mut app, &mut services, bounds, 2.0);
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 2.0);
     assert_eq!(
@@ -399,6 +400,7 @@ fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
         },
     );
     ui.set_root(node);
+    let canvas_node = ui.children(node)[0];
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     let mut scene = Scene::default();
@@ -438,7 +440,7 @@ fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
     );
 
     app.advance_frame();
-    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.invalidate(canvas_node, crate::widget::Invalidation::Paint);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
     assert_eq!(
@@ -457,7 +459,7 @@ fn canvas_scene_fragment_is_boundary_owned_and_keyed_by_prepaint_key() {
     assert_eq!(boundary.scene_fragment_rejected_entries, 0);
 
     app.advance_frame();
-    ui.invalidate(node, crate::widget::Invalidation::Paint);
+    ui.invalidate(canvas_node, crate::widget::Invalidation::Paint);
     ui.layout_all(&mut app, &mut services, bounds, 2.0);
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 2.0);
     assert_eq!(
