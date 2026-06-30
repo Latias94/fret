@@ -39,6 +39,45 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
 }
 
 #[test]
+fn prepaint_interaction_cache_entry_is_owned_by_view_boundary_state() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.add_child(root, cache_root);
+    ui.add_child(cache_root, leaf);
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        ui.test_view_boundary_interaction_cache_has_entry(cache_root),
+        "view-cache roots should store interaction replay entries in ViewBoundaryState"
+    );
+    let boundary = ui
+        .debug_boundary_stats()
+        .into_iter()
+        .find(|boundary| boundary.id == cache_root)
+        .expect("cache root boundary stats");
+    assert_eq!(
+        boundary.interaction_cache_owner,
+        "view_boundary_interaction_cache_state"
+    );
+}
+
+#[test]
 fn prepaint_interaction_cache_replay_translates_records_when_cache_root_moves() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui = UiTree::new();

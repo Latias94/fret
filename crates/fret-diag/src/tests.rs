@@ -3305,6 +3305,7 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
                                     "layout_definite": true,
                                     "layout_dirty": false,
                                     "prepaint_owner": "view_boundary_prepaint_state",
+                                    "interaction_cache_owner": "view_boundary_interaction_cache_state",
                                     "scene_fragment_owner": "view_boundary_scene_fragment_state",
                                     "scene_fragment_slots": 1,
                                     "scene_fragment_entries": 0,
@@ -3361,6 +3362,10 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
         Some("view_boundary_prepaint_state")
     );
     assert_eq!(
+        cache_root.boundary_interaction_cache_owner.as_deref(),
+        Some("view_boundary_interaction_cache_state")
+    );
+    assert_eq!(
         cache_root.boundary_paint_outcome.as_deref(),
         Some("not_replayed")
     );
@@ -3384,6 +3389,11 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
         json.pointer("/top/0/top_cache_roots/0/boundary/layout_dependency")
             .and_then(|v| v.as_str()),
         Some("contained_when_bounds_known")
+    );
+    assert_eq!(
+        json.pointer("/top/0/top_cache_roots/0/boundary/interaction_cache_owner")
+            .and_then(|v| v.as_str()),
+        Some("view_boundary_interaction_cache_state")
     );
 }
 

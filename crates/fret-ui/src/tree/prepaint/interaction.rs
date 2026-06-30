@@ -45,7 +45,7 @@ impl<H: UiHost> UiTree<H> {
                 n.bounds,
                 n.invalidation,
                 self.view_cache_active() && n.view_cache.enabled,
-                n.interaction_cache,
+                self.interaction_cache_entry_for_boundary(node),
                 n.view_cache.enabled && n.element.is_none(),
                 // Retained/manual cache roots use the same cache-boundary flag to opt into
                 // per-frame prepaint work even when global view-cache reuse is disabled.
@@ -197,15 +197,16 @@ impl<H: UiHost> UiTree<H> {
                 }
                 let end = self.interaction_cache.records.len();
 
-                if let Some(n) = self.nodes.get_mut(node) {
-                    n.interaction_cache = Some(InteractionCacheEntry {
+                self.set_interaction_cache_entry_for_boundary(
+                    node,
+                    InteractionCacheEntry {
                         generation: self.interaction_cache.target_generation,
                         key,
                         origin: bounds.origin,
                         start: start as u32,
                         end: end as u32,
-                    });
-                }
+                    },
+                );
 
                 self.interaction_cache.hits = self.interaction_cache.hits.saturating_add(1);
                 self.interaction_cache.replayed_records = self
@@ -275,14 +276,17 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let end = self.interaction_cache.records.len();
-        if is_view_cache_root && let Some(n) = self.nodes.get_mut(node) {
-            n.interaction_cache = Some(InteractionCacheEntry {
-                generation: self.interaction_cache.target_generation,
-                key,
-                origin: bounds.origin,
-                start: start as u32,
-                end: end as u32,
-            });
+        if is_view_cache_root {
+            self.set_interaction_cache_entry_for_boundary(
+                node,
+                InteractionCacheEntry {
+                    generation: self.interaction_cache.target_generation,
+                    key,
+                    origin: bounds.origin,
+                    start: start as u32,
+                    end: end as u32,
+                },
+            );
         }
     }
 }

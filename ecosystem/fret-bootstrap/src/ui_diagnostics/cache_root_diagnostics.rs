@@ -63,6 +63,8 @@ pub struct UiBoundaryDiagnosticsV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_dirty_detail: Option<String>,
     pub prepaint_owner: String,
+    #[serde(default)]
+    pub interaction_cache_owner: String,
     pub paint_cache_owner: String,
     pub scene_fragment_owner: String,
     pub scene_fragment_slots: usize,
@@ -111,6 +113,7 @@ impl UiBoundaryDiagnosticsV1 {
                 .layout_dirty_detail
                 .and_then(|detail| detail.as_str().map(str::to_string)),
             prepaint_owner: boundary.prepaint_owner.to_string(),
+            interaction_cache_owner: boundary.interaction_cache_owner.to_string(),
             paint_cache_owner: boundary.paint_cache_owner.to_string(),
             scene_fragment_owner: boundary.scene_fragment_owner.to_string(),
             scene_fragment_slots: boundary.scene_fragment_slots,
@@ -133,6 +136,7 @@ impl UiBoundaryDiagnosticsV1 {
         truncate_opt_string_bytes(&mut out.layout_dirty_source, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.layout_dirty_detail, max_debug_string_bytes);
         truncate_string_bytes(&mut out.prepaint_owner, max_debug_string_bytes);
+        truncate_string_bytes(&mut out.interaction_cache_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.paint_cache_owner, max_debug_string_bytes);
         truncate_string_bytes(&mut out.scene_fragment_owner, max_debug_string_bytes);
         truncate_opt_string_bytes(&mut out.scene_fragment_reject_reason, max_debug_string_bytes);
@@ -457,6 +461,7 @@ mod cache_root_boundary_tests {
             kind: "view_cache_root",
             source: "view_cache",
             prepaint_owner: "view_boundary_prepaint_state",
+            interaction_cache_owner: "view_boundary_interaction_cache_state",
             paint_cache_owner: "view_boundary_paint_cache_state",
             scene_fragment_owner: "view_boundary_scene_fragment_state",
             scene_fragment_slots: 1,
@@ -498,6 +503,10 @@ mod cache_root_boundary_tests {
             Some("subtree_layout_dirty_repair")
         );
         assert_eq!(boundary.prepaint_owner, "view_boundary_prepaint_state");
+        assert_eq!(
+            boundary.interaction_cache_owner,
+            "view_boundary_interaction_cache_state"
+        );
         assert_eq!(
             boundary.paint_cache_owner,
             "view_boundary_paint_cache_state"

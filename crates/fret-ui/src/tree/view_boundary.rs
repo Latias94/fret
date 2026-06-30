@@ -113,6 +113,7 @@ pub(super) struct ViewBoundaryState {
 pub(super) struct BoundaryFrameProducts {
     pub(super) dirty: BoundaryDirtyState,
     pub(super) prepaint: BoundaryPrepaintState,
+    pub(super) interaction_cache: BoundaryInteractionCacheState,
     pub(super) scene_fragment: BoundarySceneFragmentState,
     pub(super) paint_cache: BoundaryPaintCacheState,
 }
@@ -149,8 +150,27 @@ pub(in crate::tree) struct BoundaryPaintCacheState {
 }
 
 #[derive(Default)]
+pub(in crate::tree) struct BoundaryInteractionCacheState {
+    entry: Option<prepaint::InteractionCacheEntry>,
+}
+
+#[derive(Default)]
 pub(in crate::tree) struct PaintCacheEntryState {
     entry: Option<PaintCacheEntry>,
+}
+
+impl BoundaryInteractionCacheState {
+    pub(super) fn entry(&self) -> Option<prepaint::InteractionCacheEntry> {
+        self.entry
+    }
+
+    pub(super) fn set_entry(&mut self, entry: prepaint::InteractionCacheEntry) {
+        self.entry = Some(entry);
+    }
+
+    pub(super) fn has_entry(&self) -> bool {
+        self.entry.is_some()
+    }
 }
 
 impl BoundaryPaintCacheState {
@@ -530,6 +550,26 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn interaction_cache_entry_for_boundary(
+        &self,
+        node: NodeId,
+    ) -> Option<prepaint::InteractionCacheEntry> {
+        self.view_boundaries
+            .get(node)
+            .and_then(|state| state.frame_products.interaction_cache.entry())
+    }
+
+    pub(in crate::tree) fn set_interaction_cache_entry_for_boundary(
+        &mut self,
+        node: NodeId,
+        entry: prepaint::InteractionCacheEntry,
+    ) {
+        let Some(boundary) = self.ensure_view_boundary_state(node) else {
+            return;
+        };
+        boundary.frame_products.interaction_cache.set_entry(entry);
+    }
+
     pub(in crate::tree) fn mark_boundary_layout_dirty(
         &mut self,
         node: NodeId,
@@ -629,6 +669,11 @@ impl<H: UiHost> UiTree<H> {
                     ViewBoundaryKind::ViewCacheRoot => "view_cache",
                 },
                 prepaint_owner: "view_boundary_prepaint_state",
+                interaction_cache_owner: if state.frame_products.interaction_cache.has_entry() {
+                    "view_boundary_interaction_cache_state"
+                } else {
+                    "none"
+                },
                 paint_cache_owner: if state.frame_products.paint_cache.has_entry() {
                     "view_boundary_paint_cache_state"
                 } else {
@@ -721,6 +766,13 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(test)]
+    pub(crate) fn test_view_boundary_interaction_cache_has_entry(&self, node: NodeId) -> bool {
+        self.view_boundaries
+            .get(node)
+            .is_some_and(|state| state.frame_products.interaction_cache.has_entry())
+    }
+
+    #[cfg(test)]
     pub(crate) fn test_paint_cache_entry_for_node_has_entry(&self, node: NodeId) -> bool {
         self.paint_cache_entry_for_node(node).is_some()
     }
@@ -794,7 +846,8 @@ mod boundary_frame_products_tests {
     }
 
     #[test]
-    fn boundary_frame_products_own_boundary_dirty_prepaint_scene_and_paint_cache_state() {
+    fn boundary_frame_products_own_boundary_dirty_prepaint_interaction_scene_and_paint_cache_state()
+    {
         let mut state = ViewBoundaryState::new_runtime(
             BoundaryId::from_node(node(1)),
             None,
@@ -821,6 +874,18 @@ mod boundary_frame_products_tests {
         state.frame_products.prepaint.begin_outputs(key);
         state.frame_products.prepaint.set_output(42u32);
         assert_eq!(state.frame_products.prepaint.output::<u32>(), Some(&42));
+
+        state
+            .frame_products
+            .interaction_cache
+            .set_entry(prepaint::InteractionCacheEntry {
+                generation: 1,
+                key,
+                origin: Point::default(),
+                start: 0,
+                end: 2,
+            });
+        assert!(state.frame_products.interaction_cache.has_entry());
 
         state.frame_products.scene_fragment.begin_fragment(key);
         state

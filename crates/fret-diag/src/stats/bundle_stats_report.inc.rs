@@ -2145,6 +2145,7 @@ pub(super) struct BundleStatsCacheRoot {
     pub(super) boundary_reuse_reason: Option<String>,
     pub(super) boundary_layout_outcome: Option<String>,
     pub(super) boundary_prepaint_owner: Option<String>,
+    pub(super) boundary_interaction_cache_owner: Option<String>,
     pub(super) boundary_paint_outcome: Option<String>,
 }
 
@@ -2155,6 +2156,7 @@ fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
         || c.boundary_reuse_reason.is_some()
         || c.boundary_layout_outcome.is_some()
         || c.boundary_prepaint_owner.is_some()
+        || c.boundary_interaction_cache_owner.is_some()
         || c.boundary_paint_outcome.is_some();
     if !has_boundary {
         return;
@@ -2177,6 +2179,9 @@ fn push_cache_root_boundary_summary(s: &mut String, c: &BundleStatsCacheRoot) {
     if let Some(value) = c.boundary_prepaint_owner.as_deref() {
         s.push_str(&format!(" prepaint={value}"));
     }
+    if let Some(value) = c.boundary_interaction_cache_owner.as_deref() {
+        s.push_str(&format!(" interaction={value}"));
+    }
     if let Some(value) = c.boundary_paint_outcome.as_deref() {
         s.push_str(&format!(" paint={value}"));
     }
@@ -2190,6 +2195,7 @@ fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleSta
         || c.boundary_reuse_reason.is_some()
         || c.boundary_layout_outcome.is_some()
         || c.boundary_prepaint_owner.is_some()
+        || c.boundary_interaction_cache_owner.is_some()
         || c.boundary_paint_outcome.is_some();
     if !has_boundary {
         return;
@@ -2231,6 +2237,13 @@ fn insert_cache_root_boundary_json(c_obj: &mut Map<String, Value>, c: &BundleSta
     boundary.insert(
         "prepaint_owner".to_string(),
         c.boundary_prepaint_owner
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    boundary.insert(
+        "interaction_cache_owner".to_string(),
+        c.boundary_interaction_cache_owner
             .clone()
             .map(Value::from)
             .unwrap_or(Value::Null),
