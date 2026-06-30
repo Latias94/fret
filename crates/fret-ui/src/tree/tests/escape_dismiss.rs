@@ -51,7 +51,7 @@ fn escape_dismisses_topmost_overlay_without_focus() {
 
     assert!(
         app.models().get_copied(&dismissed).unwrap_or(false),
-        "expected Escape to route to the topmost dismissible overlay"
+        "expected Escape to route to the topmost layer interaction overlay"
     );
 }
 

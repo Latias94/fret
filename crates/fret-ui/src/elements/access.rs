@@ -377,7 +377,7 @@ pub fn take_element_state<H: UiHost, S: Any>(
 /// `LayerInteractionRoot`.
 ///
 /// This is intended for diagnostics and cross-crate UI policy tests.
-pub fn dismissible_has_pointer_move_handler<H: UiHost>(
+pub fn layer_interaction_has_pointer_move_handler<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     element: GlobalElementId,

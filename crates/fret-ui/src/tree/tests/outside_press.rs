@@ -1135,7 +1135,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
 }
 
 #[test]
-fn outside_press_observer_dispatches_only_topmost_dismissible_non_modal_overlay() {
+fn outside_press_observer_dispatches_only_topmost_layer_interaction_non_modal_overlay() {
     struct RecordOutsidePress {
         observer_down: Model<u32>,
     }

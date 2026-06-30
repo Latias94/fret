@@ -3480,7 +3480,7 @@ fn viewport_root_anchored_wraps_flow_in_engine_tree() {
 }
 
 #[test]
-fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
+fn overlay_root_layer_interaction_root_precomputes_child_flow_islands() {
     let window = AppWindowId::default();
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -3509,7 +3509,7 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
         &mut services,
         window,
         bounds,
-        "overlay-root-dismissible-precompute",
+        "overlay-root-layer-interaction-precompute",
         |cx| {
             let anchored = crate::element::AnchoredProps {
                 anchor: Rect::new(
@@ -3549,7 +3549,7 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
     let engine = ui.take_layout_engine();
     assert!(
         engine.layout_id_for_node(overlay_root).is_some(),
-        "expected dismissible root to be represented in the engine tree"
+        "expected layer interaction root to be represented in the engine tree"
     );
     assert!(
         engine.layout_id_for_node(anchored).is_some(),

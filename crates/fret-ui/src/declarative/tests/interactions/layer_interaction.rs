@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
+fn layer_interaction_pointer_move_observer_does_not_break_click_through() {
     struct CountPointerDown {
         clicks: fret_runtime::Model<u32>,
     }
@@ -51,7 +51,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
         &mut services,
         window,
         bounds,
-        "dismissible-pointer-move-observer",
+        "layer-interaction-pointer-move-observer",
         move |cx| {
             cx.layer_interaction_on_pointer_move(Arc::new(move |host, _acx, _mv| {
                 let _ = host
@@ -123,7 +123,7 @@ fn layer_interaction_on_request_hook_runs_on_escape() {
         &mut services,
         window,
         bounds,
-        "dismissible-hook-escape",
+        "layer-interaction-hook-escape",
         |cx| {
             let dismissed = dismissed.clone();
             cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
@@ -146,7 +146,7 @@ fn layer_interaction_on_request_hook_runs_on_escape() {
 
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    // Focus a descendant in the overlay so Escape bubbles up to the dismissible layer.
+    // Focus a descendant in the overlay so Escape bubbles up to the layer interaction root.
     let focused = ui.children(overlay_root)[0];
     ui.set_focus(Some(focused));
 
@@ -185,7 +185,7 @@ fn layer_interaction_on_request_hook_runs_on_outside_press_observer() {
         &mut services,
         window,
         bounds,
-        "dismissible-hook-outside-press",
+        "layer-interaction-hook-outside-press",
         |cx| {
             let dismissed = dismissed.clone();
             cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
@@ -258,7 +258,7 @@ fn layer_scroll_observer_ignores_stale_detached_node_entry() {
     let scroll_element: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
         Rc::new(Cell::new(None));
     let dismissed = app.models_mut().insert(false);
-    let root_name = "dismissible-scroll-dismiss-stale-node-entry";
+    let root_name = "layer-interaction-scroll-observer-stale-node-entry";
 
     let base_root = render_root(
         &mut ui,
@@ -337,7 +337,7 @@ fn layer_scroll_observer_ignores_stale_detached_node_entry() {
         &mut services,
         window,
         bounds,
-        "dismissible-scroll-dismiss-overlay",
+        "layer-interaction-scroll-observer-overlay",
         |cx| {
             let dismissed = dismissed.clone();
             cx.layer_interaction_on_request(Arc::new(move |host, _cx, req| {
@@ -385,12 +385,12 @@ fn layer_scroll_observer_ignores_stale_detached_node_entry() {
 
     assert!(
         app.models().get_copied(&dismissed).unwrap_or(false),
-        "expected wheel scroll-dismiss lookup to use the live attached scroll element instead of a stale detached node_entry seed"
+        "expected wheel scroll observer lookup to use the live attached scroll element instead of a stale detached node_entry seed"
     );
 }
 
 #[test]
-fn dismissible_outside_press_prevent_default_keeps_focus() {
+fn layer_interaction_outside_press_prevent_default_keeps_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -409,7 +409,7 @@ fn dismissible_outside_press_prevent_default_keeps_focus() {
         &mut services,
         window,
         bounds,
-        "dismissible-outside-press-prevent-default-keeps-focus",
+        "layer-interaction-outside-press-prevent-default-keeps-focus",
         |cx| {
             cx.layer_interaction_on_request(Arc::new(move |_host, _cx, req| {
                 if matches!(req.reason, LayerInteractionReason::OutsidePress { .. }) {
@@ -458,7 +458,7 @@ fn dismissible_outside_press_prevent_default_keeps_focus() {
 }
 
 #[test]
-fn dismissible_outside_press_without_prevent_default_clears_focus() {
+fn layer_interaction_outside_press_without_prevent_default_clears_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -477,7 +477,7 @@ fn dismissible_outside_press_without_prevent_default_clears_focus() {
         &mut services,
         window,
         bounds,
-        "dismissible-outside-press-without-prevent-default-clears-focus",
+        "layer-interaction-outside-press-without-prevent-default-clears-focus",
         |cx| {
             cx.layer_interaction_on_request(Arc::new(move |_host, _cx, _req| {}));
 

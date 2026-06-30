@@ -2,7 +2,7 @@ use super::ElementHostWidget;
 use crate::declarative::frame::LayerInteractionRootProps;
 use crate::declarative::prelude::*;
 
-pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
+pub(super) fn handle_layer_interaction_root_observer<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut crate::widget::ObserverCx<'_, H>,
     window: AppWindowId,
@@ -209,7 +209,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
     }
 }
 
-pub(super) fn handle_dismissible_layer<H: UiHost>(
+pub(super) fn handle_layer_interaction_root<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,

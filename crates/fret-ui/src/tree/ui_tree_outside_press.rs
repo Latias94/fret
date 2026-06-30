@@ -168,7 +168,7 @@ impl<H: UiHost> UiTree<H> {
                 Some(&snapshot),
                 invalidation_visited,
             );
-            // Match Radix/web outcomes: clicking outside a dismissible overlay should clear focus
+            // Match Radix/web outcomes: clicking outside a layer interaction overlay should clear focus
             // from the overlay subtree. If policy prevents default dismissal, keep focus stable.
             //
             // If the event is click-through, the subsequent hit-tested dispatch can still assign

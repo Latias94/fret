@@ -1459,7 +1459,7 @@ fn focus_traversal_command_can_focus_rebuilt_declarative_nodes_before_layout() {
 }
 
 #[test]
-fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_attachment() {
+fn render_layer_interaction_root_initial_attach_commits_window_snapshot_after_root_attachment() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());
 
@@ -1479,7 +1479,7 @@ fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_att
         &mut text,
         window,
         bounds,
-        "dismissible-attach-base",
+        "layer-interaction-attach-base",
         |cx| vec![cx.text("base")],
     );
 
@@ -1499,7 +1499,7 @@ fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_att
         &mut text,
         window,
         bounds,
-        "dismissible-attach-overlay",
+        "layer-interaction-attach-overlay",
         |cx| vec![cx.text("overlay")],
     );
 
@@ -1507,10 +1507,10 @@ fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_att
         .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window))
         .cloned()
-        .expect("snapshot after detached dismissible rebuild");
+        .expect("snapshot after detached layer interaction root rebuild");
     assert!(
         !snapshot_after_render.ui_has_modal,
-        "detached dismissible rebuild must not publish a modal snapshot before the root is attached"
+        "detached layer interaction root rebuild must not publish a modal snapshot before the root is attached"
     );
 
     let _layer = ui.push_overlay_root(overlay_root, true);
@@ -1526,7 +1526,7 @@ fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_att
 
     assert!(
         ui.commit_pending_declarative_window_runtime_snapshots(&mut app, overlay_root),
-        "expected detached dismissible root attachment to finish a pending window snapshot commit"
+        "expected detached layer interaction root attachment to finish a pending window snapshot commit"
     );
 
     let committed_snapshot = app
@@ -1546,7 +1546,7 @@ fn render_dismissible_root_initial_attach_commits_window_snapshot_after_root_att
 }
 
 #[test]
-fn render_dismissible_root_parent_attach_commits_window_snapshot_after_root_attachment() {
+fn render_layer_interaction_root_parent_attach_commits_window_snapshot_after_root_attachment() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());
 
@@ -1567,7 +1567,7 @@ fn render_dismissible_root_parent_attach_commits_window_snapshot_after_root_atta
         &mut text,
         window,
         bounds,
-        "dismissible-parent-attach-base",
+        "layer-interaction-parent-attach-base",
         |cx| vec![cx.text("base")],
     );
 
@@ -1587,7 +1587,7 @@ fn render_dismissible_root_parent_attach_commits_window_snapshot_after_root_atta
         &mut text,
         window,
         bounds,
-        "dismissible-parent-attach-overlay",
+        "layer-interaction-parent-attach-overlay",
         |cx| vec![cx.text_input(TextInputProps::new(value.clone()))],
     );
 
@@ -2702,7 +2702,7 @@ fn view_cache_subtree_membership_includes_nested_cache_roots() {
 }
 
 #[test]
-fn dismissible_root_recreates_nodes_after_layer_removal() {
+fn layer_interaction_root_recreates_nodes_after_layer_removal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();

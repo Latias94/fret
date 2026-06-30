@@ -2,10 +2,10 @@ use super::super::frame::ElementInstance;
 use super::super::prelude::*;
 use super::ElementHostWidget;
 
-mod dismissible;
 mod external_drag_region;
 mod hooks;
 mod internal_drag_region;
+mod layer_interaction;
 mod pointer_region;
 mod pressable;
 mod roving_flex;
@@ -150,7 +150,7 @@ impl ElementHostWidget {
                 let _ = wheel_region::handle_wheel_region(self, cx, window, props, event);
             }
             ElementInstance::LayerInteractionRoot(props) => {
-                dismissible::handle_dismissible_layer(self, cx, window, props, event);
+                layer_interaction::handle_layer_interaction_root(self, cx, window, props, event);
             }
             ElementInstance::Pressable(props) => {
                 pressable::handle_pressable(self, cx, window, props, event);
@@ -197,7 +197,9 @@ impl ElementHostWidget {
         };
 
         if let ElementInstance::LayerInteractionRoot(props) = instance {
-            dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
+            layer_interaction::handle_layer_interaction_root_observer(
+                self, cx, window, props, event,
+            );
         }
     }
 }

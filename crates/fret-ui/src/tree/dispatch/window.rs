@@ -2547,7 +2547,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            let stopped_by_dismissible_root_hook = stop_propagation_requested
+            let stopped_by_layer_interaction_root_hook = stop_propagation_requested
                 && self.window.is_some_and(|window| {
                     stop_propagation_requested_by
                         .and_then(|node| self.nodes.get(node).and_then(|n| n.element))
@@ -2564,7 +2564,7 @@ impl<H: UiHost> UiTree<H> {
                 });
 
             if defer_escape_overlay_dismiss
-                && !stopped_by_dismissible_root_hook
+                && !stopped_by_layer_interaction_root_hook
                 && (!stop_propagation_requested || !focus_requested)
                 && let Event::KeyDown {
                     key: fret_core::KeyCode::Escape,

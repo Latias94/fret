@@ -282,6 +282,30 @@ class SurfacePolicyTests(unittest.TestCase):
                 )
             )
 
+    def test_dismissible_public_member_is_rejected_in_mechanism_crate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write(
+                root / "crates/fret-ui/src/elements/access.rs",
+                """
+                pub fn dismissible_has_pointer_move_handler() {}
+                """,
+            )
+
+            violations = POLICY.check_surface_policy(
+                root,
+                default_surfaces=[],
+                advanced_manual_surfaces=[],
+                policy_recipe_surfaces=[],
+                mechanism_root_surfaces=[],
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertEqual(
+                "mechanism-public-member-policy-vocabulary:dismissible-public-member",
+                violations[0].rule,
+            )
+
     def test_auto_focus_public_action_hook_is_rejected_in_mechanism_crate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
