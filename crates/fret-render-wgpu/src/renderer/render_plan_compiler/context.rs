@@ -3,6 +3,9 @@ use super::draw_scope::DrawScopeStack;
 use slotmap::Key;
 use std::ops::Range;
 
+const FNV_OFFSET_BASIS: u64 = 14695981039346656037;
+const FNV_PRIME: u64 = 1099511628211;
+
 pub(super) struct RenderPlanCompilerCtx {
     passes: Vec<RenderPlanPass>,
     segments: Vec<RenderPlanSegment>,
@@ -116,6 +119,12 @@ impl RenderPlanCompilerCtx {
 
         self.segments.push(RenderPlanSegment {
             id,
+            scene_chunk_candidate: scene_chunk_candidate(
+                draw_range.clone(),
+                draws,
+                start_uniform_fingerprint,
+                flags,
+            ),
             draw_range,
             start_uniform_index,
             start_uniform_fingerprint,
@@ -167,5 +176,138 @@ impl RenderPlanCompilerCtx {
         Vec<RenderPlanDegradation>,
     ) {
         (self.segments, self.passes, self.degradations)
+    }
+}
+
+fn mix_fnv1a(mut hash: u64, value: u64) -> u64 {
+    hash ^= value;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash
+}
+
+fn mix_scissor(hash: &mut u64, scissor: ScissorRect) {
+    *hash = mix_fnv1a(*hash, u64::from(scissor.x));
+    *hash = mix_fnv1a(*hash, u64::from(scissor.y));
+    *hash = mix_fnv1a(*hash, u64::from(scissor.w));
+    *hash = mix_fnv1a(*hash, u64::from(scissor.h));
+}
+
+fn scene_chunk_candidate(
+    draw_range: Range<usize>,
+    draws: &[OrderedDraw],
+    start_uniform_fingerprint: u64,
+    flags: RenderPlanSegmentFlags,
+) -> RenderPlanSceneChunkCandidate {
+    let segment_draws = draws.get(draw_range.clone()).unwrap_or(&[]);
+    let draw_count = u32::try_from(segment_draws.len()).unwrap_or(u32::MAX);
+    if segment_draws.is_empty() {
+        return RenderPlanSceneChunkCandidate {
+            eligible: false,
+            draw_count: 0,
+            fingerprint: 0,
+        };
+    }
+
+    let mut hash = FNV_OFFSET_BASIS;
+    hash = mix_fnv1a(hash, draw_range.start as u64);
+    hash = mix_fnv1a(hash, draw_range.end as u64);
+    hash = mix_fnv1a(hash, start_uniform_fingerprint);
+    hash = mix_fnv1a(hash, flags.diagnostics_mask().into());
+    for draw in segment_draws {
+        mix_ordered_draw(&mut hash, draw);
+    }
+
+    RenderPlanSceneChunkCandidate {
+        eligible: true,
+        draw_count,
+        fingerprint: hash,
+    }
+}
+
+fn mix_ordered_draw(hash: &mut u64, draw: &OrderedDraw) {
+    match draw {
+        OrderedDraw::Quad(draw) => {
+            *hash = mix_fnv1a(*hash, 1);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_instance));
+            *hash = mix_fnv1a(*hash, u64::from(draw.instance_count));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.fill_kind));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.border_kind));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.border_present));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.dash_enabled));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.fill_material_sampled));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.border_material_sampled));
+            *hash = mix_fnv1a(*hash, u64::from(draw.pipeline.shadow_mode));
+        }
+        OrderedDraw::Viewport(draw) => {
+            *hash = mix_fnv1a(*hash, 2);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_vertex));
+            *hash = mix_fnv1a(*hash, u64::from(draw.vertex_count));
+            *hash = mix_fnv1a(*hash, draw.target.data().as_ffi());
+        }
+        OrderedDraw::Image(draw) => {
+            *hash = mix_fnv1a(*hash, 3);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_vertex));
+            *hash = mix_fnv1a(*hash, u64::from(draw.vertex_count));
+            *hash = mix_fnv1a(*hash, draw.image.data().as_ffi());
+            *hash = mix_fnv1a(*hash, image_sampling_hint_id(draw.sampling));
+        }
+        OrderedDraw::VertexColor(draw) => {
+            *hash = mix_fnv1a(*hash, 4);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_vertex));
+            *hash = mix_fnv1a(*hash, u64::from(draw.vertex_count));
+        }
+        OrderedDraw::Mask(draw) => {
+            *hash = mix_fnv1a(*hash, 5);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_vertex));
+            *hash = mix_fnv1a(*hash, u64::from(draw.vertex_count));
+            *hash = mix_fnv1a(*hash, draw.image.data().as_ffi());
+            *hash = mix_fnv1a(*hash, image_sampling_hint_id(draw.sampling));
+        }
+        OrderedDraw::Text(draw) => {
+            *hash = mix_fnv1a(*hash, 6);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_instance));
+            *hash = mix_fnv1a(*hash, u64::from(draw.instance_count));
+            *hash = mix_fnv1a(*hash, text_draw_kind_id(draw.kind));
+            *hash = mix_fnv1a(*hash, u64::from(draw.atlas_page));
+            *hash = mix_fnv1a(*hash, u64::from(draw.paint_index));
+        }
+        OrderedDraw::Path(draw) => {
+            *hash = mix_fnv1a(*hash, 7);
+            mix_scissor(hash, draw.scissor);
+            *hash = mix_fnv1a(*hash, u64::from(draw.uniform_index));
+            *hash = mix_fnv1a(*hash, u64::from(draw.first_vertex));
+            *hash = mix_fnv1a(*hash, u64::from(draw.vertex_count));
+            *hash = mix_fnv1a(*hash, u64::from(draw.paint_index));
+        }
+    }
+}
+
+fn image_sampling_hint_id(sampling: fret_core::scene::ImageSamplingHint) -> u64 {
+    match sampling {
+        fret_core::scene::ImageSamplingHint::Default => 0,
+        fret_core::scene::ImageSamplingHint::Linear => 1,
+        fret_core::scene::ImageSamplingHint::Nearest => 2,
+    }
+}
+
+fn text_draw_kind_id(kind: TextDrawKind) -> u64 {
+    match kind {
+        TextDrawKind::Mask => 0,
+        TextDrawKind::MaskOutline => 1,
+        TextDrawKind::Color => 2,
+        TextDrawKind::Subpixel => 3,
+        TextDrawKind::SubpixelOutline => 4,
     }
 }

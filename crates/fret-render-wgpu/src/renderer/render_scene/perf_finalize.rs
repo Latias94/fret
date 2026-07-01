@@ -212,6 +212,12 @@ impl Renderer {
         perf.render_plan_segments = perf
             .render_plan_segments
             .max(frame_perf.render_plan_segments);
+        perf.render_plan_scene_chunk_candidates = perf
+            .render_plan_scene_chunk_candidates
+            .max(frame_perf.render_plan_scene_chunk_candidates);
+        perf.render_plan_scene_chunk_candidate_draws = perf
+            .render_plan_scene_chunk_candidate_draws
+            .max(frame_perf.render_plan_scene_chunk_candidate_draws);
         perf.render_plan_degradations = perf
             .render_plan_degradations
             .saturating_add(frame_perf.render_plan_degradations);
@@ -247,6 +253,12 @@ impl Renderer {
         perf.render_plan_segments_passes_increased = perf
             .render_plan_segments_passes_increased
             .saturating_add(frame_perf.render_plan_segments_passes_increased);
+        perf.render_plan_scene_chunk_candidates_stable = perf
+            .render_plan_scene_chunk_candidates_stable
+            .saturating_add(frame_perf.render_plan_scene_chunk_candidates_stable);
+        perf.render_plan_scene_chunk_candidates_changed = perf
+            .render_plan_scene_chunk_candidates_changed
+            .saturating_add(frame_perf.render_plan_scene_chunk_candidates_changed);
         perf.render_plan_degradations_budget_zero = perf
             .render_plan_degradations_budget_zero
             .saturating_add(frame_perf.render_plan_degradations_budget_zero);
@@ -586,6 +598,13 @@ impl Renderer {
             render_plan_segments: frame_perf.render_plan_segments,
             render_plan_segments_changed: frame_perf.render_plan_segments_changed,
             render_plan_segments_passes_increased: frame_perf.render_plan_segments_passes_increased,
+            render_plan_scene_chunk_candidates: frame_perf.render_plan_scene_chunk_candidates,
+            render_plan_scene_chunk_candidate_draws: frame_perf
+                .render_plan_scene_chunk_candidate_draws,
+            render_plan_scene_chunk_candidates_stable: frame_perf
+                .render_plan_scene_chunk_candidates_stable,
+            render_plan_scene_chunk_candidates_changed: frame_perf
+                .render_plan_scene_chunk_candidates_changed,
             render_plan_degradations: frame_perf.render_plan_degradations,
             render_plan_effect_chain_budget_samples: frame_perf
                 .render_plan_effect_chain_budget_samples,

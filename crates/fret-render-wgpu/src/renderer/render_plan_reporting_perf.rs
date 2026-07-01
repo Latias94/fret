@@ -31,6 +31,17 @@ pub(super) fn record_render_plan_frame_perf(
     frame_perf.render_plan_estimated_peak_intermediate_bytes =
         plan.compile_stats.estimated_peak_intermediate_bytes;
     frame_perf.render_plan_segments = plan.segments.len() as u64;
+    frame_perf.render_plan_scene_chunk_candidates = plan
+        .segments
+        .iter()
+        .filter(|segment| segment.scene_chunk_candidate.eligible)
+        .count() as u64;
+    frame_perf.render_plan_scene_chunk_candidate_draws = plan
+        .segments
+        .iter()
+        .filter(|segment| segment.scene_chunk_candidate.eligible)
+        .map(|segment| u64::from(segment.scene_chunk_candidate.draw_count))
+        .sum();
     frame_perf.render_plan_degradations = plan.degradations.len() as u64;
     frame_perf.render_plan_effect_chain_budget_samples =
         plan.compile_stats.effect_chain_budget_samples;

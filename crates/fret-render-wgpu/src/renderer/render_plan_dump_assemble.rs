@@ -30,7 +30,15 @@ pub(super) struct JsonDumpSegment {
     start_uniform_index: Option<u32>,
     start_uniform_fingerprint: String,
     flags: JsonDumpSegmentFlags,
+    scene_chunk_candidate: JsonDumpSegmentSceneChunkCandidate,
     pass_counts: JsonDumpSegmentPassCounts,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub(super) struct JsonDumpSegmentSceneChunkCandidate {
+    eligible: bool,
+    draw_count: u32,
+    fingerprint: String,
 }
 
 #[derive(Debug, serde::Serialize, Clone, Copy)]
@@ -222,6 +230,11 @@ fn rebuild_segment_dump_scratch(plan: &RenderPlan, dump_scratch: &mut RenderPlan
                 has_text: segment.flags.has_text,
                 has_path: segment.flags.has_path,
             },
+            scene_chunk_candidate: JsonDumpSegmentSceneChunkCandidate {
+                eligible: segment.scene_chunk_candidate.eligible,
+                draw_count: segment.scene_chunk_candidate.draw_count,
+                fingerprint: format!("0x{:016x}", segment.scene_chunk_candidate.fingerprint),
+            },
             pass_counts: dump_scratch.segment_pass_counts.get(ix).copied().unwrap_or(
                 JsonDumpSegmentPassCounts {
                     scene_draw_range: 0,
@@ -290,7 +303,7 @@ pub(super) fn assemble_render_plan_json_dump<'a>(
     dump_scratch: &'a RenderPlanJsonDumpScratch,
 ) -> RenderPlanJsonDump<'a> {
     RenderPlanJsonDump {
-        schema_version: 7,
+        schema_version: 8,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
@@ -317,8 +330,8 @@ mod tests {
         ClipMaskPass, CustomEffectPass, CustomEffectPassCommon, CustomEffectV2Pass,
         CustomEffectV3Pass, LocalScissorRect, PathMsaaBatchPass, PlanTarget,
         RenderPlanCompileStats, RenderPlanDegradation, RenderPlanDegradationKind,
-        RenderPlanDegradationReason, RenderPlanPass, RenderPlanSegment, RenderPlanSegmentFlags,
-        SceneDrawRangePass, SceneSegmentId,
+        RenderPlanDegradationReason, RenderPlanPass, RenderPlanSceneChunkCandidate,
+        RenderPlanSegment, RenderPlanSegmentFlags, SceneDrawRangePass, SceneSegmentId,
     };
 
     fn custom_effect_common(dst: PlanTarget) -> CustomEffectPassCommon {
@@ -349,6 +362,11 @@ mod tests {
                         has_quad: true,
                         ..Default::default()
                     },
+                    scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                        eligible: true,
+                        draw_count: 3,
+                        fingerprint: 0x1111,
+                    },
                 },
                 RenderPlanSegment {
                     id: SceneSegmentId(1),
@@ -358,6 +376,11 @@ mod tests {
                     flags: RenderPlanSegmentFlags {
                         has_path: true,
                         ..Default::default()
+                    },
+                    scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                        eligible: true,
+                        draw_count: 3,
+                        fingerprint: 0x2222,
                     },
                 },
             ],
@@ -446,8 +469,20 @@ mod tests {
         );
 
         assert_eq!(dump.segments.len(), 2);
+        assert!(dump.segments[0].scene_chunk_candidate.eligible);
+        assert_eq!(dump.segments[0].scene_chunk_candidate.draw_count, 3);
+        assert_eq!(
+            dump.segments[0].scene_chunk_candidate.fingerprint,
+            "0x0000000000001111"
+        );
         assert_eq!(dump.segments[0].pass_counts.scene_draw_range, 1);
         assert_eq!(dump.segments[0].pass_counts.path_msaa_batch, 1);
+        assert!(dump.segments[1].scene_chunk_candidate.eligible);
+        assert_eq!(dump.segments[1].scene_chunk_candidate.draw_count, 3);
+        assert_eq!(
+            dump.segments[1].scene_chunk_candidate.fingerprint,
+            "0x0000000000002222"
+        );
         assert_eq!(dump.segments[1].pass_counts.scene_draw_range, 1);
         assert_eq!(dump.segments[1].pass_counts.path_msaa_batch, 0);
 

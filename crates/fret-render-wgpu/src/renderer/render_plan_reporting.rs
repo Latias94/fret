@@ -5,8 +5,21 @@ pub(super) struct RenderPlanSegmentReport {
     pub(super) draw_range: (usize, usize),
     pub(super) start_uniform_fingerprint: u64,
     pub(super) flags_mask: u8,
+    pub(super) scene_chunk_candidate_eligible: bool,
+    pub(super) scene_chunk_candidate_draw_count: u32,
+    pub(super) scene_chunk_candidate_fingerprint: u64,
     pub(super) scene_draw_range_passes: u32,
     pub(super) path_msaa_batch_passes: u32,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct RenderPlanSegmentReportDiff {
+    segments_changed: u64,
+    segments_passes_increased: u64,
+    scene_chunk_candidates: u64,
+    scene_chunk_candidate_draws: u64,
+    scene_chunk_candidates_stable: u64,
+    scene_chunk_candidates_changed: u64,
 }
 
 #[derive(Default)]
@@ -42,15 +55,21 @@ impl RenderPlanReportingState {
             );
 
             self.rebuild_segment_report(plan);
-            let (segments_changed, segments_passes_increased) = diff_segment_reports(
+            let diff = diff_segment_reports(
                 diagnostics_state
                     .last_render_plan_segment_report
                     .as_deref()
                     .unwrap_or(&[]),
                 &self.segment_report_scratch,
             );
-            frame_perf.render_plan_segments_changed = segments_changed;
-            frame_perf.render_plan_segments_passes_increased = segments_passes_increased;
+            frame_perf.render_plan_segments_changed = diff.segments_changed;
+            frame_perf.render_plan_segments_passes_increased = diff.segments_passes_increased;
+            frame_perf.render_plan_scene_chunk_candidates = diff.scene_chunk_candidates;
+            frame_perf.render_plan_scene_chunk_candidate_draws = diff.scene_chunk_candidate_draws;
+            frame_perf.render_plan_scene_chunk_candidates_stable =
+                diff.scene_chunk_candidates_stable;
+            frame_perf.render_plan_scene_chunk_candidates_changed =
+                diff.scene_chunk_candidates_changed;
 
             if let Some(prev) = diagnostics_state.last_render_plan_segment_report.as_mut() {
                 std::mem::swap(prev, &mut self.segment_report_scratch);
@@ -100,17 +119,13 @@ impl RenderPlanReportingState {
         self.segment_report_scratch.clear();
         self.segment_report_scratch.reserve(plan.segments.len());
         for (ix, seg) in plan.segments.iter().enumerate() {
-            let flags_mask = u8::from(seg.flags.has_quad)
-                | (u8::from(seg.flags.has_viewport) << 1)
-                | (u8::from(seg.flags.has_image) << 2)
-                | (u8::from(seg.flags.has_mask) << 3)
-                | (u8::from(seg.flags.has_text) << 4)
-                | (u8::from(seg.flags.has_path) << 5)
-                | (u8::from(seg.flags.has_vertex_color) << 6);
             self.segment_report_scratch.push(RenderPlanSegmentReport {
                 draw_range: (seg.draw_range.start, seg.draw_range.end),
                 start_uniform_fingerprint: seg.start_uniform_fingerprint,
-                flags_mask,
+                flags_mask: seg.flags.diagnostics_mask(),
+                scene_chunk_candidate_eligible: seg.scene_chunk_candidate.eligible,
+                scene_chunk_candidate_draw_count: seg.scene_chunk_candidate.draw_count,
+                scene_chunk_candidate_fingerprint: seg.scene_chunk_candidate.fingerprint,
                 scene_draw_range_passes: *self
                     .scene_draw_range_passes_scratch
                     .get(ix)
@@ -124,19 +139,30 @@ impl RenderPlanReportingState {
 fn diff_segment_reports(
     previous: &[RenderPlanSegmentReport],
     current: &[RenderPlanSegmentReport],
-) -> (u64, u64) {
+) -> RenderPlanSegmentReportDiff {
+    let mut diff = RenderPlanSegmentReportDiff::default();
+    diff.scene_chunk_candidates = current
+        .iter()
+        .filter(|report| report.scene_chunk_candidate_eligible)
+        .count() as u64;
+    diff.scene_chunk_candidate_draws = current
+        .iter()
+        .filter(|report| report.scene_chunk_candidate_eligible)
+        .map(|report| u64::from(report.scene_chunk_candidate_draw_count))
+        .sum();
+
     if previous.len() != current.len() {
-        return (current.len() as u64, 0);
+        diff.segments_changed = current.len() as u64;
+        diff.scene_chunk_candidates_changed = diff.scene_chunk_candidates;
+        return diff;
     }
 
-    let mut segments_changed = 0u64;
-    let mut segments_passes_increased = 0u64;
     for (prev, cur) in previous.iter().zip(current.iter()) {
         if prev.draw_range != cur.draw_range
             || prev.start_uniform_fingerprint != cur.start_uniform_fingerprint
             || prev.flags_mask != cur.flags_mask
         {
-            segments_changed = segments_changed.saturating_add(1);
+            diff.segments_changed = diff.segments_changed.saturating_add(1);
         }
 
         let prev_passes = prev
@@ -146,11 +172,24 @@ fn diff_segment_reports(
             .scene_draw_range_passes
             .saturating_add(cur.path_msaa_batch_passes);
         if cur_passes > prev_passes {
-            segments_passes_increased = segments_passes_increased.saturating_add(1);
+            diff.segments_passes_increased = diff.segments_passes_increased.saturating_add(1);
+        }
+
+        if cur.scene_chunk_candidate_eligible {
+            if prev.scene_chunk_candidate_eligible
+                && prev.scene_chunk_candidate_draw_count == cur.scene_chunk_candidate_draw_count
+                && prev.scene_chunk_candidate_fingerprint == cur.scene_chunk_candidate_fingerprint
+            {
+                diff.scene_chunk_candidates_stable =
+                    diff.scene_chunk_candidates_stable.saturating_add(1);
+            } else {
+                diff.scene_chunk_candidates_changed =
+                    diff.scene_chunk_candidates_changed.saturating_add(1);
+            }
         }
     }
 
-    (segments_changed, segments_passes_increased)
+    diff
 }
 
 #[cfg(test)]
@@ -161,6 +200,9 @@ mod tests {
         draw_range: (usize, usize),
         start_uniform_fingerprint: u64,
         flags_mask: u8,
+        scene_chunk_candidate_eligible: bool,
+        scene_chunk_candidate_draw_count: u32,
+        scene_chunk_candidate_fingerprint: u64,
         scene_draw_range_passes: u32,
         path_msaa_batch_passes: u32,
     ) -> RenderPlanSegmentReport {
@@ -168,6 +210,9 @@ mod tests {
             draw_range,
             start_uniform_fingerprint,
             flags_mask,
+            scene_chunk_candidate_eligible,
+            scene_chunk_candidate_draw_count,
+            scene_chunk_candidate_fingerprint,
             scene_draw_range_passes,
             path_msaa_batch_passes,
         }
@@ -176,18 +221,38 @@ mod tests {
     #[test]
     fn diff_segment_reports_tracks_shape_changes_and_pass_growth() {
         let previous = [
-            report((0, 4), 11, 0b000001, 1, 0),
-            report((4, 8), 22, 0b000010, 1, 1),
+            report((0, 4), 11, 0b000001, true, 4, 0xA11C, 1, 0),
+            report((4, 8), 22, 0b000010, true, 4, 0xB22D, 1, 1),
         ];
         let current = [
-            report((0, 4), 11, 0b000001, 2, 0),
-            report((5, 9), 22, 0b000010, 1, 1),
+            report((0, 4), 11, 0b000001, true, 4, 0xA11C, 2, 0),
+            report((5, 9), 22, 0b000010, true, 4, 0xC33E, 1, 1),
         ];
 
-        let (segments_changed, segments_passes_increased) =
-            diff_segment_reports(&previous, &current);
+        let diff = diff_segment_reports(&previous, &current);
 
-        assert_eq!(segments_changed, 1);
-        assert_eq!(segments_passes_increased, 1);
+        assert_eq!(diff.segments_changed, 1);
+        assert_eq!(diff.segments_passes_increased, 1);
+        assert_eq!(diff.scene_chunk_candidates, 2);
+        assert_eq!(diff.scene_chunk_candidate_draws, 8);
+        assert_eq!(diff.scene_chunk_candidates_stable, 1);
+        assert_eq!(diff.scene_chunk_candidates_changed, 1);
+    }
+
+    #[test]
+    fn diff_segment_reports_treats_new_shape_candidates_as_changed() {
+        let current = [
+            report((0, 2), 11, 0b000001, true, 2, 0xA11C, 1, 0),
+            report((2, 2), 0, 0, false, 0, 0, 1, 0),
+        ];
+
+        let diff = diff_segment_reports(&[], &current);
+
+        assert_eq!(diff.segments_changed, 2);
+        assert_eq!(diff.segments_passes_increased, 0);
+        assert_eq!(diff.scene_chunk_candidates, 1);
+        assert_eq!(diff.scene_chunk_candidate_draws, 2);
+        assert_eq!(diff.scene_chunk_candidates_stable, 0);
+        assert_eq!(diff.scene_chunk_candidates_changed, 1);
     }
 }

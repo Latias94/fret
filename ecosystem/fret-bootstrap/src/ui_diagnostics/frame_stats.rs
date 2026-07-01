@@ -710,6 +710,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_intermediate_full_target_bytes: u64,
     #[serde(default)]
+    pub renderer_render_plan_scene_chunk_candidates: u64,
+    #[serde(default)]
+    pub renderer_render_plan_scene_chunk_candidate_draws: u64,
+    #[serde(default)]
+    pub renderer_render_plan_scene_chunk_candidates_stable: u64,
+    #[serde(default)]
+    pub renderer_render_plan_scene_chunk_candidates_changed: u64,
+    #[serde(default)]
     pub renderer_render_plan_effect_chain_budget_samples: u64,
     #[serde(default)]
     pub renderer_render_plan_effect_chain_effective_budget_min_bytes: u64,
@@ -1529,6 +1537,10 @@ impl UiFrameStatsV1 {
             renderer_text_atlas_resets: 0,
             renderer_intermediate_budget_bytes: 0,
             renderer_intermediate_full_target_bytes: 0,
+            renderer_render_plan_scene_chunk_candidates: 0,
+            renderer_render_plan_scene_chunk_candidate_draws: 0,
+            renderer_render_plan_scene_chunk_candidates_stable: 0,
+            renderer_render_plan_scene_chunk_candidates_changed: 0,
             renderer_render_plan_effect_chain_budget_samples: 0,
             renderer_render_plan_effect_chain_effective_budget_min_bytes: 0,
             renderer_render_plan_effect_chain_effective_budget_max_bytes: 0,
@@ -1827,6 +1839,14 @@ impl UiFrameStatsV1 {
         self.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
         self.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
         self.renderer_intermediate_full_target_bytes = sample.perf.intermediate_full_target_bytes;
+        self.renderer_render_plan_scene_chunk_candidates =
+            sample.perf.render_plan_scene_chunk_candidates;
+        self.renderer_render_plan_scene_chunk_candidate_draws =
+            sample.perf.render_plan_scene_chunk_candidate_draws;
+        self.renderer_render_plan_scene_chunk_candidates_stable =
+            sample.perf.render_plan_scene_chunk_candidates_stable;
+        self.renderer_render_plan_scene_chunk_candidates_changed =
+            sample.perf.render_plan_scene_chunk_candidates_changed;
         self.renderer_render_plan_effect_chain_budget_samples =
             sample.perf.render_plan_effect_chain_budget_samples;
         self.renderer_render_plan_effect_chain_effective_budget_min_bytes =

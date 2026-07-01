@@ -19,6 +19,18 @@ pub(super) struct RenderPlanSegmentFlags {
     pub(super) has_path: bool,
 }
 
+impl RenderPlanSegmentFlags {
+    pub(super) fn diagnostics_mask(self) -> u8 {
+        u8::from(self.has_quad)
+            | (u8::from(self.has_viewport) << 1)
+            | (u8::from(self.has_image) << 2)
+            | (u8::from(self.has_mask) << 3)
+            | (u8::from(self.has_text) << 4)
+            | (u8::from(self.has_path) << 5)
+            | (u8::from(self.has_vertex_color) << 6)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct RenderPlanSegment {
     pub(super) id: SceneSegmentId,
@@ -26,6 +38,14 @@ pub(super) struct RenderPlanSegment {
     pub(super) start_uniform_index: Option<u32>,
     pub(super) start_uniform_fingerprint: u64,
     pub(super) flags: RenderPlanSegmentFlags,
+    pub(super) scene_chunk_candidate: RenderPlanSceneChunkCandidate,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RenderPlanSceneChunkCandidate {
+    pub(super) eligible: bool,
+    pub(super) draw_count: u32,
+    pub(super) fingerprint: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]

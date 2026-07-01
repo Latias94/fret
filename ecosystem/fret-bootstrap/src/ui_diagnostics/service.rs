@@ -1984,6 +1984,10 @@ mod service_tests {
         perf.geometry_upload.text_vertex_write_count = 2;
         perf.scene_encoding_cache_miss_histogram.scene_fingerprint_changed = 3;
         perf.scene_encoding_cache_miss_histogram.text_quality_key_changed = 1;
+        perf.render_plan_scene_chunk_candidates = 4;
+        perf.render_plan_scene_chunk_candidate_draws = 11;
+        perf.render_plan_scene_chunk_candidates_stable = 3;
+        perf.render_plan_scene_chunk_candidates_changed = 1;
         perf.encode_scene_text_ops = 17;
         let sample = fret_render::RendererPerfFrameSample {
             tick_id: 7,
@@ -2019,6 +2023,16 @@ mod service_tests {
         );
         assert_eq!(
             stats.renderer_scene_encoding_cache_miss_text_quality_key_changed,
+            1
+        );
+        assert_eq!(stats.renderer_render_plan_scene_chunk_candidates, 4);
+        assert_eq!(stats.renderer_render_plan_scene_chunk_candidate_draws, 11);
+        assert_eq!(
+            stats.renderer_render_plan_scene_chunk_candidates_stable,
+            3
+        );
+        assert_eq!(
+            stats.renderer_render_plan_scene_chunk_candidates_changed,
             1
         );
         assert_eq!(stats.renderer_encode_scene_text_ops, 17);

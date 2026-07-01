@@ -685,6 +685,18 @@ pub struct RenderPerfSnapshot {
     pub render_plan_segments: u64,
     pub render_plan_segments_changed: u64,
     pub render_plan_segments_passes_increased: u64,
+    /// Count of render-plan segments that are diagnostics candidates for future retained scene
+    /// chunk encoding reuse.
+    ///
+    /// This is evidence-only. It is not a cache hit count and does not imply dirty GPU uploads.
+    pub render_plan_scene_chunk_candidates: u64,
+    /// Total ordered draws covered by `render_plan_scene_chunk_candidates`.
+    pub render_plan_scene_chunk_candidate_draws: u64,
+    /// Candidate segments whose candidate fingerprint matched the previous frame's segment report.
+    pub render_plan_scene_chunk_candidates_stable: u64,
+    /// Candidate segments that are new or whose candidate fingerprint changed since the previous
+    /// frame's segment report.
+    pub render_plan_scene_chunk_candidates_changed: u64,
     pub render_plan_degradations: u64,
     /// Number of effect chain budget samples recorded during render plan compilation.
     ///
@@ -1005,6 +1017,10 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_segments: u64,
     pub(super) render_plan_segments_changed: u64,
     pub(super) render_plan_segments_passes_increased: u64,
+    pub(super) render_plan_scene_chunk_candidates: u64,
+    pub(super) render_plan_scene_chunk_candidate_draws: u64,
+    pub(super) render_plan_scene_chunk_candidates_stable: u64,
+    pub(super) render_plan_scene_chunk_candidates_changed: u64,
     pub(super) render_plan_degradations: u64,
     pub(super) render_plan_effect_chain_budget_samples: u64,
     pub(super) render_plan_effect_chain_effective_budget_min_bytes: u64,

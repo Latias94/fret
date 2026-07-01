@@ -183,6 +183,12 @@ impl Renderer {
             render_plan_segments: perf.render_plan_segments,
             render_plan_segments_changed: perf.render_plan_segments_changed,
             render_plan_segments_passes_increased: perf.render_plan_segments_passes_increased,
+            render_plan_scene_chunk_candidates: perf.render_plan_scene_chunk_candidates,
+            render_plan_scene_chunk_candidate_draws: perf.render_plan_scene_chunk_candidate_draws,
+            render_plan_scene_chunk_candidates_stable: perf
+                .render_plan_scene_chunk_candidates_stable,
+            render_plan_scene_chunk_candidates_changed: perf
+                .render_plan_scene_chunk_candidates_changed,
             render_plan_degradations: perf.render_plan_degradations,
             render_plan_effect_chain_budget_samples: perf.render_plan_effect_chain_budget_samples,
             render_plan_effect_chain_effective_budget_min_bytes: perf
