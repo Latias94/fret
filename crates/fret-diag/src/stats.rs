@@ -1571,6 +1571,21 @@ mod tests {
                                     "ns_torture_autoscroll": 19000,
                                     "us_torture_overlay": 9,
                                     "ns_torture_overlay": 11000
+                                },
+                                "cache_stats": {
+                                    "row_text_get_calls": 21,
+                                    "row_text_hits": 18,
+                                    "row_text_misses": 3,
+                                    "row_text_evictions": 1,
+                                    "row_text_resets": 2,
+                                    "row_scene_get_calls": 11,
+                                    "row_scene_hits": 8,
+                                    "row_scene_misses": 3,
+                                    "row_scene_evictions": 1,
+                                    "row_scene_resets": 0,
+                                    "row_scene_fast_get_calls": 7,
+                                    "row_scene_fast_hits": 6,
+                                    "row_scene_fast_misses": 1
                                 }
                             }
                         }
@@ -1636,6 +1651,23 @@ mod tests {
         assert_eq!(perf.us_windowed_surface_row_callback_gap, 30);
         assert_eq!(perf.us_torture_autoscroll, 19);
         assert_eq!(perf.us_torture_overlay, 11);
+        let cache_stats = top
+            .code_editor_cache_stats
+            .as_ref()
+            .expect("code editor cache stats");
+        assert_eq!(cache_stats.row_text_get_calls, 21);
+        assert_eq!(cache_stats.row_text_hits, 18);
+        assert_eq!(cache_stats.row_text_misses, 3);
+        assert_eq!(cache_stats.row_text_evictions, 1);
+        assert_eq!(cache_stats.row_text_resets, 2);
+        assert_eq!(cache_stats.row_scene_get_calls, 11);
+        assert_eq!(cache_stats.row_scene_hits, 8);
+        assert_eq!(cache_stats.row_scene_misses, 3);
+        assert_eq!(cache_stats.row_scene_evictions, 1);
+        assert_eq!(cache_stats.row_scene_resets, 0);
+        assert_eq!(cache_stats.row_scene_fast_get_calls, 7);
+        assert_eq!(cache_stats.row_scene_fast_hits, 6);
+        assert_eq!(cache_stats.row_scene_fast_misses, 1);
 
         let json = report.to_json();
         assert_eq!(
@@ -1767,6 +1799,16 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/us_torture_overlay")
                 .and_then(|v| v.as_u64()),
             Some(11)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_cache_stats/row_text_get_calls")
+                .and_then(|v| v.as_u64()),
+            Some(21)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_cache_stats/row_scene_hits")
+                .and_then(|v| v.as_u64()),
+            Some(8)
         );
     }
 

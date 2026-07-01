@@ -130,11 +130,22 @@ pub(super) fn push_perf_json_repeat_summary_row(
     let mut top_barrier_relayouts_performed: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_virtual_list_visible_range_checks: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_virtual_list_visible_range_refreshes: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_text_get_calls: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_text_hits: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_text_misses: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_text_resets: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_text_hit_rate_pct: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_text_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_rows_painted: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_rows_scene_replayed: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_rows_scene_stored: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_ops_stored: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_replay_hit_rate_pct: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_cache_get_calls: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_cache_hits: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_cache_misses: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_cache_resets: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_cache_hit_rate_pct: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_prepaint_plan_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_prepaint_probe_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_prepaint_key_compare_us: Vec<u64> =
@@ -254,6 +265,14 @@ pub(super) fn push_perf_json_repeat_summary_row(
             .push(json_u64(run, "top_virtual_list_visible_range_checks"));
         top_virtual_list_visible_range_refreshes
             .push(json_u64(run, "top_virtual_list_visible_range_refreshes"));
+        top_code_editor_row_text_get_calls
+            .push(json_u64(run, "top_code_editor_row_text_get_calls"));
+        top_code_editor_row_text_hits.push(json_u64(run, "top_code_editor_row_text_hits"));
+        top_code_editor_row_text_misses.push(json_u64(run, "top_code_editor_row_text_misses"));
+        top_code_editor_row_text_resets.push(json_u64(run, "top_code_editor_row_text_resets"));
+        top_code_editor_row_text_hit_rate_pct
+            .push(json_u64(run, "top_code_editor_row_text_hit_rate_pct"));
+        top_code_editor_row_text_us.push(json_u64(run, "top_code_editor_row_text_us"));
         top_code_editor_rows_painted.push(json_u64(run, "top_code_editor_rows_painted"));
         top_code_editor_rows_scene_replayed
             .push(json_u64(run, "top_code_editor_rows_scene_replayed"));
@@ -263,6 +282,18 @@ pub(super) fn push_perf_json_repeat_summary_row(
         top_code_editor_row_scene_replay_hit_rate_pct.push(json_u64(
             run,
             "top_code_editor_row_scene_replay_hit_rate_pct",
+        ));
+        top_code_editor_row_scene_cache_get_calls
+            .push(json_u64(run, "top_code_editor_row_scene_cache_get_calls"));
+        top_code_editor_row_scene_cache_hits
+            .push(json_u64(run, "top_code_editor_row_scene_cache_hits"));
+        top_code_editor_row_scene_cache_misses
+            .push(json_u64(run, "top_code_editor_row_scene_cache_misses"));
+        top_code_editor_row_scene_cache_resets
+            .push(json_u64(run, "top_code_editor_row_scene_cache_resets"));
+        top_code_editor_row_scene_cache_hit_rate_pct.push(json_u64(
+            run,
+            "top_code_editor_row_scene_cache_hit_rate_pct",
         ));
         top_code_editor_row_scene_prepaint_plan_us
             .push(json_u64(run, "top_code_editor_row_scene_prepaint_plan_us"));
@@ -477,11 +508,22 @@ pub(super) fn push_perf_json_repeat_summary_row(
             "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
             "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
             "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
+            "top_code_editor_row_text_get_calls": summarize_times_us(&top_code_editor_row_text_get_calls),
+            "top_code_editor_row_text_hits": summarize_times_us(&top_code_editor_row_text_hits),
+            "top_code_editor_row_text_misses": summarize_times_us(&top_code_editor_row_text_misses),
+            "top_code_editor_row_text_resets": summarize_times_us(&top_code_editor_row_text_resets),
+            "top_code_editor_row_text_hit_rate_pct": summarize_times_us(&top_code_editor_row_text_hit_rate_pct),
+            "top_code_editor_row_text_us": summarize_times_us(&top_code_editor_row_text_us),
             "top_code_editor_rows_painted": summarize_times_us(&top_code_editor_rows_painted),
             "top_code_editor_rows_scene_replayed": summarize_times_us(&top_code_editor_rows_scene_replayed),
             "top_code_editor_rows_scene_stored": summarize_times_us(&top_code_editor_rows_scene_stored),
             "top_code_editor_row_scene_ops_stored": summarize_times_us(&top_code_editor_row_scene_ops_stored),
             "top_code_editor_row_scene_replay_hit_rate_pct": summarize_times_us(&top_code_editor_row_scene_replay_hit_rate_pct),
+            "top_code_editor_row_scene_cache_get_calls": summarize_times_us(&top_code_editor_row_scene_cache_get_calls),
+            "top_code_editor_row_scene_cache_hits": summarize_times_us(&top_code_editor_row_scene_cache_hits),
+            "top_code_editor_row_scene_cache_misses": summarize_times_us(&top_code_editor_row_scene_cache_misses),
+            "top_code_editor_row_scene_cache_resets": summarize_times_us(&top_code_editor_row_scene_cache_resets),
+            "top_code_editor_row_scene_cache_hit_rate_pct": summarize_times_us(&top_code_editor_row_scene_cache_hit_rate_pct),
             "top_code_editor_row_scene_prepaint_plan_us": summarize_times_us(&top_code_editor_row_scene_prepaint_plan_us),
             "top_code_editor_row_scene_prepaint_probe_us": summarize_times_us(&top_code_editor_row_scene_prepaint_probe_us),
             "top_code_editor_row_scene_prepaint_key_compare_us": summarize_times_us(&top_code_editor_row_scene_prepaint_key_compare_us),
@@ -566,11 +608,22 @@ mod tests {
         let mut rows = Vec::new();
         let runs = vec![
             serde_json::json!({
+                "top_code_editor_row_text_get_calls": 20,
+                "top_code_editor_row_text_hits": 16,
+                "top_code_editor_row_text_misses": 4,
+                "top_code_editor_row_text_resets": 1,
+                "top_code_editor_row_text_hit_rate_pct": 80,
+                "top_code_editor_row_text_us": 12,
                 "top_code_editor_rows_painted": 10,
                 "top_code_editor_rows_scene_replayed": 6,
                 "top_code_editor_rows_scene_stored": 4,
                 "top_code_editor_row_scene_ops_stored": 40,
                 "top_code_editor_row_scene_replay_hit_rate_pct": 60,
+                "top_code_editor_row_scene_cache_get_calls": 8,
+                "top_code_editor_row_scene_cache_hits": 6,
+                "top_code_editor_row_scene_cache_misses": 2,
+                "top_code_editor_row_scene_cache_resets": 0,
+                "top_code_editor_row_scene_cache_hit_rate_pct": 75,
                 "top_code_editor_row_scene_prepaint_plan_us": 30,
                 "top_code_editor_row_scene_prepaint_probe_us": 20,
                 "top_code_editor_row_scene_prepaint_key_compare_us": 5,
@@ -579,11 +632,22 @@ mod tests {
                 "top_renderer_scene_encoding_cache_miss_scene_fingerprint_changed": 2
             }),
             serde_json::json!({
+                "top_code_editor_row_text_get_calls": 30,
+                "top_code_editor_row_text_hits": 27,
+                "top_code_editor_row_text_misses": 3,
+                "top_code_editor_row_text_resets": 0,
+                "top_code_editor_row_text_hit_rate_pct": 90,
+                "top_code_editor_row_text_us": 8,
                 "top_code_editor_rows_painted": 20,
                 "top_code_editor_rows_scene_replayed": 18,
                 "top_code_editor_rows_scene_stored": 2,
                 "top_code_editor_row_scene_ops_stored": 12,
                 "top_code_editor_row_scene_replay_hit_rate_pct": 90,
+                "top_code_editor_row_scene_cache_get_calls": 10,
+                "top_code_editor_row_scene_cache_hits": 9,
+                "top_code_editor_row_scene_cache_misses": 1,
+                "top_code_editor_row_scene_cache_resets": 1,
+                "top_code_editor_row_scene_cache_hit_rate_pct": 90,
                 "top_code_editor_row_scene_prepaint_plan_us": 70,
                 "top_code_editor_row_scene_prepaint_probe_us": 50,
                 "top_code_editor_row_scene_prepaint_key_compare_us": 11,
@@ -613,12 +677,29 @@ mod tests {
         );
 
         let stats = &rows[0]["stats"];
+        assert_eq!(stats["top_code_editor_row_text_get_calls"]["max"], 30);
+        assert_eq!(stats["top_code_editor_row_text_hits"]["p50"], 16);
+        assert_eq!(stats["top_code_editor_row_text_misses"]["max"], 4);
+        assert_eq!(stats["top_code_editor_row_text_resets"]["max"], 1);
+        assert_eq!(stats["top_code_editor_row_text_hit_rate_pct"]["p95"], 90);
+        assert_eq!(stats["top_code_editor_row_text_us"]["p50"], 8);
         assert_eq!(stats["top_code_editor_rows_painted"]["max"], 20);
         assert_eq!(stats["top_code_editor_rows_scene_replayed"]["p50"], 6);
         assert_eq!(stats["top_code_editor_rows_scene_stored"]["p95"], 4);
         assert_eq!(stats["top_code_editor_row_scene_ops_stored"]["max"], 40);
         assert_eq!(
             stats["top_code_editor_row_scene_replay_hit_rate_pct"]["p95"],
+            90
+        );
+        assert_eq!(
+            stats["top_code_editor_row_scene_cache_get_calls"]["max"],
+            10
+        );
+        assert_eq!(stats["top_code_editor_row_scene_cache_hits"]["p50"], 6);
+        assert_eq!(stats["top_code_editor_row_scene_cache_misses"]["max"], 2);
+        assert_eq!(stats["top_code_editor_row_scene_cache_resets"]["p95"], 1);
+        assert_eq!(
+            stats["top_code_editor_row_scene_cache_hit_rate_pct"]["p95"],
             90
         );
         assert_eq!(

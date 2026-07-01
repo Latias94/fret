@@ -484,6 +484,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_publish_text_input_snapshot_time_us: u64,
     pub(super) paint_collapse_observations_time_us: u64,
     pub(super) code_editor_paint_perf: Option<BundleStatsCodeEditorPaintPerf>,
+    pub(super) code_editor_cache_stats: Option<BundleStatsCodeEditorCacheStats>,
     pub(super) dispatch_time_us: u64,
     pub(super) dispatch_inner_body_time_us: u64,
     pub(super) dispatch_pointer_events: u32,
@@ -886,6 +887,43 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_windowed_surface_row_callback_gap: u64,
     pub(super) us_torture_autoscroll: u64,
     pub(super) us_torture_overlay: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCodeEditorCacheStats {
+    pub(super) row_text_get_calls: u64,
+    pub(super) row_text_hits: u64,
+    pub(super) row_text_misses: u64,
+    pub(super) row_text_evictions: u64,
+    pub(super) row_text_resets: u64,
+    pub(super) row_scene_get_calls: u64,
+    pub(super) row_scene_hits: u64,
+    pub(super) row_scene_misses: u64,
+    pub(super) row_scene_evictions: u64,
+    pub(super) row_scene_resets: u64,
+    pub(super) row_scene_fast_get_calls: u64,
+    pub(super) row_scene_fast_hits: u64,
+    pub(super) row_scene_fast_misses: u64,
+}
+
+impl BundleStatsCodeEditorCacheStats {
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "row_text_get_calls": self.row_text_get_calls,
+            "row_text_hits": self.row_text_hits,
+            "row_text_misses": self.row_text_misses,
+            "row_text_evictions": self.row_text_evictions,
+            "row_text_resets": self.row_text_resets,
+            "row_scene_get_calls": self.row_scene_get_calls,
+            "row_scene_hits": self.row_scene_hits,
+            "row_scene_misses": self.row_scene_misses,
+            "row_scene_evictions": self.row_scene_evictions,
+            "row_scene_resets": self.row_scene_resets,
+            "row_scene_fast_get_calls": self.row_scene_fast_get_calls,
+            "row_scene_fast_hits": self.row_scene_fast_hits,
+            "row_scene_fast_misses": self.row_scene_fast_misses,
+        })
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -7973,6 +8011,13 @@ impl BundleStatsReport {
                     row.code_editor_paint_perf
                         .as_ref()
                         .map(BundleStatsCodeEditorPaintPerf::to_json)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "code_editor_cache_stats".to_string(),
+                    row.code_editor_cache_stats
+                        .as_ref()
+                        .map(BundleStatsCodeEditorCacheStats::to_json)
                         .unwrap_or(Value::Null),
                 );
                 obj.insert(

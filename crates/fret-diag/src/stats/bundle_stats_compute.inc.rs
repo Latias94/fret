@@ -183,6 +183,38 @@ fn snapshot_code_editor_paint_perf(
     })
 }
 
+fn snapshot_code_editor_cache_stats(
+    snapshot: &serde_json::Value,
+) -> Option<BundleStatsCodeEditorCacheStats> {
+    let stats = snapshot
+        .get("app_snapshot")?
+        .get("code_editor")?
+        .get("torture")?
+        .get("cache_stats")?;
+
+    macro_rules! u64_field {
+        ($key:literal) => {
+            stats.get($key).and_then(|v| v.as_u64()).unwrap_or(0)
+        };
+    }
+
+    Some(BundleStatsCodeEditorCacheStats {
+        row_text_get_calls: u64_field!("row_text_get_calls"),
+        row_text_hits: u64_field!("row_text_hits"),
+        row_text_misses: u64_field!("row_text_misses"),
+        row_text_evictions: u64_field!("row_text_evictions"),
+        row_text_resets: u64_field!("row_text_resets"),
+        row_scene_get_calls: u64_field!("row_scene_get_calls"),
+        row_scene_hits: u64_field!("row_scene_hits"),
+        row_scene_misses: u64_field!("row_scene_misses"),
+        row_scene_evictions: u64_field!("row_scene_evictions"),
+        row_scene_resets: u64_field!("row_scene_resets"),
+        row_scene_fast_get_calls: u64_field!("row_scene_fast_get_calls"),
+        row_scene_fast_hits: u64_field!("row_scene_fast_hits"),
+        row_scene_fast_misses: u64_field!("row_scene_fast_misses"),
+    })
+}
+
 #[cfg(test)]
 pub(super) fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
@@ -2183,6 +2215,7 @@ fn bundle_stats_from_json_with_options_and_filter(
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
             let global_change_unobserved = snapshot_global_change_unobserved(s, 3);
             let code_editor_paint_perf = snapshot_code_editor_paint_perf(s);
+            let code_editor_cache_stats = snapshot_code_editor_cache_stats(s);
             if let Some(perf) = code_editor_paint_perf.as_ref() {
                 out.code_editor_paint_perf.observe(perf);
             }
@@ -2793,6 +2826,7 @@ fn bundle_stats_from_json_with_options_and_filter(
                 paint_publish_text_input_snapshot_time_us,
                 paint_collapse_observations_time_us,
                 code_editor_paint_perf,
+                code_editor_cache_stats,
                 dispatch_time_us,
                 dispatch_inner_body_time_us,
                 dispatch_pointer_events,

@@ -273,11 +273,22 @@ pub(crate) fn push_perf_json_row(
         "top_hit_test_time_us": top_hit_test,
         "top_dispatch_events": top_dispatch_events,
         "top_hit_test_queries": top_hit_test_queries,
+        "top_code_editor_row_text_get_calls": top_code_editor.row_text_get_calls,
+        "top_code_editor_row_text_hits": top_code_editor.row_text_hits,
+        "top_code_editor_row_text_misses": top_code_editor.row_text_misses,
+        "top_code_editor_row_text_resets": top_code_editor.row_text_resets,
+        "top_code_editor_row_text_hit_rate_pct": top_code_editor.row_text_hit_rate_pct,
+        "top_code_editor_row_text_us": top_code_editor.row_text_us,
         "top_code_editor_rows_painted": top_code_editor.rows_painted,
         "top_code_editor_rows_scene_replayed": top_code_editor.rows_scene_replayed,
         "top_code_editor_rows_scene_stored": top_code_editor.rows_scene_stored,
         "top_code_editor_row_scene_ops_stored": top_code_editor.row_scene_ops_stored,
         "top_code_editor_row_scene_replay_hit_rate_pct": top_code_editor.row_scene_replay_hit_rate_pct,
+        "top_code_editor_row_scene_cache_get_calls": top_code_editor.row_scene_cache_get_calls,
+        "top_code_editor_row_scene_cache_hits": top_code_editor.row_scene_cache_hits,
+        "top_code_editor_row_scene_cache_misses": top_code_editor.row_scene_cache_misses,
+        "top_code_editor_row_scene_cache_resets": top_code_editor.row_scene_cache_resets,
+        "top_code_editor_row_scene_cache_hit_rate_pct": top_code_editor.row_scene_cache_hit_rate_pct,
         "top_code_editor_row_scene_prepaint_plan_us": top_code_editor.row_scene_prepaint_plan_us,
         "top_code_editor_row_scene_prepaint_probe_us": top_code_editor.row_scene_prepaint_probe_us,
         "top_code_editor_row_scene_prepaint_key_compare_us": top_code_editor.row_scene_prepaint_key_compare_us,
@@ -399,7 +410,9 @@ pub(crate) fn push_perf_json_row(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stats::{BundleStatsCodeEditorPaintPerf, BundleStatsSnapshotRow};
+    use crate::stats::{
+        BundleStatsCodeEditorCacheStats, BundleStatsCodeEditorPaintPerf, BundleStatsSnapshotRow,
+    };
 
     #[test]
     fn perf_json_row_exports_top_code_editor_row_scene_fields() {
@@ -414,6 +427,7 @@ mod tests {
             renderer_scene_encoding_cache_miss_scene_fingerprint_changed: 3,
             renderer_scene_encoding_cache_miss_text_quality_key_changed: 1,
             code_editor_paint_perf: Some(BundleStatsCodeEditorPaintPerf {
+                us_row_text: 15,
                 rows_painted: 20,
                 rows_scene_replayed: 15,
                 rows_scene_stored: 5,
@@ -428,6 +442,17 @@ mod tests {
                 us_torture_overlay: 23,
                 ..Default::default()
             }),
+            code_editor_cache_stats: Some(BundleStatsCodeEditorCacheStats {
+                row_text_get_calls: 25,
+                row_text_hits: 20,
+                row_text_misses: 5,
+                row_text_resets: 1,
+                row_scene_get_calls: 16,
+                row_scene_hits: 12,
+                row_scene_misses: 4,
+                row_scene_resets: 2,
+                ..Default::default()
+            }),
             ..Default::default()
         });
 
@@ -439,11 +464,22 @@ mod tests {
             Path::new("target/fret-diag/editor/bundle.schema2.json"),
         );
 
+        assert_eq!(rows[0]["top_code_editor_row_text_get_calls"], 25);
+        assert_eq!(rows[0]["top_code_editor_row_text_hits"], 20);
+        assert_eq!(rows[0]["top_code_editor_row_text_misses"], 5);
+        assert_eq!(rows[0]["top_code_editor_row_text_resets"], 1);
+        assert_eq!(rows[0]["top_code_editor_row_text_hit_rate_pct"], 80);
+        assert_eq!(rows[0]["top_code_editor_row_text_us"], 15);
         assert_eq!(rows[0]["top_code_editor_rows_painted"], 20);
         assert_eq!(rows[0]["top_code_editor_rows_scene_replayed"], 15);
         assert_eq!(rows[0]["top_code_editor_rows_scene_stored"], 5);
         assert_eq!(rows[0]["top_code_editor_row_scene_ops_stored"], 64);
         assert_eq!(rows[0]["top_code_editor_row_scene_replay_hit_rate_pct"], 75);
+        assert_eq!(rows[0]["top_code_editor_row_scene_cache_get_calls"], 16);
+        assert_eq!(rows[0]["top_code_editor_row_scene_cache_hits"], 12);
+        assert_eq!(rows[0]["top_code_editor_row_scene_cache_misses"], 4);
+        assert_eq!(rows[0]["top_code_editor_row_scene_cache_resets"], 2);
+        assert_eq!(rows[0]["top_code_editor_row_scene_cache_hit_rate_pct"], 75);
         assert_eq!(rows[0]["top_code_editor_row_scene_prepaint_plan_us"], 33);
         assert_eq!(rows[0]["top_code_editor_row_scene_prepaint_probe_us"], 21);
         assert_eq!(

@@ -44,4 +44,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U8 visible glyph residency](progress/2026-07-01-u8-visible-glyph-residency.md)
 - [U8 editor line text identity](progress/2026-07-01-u8-editor-line-text-identity.md)
 - [U8 row scene cache delta preservation](progress/2026-07-01-u8-row-scene-cache-delta.md)
+- [U8 code-editor text/cache diagnostics](progress/2026-07-01-u8-code-editor-text-cache-diagnostics.md)
 - [Log](log.md)
