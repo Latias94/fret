@@ -2710,6 +2710,7 @@ mod authoring_surface_policy_tests {
     );
     const LIB_RS: &str = include_str!("lib.rs");
     const VIEW_RS: &str = include_str!("view.rs");
+    const VIEW_CONTEXT_RS: &str = include_str!("view/context.rs");
 
     fn crate_rustdoc() -> String {
         LIB_RS
@@ -4538,7 +4539,8 @@ mod authoring_surface_policy_tests {
     fn view_runtime_exposes_only_app_ui_as_the_public_context_name() {
         assert!(!VIEW_RS.contains("pub type ViewCx"));
         assert!(
-            VIEW_RS.contains("fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui;")
+            VIEW_CONTEXT_RS
+                .contains("fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui;")
         );
         assert!(VIEW_RS.contains(") -> crate::Ui {"));
     }

@@ -23,70 +23,12 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate, OnCommand, OnCommandAvailability, UiActionHost};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-/// A stateful view object that renders into the existing declarative IR (`Ui`).
-pub trait View: 'static {
-    /// Initialize the view for a specific window.
-    fn init(app: &mut crate::app::App, window: crate::WindowId) -> Self
-    where
-        Self: Sized;
-
-    /// Render the view into declarative UI.
-    fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui;
-}
-
+mod context;
 mod local_state;
+pub use context::{AppRenderContext, RenderContextAccess, View};
 pub use local_state::{
     LocalActionCapture, LocalState, LocalStateTxn, TrackedStateExt, WatchedState,
 };
-/// Explicit render-authoring helper capability for app-facing extracted helper functions.
-///
-/// This keeps helper signatures on one named lane without forcing them to accept the full `AppUi`
-/// surface or a raw `ElementContext<'_, H>` type directly.
-pub trait RenderContextAccess<'a, H: UiHost + 'a>: fret_ui::ElementContextAccess<'a, H> {
-    fn app<'b>(&'b mut self) -> &'b H
-    where
-        'a: 'b,
-    {
-        &*self.elements().app
-    }
-
-    fn app_mut<'b>(&'b mut self) -> &'b mut H
-    where
-        'a: 'b,
-    {
-        &mut *self.elements().app
-    }
-
-    fn window_id(&mut self) -> AppWindowId {
-        self.elements().window
-    }
-
-    fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> fret_core::Rect {
-        self.elements().environment_viewport_bounds(invalidation)
-    }
-
-    fn with_theme<R>(&mut self, f: impl FnOnce(&fret_ui::Theme) -> R) -> R {
-        f(self.elements().theme())
-    }
-
-    fn theme_snapshot(&mut self) -> fret_ui::ThemeSnapshot {
-        self.with_theme(|theme| theme.snapshot())
-    }
-}
-
-impl<'a, H: UiHost + 'a, T> RenderContextAccess<'a, H> for T where
-    T: fret_ui::ElementContextAccess<'a, H>
-{
-}
-
-/// Named default extracted-helper render lane for ordinary `fret` app code.
-///
-/// This is the app-facing façade over `RenderContextAccess<'a, crate::app::App>` so new helper
-/// signatures can name the default lane directly without spelling the generic host parameter at
-/// every callsite.
-pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App> {}
-
-impl<'a, T> AppRenderContext<'a> for T where T: RenderContextAccess<'a, crate::app::App> {}
 
 /// App-facing layout-phase convenience reads for query handles on the default `fret` lane.
 ///
@@ -2436,6 +2378,7 @@ mod tests {
     #[cfg(feature = "state-mutation")]
     use std::task::{Context, Poll, Waker};
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
+    const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
 
     fn view_authoring_api_source() -> String {
@@ -2443,7 +2386,7 @@ mod tests {
             .split("\nmod tests {")
             .next()
             .expect("view.rs test module marker should exist");
-        format!("{view_api}\n{LOCAL_STATE_RS_SOURCE}")
+        format!("{view_api}\n{CONTEXT_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}")
     }
     use fret_core::{
         AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType, Px,

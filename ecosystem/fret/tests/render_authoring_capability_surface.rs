@@ -1,5 +1,6 @@
 const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
+const VIEW_CONTEXT_RS: &str = include_str!("../src/view/context.rs");
 const COOKBOOK_SCAFFOLD: &str = include_str!("../../../apps/fret-cookbook/src/scaffold.rs");
 const DEFAULT_SNIPPET_GATE: &str =
     include_str!("../../../tools/gate_no_raw_app_context_in_default_teaching_snippets.py");
@@ -47,7 +48,7 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
     assert!(app_prelude.contains("pub use crate::{AppUi, Ui, UiChild, WindowId};"));
     assert!(!app_prelude.contains("pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};"));
     assert!(
-        VIEW_RS
+        VIEW_CONTEXT_RS
             .contains("pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App>")
     );
     assert!(VIEW_RS.contains(
