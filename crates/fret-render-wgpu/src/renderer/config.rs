@@ -188,6 +188,15 @@ impl Renderer {
                 .scene_chunk_encoding_key_cache_stale_entries,
             scene_chunk_encoding_key_cache_context_fingerprint: perf
                 .scene_chunk_encoding_key_cache_context_fingerprint,
+            scene_chunk_encoding_payload_cache_hits: perf.scene_chunk_encoding_payload_cache_hits,
+            scene_chunk_encoding_payload_cache_misses: perf
+                .scene_chunk_encoding_payload_cache_misses,
+            scene_chunk_encoding_payload_chunks_encoded: perf
+                .scene_chunk_encoding_payload_chunks_encoded,
+            scene_chunk_encoding_payload_bytes_estimate: perf
+                .scene_chunk_encoding_payload_bytes_estimate,
+            scene_chunk_encoding_payload_entries_live: perf
+                .scene_chunk_encoding_payload_entries_live,
             render_plan_estimated_peak_intermediate_bytes: perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: perf.render_plan_segments,

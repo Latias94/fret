@@ -23,4 +23,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 scene chunk renderer input bridge](progress/2026-07-01-u7-scene-chunk-renderer-input-bridge.md)
 - [U7 render-plan stream range estimates](progress/2026-07-01-u7-render-plan-stream-range-estimates.md)
 - [U7 scene chunk encoding key cache](progress/2026-07-01-u7-scene-chunk-encoding-key-cache.md)
+- [U7 scene chunk encoding payload cache](progress/2026-07-01-u7-scene-chunk-encoding-payload-cache.md)
 - [Log](log.md)

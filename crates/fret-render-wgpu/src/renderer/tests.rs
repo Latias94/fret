@@ -1356,6 +1356,11 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     assert_eq!(last.scene_chunk_encoding_key_cache_misses, 1);
     assert_eq!(last.scene_chunk_encoding_key_cache_stale_entries, 0);
     assert_ne!(last.scene_chunk_encoding_key_cache_context_fingerprint, 0);
+    assert_eq!(last.scene_chunk_encoding_payload_cache_hits, 0);
+    assert_eq!(last.scene_chunk_encoding_payload_cache_misses, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_chunks_encoded, 1);
+    assert!(last.scene_chunk_encoding_payload_bytes_estimate > 0);
+    assert_eq!(last.scene_chunk_encoding_payload_entries_live, 1);
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(Some(&manifest)));
     let key_with_stable_manifest = renderer
@@ -1372,6 +1377,11 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     assert_eq!(last.scene_chunk_encoding_key_cache_hits, 1);
     assert_eq!(last.scene_chunk_encoding_key_cache_misses, 0);
     assert_eq!(last.scene_chunk_encoding_key_cache_stale_entries, 0);
+    assert_eq!(last.scene_chunk_encoding_payload_cache_hits, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_cache_misses, 0);
+    assert_eq!(last.scene_chunk_encoding_payload_chunks_encoded, 0);
+    assert!(last.scene_chunk_encoding_payload_bytes_estimate > 0);
+    assert_eq!(last.scene_chunk_encoding_payload_entries_live, 1);
 }
 
 #[test]

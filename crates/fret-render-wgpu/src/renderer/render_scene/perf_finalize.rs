@@ -231,6 +231,21 @@ impl Renderer {
             perf.scene_chunk_encoding_key_cache_context_fingerprint =
                 frame_perf.scene_chunk_encoding_key_cache_context_fingerprint;
         }
+        perf.scene_chunk_encoding_payload_cache_hits = perf
+            .scene_chunk_encoding_payload_cache_hits
+            .saturating_add(frame_perf.scene_chunk_encoding_payload_cache_hits);
+        perf.scene_chunk_encoding_payload_cache_misses = perf
+            .scene_chunk_encoding_payload_cache_misses
+            .saturating_add(frame_perf.scene_chunk_encoding_payload_cache_misses);
+        perf.scene_chunk_encoding_payload_chunks_encoded = perf
+            .scene_chunk_encoding_payload_chunks_encoded
+            .saturating_add(frame_perf.scene_chunk_encoding_payload_chunks_encoded);
+        perf.scene_chunk_encoding_payload_bytes_estimate = perf
+            .scene_chunk_encoding_payload_bytes_estimate
+            .max(frame_perf.scene_chunk_encoding_payload_bytes_estimate);
+        perf.scene_chunk_encoding_payload_entries_live = perf
+            .scene_chunk_encoding_payload_entries_live
+            .max(frame_perf.scene_chunk_encoding_payload_entries_live);
         perf.render_plan_estimated_peak_intermediate_bytes = perf
             .render_plan_estimated_peak_intermediate_bytes
             .max(frame_perf.render_plan_estimated_peak_intermediate_bytes);
@@ -635,6 +650,16 @@ impl Renderer {
                 .scene_chunk_encoding_key_cache_stale_entries,
             scene_chunk_encoding_key_cache_context_fingerprint: frame_perf
                 .scene_chunk_encoding_key_cache_context_fingerprint,
+            scene_chunk_encoding_payload_cache_hits: frame_perf
+                .scene_chunk_encoding_payload_cache_hits,
+            scene_chunk_encoding_payload_cache_misses: frame_perf
+                .scene_chunk_encoding_payload_cache_misses,
+            scene_chunk_encoding_payload_chunks_encoded: frame_perf
+                .scene_chunk_encoding_payload_chunks_encoded,
+            scene_chunk_encoding_payload_bytes_estimate: frame_perf
+                .scene_chunk_encoding_payload_bytes_estimate,
+            scene_chunk_encoding_payload_entries_live: frame_perf
+                .scene_chunk_encoding_payload_entries_live,
             render_plan_estimated_peak_intermediate_bytes: frame_perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: frame_perf.render_plan_segments,

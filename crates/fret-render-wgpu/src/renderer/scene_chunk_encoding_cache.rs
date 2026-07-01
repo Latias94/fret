@@ -1,12 +1,15 @@
 use super::*;
+use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub(super) struct SceneChunkEncodingState {
     cached_keys: Vec<SceneChunkEncodingKey>,
     previous_counts: HashMap<SceneChunkEncodingKey, u32>,
     next_keys: Vec<SceneChunkEncodingKey>,
+    payloads: HashMap<SceneChunkEncodingKey, CachedSceneChunkEncoding>,
+    live_payload_keys: HashSet<SceneChunkEncodingKey>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -37,6 +40,11 @@ pub(super) struct SceneChunkEncodingFrameStats {
     pub(super) key_cache_misses: u64,
     pub(super) key_cache_stale_entries: u64,
     pub(super) key_cache_context_fingerprint: u64,
+    pub(super) payload_cache_hits: u64,
+    pub(super) payload_cache_misses: u64,
+    pub(super) payload_chunks_encoded: u64,
+    pub(super) payload_bytes_estimate: u64,
+    pub(super) payload_entries_live: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -45,6 +53,34 @@ struct SceneChunkEncodingKey {
     entry_fingerprint: u64,
     chunk_fingerprint: u64,
     chunk_ops_len: usize,
+}
+
+#[derive(Default)]
+pub(super) struct CachedSceneChunkEncoding {
+    encoding: SceneEncoding,
+}
+
+impl CachedSceneChunkEncoding {
+    pub(super) fn new(encoding: SceneEncoding) -> Self {
+        Self { encoding }
+    }
+
+    fn estimated_bytes(&self) -> u64 {
+        estimate_slice_bytes(&self.encoding.instances)
+            .saturating_add(estimate_slice_bytes(&self.encoding.path_paints))
+            .saturating_add(estimate_slice_bytes(&self.encoding.text_paints))
+            .saturating_add(estimate_slice_bytes(&self.encoding.viewport_vertices))
+            .saturating_add(estimate_slice_bytes(&self.encoding.text_glyph_instances))
+            .saturating_add(estimate_slice_bytes(&self.encoding.text_vertices))
+            .saturating_add(estimate_slice_bytes(&self.encoding.path_vertices))
+            .saturating_add(estimate_slice_bytes(&self.encoding.clip_path_masks))
+            .saturating_add(estimate_slice_bytes(&self.encoding.clips))
+            .saturating_add(estimate_slice_bytes(&self.encoding.masks))
+            .saturating_add(estimate_slice_bytes(&self.encoding.uniforms))
+            .saturating_add(estimate_slice_bytes(&self.encoding.uniform_mask_images))
+            .saturating_add(estimate_slice_bytes(&self.encoding.ordered_draws))
+            .saturating_add(estimate_slice_bytes(&self.encoding.effect_markers))
+    }
 }
 
 impl SceneChunkEncodingKey {
@@ -105,6 +141,77 @@ impl SceneChunkEncodingState {
         self.next_keys.clear();
         stats
     }
+
+    pub(super) fn begin_frame_with_payloads(
+        &mut self,
+        manifest: Option<&fret_core::SceneChunkManifest>,
+        context: SceneChunkEncodingContext,
+        mut build_payload: impl FnMut(&fret_core::SceneChunkManifestEntry) -> CachedSceneChunkEncoding,
+    ) -> SceneChunkEncodingFrameStats {
+        self.previous_counts.clear();
+        for key in &self.cached_keys {
+            let count = self.previous_counts.entry(*key).or_default();
+            *count = count.saturating_add(1);
+        }
+
+        self.next_keys.clear();
+        self.live_payload_keys.clear();
+
+        let mut stats = SceneChunkEncodingFrameStats::default();
+        if let Some(manifest) = manifest {
+            stats.entries = manifest.len() as u64;
+            if !manifest.is_empty() {
+                stats.key_cache_context_fingerprint = context.fingerprint();
+            }
+
+            self.next_keys.reserve(manifest.len());
+            self.live_payload_keys.reserve(manifest.len());
+            for entry in manifest.entries() {
+                let key = SceneChunkEncodingKey::new(context, entry);
+                if let Some(count) = self.previous_counts.get_mut(&key) {
+                    if *count > 0 {
+                        *count -= 1;
+                        stats.key_cache_hits = stats.key_cache_hits.saturating_add(1);
+                    } else {
+                        stats.key_cache_misses = stats.key_cache_misses.saturating_add(1);
+                    }
+                } else {
+                    stats.key_cache_misses = stats.key_cache_misses.saturating_add(1);
+                }
+
+                if self.payloads.contains_key(&key) {
+                    stats.payload_cache_hits = stats.payload_cache_hits.saturating_add(1);
+                } else {
+                    let payload = build_payload(entry);
+                    self.payloads.insert(key, payload);
+                    stats.payload_cache_misses = stats.payload_cache_misses.saturating_add(1);
+                    stats.payload_chunks_encoded = stats.payload_chunks_encoded.saturating_add(1);
+                }
+
+                if let Some(payload) = self.payloads.get(&key) {
+                    stats.payload_bytes_estimate = stats
+                        .payload_bytes_estimate
+                        .saturating_add(payload.estimated_bytes());
+                }
+
+                self.live_payload_keys.insert(key);
+                self.next_keys.push(key);
+            }
+        }
+
+        stats.key_cache_stale_entries = self
+            .previous_counts
+            .values()
+            .fold(0u64, |total, count| total.saturating_add(u64::from(*count)));
+
+        self.payloads
+            .retain(|key, _| self.live_payload_keys.contains(key));
+        stats.payload_entries_live = self.payloads.len() as u64;
+
+        std::mem::swap(&mut self.cached_keys, &mut self.next_keys);
+        self.next_keys.clear();
+        stats
+    }
 }
 
 impl Renderer {
@@ -139,12 +246,26 @@ impl Renderer {
         &mut self,
         scene_chunks: Option<&fret_core::SceneChunkManifest>,
         context: SceneChunkEncodingContext,
+        scale_factor: f32,
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
-        let stats = self
-            .scene_chunk_encoding_state
-            .begin_frame(scene_chunks, context);
+        let mut state = std::mem::take(&mut self.scene_chunk_encoding_state);
+        let stats = if perf_enabled {
+            let viewport_size = context.viewport_size;
+            let output_is_srgb = context.format.is_srgb();
+            state.begin_frame_with_payloads(scene_chunks, context, |entry| {
+                self.encode_scene_chunk_entry_payload(
+                    entry,
+                    scale_factor,
+                    viewport_size,
+                    output_is_srgb,
+                )
+            })
+        } else {
+            state.begin_frame(scene_chunks, context)
+        };
+        self.scene_chunk_encoding_state = state;
         if perf_enabled {
             frame_perf.scene_chunk_encoding_key_cache_entries = stats.entries;
             frame_perf.scene_chunk_encoding_key_cache_hits = stats.key_cache_hits;
@@ -152,7 +273,38 @@ impl Renderer {
             frame_perf.scene_chunk_encoding_key_cache_stale_entries = stats.key_cache_stale_entries;
             frame_perf.scene_chunk_encoding_key_cache_context_fingerprint =
                 stats.key_cache_context_fingerprint;
+            frame_perf.scene_chunk_encoding_payload_cache_hits = stats.payload_cache_hits;
+            frame_perf.scene_chunk_encoding_payload_cache_misses = stats.payload_cache_misses;
+            frame_perf.scene_chunk_encoding_payload_chunks_encoded = stats.payload_chunks_encoded;
+            frame_perf.scene_chunk_encoding_payload_bytes_estimate = stats.payload_bytes_estimate;
+            frame_perf.scene_chunk_encoding_payload_entries_live = stats.payload_entries_live;
         }
+    }
+
+    fn encode_scene_chunk_entry_payload(
+        &mut self,
+        entry: &fret_core::SceneChunkManifestEntry,
+        scale_factor: f32,
+        viewport_size: (u32, u32),
+        output_is_srgb: bool,
+    ) -> CachedSceneChunkEncoding {
+        let mut scene = fret_core::Scene::default();
+        entry
+            .chunk()
+            .replay_translated_into(&mut scene, entry.scene_origin());
+        let mut encoding = SceneEncoding::default();
+        let mut ignored_perf = RenderPerfStats::default();
+        self.encode_scene_ops_into(
+            &scene,
+            scale_factor,
+            viewport_size,
+            output_is_srgb,
+            &mut encoding,
+            false,
+            false,
+            &mut ignored_perf,
+        );
+        CachedSceneChunkEncoding::new(encoding)
     }
 }
 
@@ -160,6 +312,10 @@ fn hash_value<T: Hash>(value: T) -> u64 {
     let mut hasher = DefaultHasher::new();
     value.hash(&mut hasher);
     hasher.finish()
+}
+
+fn estimate_slice_bytes<T>(slice: &[T]) -> u64 {
+    std::mem::size_of_val(slice) as u64
 }
 
 #[cfg(test)]
@@ -264,5 +420,46 @@ mod tests {
         assert_eq!(stats.key_cache_hits, 0);
         assert_eq!(stats.key_cache_misses, 1);
         assert_eq!(stats.key_cache_stale_entries, 1);
+    }
+
+    #[test]
+    fn chunk_encoding_payload_cache_builds_only_misses_and_evicts_stale_payloads() {
+        let mut state = SceneChunkEncodingState::default();
+        let first = entry(0.0);
+        let second = entry(20.0);
+        let mut builds = 0u64;
+
+        let frame = manifest(std::slice::from_ref(&first));
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+            builds += 1;
+            CachedSceneChunkEncoding::default()
+        });
+        assert_eq!(stats.payload_cache_hits, 0);
+        assert_eq!(stats.payload_cache_misses, 1);
+        assert_eq!(stats.payload_chunks_encoded, 1);
+        assert_eq!(stats.payload_entries_live, 1);
+        assert_eq!(builds, 1);
+
+        let frame = manifest(&[first.clone(), second]);
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+            builds += 1;
+            CachedSceneChunkEncoding::default()
+        });
+        assert_eq!(stats.payload_cache_hits, 1);
+        assert_eq!(stats.payload_cache_misses, 1);
+        assert_eq!(stats.payload_chunks_encoded, 1);
+        assert_eq!(stats.payload_entries_live, 2);
+        assert_eq!(builds, 2);
+
+        let frame = manifest(&[first]);
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+            builds += 1;
+            CachedSceneChunkEncoding::default()
+        });
+        assert_eq!(stats.payload_cache_hits, 1);
+        assert_eq!(stats.payload_cache_misses, 0);
+        assert_eq!(stats.payload_chunks_encoded, 0);
+        assert_eq!(stats.payload_entries_live, 1);
+        assert_eq!(builds, 2);
     }
 }

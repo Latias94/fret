@@ -11,7 +11,7 @@ use state::EncodeState;
 use fret_core::time::Instant;
 
 impl Renderer {
-    pub(super) fn encode_scene_ops_into(
+    pub(in crate::renderer) fn encode_scene_ops_into(
         &mut self,
         scene: &Scene,
         scale_factor: f32,

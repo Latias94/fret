@@ -705,6 +705,18 @@ pub struct RenderPerfSnapshot {
     pub scene_chunk_encoding_key_cache_stale_entries: u64,
     /// Best-effort fingerprint of the renderer resource context used for chunk encoding keys.
     pub scene_chunk_encoding_key_cache_context_fingerprint: u64,
+    /// CPU encoded retained scene chunk payload entries reused from the renderer payload cache.
+    ///
+    /// This is not a render cache hit: flat `Scene` encoding remains the output source.
+    pub scene_chunk_encoding_payload_cache_hits: u64,
+    /// CPU encoded retained scene chunk payload entries built because no payload was cached.
+    pub scene_chunk_encoding_payload_cache_misses: u64,
+    /// Retained scene chunk payloads encoded for this frame's diagnostics cache.
+    pub scene_chunk_encoding_payload_chunks_encoded: u64,
+    /// Estimated CPU-side bytes represented by retained scene chunk payloads touched this frame.
+    pub scene_chunk_encoding_payload_bytes_estimate: u64,
+    /// Unique retained scene chunk payload entries currently retained by the renderer payload cache.
+    pub scene_chunk_encoding_payload_entries_live: u64,
     pub render_plan_estimated_peak_intermediate_bytes: u64,
     pub render_plan_segments: u64,
     pub render_plan_segments_changed: u64,
@@ -1053,6 +1065,11 @@ pub(super) struct RenderPerfStats {
     pub(super) scene_chunk_encoding_key_cache_misses: u64,
     pub(super) scene_chunk_encoding_key_cache_stale_entries: u64,
     pub(super) scene_chunk_encoding_key_cache_context_fingerprint: u64,
+    pub(super) scene_chunk_encoding_payload_cache_hits: u64,
+    pub(super) scene_chunk_encoding_payload_cache_misses: u64,
+    pub(super) scene_chunk_encoding_payload_chunks_encoded: u64,
+    pub(super) scene_chunk_encoding_payload_bytes_estimate: u64,
+    pub(super) scene_chunk_encoding_payload_entries_live: u64,
     pub(super) render_plan_estimated_peak_intermediate_bytes: u64,
     pub(super) render_plan_segments: u64,
     pub(super) render_plan_segments_changed: u64,

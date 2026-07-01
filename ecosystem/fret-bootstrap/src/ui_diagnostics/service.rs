@@ -1992,6 +1992,11 @@ mod service_tests {
         perf.scene_chunk_encoding_key_cache_misses = 1;
         perf.scene_chunk_encoding_key_cache_stale_entries = 3;
         perf.scene_chunk_encoding_key_cache_context_fingerprint = 0xFACE;
+        perf.scene_chunk_encoding_payload_cache_hits = 4;
+        perf.scene_chunk_encoding_payload_cache_misses = 5;
+        perf.scene_chunk_encoding_payload_chunks_encoded = 6;
+        perf.scene_chunk_encoding_payload_bytes_estimate = 4096;
+        perf.scene_chunk_encoding_payload_entries_live = 7;
         perf.render_plan_scene_chunk_candidates = 4;
         perf.render_plan_scene_chunk_candidate_draws = 11;
         perf.render_plan_scene_chunk_candidates_stable = 3;
@@ -2050,6 +2055,17 @@ mod service_tests {
             stats.renderer_scene_chunk_encoding_key_cache_context_fingerprint,
             0xFACE
         );
+        assert_eq!(stats.renderer_scene_chunk_encoding_payload_cache_hits, 4);
+        assert_eq!(stats.renderer_scene_chunk_encoding_payload_cache_misses, 5);
+        assert_eq!(
+            stats.renderer_scene_chunk_encoding_payload_chunks_encoded,
+            6
+        );
+        assert_eq!(
+            stats.renderer_scene_chunk_encoding_payload_bytes_estimate,
+            4096
+        );
+        assert_eq!(stats.renderer_scene_chunk_encoding_payload_entries_live, 7);
         assert_eq!(stats.renderer_render_plan_scene_chunk_candidate_draws, 11);
         assert_eq!(
             stats.renderer_render_plan_scene_chunk_candidates_stable,

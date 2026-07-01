@@ -726,6 +726,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_scene_chunk_encoding_key_cache_context_fingerprint: u64,
     #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_chunks_encoded: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_bytes_estimate: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_entries_live: u64,
+    #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidates: u64,
     #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidate_draws: u64,
@@ -1565,6 +1575,11 @@ impl UiFrameStatsV1 {
             renderer_scene_chunk_encoding_key_cache_misses: 0,
             renderer_scene_chunk_encoding_key_cache_stale_entries: 0,
             renderer_scene_chunk_encoding_key_cache_context_fingerprint: 0,
+            renderer_scene_chunk_encoding_payload_cache_hits: 0,
+            renderer_scene_chunk_encoding_payload_cache_misses: 0,
+            renderer_scene_chunk_encoding_payload_chunks_encoded: 0,
+            renderer_scene_chunk_encoding_payload_bytes_estimate: 0,
+            renderer_scene_chunk_encoding_payload_entries_live: 0,
             renderer_render_plan_scene_chunk_candidates: 0,
             renderer_render_plan_scene_chunk_candidate_draws: 0,
             renderer_render_plan_scene_chunk_candidates_stable: 0,
@@ -1883,6 +1898,16 @@ impl UiFrameStatsV1 {
         self.renderer_scene_chunk_encoding_key_cache_context_fingerprint = sample
             .perf
             .scene_chunk_encoding_key_cache_context_fingerprint;
+        self.renderer_scene_chunk_encoding_payload_cache_hits =
+            sample.perf.scene_chunk_encoding_payload_cache_hits;
+        self.renderer_scene_chunk_encoding_payload_cache_misses =
+            sample.perf.scene_chunk_encoding_payload_cache_misses;
+        self.renderer_scene_chunk_encoding_payload_chunks_encoded =
+            sample.perf.scene_chunk_encoding_payload_chunks_encoded;
+        self.renderer_scene_chunk_encoding_payload_bytes_estimate =
+            sample.perf.scene_chunk_encoding_payload_bytes_estimate;
+        self.renderer_scene_chunk_encoding_payload_entries_live =
+            sample.perf.scene_chunk_encoding_payload_entries_live;
         self.renderer_render_plan_scene_chunk_candidates =
             sample.perf.render_plan_scene_chunk_candidates;
         self.renderer_render_plan_scene_chunk_candidate_draws =
