@@ -68,7 +68,7 @@ impl TextSystem {
         &mut self,
         shape_key: &TextShapeKey,
     ) -> Option<Arc<TextShape>> {
-        let shape = self.layout_cache.shape_cache.get(shape_key)?.clone();
+        let shape = self.layout_cache.get_shape(shape_key)?;
         self.frame_perf.shape_cache_hits = self.frame_perf.shape_cache_hits.saturating_add(1);
         Some(shape)
     }
@@ -79,9 +79,11 @@ impl TextSystem {
         shape: Arc<TextShape>,
     ) -> Arc<TextShape> {
         self.frame_perf.shapes_created = self.frame_perf.shapes_created.saturating_add(1);
-        self.layout_cache
-            .shape_cache
-            .insert(shape_key, shape.clone());
+        let evicted = self.layout_cache.insert_shape(shape_key, shape.clone());
+        self.frame_perf.shape_cache_evictions = self
+            .frame_perf
+            .shape_cache_evictions
+            .saturating_add(evicted);
         shape
     }
 

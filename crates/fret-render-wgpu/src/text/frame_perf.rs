@@ -7,6 +7,7 @@ pub(crate) struct TextFramePerfState {
     pub(crate) shape_cache_hits: u64,
     pub(crate) shape_cache_misses: u64,
     pub(crate) shapes_created: u64,
+    pub(crate) shape_cache_evictions: u64,
     pub(crate) missing_glyphs: u64,
     pub(crate) texts_with_missing_glyphs: u64,
 }

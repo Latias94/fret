@@ -44,6 +44,32 @@ pub fn measure_shaping_cache_entries() -> usize {
 }
 
 #[doc(hidden)]
+pub fn prepared_shape_cache_entries() -> usize {
+    static ENTRIES: OnceLock<usize> = OnceLock::new();
+    *ENTRIES.get_or_init(|| {
+        // Bound renderer-owned prepared layout/glyph shapes separately from measure-only shaping.
+        // Native editor surfaces benefit from a larger window; wasm keeps the CPU heap footprint
+        // tighter by default.
+        std::env::var("FRET_TEXT_SHAPE_CACHE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(default_prepared_shape_cache_entries())
+            .clamp(64, 65_536)
+    })
+}
+
+fn default_prepared_shape_cache_entries() -> usize {
+    #[cfg(target_arch = "wasm32")]
+    {
+        1024
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        4096
+    }
+}
+
+#[doc(hidden)]
 pub fn measure_shaping_cache_min_text_len_bytes() -> usize {
     static MIN_BYTES: OnceLock<usize> = OnceLock::new();
     *MIN_BYTES.get_or_init(|| {

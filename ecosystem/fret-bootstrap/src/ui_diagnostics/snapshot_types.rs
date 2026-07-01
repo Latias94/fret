@@ -256,6 +256,8 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub blobs_live: u64,
     pub blob_cache_entries: u64,
     pub shape_cache_entries: u64,
+    #[serde(default)]
+    pub shape_cache_entry_limit: u64,
     pub measure_cache_buckets: u64,
 
     #[serde(default)]
@@ -281,6 +283,8 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub frame_shape_cache_hits: u64,
     pub frame_shape_cache_misses: u64,
     pub frame_shapes_created: u64,
+    #[serde(default)]
+    pub frame_shape_cache_evictions: u64,
 
     pub mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
     pub color_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
@@ -308,6 +312,7 @@ impl UiRendererTextPerfSnapshotV1 {
             blobs_live: snapshot.blobs_live,
             blob_cache_entries: snapshot.blob_cache_entries,
             shape_cache_entries: snapshot.shape_cache_entries,
+            shape_cache_entry_limit: snapshot.shape_cache_entry_limit,
             measure_cache_buckets: snapshot.measure_cache_buckets,
             shape_cache_bytes_estimate_total: snapshot.shape_cache_bytes_estimate_total,
             blob_paint_palette_bytes_estimate_total: snapshot
@@ -324,6 +329,7 @@ impl UiRendererTextPerfSnapshotV1 {
             frame_shape_cache_hits: snapshot.frame_shape_cache_hits,
             frame_shape_cache_misses: snapshot.frame_shape_cache_misses,
             frame_shapes_created: snapshot.frame_shapes_created,
+            frame_shape_cache_evictions: snapshot.frame_shape_cache_evictions,
             mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
             color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
             subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),

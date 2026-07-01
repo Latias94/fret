@@ -33,4 +33,6 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 resident stream coverage gate](progress/2026-07-01-u7-resident-stream-coverage-gate.md)
 - [U7 runtime resident write-plan decoupling](progress/2026-07-01-u7-runtime-resident-write-plan.md)
 - [U7 guarded quad instance partial upload](progress/2026-07-01-u7-guarded-quad-partial-upload.md)
+- [U7 non-quad resident partial uploads deferred](progress/2026-07-01-u7-non-quad-upload-closeout.md)
+- [U8 prepared shape cache budget](progress/2026-07-01-u8-prepared-shape-cache-budget.md)
 - [Log](log.md)

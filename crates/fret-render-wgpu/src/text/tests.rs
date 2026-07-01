@@ -2081,6 +2081,146 @@ fn paint_only_changes_miss_blob_cache_but_hit_shape_cache() {
     );
 }
 
+fn test_shape_key_for_text(
+    text_system: &super::TextSystem,
+    text: &str,
+    style: &TextStyle,
+    constraints: TextConstraints,
+) -> TextShapeKey {
+    let mut key = TextBlobKey::new(text, style, constraints, text_system.font_stack_key());
+    key.set_backend(1);
+    TextShapeKey::from_blob_key(&key)
+}
+
+fn test_shape_key_for_attributed(
+    text_system: &super::TextSystem,
+    rich: &AttributedText,
+    style: &TextStyle,
+    constraints: TextConstraints,
+) -> TextShapeKey {
+    let mut key =
+        TextBlobKey::new_attributed(rich, style, constraints, text_system.font_stack_key());
+    key.set_backend(1);
+    TextShapeKey::from_blob_key(&key)
+}
+
+#[test]
+fn prepared_shape_cache_respects_entry_budget_and_reports_evictions() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    text.layout_cache.set_shape_cache_limit_for_tests(2);
+    text.begin_frame_diagnostics();
+
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let constraints = TextConstraints::default();
+    let key_a = test_shape_key_for_text(&text, "shape-cache-budget-a", &style, constraints);
+    let key_b = test_shape_key_for_text(&text, "shape-cache-budget-b", &style, constraints);
+    let key_c = test_shape_key_for_text(&text, "shape-cache-budget-c", &style, constraints);
+
+    let _ = text.prepare("shape-cache-budget-a", &style, constraints);
+    let _ = text.prepare("shape-cache-budget-b", &style, constraints);
+    let _ = text.prepare("shape-cache-budget-c", &style, constraints);
+
+    let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
+    assert_eq!(snap.shape_cache_entry_limit, 2);
+    assert_eq!(snap.shape_cache_entries, 2);
+    assert_eq!(snap.frame_shape_cache_evictions, 1);
+    assert!(!text.layout_cache.contains_shape(&key_a));
+    assert!(text.layout_cache.contains_shape(&key_b));
+    assert!(text.layout_cache.contains_shape(&key_c));
+}
+
+#[test]
+fn prepared_shape_cache_hit_refreshes_lru_before_eviction() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    text.layout_cache.set_shape_cache_limit_for_tests(2);
+    text.begin_frame_diagnostics();
+
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let constraints = TextConstraints::default();
+    let content: Arc<str> = Arc::<str>::from("shape-cache-lru-a");
+    let rich_a_red = AttributedText::new(
+        Arc::clone(&content),
+        Arc::<[TextSpan]>::from(vec![TextSpan {
+            len: content.len(),
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                fg: Some(Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+        }]),
+    );
+    let rich_a_blue = AttributedText::new(
+        Arc::clone(&content),
+        Arc::<[TextSpan]>::from(vec![TextSpan {
+            len: content.len(),
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                fg: Some(Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 1.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+        }]),
+    );
+    let key_a = test_shape_key_for_attributed(&text, &rich_a_red, &style, constraints);
+    let key_b = test_shape_key_for_text(&text, "shape-cache-lru-b", &style, constraints);
+    let key_c = test_shape_key_for_text(&text, "shape-cache-lru-c", &style, constraints);
+
+    let _ = text.prepare_attributed(&rich_a_red, &style, constraints);
+    let _ = text.prepare("shape-cache-lru-b", &style, constraints);
+    let _ = text.prepare_attributed(&rich_a_blue, &style, constraints);
+    let _ = text.prepare("shape-cache-lru-c", &style, constraints);
+
+    let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
+    assert_eq!(snap.shape_cache_entries, 2);
+    assert_eq!(snap.frame_shape_cache_hits, 1);
+    assert_eq!(snap.frame_shape_cache_evictions, 1);
+    assert!(text.layout_cache.contains_shape(&key_a));
+    assert!(!text.layout_cache.contains_shape(&key_b));
+    assert!(text.layout_cache.contains_shape(&key_c));
+}
+
+#[test]
+fn prepared_shape_cache_eviction_keeps_live_blob_shape_usable() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    text.layout_cache.set_shape_cache_limit_for_tests(1);
+    text.begin_frame_diagnostics();
+
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let constraints = TextConstraints::default();
+    let key_a = test_shape_key_for_text(&text, "shape-cache-live-a", &style, constraints);
+    let (blob_a, metrics_a) = text.prepare("shape-cache-live-a", &style, constraints);
+    let _ = text.prepare("shape-cache-live-b", &style, constraints);
+
+    let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
+    assert_eq!(snap.shape_cache_entries, 1);
+    assert_eq!(snap.frame_shape_cache_evictions, 1);
+    assert!(!text.layout_cache.contains_shape(&key_a));
+    let retained = prepared_shape_for_blob(&text, blob_a);
+    assert_eq!(retained.metrics(), metrics_a);
+    assert!(!retained.glyphs().is_empty());
+}
+
 #[test]
 fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     // Use a small variable-font subset as a deterministic fixture.

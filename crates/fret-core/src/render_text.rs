@@ -28,6 +28,7 @@ pub struct RendererTextPerfSnapshot {
     pub blobs_live: u64,
     pub blob_cache_entries: u64,
     pub shape_cache_entries: u64,
+    pub shape_cache_entry_limit: u64,
     pub measure_cache_buckets: u64,
 
     /// Best-effort heap byte estimates for text caches (CPU-side).
@@ -50,6 +51,7 @@ pub struct RendererTextPerfSnapshot {
     pub frame_shape_cache_hits: u64,
     pub frame_shape_cache_misses: u64,
     pub frame_shapes_created: u64,
+    pub frame_shape_cache_evictions: u64,
 
     pub mask_atlas: RendererGlyphAtlasPerfSnapshot,
     pub color_atlas: RendererGlyphAtlasPerfSnapshot,

@@ -25,7 +25,7 @@ pub use cache_keys::{
 };
 pub use cache_tuning::{
     measure_shaping_cache_entries, measure_shaping_cache_min_text_len_bytes,
-    released_blob_cache_entries,
+    prepared_shape_cache_entries, released_blob_cache_entries,
 };
 pub use decorations::{
     TextDecoration, TextDecorationKind, TextDecorationMetricsPx,
