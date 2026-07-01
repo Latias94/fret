@@ -1,5 +1,19 @@
 use super::{GlyphInstance, TextDecoration, TextFontFaceUsage, TextLine, TextShape, TextSystem};
-use std::{collections::HashSet, sync::Arc};
+use slotmap::Key;
+use std::{
+    collections::{HashSet, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TextSceneResourceSnapshot {
+    pub(crate) fingerprint: u64,
+    pub(crate) text_blobs: u64,
+    pub(crate) glyphs: u64,
+    pub(crate) missing_glyph_resources: u64,
+    pub(crate) reset_generation: u64,
+}
 
 fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
     let mul = |len: usize, item_size: usize| -> u64 {
@@ -163,6 +177,53 @@ impl TextSystem {
 
     pub(crate) fn atlas_revision(&self) -> u64 {
         self.atlas_runtime.combined_revision()
+    }
+
+    pub(crate) fn scene_text_resource_snapshot(
+        &self,
+        scene: &fret_core::Scene,
+    ) -> TextSceneResourceSnapshot {
+        let mut hasher = DefaultHasher::new();
+        let reset_generation = self.atlas_runtime.reset_generation();
+        reset_generation.hash(&mut hasher);
+        scene.text_blob_ids().len().hash(&mut hasher);
+
+        let mut snapshot = TextSceneResourceSnapshot {
+            text_blobs: scene.text_blob_ids().len() as u64,
+            reset_generation,
+            ..Default::default()
+        };
+
+        for text_blob in scene.text_blob_ids().iter().copied() {
+            text_blob.data().as_ffi().hash(&mut hasher);
+            let Some(blob) = self.blob_state.blobs.get(text_blob) else {
+                0x6d_69_73_73_69_6e_67_u64.hash(&mut hasher);
+                continue;
+            };
+            let shape = blob.shape();
+            shape.glyphs().len().hash(&mut hasher);
+            for glyph in shape.glyphs() {
+                snapshot.glyphs = snapshot.glyphs.saturating_add(1);
+                glyph.key.hash(&mut hasher);
+                match self.glyph_uv_for_instance(glyph) {
+                    Some((page, uv)) => {
+                        1_u8.hash(&mut hasher);
+                        page.hash(&mut hasher);
+                        for value in uv {
+                            value.to_bits().hash(&mut hasher);
+                        }
+                    }
+                    None => {
+                        snapshot.missing_glyph_resources =
+                            snapshot.missing_glyph_resources.saturating_add(1);
+                        0_u8.hash(&mut hasher);
+                    }
+                }
+            }
+        }
+
+        snapshot.fingerprint = hasher.finish();
+        snapshot
     }
 
     pub(super) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {

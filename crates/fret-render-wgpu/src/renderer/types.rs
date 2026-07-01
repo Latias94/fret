@@ -625,6 +625,71 @@ impl SceneEncodingCacheMissHistogramSnapshot {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct TextSceneResourceKeyObservation {
+    pub(super) fingerprint_changed: bool,
+    pub(super) atlas_revision_changed_but_scene_text_resources_stable: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct TextSceneResourceKeyState {
+    previous_atlas_revision: Option<u64>,
+    previous_fingerprint: Option<u64>,
+}
+
+impl TextSceneResourceKeyState {
+    pub(super) fn observe(
+        &mut self,
+        atlas_revision: u64,
+        fingerprint: u64,
+    ) -> TextSceneResourceKeyObservation {
+        let fingerprint_changed = self
+            .previous_fingerprint
+            .is_some_and(|previous| previous != fingerprint);
+        let atlas_revision_changed_but_scene_text_resources_stable =
+            match (self.previous_atlas_revision, self.previous_fingerprint) {
+                (Some(previous_revision), Some(previous_fingerprint)) => {
+                    previous_revision != atlas_revision && previous_fingerprint == fingerprint
+                }
+                _ => false,
+            };
+
+        self.previous_atlas_revision = Some(atlas_revision);
+        self.previous_fingerprint = Some(fingerprint);
+
+        TextSceneResourceKeyObservation {
+            fingerprint_changed,
+            atlas_revision_changed_but_scene_text_resources_stable,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn text_scene_resource_key_state_counts_atlas_revision_churn_with_stable_resources() {
+        let mut state = TextSceneResourceKeyState::default();
+
+        let first = state.observe(1, 10);
+        assert!(!first.fingerprint_changed);
+        assert!(!first.atlas_revision_changed_but_scene_text_resources_stable);
+
+        let stable_resources = state.observe(2, 10);
+        assert!(!stable_resources.fingerprint_changed);
+        assert!(stable_resources.atlas_revision_changed_but_scene_text_resources_stable);
+
+        let changed_resources = state.observe(2, 11);
+        assert!(changed_resources.fingerprint_changed);
+        assert!(!changed_resources.atlas_revision_changed_but_scene_text_resources_stable);
+
+        let stable_after_change = state.observe(3, 11);
+        assert!(!stable_after_change.fingerprint_changed);
+        assert!(stable_after_change.atlas_revision_changed_but_scene_text_resources_stable);
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct RenderPerfSnapshot {
     pub frames: u64,
@@ -724,6 +789,13 @@ pub struct RenderPerfSnapshot {
     // Text atlas churn (best-effort). These numbers are per-frame signals and should be treated as
     // diagnostic hints rather than strict correctness metrics.
     pub text_atlas_revision: u64,
+    pub text_scene_resource_fingerprint: u64,
+    pub text_scene_resource_blobs: u64,
+    pub text_scene_resource_glyphs: u64,
+    pub text_scene_resource_missing_glyph_resources: u64,
+    pub text_scene_resource_reset_generation: u64,
+    pub text_scene_resource_fingerprint_changed: u64,
+    pub text_atlas_revision_changed_scene_text_resources_stable: u64,
     pub text_atlas_uploads: u64,
     pub text_atlas_upload_bytes: u64,
     pub text_atlas_evicted_glyphs: u64,
@@ -1161,6 +1233,13 @@ pub(super) struct RenderPerfStats {
     pub(super) svg_mask_atlas_entries_evicted: u64,
 
     pub(super) text_atlas_revision: u64,
+    pub(super) text_scene_resource_fingerprint: u64,
+    pub(super) text_scene_resource_blobs: u64,
+    pub(super) text_scene_resource_glyphs: u64,
+    pub(super) text_scene_resource_missing_glyph_resources: u64,
+    pub(super) text_scene_resource_reset_generation: u64,
+    pub(super) text_scene_resource_fingerprint_changed: u64,
+    pub(super) text_atlas_revision_changed_scene_text_resources_stable: u64,
     pub(super) text_atlas_uploads: u64,
     pub(super) text_atlas_upload_bytes: u64,
     pub(super) text_atlas_evicted_glyphs: u64,
@@ -1343,6 +1422,28 @@ impl RenderPerfStats {
         self.prepare_text_removed_glyph_keys = self
             .prepare_text_removed_glyph_keys
             .saturating_add(perf.removed_glyph_keys);
+    }
+
+    pub(super) fn record_text_scene_resource_snapshot(
+        &mut self,
+        snapshot: crate::text::TextSceneResourceSnapshot,
+        observation: TextSceneResourceKeyObservation,
+    ) {
+        self.text_scene_resource_fingerprint = snapshot.fingerprint;
+        self.text_scene_resource_blobs = snapshot.text_blobs;
+        self.text_scene_resource_glyphs = snapshot.glyphs;
+        self.text_scene_resource_missing_glyph_resources = snapshot.missing_glyph_resources;
+        self.text_scene_resource_reset_generation = snapshot.reset_generation;
+        if observation.fingerprint_changed {
+            self.text_scene_resource_fingerprint_changed = self
+                .text_scene_resource_fingerprint_changed
+                .saturating_add(1);
+        }
+        if observation.atlas_revision_changed_but_scene_text_resources_stable {
+            self.text_atlas_revision_changed_scene_text_resources_stable = self
+                .text_atlas_revision_changed_scene_text_resources_stable
+                .saturating_add(1);
+        }
     }
 
     pub(super) fn record_encode_scene_family(

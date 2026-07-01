@@ -3245,11 +3245,60 @@
       "unit": "count"
     },
     {
+      "key": "renderer_text_atlas_revision_changed_scene_text_resources_stable",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_text_atlas_upload_bytes",
       "kind": "counter",
       "scope": "frame",
       "suggested_aggregate": "max",
       "unit": "bytes"
+    },
+    {
+      "key": "renderer_text_scene_resource_blobs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_text_scene_resource_fingerprint",
+      "kind": "identifier",
+      "scope": "frame",
+      "suggested_aggregate": "none",
+      "unit": "id"
+    },
+    {
+      "key": "renderer_text_scene_resource_fingerprint_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_text_scene_resource_glyphs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_text_scene_resource_missing_glyph_resources",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_text_scene_resource_reset_generation",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
     },
     {
       "key": "renderer_tick_id",

@@ -2043,7 +2043,26 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     byte_key("renderer_svg_standalone_bytes_live", PerfKeyAggregate::Max),
     byte_key("renderer_svg_upload_bytes", PerfKeyAggregate::Max),
     count_key("renderer_text_atlas_evicted_pages", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_text_atlas_revision_changed_scene_text_resources_stable",
+        PerfKeyAggregate::Max,
+    ),
     byte_key("renderer_text_atlas_upload_bytes", PerfKeyAggregate::Max),
+    count_key("renderer_text_scene_resource_blobs", PerfKeyAggregate::Max),
+    id_key("renderer_text_scene_resource_fingerprint"),
+    count_key(
+        "renderer_text_scene_resource_fingerprint_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key("renderer_text_scene_resource_glyphs", PerfKeyAggregate::Max),
+    count_key(
+        "renderer_text_scene_resource_missing_glyph_resources",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_text_scene_resource_reset_generation",
+        PerfKeyAggregate::Max,
+    ),
     id_key("renderer_tick_id"),
     count_key("renderer_viewport_draw_calls", PerfKeyAggregate::Max),
     count_key(
@@ -2679,6 +2698,8 @@ mod tests {
             "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch",
             "renderer_render_plan_scene_chunk_candidates_changed",
             "renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate",
+            "renderer_text_scene_resource_fingerprint_changed",
+            "renderer_text_atlas_revision_changed_scene_text_resources_stable",
             "renderer_encode_scene_text_ops",
             "renderer_render_target_updates_ingest_gpu_copy",
             "renderer_svg_mask_atlas_capacity_px",

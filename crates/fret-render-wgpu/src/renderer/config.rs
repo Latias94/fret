@@ -151,6 +151,15 @@ impl Renderer {
             svg_mask_atlas_page_evictions: perf.svg_mask_atlas_page_evictions,
             svg_mask_atlas_entries_evicted: perf.svg_mask_atlas_entries_evicted,
             text_atlas_revision: perf.text_atlas_revision,
+            text_scene_resource_fingerprint: perf.text_scene_resource_fingerprint,
+            text_scene_resource_blobs: perf.text_scene_resource_blobs,
+            text_scene_resource_glyphs: perf.text_scene_resource_glyphs,
+            text_scene_resource_missing_glyph_resources: perf
+                .text_scene_resource_missing_glyph_resources,
+            text_scene_resource_reset_generation: perf.text_scene_resource_reset_generation,
+            text_scene_resource_fingerprint_changed: perf.text_scene_resource_fingerprint_changed,
+            text_atlas_revision_changed_scene_text_resources_stable: perf
+                .text_atlas_revision_changed_scene_text_resources_stable,
             text_atlas_uploads: perf.text_atlas_uploads,
             text_atlas_upload_bytes: perf.text_atlas_upload_bytes,
             text_atlas_evicted_glyphs: perf.text_atlas_evicted_glyphs,

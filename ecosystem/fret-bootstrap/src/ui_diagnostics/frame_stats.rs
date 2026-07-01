@@ -694,6 +694,20 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_text_atlas_revision: u64,
     #[serde(default)]
+    pub renderer_text_scene_resource_fingerprint: u64,
+    #[serde(default)]
+    pub renderer_text_scene_resource_blobs: u64,
+    #[serde(default)]
+    pub renderer_text_scene_resource_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_scene_resource_missing_glyph_resources: u64,
+    #[serde(default)]
+    pub renderer_text_scene_resource_reset_generation: u64,
+    #[serde(default)]
+    pub renderer_text_scene_resource_fingerprint_changed: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_revision_changed_scene_text_resources_stable: u64,
+    #[serde(default)]
     pub renderer_text_atlas_uploads: u64,
     #[serde(default)]
     pub renderer_text_atlas_upload_bytes: u64,
@@ -1622,6 +1636,13 @@ impl UiFrameStatsV1 {
             renderer_svg_mask_atlas_page_evictions: 0,
             renderer_svg_mask_atlas_entries_evicted: 0,
             renderer_text_atlas_revision: 0,
+            renderer_text_scene_resource_fingerprint: 0,
+            renderer_text_scene_resource_blobs: 0,
+            renderer_text_scene_resource_glyphs: 0,
+            renderer_text_scene_resource_missing_glyph_resources: 0,
+            renderer_text_scene_resource_reset_generation: 0,
+            renderer_text_scene_resource_fingerprint_changed: 0,
+            renderer_text_atlas_revision_changed_scene_text_resources_stable: 0,
             renderer_text_atlas_uploads: 0,
             renderer_text_atlas_upload_bytes: 0,
             renderer_text_atlas_evicted_glyphs: 0,
@@ -1971,6 +1992,19 @@ impl UiFrameStatsV1 {
         self.renderer_svg_mask_atlas_page_evictions = sample.perf.svg_mask_atlas_page_evictions;
         self.renderer_svg_mask_atlas_entries_evicted = sample.perf.svg_mask_atlas_entries_evicted;
         self.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
+        self.renderer_text_scene_resource_fingerprint =
+            sample.perf.text_scene_resource_fingerprint;
+        self.renderer_text_scene_resource_blobs = sample.perf.text_scene_resource_blobs;
+        self.renderer_text_scene_resource_glyphs = sample.perf.text_scene_resource_glyphs;
+        self.renderer_text_scene_resource_missing_glyph_resources =
+            sample.perf.text_scene_resource_missing_glyph_resources;
+        self.renderer_text_scene_resource_reset_generation =
+            sample.perf.text_scene_resource_reset_generation;
+        self.renderer_text_scene_resource_fingerprint_changed =
+            sample.perf.text_scene_resource_fingerprint_changed;
+        self.renderer_text_atlas_revision_changed_scene_text_resources_stable = sample
+            .perf
+            .text_atlas_revision_changed_scene_text_resources_stable;
         self.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
         self.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;
         self.renderer_text_atlas_evicted_glyphs = sample.perf.text_atlas_evicted_glyphs;

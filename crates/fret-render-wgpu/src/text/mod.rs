@@ -45,6 +45,7 @@ use self::atlas_epoch::TextAtlasEpochState;
 use self::atlas_runtime_state::TextAtlasRuntimeState;
 use self::blob_state::TextBlobState;
 pub(crate) use self::blobs::TextBlobRenderData;
+pub(crate) use self::diagnostics::TextSceneResourceSnapshot;
 use self::face_cache::TextFaceCacheState;
 use self::font_runtime_state::TextFontRuntimeState;
 use self::frame_perf::TextFramePerfState;

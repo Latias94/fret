@@ -136,6 +136,7 @@ pub struct Renderer {
     custom_effect_v3_pyramid: v3_pyramid::CustomEffectV3PyramidState,
 
     text_system: TextSystem,
+    text_scene_resource_key_state: TextSceneResourceKeyState,
 
     path_state: PathState,
 

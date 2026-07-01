@@ -26,6 +26,15 @@ impl Renderer {
                 let text_atlas_revision = self.text_system.atlas_revision();
                 if perf_enabled {
                     frame_perf.record_text_prepare_scene_perf(text_prepare_perf);
+                    let scene_resource_snapshot =
+                        self.text_system.scene_text_resource_snapshot(scene);
+                    let scene_resource_observation = self
+                        .text_scene_resource_key_state
+                        .observe(text_atlas_revision, scene_resource_snapshot.fingerprint);
+                    frame_perf.record_text_scene_resource_snapshot(
+                        scene_resource_snapshot,
+                        scene_resource_observation,
+                    );
                     let atlas_perf = self.text_system.take_atlas_perf_snapshot();
                     frame_perf.text_atlas_revision = text_atlas_revision;
                     frame_perf.text_atlas_uploads = atlas_perf.uploads;

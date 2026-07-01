@@ -399,6 +399,46 @@ fn prepare_for_scene_retries_retained_keys_missing_from_reset_atlas() {
 }
 
 #[test]
+fn scene_text_resource_snapshot_ignores_unreferenced_atlas_revision_churn() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let (blob_a, _) = text.prepare("aaaa", &style, TextConstraints::default());
+    let scene_a = scene_with_text(blob_a);
+
+    text.prepare_for_scene(&scene_a, 0);
+    let initial_revision = text.atlas_revision();
+    let initial = text.scene_text_resource_snapshot(&scene_a);
+    assert_ne!(initial.fingerprint, 0);
+    assert_eq!(initial.text_blobs, 1);
+    assert!(initial.glyphs > 0);
+    assert_eq!(initial.missing_glyph_resources, 0);
+
+    let (_blob_b, _) = text.prepare("zzzz", &style, TextConstraints::default());
+    let churn_revision = text.atlas_revision();
+    assert_ne!(
+        churn_revision, initial_revision,
+        "test setup should change the global atlas revision with glyphs outside scene_a"
+    );
+    assert_eq!(
+        text.scene_text_resource_snapshot(&scene_a),
+        initial,
+        "scene text resource key should ignore atlas churn from unreferenced text"
+    );
+
+    text.atlas_runtime.reset();
+    let reset = text.scene_text_resource_snapshot(&scene_a);
+    assert_ne!(reset.fingerprint, initial.fingerprint);
+    assert_eq!(reset.text_blobs, initial.text_blobs);
+    assert_eq!(reset.glyphs, initial.glyphs);
+    assert_eq!(reset.missing_glyph_resources, reset.glyphs);
+    assert!(reset.reset_generation > initial.reset_generation);
+}
+
+#[test]
 fn prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);

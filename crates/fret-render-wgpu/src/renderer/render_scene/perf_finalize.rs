@@ -162,6 +162,25 @@ impl Renderer {
             .saturating_add(frame_perf.svg_mask_atlas_entries_evicted);
 
         perf.text_atlas_revision = frame_perf.text_atlas_revision;
+        if frame_perf.text_scene_resource_fingerprint != 0 {
+            perf.text_scene_resource_fingerprint = frame_perf.text_scene_resource_fingerprint;
+        }
+        perf.text_scene_resource_blobs = perf
+            .text_scene_resource_blobs
+            .max(frame_perf.text_scene_resource_blobs);
+        perf.text_scene_resource_glyphs = perf
+            .text_scene_resource_glyphs
+            .max(frame_perf.text_scene_resource_glyphs);
+        perf.text_scene_resource_missing_glyph_resources = perf
+            .text_scene_resource_missing_glyph_resources
+            .max(frame_perf.text_scene_resource_missing_glyph_resources);
+        perf.text_scene_resource_reset_generation = frame_perf.text_scene_resource_reset_generation;
+        perf.text_scene_resource_fingerprint_changed = perf
+            .text_scene_resource_fingerprint_changed
+            .saturating_add(frame_perf.text_scene_resource_fingerprint_changed);
+        perf.text_atlas_revision_changed_scene_text_resources_stable = perf
+            .text_atlas_revision_changed_scene_text_resources_stable
+            .saturating_add(frame_perf.text_atlas_revision_changed_scene_text_resources_stable);
         perf.text_atlas_uploads = perf
             .text_atlas_uploads
             .saturating_add(frame_perf.text_atlas_uploads);
@@ -671,6 +690,16 @@ impl Renderer {
             svg_mask_atlas_page_evictions: frame_perf.svg_mask_atlas_page_evictions,
             svg_mask_atlas_entries_evicted: frame_perf.svg_mask_atlas_entries_evicted,
             text_atlas_revision: frame_perf.text_atlas_revision,
+            text_scene_resource_fingerprint: frame_perf.text_scene_resource_fingerprint,
+            text_scene_resource_blobs: frame_perf.text_scene_resource_blobs,
+            text_scene_resource_glyphs: frame_perf.text_scene_resource_glyphs,
+            text_scene_resource_missing_glyph_resources: frame_perf
+                .text_scene_resource_missing_glyph_resources,
+            text_scene_resource_reset_generation: frame_perf.text_scene_resource_reset_generation,
+            text_scene_resource_fingerprint_changed: frame_perf
+                .text_scene_resource_fingerprint_changed,
+            text_atlas_revision_changed_scene_text_resources_stable: frame_perf
+                .text_atlas_revision_changed_scene_text_resources_stable,
             text_atlas_uploads: frame_perf.text_atlas_uploads,
             text_atlas_upload_bytes: frame_perf.text_atlas_upload_bytes,
             text_atlas_evicted_glyphs: frame_perf.text_atlas_evicted_glyphs,
