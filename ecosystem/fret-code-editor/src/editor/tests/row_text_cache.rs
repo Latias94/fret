@@ -122,6 +122,115 @@ fn single_line_edit_preserves_unaffected_row_text_cache_entries() {
     }
 }
 
+#[derive(Debug)]
+struct SeededPlainRowScene {
+    row: usize,
+    range: std::ops::Range<usize>,
+    text: Arc<str>,
+    key: RowSceneKey,
+    tick: u64,
+    chunk_fingerprint: u64,
+    hosted_text_blobs: Vec<fret_core::TextBlobId>,
+}
+
+#[test]
+fn single_line_edit_preserves_unaffected_row_scene_cache_entries() {
+    let handle = CodeEditorHandle::new("hello\nworld\nagain");
+    let fg = Color {
+        r: 0.2,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+
+    let before = {
+        let mut st = handle.state.borrow_mut();
+        st.sync_row_scene_cache_epoch();
+        (0..3)
+            .map(|row| {
+                let (range, text, _folds, _preedit, _spans) =
+                    paint::cached_row_text_with_range(&mut st, row, 64);
+                seed_plain_row_scene_cache_entry(&mut st, row, range, text, fg, row as u64 + 1)
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let row_scene_resets_before = handle.cache_stats().row_scene_resets;
+    {
+        let mut st = handle.state.borrow_mut();
+        crate::editor::input::apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            Edit::Insert {
+                at: 0,
+                text: "!".to_string(),
+            },
+            Selection {
+                anchor: 1,
+                focus: 1,
+            },
+        )
+        .expect("edit should apply");
+
+        assert_eq!(st.row_scene_cache_rev, st.buffer.revision());
+        assert_eq!(
+            st.cache_stats.row_scene_resets, row_scene_resets_before,
+            "safe single-line edits should delta-update row scene cache instead of resetting it"
+        );
+        assert!(
+            !st.row_scene_cache.contains_key(&0),
+            "edited row scene must be rebuilt"
+        );
+        assert_eq!(
+            st.row_scene_cache_scene_ops_len_total, 2,
+            "only unaffected row scene chunks should remain resident"
+        );
+        #[cfg(feature = "syntax")]
+        assert!(
+            st.row_scene_replay_plan_cache.is_none(),
+            "window-level replay plans include revision/display epochs and must be rebuilt"
+        );
+
+        for seeded in before.into_iter().skip(1) {
+            let (entry, tick) = st
+                .row_scene_cache
+                .get(&seeded.row)
+                .expect("unaffected row scene should remain cached");
+            assert_eq!(*tick, seeded.tick);
+            assert_eq!(
+                entry.key, seeded.key,
+                "unaffected row scene key should stay stable"
+            );
+            assert!(
+                Arc::ptr_eq(&entry.retained.content.text, &seeded.text),
+                "unaffected row scene text allocation should stay stable"
+            );
+            assert_eq!(
+                entry.retained.content.range,
+                (seeded.range.start + 1)..(seeded.range.end + 1),
+                "unaffected row scene content range should shift by inserted bytes"
+            );
+            assert_eq!(
+                entry.retained.geom.row_range,
+                (seeded.range.start + 1)..(seeded.range.end + 1),
+                "unaffected row scene geometry range should shift by inserted bytes"
+            );
+            assert_eq!(
+                entry.retained.chunk.fingerprint(),
+                seeded.chunk_fingerprint,
+                "unaffected row scene chunk identity should stay stable"
+            );
+            assert_eq!(
+                entry.retained.hosted_resources.text_blob_ids(),
+                seeded.hosted_text_blobs.as_slice(),
+                "unaffected row scene hosted resources should stay stable"
+            );
+            #[cfg(feature = "syntax")]
+            assert!(entry.syntax_replay_key.is_none());
+        }
+    }
+}
+
 #[test]
 fn cached_row_text_lru_eviction_rebuilds_evicted_rows() {
     let handle = CodeEditorHandle::new("hello\nworld");
@@ -263,6 +372,106 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
         chunk: fret_core::SceneChunk::default(),
         hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
     })
+}
+
+fn seed_plain_row_scene_cache_entry(
+    st: &mut CodeEditorState,
+    row: usize,
+    range: std::ops::Range<usize>,
+    text: Arc<str>,
+    fg: Color,
+    tick: u64,
+) -> SeededPlainRowScene {
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(256.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let row_geom_key = geom::RowGeomKey::for_plain(
+        &text,
+        &text_style,
+        (
+            constraints.max_width,
+            constraints.wrap,
+            constraints.overflow,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        st.font_stack_key,
+    );
+    let key = RowSceneKey::plain(row_geom_key.clone(), fg);
+    let rect = Rect::new(
+        Point::new(Px(0.0), Px(row as f32 * 16.0)),
+        Size::new(Px(80.0), Px(16.0)),
+    );
+    let text_blob = test_text_blob_id(row as u64 + 1);
+    let chunk = fret_core::SceneChunk::from_ops(Arc::from(vec![SceneOp::Text {
+        order: DrawOrder(2),
+        origin: rect.origin,
+        text: text_blob,
+        paint: fret_core::Paint::Solid(fg).into(),
+        outline: None,
+        shadow: None,
+    }]));
+    let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(chunk.ops());
+    let content = Arc::new(RowContentSnapshot {
+        text: Arc::clone(&text),
+        range: range.clone(),
+        fold_map: None,
+        preedit_range: None,
+        row_spans: Arc::from([]),
+    });
+    let retained = Arc::new(RowSceneRetainedFragment {
+        content,
+        local_bounds: rect,
+        origin: rect.origin,
+        geom: RowGeom {
+            row_range: range.clone(),
+            key: row_geom_key,
+            caret_stops: Vec::new(),
+            fold_map: None,
+            caret_rect_top: None,
+            caret_rect_height: None,
+            has_preedit: false,
+            preedit: None,
+        },
+        is_rich: false,
+        chunk,
+        hosted_resources,
+    });
+    let chunk_fingerprint = retained.chunk.fingerprint();
+    let hosted_text_blobs = retained.hosted_resources.text_blob_ids().to_vec();
+    st.row_scene_cache.insert(
+        row,
+        (
+            RowSceneCacheEntry {
+                key: key.clone(),
+                retained,
+                #[cfg(feature = "syntax")]
+                syntax_replay_key: None,
+            },
+            tick,
+        ),
+    );
+    st.row_scene_cache_queue.push_back((row, tick));
+    st.row_scene_cache_tick = st.row_scene_cache_tick.max(tick);
+    st.row_scene_cache_scene_ops_len_total =
+        st.row_scene_cache_scene_ops_len_total.saturating_add(1);
+
+    SeededPlainRowScene {
+        row,
+        range,
+        text,
+        key,
+        tick,
+        chunk_fingerprint,
+        hosted_text_blobs,
+    }
 }
 
 #[test]

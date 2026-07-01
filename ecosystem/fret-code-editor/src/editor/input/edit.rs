@@ -304,6 +304,13 @@ fn apply_and_record_edit_inner(
             crate::editor::paint::shift_row_text_cache_for_single_line_edit(
                 st,
                 before_line_rows.clone(),
+                after_line_rows.clone(),
+                edit_old_end,
+                edit_byte_delta,
+            );
+            crate::editor::paint::shift_row_scene_cache_for_single_line_edit(
+                st,
+                before_line_rows.clone(),
                 after_line_rows,
                 edit_old_end,
                 edit_byte_delta,

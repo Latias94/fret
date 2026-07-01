@@ -30,6 +30,7 @@ use self::rich::{
     materialize_row_rich_text_with_fg, normalize_syntax_spans_for_text,
     row_rich_prefetch_candidate_rows,
 };
+pub(super) use self::scene::shift_row_scene_cache_for_single_line_edit;
 #[cfg(test)]
 pub(super) use self::text::cached_row_text;
 pub(super) use self::text::{
