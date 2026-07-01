@@ -1,4 +1,5 @@
 use super::{GlyphInstance, TextDecoration, TextFontFaceUsage, TextLine, TextShape, TextSystem};
+use fret_core::TextBlobId;
 use slotmap::Key;
 use std::{
     collections::{HashSet, hash_map::DefaultHasher},
@@ -183,18 +184,29 @@ impl TextSystem {
         &self,
         scene: &fret_core::Scene,
     ) -> TextSceneResourceSnapshot {
+        self.text_resource_snapshot_for_blobs(scene.text_blob_ids())
+    }
+
+    pub(crate) fn text_resource_snapshot_for_blobs(
+        &self,
+        text_blob_ids: &[TextBlobId],
+    ) -> TextSceneResourceSnapshot {
+        if text_blob_ids.is_empty() {
+            return TextSceneResourceSnapshot::default();
+        }
+
         let mut hasher = DefaultHasher::new();
         let reset_generation = self.atlas_runtime.reset_generation();
         reset_generation.hash(&mut hasher);
-        scene.text_blob_ids().len().hash(&mut hasher);
+        text_blob_ids.len().hash(&mut hasher);
 
         let mut snapshot = TextSceneResourceSnapshot {
-            text_blobs: scene.text_blob_ids().len() as u64,
+            text_blobs: text_blob_ids.len() as u64,
             reset_generation,
             ..Default::default()
         };
 
-        for text_blob in scene.text_blob_ids().iter().copied() {
+        for text_blob in text_blob_ids.iter().copied() {
             text_blob.data().as_ffi().hash(&mut hasher);
             let Some(blob) = self.blob_state.blobs.get(text_blob) else {
                 0x6d_69_73_73_69_6e_67_u64.hash(&mut hasher);

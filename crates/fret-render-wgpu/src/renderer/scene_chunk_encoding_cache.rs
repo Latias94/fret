@@ -19,7 +19,6 @@ pub(super) struct SceneChunkEncodingContext {
     pub(super) scale_factor_bits: u32,
     pub(super) render_targets_generation: u64,
     pub(super) images_generation: u64,
-    pub(super) text_scene_resource_key: u64,
     pub(super) text_quality_key: u64,
     pub(super) materials_generation: u64,
     pub(super) material_paint_budget_per_frame: u64,
@@ -99,6 +98,7 @@ struct SceneChunkEncodingKey {
     entry_fingerprint: u64,
     chunk_fingerprint: u64,
     chunk_ops_len: usize,
+    chunk_text_resource_key: u64,
 }
 
 #[derive(Default)]
@@ -267,12 +267,17 @@ impl SceneChunkPayloadPlanShape {
 }
 
 impl SceneChunkEncodingKey {
-    fn new(context: SceneChunkEncodingContext, entry: &fret_core::SceneChunkManifestEntry) -> Self {
+    fn new(
+        context: SceneChunkEncodingContext,
+        entry: &fret_core::SceneChunkManifestEntry,
+        chunk_text_resource_key: u64,
+    ) -> Self {
         Self {
             context,
             entry_fingerprint: entry.fingerprint(),
             chunk_fingerprint: entry.chunk().fingerprint(),
             chunk_ops_len: entry.chunk().ops_len(),
+            chunk_text_resource_key,
         }
     }
 }
@@ -282,6 +287,7 @@ impl SceneChunkEncodingState {
         &mut self,
         manifest: Option<&fret_core::SceneChunkManifest>,
         context: SceneChunkEncodingContext,
+        entry_text_resource_keys: &[u64],
         mut build_payload: impl FnMut(&fret_core::SceneChunkManifestEntry) -> CachedSceneChunkEncoding,
     ) -> SceneChunkEncodingFrameStats {
         self.previous_counts.clear();
@@ -295,6 +301,11 @@ impl SceneChunkEncodingState {
 
         let mut stats = SceneChunkEncodingFrameStats::default();
         if let Some(manifest) = manifest {
+            debug_assert_eq!(
+                entry_text_resource_keys.len(),
+                manifest.len(),
+                "scene chunk text resource keys must match manifest entries"
+            );
             stats.entries = manifest.len() as u64;
             if !manifest.is_empty() {
                 stats.key_cache_context_fingerprint = context.fingerprint();
@@ -302,8 +313,12 @@ impl SceneChunkEncodingState {
 
             self.next_keys.reserve(manifest.len());
             self.live_payload_keys.reserve(manifest.len());
-            for entry in manifest.entries() {
-                let key = SceneChunkEncodingKey::new(context, entry);
+            for (index, entry) in manifest.entries().iter().enumerate() {
+                let key = SceneChunkEncodingKey::new(
+                    context,
+                    entry,
+                    entry_text_resource_keys.get(index).copied().unwrap_or(0),
+                );
                 if let Some(count) = self.previous_counts.get_mut(&key) {
                     if *count > 0 {
                         *count -= 1;
@@ -470,7 +485,6 @@ impl Renderer {
         format: wgpu::TextureFormat,
         viewport_size: (u32, u32),
         scale_factor: f32,
-        text_scene_resource_key: u64,
     ) -> SceneChunkEncodingContext {
         let (render_targets_generation, images_generation) = self.gpu_resources.generations();
         SceneChunkEncodingContext {
@@ -479,7 +493,6 @@ impl Renderer {
             scale_factor_bits: scale_factor.to_bits(),
             render_targets_generation,
             images_generation,
-            text_scene_resource_key,
             text_quality_key: self.text_system.text_quality_key(),
             materials_generation: self.material_effect_state.materials_generation,
             material_paint_budget_per_frame: self
@@ -500,17 +513,35 @@ impl Renderer {
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
+        let entry_text_resource_keys = scene_chunks
+            .map(|manifest| {
+                manifest
+                    .entries()
+                    .iter()
+                    .map(|entry| {
+                        self.text_system
+                            .text_resource_snapshot_for_blobs(entry.chunk().text_blob_ids())
+                            .fingerprint
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
         let mut state = std::mem::take(&mut self.scene_chunk_encoding_state);
         let viewport_size = context.viewport_size;
         let output_is_srgb = context.format.is_srgb();
-        let stats = state.begin_frame_with_payloads(scene_chunks, context, |entry| {
-            self.encode_scene_chunk_entry_payload(
-                entry,
-                scale_factor,
-                viewport_size,
-                output_is_srgb,
-            )
-        });
+        let stats = state.begin_frame_with_payloads(
+            scene_chunks,
+            context,
+            &entry_text_resource_keys,
+            |entry| {
+                self.encode_scene_chunk_entry_payload(
+                    entry,
+                    scale_factor,
+                    viewport_size,
+                    output_is_srgb,
+                )
+            },
+        );
         self.scene_chunk_encoding_state = state;
         if perf_enabled {
             frame_perf.scene_chunk_encoding_key_cache_entries = stats.entries;
@@ -643,15 +674,14 @@ mod tests {
     use fret_core::{Point, Rect, SceneChunk, SceneChunkManifest, SceneChunkManifestEntry, Size};
     use std::sync::Arc;
 
-    fn context(text_scene_resource_key: u64) -> SceneChunkEncodingContext {
+    fn context(text_quality_key: u64) -> SceneChunkEncodingContext {
         SceneChunkEncodingContext {
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             viewport_size: (320, 200),
             scale_factor_bits: 1.0f32.to_bits(),
             render_targets_generation: 1,
             images_generation: 2,
-            text_scene_resource_key,
-            text_quality_key: 3,
+            text_quality_key,
             materials_generation: 4,
             material_paint_budget_per_frame: 5,
             material_distinct_budget_per_frame: 6,
@@ -684,7 +714,10 @@ mod tests {
         manifest: Option<&SceneChunkManifest>,
         context: SceneChunkEncodingContext,
     ) -> SceneChunkEncodingFrameStats {
-        state.begin_frame_with_payloads(manifest, context, |_| {
+        let entry_text_resource_keys = manifest
+            .map(|manifest| vec![0; manifest.len()])
+            .unwrap_or_default();
+        state.begin_frame_with_payloads(manifest, context, &entry_text_resource_keys, |_| {
             CachedSceneChunkEncoding::new(SceneEncoding::default())
         })
     }
@@ -781,7 +814,7 @@ mod tests {
         let mut builds = 0u64;
 
         let frame = manifest(std::slice::from_ref(&first));
-        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), &[0], |_| {
             builds += 1;
             CachedSceneChunkEncoding::default()
         });
@@ -792,7 +825,7 @@ mod tests {
         assert_eq!(builds, 1);
 
         let frame = manifest(&[first.clone(), second]);
-        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
             builds += 1;
             CachedSceneChunkEncoding::default()
         });
@@ -803,7 +836,7 @@ mod tests {
         assert_eq!(builds, 2);
 
         let frame = manifest(&[first]);
-        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), &[0], |_| {
             builds += 1;
             CachedSceneChunkEncoding::default()
         });
@@ -815,10 +848,42 @@ mod tests {
     }
 
     #[test]
+    fn chunk_encoding_payload_cache_uses_entry_local_text_resource_keys() {
+        let mut state = SceneChunkEncodingState::default();
+        let first = entry(0.0);
+        let second = entry(20.0);
+        let frame = manifest(&[first, second]);
+        let mut builds = 0u64;
+
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), &[10, 20], |_| {
+            builds += 1;
+            CachedSceneChunkEncoding::default()
+        });
+        assert_eq!(stats.key_cache_hits, 0);
+        assert_eq!(stats.key_cache_misses, 2);
+        assert_eq!(stats.payload_cache_hits, 0);
+        assert_eq!(stats.payload_cache_misses, 2);
+        assert_eq!(builds, 2);
+
+        let stats = state.begin_frame_with_payloads(Some(&frame), context(1), &[10, 21], |_| {
+            builds += 1;
+            CachedSceneChunkEncoding::default()
+        });
+        assert_eq!(stats.key_cache_hits, 1);
+        assert_eq!(stats.key_cache_misses, 1);
+        assert_eq!(stats.key_cache_stale_entries, 1);
+        assert_eq!(stats.payload_cache_hits, 1);
+        assert_eq!(stats.payload_cache_misses, 1);
+        assert_eq!(stats.payload_chunks_encoded, 1);
+        assert_eq!(stats.payload_entries_live, 2);
+        assert_eq!(builds, 3);
+    }
+
+    #[test]
     fn payload_plan_alignment_compares_cached_payloads_to_candidate_segments_in_order() {
         let mut state = SceneChunkEncodingState::default();
         let frame = manifest(&[entry(0.0)]);
-        state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+        state.begin_frame_with_payloads(Some(&frame), context(1), &[0], |_| {
             CachedSceneChunkEncoding::new(quad_payload_encoding())
         });
         let mut flat_encoding = quad_payload_encoding();
@@ -895,7 +960,7 @@ mod tests {
     fn payload_plan_alignment_returns_exact_safe_segment_indices() {
         let mut state = SceneChunkEncodingState::default();
         let frame = manifest(&[entry(0.0), entry(20.0)]);
-        state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+        state.begin_frame_with_payloads(Some(&frame), context(1), &[0, 0], |_| {
             CachedSceneChunkEncoding::new(quad_payload_encoding())
         });
 

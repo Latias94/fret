@@ -38,4 +38,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U8 glyph atlas page budget diagnostics](progress/2026-07-01-u8-glyph-atlas-page-budget.md)
 - [U8 scene text resource key dry-run diagnostics](progress/2026-07-01-u8-text-resource-key-dry-run.md)
 - [U8 scene text resource cache key](progress/2026-07-01-u8-scene-text-resource-cache-key.md)
+- [U8 scene chunk text resource cache key](progress/2026-07-01-u8-scene-chunk-text-resource-cache-key.md)
 - [Log](log.md)

@@ -439,6 +439,32 @@ fn scene_text_resource_snapshot_ignores_unreferenced_atlas_revision_churn() {
 }
 
 #[test]
+fn empty_text_resource_snapshot_ignores_atlas_churn_and_reset() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let initial = text.text_resource_snapshot_for_blobs(&[]);
+    assert_eq!(initial, super::TextSceneResourceSnapshot::default());
+
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let _ = text.prepare("aaaa", &style, TextConstraints::default());
+    assert_eq!(
+        text.text_resource_snapshot_for_blobs(&[]),
+        initial,
+        "empty text chunks must not inherit unrelated atlas churn"
+    );
+
+    text.atlas_runtime.reset();
+    assert_eq!(
+        text.text_resource_snapshot_for_blobs(&[]),
+        initial,
+        "empty text chunks must not inherit atlas reset generation"
+    );
+}
+
+#[test]
 fn prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
