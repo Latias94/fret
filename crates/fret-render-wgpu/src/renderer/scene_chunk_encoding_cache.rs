@@ -61,6 +61,38 @@ pub(super) struct SceneChunkEncodingFrameStats {
     pub(super) payload_plan_candidates_without_payload: u64,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub(super) struct SceneChunkPayloadReassemblyPlan {
+    safe_segment_indices: Vec<usize>,
+}
+
+impl SceneChunkPayloadReassemblyPlan {
+    #[cfg(test)]
+    pub(super) fn from_safe_segment_indices(indices: Vec<usize>) -> Self {
+        Self {
+            safe_segment_indices: indices,
+        }
+    }
+
+    pub(super) fn is_empty(&self) -> bool {
+        self.safe_segment_indices.is_empty()
+    }
+
+    pub(super) fn safe_segment_indices(&self) -> &[usize] {
+        &self.safe_segment_indices
+    }
+
+    fn push_safe_segment_index(&mut self, index: usize) {
+        self.safe_segment_indices.push(index);
+    }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub(super) struct SceneChunkPayloadPlanAlignment {
+    pub(super) stats: SceneChunkEncodingFrameStats,
+    pub(super) reassembly_plan: SceneChunkPayloadReassemblyPlan,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SceneChunkEncodingKey {
     context: SceneChunkEncodingContext,
@@ -368,15 +400,17 @@ impl SceneChunkEncodingState {
         &self,
         plan: &RenderPlan,
         flat_encoding: &SceneEncoding,
-    ) -> SceneChunkEncodingFrameStats {
+    ) -> SceneChunkPayloadPlanAlignment {
         let mut stats = SceneChunkEncodingFrameStats::default();
+        let mut reassembly_plan = SceneChunkPayloadReassemblyPlan::default();
         let mut candidates = plan
             .segments
             .iter()
-            .filter(|segment| segment.scene_chunk_candidate.eligible);
+            .enumerate()
+            .filter(|(_, segment)| segment.scene_chunk_candidate.eligible);
 
         for key in &self.cached_keys {
-            let Some(segment) = candidates.next() else {
+            let Some((segment_index, segment)) = candidates.next() else {
                 stats.payload_entries_without_plan_candidate = stats
                     .payload_entries_without_plan_candidate
                     .saturating_add(1);
@@ -431,6 +465,7 @@ impl SceneChunkEncodingState {
                     stats.payload_reassembly_append_only_matches = stats
                         .payload_reassembly_append_only_matches
                         .saturating_add(1);
+                    reassembly_plan.push_safe_segment_index(segment_index);
                 }
                 Some(SceneChunkPayloadReassemblyBlocker::ShapeMismatch) => {
                     stats.payload_reassembly_blocked_by_shape_mismatch = stats
@@ -469,7 +504,10 @@ impl SceneChunkEncodingState {
             .payload_plan_shape_matches
             .saturating_add(stats.payload_plan_shape_mismatches)
             .saturating_add(stats.payload_plan_candidates_without_payload);
-        stats
+        SceneChunkPayloadPlanAlignment {
+            stats,
+            reassembly_plan,
+        }
     }
 }
 
@@ -546,14 +584,15 @@ impl Renderer {
         flat_encoding: &SceneEncoding,
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
-    ) {
+    ) -> SceneChunkPayloadReassemblyPlan {
         if !perf_enabled {
-            return;
+            return SceneChunkPayloadReassemblyPlan::default();
         }
 
-        let stats = self
+        let alignment = self
             .scene_chunk_encoding_state
             .record_payload_plan_alignment(plan, flat_encoding);
+        let stats = alignment.stats;
         frame_perf.scene_chunk_encoding_payload_plan_candidate_segments =
             stats.payload_plan_candidate_segments;
         frame_perf.scene_chunk_encoding_payload_plan_shape_matches =
@@ -582,6 +621,7 @@ impl Renderer {
             stats.payload_entries_without_plan_candidate;
         frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload =
             stats.payload_plan_candidates_without_payload;
+        alignment.reassembly_plan
     }
 
     fn encode_scene_chunk_entry_payload(
@@ -856,7 +896,8 @@ mod tests {
             degradations: Vec::new(),
         };
 
-        let stats = state.record_payload_plan_alignment(&plan, &flat_encoding);
+        let alignment = state.record_payload_plan_alignment(&plan, &flat_encoding);
+        let stats = alignment.stats;
 
         assert_eq!(stats.payload_plan_candidate_segments, 1);
         assert_eq!(stats.payload_plan_shape_matches, 1);
@@ -875,9 +916,11 @@ mod tests {
         assert_eq!(stats.payload_reassembly_blocked_by_material_state, 0);
         assert_eq!(stats.payload_entries_without_plan_candidate, 0);
         assert_eq!(stats.payload_plan_candidates_without_payload, 0);
+        assert_eq!(alignment.reassembly_plan.safe_segment_indices(), &[0]);
 
         flat_encoding.instances[0].rect[0] = 1.0;
-        let stats = state.record_payload_plan_alignment(&plan, &flat_encoding);
+        let alignment = state.record_payload_plan_alignment(&plan, &flat_encoding);
+        let stats = alignment.stats;
         assert_eq!(stats.payload_plan_shape_matches, 1);
         assert_eq!(stats.payload_plan_stream_fingerprint_matches, 0);
         assert_eq!(stats.payload_plan_stream_fingerprint_mismatches, 1);
@@ -887,5 +930,77 @@ mod tests {
             stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch,
             1
         );
+        assert!(alignment.reassembly_plan.is_empty());
+    }
+
+    #[test]
+    fn payload_plan_alignment_returns_exact_safe_segment_indices() {
+        let mut state = SceneChunkEncodingState::default();
+        let frame = manifest(&[entry(0.0), entry(20.0)]);
+        state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+            CachedSceneChunkEncoding::new(quad_payload_encoding())
+        });
+
+        let mut flat_encoding = quad_payload_encoding();
+        flat_encoding.instances[0].rect[0] = 1.0;
+        let instance: QuadInstance = bytemuck::Zeroable::zeroed();
+        flat_encoding.instances.push(instance);
+        let plan = RenderPlan {
+            segments: vec![
+                RenderPlanSegment {
+                    id: SceneSegmentId(0),
+                    draw_range: 0..1,
+                    start_uniform_index: Some(0),
+                    start_uniform_fingerprint: 0,
+                    flags: RenderPlanSegmentFlags {
+                        has_quad: true,
+                        ..Default::default()
+                    },
+                    scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                        eligible: true,
+                        draw_count: 1,
+                        fingerprint: 10,
+                    },
+                    stream_ranges: RenderPlanSegmentStreamRanges {
+                        quad_instances: RenderPlanStreamRange::new(0, 1),
+                        ..Default::default()
+                    },
+                },
+                RenderPlanSegment {
+                    id: SceneSegmentId(1),
+                    draw_range: 1..2,
+                    start_uniform_index: Some(0),
+                    start_uniform_fingerprint: 0,
+                    flags: RenderPlanSegmentFlags {
+                        has_quad: true,
+                        ..Default::default()
+                    },
+                    scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                        eligible: true,
+                        draw_count: 1,
+                        fingerprint: 20,
+                    },
+                    stream_ranges: RenderPlanSegmentStreamRanges {
+                        quad_instances: RenderPlanStreamRange::new(1, 2),
+                        ..Default::default()
+                    },
+                },
+            ],
+            passes: Vec::new(),
+            compile_stats: RenderPlanCompileStats::default(),
+            degradations: Vec::new(),
+        };
+
+        let alignment = state.record_payload_plan_alignment(&plan, &flat_encoding);
+
+        assert_eq!(alignment.stats.payload_reassembly_dry_run_candidates, 2);
+        assert_eq!(alignment.stats.payload_reassembly_append_only_matches, 1);
+        assert_eq!(
+            alignment
+                .stats
+                .payload_reassembly_blocked_by_stream_fingerprint_mismatch,
+            1
+        );
+        assert_eq!(alignment.reassembly_plan.safe_segment_indices(), &[1]);
     }
 }
