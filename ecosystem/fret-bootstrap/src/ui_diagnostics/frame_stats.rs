@@ -903,7 +903,15 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_geometry_upload_resident_stream_misses: u64,
     #[serde(default)]
+    pub renderer_geometry_upload_resident_stream_content_mismatches: u64,
+    #[serde(default)]
     pub renderer_geometry_upload_resident_dirty_range_bytes_estimate: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_partial_write_dry_run_streams: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate: u64,
     #[serde(default)]
     pub renderer_geometry_upload_resident_full_upload_fallbacks: u64,
     #[serde(default)]
@@ -916,6 +924,8 @@ pub struct UiFrameStatsV1 {
     pub renderer_geometry_upload_resident_full_upload_fallbacks_uninitialized: u64,
     #[serde(default)]
     pub renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized: u64,
+    #[serde(default)]
+    pub renderer_geometry_upload_resident_full_upload_fallbacks_stream_content_changed: u64,
     #[serde(default)]
     pub renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed: u64,
     #[serde(default)]
@@ -1715,13 +1725,18 @@ impl UiFrameStatsV1 {
             renderer_geometry_upload_resident_stream_candidates: 0,
             renderer_geometry_upload_resident_stream_hits: 0,
             renderer_geometry_upload_resident_stream_misses: 0,
+            renderer_geometry_upload_resident_stream_content_mismatches: 0,
             renderer_geometry_upload_resident_dirty_range_bytes_estimate: 0,
+            renderer_geometry_upload_resident_partial_write_dry_run_streams: 0,
+            renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate: 0,
+            renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_missing_payload: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_reassembly_blocked: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_uninitialized: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized: 0,
+            renderer_geometry_upload_resident_full_upload_fallbacks_stream_content_changed: 0,
             renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed: 0,
             renderer_scene_encoding_cache_hits: 0,
             renderer_scene_encoding_cache_misses: 0,
@@ -2139,8 +2154,16 @@ impl UiFrameStatsV1 {
         self.renderer_geometry_upload_resident_stream_hits = geometry_upload.resident_stream_hits;
         self.renderer_geometry_upload_resident_stream_misses =
             geometry_upload.resident_stream_misses;
+        self.renderer_geometry_upload_resident_stream_content_mismatches =
+            geometry_upload.resident_stream_content_mismatches;
         self.renderer_geometry_upload_resident_dirty_range_bytes_estimate =
             geometry_upload.resident_dirty_range_bytes_estimate;
+        self.renderer_geometry_upload_resident_partial_write_dry_run_streams =
+            geometry_upload.resident_partial_write_dry_run_streams;
+        self.renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate =
+            geometry_upload.resident_partial_write_dry_run_write_count_estimate;
+        self.renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate =
+            geometry_upload.resident_partial_write_dry_run_bytes_estimate;
         self.renderer_geometry_upload_resident_full_upload_fallbacks =
             geometry_upload.resident_full_upload_fallbacks;
         self.renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate =
@@ -2153,6 +2176,8 @@ impl UiFrameStatsV1 {
             geometry_upload.resident_full_upload_fallbacks_uninitialized;
         self.renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized =
             geometry_upload.resident_full_upload_fallbacks_buffer_resized;
+        self.renderer_geometry_upload_resident_full_upload_fallbacks_stream_content_changed =
+            geometry_upload.resident_full_upload_fallbacks_stream_content_changed;
         self.renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed =
             geometry_upload.resident_full_upload_fallbacks_stream_layout_changed;
         self.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;

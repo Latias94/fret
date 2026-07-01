@@ -440,8 +440,16 @@ pub struct GeometryUploadPerfSnapshot {
     pub resident_stream_hits: u64,
     /// Candidate geometry streams that require a full upload fallback for the current ring slot.
     pub resident_stream_misses: u64,
+    /// Resident streams whose layout/range matched the selected ring slot but content changed.
+    pub resident_stream_content_mismatches: u64,
     /// Estimated bytes covered by dirty resident stream ranges for missed candidates.
     pub resident_dirty_range_bytes_estimate: u64,
+    /// Streams that the resident diagnostics owner would write with a partial upload.
+    pub resident_partial_write_dry_run_streams: u64,
+    /// Estimated write calls needed for the resident partial-upload dry-run.
+    pub resident_partial_write_dry_run_write_count_estimate: u64,
+    /// Estimated bytes that the resident partial-upload dry-run would write.
+    pub resident_partial_write_dry_run_bytes_estimate: u64,
     /// Full-upload fallback observations recorded by the resident diagnostics owner.
     pub resident_full_upload_fallbacks: u64,
     /// Fallbacks because no retained scene chunk upload candidate exists for the frame.
@@ -454,6 +462,8 @@ pub struct GeometryUploadPerfSnapshot {
     pub resident_full_upload_fallbacks_uninitialized: u64,
     /// Fallbacks because a stream buffer was resized and resident slot contents were invalidated.
     pub resident_full_upload_fallbacks_buffer_resized: u64,
+    /// Fallbacks because content changed inside an otherwise resident-compatible stream range.
+    pub resident_full_upload_fallbacks_stream_content_changed: u64,
     /// Fallbacks because the selected ring slot has a different stream layout/signature.
     pub resident_full_upload_fallbacks_stream_layout_changed: u64,
 }
@@ -507,9 +517,21 @@ impl GeometryUploadPerfSnapshot {
         self.resident_stream_misses = self
             .resident_stream_misses
             .saturating_add(other.resident_stream_misses);
+        self.resident_stream_content_mismatches = self
+            .resident_stream_content_mismatches
+            .saturating_add(other.resident_stream_content_mismatches);
         self.resident_dirty_range_bytes_estimate = self
             .resident_dirty_range_bytes_estimate
             .saturating_add(other.resident_dirty_range_bytes_estimate);
+        self.resident_partial_write_dry_run_streams = self
+            .resident_partial_write_dry_run_streams
+            .saturating_add(other.resident_partial_write_dry_run_streams);
+        self.resident_partial_write_dry_run_write_count_estimate = self
+            .resident_partial_write_dry_run_write_count_estimate
+            .saturating_add(other.resident_partial_write_dry_run_write_count_estimate);
+        self.resident_partial_write_dry_run_bytes_estimate = self
+            .resident_partial_write_dry_run_bytes_estimate
+            .saturating_add(other.resident_partial_write_dry_run_bytes_estimate);
         self.resident_full_upload_fallbacks = self
             .resident_full_upload_fallbacks
             .saturating_add(other.resident_full_upload_fallbacks);
@@ -528,6 +550,9 @@ impl GeometryUploadPerfSnapshot {
         self.resident_full_upload_fallbacks_buffer_resized = self
             .resident_full_upload_fallbacks_buffer_resized
             .saturating_add(other.resident_full_upload_fallbacks_buffer_resized);
+        self.resident_full_upload_fallbacks_stream_content_changed = self
+            .resident_full_upload_fallbacks_stream_content_changed
+            .saturating_add(other.resident_full_upload_fallbacks_stream_content_changed);
         self.resident_full_upload_fallbacks_stream_layout_changed = self
             .resident_full_upload_fallbacks_stream_layout_changed
             .saturating_add(other.resident_full_upload_fallbacks_stream_layout_changed);
