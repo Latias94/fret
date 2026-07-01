@@ -63,6 +63,7 @@ mod render_text_dump;
 #[path = "render_text_dump_wasm.rs"]
 mod render_text_dump;
 mod resources;
+mod scene_chunk_encoding_cache;
 mod scene_encoding_cache;
 mod scene_encoding_cache_diagnostics;
 mod services;
@@ -92,6 +93,7 @@ use path::*;
 use render_plan::*;
 use render_plan_reporting::*;
 use render_scene_config::*;
+use scene_chunk_encoding_cache::*;
 use scene_encoding_cache::SceneEncodingState;
 use types::*;
 pub use types::{BlurQualityCounters, BlurQualitySnapshot};
@@ -150,6 +152,8 @@ pub struct Renderer {
     intermediate_state: IntermediateState,
 
     gpu_resources: GpuResources,
+
+    scene_chunk_encoding_state: SceneChunkEncodingState,
 
     scene_encoding_state: SceneEncodingState,
 

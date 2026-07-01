@@ -215,6 +215,22 @@ impl Renderer {
         if frame_perf.scene_chunk_input_fingerprint != 0 {
             perf.scene_chunk_input_fingerprint = frame_perf.scene_chunk_input_fingerprint;
         }
+        perf.scene_chunk_encoding_key_cache_entries = perf
+            .scene_chunk_encoding_key_cache_entries
+            .max(frame_perf.scene_chunk_encoding_key_cache_entries);
+        perf.scene_chunk_encoding_key_cache_hits = perf
+            .scene_chunk_encoding_key_cache_hits
+            .saturating_add(frame_perf.scene_chunk_encoding_key_cache_hits);
+        perf.scene_chunk_encoding_key_cache_misses = perf
+            .scene_chunk_encoding_key_cache_misses
+            .saturating_add(frame_perf.scene_chunk_encoding_key_cache_misses);
+        perf.scene_chunk_encoding_key_cache_stale_entries = perf
+            .scene_chunk_encoding_key_cache_stale_entries
+            .saturating_add(frame_perf.scene_chunk_encoding_key_cache_stale_entries);
+        if frame_perf.scene_chunk_encoding_key_cache_context_fingerprint != 0 {
+            perf.scene_chunk_encoding_key_cache_context_fingerprint =
+                frame_perf.scene_chunk_encoding_key_cache_context_fingerprint;
+        }
         perf.render_plan_estimated_peak_intermediate_bytes = perf
             .render_plan_estimated_peak_intermediate_bytes
             .max(frame_perf.render_plan_estimated_peak_intermediate_bytes);
@@ -611,6 +627,14 @@ impl Renderer {
             scene_chunk_input_chunks: frame_perf.scene_chunk_input_chunks,
             scene_chunk_input_ops: frame_perf.scene_chunk_input_ops,
             scene_chunk_input_fingerprint: frame_perf.scene_chunk_input_fingerprint,
+            scene_chunk_encoding_key_cache_entries: frame_perf
+                .scene_chunk_encoding_key_cache_entries,
+            scene_chunk_encoding_key_cache_hits: frame_perf.scene_chunk_encoding_key_cache_hits,
+            scene_chunk_encoding_key_cache_misses: frame_perf.scene_chunk_encoding_key_cache_misses,
+            scene_chunk_encoding_key_cache_stale_entries: frame_perf
+                .scene_chunk_encoding_key_cache_stale_entries,
+            scene_chunk_encoding_key_cache_context_fingerprint: frame_perf
+                .scene_chunk_encoding_key_cache_context_fingerprint,
             render_plan_estimated_peak_intermediate_bytes: frame_perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: frame_perf.render_plan_segments,

@@ -2706,6 +2706,41 @@
       "unit": "count"
     },
     {
+      "key": "renderer_scene_chunk_encoding_key_cache_entries",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_key_cache_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_key_cache_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_key_cache_stale_entries",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_key_cache_context_fingerprint",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_render_plan_scene_chunk_candidates",
       "kind": "counter",
       "scope": "frame",

@@ -87,6 +87,18 @@ impl Renderer {
             trace_enabled,
             &mut frame_perf,
         );
+        let scene_chunk_encoding_context = self.build_scene_chunk_encoding_context(
+            format,
+            viewport_size,
+            scale_factor,
+            text_atlas_revision,
+        );
+        self.record_scene_chunk_encoding_key_cache_for_frame(
+            scene_chunks,
+            scene_chunk_encoding_context,
+            perf_enabled,
+            &mut frame_perf,
+        );
 
         let key = self.build_scene_encoding_cache_key(
             format,

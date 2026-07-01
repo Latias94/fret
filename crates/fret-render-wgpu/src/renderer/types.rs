@@ -690,6 +690,21 @@ pub struct RenderPerfSnapshot {
     pub scene_chunk_input_ops: u64,
     /// Best-effort fingerprint of the supplied retained scene chunk manifest.
     pub scene_chunk_input_fingerprint: u64,
+    /// Retained scene chunk entries tracked by the renderer-side encoding key cache.
+    ///
+    /// This reports key-cache slots only. It does not imply encoded payload reuse or dirty GPU
+    /// uploads.
+    pub scene_chunk_encoding_key_cache_entries: u64,
+    /// Current-frame retained chunk entries whose encoding key matched a previous key-cache slot.
+    ///
+    /// This is a key lookup hit, not an encoded chunk reuse counter.
+    pub scene_chunk_encoding_key_cache_hits: u64,
+    /// Current-frame retained chunk entries without a matching previous key-cache slot.
+    pub scene_chunk_encoding_key_cache_misses: u64,
+    /// Previous key-cache slots not referenced by the current frame's retained chunk manifest.
+    pub scene_chunk_encoding_key_cache_stale_entries: u64,
+    /// Best-effort fingerprint of the renderer resource context used for chunk encoding keys.
+    pub scene_chunk_encoding_key_cache_context_fingerprint: u64,
     pub render_plan_estimated_peak_intermediate_bytes: u64,
     pub render_plan_segments: u64,
     pub render_plan_segments_changed: u64,
@@ -1033,6 +1048,11 @@ pub(super) struct RenderPerfStats {
     pub(super) scene_chunk_input_chunks: u64,
     pub(super) scene_chunk_input_ops: u64,
     pub(super) scene_chunk_input_fingerprint: u64,
+    pub(super) scene_chunk_encoding_key_cache_entries: u64,
+    pub(super) scene_chunk_encoding_key_cache_hits: u64,
+    pub(super) scene_chunk_encoding_key_cache_misses: u64,
+    pub(super) scene_chunk_encoding_key_cache_stale_entries: u64,
+    pub(super) scene_chunk_encoding_key_cache_context_fingerprint: u64,
     pub(super) render_plan_estimated_peak_intermediate_bytes: u64,
     pub(super) render_plan_segments: u64,
     pub(super) render_plan_segments_changed: u64,
