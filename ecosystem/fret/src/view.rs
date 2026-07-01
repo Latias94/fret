@@ -24,9 +24,12 @@ use fret_ui::action::{ActionCx, OnActivate, OnCommand, OnCommandAvailability, Ui
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 mod context;
+mod effects;
 mod local_state;
 mod runtime;
+mod state;
 pub use context::{AppRenderContext, RenderContextAccess, View};
+pub use effects::AppUiEffects;
 pub use local_state::{
     LocalActionCapture, LocalState, LocalStateTxn, TrackedStateExt, WatchedState,
 };
@@ -35,6 +38,7 @@ pub use runtime::view_record_engine_frame;
 pub use runtime::{
     AppUiRenderRootState, ViewWindowState, render_root_with_app_ui, view_init_window, view_view,
 };
+pub use state::AppUiState;
 
 /// App-facing layout-phase convenience reads for query handles on the default `fret` lane.
 ///
@@ -422,45 +426,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawActionNotifyExt for AppUi<'cx, 'a, H> {
             }
             handled
         });
-    }
-}
-
-/// Grouped LocalState-first helpers for the default app authoring surface.
-#[doc(hidden)]
-pub struct AppUiState<'view, 'cx, 'a, H: UiHost> {
-    cx: &'view mut AppUi<'cx, 'a, H>,
-}
-
-impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
-    #[track_caller]
-    pub fn local<T>(self) -> LocalState<T>
-    where
-        T: Any + Default,
-    {
-        self.cx.local_with(T::default)
-    }
-
-    #[track_caller]
-    pub fn local_keyed<K: Hash, T>(self, key: K) -> LocalState<T>
-    where
-        T: Any + Default,
-    {
-        self.cx.keyed(key, |cx| cx.local_with(T::default))
-    }
-
-    #[track_caller]
-    pub fn local_init<T>(self, init: impl FnOnce() -> T) -> LocalState<T>
-    where
-        T: Any,
-    {
-        self.cx.local_with(init)
-    }
-
-    pub fn watch<T: Any>(
-        self,
-        local: &'view LocalState<T>,
-    ) -> WatchedState<'view, 'view, 'a, H, T> {
-        self.cx.watch_local(local)
     }
 }
 
@@ -1717,18 +1682,6 @@ where
     }
 }
 
-/// Grouped render-time effect helpers for the default app authoring surface.
-#[doc(hidden)]
-pub struct AppUiEffects<'view, 'cx, 'a, H: UiHost> {
-    cx: &'view mut AppUi<'cx, 'a, H>,
-}
-
-impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
-    pub fn take_transient(self, key: u64) -> bool {
-        self.cx.cx.take_transient_for(self.cx.action_root, key)
-    }
-}
-
 impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {
     fn elements(&mut self) -> &mut ElementContext<'a, H> {
         self.cx
@@ -2220,15 +2173,19 @@ mod tests {
     use std::task::{Context, Poll, Waker};
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
+    const EFFECTS_RS_SOURCE: &str = include_str!("view/effects.rs");
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
     const RUNTIME_RS_SOURCE: &str = include_str!("view/runtime.rs");
+    const STATE_RS_SOURCE: &str = include_str!("view/state.rs");
 
     fn view_authoring_api_source() -> String {
         let view_api = VIEW_RS_SOURCE
             .split("\nmod tests {")
             .next()
             .expect("view.rs test module marker should exist");
-        format!("{view_api}\n{CONTEXT_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RUNTIME_RS_SOURCE}")
+        format!(
+            "{view_api}\n{CONTEXT_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{STATE_RS_SOURCE}"
+        )
     }
     use fret_core::{
         AppWindowId, FrameId, Modifiers, MouseButton, NodeId, Point, PointerEvent, PointerType, Px,
