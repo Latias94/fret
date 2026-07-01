@@ -51,4 +51,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U9 consumption profile gate hardening](progress/2026-07-01-u9-consumption-profile-gate.md)
 - [U9 view runtime split](progress/2026-07-01-u9-view-runtime-split.md)
 - [U9 view state and effects split](progress/2026-07-01-u9-view-state-effects-split.md)
+- [U9 view activation bridge split](progress/2026-07-01-u9-view-activation-split.md)
 - [Log](log.md)
