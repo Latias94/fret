@@ -1527,6 +1527,9 @@ fn scene_chunk_payload_and_resident_upload_state_warm_without_perf() {
     assert_eq!(last.geometry_upload.resident_stream_candidates, 1);
     assert_eq!(last.geometry_upload.resident_stream_hits, 1);
     assert_eq!(last.geometry_upload.resident_stream_misses, 0);
+    assert_eq!(last.geometry_upload.quad_instance_write_count, 0);
+    assert_eq!(last.geometry_upload.quad_instance_bytes, 0);
+    assert_eq!(last.instance_bytes, 0);
 }
 
 #[test]

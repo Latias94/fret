@@ -72,6 +72,19 @@ struct ResidentGeometryUploadStreamState {
     slots: Vec<Option<Vec<ResidentGeometryUploadStreamSignature>>>,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct ResidentGeometryUploadFrameWritePlan {
+    quad_instances: ResidentGeometryUploadStreamWritePlan,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+enum ResidentGeometryUploadStreamWritePlan {
+    #[default]
+    Full,
+    Skip,
+    Partial(Vec<RenderPlanStreamRange>),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ResidentGeometryUploadStreamSignature {
     layout_fingerprint: u64,
@@ -102,6 +115,18 @@ struct ResidentGeometryUploadStreamRangeSignature {
 }
 
 impl ResidentGeometryUploadState {
+    fn invalidate_slots(&mut self, slots: ResidentGeometryUploadSlots) {
+        self.quad_instances.invalidate_slot(slots.quad_instances);
+        self.path_paints.invalidate_slot(slots.path_paints);
+        self.text_paints.invalidate_slot(slots.text_paints);
+        self.viewport_vertices
+            .invalidate_slot(slots.viewport_vertices);
+        self.text_glyph_instances
+            .invalidate_slot(slots.text_glyph_instances);
+        self.text_vertices.invalidate_slot(slots.text_vertices);
+        self.path_vertices.invalidate_slot(slots.path_vertices);
+    }
+
     fn record_frame(
         &mut self,
         plan: &RenderPlan,
@@ -110,7 +135,8 @@ impl ResidentGeometryUploadState {
         slots: ResidentGeometryUploadSlots,
         streams: ResidentGeometryUploadStreams<'_>,
         invalidations: ResidentGeometryUploadInvalidations,
-    ) {
+    ) -> ResidentGeometryUploadFrameWritePlan {
+        let mut write_plan = ResidentGeometryUploadFrameWritePlan::default();
         let mut upload = frame_perf.map(|frame_perf| &mut frame_perf.geometry_upload);
         let eligible_candidates = plan
             .segments
@@ -121,7 +147,8 @@ impl ResidentGeometryUploadState {
             if let Some(upload) = upload.as_deref_mut() {
                 upload.record_resident_full_upload_fallback_no_candidate();
             }
-            return;
+            self.invalidate_slots(slots);
+            return write_plan;
         }
 
         let alignment_stats = payload_alignment.stats;
@@ -147,7 +174,8 @@ impl ResidentGeometryUploadState {
         }
 
         if payload_alignment.reassembly_plan.is_empty() {
-            return;
+            self.invalidate_slots(slots);
+            return write_plan;
         }
 
         let signatures = ResidentGeometryUploadFrameSignatures::from_plan(
@@ -155,7 +183,7 @@ impl ResidentGeometryUploadState {
             &payload_alignment.reassembly_plan,
             streams,
         );
-        self.quad_instances.record_frame(
+        write_plan.quad_instances = self.quad_instances.record_frame(
             slots.quad_instances,
             invalidations.quad_instances,
             signatures.quad_instances,
@@ -163,7 +191,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<QuadInstance>,
             upload.as_deref_mut(),
         );
-        self.path_paints.record_frame(
+        let _ = self.path_paints.record_frame(
             slots.path_paints,
             invalidations.path_paints,
             signatures.path_paints,
@@ -171,7 +199,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<PaintGpu>,
             upload.as_deref_mut(),
         );
-        self.text_paints.record_frame(
+        let _ = self.text_paints.record_frame(
             slots.text_paints,
             invalidations.text_paints,
             signatures.text_paints,
@@ -179,7 +207,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<PaintGpu>,
             upload.as_deref_mut(),
         );
-        self.viewport_vertices.record_frame(
+        let _ = self.viewport_vertices.record_frame(
             slots.viewport_vertices,
             invalidations.viewport_vertices,
             signatures.viewport_vertices,
@@ -187,7 +215,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<ViewportVertex>,
             upload.as_deref_mut(),
         );
-        self.text_glyph_instances.record_frame(
+        let _ = self.text_glyph_instances.record_frame(
             slots.text_glyph_instances,
             invalidations.text_glyph_instances,
             signatures.text_glyph_instances,
@@ -195,7 +223,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<TextGlyphInstance>,
             upload.as_deref_mut(),
         );
-        self.text_vertices.record_frame(
+        let _ = self.text_vertices.record_frame(
             slots.text_vertices,
             invalidations.text_vertices,
             signatures.text_vertices,
@@ -203,7 +231,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<TextVertex>,
             upload.as_deref_mut(),
         );
-        self.path_vertices.record_frame(
+        let _ = self.path_vertices.record_frame(
             slots.path_vertices,
             invalidations.path_vertices,
             signatures.path_vertices,
@@ -211,6 +239,7 @@ impl ResidentGeometryUploadState {
             estimate_range_bytes::<PathVertex>,
             upload.as_deref_mut(),
         );
+        write_plan
     }
 }
 
@@ -235,15 +264,14 @@ impl ResidentGeometryUploadFrameSignatures {
             if !segment.scene_chunk_candidate.eligible {
                 continue;
             }
-            let fingerprint = segment.scene_chunk_candidate.fingerprint;
             let ranges = segment.stream_ranges;
-            quad_instances.include(fingerprint, ranges.quad_instances);
-            path_paints.include(fingerprint, ranges.path_paints);
-            text_paints.include(fingerprint, ranges.text_paints);
-            viewport_vertices.include(fingerprint, ranges.viewport_vertices);
-            text_glyph_instances.include(fingerprint, ranges.text_glyph_instances);
-            text_vertices.include(fingerprint, ranges.text_vertices);
-            path_vertices.include(fingerprint, ranges.path_vertices);
+            quad_instances.include(ranges.quad_instances);
+            path_paints.include(ranges.path_paints);
+            text_paints.include(ranges.text_paints);
+            viewport_vertices.include(ranges.viewport_vertices);
+            text_glyph_instances.include(ranges.text_glyph_instances);
+            text_vertices.include(ranges.text_vertices);
+            path_vertices.include(ranges.path_vertices);
         }
 
         Self {
@@ -259,13 +287,12 @@ impl ResidentGeometryUploadFrameSignatures {
 }
 
 impl ResidentGeometryUploadStreamAccumulator {
-    fn include(&mut self, candidate_fingerprint: u64, range: RenderPlanStreamRange) {
+    fn include(&mut self, range: RenderPlanStreamRange) {
         if range.is_empty() {
             return;
         }
 
         let mut hasher = DefaultHasher::new();
-        candidate_fingerprint.hash(&mut hasher);
         range.start.hash(&mut hasher);
         range.end.hash(&mut hasher);
         self.ranges
@@ -288,6 +315,12 @@ impl ResidentGeometryUploadStreamAccumulator {
 }
 
 impl ResidentGeometryUploadStreamState {
+    fn invalidate_slot(&mut self, slot: usize) {
+        if let Some(entry) = self.slots.get_mut(slot) {
+            *entry = None;
+        }
+    }
+
     fn record_frame(
         &mut self,
         slot: usize,
@@ -296,9 +329,12 @@ impl ResidentGeometryUploadStreamState {
         stream_len: usize,
         estimate_bytes: fn(RenderPlanStreamRange) -> u64,
         upload: Option<&mut GeometryUploadPerfSnapshot>,
-    ) {
+    ) -> ResidentGeometryUploadStreamWritePlan {
         if signatures.is_empty() {
-            return;
+            if stream_len > 0 {
+                self.invalidate_slot(slot);
+            }
+            return ResidentGeometryUploadStreamWritePlan::Full;
         }
 
         let mut upload = upload;
@@ -325,23 +361,36 @@ impl ResidentGeometryUploadStreamState {
                 if let Some(upload) = upload.as_deref_mut() {
                     upload.resident_stream_hits = upload.resident_stream_hits.saturating_add(1);
                 }
+                if covers_entire_stream {
+                    ResidentGeometryUploadStreamWritePlan::Skip
+                } else {
+                    ResidentGeometryUploadStreamWritePlan::Full
+                }
             }
             Some(previous) if resident_stream_layout_matches(previous, &signatures) => {
                 let dirty_bytes =
                     estimate_changed_signature_bytes(previous, &signatures, estimate_bytes);
+                let changed_ranges = changed_signature_ranges(previous, &signatures);
                 if let Some(upload) = upload.as_deref_mut() {
                     upload.record_resident_stream_miss(dirty_bytes);
                     upload.resident_stream_content_mismatches =
                         upload.resident_stream_content_mismatches.saturating_add(1);
                     if covers_entire_stream {
-                        let changed_ranges = count_changed_signatures(previous, &signatures) as u64;
-                        upload.record_resident_partial_write_dry_run(changed_ranges, dirty_bytes);
+                        upload.record_resident_partial_write_dry_run(
+                            changed_ranges.len() as u64,
+                            dirty_bytes,
+                        );
                     }
                     upload.resident_full_upload_fallbacks_stream_content_changed = upload
                         .resident_full_upload_fallbacks_stream_content_changed
                         .saturating_add(1);
                 }
                 self.slots[slot] = Some(signatures);
+                if covers_entire_stream {
+                    ResidentGeometryUploadStreamWritePlan::Partial(changed_ranges)
+                } else {
+                    ResidentGeometryUploadStreamWritePlan::Full
+                }
             }
             Some(_) => {
                 if let Some(upload) = upload.as_deref_mut() {
@@ -354,6 +403,7 @@ impl ResidentGeometryUploadStreamState {
                         .saturating_add(1);
                 }
                 self.slots[slot] = Some(signatures);
+                ResidentGeometryUploadStreamWritePlan::Full
             }
             None => {
                 if let Some(upload) = upload.as_deref_mut() {
@@ -372,6 +422,7 @@ impl ResidentGeometryUploadStreamState {
                     }
                 }
                 self.slots[slot] = Some(signatures);
+                ResidentGeometryUploadStreamWritePlan::Full
             }
         }
     }
@@ -440,15 +491,16 @@ fn resident_stream_layout_matches(
             })
 }
 
-fn count_changed_signatures(
+fn changed_signature_ranges(
     previous: &[ResidentGeometryUploadStreamSignature],
     current: &[ResidentGeometryUploadStreamSignature],
-) -> usize {
+) -> Vec<RenderPlanStreamRange> {
     previous
         .iter()
         .zip(current.iter())
         .filter(|(previous, current)| previous.content_fingerprint != current.content_fingerprint)
-        .count()
+        .map(|(_, current)| current.range)
+        .collect()
 }
 
 fn estimate_changed_signature_bytes(
@@ -499,6 +551,17 @@ fn resident_stream_signatures_cover_stream(
     }
 
     covered_end == stream_len
+}
+
+fn pod_upload_range<T: bytemuck::Pod>(
+    values: &[T],
+    range: RenderPlanStreamRange,
+) -> Option<(u64, &[T])> {
+    let start = usize::try_from(range.start).ok()?;
+    let end = usize::try_from(range.end).ok()?;
+    let slice = values.get(start..end)?;
+    let offset = (start as u64).checked_mul(std::mem::size_of::<T>() as u64)?;
+    Some((offset, slice))
 }
 
 fn hash_pod_range<T: bytemuck::Pod>(values: &[T], range: RenderPlanStreamRange) -> u64 {
@@ -725,7 +788,7 @@ impl GeometryUploadState {
             text_vertices,
             path_vertices,
         };
-        self.resident_uploads.record_frame(
+        let resident_write_plan = self.resident_uploads.record_frame(
             plan,
             payload_alignment,
             if perf_enabled {
@@ -740,13 +803,46 @@ impl GeometryUploadState {
 
         let (instance_buffer, quad_instance_bind_group) = self.quad_instances.next_pair();
         if !instances.is_empty() {
-            queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
-            let bytes = std::mem::size_of_val(instances) as u64;
-            record_instance_upload(perf_enabled, frame_perf, bytes, |upload| {
-                upload.quad_instance_bytes = upload.quad_instance_bytes.saturating_add(bytes);
-                upload.quad_instance_write_count =
-                    upload.quad_instance_write_count.saturating_add(1);
-            });
+            let write_full_instances = |frame_perf: &mut RenderPerfStats| {
+                queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
+                let bytes = std::mem::size_of_val(instances) as u64;
+                record_instance_upload(perf_enabled, frame_perf, bytes, |upload| {
+                    upload.quad_instance_bytes = upload.quad_instance_bytes.saturating_add(bytes);
+                    upload.quad_instance_write_count =
+                        upload.quad_instance_write_count.saturating_add(1);
+                });
+            };
+
+            match &resident_write_plan.quad_instances {
+                ResidentGeometryUploadStreamWritePlan::Full => {
+                    write_full_instances(frame_perf);
+                }
+                ResidentGeometryUploadStreamWritePlan::Skip => {}
+                ResidentGeometryUploadStreamWritePlan::Partial(ranges) => {
+                    let upload_ranges = ranges
+                        .iter()
+                        .map(|range| pod_upload_range(instances, *range))
+                        .collect::<Option<Vec<_>>>();
+                    if let Some(upload_ranges) = upload_ranges {
+                        for (offset, range_instances) in upload_ranges {
+                            queue.write_buffer(
+                                &instance_buffer,
+                                offset,
+                                bytemuck::cast_slice(range_instances),
+                            );
+                            let bytes = std::mem::size_of_val(range_instances) as u64;
+                            record_instance_upload(perf_enabled, frame_perf, bytes, |upload| {
+                                upload.quad_instance_bytes =
+                                    upload.quad_instance_bytes.saturating_add(bytes);
+                                upload.quad_instance_write_count =
+                                    upload.quad_instance_write_count.saturating_add(1);
+                            });
+                        }
+                    } else {
+                        write_full_instances(frame_perf);
+                    }
+                }
+            }
         }
 
         let (path_paint_buffer, path_paint_bind_group) = self.path_paints.next_pair();
@@ -953,6 +1049,16 @@ mod tests {
     }
 
     #[test]
+    fn pod_upload_range_reports_byte_offsets() {
+        let instances = quad_instances(3);
+        let (offset, slice) =
+            pod_upload_range(&instances, RenderPlanStreamRange::new(1, 3)).expect("range");
+        assert_eq!(offset, std::mem::size_of::<QuadInstance>() as u64);
+        assert_eq!(slice.len(), 2);
+        assert!(pod_upload_range(&instances, RenderPlanStreamRange::new(3, 4)).is_none());
+    }
+
+    #[test]
     fn resident_upload_diagnostics_are_ring_slot_scoped() {
         let plan = plan_with_quad_range(0, 2, 7);
         let quad_instances = quad_instances(2);
@@ -960,13 +1066,17 @@ mod tests {
 
         let alignment = payload_alignment(&[0]);
         let mut first = RenderPerfStats::default();
-        state.record_frame(
+        let first_write_plan = state.record_frame(
             &plan,
             &alignment,
             Some(&mut first),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
+        );
+        assert_eq!(
+            first_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Full
         );
         assert_eq!(first.geometry_upload.resident_stream_candidates, 1);
         assert_eq!(first.geometry_upload.resident_stream_hits, 0);
@@ -1001,13 +1111,17 @@ mod tests {
         );
 
         let mut reused_slot = RenderPerfStats::default();
-        state.record_frame(
+        let reused_write_plan = state.record_frame(
             &plan,
             &alignment,
             Some(&mut reused_slot),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
+        );
+        assert_eq!(
+            reused_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Skip
         );
         assert_eq!(reused_slot.geometry_upload.resident_stream_candidates, 1);
         assert_eq!(reused_slot.geometry_upload.resident_stream_hits, 1);
@@ -1041,7 +1155,7 @@ mod tests {
         );
 
         let mut observed = RenderPerfStats::default();
-        state.record_frame(
+        let observed_write_plan = state.record_frame(
             &plan,
             &alignment,
             Some(&mut observed),
@@ -1050,9 +1164,64 @@ mod tests {
             ResidentGeometryUploadInvalidations::default(),
         );
 
+        assert_eq!(
+            observed_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Skip
+        );
         assert_eq!(observed.geometry_upload.resident_stream_candidates, 1);
         assert_eq!(observed.geometry_upload.resident_stream_hits, 1);
         assert_eq!(observed.geometry_upload.resident_stream_misses, 0);
+    }
+
+    #[test]
+    fn resident_upload_state_invalidates_slot_when_reassembly_plan_is_empty() {
+        let plan = plan_with_quad_range(0, 2, 7);
+        let first_instances = quad_instances(2);
+        let mut changed_instances = quad_instances(2);
+        changed_instances[0].rect[0] = 1.0;
+        let alignment = payload_alignment(&[0]);
+        let empty_alignment = payload_alignment(&[]);
+        let mut state = ResidentGeometryUploadState::default();
+
+        state.record_frame(
+            &plan,
+            &alignment,
+            None,
+            slots(0),
+            streams_with_quad_instances(&first_instances),
+            ResidentGeometryUploadInvalidations::default(),
+        );
+        state.record_frame(
+            &plan,
+            &empty_alignment,
+            None,
+            slots(0),
+            streams_with_quad_instances(&changed_instances),
+            ResidentGeometryUploadInvalidations::default(),
+        );
+
+        let mut observed = RenderPerfStats::default();
+        let observed_write_plan = state.record_frame(
+            &plan,
+            &alignment,
+            Some(&mut observed),
+            slots(0),
+            streams_with_quad_instances(&first_instances),
+            ResidentGeometryUploadInvalidations::default(),
+        );
+
+        assert_eq!(
+            observed_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Full
+        );
+        assert_eq!(observed.geometry_upload.resident_stream_hits, 0);
+        assert_eq!(observed.geometry_upload.resident_stream_misses, 1);
+        assert_eq!(
+            observed
+                .geometry_upload
+                .resident_full_upload_fallbacks_uninitialized,
+            1
+        );
     }
 
     #[test]
@@ -1156,6 +1325,7 @@ mod tests {
     #[test]
     fn resident_upload_diagnostics_report_content_change_partial_write_dry_run() {
         let plan = plan_with_quad_range(0, 2, 7);
+        let changed_plan = plan_with_quad_range(0, 2, 8);
         let first_instances = quad_instances(2);
         let mut changed_instances = quad_instances(2);
         changed_instances[0].rect[0] = 1.0;
@@ -1173,8 +1343,8 @@ mod tests {
         );
 
         let mut changed = RenderPerfStats::default();
-        state.record_frame(
-            &plan,
+        let changed_write_plan = state.record_frame(
+            &changed_plan,
             &alignment,
             Some(&mut changed),
             slots(0),
@@ -1183,6 +1353,10 @@ mod tests {
         );
 
         let dirty_bytes = 2 * std::mem::size_of::<QuadInstance>() as u64;
+        assert_eq!(
+            changed_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Partial(vec![RenderPlanStreamRange::new(0, 2)])
+        );
         assert_eq!(changed.geometry_upload.resident_stream_hits, 0);
         assert_eq!(changed.geometry_upload.resident_stream_misses, 1);
         assert_eq!(
@@ -1241,7 +1415,7 @@ mod tests {
         );
 
         let mut changed = RenderPerfStats::default();
-        state.record_frame(
+        let changed_write_plan = state.record_frame(
             &plan,
             &alignment,
             Some(&mut changed),
@@ -1253,6 +1427,10 @@ mod tests {
         assert_eq!(changed.geometry_upload.resident_stream_candidates, 1);
         assert_eq!(changed.geometry_upload.resident_stream_hits, 1);
         assert_eq!(changed.geometry_upload.resident_stream_misses, 0);
+        assert_eq!(
+            changed_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Full
+        );
         assert_eq!(changed.geometry_upload.resident_stream_coverage_gaps, 1);
         assert_eq!(
             changed.geometry_upload.resident_stream_content_mismatches,
@@ -1286,7 +1464,7 @@ mod tests {
         );
 
         let mut changed = RenderPerfStats::default();
-        state.record_frame(
+        let changed_write_plan = state.record_frame(
             &plan,
             &alignment,
             Some(&mut changed),
@@ -1295,6 +1473,10 @@ mod tests {
             ResidentGeometryUploadInvalidations::default(),
         );
 
+        assert_eq!(
+            changed_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Full
+        );
         assert_eq!(changed.geometry_upload.resident_stream_misses, 1);
         assert_eq!(
             changed.geometry_upload.resident_stream_content_mismatches,
@@ -1341,7 +1523,7 @@ mod tests {
         );
 
         let mut changed = RenderPerfStats::default();
-        state.record_frame(
+        let changed_write_plan = state.record_frame(
             &plan,
             &alignment,
             Some(&mut changed),
@@ -1350,6 +1532,10 @@ mod tests {
             ResidentGeometryUploadInvalidations::default(),
         );
 
+        assert_eq!(
+            changed_write_plan.quad_instances,
+            ResidentGeometryUploadStreamWritePlan::Partial(vec![RenderPlanStreamRange::new(1, 2)])
+        );
         assert_eq!(changed.geometry_upload.resident_stream_misses, 1);
         assert_eq!(
             changed.geometry_upload.resident_stream_content_mismatches,
@@ -1367,5 +1553,67 @@ mod tests {
                 .resident_partial_write_dry_run_bytes_estimate,
             std::mem::size_of::<QuadInstance>() as u64
         );
+    }
+
+    #[test]
+    fn resident_quad_partial_upload_writes_only_changed_range() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut upload_state = GeometryUploadState::new(&ctx.device);
+        let plan = plan_with_quad_ranges(&[(0, 1, 7), (1, 2, 8)]);
+        let alignment = payload_alignment(&[0, 1]);
+        let first_instances = quad_instances(2);
+        let mut changed_instances = quad_instances(2);
+        changed_instances[1].rect[0] = 1.0;
+
+        for _ in 0..3 {
+            let mut frame_perf = RenderPerfStats::default();
+            let _ = upload_state.upload_frame_geometry(
+                &ctx.device,
+                &ctx.queue,
+                &plan,
+                &alignment,
+                &first_instances,
+                &[],
+                &[],
+                &[],
+                &[],
+                &[],
+                &[],
+                true,
+                &mut frame_perf,
+            );
+        }
+
+        let mut changed_perf = RenderPerfStats::default();
+        let _ = upload_state.upload_frame_geometry(
+            &ctx.device,
+            &ctx.queue,
+            &plan,
+            &alignment,
+            &changed_instances,
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            &[],
+            true,
+            &mut changed_perf,
+        );
+
+        let quad_instance_bytes = std::mem::size_of::<QuadInstance>() as u64;
+        assert_eq!(changed_perf.geometry_upload.resident_stream_misses, 1);
+        assert_eq!(
+            changed_perf
+                .geometry_upload
+                .resident_partial_write_dry_run_write_count_estimate,
+            1
+        );
+        assert_eq!(changed_perf.geometry_upload.quad_instance_write_count, 1);
+        assert_eq!(
+            changed_perf.geometry_upload.quad_instance_bytes,
+            quad_instance_bytes
+        );
+        assert_eq!(changed_perf.instance_bytes, quad_instance_bytes);
     }
 }

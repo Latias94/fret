@@ -32,4 +32,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 exact resident write-plan diagnostics](progress/2026-07-01-u7-exact-resident-write-plan.md)
 - [U7 resident stream coverage gate](progress/2026-07-01-u7-resident-stream-coverage-gate.md)
 - [U7 runtime resident write-plan decoupling](progress/2026-07-01-u7-runtime-resident-write-plan.md)
+- [U7 guarded quad instance partial upload](progress/2026-07-01-u7-guarded-quad-partial-upload.md)
 - [Log](log.md)
