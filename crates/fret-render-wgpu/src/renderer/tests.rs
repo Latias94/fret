@@ -1350,7 +1350,7 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
         .expect("last frame perf snapshot");
     assert_eq!(last.scene_chunk_input_chunks, 1);
     assert_eq!(last.scene_chunk_input_ops, chunk.ops_len() as u64);
-    assert_eq!(last.scene_chunk_input_fingerprint, chunk.fingerprint());
+    assert_eq!(last.scene_chunk_input_fingerprint, manifest.fingerprint());
 }
 
 #[test]

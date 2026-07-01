@@ -21,4 +21,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 boundary scene chunk manifest](progress/2026-07-01-u7-boundary-scene-chunk-manifest.md)
 - [U7 render-plan scene chunk candidate telemetry](progress/2026-07-01-u7-render-plan-scene-chunk-candidate-telemetry.md)
 - [U7 scene chunk renderer input bridge](progress/2026-07-01-u7-scene-chunk-renderer-input-bridge.md)
+- [U7 render-plan stream range estimates](progress/2026-07-01-u7-render-plan-stream-range-estimates.md)
 - [Log](log.md)

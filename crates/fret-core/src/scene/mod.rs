@@ -1476,12 +1476,47 @@ mod tests {
 
         assert_eq!(manifest.len(), 1);
         assert_eq!(manifest.ops_len(), 1);
-        assert_eq!(manifest.fingerprint(), chunk.fingerprint());
+        assert_ne!(manifest.fingerprint(), 0);
+        assert_ne!(manifest.entries()[0].fingerprint(), chunk.fingerprint());
         assert_eq!(manifest.entries()[0].local_bounds().size.width, Px(10.0));
         assert_eq!(
             manifest.entries()[0].scene_origin(),
             Point::new(Px(2.0), Px(3.0))
         );
+
+        let mut moved = SceneChunkManifest::default();
+        moved.push(SceneChunkManifestEntry::new(
+            chunk.clone(),
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(12.0))),
+            Point::new(Px(3.0), Px(3.0)),
+        ));
+        assert_ne!(manifest.fingerprint(), moved.fingerprint());
+
+        let other = SceneChunk::from_ops(std::sync::Arc::<[SceneOp]>::from(vec![
+            SceneOp::PushLayer { layer: 7 },
+        ]));
+        let entry_a = SceneChunkManifestEntry::new(
+            chunk.clone(),
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(12.0))),
+            Point::new(Px(2.0), Px(3.0)),
+        );
+        let entry_b = SceneChunkManifestEntry::new(
+            other,
+            Rect::new(Point::default(), Size::new(Px(4.0), Px(5.0))),
+            Point::new(Px(6.0), Px(7.0)),
+        );
+        let mut ordered = SceneChunkManifest::default();
+        ordered.push(entry_a.clone());
+        ordered.push(entry_b.clone());
+        let mut reversed = SceneChunkManifest::default();
+        reversed.push(entry_b);
+        reversed.push(entry_a.clone());
+        assert_ne!(ordered.fingerprint(), reversed.fingerprint());
+
+        let mut repeated = SceneChunkManifest::default();
+        repeated.push(entry_a.clone());
+        repeated.push(entry_a);
+        assert_ne!(repeated.fingerprint(), 0);
 
         manifest.clear();
         assert!(manifest.is_empty());

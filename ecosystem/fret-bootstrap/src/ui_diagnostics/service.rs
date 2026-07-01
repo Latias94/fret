@@ -1991,6 +1991,8 @@ mod service_tests {
         perf.render_plan_scene_chunk_candidate_draws = 11;
         perf.render_plan_scene_chunk_candidates_stable = 3;
         perf.render_plan_scene_chunk_candidates_changed = 1;
+        perf.render_plan_scene_chunk_candidate_upload_bytes_estimate = 2048;
+        perf.render_plan_scene_chunk_candidate_stream_ranges_changed = 2;
         perf.encode_scene_text_ops = 17;
         let sample = fret_render::RendererPerfFrameSample {
             tick_id: 7,
@@ -2040,6 +2042,14 @@ mod service_tests {
         assert_eq!(
             stats.renderer_render_plan_scene_chunk_candidates_changed,
             1
+        );
+        assert_eq!(
+            stats.renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate,
+            2048
+        );
+        assert_eq!(
+            stats.renderer_render_plan_scene_chunk_candidate_stream_ranges_changed,
+            2
         );
         assert_eq!(stats.renderer_encode_scene_text_ops, 17);
     }

@@ -724,6 +724,10 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidates_changed: u64,
     #[serde(default)]
+    pub renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate: u64,
+    #[serde(default)]
+    pub renderer_render_plan_scene_chunk_candidate_stream_ranges_changed: u64,
+    #[serde(default)]
     pub renderer_render_plan_effect_chain_budget_samples: u64,
     #[serde(default)]
     pub renderer_render_plan_effect_chain_effective_budget_min_bytes: u64,
@@ -1550,6 +1554,8 @@ impl UiFrameStatsV1 {
             renderer_render_plan_scene_chunk_candidate_draws: 0,
             renderer_render_plan_scene_chunk_candidates_stable: 0,
             renderer_render_plan_scene_chunk_candidates_changed: 0,
+            renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate: 0,
+            renderer_render_plan_scene_chunk_candidate_stream_ranges_changed: 0,
             renderer_render_plan_effect_chain_budget_samples: 0,
             renderer_render_plan_effect_chain_effective_budget_min_bytes: 0,
             renderer_render_plan_effect_chain_effective_budget_max_bytes: 0,
@@ -1859,6 +1865,12 @@ impl UiFrameStatsV1 {
             sample.perf.render_plan_scene_chunk_candidates_stable;
         self.renderer_render_plan_scene_chunk_candidates_changed =
             sample.perf.render_plan_scene_chunk_candidates_changed;
+        self.renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate = sample
+            .perf
+            .render_plan_scene_chunk_candidate_upload_bytes_estimate;
+        self.renderer_render_plan_scene_chunk_candidate_stream_ranges_changed = sample
+            .perf
+            .render_plan_scene_chunk_candidate_stream_ranges_changed;
         self.renderer_render_plan_effect_chain_budget_samples =
             sample.perf.render_plan_effect_chain_budget_samples;
         self.renderer_render_plan_effect_chain_effective_budget_min_bytes =

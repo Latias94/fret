@@ -5,7 +5,7 @@ use super::super::intermediate_pool::estimate_texture_bytes;
 use super::super::render_plan_effects as effects;
 use super::super::{
     ClipPathMaskDraw, EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw, QuadDraw,
-    QuadPipelineKey,
+    QuadInstance, QuadPipelineKey, TextDraw, TextDrawKind, TextGlyphInstance,
 };
 use super::analysis::insert_early_releases;
 #[cfg(debug_assertions)]
@@ -18,6 +18,90 @@ fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
         .iter()
         .filter(|p| !matches!(p, RenderPlanPass::ReleaseTarget(_)))
         .collect()
+}
+
+#[test]
+fn compile_for_scene_segments_report_encoded_stream_ranges_and_upload_estimate() {
+    let scissor = ScissorRect::full(64, 64);
+    let mut encoding = SceneEncoding::default();
+    encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+        scissor,
+        uniform_index: 0,
+        first_instance: 2,
+        instance_count: 3,
+        pipeline: QuadPipelineKey {
+            fill_kind: 0,
+            border_kind: 0,
+            border_present: false,
+            dash_enabled: false,
+            fill_material_sampled: false,
+            border_material_sampled: false,
+            shadow_mode: false,
+        },
+    }));
+    encoding.ordered_draws.push(OrderedDraw::Text(TextDraw {
+        scissor,
+        uniform_index: 0,
+        first_instance: 10,
+        instance_count: 2,
+        kind: TextDrawKind::Color,
+        atlas_page: 0,
+        paint_index: 4,
+    }));
+    encoding.ordered_draws.push(OrderedDraw::Path(PathDraw {
+        scissor,
+        uniform_index: 0,
+        first_vertex: 20,
+        vertex_count: 5,
+        paint_index: 7,
+    }));
+
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        1.0,
+        (64, 64),
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    let segment = plan
+        .segments
+        .iter()
+        .find(|segment| segment.draw_range == (0..3))
+        .expect("scene draw segment");
+    assert_eq!(
+        segment.stream_ranges.quad_instances,
+        RenderPlanStreamRange::new(2, 5)
+    );
+    assert_eq!(
+        segment.stream_ranges.text_glyph_instances,
+        RenderPlanStreamRange::new(10, 12)
+    );
+    assert_eq!(
+        segment.stream_ranges.text_paints,
+        RenderPlanStreamRange::new(4, 5)
+    );
+    assert_eq!(
+        segment.stream_ranges.path_vertices,
+        RenderPlanStreamRange::new(20, 25)
+    );
+    assert_eq!(
+        segment.stream_ranges.path_paints,
+        RenderPlanStreamRange::new(7, 8)
+    );
+
+    let expected_upload_bytes = (3 * std::mem::size_of::<QuadInstance>()
+        + 2 * std::mem::size_of::<TextGlyphInstance>()
+        + 2 * std::mem::size_of::<super::super::PaintGpu>()
+        + 5 * std::mem::size_of::<super::super::PathVertex>())
+        as u64;
+    assert_eq!(
+        segment.stream_ranges.estimated_upload_bytes(),
+        expected_upload_bytes
+    );
 }
 
 fn apply_single_step_effect_with_scissor(

@@ -8,6 +8,8 @@ pub(super) struct RenderPlanSegmentReport {
     pub(super) scene_chunk_candidate_eligible: bool,
     pub(super) scene_chunk_candidate_draw_count: u32,
     pub(super) scene_chunk_candidate_fingerprint: u64,
+    pub(super) scene_chunk_candidate_upload_bytes_estimate: u64,
+    pub(super) stream_ranges: RenderPlanSegmentStreamRanges,
     pub(super) scene_draw_range_passes: u32,
     pub(super) path_msaa_batch_passes: u32,
 }
@@ -20,6 +22,8 @@ struct RenderPlanSegmentReportDiff {
     scene_chunk_candidate_draws: u64,
     scene_chunk_candidates_stable: u64,
     scene_chunk_candidates_changed: u64,
+    scene_chunk_candidate_upload_bytes_estimate: u64,
+    scene_chunk_candidate_stream_ranges_changed: u64,
 }
 
 #[derive(Default)]
@@ -70,6 +74,10 @@ impl RenderPlanReportingState {
                 diff.scene_chunk_candidates_stable;
             frame_perf.render_plan_scene_chunk_candidates_changed =
                 diff.scene_chunk_candidates_changed;
+            frame_perf.render_plan_scene_chunk_candidate_upload_bytes_estimate =
+                diff.scene_chunk_candidate_upload_bytes_estimate;
+            frame_perf.render_plan_scene_chunk_candidate_stream_ranges_changed =
+                diff.scene_chunk_candidate_stream_ranges_changed;
 
             if let Some(prev) = diagnostics_state.last_render_plan_segment_report.as_mut() {
                 std::mem::swap(prev, &mut self.segment_report_scratch);
@@ -126,6 +134,10 @@ impl RenderPlanReportingState {
                 scene_chunk_candidate_eligible: seg.scene_chunk_candidate.eligible,
                 scene_chunk_candidate_draw_count: seg.scene_chunk_candidate.draw_count,
                 scene_chunk_candidate_fingerprint: seg.scene_chunk_candidate.fingerprint,
+                scene_chunk_candidate_upload_bytes_estimate: seg
+                    .stream_ranges
+                    .estimated_upload_bytes(),
+                stream_ranges: seg.stream_ranges,
                 scene_draw_range_passes: *self
                     .scene_draw_range_passes_scratch
                     .get(ix)
@@ -150,10 +162,16 @@ fn diff_segment_reports(
         .filter(|report| report.scene_chunk_candidate_eligible)
         .map(|report| u64::from(report.scene_chunk_candidate_draw_count))
         .sum();
+    diff.scene_chunk_candidate_upload_bytes_estimate = current
+        .iter()
+        .filter(|report| report.scene_chunk_candidate_eligible)
+        .map(|report| report.scene_chunk_candidate_upload_bytes_estimate)
+        .sum();
 
     if previous.len() != current.len() {
         diff.segments_changed = current.len() as u64;
         diff.scene_chunk_candidates_changed = diff.scene_chunk_candidates;
+        diff.scene_chunk_candidate_stream_ranges_changed = diff.scene_chunk_candidates;
         return diff;
     }
 
@@ -186,6 +204,12 @@ fn diff_segment_reports(
                 diff.scene_chunk_candidates_changed =
                     diff.scene_chunk_candidates_changed.saturating_add(1);
             }
+
+            if !prev.scene_chunk_candidate_eligible || prev.stream_ranges != cur.stream_ranges {
+                diff.scene_chunk_candidate_stream_ranges_changed = diff
+                    .scene_chunk_candidate_stream_ranges_changed
+                    .saturating_add(1);
+            }
         }
     }
 
@@ -203,6 +227,7 @@ mod tests {
         scene_chunk_candidate_eligible: bool,
         scene_chunk_candidate_draw_count: u32,
         scene_chunk_candidate_fingerprint: u64,
+        stream_ranges: RenderPlanSegmentStreamRanges,
         scene_draw_range_passes: u32,
         path_msaa_batch_passes: u32,
     ) -> RenderPlanSegmentReport {
@@ -213,20 +238,32 @@ mod tests {
             scene_chunk_candidate_eligible,
             scene_chunk_candidate_draw_count,
             scene_chunk_candidate_fingerprint,
+            scene_chunk_candidate_upload_bytes_estimate: stream_ranges.estimated_upload_bytes(),
+            stream_ranges,
             scene_draw_range_passes,
             path_msaa_batch_passes,
         }
     }
 
+    fn quad_ranges(start: u32, end: u32) -> RenderPlanSegmentStreamRanges {
+        RenderPlanSegmentStreamRanges {
+            quad_instances: RenderPlanStreamRange::new(start, end),
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn diff_segment_reports_tracks_shape_changes_and_pass_growth() {
+        let first = quad_ranges(0, 4);
+        let second = quad_ranges(4, 8);
+        let moved_second = quad_ranges(5, 9);
         let previous = [
-            report((0, 4), 11, 0b000001, true, 4, 0xA11C, 1, 0),
-            report((4, 8), 22, 0b000010, true, 4, 0xB22D, 1, 1),
+            report((0, 4), 11, 0b000001, true, 4, 0xA11C, first, 1, 0),
+            report((4, 8), 22, 0b000010, true, 4, 0xB22D, second, 1, 1),
         ];
         let current = [
-            report((0, 4), 11, 0b000001, true, 4, 0xA11C, 2, 0),
-            report((5, 9), 22, 0b000010, true, 4, 0xC33E, 1, 1),
+            report((0, 4), 11, 0b000001, true, 4, 0xA11C, first, 2, 0),
+            report((5, 9), 22, 0b000010, true, 4, 0xC33E, moved_second, 1, 1),
         ];
 
         let diff = diff_segment_reports(&previous, &current);
@@ -237,13 +274,40 @@ mod tests {
         assert_eq!(diff.scene_chunk_candidate_draws, 8);
         assert_eq!(diff.scene_chunk_candidates_stable, 1);
         assert_eq!(diff.scene_chunk_candidates_changed, 1);
+        assert_eq!(
+            diff.scene_chunk_candidate_upload_bytes_estimate,
+            first
+                .estimated_upload_bytes()
+                .saturating_add(moved_second.estimated_upload_bytes())
+        );
+        assert_eq!(diff.scene_chunk_candidate_stream_ranges_changed, 1);
     }
 
     #[test]
     fn diff_segment_reports_treats_new_shape_candidates_as_changed() {
         let current = [
-            report((0, 2), 11, 0b000001, true, 2, 0xA11C, 1, 0),
-            report((2, 2), 0, 0, false, 0, 0, 1, 0),
+            report(
+                (0, 2),
+                11,
+                0b000001,
+                true,
+                2,
+                0xA11C,
+                quad_ranges(0, 2),
+                1,
+                0,
+            ),
+            report(
+                (2, 2),
+                0,
+                0,
+                false,
+                0,
+                0,
+                RenderPlanSegmentStreamRanges::default(),
+                1,
+                0,
+            ),
         ];
 
         let diff = diff_segment_reports(&[], &current);
@@ -254,5 +318,6 @@ mod tests {
         assert_eq!(diff.scene_chunk_candidate_draws, 2);
         assert_eq!(diff.scene_chunk_candidates_stable, 0);
         assert_eq!(diff.scene_chunk_candidates_changed, 1);
+        assert_eq!(diff.scene_chunk_candidate_stream_ranges_changed, 1);
     }
 }

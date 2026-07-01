@@ -706,6 +706,14 @@ pub struct RenderPerfSnapshot {
     /// Candidate segments that are new or whose candidate fingerprint changed since the previous
     /// frame's segment report.
     pub render_plan_scene_chunk_candidates_changed: u64,
+    /// Estimated geometry-stream upload bytes covered by candidate retained scene chunk segments.
+    ///
+    /// This is a conservative planning signal only. It is not a dirty upload byte counter.
+    pub render_plan_scene_chunk_candidate_upload_bytes_estimate: u64,
+    /// Candidate segments whose encoded stream ranges changed since the previous frame.
+    ///
+    /// This is a planning signal for future partial upload work. It is not a cache miss count.
+    pub render_plan_scene_chunk_candidate_stream_ranges_changed: u64,
     pub render_plan_degradations: u64,
     /// Number of effect chain budget samples recorded during render plan compilation.
     ///
@@ -1033,6 +1041,8 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_scene_chunk_candidate_draws: u64,
     pub(super) render_plan_scene_chunk_candidates_stable: u64,
     pub(super) render_plan_scene_chunk_candidates_changed: u64,
+    pub(super) render_plan_scene_chunk_candidate_upload_bytes_estimate: u64,
+    pub(super) render_plan_scene_chunk_candidate_stream_ranges_changed: u64,
     pub(super) render_plan_degradations: u64,
     pub(super) render_plan_effect_chain_budget_samples: u64,
     pub(super) render_plan_effect_chain_effective_budget_min_bytes: u64,

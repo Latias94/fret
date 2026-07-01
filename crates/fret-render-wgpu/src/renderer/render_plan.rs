@@ -39,6 +39,7 @@ pub(super) struct RenderPlanSegment {
     pub(super) start_uniform_fingerprint: u64,
     pub(super) flags: RenderPlanSegmentFlags,
     pub(super) scene_chunk_candidate: RenderPlanSceneChunkCandidate,
+    pub(super) stream_ranges: RenderPlanSegmentStreamRanges,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +47,77 @@ pub(super) struct RenderPlanSceneChunkCandidate {
     pub(super) eligible: bool,
     pub(super) draw_count: u32,
     pub(super) fingerprint: u64,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RenderPlanStreamRange {
+    pub(super) start: u32,
+    pub(super) end: u32,
+}
+
+impl RenderPlanStreamRange {
+    pub(super) fn new(start: u32, end: u32) -> Self {
+        if start >= end {
+            Self::default()
+        } else {
+            Self { start, end }
+        }
+    }
+
+    pub(super) fn extend(&mut self, start: u32, end: u32) {
+        if start >= end {
+            return;
+        }
+        if self.is_empty() {
+            *self = Self::new(start, end);
+        } else {
+            self.start = self.start.min(start);
+            self.end = self.end.max(end);
+        }
+    }
+
+    pub(super) fn is_empty(self) -> bool {
+        self.start >= self.end
+    }
+
+    pub(super) fn len(self) -> u32 {
+        self.end.saturating_sub(self.start)
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RenderPlanSegmentStreamRanges {
+    pub(super) quad_instances: RenderPlanStreamRange,
+    pub(super) path_paints: RenderPlanStreamRange,
+    pub(super) text_paints: RenderPlanStreamRange,
+    pub(super) viewport_vertices: RenderPlanStreamRange,
+    pub(super) text_glyph_instances: RenderPlanStreamRange,
+    pub(super) text_vertices: RenderPlanStreamRange,
+    pub(super) path_vertices: RenderPlanStreamRange,
+}
+
+impl RenderPlanSegmentStreamRanges {
+    pub(super) fn estimated_upload_bytes(self) -> u64 {
+        estimate_range_bytes::<super::QuadInstance>(self.quad_instances)
+            .saturating_add(estimate_range_bytes::<super::PaintGpu>(self.path_paints))
+            .saturating_add(estimate_range_bytes::<super::PaintGpu>(self.text_paints))
+            .saturating_add(estimate_range_bytes::<super::ViewportVertex>(
+                self.viewport_vertices,
+            ))
+            .saturating_add(estimate_range_bytes::<super::TextGlyphInstance>(
+                self.text_glyph_instances,
+            ))
+            .saturating_add(estimate_range_bytes::<super::TextVertex>(
+                self.text_vertices,
+            ))
+            .saturating_add(estimate_range_bytes::<super::PathVertex>(
+                self.path_vertices,
+            ))
+    }
+}
+
+fn estimate_range_bytes<T>(range: RenderPlanStreamRange) -> u64 {
+    u64::from(range.len()).saturating_mul(std::mem::size_of::<T>() as u64)
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -39,6 +39,7 @@ pub(super) struct JsonDumpSegmentSceneChunkCandidate {
     eligible: bool,
     draw_count: u32,
     fingerprint: String,
+    upload_bytes_estimate: u64,
 }
 
 #[derive(Debug, serde::Serialize, Clone, Copy)]
@@ -234,6 +235,7 @@ fn rebuild_segment_dump_scratch(plan: &RenderPlan, dump_scratch: &mut RenderPlan
                 eligible: segment.scene_chunk_candidate.eligible,
                 draw_count: segment.scene_chunk_candidate.draw_count,
                 fingerprint: format!("0x{:016x}", segment.scene_chunk_candidate.fingerprint),
+                upload_bytes_estimate: segment.stream_ranges.estimated_upload_bytes(),
             },
             pass_counts: dump_scratch.segment_pass_counts.get(ix).copied().unwrap_or(
                 JsonDumpSegmentPassCounts {
@@ -367,6 +369,7 @@ mod tests {
                         draw_count: 3,
                         fingerprint: 0x1111,
                     },
+                    stream_ranges: Default::default(),
                 },
                 RenderPlanSegment {
                     id: SceneSegmentId(1),
@@ -382,6 +385,7 @@ mod tests {
                         draw_count: 3,
                         fingerprint: 0x2222,
                     },
+                    stream_ranges: Default::default(),
                 },
             ],
             passes: vec![

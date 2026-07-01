@@ -227,6 +227,9 @@ impl Renderer {
         perf.render_plan_scene_chunk_candidate_draws = perf
             .render_plan_scene_chunk_candidate_draws
             .max(frame_perf.render_plan_scene_chunk_candidate_draws);
+        perf.render_plan_scene_chunk_candidate_upload_bytes_estimate = perf
+            .render_plan_scene_chunk_candidate_upload_bytes_estimate
+            .max(frame_perf.render_plan_scene_chunk_candidate_upload_bytes_estimate);
         perf.render_plan_degradations = perf
             .render_plan_degradations
             .saturating_add(frame_perf.render_plan_degradations);
@@ -268,6 +271,9 @@ impl Renderer {
         perf.render_plan_scene_chunk_candidates_changed = perf
             .render_plan_scene_chunk_candidates_changed
             .saturating_add(frame_perf.render_plan_scene_chunk_candidates_changed);
+        perf.render_plan_scene_chunk_candidate_stream_ranges_changed = perf
+            .render_plan_scene_chunk_candidate_stream_ranges_changed
+            .saturating_add(frame_perf.render_plan_scene_chunk_candidate_stream_ranges_changed);
         perf.render_plan_degradations_budget_zero = perf
             .render_plan_degradations_budget_zero
             .saturating_add(frame_perf.render_plan_degradations_budget_zero);
@@ -617,6 +623,10 @@ impl Renderer {
                 .render_plan_scene_chunk_candidates_stable,
             render_plan_scene_chunk_candidates_changed: frame_perf
                 .render_plan_scene_chunk_candidates_changed,
+            render_plan_scene_chunk_candidate_upload_bytes_estimate: frame_perf
+                .render_plan_scene_chunk_candidate_upload_bytes_estimate,
+            render_plan_scene_chunk_candidate_stream_ranges_changed: frame_perf
+                .render_plan_scene_chunk_candidate_stream_ranges_changed,
             render_plan_degradations: frame_perf.render_plan_degradations,
             render_plan_effect_chain_budget_samples: frame_perf
                 .render_plan_effect_chain_budget_samples,

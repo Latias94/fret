@@ -1787,6 +1787,14 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         "renderer_render_plan_scene_chunk_candidates_changed",
         PerfKeyAggregate::Max,
     ),
+    byte_key(
+        "renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_render_plan_scene_chunk_candidate_stream_ranges_changed",
+        PerfKeyAggregate::Max,
+    ),
     count_key(
         "renderer_scene_encoding_cache_misses",
         PerfKeyAggregate::Max,
@@ -2489,6 +2497,7 @@ mod tests {
             "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
             "renderer_scene_chunk_input_chunks",
             "renderer_render_plan_scene_chunk_candidates_changed",
+            "renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate",
             "renderer_encode_scene_text_ops",
             "renderer_render_target_updates_ingest_gpu_copy",
             "renderer_svg_mask_atlas_capacity_px",

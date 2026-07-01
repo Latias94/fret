@@ -192,6 +192,10 @@ impl Renderer {
                 .render_plan_scene_chunk_candidates_stable,
             render_plan_scene_chunk_candidates_changed: perf
                 .render_plan_scene_chunk_candidates_changed,
+            render_plan_scene_chunk_candidate_upload_bytes_estimate: perf
+                .render_plan_scene_chunk_candidate_upload_bytes_estimate,
+            render_plan_scene_chunk_candidate_stream_ranges_changed: perf
+                .render_plan_scene_chunk_candidate_stream_ranges_changed,
             render_plan_degradations: perf.render_plan_degradations,
             render_plan_effect_chain_budget_samples: perf.render_plan_effect_chain_budget_samples,
             render_plan_effect_chain_effective_budget_min_bytes: perf
