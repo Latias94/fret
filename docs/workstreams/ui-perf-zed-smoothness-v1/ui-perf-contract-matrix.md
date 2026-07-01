@@ -149,6 +149,12 @@ Budgets are guidance for representative probes. The committed gate is the script
 - The target-machine editor paint closeout now has a one-command local gate:
   `python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`.
   It wraps the artifact verifier plus the local repo closeout gates without rerunning the probes.
+- U8 text/cache/glyph/upload budgets now have a thin helper gate:
+  `python tools/perf/diag_u8_text_budget_gate.py --dry-run` prints the native `diag repeat --check-memory-p90-max`
+  commands for text-heavy and code-editor memory probes, while `--web-export-bundle <bundle.json>` validates wasm
+  runtime bundle evidence for the smaller shape-cache and glyph-atlas page budgets plus renderer text upload metrics.
+  Keep it as a gate wrapper over existing evidence surfaces; do not use it as a reason to re-seed calibrated Windows
+  frame-time baselines.
 - Hit-test torture dispatch now has a direct repeat=7 pointer-move gate after dispatch snapshot reuse. Keep the
   threshold form unless the workload becomes machine-sensitive enough to need environment-specific baselines; the
   architectural invariant is that stable tree/layer topology keeps context build near single-digit microseconds rather

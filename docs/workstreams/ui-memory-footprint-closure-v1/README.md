@@ -544,6 +544,9 @@ Note:
   workloads like UI Gallery, this can produce `differing_runs > 0` even when every script run
   itself passes. Treat the memory samples as valid when `stage_counts.passed == repeat`.
 - For memory-only calibration, prefer `--no-compare` so `repeat.summary.json` reflects only script/tooling failures and explicit memory gates.
+- U8 text budget closeout can now use `python tools/perf/diag_u8_text_budget_gate.py` as the helper entrypoint. It
+  runs the text-heavy and code-editor memory probes with `diag repeat --check-memory-p90-max`, and can validate a
+  web/wasm raw `bundle.json` with `--web-export-bundle` for the smaller wasm text shape-cache and glyph-atlas budgets.
 
 - `empty-idle-memory-steady` (`target/diag/mem-empty-idle-repeat3-20260306/`):
   - `macos_physical_footprint_peak_bytes`: p90 ≈ 267.0 MiB
