@@ -49,6 +49,33 @@ impl TextSystem {
         Some(self.blob(id)?.shape())
     }
 
+    pub(crate) fn glyph_bounds_for_blob(&self, id: TextBlobId) -> Option<(f32, f32, f32, f32)> {
+        let shape = self.shape_for_blob(id)?;
+        let mut bounds: Option<(f32, f32, f32, f32)> = None;
+        for glyph in shape.glyphs() {
+            let [x, y, w, h] = glyph.rect();
+            if !x.is_finite() || !y.is_finite() || !w.is_finite() || !h.is_finite() {
+                continue;
+            }
+            let x1 = x + w;
+            let y1 = y + h;
+            let min_x = x.min(x1);
+            let min_y = y.min(y1);
+            let max_x = x.max(x1);
+            let max_y = y.max(y1);
+            bounds = Some(match bounds {
+                Some((bx0, by0, bx1, by1)) => (
+                    bx0.min(min_x),
+                    by0.min(min_y),
+                    bx1.max(max_x),
+                    by1.max(max_y),
+                ),
+                None => (min_x, min_y, max_x, max_y),
+            });
+        }
+        bounds
+    }
+
     pub(crate) fn render_data_for_blob(&self, id: TextBlobId) -> Option<TextBlobRenderData<'_>> {
         Some(TextBlobRenderData::new(self, self.blob(id)?))
     }

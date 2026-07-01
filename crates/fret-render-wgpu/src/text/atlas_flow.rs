@@ -1,9 +1,11 @@
 use super::atlas::GlyphKey;
-use super::pin_state::ScenePinBucketSignature;
+use super::pin_state::TextBlobPinBucketSignature;
 use super::prepare::{
     build_glyph_scaler_from_face_bytes, glyph_render_at_bins, render_glyph_image,
 };
 use super::{TextPrepareScenePerf, TextSystem};
+use fret_core::TextBlobId;
+#[cfg(test)]
 use fret_core::scene::Scene;
 use std::time::Instant;
 
@@ -33,9 +35,19 @@ impl TextSystem {
         let _ = self.prepare_for_scene_with_perf(scene, frame_index, false);
     }
 
+    #[cfg(test)]
     pub(crate) fn prepare_for_scene_with_perf(
         &mut self,
         scene: &Scene,
+        frame_index: u64,
+        perf_enabled: bool,
+    ) -> TextPrepareScenePerf {
+        self.prepare_for_text_blobs_with_perf(scene.text_blob_ids(), frame_index, perf_enabled)
+    }
+
+    pub(crate) fn prepare_for_text_blobs_with_perf(
+        &mut self,
+        text_blob_ids: &[TextBlobId],
         frame_index: u64,
         perf_enabled: bool,
     ) -> TextPrepareScenePerf {
@@ -50,9 +62,9 @@ impl TextSystem {
             .clear_for_atlas_reset_generation(self.atlas_runtime.reset_generation());
 
         let collect_start = perf_enabled.then(Instant::now);
-        if let Some(reuse) = self
-            .pin_state
-            .try_reuse_scene_bucket(bucket, scene, &self.blob_state)
+        if let Some(reuse) =
+            self.pin_state
+                .try_reuse_text_blob_bucket(bucket, text_blob_ids, &self.blob_state)
         {
             perf.fast_scene_bucket_reused = true;
             perf.scene_text_blobs = usize_to_u64(reuse.scene_text_blobs);
@@ -66,7 +78,7 @@ impl TextSystem {
 
         let collection = self
             .pin_state
-            .collect_scene_pin_snapshot(scene, &self.blob_state);
+            .collect_text_blob_pin_snapshot(text_blob_ids, &self.blob_state);
         perf.scene_text_blobs = usize_to_u64(collection.scene_text_blobs);
         perf.pinned_glyph_keys = usize_to_u64(collection.pinned_glyph_keys);
         if let Some(start) = collect_start {
@@ -107,8 +119,9 @@ impl TextSystem {
         perf.added_glyph_keys = glyph_bucket_len_u64(&add_mask, &add_color, &add_subpixel);
         let bucket_complete = perf.added_glyph_keys == perf.prewarm_glyph_keys;
         let next_signature = collection.signature.and_then(|signature| {
-            bucket_complete
-                .then(|| ScenePinBucketSignature::new(signature, perf.pinned_glyph_keys as usize))
+            bucket_complete.then(|| {
+                TextBlobPinBucketSignature::new(signature, perf.pinned_glyph_keys as usize)
+            })
         });
 
         let pin_update_start = perf_enabled.then(Instant::now);

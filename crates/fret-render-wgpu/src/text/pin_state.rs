@@ -1,6 +1,6 @@
 use super::atlas::{GlyphKey, GlyphPinKeys};
 use super::blob_state::TextBlobState;
-use fret_core::{Scene, TextBlobId};
+use fret_core::TextBlobId;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub(crate) struct TextPinState {
@@ -10,9 +10,9 @@ pub(crate) struct TextPinState {
     mask_members: Vec<FxHashSet<GlyphKey>>,
     color_members: Vec<FxHashSet<GlyphKey>>,
     subpixel_members: Vec<FxHashSet<GlyphKey>>,
-    bucket_signatures: Vec<Option<ScenePinBucketSignature>>,
+    bucket_signatures: Vec<Option<TextBlobPinBucketSignature>>,
     atlas_reset_generation: u64,
-    scene_cache: ScenePinKeyCache,
+    text_blob_cache: TextBlobPinKeyCache,
 }
 
 impl TextPinState {
@@ -26,7 +26,7 @@ impl TextPinState {
             subpixel_members: vec![FxHashSet::default(); ring_len],
             bucket_signatures: vec![None; ring_len],
             atlas_reset_generation: 0,
-            scene_cache: ScenePinKeyCache::default(),
+            text_blob_cache: TextBlobPinKeyCache::default(),
         }
     }
 
@@ -46,7 +46,7 @@ impl TextPinState {
         self.bucket_signatures
             .iter_mut()
             .for_each(|signature| *signature = None);
-        self.scene_cache.clear();
+        self.text_blob_cache.clear();
     }
 
     pub(crate) fn clear_for_atlas_reset_generation(&mut self, generation: u64) {
@@ -85,31 +85,32 @@ impl TextPinState {
     pub(crate) fn replace_bucket_signature(
         &mut self,
         bucket: usize,
-        signature: Option<ScenePinBucketSignature>,
+        signature: Option<TextBlobPinBucketSignature>,
     ) {
         self.bucket_signatures[bucket] = signature;
     }
 
-    pub(crate) fn try_reuse_scene_bucket(
+    pub(crate) fn try_reuse_text_blob_bucket(
         &self,
         bucket: usize,
-        scene: &Scene,
+        text_blob_ids: &[TextBlobId],
         blob_state: &TextBlobState,
-    ) -> Option<ScenePinBucketReuse> {
+    ) -> Option<TextBlobPinBucketReuse> {
         let signature = self.bucket_signatures.get(bucket)?.as_ref()?;
-        let current = scene_text_signature_if_all_live(scene, blob_state)?;
-        (signature.scene == current).then_some(ScenePinBucketReuse {
+        let current = text_blob_signature_if_all_live(text_blob_ids, blob_state)?;
+        (signature.text_blobs == current).then_some(TextBlobPinBucketReuse {
             scene_text_blobs: current.len(),
             pinned_glyph_keys: signature.pinned_glyph_keys,
         })
     }
 
-    pub(crate) fn collect_scene_pin_snapshot(
+    pub(crate) fn collect_text_blob_pin_snapshot(
         &mut self,
-        scene: &Scene,
+        text_blob_ids: &[TextBlobId],
         blob_state: &TextBlobState,
-    ) -> ScenePinSnapshot {
-        self.scene_cache.collect_snapshot(scene, blob_state)
+    ) -> TextBlobPinSnapshot {
+        self.text_blob_cache
+            .collect_snapshot(text_blob_ids, blob_state)
     }
 
     pub(crate) fn current_scene_delta_for_bucket(
@@ -119,7 +120,7 @@ impl TextPinState {
         if bucket >= self.ring_len() {
             return None;
         }
-        Some(self.scene_cache.delta_from_bucket(
+        Some(self.text_blob_cache.delta_from_bucket(
             &self.mask[bucket],
             &self.mask_members[bucket],
             &self.color[bucket],
@@ -131,38 +132,38 @@ impl TextPinState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ScenePinBucketSignature {
-    scene: SceneTextSignature,
+pub(crate) struct TextBlobPinBucketSignature {
+    text_blobs: TextBlobResidencySignature,
     pinned_glyph_keys: usize,
 }
 
-impl ScenePinBucketSignature {
-    pub(crate) fn new(scene: SceneTextSignature, pinned_glyph_keys: usize) -> Self {
+impl TextBlobPinBucketSignature {
+    pub(crate) fn new(text_blobs: TextBlobResidencySignature, pinned_glyph_keys: usize) -> Self {
         Self {
-            scene,
+            text_blobs,
             pinned_glyph_keys,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct ScenePinBucketReuse {
+pub(crate) struct TextBlobPinBucketReuse {
     pub(crate) scene_text_blobs: usize,
     pub(crate) pinned_glyph_keys: usize,
 }
 
-pub(crate) struct ScenePinSnapshot {
+pub(crate) struct TextBlobPinSnapshot {
     pub(crate) scene_text_blobs: usize,
     pub(crate) pinned_glyph_keys: usize,
-    pub(crate) signature: Option<SceneTextSignature>,
+    pub(crate) signature: Option<TextBlobResidencySignature>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SceneTextSignature {
+pub(crate) struct TextBlobResidencySignature {
     text_blobs: Vec<TextBlobId>,
 }
 
-impl SceneTextSignature {
+impl TextBlobResidencySignature {
     fn empty() -> Self {
         Self { text_blobs: vec![] }
     }
@@ -177,8 +178,8 @@ impl SceneTextSignature {
 }
 
 #[derive(Default)]
-struct ScenePinKeyCache {
-    blob_entries: FxHashMap<TextBlobId, ScenePinBlobEntry>,
+struct TextBlobPinKeyCache {
+    blob_entries: FxHashMap<TextBlobId, TextBlobPinEntry>,
     current_counts: FxHashMap<TextBlobId, u32>,
     current_blobs: Vec<TextBlobId>,
     stale_blobs: Vec<TextBlobId>,
@@ -187,7 +188,7 @@ struct ScenePinKeyCache {
     subpixel_ref_counts: FxHashMap<GlyphKey, u32>,
 }
 
-impl ScenePinKeyCache {
+impl TextBlobPinKeyCache {
     fn clear(&mut self) {
         self.blob_entries.clear();
         self.current_counts.clear();
@@ -198,11 +199,15 @@ impl ScenePinKeyCache {
         self.subpixel_ref_counts.clear();
     }
 
-    fn collect_snapshot(&mut self, scene: &Scene, blob_state: &TextBlobState) -> ScenePinSnapshot {
+    fn collect_snapshot(
+        &mut self,
+        text_blob_ids: &[TextBlobId],
+        blob_state: &TextBlobState,
+    ) -> TextBlobPinSnapshot {
         self.current_counts.clear();
-        let mut signature = SceneTextSignature::empty();
+        let mut signature = TextBlobResidencySignature::empty();
         let mut all_text_blobs_live = true;
-        for &text in scene.text_blob_ids() {
+        for &text in text_blob_ids {
             if !blob_state.blobs.contains_key(text) {
                 all_text_blobs_live = false;
                 continue;
@@ -213,7 +218,7 @@ impl ScenePinKeyCache {
         }
 
         self.reconcile(blob_state);
-        ScenePinSnapshot {
+        TextBlobPinSnapshot {
             scene_text_blobs: signature.len(),
             pinned_glyph_keys: self.current_pin_key_count(),
             signature: all_text_blobs_live.then_some(signature),
@@ -251,7 +256,7 @@ impl ScenePinKeyCache {
             let pin_keys = blob.shape().pin_keys().clone();
             self.inc_pin_keys(&pin_keys);
             self.blob_entries
-                .insert(text, ScenePinBlobEntry { pin_keys });
+                .insert(text, TextBlobPinEntry { pin_keys });
         }
         self.current_blobs = current_blobs;
     }
@@ -310,16 +315,16 @@ impl ScenePinKeyCache {
     }
 }
 
-struct ScenePinBlobEntry {
+struct TextBlobPinEntry {
     pin_keys: GlyphPinKeys,
 }
 
-fn scene_text_signature_if_all_live(
-    scene: &Scene,
+fn text_blob_signature_if_all_live(
+    text_blob_ids: &[TextBlobId],
     blob_state: &TextBlobState,
-) -> Option<SceneTextSignature> {
-    let mut signature = SceneTextSignature::empty();
-    for &text in scene.text_blob_ids() {
+) -> Option<TextBlobResidencySignature> {
+    let mut signature = TextBlobResidencySignature::empty();
+    for &text in text_blob_ids {
         if !blob_state.blobs.contains_key(text) {
             return None;
         }

@@ -72,6 +72,8 @@ impl Renderer {
         let text_frame_resources = self.prepare_text_for_frame(
             queue,
             scene,
+            scale_factor,
+            viewport_size,
             frame_index,
             perf_enabled,
             trace_enabled,

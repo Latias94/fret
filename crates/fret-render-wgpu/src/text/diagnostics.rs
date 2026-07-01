@@ -180,6 +180,7 @@ impl TextSystem {
         self.atlas_runtime.combined_revision()
     }
 
+    #[cfg(test)]
     pub(crate) fn scene_text_resource_snapshot(
         &self,
         scene: &fret_core::Scene,

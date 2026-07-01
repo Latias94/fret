@@ -21,3 +21,4 @@ mod recorders;
 mod render;
 mod render_space_upload;
 mod uploads;
+mod visible_text;

@@ -40,4 +40,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U8 scene text resource cache key](progress/2026-07-01-u8-scene-text-resource-cache-key.md)
 - [U8 scene chunk text resource cache key](progress/2026-07-01-u8-scene-chunk-text-resource-cache-key.md)
 - [U8 prepare atlas residency split](progress/2026-07-01-u8-prepare-atlas-residency-split.md)
+- [U8 visible text blob residency prepass](progress/2026-07-01-u8-visible-text-blob-residency.md)
 - [Log](log.md)

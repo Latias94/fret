@@ -1,10 +1,13 @@
 use super::super::*;
+use super::visible_text::visible_text_blob_ids_for_scene;
 
 impl Renderer {
     pub(super) fn prepare_text_for_frame(
         &mut self,
         queue: &wgpu::Queue,
         scene: &Scene,
+        scale_factor: f32,
+        viewport_size: (u32, u32),
         frame_index: u64,
         perf_enabled: bool,
         trace_enabled: bool,
@@ -15,16 +18,26 @@ impl Renderer {
             trace_enabled,
             || tracing::trace_span!("fret.renderer.text.prepare", frame_index),
             || {
-                let mut text_prepare_perf =
-                    self.text_system
-                        .prepare_for_scene_with_perf(scene, frame_index, perf_enabled);
+                let visible_text_blob_ids = visible_text_blob_ids_for_scene(
+                    scene,
+                    &self.text_system,
+                    scale_factor,
+                    viewport_size,
+                );
+                let mut text_prepare_perf = self.text_system.prepare_for_text_blobs_with_perf(
+                    &visible_text_blob_ids,
+                    frame_index,
+                    perf_enabled,
+                );
                 let flush_start = perf_enabled.then(std::time::Instant::now);
                 self.text_system.flush_uploads(queue);
                 if let Some(start) = flush_start {
                     text_prepare_perf.flush_uploads += start.elapsed();
                 }
                 let text_atlas_revision = self.text_system.atlas_revision();
-                let scene_resource_snapshot = self.text_system.scene_text_resource_snapshot(scene);
+                let scene_resource_snapshot = self
+                    .text_system
+                    .text_resource_snapshot_for_blobs(&visible_text_blob_ids);
                 if perf_enabled {
                     frame_perf.record_text_prepare_scene_perf(text_prepare_perf);
                     let scene_resource_observation = self
