@@ -64,9 +64,9 @@ impl<T> StorageRingBuffer<T> {
         &self.bind_group_layout
     }
 
-    pub(super) fn ensure_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+    pub(super) fn ensure_capacity(&mut self, device: &wgpu::Device, needed: usize) -> bool {
         if needed <= self.capacity {
-            return;
+            return false;
         }
 
         let new_capacity = needed
@@ -99,6 +99,11 @@ impl<T> StorageRingBuffer<T> {
         self.bind_groups = new_bind_groups;
         self.buffer_index = 0;
         self.capacity = new_capacity;
+        true
+    }
+
+    pub(super) fn current_slot(&self) -> usize {
+        self.buffer_index
     }
 
     pub(super) fn next_pair(&mut self) -> (wgpu::Buffer, wgpu::BindGroup) {
@@ -148,9 +153,9 @@ impl<T> RingBuffer<T> {
         }
     }
 
-    pub(super) fn ensure_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+    pub(super) fn ensure_capacity(&mut self, device: &wgpu::Device, needed: usize) -> bool {
         if needed <= self.capacity {
-            return;
+            return false;
         }
 
         let new_capacity = needed
@@ -172,6 +177,11 @@ impl<T> RingBuffer<T> {
         self.buffers = new_buffers;
         self.buffer_index = 0;
         self.capacity = new_capacity;
+        true
+    }
+
+    pub(super) fn current_slot(&self) -> usize {
+        self.buffer_index
     }
 
     pub(super) fn next_buffer(&mut self) -> wgpu::Buffer {

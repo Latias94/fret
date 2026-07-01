@@ -431,6 +431,31 @@ pub struct GeometryUploadPerfSnapshot {
     pub text_vertex_write_count: u64,
     pub path_vertex_bytes: u64,
     pub path_vertex_write_count: u64,
+    /// Geometry streams that have a conservative retained-chunk resident candidate for the current
+    /// upload ring slot.
+    ///
+    /// This is diagnostics-only. Full-buffer writes are still performed.
+    pub resident_stream_candidates: u64,
+    /// Candidate geometry streams whose current ring-slot resident signature matches.
+    pub resident_stream_hits: u64,
+    /// Candidate geometry streams that require a full upload fallback for the current ring slot.
+    pub resident_stream_misses: u64,
+    /// Estimated bytes covered by dirty resident stream ranges for missed candidates.
+    pub resident_dirty_range_bytes_estimate: u64,
+    /// Full-upload fallback observations recorded by the resident diagnostics owner.
+    pub resident_full_upload_fallbacks: u64,
+    /// Fallbacks because no retained scene chunk upload candidate exists for the frame.
+    pub resident_full_upload_fallbacks_no_candidate: u64,
+    /// Fallbacks because a flat render-plan candidate has no retained payload entry.
+    pub resident_full_upload_fallbacks_missing_payload: u64,
+    /// Fallbacks because retained payload reassembly is not yet in the safe subset.
+    pub resident_full_upload_fallbacks_reassembly_blocked: u64,
+    /// Fallbacks because the selected ring slot has no resident stream signature yet.
+    pub resident_full_upload_fallbacks_uninitialized: u64,
+    /// Fallbacks because a stream buffer was resized and resident slot contents were invalidated.
+    pub resident_full_upload_fallbacks_buffer_resized: u64,
+    /// Fallbacks because the selected ring slot has a different stream layout/signature.
+    pub resident_full_upload_fallbacks_stream_layout_changed: u64,
 }
 
 impl GeometryUploadPerfSnapshot {
@@ -473,6 +498,39 @@ impl GeometryUploadPerfSnapshot {
         self.path_vertex_write_count = self
             .path_vertex_write_count
             .saturating_add(other.path_vertex_write_count);
+        self.resident_stream_candidates = self
+            .resident_stream_candidates
+            .saturating_add(other.resident_stream_candidates);
+        self.resident_stream_hits = self
+            .resident_stream_hits
+            .saturating_add(other.resident_stream_hits);
+        self.resident_stream_misses = self
+            .resident_stream_misses
+            .saturating_add(other.resident_stream_misses);
+        self.resident_dirty_range_bytes_estimate = self
+            .resident_dirty_range_bytes_estimate
+            .saturating_add(other.resident_dirty_range_bytes_estimate);
+        self.resident_full_upload_fallbacks = self
+            .resident_full_upload_fallbacks
+            .saturating_add(other.resident_full_upload_fallbacks);
+        self.resident_full_upload_fallbacks_no_candidate = self
+            .resident_full_upload_fallbacks_no_candidate
+            .saturating_add(other.resident_full_upload_fallbacks_no_candidate);
+        self.resident_full_upload_fallbacks_missing_payload = self
+            .resident_full_upload_fallbacks_missing_payload
+            .saturating_add(other.resident_full_upload_fallbacks_missing_payload);
+        self.resident_full_upload_fallbacks_reassembly_blocked = self
+            .resident_full_upload_fallbacks_reassembly_blocked
+            .saturating_add(other.resident_full_upload_fallbacks_reassembly_blocked);
+        self.resident_full_upload_fallbacks_uninitialized = self
+            .resident_full_upload_fallbacks_uninitialized
+            .saturating_add(other.resident_full_upload_fallbacks_uninitialized);
+        self.resident_full_upload_fallbacks_buffer_resized = self
+            .resident_full_upload_fallbacks_buffer_resized
+            .saturating_add(other.resident_full_upload_fallbacks_buffer_resized);
+        self.resident_full_upload_fallbacks_stream_layout_changed = self
+            .resident_full_upload_fallbacks_stream_layout_changed
+            .saturating_add(other.resident_full_upload_fallbacks_stream_layout_changed);
     }
 }
 

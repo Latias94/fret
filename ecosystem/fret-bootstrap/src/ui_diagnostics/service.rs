@@ -1982,6 +1982,17 @@ mod service_tests {
         perf.geometry_upload.quad_instance_write_count = 1;
         perf.geometry_upload.text_vertex_bytes = 256;
         perf.geometry_upload.text_vertex_write_count = 2;
+        perf.geometry_upload.resident_stream_candidates = 31;
+        perf.geometry_upload.resident_stream_hits = 32;
+        perf.geometry_upload.resident_stream_misses = 33;
+        perf.geometry_upload.resident_dirty_range_bytes_estimate = 4096;
+        perf.geometry_upload.resident_full_upload_fallbacks = 34;
+        perf.geometry_upload.resident_full_upload_fallbacks_no_candidate = 35;
+        perf.geometry_upload.resident_full_upload_fallbacks_missing_payload = 36;
+        perf.geometry_upload.resident_full_upload_fallbacks_reassembly_blocked = 37;
+        perf.geometry_upload.resident_full_upload_fallbacks_uninitialized = 38;
+        perf.geometry_upload.resident_full_upload_fallbacks_buffer_resized = 39;
+        perf.geometry_upload.resident_full_upload_fallbacks_stream_layout_changed = 40;
         perf.scene_encoding_cache_miss_histogram.scene_fingerprint_changed = 3;
         perf.scene_encoding_cache_miss_histogram.text_quality_key_changed = 1;
         perf.scene_chunk_input_chunks = 2;
@@ -2046,6 +2057,45 @@ mod service_tests {
         assert_eq!(stats.renderer_geometry_upload_quad_instance_write_count, 1);
         assert_eq!(stats.renderer_geometry_upload_text_vertex_bytes, 256);
         assert_eq!(stats.renderer_geometry_upload_text_vertex_write_count, 2);
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_stream_candidates,
+            31
+        );
+        assert_eq!(stats.renderer_geometry_upload_resident_stream_hits, 32);
+        assert_eq!(stats.renderer_geometry_upload_resident_stream_misses, 33);
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_dirty_range_bytes_estimate,
+            4096
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks,
+            34
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate,
+            35
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks_missing_payload,
+            36
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks_reassembly_blocked,
+            37
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks_uninitialized,
+            38
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized,
+            39
+        );
+        assert_eq!(
+            stats
+                .renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed,
+            40
+        );
         assert_eq!(
             stats.renderer_scene_encoding_cache_miss_scene_fingerprint_changed,
             3

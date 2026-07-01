@@ -32,6 +32,7 @@ impl Renderer {
         let uploads = self.geometry_upload_state.upload_frame_geometry(
             device,
             queue,
+            plan,
             instances,
             path_paints,
             text_paints,

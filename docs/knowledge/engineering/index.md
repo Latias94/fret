@@ -27,4 +27,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 scene chunk payload-plan alignment diagnostics](progress/2026-07-01-u7-scene-chunk-payload-plan-alignment.md)
 - [U7 scene chunk stream fingerprint diagnostics](progress/2026-07-01-u7-scene-chunk-stream-fingerprint-diagnostics.md)
 - [U7 scene chunk reassembly dry-run blockers](progress/2026-07-01-u7-scene-chunk-reassembly-dry-run.md)
+- [U7 resident geometry upload diagnostics](progress/2026-07-01-u7-resident-geometry-upload-diagnostics.md)
 - [Log](log.md)

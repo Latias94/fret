@@ -2321,6 +2321,83 @@
       "unit": "count"
     },
     {
+      "key": "renderer_geometry_upload_resident_dirty_range_bytes_estimate",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_missing_payload",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_reassembly_blocked",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_full_upload_fallbacks_uninitialized",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_stream_candidates",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_stream_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_geometry_upload_resident_stream_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_geometry_upload_quad_instance_bytes",
       "kind": "counter",
       "scope": "frame",

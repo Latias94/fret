@@ -1588,6 +1588,50 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         PerfKeyAggregate::Max,
     ),
     byte_key(
+        "renderer_geometry_upload_resident_dirty_range_bytes_estimate",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_buffer_resized",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_missing_payload",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_no_candidate",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_reassembly_blocked",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_stream_layout_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_full_upload_fallbacks_uninitialized",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_stream_candidates",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_stream_hits",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_geometry_upload_resident_stream_misses",
+        PerfKeyAggregate::Max,
+    ),
+    byte_key(
         "renderer_geometry_upload_quad_instance_bytes",
         PerfKeyAggregate::Max,
     ),
@@ -2589,6 +2633,9 @@ mod tests {
             "renderer_prepare_svg_us",
             "renderer_instance_bytes",
             "renderer_geometry_upload_quad_instance_bytes",
+            "renderer_geometry_upload_resident_dirty_range_bytes_estimate",
+            "renderer_geometry_upload_resident_stream_hits",
+            "renderer_geometry_upload_resident_full_upload_fallbacks_reassembly_blocked",
             "renderer_geometry_upload_text_vertex_write_count",
             "renderer_scene_encoding_cache_miss_scene_fingerprint_changed",
             "renderer_scene_chunk_input_chunks",
