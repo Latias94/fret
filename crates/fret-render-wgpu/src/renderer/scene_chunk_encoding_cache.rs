@@ -48,6 +48,8 @@ pub(super) struct SceneChunkEncodingFrameStats {
     pub(super) payload_plan_candidate_segments: u64,
     pub(super) payload_plan_shape_matches: u64,
     pub(super) payload_plan_shape_mismatches: u64,
+    pub(super) payload_plan_stream_fingerprint_matches: u64,
+    pub(super) payload_plan_stream_fingerprint_mismatches: u64,
     pub(super) payload_entries_without_plan_candidate: u64,
     pub(super) payload_plan_candidates_without_payload: u64,
 }
@@ -64,14 +66,18 @@ struct SceneChunkEncodingKey {
 pub(super) struct CachedSceneChunkEncoding {
     encoding: SceneEncoding,
     plan_shape: SceneChunkPayloadPlanShape,
+    stream_fingerprint: u64,
 }
 
 impl CachedSceneChunkEncoding {
     pub(super) fn new(encoding: SceneEncoding) -> Self {
         let plan_shape = SceneChunkPayloadPlanShape::from_ordered_draws(&encoding.ordered_draws);
+        let stream_fingerprint =
+            SceneChunkPayloadStreamFingerprint::from_payload_encoding(&encoding).fingerprint;
         Self {
             encoding,
             plan_shape,
+            stream_fingerprint,
         }
     }
 
@@ -90,6 +96,64 @@ impl CachedSceneChunkEncoding {
             .saturating_add(estimate_slice_bytes(&self.encoding.uniform_mask_images))
             .saturating_add(estimate_slice_bytes(&self.encoding.ordered_draws))
             .saturating_add(estimate_slice_bytes(&self.encoding.effect_markers))
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct SceneChunkPayloadStreamFingerprint {
+    fingerprint: u64,
+}
+
+impl SceneChunkPayloadStreamFingerprint {
+    fn from_payload_encoding(encoding: &SceneEncoding) -> Self {
+        let mut hasher = DefaultHasher::new();
+        hash_pod_slice(&mut hasher, 0, &encoding.instances);
+        hash_pod_slice(&mut hasher, 1, &encoding.path_paints);
+        hash_pod_slice(&mut hasher, 2, &encoding.text_paints);
+        hash_pod_slice(&mut hasher, 3, &encoding.viewport_vertices);
+        hash_pod_slice(&mut hasher, 4, &encoding.text_glyph_instances);
+        hash_pod_slice(&mut hasher, 5, &encoding.text_vertices);
+        hash_pod_slice(&mut hasher, 6, &encoding.path_vertices);
+        Self {
+            fingerprint: hasher.finish(),
+        }
+    }
+
+    fn from_flat_encoding_segment(
+        encoding: &SceneEncoding,
+        ranges: RenderPlanSegmentStreamRanges,
+    ) -> Self {
+        let mut hasher = DefaultHasher::new();
+        hash_pod_range(&mut hasher, 0, &encoding.instances, ranges.quad_instances);
+        hash_pod_range(&mut hasher, 1, &encoding.path_paints, ranges.path_paints);
+        hash_pod_range(&mut hasher, 2, &encoding.text_paints, ranges.text_paints);
+        hash_pod_range(
+            &mut hasher,
+            3,
+            &encoding.viewport_vertices,
+            ranges.viewport_vertices,
+        );
+        hash_pod_range(
+            &mut hasher,
+            4,
+            &encoding.text_glyph_instances,
+            ranges.text_glyph_instances,
+        );
+        hash_pod_range(
+            &mut hasher,
+            5,
+            &encoding.text_vertices,
+            ranges.text_vertices,
+        );
+        hash_pod_range(
+            &mut hasher,
+            6,
+            &encoding.path_vertices,
+            ranges.path_vertices,
+        );
+        Self {
+            fingerprint: hasher.finish(),
+        }
     }
 }
 
@@ -251,6 +315,7 @@ impl SceneChunkEncodingState {
     pub(super) fn record_payload_plan_alignment(
         &self,
         plan: &RenderPlan,
+        flat_encoding: &SceneEncoding,
     ) -> SceneChunkEncodingFrameStats {
         let mut stats = SceneChunkEncodingFrameStats::default();
         let mut candidates = plan
@@ -279,6 +344,21 @@ impl SceneChunkEncodingState {
             } else {
                 stats.payload_plan_shape_mismatches =
                     stats.payload_plan_shape_mismatches.saturating_add(1);
+            }
+
+            let segment_stream_fingerprint =
+                SceneChunkPayloadStreamFingerprint::from_flat_encoding_segment(
+                    flat_encoding,
+                    segment.stream_ranges,
+                );
+            if payload.stream_fingerprint == segment_stream_fingerprint.fingerprint {
+                stats.payload_plan_stream_fingerprint_matches = stats
+                    .payload_plan_stream_fingerprint_matches
+                    .saturating_add(1);
+            } else {
+                stats.payload_plan_stream_fingerprint_mismatches = stats
+                    .payload_plan_stream_fingerprint_mismatches
+                    .saturating_add(1);
             }
         }
 
@@ -365,6 +445,7 @@ impl Renderer {
     pub(super) fn record_scene_chunk_payload_plan_alignment_for_frame(
         &mut self,
         plan: &RenderPlan,
+        flat_encoding: &SceneEncoding,
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
     ) {
@@ -374,13 +455,17 @@ impl Renderer {
 
         let stats = self
             .scene_chunk_encoding_state
-            .record_payload_plan_alignment(plan);
+            .record_payload_plan_alignment(plan, flat_encoding);
         frame_perf.scene_chunk_encoding_payload_plan_candidate_segments =
             stats.payload_plan_candidate_segments;
         frame_perf.scene_chunk_encoding_payload_plan_shape_matches =
             stats.payload_plan_shape_matches;
         frame_perf.scene_chunk_encoding_payload_plan_shape_mismatches =
             stats.payload_plan_shape_mismatches;
+        frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_matches =
+            stats.payload_plan_stream_fingerprint_matches;
+        frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches =
+            stats.payload_plan_stream_fingerprint_mismatches;
         frame_perf.scene_chunk_encoding_payload_entries_without_plan_candidate =
             stats.payload_entries_without_plan_candidate;
         frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload =
@@ -424,6 +509,34 @@ fn estimate_slice_bytes<T>(slice: &[T]) -> u64 {
     std::mem::size_of_val(slice) as u64
 }
 
+fn hash_pod_slice<T: bytemuck::Pod>(hasher: &mut DefaultHasher, tag: u8, slice: &[T]) {
+    tag.hash(hasher);
+    u64::try_from(slice.len()).unwrap_or(u64::MAX).hash(hasher);
+    true.hash(hasher);
+    bytemuck::cast_slice::<T, u8>(slice).hash(hasher);
+}
+
+fn hash_pod_range<T: bytemuck::Pod>(
+    hasher: &mut DefaultHasher,
+    tag: u8,
+    slice: &[T],
+    range: RenderPlanStreamRange,
+) {
+    tag.hash(hasher);
+    u64::from(range.len()).hash(hasher);
+    let start = usize::try_from(range.start).ok();
+    let end = usize::try_from(range.end).ok();
+    if let (Some(start), Some(end)) = (start, end)
+        && let Some(slice) = slice.get(start..end)
+    {
+        true.hash(hasher);
+        bytemuck::cast_slice::<T, u8>(slice).hash(hasher);
+        return;
+    }
+
+    false.hash(hasher);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -464,6 +577,28 @@ mod tests {
             manifest.push(entry.clone());
         }
         manifest
+    }
+
+    fn quad_payload_encoding() -> SceneEncoding {
+        let mut encoding = SceneEncoding::default();
+        let instance: QuadInstance = bytemuck::Zeroable::zeroed();
+        encoding.instances.push(instance);
+        encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+            scissor: ScissorRect::full(320, 200),
+            uniform_index: 0,
+            first_instance: 0,
+            instance_count: 1,
+            pipeline: QuadPipelineKey {
+                fill_kind: 0,
+                border_kind: 0,
+                border_present: false,
+                dash_enabled: false,
+                fill_material_sampled: false,
+                border_material_sampled: false,
+                shadow_mode: false,
+            },
+        }));
+        encoding
     }
 
     #[test]
@@ -574,24 +709,18 @@ mod tests {
         let mut state = SceneChunkEncodingState::default();
         let frame = manifest(&[entry(0.0)]);
         state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
-            let mut encoding = SceneEncoding::default();
-            encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
-                scissor: ScissorRect::full(320, 200),
-                uniform_index: 0,
-                first_instance: 0,
-                instance_count: 1,
-                pipeline: QuadPipelineKey {
-                    fill_kind: 0,
-                    border_kind: 0,
-                    border_present: false,
-                    dash_enabled: false,
-                    fill_material_sampled: false,
-                    border_material_sampled: false,
-                    shadow_mode: false,
-                },
-            }));
-            CachedSceneChunkEncoding::new(encoding)
+            CachedSceneChunkEncoding::new(quad_payload_encoding())
         });
+        let mut flat_encoding = quad_payload_encoding();
+        let ranges = RenderPlanSegmentStreamRanges {
+            quad_instances: RenderPlanStreamRange::new(0, 1),
+            ..Default::default()
+        };
+        assert_eq!(
+            SceneChunkPayloadStreamFingerprint::from_payload_encoding(&flat_encoding).fingerprint,
+            SceneChunkPayloadStreamFingerprint::from_flat_encoding_segment(&flat_encoding, ranges)
+                .fingerprint
+        );
 
         let plan = RenderPlan {
             segments: vec![RenderPlanSegment {
@@ -608,22 +737,27 @@ mod tests {
                     draw_count: 1,
                     fingerprint: 0,
                 },
-                stream_ranges: RenderPlanSegmentStreamRanges {
-                    quad_instances: RenderPlanStreamRange::new(0, 1),
-                    ..Default::default()
-                },
+                stream_ranges: ranges,
             }],
             passes: Vec::new(),
             compile_stats: RenderPlanCompileStats::default(),
             degradations: Vec::new(),
         };
 
-        let stats = state.record_payload_plan_alignment(&plan);
+        let stats = state.record_payload_plan_alignment(&plan, &flat_encoding);
 
         assert_eq!(stats.payload_plan_candidate_segments, 1);
         assert_eq!(stats.payload_plan_shape_matches, 1);
         assert_eq!(stats.payload_plan_shape_mismatches, 0);
+        assert_eq!(stats.payload_plan_stream_fingerprint_matches, 1);
+        assert_eq!(stats.payload_plan_stream_fingerprint_mismatches, 0);
         assert_eq!(stats.payload_entries_without_plan_candidate, 0);
         assert_eq!(stats.payload_plan_candidates_without_payload, 0);
+
+        flat_encoding.instances[0].rect[0] = 1.0;
+        let stats = state.record_payload_plan_alignment(&plan, &flat_encoding);
+        assert_eq!(stats.payload_plan_shape_matches, 1);
+        assert_eq!(stats.payload_plan_stream_fingerprint_matches, 0);
+        assert_eq!(stats.payload_plan_stream_fingerprint_mismatches, 1);
     }
 }

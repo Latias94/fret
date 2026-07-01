@@ -255,6 +255,16 @@ impl Renderer {
         perf.scene_chunk_encoding_payload_plan_shape_mismatches = perf
             .scene_chunk_encoding_payload_plan_shape_mismatches
             .saturating_add(frame_perf.scene_chunk_encoding_payload_plan_shape_mismatches);
+        perf.scene_chunk_encoding_payload_plan_stream_fingerprint_matches = perf
+            .scene_chunk_encoding_payload_plan_stream_fingerprint_matches
+            .saturating_add(
+                frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_matches,
+            );
+        perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches = perf
+            .scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches
+            .saturating_add(
+                frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
+            );
         perf.scene_chunk_encoding_payload_entries_without_plan_candidate = perf
             .scene_chunk_encoding_payload_entries_without_plan_candidate
             .saturating_add(frame_perf.scene_chunk_encoding_payload_entries_without_plan_candidate);
@@ -683,6 +693,10 @@ impl Renderer {
                 .scene_chunk_encoding_payload_plan_shape_matches,
             scene_chunk_encoding_payload_plan_shape_mismatches: frame_perf
                 .scene_chunk_encoding_payload_plan_shape_mismatches,
+            scene_chunk_encoding_payload_plan_stream_fingerprint_matches: frame_perf
+                .scene_chunk_encoding_payload_plan_stream_fingerprint_matches,
+            scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: frame_perf
+                .scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
             scene_chunk_encoding_payload_entries_without_plan_candidate: frame_perf
                 .scene_chunk_encoding_payload_entries_without_plan_candidate,
             scene_chunk_encoding_payload_plan_candidates_without_payload: frame_perf

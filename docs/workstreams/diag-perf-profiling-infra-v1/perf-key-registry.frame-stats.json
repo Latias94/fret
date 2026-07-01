@@ -2797,6 +2797,20 @@
       "unit": "count"
     },
     {
+      "key": "renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_scene_chunk_encoding_payload_entries_without_plan_candidate",
       "kind": "counter",
       "scope": "frame",

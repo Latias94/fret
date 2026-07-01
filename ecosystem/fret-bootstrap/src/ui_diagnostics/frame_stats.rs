@@ -742,6 +742,10 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_plan_shape_mismatches: u64,
     #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: u64,
+    #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
     #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_plan_candidates_without_payload: u64,
@@ -1593,6 +1597,8 @@ impl UiFrameStatsV1 {
             renderer_scene_chunk_encoding_payload_plan_candidate_segments: 0,
             renderer_scene_chunk_encoding_payload_plan_shape_matches: 0,
             renderer_scene_chunk_encoding_payload_plan_shape_mismatches: 0,
+            renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches: 0,
+            renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: 0,
             renderer_scene_chunk_encoding_payload_entries_without_plan_candidate: 0,
             renderer_scene_chunk_encoding_payload_plan_candidates_without_payload: 0,
             renderer_render_plan_scene_chunk_candidates: 0,
@@ -1931,6 +1937,12 @@ impl UiFrameStatsV1 {
         self.renderer_scene_chunk_encoding_payload_plan_shape_mismatches = sample
             .perf
             .scene_chunk_encoding_payload_plan_shape_mismatches;
+        self.renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches = sample
+            .perf
+            .scene_chunk_encoding_payload_plan_stream_fingerprint_matches;
+        self.renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches = sample
+            .perf
+            .scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches;
         self.renderer_scene_chunk_encoding_payload_entries_without_plan_candidate = sample
             .perf
             .scene_chunk_encoding_payload_entries_without_plan_candidate;

@@ -2000,8 +2000,10 @@ mod service_tests {
         perf.scene_chunk_encoding_payload_plan_candidate_segments = 8;
         perf.scene_chunk_encoding_payload_plan_shape_matches = 9;
         perf.scene_chunk_encoding_payload_plan_shape_mismatches = 10;
-        perf.scene_chunk_encoding_payload_entries_without_plan_candidate = 11;
-        perf.scene_chunk_encoding_payload_plan_candidates_without_payload = 12;
+        perf.scene_chunk_encoding_payload_plan_stream_fingerprint_matches = 11;
+        perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches = 12;
+        perf.scene_chunk_encoding_payload_entries_without_plan_candidate = 13;
+        perf.scene_chunk_encoding_payload_plan_candidates_without_payload = 14;
         perf.render_plan_scene_chunk_candidates = 4;
         perf.render_plan_scene_chunk_candidate_draws = 11;
         perf.render_plan_scene_chunk_candidates_stable = 3;
@@ -2084,12 +2086,20 @@ mod service_tests {
             10
         );
         assert_eq!(
-            stats.renderer_scene_chunk_encoding_payload_entries_without_plan_candidate,
+            stats.renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches,
             11
         );
         assert_eq!(
-            stats.renderer_scene_chunk_encoding_payload_plan_candidates_without_payload,
+            stats.renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
             12
+        );
+        assert_eq!(
+            stats.renderer_scene_chunk_encoding_payload_entries_without_plan_candidate,
+            13
+        );
+        assert_eq!(
+            stats.renderer_scene_chunk_encoding_payload_plan_candidates_without_payload,
+            14
         );
         assert_eq!(stats.renderer_render_plan_scene_chunk_candidate_draws, 11);
         assert_eq!(

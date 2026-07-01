@@ -199,6 +199,7 @@ impl Renderer {
         );
         self.record_scene_chunk_payload_plan_alignment_for_frame(
             &plan,
+            &encoding,
             perf_enabled,
             &mut frame_perf,
         );

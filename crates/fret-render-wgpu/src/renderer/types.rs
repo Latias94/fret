@@ -727,6 +727,12 @@ pub struct RenderPerfSnapshot {
     /// Retained chunk payloads whose shape does not match the corresponding flat render-plan
     /// candidate segment.
     pub scene_chunk_encoding_payload_plan_shape_mismatches: u64,
+    /// Retained chunk payload upload streams whose normalized fingerprint matches the corresponding
+    /// flat render-plan candidate segment stream ranges.
+    pub scene_chunk_encoding_payload_plan_stream_fingerprint_matches: u64,
+    /// Retained chunk payload upload streams whose normalized fingerprint does not match the
+    /// corresponding flat render-plan candidate segment stream ranges.
+    pub scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: u64,
     /// Retained chunk payload entries with no corresponding flat render-plan candidate segment.
     pub scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
     /// Flat render-plan candidate segments with no retained chunk payload entry in manifest order.
@@ -1087,6 +1093,8 @@ pub(super) struct RenderPerfStats {
     pub(super) scene_chunk_encoding_payload_plan_candidate_segments: u64,
     pub(super) scene_chunk_encoding_payload_plan_shape_matches: u64,
     pub(super) scene_chunk_encoding_payload_plan_shape_mismatches: u64,
+    pub(super) scene_chunk_encoding_payload_plan_stream_fingerprint_matches: u64,
+    pub(super) scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: u64,
     pub(super) scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
     pub(super) scene_chunk_encoding_payload_plan_candidates_without_payload: u64,
     pub(super) render_plan_estimated_peak_intermediate_bytes: u64,
