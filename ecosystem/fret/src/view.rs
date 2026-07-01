@@ -28,6 +28,7 @@ mod bridges;
 mod context;
 mod data;
 mod effects;
+mod lane_barriers;
 mod layout_query;
 mod local_state;
 mod raw;
@@ -134,131 +135,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     /// Read the current window id without reopening the broader `ElementContext` surface.
     pub fn window_id(&self) -> AppWindowId {
         self.cx.window
-    }
-
-    // Lane-sealing barriers for the default app surface.
-    //
-    // Keep these helpers callable-but-unusable on `AppUi` itself so method resolution stops here
-    // instead of falling through the `Deref` to `ElementContext`. Advanced code can still opt into
-    // the lower-level substrate explicitly via `cx.elements()`.
-
-    #[doc(hidden)]
-    pub fn scope<R>(&mut self, _f: impl FnOnce(&mut Self) -> R)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.keyed(...) or cx.elements().scope(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn named<R>(&mut self, _name: &str, _f: impl FnOnce(&mut Self) -> R)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.keyed(...) or cx.elements().named(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn root_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.state().local* or cx.elements().root_state(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn with_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.state().local* or cx.elements().root_state(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn slot_state<S: Any, R>(&mut self, _init: impl FnOnce() -> S, _f: impl FnOnce(&mut S) -> R)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.state().local* or cx.elements().slot_state(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn keyed_slot_state<K: Hash, S: Any, R>(
-        &mut self,
-        _key: K,
-        _init: impl FnOnce() -> S,
-        _f: impl FnOnce(&mut S) -> R,
-    ) where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.state().local_keyed(...) or cx.elements().keyed_slot_state(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn slot_id(&mut self)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.elements().slot_id(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn keyed_slot_id<K: Hash>(&mut self, _key: K)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.elements().keyed_slot_id(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn local_model<T: Any>(&mut self, _init: impl FnOnce() -> T)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.state().local_init(...) or cx.elements().local_model(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn local_model_keyed<K: Hash, T: Any>(&mut self, _key: K, _init: impl FnOnce() -> T)
-    where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.state().local_keyed(...) or cx.elements().local_model_keyed(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn state_for<S: Any, R>(
-        &mut self,
-        _element: fret_ui::GlobalElementId,
-        _init: impl FnOnce() -> S,
-        _f: impl FnOnce(&mut S) -> R,
-    ) where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.elements().state_for(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn with_state_for<S: Any, R>(
-        &mut self,
-        _element: fret_ui::GlobalElementId,
-        _init: impl FnOnce() -> S,
-        _f: impl FnOnce(&mut S) -> R,
-    ) where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.elements().state_for(...)")
-    }
-
-    #[doc(hidden)]
-    pub fn model_for<T: Any>(
-        &mut self,
-        _element: fret_ui::GlobalElementId,
-        _init: impl FnOnce() -> T,
-    ) where
-        Self: AppUiComponentLaneRequiresExplicitElementsEscapeHatch,
-    {
-        unreachable!("use cx.elements().model_for(...)")
     }
 
     /// Grouped state/local helpers for the default app authoring surface.
@@ -443,6 +319,7 @@ mod tests {
     const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
     const DATA_RS_SOURCE: &str = include_str!("view/data.rs");
     const EFFECTS_RS_SOURCE: &str = include_str!("view/effects.rs");
+    const LANE_BARRIERS_RS_SOURCE: &str = include_str!("view/lane_barriers.rs");
     const LAYOUT_QUERY_RS_SOURCE: &str = include_str!("view/layout_query.rs");
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
     const RAW_RS_SOURCE: &str = include_str!("view/raw.rs");
@@ -456,7 +333,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LANE_BARRIERS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{
