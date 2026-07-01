@@ -2,6 +2,8 @@ const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
 const VIEW_BRIDGES_RS: &str = include_str!("../src/view/bridges.rs");
 const VIEW_CONTEXT_RS: &str = include_str!("../src/view/context.rs");
+const VIEW_LAYOUT_QUERY_RS: &str = include_str!("../src/view/layout_query.rs");
+const VIEW_SCHEDULING_RS: &str = include_str!("../src/view/scheduling.rs");
 const COOKBOOK_SCAFFOLD: &str = include_str!("../../../apps/fret-cookbook/src/scaffold.rs");
 const DEFAULT_SNIPPET_GATE: &str =
     include_str!("../../../tools/gate_no_raw_app_context_in_default_teaching_snippets.py");
@@ -37,7 +39,7 @@ fn view_api_surface() -> String {
         .split("\n#[cfg(test)]\nmod tests")
         .next()
         .expect("view.rs test module marker should exist");
-    format!("{view_api}\n{VIEW_BRIDGES_RS}")
+    format!("{view_api}\n{VIEW_BRIDGES_RS}\n{VIEW_LAYOUT_QUERY_RS}\n{VIEW_SCHEDULING_RS}")
 }
 
 #[test]

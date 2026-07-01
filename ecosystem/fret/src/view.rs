@@ -20,7 +20,7 @@ use fret_runtime::Model;
 #[cfg(test)]
 use fret_ui::action::OnActivate;
 use fret_ui::action::{OnCommand, OnCommandAvailability};
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, UiHost};
 
 mod actions;
 mod activation;
@@ -28,9 +28,11 @@ mod bridges;
 mod context;
 mod data;
 mod effects;
+mod layout_query;
 mod local_state;
 mod raw;
 mod runtime;
+mod scheduling;
 mod state;
 #[allow(unused_imports)]
 pub use actions::{
@@ -132,89 +134,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     /// Read the current window id without reopening the broader `ElementContext` surface.
     pub fn window_id(&self) -> AppWindowId {
         self.cx.window
-    }
-
-    /// Request the next animation frame from the default app-facing render lane.
-    ///
-    /// Use this for frame-driven progression that must continue without fresh input events.
-    pub fn request_animation_frame(&mut self) {
-        self.cx.request_animation_frame();
-    }
-
-    /// Toggle the continuous-frames lease for the current view root without reopening
-    /// `ElementContext`.
-    ///
-    /// Use this for app-facing surfaces that need ongoing frame delivery while a mode remains
-    /// active. Advanced/component code can still opt into the lower-level helper directly.
-    pub fn set_continuous_frames(&mut self, enabled: bool) {
-        fret_ui_kit::declarative::scheduling::set_continuous_frames(self.cx, enabled);
-    }
-
-    /// Observe the committed bounds for a layout-query region from the default app-facing lane.
-    pub fn layout_query_bounds(
-        &mut self,
-        region: fret_ui::GlobalElementId,
-        invalidation: Invalidation,
-    ) -> Option<fret_core::Rect> {
-        self.cx.layout_query_bounds(region, invalidation)
-    }
-
-    /// Create a layout-query region on the default app-facing render lane and pass its region id.
-    ///
-    /// The nested builder keeps the same grouped action-registration surface as the outer `AppUi`
-    /// scope instead of reopening the raw `ElementContext` lane.
-    #[track_caller]
-    pub fn layout_query_region_with_id<I>(
-        &mut self,
-        props: fret_ui::element::LayoutQueryRegionProps,
-        f: impl for<'b> FnOnce(&mut AppUi<'b, 'a, H>, fret_ui::GlobalElementId) -> I,
-    ) -> fret_ui::element::AnyElement
-    where
-        I: IntoIterator<Item = fret_ui::element::AnyElement>,
-    {
-        let action_root = self.action_root;
-        let mut carried_action_handlers = Some(std::mem::take(&mut self.action_handlers));
-        let mut carried_action_handlers_used = self.action_handlers_used;
-
-        let out = self.cx.layout_query_region_with_id(props, |cx, id| {
-            let action_handlers = carried_action_handlers
-                .take()
-                .expect("AppUi layout_query_region_with_id should carry handlers once");
-            let mut nested = AppUi {
-                cx,
-                action_root,
-                action_handlers,
-                action_handlers_used: carried_action_handlers_used,
-            };
-            let built = f(&mut nested, id);
-            carried_action_handlers = Some(nested.action_handlers);
-            carried_action_handlers_used = nested.action_handlers_used;
-            built
-        });
-
-        self.action_handlers = carried_action_handlers
-            .take()
-            .expect("AppUi layout_query_region_with_id should restore handlers");
-        self.action_handlers_used = carried_action_handlers_used;
-        out
-    }
-
-    /// Create a layout-query region on the default app-facing render lane.
-    #[track_caller]
-    pub fn layout_query_region<I>(
-        &mut self,
-        props: fret_ui::element::LayoutQueryRegionProps,
-        f: impl for<'b> FnOnce(&mut AppUi<'b, 'a, H>) -> I,
-    ) -> fret_ui::element::AnyElement
-    where
-        I: IntoIterator<Item = fret_ui::element::AnyElement>,
-    {
-        self.layout_query_region_with_id(props, |cx, _id| f(cx))
-    }
-
-    /// Read the committed viewport bounds from the default app-facing render lane.
-    pub fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> fret_core::Rect {
-        self.cx.environment_viewport_bounds(invalidation)
     }
 
     // Lane-sealing barriers for the default app surface.
@@ -524,9 +443,11 @@ mod tests {
     const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
     const DATA_RS_SOURCE: &str = include_str!("view/data.rs");
     const EFFECTS_RS_SOURCE: &str = include_str!("view/effects.rs");
+    const LAYOUT_QUERY_RS_SOURCE: &str = include_str!("view/layout_query.rs");
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
     const RAW_RS_SOURCE: &str = include_str!("view/raw.rs");
     const RUNTIME_RS_SOURCE: &str = include_str!("view/runtime.rs");
+    const SCHEDULING_RS_SOURCE: &str = include_str!("view/scheduling.rs");
     const STATE_RS_SOURCE: &str = include_str!("view/state.rs");
 
     fn view_authoring_api_source() -> String {
@@ -535,7 +456,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LAYOUT_QUERY_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{SCHEDULING_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{

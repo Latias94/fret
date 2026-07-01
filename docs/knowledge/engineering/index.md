@@ -56,4 +56,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U9 view data helpers split](progress/2026-07-02-u9-view-data-split.md)
 - [U9 view raw seam split](progress/2026-07-02-u9-view-raw-seam-split.md)
 - [U9 view bridge impls split](progress/2026-07-02-u9-view-bridges-split.md)
+- [U9 view scheduling and layout-query split](progress/2026-07-02-u9-view-scheduling-layout-split.md)
 - [Log](log.md)
