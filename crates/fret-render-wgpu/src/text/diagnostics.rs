@@ -1,4 +1,7 @@
-use super::{GlyphInstance, TextDecoration, TextFontFaceUsage, TextLine, TextShape, TextSystem};
+use super::{
+    GlyphInstance, TextDecoration, TextFontFaceUsage, TextFrameResidency, TextLine, TextShape,
+    TextSystem,
+};
 use fret_core::TextBlobId;
 use slotmap::Key;
 use std::{
@@ -192,33 +195,37 @@ impl TextSystem {
         &self,
         text_blob_ids: &[TextBlobId],
     ) -> TextSceneResourceSnapshot {
-        if text_blob_ids.is_empty() {
+        let residency = self.text_residency_for_blobs(text_blob_ids);
+        self.text_resource_snapshot_for_residency(&residency)
+    }
+
+    pub(crate) fn text_resource_snapshot_for_residency(
+        &self,
+        residency: &TextFrameResidency,
+    ) -> TextSceneResourceSnapshot {
+        if residency.is_empty() {
             return TextSceneResourceSnapshot::default();
         }
 
         let mut hasher = DefaultHasher::new();
         let reset_generation = self.atlas_runtime.reset_generation();
         reset_generation.hash(&mut hasher);
-        text_blob_ids.len().hash(&mut hasher);
+        residency.entries().len().hash(&mut hasher);
 
         let mut snapshot = TextSceneResourceSnapshot {
-            text_blobs: text_blob_ids.len() as u64,
+            text_blobs: residency.entries().len() as u64,
             reset_generation,
             ..Default::default()
         };
 
-        for text_blob in text_blob_ids.iter().copied() {
+        for entry in residency.entries() {
+            let text_blob = entry.text_blob();
             text_blob.data().as_ffi().hash(&mut hasher);
-            let Some(blob) = self.blob_state.blobs.get(text_blob) else {
-                0x6d_69_73_73_69_6e_67_u64.hash(&mut hasher);
-                continue;
-            };
-            let shape = blob.shape();
-            shape.glyphs().len().hash(&mut hasher);
-            for glyph in shape.glyphs() {
+            entry.key().hash(&mut hasher);
+            for glyph_key in entry.glyphs().iter().copied() {
                 snapshot.glyphs = snapshot.glyphs.saturating_add(1);
-                glyph.key.hash(&mut hasher);
-                match self.glyph_uv_for_instance(glyph) {
+                glyph_key.hash(&mut hasher);
+                match self.glyph_uv_for_key(glyph_key) {
                     Some((page, uv)) => {
                         1_u8.hash(&mut hasher);
                         page.hash(&mut hasher);
@@ -239,7 +246,11 @@ impl TextSystem {
         snapshot
     }
 
+    pub(super) fn glyph_uv_for_key(&self, key: super::atlas::GlyphKey) -> Option<(u16, [f32; 4])> {
+        self.atlas_runtime.uv_for_key(key)
+    }
+
     pub(super) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
-        self.atlas_runtime.uv_for_key(glyph.key)
+        self.glyph_uv_for_key(glyph.key)
     }
 }

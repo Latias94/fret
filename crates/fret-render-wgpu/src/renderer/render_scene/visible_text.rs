@@ -1,21 +1,20 @@
 use super::super::types::ScissorRect;
 use super::super::util::{intersect_scissor, rect_to_pixels, scissor_from_bounds_px};
 use super::super::*;
-use crate::text::TextSystem;
-use fret_core::TextBlobId;
+use crate::text::{TextFrameResidency, TextSystem};
 
-pub(super) fn visible_text_blob_ids_for_scene(
+pub(super) fn visible_text_residency_for_scene(
     scene: &Scene,
     text_system: &TextSystem,
     scale_factor: f32,
     viewport_size: (u32, u32),
-) -> Vec<TextBlobId> {
+) -> TextFrameResidency {
     let mut state = VisibleTextState::new(scale_factor, viewport_size);
-    let mut visible = Vec::new();
+    let mut residency = TextFrameResidency::new();
     for op in scene.ops() {
-        state.handle_op(op, text_system, &mut visible);
+        state.handle_op(op, text_system, &mut residency);
     }
-    visible
+    residency
 }
 
 struct VisibleTextState {
@@ -40,7 +39,12 @@ impl VisibleTextState {
         }
     }
 
-    fn handle_op(&mut self, op: &SceneOp, text_system: &TextSystem, visible: &mut Vec<TextBlobId>) {
+    fn handle_op(
+        &mut self,
+        op: &SceneOp,
+        text_system: &TextSystem,
+        residency: &mut TextFrameResidency,
+    ) {
         match *op {
             SceneOp::PushTransform { transform } => {
                 self.transform_stack
@@ -85,11 +89,10 @@ impl VisibleTextState {
                     return;
                 }
 
-                if self.text_blob_intersects_scissor(text_system, text, origin)
-                    || self.shadow_intersects_scissor(text_system, text, origin, shadow)
-                {
-                    visible.push(text);
-                }
+                text_system.push_glyph_residency_for_blob(residency, text, |rect| {
+                    self.glyph_rect_intersects_scissor(origin, rect)
+                        || self.shadow_glyph_rect_intersects_scissor(origin, rect, shadow)
+                });
             }
             SceneOp::PushLayer { .. }
             | SceneOp::PopLayer
@@ -172,17 +175,19 @@ impl VisibleTextState {
         )
     }
 
-    fn text_blob_intersects_scissor(
-        &self,
-        text_system: &TextSystem,
-        text: TextBlobId,
-        origin: Point,
-    ) -> bool {
-        let Some((min_x, min_y, max_x, max_y)) =
-            self.text_blob_bounds_px(text_system, text, origin)
-        else {
+    fn glyph_rect_intersects_scissor(&self, origin: Point, rect: [f32; 4]) -> bool {
+        let [x, y, w, h] = rect;
+        if !x.is_finite() || !y.is_finite() || !w.is_finite() || !h.is_finite() {
             return false;
-        };
+        }
+        let x0 = (origin.x.0 + x) * self.scale_factor;
+        let y0 = (origin.y.0 + y) * self.scale_factor;
+        let x1 = x0 + w * self.scale_factor;
+        let y1 = y0 + h * self.scale_factor;
+        let min_x = x0.min(x1);
+        let min_y = y0.min(y1);
+        let max_x = x0.max(x1);
+        let max_y = y0.max(y1);
         let quad = transform_quad_points_px(
             self.current_transform_px(),
             min_x,
@@ -200,11 +205,10 @@ impl VisibleTextState {
         clipped.w > 0 && clipped.h > 0
     }
 
-    fn shadow_intersects_scissor(
+    fn shadow_glyph_rect_intersects_scissor(
         &self,
-        text_system: &TextSystem,
-        text: TextBlobId,
         origin: Point,
+        rect: [f32; 4],
         shadow: Option<fret_core::scene::TextShadowV1>,
     ) -> bool {
         let Some(shadow) = shadow else {
@@ -213,26 +217,10 @@ impl VisibleTextState {
         if shadow.color.a <= 0.0 || (shadow.offset.x.0 == 0.0 && shadow.offset.y.0 == 0.0) {
             return false;
         }
-        self.text_blob_intersects_scissor(
-            text_system,
-            text,
+        self.glyph_rect_intersects_scissor(
             Point::new(origin.x + shadow.offset.x, origin.y + shadow.offset.y),
+            rect,
         )
-    }
-
-    fn text_blob_bounds_px(
-        &self,
-        text_system: &TextSystem,
-        text: TextBlobId,
-        origin: Point,
-    ) -> Option<(f32, f32, f32, f32)> {
-        let (min_x, min_y, max_x, max_y) = text_system.glyph_bounds_for_blob(text)?;
-        Some((
-            (origin.x.0 + min_x) * self.scale_factor,
-            (origin.y.0 + min_y) * self.scale_factor,
-            (origin.x.0 + max_x) * self.scale_factor,
-            (origin.y.0 + max_y) * self.scale_factor,
-        ))
     }
 }
 
@@ -270,7 +258,9 @@ fn bounds_of_quad_points(pts: &[(f32, f32); 4]) -> (f32, f32, f32, f32) {
 mod tests {
     use super::*;
     use crate::WgpuContext;
-    use fret_core::{Color, DrawOrder, Paint, TextConstraints, TextStyle, geometry::Size};
+    use fret_core::{
+        Color, DrawOrder, Paint, TextBlobId, TextConstraints, TextStyle, geometry::Size,
+    };
 
     fn white_text_op(origin: Point, text: TextBlobId) -> SceneOp {
         SceneOp::Text {
@@ -311,14 +301,14 @@ mod tests {
             offscreen_blob,
         ));
 
-        let visible = visible_text_blob_ids_for_scene(&scene, &text, 1.0, (240, 80));
-        assert_eq!(visible, vec![visible_blob]);
+        let residency = visible_text_residency_for_scene(&scene, &text, 1.0, (240, 80));
+        assert_eq!(residency.text_blob_ids(), vec![visible_blob]);
 
-        let perf = text.prepare_for_text_blobs_with_perf(&visible, 0, true);
+        let perf = text.prepare_for_text_residency_with_perf(&residency, 0, true);
         assert_eq!(perf.scene_text_blobs, 1);
         assert!(perf.added_glyph_keys > 0);
 
-        let visible_snapshot = text.text_resource_snapshot_for_blobs(&[visible_blob]);
+        let visible_snapshot = text.text_resource_snapshot_for_residency(&residency);
         assert!(visible_snapshot.glyphs > 0);
         assert_eq!(visible_snapshot.missing_glyph_resources, 0);
 
@@ -327,6 +317,49 @@ mod tests {
         assert_eq!(
             offscreen_snapshot.missing_glyph_resources, offscreen_snapshot.glyphs,
             "offscreen text must not be pulled into atlas residency by frame prepare"
+        );
+    }
+
+    #[test]
+    fn visible_text_glyph_residency_excludes_offscreen_suffix_glyphs() {
+        let ctx = pollster::block_on(WgpuContext::new()).expect("wgpu context");
+        let mut text = TextSystem::new(&ctx.device);
+        let style = TextStyle {
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let (blob, _) = text.prepare(
+            "abcdefghijklmnopqrstuvwxyz",
+            &style,
+            TextConstraints::default(),
+        );
+        let full_before = text.text_resource_snapshot_for_blobs(&[blob]);
+        assert!(full_before.glyphs > 4);
+
+        let mut scene = Scene::default();
+        scene.push(white_text_op(Point::new(Px(0.0), Px(32.0)), blob));
+
+        let residency = visible_text_residency_for_scene(&scene, &text, 1.0, (36, 80));
+        assert_eq!(residency.text_blob_ids(), vec![blob]);
+        assert!(residency.glyph_count() > 0);
+        assert!(
+            residency.glyph_count() < full_before.glyphs as usize,
+            "narrow viewport should select only a glyph prefix from the long blob"
+        );
+
+        let perf = text.prepare_for_text_residency_with_perf(&residency, 0, true);
+        assert_eq!(perf.scene_text_blobs, 1);
+        assert!(perf.added_glyph_keys > 0);
+
+        let visible_snapshot = text.text_resource_snapshot_for_residency(&residency);
+        assert_eq!(visible_snapshot.glyphs, residency.glyph_count() as u64);
+        assert_eq!(visible_snapshot.missing_glyph_resources, 0);
+
+        let full_after = text.text_resource_snapshot_for_blobs(&[blob]);
+        assert_eq!(full_after.glyphs, full_before.glyphs);
+        assert!(
+            full_after.missing_glyph_resources > 0,
+            "offscreen suffix glyph resources must remain absent after visible-prefix prewarm"
         );
     }
 
@@ -361,8 +394,8 @@ mod tests {
         ));
         scene.push(SceneOp::PopOpacity);
 
-        let visible = visible_text_blob_ids_for_scene(&scene, &text_system, 1.0, (240, 80));
-        assert_eq!(visible, vec![visible_blob]);
+        let residency = visible_text_residency_for_scene(&scene, &text_system, 1.0, (240, 80));
+        assert_eq!(residency.text_blob_ids(), vec![visible_blob]);
     }
 
     #[test]
@@ -388,9 +421,9 @@ mod tests {
         scene.push(white_text_op(Point::new(Px(8.0), Px(24.0)), blob));
         scene.push(SceneOp::PopEffect);
 
-        let visible = visible_text_blob_ids_for_scene(&scene, &text_system, 1.0, (240, 80));
+        let residency = visible_text_residency_for_scene(&scene, &text_system, 1.0, (240, 80));
         assert_eq!(
-            visible,
+            residency.text_blob_ids(),
             vec![blob],
             "effect bounds are computation bounds, not text draw scissor"
         );
@@ -421,9 +454,9 @@ mod tests {
         scene.push(white_text_op(Point::new(Px(8.0), Px(24.0)), blob));
         scene.push(SceneOp::PopCompositeGroup);
 
-        let visible = visible_text_blob_ids_for_scene(&scene, &text_system, 1.0, (240, 80));
+        let residency = visible_text_residency_for_scene(&scene, &text_system, 1.0, (240, 80));
         assert!(
-            visible.is_empty(),
+            residency.text_blob_ids().is_empty(),
             "wgpu encode uses composite group bounds as a work scissor"
         );
     }

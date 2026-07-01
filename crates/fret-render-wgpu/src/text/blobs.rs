@@ -1,4 +1,4 @@
-use super::{TextBlob, TextDecoration, TextRenderGlyph, TextSystem};
+use super::{TextBlob, TextDecoration, TextFrameResidency, TextRenderGlyph, TextSystem};
 use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
 
@@ -49,31 +49,40 @@ impl TextSystem {
         Some(self.blob(id)?.shape())
     }
 
-    pub(crate) fn glyph_bounds_for_blob(&self, id: TextBlobId) -> Option<(f32, f32, f32, f32)> {
-        let shape = self.shape_for_blob(id)?;
-        let mut bounds: Option<(f32, f32, f32, f32)> = None;
-        for glyph in shape.glyphs() {
-            let [x, y, w, h] = glyph.rect();
-            if !x.is_finite() || !y.is_finite() || !w.is_finite() || !h.is_finite() {
+    pub(crate) fn text_residency_for_blobs(
+        &self,
+        text_blob_ids: &[TextBlobId],
+    ) -> TextFrameResidency {
+        let mut residency = TextFrameResidency::new();
+        for text_blob in text_blob_ids.iter().copied() {
+            let Some(shape) = self.shape_for_blob(text_blob) else {
+                residency.note_missing_entry();
                 continue;
-            }
-            let x1 = x + w;
-            let y1 = y + h;
-            let min_x = x.min(x1);
-            let min_y = y.min(y1);
-            let max_x = x.max(x1);
-            let max_y = y.max(y1);
-            bounds = Some(match bounds {
-                Some((bx0, by0, bx1, by1)) => (
-                    bx0.min(min_x),
-                    by0.min(min_y),
-                    bx1.max(max_x),
-                    by1.max(max_y),
-                ),
-                None => (min_x, min_y, max_x, max_y),
-            });
+            };
+            residency.push_glyphs(text_blob, shape.glyphs().iter().map(|glyph| glyph.key));
         }
-        bounds
+        residency
+    }
+
+    pub(crate) fn push_glyph_residency_for_blob(
+        &self,
+        residency: &mut TextFrameResidency,
+        text_blob: TextBlobId,
+        mut predicate: impl FnMut([f32; 4]) -> bool,
+    ) -> bool {
+        let Some(shape) = self.shape_for_blob(text_blob) else {
+            residency.note_missing_entry();
+            return false;
+        };
+        let glyphs = shape
+            .glyphs()
+            .iter()
+            .filter(|glyph| predicate(glyph.rect()))
+            .map(|glyph| glyph.key)
+            .collect::<Vec<_>>();
+        let pushed = !glyphs.is_empty();
+        residency.push_glyphs(text_blob, glyphs);
+        pushed
     }
 
     pub(crate) fn render_data_for_blob(&self, id: TextBlobId) -> Option<TextBlobRenderData<'_>> {

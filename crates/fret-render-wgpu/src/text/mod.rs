@@ -47,6 +47,7 @@ use self::face_cache::TextFaceCacheState;
 use self::font_runtime_state::TextFontRuntimeState;
 use self::frame_perf::TextFramePerfState;
 use self::layout_cache_state::TextLayoutCacheState;
+pub(crate) use self::pin_state::TextFrameResidency;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;

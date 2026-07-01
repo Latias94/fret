@@ -1,7 +1,11 @@
 use super::atlas::{GlyphKey, GlyphPinKeys};
-use super::blob_state::TextBlobState;
 use fret_core::TextBlobId;
 use rustc_hash::{FxHashMap, FxHashSet};
+use slotmap::Key;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 
 pub(crate) struct TextPinState {
     mask: Vec<Vec<GlyphKey>>,
@@ -90,27 +94,24 @@ impl TextPinState {
         self.bucket_signatures[bucket] = signature;
     }
 
-    pub(crate) fn try_reuse_text_blob_bucket(
+    pub(crate) fn try_reuse_text_residency_bucket(
         &self,
         bucket: usize,
-        text_blob_ids: &[TextBlobId],
-        blob_state: &TextBlobState,
+        residency: &TextFrameResidency,
     ) -> Option<TextBlobPinBucketReuse> {
         let signature = self.bucket_signatures.get(bucket)?.as_ref()?;
-        let current = text_blob_signature_if_all_live(text_blob_ids, blob_state)?;
+        let current = residency.signature()?;
         (signature.text_blobs == current).then_some(TextBlobPinBucketReuse {
             scene_text_blobs: current.len(),
             pinned_glyph_keys: signature.pinned_glyph_keys,
         })
     }
 
-    pub(crate) fn collect_text_blob_pin_snapshot(
+    pub(crate) fn collect_text_residency_pin_snapshot(
         &mut self,
-        text_blob_ids: &[TextBlobId],
-        blob_state: &TextBlobState,
+        residency: &TextFrameResidency,
     ) -> TextBlobPinSnapshot {
-        self.text_blob_cache
-            .collect_snapshot(text_blob_ids, blob_state)
+        self.text_blob_cache.collect_snapshot(residency)
     }
 
     pub(crate) fn current_scene_delta_for_bucket(
@@ -160,29 +161,148 @@ pub(crate) struct TextBlobPinSnapshot {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TextBlobResidencySignature {
-    text_blobs: Vec<TextBlobId>,
+    entries: Vec<TextResidencyEntryKey>,
 }
 
 impl TextBlobResidencySignature {
     fn empty() -> Self {
-        Self { text_blobs: vec![] }
+        Self { entries: vec![] }
     }
 
-    fn push(&mut self, text: TextBlobId) {
-        self.text_blobs.push(text);
+    fn push(&mut self, key: TextResidencyEntryKey) {
+        self.entries.push(key);
     }
 
     fn len(&self) -> usize {
-        self.text_blobs.len()
+        self.entries.len()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) struct TextResidencyEntryKey {
+    text_blob: TextBlobId,
+    glyph_fingerprint: u64,
+    glyphs: u32,
+}
+
+#[derive(Debug)]
+pub(crate) struct TextFrameResidency {
+    entries: Vec<TextResidencyEntry>,
+    all_entries_live: bool,
+}
+
+impl TextFrameResidency {
+    pub(crate) fn new() -> Self {
+        Self {
+            entries: Vec::new(),
+            all_entries_live: true,
+        }
+    }
+
+    pub(super) fn push_glyphs(
+        &mut self,
+        text_blob: TextBlobId,
+        glyphs: impl IntoIterator<Item = GlyphKey>,
+    ) {
+        let glyphs: Vec<GlyphKey> = glyphs.into_iter().collect();
+        if glyphs.is_empty() {
+            return;
+        }
+
+        let mut hasher = DefaultHasher::new();
+        text_blob.data().as_ffi().hash(&mut hasher);
+        glyphs.len().hash(&mut hasher);
+        for glyph in &glyphs {
+            glyph.hash(&mut hasher);
+        }
+
+        let glyphs_len = glyphs.len().min(u32::MAX as usize) as u32;
+        let key = TextResidencyEntryKey {
+            text_blob,
+            glyph_fingerprint: hasher.finish(),
+            glyphs: glyphs_len,
+        };
+        let pin_keys = GlyphPinKeys::from_keys(glyphs.iter().copied());
+        self.entries.push(TextResidencyEntry {
+            key,
+            glyphs,
+            pin_keys,
+        });
+    }
+
+    pub(super) fn note_missing_entry(&mut self) {
+        self.all_entries_live = false;
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub(super) fn entries(&self) -> &[TextResidencyEntry] {
+        &self.entries
+    }
+
+    pub(super) fn signature(&self) -> Option<TextBlobResidencySignature> {
+        if !self.all_entries_live {
+            return None;
+        }
+        let mut signature = TextBlobResidencySignature::empty();
+        for entry in &self.entries {
+            signature.push(entry.key);
+        }
+        Some(signature)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn text_blob_ids(&self) -> Vec<TextBlobId> {
+        self.entries
+            .iter()
+            .map(|entry| entry.key.text_blob)
+            .collect()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn glyph_count(&self) -> usize {
+        self.entries
+            .iter()
+            .map(|entry| entry.glyphs.len())
+            .sum::<usize>()
+    }
+}
+
+impl Default for TextFrameResidency {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct TextResidencyEntry {
+    key: TextResidencyEntryKey,
+    glyphs: Vec<GlyphKey>,
+    pin_keys: GlyphPinKeys,
+}
+
+impl TextResidencyEntry {
+    pub(super) fn key(&self) -> TextResidencyEntryKey {
+        self.key
+    }
+
+    pub(super) fn text_blob(&self) -> TextBlobId {
+        self.key.text_blob
+    }
+
+    pub(super) fn glyphs(&self) -> &[GlyphKey] {
+        &self.glyphs
     }
 }
 
 #[derive(Default)]
 struct TextBlobPinKeyCache {
-    blob_entries: FxHashMap<TextBlobId, TextBlobPinEntry>,
-    current_counts: FxHashMap<TextBlobId, u32>,
-    current_blobs: Vec<TextBlobId>,
-    stale_blobs: Vec<TextBlobId>,
+    blob_entries: FxHashMap<TextResidencyEntryKey, TextBlobPinEntry>,
+    current_counts: FxHashMap<TextResidencyEntryKey, u32>,
+    current_blobs: Vec<TextResidencyEntryKey>,
+    stale_blobs: Vec<TextResidencyEntryKey>,
     mask_ref_counts: FxHashMap<GlyphKey, u32>,
     color_ref_counts: FxHashMap<GlyphKey, u32>,
     subpixel_ref_counts: FxHashMap<GlyphKey, u32>,
@@ -199,43 +319,33 @@ impl TextBlobPinKeyCache {
         self.subpixel_ref_counts.clear();
     }
 
-    fn collect_snapshot(
-        &mut self,
-        text_blob_ids: &[TextBlobId],
-        blob_state: &TextBlobState,
-    ) -> TextBlobPinSnapshot {
+    fn collect_snapshot(&mut self, residency: &TextFrameResidency) -> TextBlobPinSnapshot {
         self.current_counts.clear();
-        let mut signature = TextBlobResidencySignature::empty();
-        let mut all_text_blobs_live = true;
-        for &text in text_blob_ids {
-            if !blob_state.blobs.contains_key(text) {
-                all_text_blobs_live = false;
-                continue;
-            }
-            signature.push(text);
-            let count = self.current_counts.entry(text).or_insert(0);
+        let signature = residency.signature();
+        for entry in residency.entries() {
+            let count = self.current_counts.entry(entry.key()).or_insert(0);
             *count = count.saturating_add(1);
         }
 
-        self.reconcile(blob_state);
+        self.reconcile(residency);
         TextBlobPinSnapshot {
-            scene_text_blobs: signature.len(),
+            scene_text_blobs: residency.entries().len(),
             pinned_glyph_keys: self.current_pin_key_count(),
-            signature: all_text_blobs_live.then_some(signature),
+            signature,
         }
     }
 
-    fn reconcile(&mut self, blob_state: &TextBlobState) {
+    fn reconcile(&mut self, residency: &TextFrameResidency) {
         self.stale_blobs.clear();
-        for &text in self.blob_entries.keys() {
-            if !self.current_counts.contains_key(&text) {
-                self.stale_blobs.push(text);
+        for &key in self.blob_entries.keys() {
+            if !self.current_counts.contains_key(&key) {
+                self.stale_blobs.push(key);
             }
         }
 
         let mut stale_blobs = std::mem::take(&mut self.stale_blobs);
-        for text in stale_blobs.drain(..) {
-            if let Some(entry) = self.blob_entries.remove(&text) {
+        for key in stale_blobs.drain(..) {
+            if let Some(entry) = self.blob_entries.remove(&key) {
                 self.dec_pin_keys(&entry.pin_keys);
             }
         }
@@ -245,18 +355,17 @@ impl TextBlobPinKeyCache {
         self.current_blobs
             .extend(self.current_counts.keys().copied());
         let mut current_blobs = std::mem::take(&mut self.current_blobs);
-        for text in current_blobs.drain(..) {
-            if self.blob_entries.contains_key(&text) {
+        for key in current_blobs.drain(..) {
+            if self.blob_entries.contains_key(&key) {
                 continue;
             }
 
-            let Some(blob) = blob_state.blobs.get(text) else {
+            let Some(entry) = residency.entries().iter().find(|entry| entry.key() == key) else {
                 continue;
             };
-            let pin_keys = blob.shape().pin_keys().clone();
+            let pin_keys = entry.pin_keys.clone();
             self.inc_pin_keys(&pin_keys);
-            self.blob_entries
-                .insert(text, TextBlobPinEntry { pin_keys });
+            self.blob_entries.insert(key, TextBlobPinEntry { pin_keys });
         }
         self.current_blobs = current_blobs;
     }
@@ -317,20 +426,6 @@ impl TextBlobPinKeyCache {
 
 struct TextBlobPinEntry {
     pin_keys: GlyphPinKeys,
-}
-
-fn text_blob_signature_if_all_live(
-    text_blob_ids: &[TextBlobId],
-    blob_state: &TextBlobState,
-) -> Option<TextBlobResidencySignature> {
-    let mut signature = TextBlobResidencySignature::empty();
-    for &text in text_blob_ids {
-        if !blob_state.blobs.contains_key(text) {
-            return None;
-        }
-        signature.push(text);
-    }
-    Some(signature)
 }
 
 fn inc_ref_counts(counts: &mut FxHashMap<GlyphKey, u32>, keys: &[GlyphKey]) {

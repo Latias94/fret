@@ -3,7 +3,8 @@ use super::pin_state::TextBlobPinBucketSignature;
 use super::prepare::{
     build_glyph_scaler_from_face_bytes, glyph_render_at_bins, render_glyph_image,
 };
-use super::{TextPrepareScenePerf, TextSystem};
+use super::{TextFrameResidency, TextPrepareScenePerf, TextSystem};
+#[cfg(test)]
 use fret_core::TextBlobId;
 #[cfg(test)]
 use fret_core::scene::Scene;
@@ -45,9 +46,20 @@ impl TextSystem {
         self.prepare_for_text_blobs_with_perf(scene.text_blob_ids(), frame_index, perf_enabled)
     }
 
+    #[cfg(test)]
     pub(crate) fn prepare_for_text_blobs_with_perf(
         &mut self,
         text_blob_ids: &[TextBlobId],
+        frame_index: u64,
+        perf_enabled: bool,
+    ) -> TextPrepareScenePerf {
+        let residency = self.text_residency_for_blobs(text_blob_ids);
+        self.prepare_for_text_residency_with_perf(&residency, frame_index, perf_enabled)
+    }
+
+    pub(crate) fn prepare_for_text_residency_with_perf(
+        &mut self,
+        residency: &TextFrameResidency,
         frame_index: u64,
         perf_enabled: bool,
     ) -> TextPrepareScenePerf {
@@ -62,9 +74,9 @@ impl TextSystem {
             .clear_for_atlas_reset_generation(self.atlas_runtime.reset_generation());
 
         let collect_start = perf_enabled.then(Instant::now);
-        if let Some(reuse) =
-            self.pin_state
-                .try_reuse_text_blob_bucket(bucket, text_blob_ids, &self.blob_state)
+        if let Some(reuse) = self
+            .pin_state
+            .try_reuse_text_residency_bucket(bucket, residency)
         {
             perf.fast_scene_bucket_reused = true;
             perf.scene_text_blobs = usize_to_u64(reuse.scene_text_blobs);
@@ -78,7 +90,7 @@ impl TextSystem {
 
         let collection = self
             .pin_state
-            .collect_text_blob_pin_snapshot(text_blob_ids, &self.blob_state);
+            .collect_text_residency_pin_snapshot(residency);
         perf.scene_text_blobs = usize_to_u64(collection.scene_text_blobs);
         perf.pinned_glyph_keys = usize_to_u64(collection.pinned_glyph_keys);
         if let Some(start) = collect_start {
