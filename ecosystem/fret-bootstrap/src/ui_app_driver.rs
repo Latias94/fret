@@ -323,6 +323,7 @@ impl<S> UiAppDriver<S> {
             hooks.dock_op = Some(ui_app_dock_op::<S>);
             hooks.record_engine_frame = Some(ui_app_record_engine_frame::<S>);
             hooks.renderer_perf_sample = Some(ui_app_renderer_perf_sample::<S>);
+            hooks.scene_chunk_manifest = Some(ui_app_scene_chunk_manifest::<S>);
         })
     }
 }
@@ -2636,6 +2637,13 @@ fn ui_app_render<S>(
         "ui_app_render: end window={window:?} depth={render_depth}"
     ));
     RENDER_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+}
+
+fn ui_app_scene_chunk_manifest<S>(
+    _driver: &mut UiAppDriver<S>,
+    state: &mut UiAppWindowState<S>,
+) -> fret_core::SceneChunkManifest {
+    state.ui.scene_chunk_manifest()
 }
 
 fn ui_app_hot_reload_window<S>(

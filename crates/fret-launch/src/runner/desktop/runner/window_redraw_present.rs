@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::time::Duration;
-use fret_core::{AppWindowId, Scene};
+use fret_core::{AppWindowId, Scene, SceneChunkManifest};
 use fret_render::{ClearColor, RenderError, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 
@@ -20,6 +20,7 @@ pub(super) struct WindowRedrawPresentInput<'a, 'window, D: WinitAppDriver> {
     pub(super) app_window: AppWindowId,
     pub(super) user: &'a mut D::WindowState,
     pub(super) scene: &'a Scene,
+    pub(super) scene_chunks: &'a SceneChunkManifest,
     pub(super) tick_id: TickId,
     pub(super) frame_id: &'a mut FrameId,
     pub(super) scale_factor: f32,
@@ -63,6 +64,7 @@ pub(super) fn present_window_redraw_frame<D: WinitAppDriver>(
                 surface: input.surface,
                 target_view: present_target.target_view(),
                 scene: input.scene,
+                scene_chunks: input.scene_chunks,
                 clear_color,
                 scale_factor: input.scale_factor,
             },

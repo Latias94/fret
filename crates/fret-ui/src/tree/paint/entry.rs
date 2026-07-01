@@ -206,6 +206,7 @@ impl<H: UiHost> UiTree<H> {
                 for root in roots {
                     self.paint(app, services, root, bounds, scene, scale_factor);
                 }
+                self.publish_scene_chunk_manifest_for_painted_roots();
 
                 if let Some(window) = self.window
                     && !self.scratch_visual_bounds_records.is_empty()
@@ -357,6 +358,25 @@ impl<H: UiHost> UiTree<H> {
         }
         self.scratch_paint_observed_deps_presence.clear();
         self.scratch_paint_observed_deps_presence_active = false;
+    }
+
+    fn publish_scene_chunk_manifest_for_painted_roots(&mut self) {
+        let roots = self
+            .visible_layers_in_paint_order()
+            .filter_map(|layer| self.layers.get(layer).map(|layer| layer.root))
+            .collect::<Vec<_>>();
+        let mut manifest = fret_core::SceneChunkManifest::default();
+        for (node, boundary) in &self.view_boundaries {
+            if !self.is_reachable_from_any_root_via_children(node, &roots) {
+                continue;
+            }
+            boundary
+                .frame_products
+                .scene_fragment
+                .chunk_manifest()
+                .append_to_scene_chunk_manifest(&mut manifest);
+        }
+        self.last_paint_scene_chunk_manifest = manifest;
     }
 
     pub fn paint(

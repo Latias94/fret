@@ -111,6 +111,13 @@ pub trait WinitAppDriver {
     ) {
     }
 
+    fn scene_chunk_manifest(
+        &mut self,
+        _state: &mut Self::WindowState,
+    ) -> fret_core::SceneChunkManifest {
+        fret_core::SceneChunkManifest::default()
+    }
+
     fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}
 
     fn dock_op(&mut self, _app: &mut App, _op: fret_core::DockOp) {}

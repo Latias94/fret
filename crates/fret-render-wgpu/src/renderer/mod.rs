@@ -159,6 +159,7 @@ pub struct RenderSceneParams<'a> {
     pub format: wgpu::TextureFormat,
     pub target_view: &'a wgpu::TextureView,
     pub scene: &'a Scene,
+    pub scene_chunks: Option<&'a fret_core::SceneChunkManifest>,
     pub clear: ClearColor,
     pub scale_factor: f32,
     pub viewport_size: (u32, u32),

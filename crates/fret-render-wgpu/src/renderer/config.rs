@@ -178,6 +178,9 @@ impl Renderer {
             gpu_render_targets_live: registry_est.render_targets_live,
             gpu_render_targets_bytes_estimate: registry_est.render_targets_bytes_estimate,
             gpu_render_targets_max_bytes_estimate: registry_est.render_targets_max_bytes_estimate,
+            scene_chunk_input_chunks: perf.scene_chunk_input_chunks,
+            scene_chunk_input_ops: perf.scene_chunk_input_ops,
+            scene_chunk_input_fingerprint: perf.scene_chunk_input_fingerprint,
             render_plan_estimated_peak_intermediate_bytes: perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: perf.render_plan_segments,

@@ -79,6 +79,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 last_semantics_snapshot: None,
                 surface,
                 scene: Scene::default(),
+                scene_chunks: fret_core::SceneChunkManifest::default(),
                 platform: fret_runner_winit::WinitPlatform {
                     wheel: fret_runner_winit::WheelConfig {
                         line_delta_px: self.config.wheel_line_delta_px,

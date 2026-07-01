@@ -129,6 +129,7 @@ impl<H: UiHost> Default for UiTree<H> {
             interaction_cache: prepaint::InteractionCacheState::default(),
             view_boundaries: SecondaryMap::new(),
             retained_paint_cache_entries: SecondaryMap::new(),
+            last_paint_scene_chunk_manifest: fret_core::SceneChunkManifest::default(),
             dirty_view_frontier: DirtyViewFrontier::default(),
             last_redraw_request_tick: None,
             propagation_depth_generation: 0,

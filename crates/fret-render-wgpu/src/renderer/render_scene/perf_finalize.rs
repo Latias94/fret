@@ -206,6 +206,15 @@ impl Renderer {
             .saturating_add(frame_perf.intermediate_pool_evictions);
         perf.intermediate_pool_free_bytes = pool_perf.free_bytes;
         perf.intermediate_pool_free_textures = pool_perf.free_textures;
+        perf.scene_chunk_input_chunks = perf
+            .scene_chunk_input_chunks
+            .max(frame_perf.scene_chunk_input_chunks);
+        perf.scene_chunk_input_ops = perf
+            .scene_chunk_input_ops
+            .max(frame_perf.scene_chunk_input_ops);
+        if frame_perf.scene_chunk_input_fingerprint != 0 {
+            perf.scene_chunk_input_fingerprint = frame_perf.scene_chunk_input_fingerprint;
+        }
         perf.render_plan_estimated_peak_intermediate_bytes = perf
             .render_plan_estimated_peak_intermediate_bytes
             .max(frame_perf.render_plan_estimated_peak_intermediate_bytes);
@@ -593,6 +602,9 @@ impl Renderer {
             gpu_render_targets_live: registry_est.render_targets_live,
             gpu_render_targets_bytes_estimate: registry_est.render_targets_bytes_estimate,
             gpu_render_targets_max_bytes_estimate: registry_est.render_targets_max_bytes_estimate,
+            scene_chunk_input_chunks: frame_perf.scene_chunk_input_chunks,
+            scene_chunk_input_ops: frame_perf.scene_chunk_input_ops,
+            scene_chunk_input_fingerprint: frame_perf.scene_chunk_input_fingerprint,
             render_plan_estimated_peak_intermediate_bytes: frame_perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: frame_perf.render_plan_segments,

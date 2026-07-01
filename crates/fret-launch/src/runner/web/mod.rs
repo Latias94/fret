@@ -84,6 +84,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     renderer_caps: Option<fret_render::RendererCapabilities>,
     gpu_ready_called: bool,
     scene: Scene,
+    scene_chunks: fret_core::SceneChunkManifest,
 
     pending_events: Vec<Event>,
     pending_async_events: Rc<RefCell<Vec<Event>>>,
@@ -206,6 +207,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             renderer_caps: None,
             gpu_ready_called: false,
             scene: Scene::default(),
+            scene_chunks: fret_core::SceneChunkManifest::default(),
             pending_events: Vec::new(),
             pending_async_events: Rc::new(RefCell::new(Vec::new())),
             tick_id: TickId::default(),

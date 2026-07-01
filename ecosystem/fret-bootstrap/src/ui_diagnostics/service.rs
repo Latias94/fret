@@ -1984,6 +1984,9 @@ mod service_tests {
         perf.geometry_upload.text_vertex_write_count = 2;
         perf.scene_encoding_cache_miss_histogram.scene_fingerprint_changed = 3;
         perf.scene_encoding_cache_miss_histogram.text_quality_key_changed = 1;
+        perf.scene_chunk_input_chunks = 2;
+        perf.scene_chunk_input_ops = 9;
+        perf.scene_chunk_input_fingerprint = 0xCAFE;
         perf.render_plan_scene_chunk_candidates = 4;
         perf.render_plan_scene_chunk_candidate_draws = 11;
         perf.render_plan_scene_chunk_candidates_stable = 3;
@@ -2026,6 +2029,9 @@ mod service_tests {
             1
         );
         assert_eq!(stats.renderer_render_plan_scene_chunk_candidates, 4);
+        assert_eq!(stats.renderer_scene_chunk_input_chunks, 2);
+        assert_eq!(stats.renderer_scene_chunk_input_ops, 9);
+        assert_eq!(stats.renderer_scene_chunk_input_fingerprint, 0xCAFE);
         assert_eq!(stats.renderer_render_plan_scene_chunk_candidate_draws, 11);
         assert_eq!(
             stats.renderer_render_plan_scene_chunk_candidates_stable,

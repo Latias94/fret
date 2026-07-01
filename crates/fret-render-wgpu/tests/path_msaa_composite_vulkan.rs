@@ -114,6 +114,7 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
             format,
             target_view: &view,
             scene: &scene,
+            scene_chunks: None,
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,

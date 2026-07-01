@@ -710,6 +710,12 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_intermediate_full_target_bytes: u64,
     #[serde(default)]
+    pub renderer_scene_chunk_input_chunks: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_input_ops: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_input_fingerprint: u64,
+    #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidates: u64,
     #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidate_draws: u64,
@@ -1537,6 +1543,9 @@ impl UiFrameStatsV1 {
             renderer_text_atlas_resets: 0,
             renderer_intermediate_budget_bytes: 0,
             renderer_intermediate_full_target_bytes: 0,
+            renderer_scene_chunk_input_chunks: 0,
+            renderer_scene_chunk_input_ops: 0,
+            renderer_scene_chunk_input_fingerprint: 0,
             renderer_render_plan_scene_chunk_candidates: 0,
             renderer_render_plan_scene_chunk_candidate_draws: 0,
             renderer_render_plan_scene_chunk_candidates_stable: 0,
@@ -1839,6 +1848,9 @@ impl UiFrameStatsV1 {
         self.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
         self.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
         self.renderer_intermediate_full_target_bytes = sample.perf.intermediate_full_target_bytes;
+        self.renderer_scene_chunk_input_chunks = sample.perf.scene_chunk_input_chunks;
+        self.renderer_scene_chunk_input_ops = sample.perf.scene_chunk_input_ops;
+        self.renderer_scene_chunk_input_fingerprint = sample.perf.scene_chunk_input_fingerprint;
         self.renderer_render_plan_scene_chunk_candidates =
             sample.perf.render_plan_scene_chunk_candidates;
         self.renderer_render_plan_scene_chunk_candidate_draws =

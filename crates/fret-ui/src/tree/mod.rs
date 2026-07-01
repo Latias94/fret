@@ -516,6 +516,7 @@ pub struct UiTree<H: UiHost> {
     interaction_cache: prepaint::InteractionCacheState,
     view_boundaries: slotmap::SecondaryMap<NodeId, ViewBoundaryState>,
     retained_paint_cache_entries: slotmap::SecondaryMap<NodeId, PaintCacheEntryState>,
+    last_paint_scene_chunk_manifest: fret_core::SceneChunkManifest,
 
     dirty_view_frontier: DirtyViewFrontier,
     last_redraw_request_tick: Option<TickId>,

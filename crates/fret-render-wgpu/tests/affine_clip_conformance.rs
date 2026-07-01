@@ -343,6 +343,7 @@ fn gpu_affine_clip_conformance() {
                 format,
                 target_view: &source_render_view,
                 scene: &source_scene,
+                scene_chunks: None,
                 clear: ClearColor(wgpu::Color {
                     r: 0.0,
                     g: 0.0,

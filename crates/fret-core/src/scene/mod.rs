@@ -10,6 +10,7 @@ mod chunk;
 mod composite;
 mod fingerprint;
 mod image_object_fit;
+mod manifest;
 mod mask;
 mod paint;
 mod replay;
@@ -21,6 +22,7 @@ pub use chunk::SceneChunk;
 pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
+pub use manifest::{SceneChunkManifest, SceneChunkManifestEntry};
 pub use mask::Mask;
 pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, PaintBindingV1,
@@ -1449,6 +1451,42 @@ mod tests {
         assert!(matches!(scene.ops()[0], SceneOp::PushTransform { .. }));
         assert!(matches!(scene.ops()[2], SceneOp::PopTransform));
         assert_eq!(scene.text_blob_ids(), &[first]);
+    }
+
+    #[test]
+    fn scene_chunk_manifest_skips_empty_chunks_and_reports_ops_and_fingerprint() {
+        let chunk = SceneChunk::from_ops(std::sync::Arc::<[SceneOp]>::from(vec![text_op(
+            text_blob_id(1),
+        )]));
+        let empty = SceneChunk::default();
+        let mut manifest = SceneChunkManifest::default();
+
+        manifest.push(SceneChunkManifestEntry::new(
+            empty,
+            Rect::default(),
+            Point::default(),
+        ));
+        assert!(manifest.is_empty());
+
+        manifest.push(SceneChunkManifestEntry::new(
+            chunk.clone(),
+            Rect::new(Point::default(), Size::new(Px(10.0), Px(12.0))),
+            Point::new(Px(2.0), Px(3.0)),
+        ));
+
+        assert_eq!(manifest.len(), 1);
+        assert_eq!(manifest.ops_len(), 1);
+        assert_eq!(manifest.fingerprint(), chunk.fingerprint());
+        assert_eq!(manifest.entries()[0].local_bounds().size.width, Px(10.0));
+        assert_eq!(
+            manifest.entries()[0].scene_origin(),
+            Point::new(Px(2.0), Px(3.0))
+        );
+
+        manifest.clear();
+        assert!(manifest.is_empty());
+        assert_eq!(manifest.ops_len(), 0);
+        assert_eq!(manifest.fingerprint(), 0);
     }
 
     #[test]

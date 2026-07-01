@@ -81,6 +81,7 @@ pub struct FnDriverHooks<D, S> {
     pub gpu_frame_prepare: Option<FnDriverGpuFramePrepareHook<D, S>>,
     pub record_engine_frame: Option<FnDriverRecordEngineFrameHook<D, S>>,
     pub renderer_perf_sample: Option<FnDriverRendererPerfSampleHook<D, S>>,
+    pub scene_chunk_manifest: Option<FnDriverSceneChunkManifestHook<D, S>>,
     pub viewport_input: Option<FnDriverViewportInputHook<D>>,
     pub dock_op: Option<FnDriverDockOpHook<D>>,
     pub handle_command: Option<FnDriverHandleCommandHook<D, S>>,
@@ -135,6 +136,8 @@ pub type FnDriverRendererPerfSampleHook<D, S> = for<'d> fn(
     &mut S,
     Option<RendererPerfFrameSample>,
 );
+pub type FnDriverSceneChunkManifestHook<D, S> =
+    for<'d> fn(&'d mut D, &mut S) -> fret_core::SceneChunkManifest;
 pub type FnDriverViewportInputHook<D> = fn(&mut D, &mut App, ViewportInputEvent);
 pub type FnDriverDockOpHook<D> = fn(&mut D, &mut App, fret_core::DockOp);
 pub type FnDriverHandleCommandHook<D, S> =
@@ -214,6 +217,7 @@ impl<D, S> Default for FnDriverHooks<D, S> {
             gpu_frame_prepare: None,
             record_engine_frame: None,
             renderer_perf_sample: None,
+            scene_chunk_manifest: None,
             viewport_input: None,
             dock_op: None,
             handle_command: None,
@@ -419,6 +423,25 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
                 f(&mut self.driver_state, app, window, state, sample);
             }
         }
+    }
+
+    fn scene_chunk_manifest(
+        &mut self,
+        state: &mut Self::WindowState,
+    ) -> fret_core::SceneChunkManifest {
+        if let Some(f) = self.hooks.scene_chunk_manifest {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                return hot.call((&mut self.driver_state, state));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                return f(&mut self.driver_state, state);
+            }
+        }
+        fret_core::SceneChunkManifest::default()
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
@@ -883,5 +906,54 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::*;
+
+    fn create_window_state(
+        _driver: &mut (),
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+    ) -> u32 {
+        0
+    }
+
+    fn handle_event(_driver: &mut (), _context: WinitEventContext<'_, u32>, _event: &Event) {}
+
+    fn render(_driver: &mut (), _context: WinitRenderContext<'_, u32>) {}
+
+    fn scene_chunk_manifest_hook(
+        _driver: &mut (),
+        state: &mut u32,
+    ) -> fret_core::SceneChunkManifest {
+        *state = state.saturating_add(1);
+        let chunk = fret_core::SceneChunk::from_ops(Arc::from([fret_core::SceneOp::PushLayer {
+            layer: *state,
+        }]));
+        let mut manifest = fret_core::SceneChunkManifest::default();
+        manifest.push(fret_core::SceneChunkManifestEntry::new(
+            chunk,
+            fret_core::Rect::default(),
+            fret_core::Point::default(),
+        ));
+        manifest
+    }
+
+    #[test]
+    fn fn_driver_forwards_scene_chunk_manifest_hook() {
+        let mut driver = FnDriver::new((), create_window_state, handle_event, render)
+            .with_hooks(|hooks| hooks.scene_chunk_manifest = Some(scene_chunk_manifest_hook));
+        let mut state = 41;
+
+        let manifest = WinitAppDriver::scene_chunk_manifest(&mut driver, &mut state);
+
+        assert_eq!(state, 42);
+        assert_eq!(manifest.len(), 1);
+        assert_eq!(manifest.ops_len(), 1);
     }
 }

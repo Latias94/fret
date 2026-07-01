@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, Rect, Scene, UiServices};
+use fret_core::{AppWindowId, Rect, Scene, SceneChunkManifest, UiServices};
 
 use crate::UiHost;
 use crate::tree::UiTree;
@@ -70,5 +70,9 @@ impl<'a, H: UiHost> UiFrameCx<'a, H> {
             scene,
             self.scale_factor,
         );
+    }
+
+    pub fn scene_chunk_manifest(&self) -> SceneChunkManifest {
+        self.ui.scene_chunk_manifest()
     }
 }

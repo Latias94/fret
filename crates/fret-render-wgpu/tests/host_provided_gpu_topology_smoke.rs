@@ -102,6 +102,7 @@ fn renderer_accepts_host_provided_gpu_topology() {
             format,
             target_view: &view,
             scene: &scene,
+            scene_chunks: None,
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,

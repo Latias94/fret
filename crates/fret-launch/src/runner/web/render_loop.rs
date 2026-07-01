@@ -524,6 +524,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         });
 
         self.scene.clear();
+        self.scene_chunks.clear();
         let render_text_debug_enabled =
             std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
         let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
@@ -549,6 +550,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 });
             },
         );
+        self.scene_chunks = self.driver.scene_chunk_manifest(state);
 
         let engine = enter_web_frame_phase(
             WebFramePhase::Record {
@@ -646,6 +648,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     format: gfx.surface_state.format(),
                     target_view: &view,
                     scene: &self.scene,
+                    scene_chunks: Some(&self.scene_chunks),
                     clear: self.config.clear_color,
                     scale_factor,
                     viewport_size: gfx.surface_state.size(),

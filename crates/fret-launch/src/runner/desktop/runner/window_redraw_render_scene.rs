@@ -9,6 +9,7 @@ pub(super) struct WindowRedrawRenderSceneInput<'a, 'window> {
     pub(super) surface: &'a SurfaceState<'window>,
     pub(super) target_view: &'a wgpu::TextureView,
     pub(super) scene: &'a Scene,
+    pub(super) scene_chunks: &'a fret_core::SceneChunkManifest,
     pub(super) clear_color: ClearColor,
     pub(super) scale_factor: f32,
 }
@@ -24,6 +25,7 @@ pub(super) fn record_window_redraw_render_scene(
                 format: input.surface.format(),
                 target_view: input.target_view,
                 scene: input.scene,
+                scene_chunks: Some(input.scene_chunks),
                 clear: input.clear_color,
                 scale_factor: input.scale_factor,
                 viewport_size: input.surface.size(),

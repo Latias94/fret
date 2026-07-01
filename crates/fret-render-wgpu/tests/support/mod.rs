@@ -53,6 +53,7 @@ pub fn render_scene_rgba8_with_format(
             format,
             target_view: &view,
             scene,
+            scene_chunks: None,
             clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor,
             viewport_size: size,

@@ -131,6 +131,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 accessibility_scale_factor,
             );
 
+            state.scene_chunks = self.driver.scene_chunk_manifest(&mut state.user);
+
             let (engine_frame, record_elapsed) =
                 super::window_redraw_record::record_window_redraw_frame(
                     super::window_redraw_record::WindowRedrawRecordInput {
@@ -185,6 +187,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         app_window,
                         user: &mut state.user,
                         scene: &state.scene,
+                        scene_chunks: &state.scene_chunks,
                         tick_id: self.tick_id,
                         frame_id: &mut self.frame_id,
                         scale_factor,

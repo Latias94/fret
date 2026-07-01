@@ -333,6 +333,10 @@ impl<H: UiHost> UiTree<H> {
         )
     }
 
+    pub fn scene_chunk_manifest(&self) -> fret_core::SceneChunkManifest {
+        self.last_paint_scene_chunk_manifest.clone()
+    }
+
     pub(crate) fn record_scene_fragment_used_entries(&mut self, node: NodeId, count: usize) {
         let Some(boundary) = self.view_boundaries.get_mut(node) else {
             return;

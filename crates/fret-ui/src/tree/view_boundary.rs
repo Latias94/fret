@@ -79,6 +79,16 @@ impl BoundarySceneChunkManifest {
             .iter()
             .fold(0, |fingerprint, chunk| fingerprint ^ chunk.fingerprint())
     }
+
+    pub fn append_to_scene_chunk_manifest(&self, out: &mut fret_core::SceneChunkManifest) {
+        for chunk in &self.chunks {
+            out.push(fret_core::SceneChunkManifestEntry::new(
+                chunk.chunk().clone(),
+                chunk.local_bounds(),
+                chunk.scene_origin(),
+            ));
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

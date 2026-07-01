@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use fret_core::time::Instant;
-use fret_core::{Point, Scene};
+use fret_core::{Point, Scene, SceneChunkManifest};
 use fret_render::SurfaceState;
 use winit::{dpi::PhysicalPosition, window::Window};
 
@@ -13,6 +13,7 @@ pub(super) struct WindowRuntime<S> {
     pub(super) last_semantics_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     pub(super) surface: Option<SurfaceState<'static>>,
     pub(super) scene: Scene,
+    pub(super) scene_chunks: SceneChunkManifest,
     pub(super) platform: fret_runner_winit::WinitPlatform,
     /// Coalesced wheel delta awaiting delivery at the next frame boundary.
     ///

@@ -681,6 +681,15 @@ pub struct RenderPerfSnapshot {
     pub gpu_render_targets_live: u64,
     pub gpu_render_targets_bytes_estimate: u64,
     pub gpu_render_targets_max_bytes_estimate: u64,
+    /// Retained scene chunks explicitly supplied to the renderer for this frame.
+    ///
+    /// This is input visibility only. It is not a cache hit count and does not imply dirty GPU
+    /// uploads.
+    pub scene_chunk_input_chunks: u64,
+    /// Total retained scene ops covered by `scene_chunk_input_chunks`.
+    pub scene_chunk_input_ops: u64,
+    /// Best-effort fingerprint of the supplied retained scene chunk manifest.
+    pub scene_chunk_input_fingerprint: u64,
     pub render_plan_estimated_peak_intermediate_bytes: u64,
     pub render_plan_segments: u64,
     pub render_plan_segments_changed: u64,
@@ -1013,6 +1022,9 @@ pub(super) struct RenderPerfStats {
     pub(super) intermediate_pool_evictions: u64,
     pub(super) intermediate_pool_free_bytes: u64,
     pub(super) intermediate_pool_free_textures: u64,
+    pub(super) scene_chunk_input_chunks: u64,
+    pub(super) scene_chunk_input_ops: u64,
+    pub(super) scene_chunk_input_fingerprint: u64,
     pub(super) render_plan_estimated_peak_intermediate_bytes: u64,
     pub(super) render_plan_segments: u64,
     pub(super) render_plan_segments_changed: u64,

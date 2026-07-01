@@ -16,6 +16,7 @@ impl Renderer {
             format,
             target_view,
             scene,
+            scene_chunks,
             clear,
             scale_factor,
             viewport_size,
@@ -27,6 +28,7 @@ impl Renderer {
                 "fret.renderer.render_scene",
                 frame_index,
                 ops = scene.ops_len(),
+                scene_chunk_inputs = scene_chunks.map_or(0, |manifest| manifest.len()),
                 viewport_w = viewport_size.0,
                 viewport_h = viewport_size.1,
                 scale_factor,
@@ -49,6 +51,7 @@ impl Renderer {
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             self.begin_frame_perf_collection(&mut frame_perf);
+            record_scene_chunk_input_perf(scene_chunks, &mut frame_perf);
         }
 
         #[cfg(debug_assertions)]
@@ -275,6 +278,18 @@ impl Renderer {
             .store_after_frame(key, cache_hit, encoding);
         cmd
     }
+}
+
+fn record_scene_chunk_input_perf(
+    scene_chunks: Option<&fret_core::SceneChunkManifest>,
+    frame_perf: &mut RenderPerfStats,
+) {
+    let Some(scene_chunks) = scene_chunks else {
+        return;
+    };
+    frame_perf.scene_chunk_input_chunks = scene_chunks.len() as u64;
+    frame_perf.scene_chunk_input_ops = scene_chunks.ops_len() as u64;
+    frame_perf.scene_chunk_input_fingerprint = scene_chunks.fingerprint();
 }
 
 // FrameTargets moved to `renderer/frame_targets.rs`.

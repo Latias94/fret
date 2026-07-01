@@ -440,6 +440,7 @@ fn run_headless(
                 format,
                 target_view: &view,
                 scene: &scene,
+                scene_chunks: None,
                 clear: ClearColor::default(),
                 scale_factor,
                 viewport_size,

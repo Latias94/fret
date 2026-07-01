@@ -278,6 +278,7 @@ fn run_headless(frames: u64, group_n: u32, wait_gpu: bool, wait_every: u64) -> a
                 format,
                 target_view: &view,
                 scene: &scene,
+                scene_chunks: None,
                 clear: ClearColor::default(),
                 scale_factor,
                 viewport_size,

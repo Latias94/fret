@@ -555,6 +555,7 @@ fn image_fit_cover_encodes_cropped_uvs() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -647,6 +648,7 @@ fn image_fit_contain_encodes_centered_draw_rect() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -740,6 +742,7 @@ fn vertex_color_quad_encodes_two_triangles_with_corner_colors() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -835,6 +838,7 @@ fn vertex_color_triangle_encodes_three_custom_vertices() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -944,6 +948,7 @@ fn image_quad_encodes_custom_points_uvs_and_tint() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1071,6 +1076,7 @@ fn image_triangle_encodes_custom_uvs_and_vertex_colors() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1147,6 +1153,7 @@ fn shadow_rrect_encodes_shadow_quad_instance() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,
@@ -1199,6 +1206,7 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         format,
         target_view: &target_view,
         scene: &scene,
+        scene_chunks: None,
         clear: super::ClearColor::default(),
         scale_factor: 1.0,
         viewport_size,
@@ -1271,6 +1279,81 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
 }
 
 #[test]
+fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (32, 32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("scene chunk input test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        background: Color::TRANSPARENT.into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk.clone(),
+        Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        Point::new(Px(2.0), Px(3.0)),
+    ));
+
+    let params = |scene_chunks| super::RenderSceneParams {
+        format,
+        target_view: &target_view,
+        scene: &scene,
+        scene_chunks,
+        clear: super::ClearColor::default(),
+        scale_factor: 1.0,
+        viewport_size,
+    };
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(None));
+    let key_without_manifest = renderer
+        .scene_encoding_state
+        .cache_key()
+        .expect("scene encoding key");
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(Some(&manifest)));
+    let key_with_manifest = renderer
+        .scene_encoding_state
+        .cache_key()
+        .expect("scene encoding key");
+
+    assert_eq!(key_with_manifest, key_without_manifest);
+    assert_eq!(renderer.diagnostics_state.perf.scene_encoding_cache_hits, 1);
+
+    let last = renderer
+        .diagnostics_state
+        .last_frame_perf
+        .expect("last frame perf snapshot");
+    assert_eq!(last.scene_chunk_input_chunks, 1);
+    assert_eq!(last.scene_chunk_input_ops, chunk.ops_len() as u64);
+    assert_eq!(last.scene_chunk_input_fingerprint, chunk.fingerprint());
+}
+
+#[test]
 fn perf_snapshot_counts_path_material_paint_degradation() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
@@ -1326,6 +1409,7 @@ fn perf_snapshot_counts_path_material_paint_degradation() {
             format,
             target_view: &target_view,
             scene: &scene,
+            scene_chunks: None,
             clear: super::ClearColor::default(),
             scale_factor: 1.0,
             viewport_size,

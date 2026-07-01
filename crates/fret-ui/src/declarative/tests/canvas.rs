@@ -577,6 +577,92 @@ fn canvas_prepaint_can_prepare_text_scene_fragment_before_paint() {
     );
     assert_eq!(manifest.chunks()[0].local_bounds(), bounds);
     assert_eq!(manifest.chunks()[0].scene_origin(), bounds.origin);
+
+    let frame_manifest = ui.scene_chunk_manifest();
+    assert_eq!(frame_manifest.len(), 1);
+    assert_eq!(
+        frame_manifest.ops_len(),
+        manifest.chunks()[0].chunk().ops_len()
+    );
+    assert_eq!(
+        frame_manifest.entries()[0].fingerprint(),
+        manifest.chunks()[0].fingerprint()
+    );
+    assert_eq!(frame_manifest.entries()[0].local_bounds(), bounds);
+    assert_eq!(frame_manifest.entries()[0].scene_origin(), bounds.origin);
+}
+
+#[test]
+fn canvas_scene_chunk_manifest_is_frame_local_and_clears_when_no_chunk_is_painted() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-scene-chunk-manifest-frame-local",
+        |cx| {
+            vec![cx.canvas_with_prepaint(
+                crate::element::CanvasProps::default(),
+                |p| {
+                    let fragment = p.prepare_scene_fragment(p.bounds(), p.bounds().origin, |p| {
+                        let bounds = p.bounds();
+                        p.scene().push(SceneOp::Quad {
+                            order: fret_core::DrawOrder(0),
+                            rect: bounds,
+                            background: Color::TRANSPARENT.into(),
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_paint: Color::TRANSPARENT.into(),
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                        TestFragmentPlan { entries: 1 }
+                    });
+                    p.set_scene_fragment_debug(fragment);
+                },
+                |p| {
+                    let Some(fragment) = p
+                        .scene_fragment::<crate::canvas::CanvasSceneFragment<TestFragmentPlan>>()
+                        .cloned()
+                    else {
+                        return;
+                    };
+                    p.touch_hosted_resources(&fragment.hosted_resources);
+                    fragment.replay_translated_into(p.scene(), Point::default());
+                },
+            )]
+        },
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(ui.scene_chunk_manifest().len(), 1);
+
+    render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-scene-chunk-manifest-frame-local",
+        |cx| vec![cx.canvas(crate::element::CanvasProps::default(), |_| {})],
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    scene.clear();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(ui.scene_chunk_manifest().is_empty());
 }
 
 #[test]
