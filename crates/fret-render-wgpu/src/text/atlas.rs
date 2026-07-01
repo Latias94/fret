@@ -25,12 +25,6 @@ pub(super) struct GlyphKey {
     kind: GlyphQuadKind,
 }
 
-const GLYPH_KEY_LOOKUP_KIND_ORDER: [GlyphQuadKind; 3] = [
-    GlyphQuadKind::Color,
-    GlyphQuadKind::Subpixel,
-    GlyphQuadKind::Mask,
-];
-
 impl GlyphKey {
     fn new(
         font: FontFaceKey,
@@ -73,24 +67,25 @@ impl GlyphKey {
         x_bin: u8,
         y_bin: u8,
     ) -> [Self; 3] {
-        GLYPH_KEY_LOOKUP_KIND_ORDER
-            .map(|kind| Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind))
-    }
-
-    pub(super) fn lookup_keys_with_hint(
-        font: FontFaceKey,
-        glyph_id: u32,
-        size_bits: u32,
-        x_bin: u8,
-        y_bin: u8,
-        hint: Option<GlyphQuadKind>,
-    ) -> [Self; 3] {
-        glyph_key_lookup_kind_order_with_hint(hint)
-            .map(|kind| Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind))
-    }
-
-    pub(super) fn quad_kind(self) -> GlyphQuadKind {
-        self.kind
+        [
+            Self::new(
+                font,
+                glyph_id,
+                size_bits,
+                x_bin,
+                y_bin,
+                GlyphQuadKind::Color,
+            ),
+            Self::new(
+                font,
+                glyph_id,
+                size_bits,
+                x_bin,
+                y_bin,
+                GlyphQuadKind::Subpixel,
+            ),
+            Self::new(font, glyph_id, size_bits, x_bin, y_bin, GlyphQuadKind::Mask),
+        ]
     }
 
     #[cfg(any(test, not(target_arch = "wasm32")))]
@@ -216,30 +211,6 @@ fn glyph_image_content_metadata(
     }
 }
 
-fn glyph_key_lookup_kind_order_with_hint(hint: Option<GlyphQuadKind>) -> [GlyphQuadKind; 3] {
-    let Some(hint) = hint else {
-        return GLYPH_KEY_LOOKUP_KIND_ORDER;
-    };
-
-    match hint {
-        GlyphQuadKind::Color => [
-            GlyphQuadKind::Color,
-            GlyphQuadKind::Subpixel,
-            GlyphQuadKind::Mask,
-        ],
-        GlyphQuadKind::Subpixel => [
-            GlyphQuadKind::Subpixel,
-            GlyphQuadKind::Color,
-            GlyphQuadKind::Mask,
-        ],
-        GlyphQuadKind::Mask => [
-            GlyphQuadKind::Mask,
-            GlyphQuadKind::Color,
-            GlyphQuadKind::Subpixel,
-        ],
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,31 +323,6 @@ mod tests {
         assert_eq!(mask.len(), 1);
         assert_eq!(color.len(), 1);
         assert_eq!(subpixel.len(), 1);
-    }
-
-    #[test]
-    fn glyph_lookup_kind_hint_only_reorders_full_fallback_set() {
-        let fallback = glyph_key_lookup_kind_order_with_hint(None);
-        assert_eq!(fallback, GLYPH_KEY_LOOKUP_KIND_ORDER);
-
-        for hint in [
-            GlyphQuadKind::Mask,
-            GlyphQuadKind::Color,
-            GlyphQuadKind::Subpixel,
-        ] {
-            let order = glyph_key_lookup_kind_order_with_hint(Some(hint));
-            assert_eq!(order[0], hint);
-            for kind in [
-                GlyphQuadKind::Mask,
-                GlyphQuadKind::Color,
-                GlyphQuadKind::Subpixel,
-            ] {
-                assert!(
-                    order.contains(&kind),
-                    "lookup hint must not remove the {kind:?} fallback"
-                );
-            }
-        }
     }
 
     #[test]
@@ -654,8 +600,6 @@ pub(super) struct GlyphAtlasEntry {
     pub(super) y: u32,
     pub(super) w: u32,
     pub(super) h: u32,
-    pub(super) placement_left: i32,
-    pub(super) placement_top: i32,
     live_refs: u32,
     last_used_epoch: u64,
 }
@@ -1143,22 +1087,6 @@ impl GlyphAtlas {
         self.revision
     }
 
-    pub(super) fn touch_bounds_for_key(
-        &mut self,
-        key: GlyphKey,
-        x: i32,
-        y: i32,
-        epoch: u64,
-    ) -> Option<(f32, f32, f32, f32)> {
-        let entry = self.get(key, epoch)?;
-        Some((
-            x as f32 + entry.placement_left as f32,
-            y as f32 - entry.placement_top as f32,
-            entry.w as f32,
-            entry.h as f32,
-        ))
-    }
-
     pub(super) fn touch_if_present(&mut self, key: GlyphKey, epoch: u64) -> bool {
         self.get(key, epoch).is_some()
     }
@@ -1337,8 +1265,8 @@ impl GlyphAtlas {
         key: GlyphKey,
         w: u32,
         h: u32,
-        placement_left: i32,
-        placement_top: i32,
+        _placement_left: i32,
+        _placement_top: i32,
         bytes_per_pixel: u32,
         data: Vec<u8>,
         epoch: u64,
@@ -1351,18 +1279,7 @@ impl GlyphAtlas {
         let padded = self.padded_size_for_insert(w, h)?;
         self.ensure_page_available()?;
         let slot = self.allocate_slot_with_recovery(padded.size)?;
-        Ok(self.insert_allocated_glyph(
-            key,
-            slot,
-            padded,
-            w,
-            h,
-            placement_left,
-            placement_top,
-            bytes_per_pixel,
-            data,
-            epoch,
-        ))
+        Ok(self.insert_allocated_glyph(key, slot, padded, w, h, bytes_per_pixel, data, epoch))
     }
 
     fn page_index(&self, page: u16) -> usize {
@@ -1553,8 +1470,6 @@ impl GlyphAtlas {
         padded: PaddedGlyphSize,
         w: u32,
         h: u32,
-        placement_left: i32,
-        placement_top: i32,
         bytes_per_pixel: u32,
         data: Vec<u8>,
         epoch: u64,
@@ -1595,8 +1510,6 @@ impl GlyphAtlas {
             y: slot.y,
             w,
             h,
-            placement_left,
-            placement_top,
             live_refs: 0,
             last_used_epoch: epoch,
         };

@@ -1,4 +1,4 @@
-use super::super::atlas::{GlyphKey, GlyphQuadKind};
+use super::super::atlas::GlyphKey;
 use fret_render_text::FontFaceKey;
 
 pub(super) struct PreparedGlyphRaster {
@@ -7,17 +7,6 @@ pub(super) struct PreparedGlyphRaster {
     height: u32,
     left: i32,
     top: i32,
-    bytes_per_pixel: u32,
-    data: Vec<u8>,
-}
-
-struct PreparedGlyphRasterPayload {
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
-    bytes_per_pixel: u32,
-    data: Vec<u8>,
 }
 
 struct PreparedGlyphRasterPlacement {
@@ -29,7 +18,6 @@ struct PreparedGlyphRasterPlacement {
 
 struct PreparedGlyphRasterMetadata {
     glyph_key: GlyphKey,
-    bytes_per_pixel: u32,
 }
 
 impl PreparedGlyphRaster {
@@ -40,18 +28,6 @@ impl PreparedGlyphRaster {
             y as f32 - self.top as f32,
             self.width as f32,
             self.height as f32,
-        )
-    }
-
-    pub(super) fn into_atlas_insert(self) -> (GlyphKey, u32, u32, i32, i32, u32, Vec<u8>) {
-        (
-            self.glyph_key,
-            self.width,
-            self.height,
-            self.left,
-            self.top,
-            self.bytes_per_pixel,
-            self.data,
         )
     }
 }
@@ -68,17 +44,6 @@ pub(super) fn prepared_glyph_raster_from_image(
     Some(prepared_glyph_raster_from_image_with_placement(
         face_key, glyph_id, size_bits, x_bin, y_bin, image, placement,
     ))
-}
-
-pub(super) fn prepared_glyph_lookup_keys(
-    face_key: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
-    hint: Option<GlyphQuadKind>,
-) -> [GlyphKey; 3] {
-    GlyphKey::lookup_keys_with_hint(face_key, glyph_id, size_bits, x_bin, y_bin, hint)
 }
 
 fn prepared_glyph_raster_from_image_with_placement(
@@ -118,12 +83,9 @@ fn prepared_glyph_raster_metadata(
     y_bin: u8,
     content: parley::swash::scale::image::Content,
 ) -> PreparedGlyphRasterMetadata {
-    let (glyph_key, bytes_per_pixel) =
+    let (glyph_key, _bytes_per_pixel) =
         GlyphKey::from_image_content(face_key, glyph_id, size_bits, x_bin, y_bin, content);
-    PreparedGlyphRasterMetadata {
-        glyph_key,
-        bytes_per_pixel,
-    }
+    PreparedGlyphRasterMetadata { glyph_key }
 }
 
 fn prepared_glyph_raster_from_image_parts(
@@ -137,11 +99,10 @@ fn prepared_glyph_raster_from_image_parts(
 ) -> PreparedGlyphRaster {
     let metadata =
         prepared_glyph_raster_metadata(face_key, glyph_id, size_bits, x_bin, y_bin, image.content);
-    prepared_glyph_raster_from_image_parts_with_metadata(image, placement, metadata)
+    prepared_glyph_raster_from_image_parts_with_metadata(placement, metadata)
 }
 
 fn prepared_glyph_raster_from_image_parts_with_metadata(
-    image: parley::swash::scale::image::Image,
     placement: PreparedGlyphRasterPlacement,
     metadata: PreparedGlyphRasterMetadata,
 ) -> PreparedGlyphRaster {
@@ -151,83 +112,12 @@ fn prepared_glyph_raster_from_image_parts_with_metadata(
         left,
         top,
     } = placement;
-    let PreparedGlyphRasterMetadata {
-        glyph_key,
-        bytes_per_pixel,
-    } = metadata;
-    prepared_glyph_raster_from_image_parts_with_payload(
-        glyph_key,
-        width,
-        height,
-        left,
-        top,
-        bytes_per_pixel,
-        image.data,
-    )
-}
-
-fn prepared_glyph_raster_from_image_parts_with_payload(
-    glyph_key: GlyphKey,
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
-    bytes_per_pixel: u32,
-    data: Vec<u8>,
-) -> PreparedGlyphRaster {
-    prepared_glyph_raster(glyph_key, width, height, left, top, bytes_per_pixel, data)
-}
-
-fn prepared_glyph_raster(
-    glyph_key: GlyphKey,
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
-    bytes_per_pixel: u32,
-    data: Vec<u8>,
-) -> PreparedGlyphRaster {
-    let payload = prepared_glyph_raster_payload(width, height, left, top, bytes_per_pixel, data);
-    prepared_glyph_raster_with_key(glyph_key, payload)
-}
-
-fn prepared_glyph_raster_with_key(
-    glyph_key: GlyphKey,
-    payload: PreparedGlyphRasterPayload,
-) -> PreparedGlyphRaster {
-    let PreparedGlyphRasterPayload {
-        width,
-        height,
-        left,
-        top,
-        bytes_per_pixel,
-        data,
-    } = payload;
+    let PreparedGlyphRasterMetadata { glyph_key } = metadata;
     PreparedGlyphRaster {
         glyph_key,
         width,
         height,
         left,
         top,
-        bytes_per_pixel,
-        data,
-    }
-}
-
-fn prepared_glyph_raster_payload(
-    width: u32,
-    height: u32,
-    left: i32,
-    top: i32,
-    bytes_per_pixel: u32,
-    data: Vec<u8>,
-) -> PreparedGlyphRasterPayload {
-    PreparedGlyphRasterPayload {
-        width,
-        height,
-        left,
-        top,
-        bytes_per_pixel,
-        data,
     }
 }

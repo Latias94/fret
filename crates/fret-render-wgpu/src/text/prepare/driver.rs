@@ -87,7 +87,6 @@ impl TextSystem {
     ) -> Arc<super::super::TextShape> {
         let PrepareShapeBuildContext {
             wrapped,
-            epoch,
             mut glyphs,
             mut face_usage,
             mut lines,
@@ -109,7 +108,6 @@ impl TextSystem {
                 prepared_line,
                 resolved_spans,
                 scale,
-                epoch,
                 &mut glyphs,
                 &mut face_usage,
                 &mut lines,

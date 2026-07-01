@@ -1536,16 +1536,37 @@ fn unreferenced_text_atlas_churn_does_not_bust_scene_or_chunk_encoding_cache() {
     assert_eq!(warmed_frame.scene_chunk_encoding_payload_cache_hits, 1);
 
     let atlas_revision_before = renderer.text_system.atlas_revision();
-    let (_text_b, _) = fret_core::TextService::prepare_str(
+    let (text_b, _) = fret_core::TextService::prepare_str(
         &mut renderer,
         "zzzz",
         &style,
         TextConstraints::default(),
     );
+    assert_eq!(
+        renderer.text_system.atlas_revision(),
+        atlas_revision_before,
+        "unreferenced prepare should not create atlas churn"
+    );
+    let mut scene_b = Scene::default();
+    scene_b.push(SceneOp::Text {
+        order: DrawOrder(0),
+        origin: Point::new(Px(0.0), Px(20.0)),
+        text: text_b,
+        paint: fret_core::Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        })
+        .into(),
+        outline: None,
+        shadow: None,
+    });
+    renderer.text_system.prepare_for_scene(&scene_b, 99);
     assert_ne!(
         renderer.text_system.atlas_revision(),
         atlas_revision_before,
-        "test setup should create unreferenced atlas churn"
+        "test setup should create unreferenced atlas churn through frame residency"
     );
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());

@@ -1,5 +1,4 @@
 use super::super::{GlyphInstance, TextLine, TextSystem};
-use super::glyph_raster::PreparedGlyphRaster;
 use fret_render_text::FontFaceKey;
 use fret_render_text::{ParleyGlyph, PreparedLine, ResolvedSpan, paint_span_for_text_range};
 use std::collections::HashMap;
@@ -10,7 +9,6 @@ impl TextSystem {
         prepared_line: PreparedLine,
         resolved_spans: Option<&[ResolvedSpan]>,
         scale: f32,
-        epoch: u64,
         glyphs: &mut Vec<GlyphInstance>,
         face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
         lines: &mut Vec<TextLine>,
@@ -21,7 +19,6 @@ impl TextSystem {
             prepared_glyphs,
             resolved_spans,
             scale,
-            epoch,
             glyphs,
             face_usage,
         );
@@ -32,18 +29,13 @@ impl TextSystem {
         prepared_glyphs: Vec<ParleyGlyph>,
         resolved_spans: Option<&[ResolvedSpan]>,
         scale: f32,
-        epoch: u64,
         glyphs: &mut Vec<GlyphInstance>,
         face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
     ) {
         for glyph in prepared_glyphs {
-            let Some(instance) = self.materialize_prepared_line_glyph(
-                &glyph,
-                resolved_spans,
-                scale,
-                epoch,
-                face_usage,
-            ) else {
+            let Some(instance) =
+                self.materialize_prepared_line_glyph(&glyph, resolved_spans, scale, face_usage)
+            else {
                 continue;
             };
             glyphs.push(instance);
@@ -55,7 +47,6 @@ impl TextSystem {
         glyph: &ParleyGlyph,
         resolved_spans: Option<&[ResolvedSpan]>,
         scale: f32,
-        epoch: u64,
         face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
     ) -> Option<GlyphInstance> {
         let context = self.prepare_prepared_glyph_context(glyph, face_usage)?;
@@ -70,38 +61,10 @@ impl TextSystem {
             y_bin,
             x,
             y,
-            epoch,
         )?;
         Some(prepared_glyph_instance(
             glyph_key, x0_px, y0_px, w_px, h_px, paint_span, scale,
         ))
-    }
-
-    fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        let (glyph_key, width, height, left, top, bytes_per_pixel, data) =
-            raster.into_atlas_insert();
-        self.atlas_runtime.cache_glyph(
-            glyph_key,
-            width,
-            height,
-            left,
-            top,
-            bytes_per_pixel,
-            data,
-            epoch,
-        );
-    }
-
-    pub(super) fn commit_prepared_glyph_raster(
-        &mut self,
-        raster: PreparedGlyphRaster,
-        x: i32,
-        y: i32,
-        epoch: u64,
-    ) -> (super::super::atlas::GlyphKey, f32, f32, f32, f32) {
-        let bounds = raster.bounds(x, y);
-        self.insert_prepared_glyph_raster(raster, epoch);
-        bounds
     }
 }
 

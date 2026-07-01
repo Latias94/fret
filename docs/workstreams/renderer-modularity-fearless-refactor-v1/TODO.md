@@ -325,9 +325,8 @@ ID format:
     - text blob/cache state now lives in
       `crates/fret-render-wgpu/src/text/blob_state.rs`
     - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
-    - text atlas epoch state now lives in
-      `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
-    - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
+    - text atlas epoch state was removed in the U8 prepare/residency split
+    - `TextSystem::prepare` no longer touches glyph-atlas residency
     - text atlas runtime state now lives in
       `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
     - `text/mod.rs` no longer owns atlas textures/bind-group-layout fields directly

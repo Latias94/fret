@@ -17,7 +17,6 @@ pub use fret_render_text::{
 pub use fret_render_text::{TextDecoration, TextDecorationKind};
 
 mod atlas;
-mod atlas_epoch;
 mod atlas_flow;
 mod atlas_runtime_state;
 mod blob_state;
@@ -30,7 +29,6 @@ mod face_cache;
 mod font_runtime_state;
 mod fonts;
 mod frame_perf;
-mod glyph_kind_cache;
 mod layout_cache_state;
 mod measure;
 mod pin_state;
@@ -41,7 +39,6 @@ mod types;
 
 #[cfg(test)]
 use self::atlas::GlyphKey;
-use self::atlas_epoch::TextAtlasEpochState;
 use self::atlas_runtime_state::TextAtlasRuntimeState;
 use self::blob_state::TextBlobState;
 pub(crate) use self::blobs::TextBlobRenderData;
@@ -49,7 +46,6 @@ pub(crate) use self::diagnostics::TextSceneResourceSnapshot;
 use self::face_cache::TextFaceCacheState;
 use self::font_runtime_state::TextFontRuntimeState;
 use self::frame_perf::TextFramePerfState;
-use self::glyph_kind_cache::TextGlyphKindLookupCache;
 use self::layout_cache_state::TextLayoutCacheState;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
@@ -77,11 +73,8 @@ pub struct TextSystem {
 
     pin_state: TextPinState,
     face_cache: TextFaceCacheState,
-    glyph_kind_cache: TextGlyphKindLookupCache,
 
     frame_perf: TextFramePerfState,
-
-    atlas_epoch: TextAtlasEpochState,
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -14,11 +14,9 @@ impl TextSystem {
     ) -> PrepareShapeBuildContext {
         let input = prepare_shape_input(text, style, spans);
         let wrapped = self.wrap_for_prepare(input, constraints);
-        let epoch = next_prepare_shape_epoch(self);
 
         PrepareShapeBuildContext {
             wrapped,
-            epoch,
             glyphs: Vec::new(),
             face_usage: HashMap::new(),
             lines: Vec::new(),
@@ -59,10 +57,6 @@ fn prepare_shape_input<'a>(
         },
         None => TextInputRef::Plain { text, style },
     }
-}
-
-fn next_prepare_shape_epoch(text_system: &mut TextSystem) -> u64 {
-    text_system.atlas_epoch.next()
 }
 
 fn prepared_shape_face_usages(

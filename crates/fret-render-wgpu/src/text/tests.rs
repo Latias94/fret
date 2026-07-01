@@ -399,7 +399,37 @@ fn prepare_for_scene_retries_retained_keys_missing_from_reset_atlas() {
 }
 
 #[test]
-fn scene_text_resource_snapshot_ignores_unreferenced_atlas_revision_churn() {
+fn prepare_does_not_insert_unreferenced_glyphs_into_atlas() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+
+    let initial_revision = text.atlas_revision();
+    let (blob, _) = text.prepare("aaaa", &style, TextConstraints::default());
+    let key = first_glyph_key_for_blob(&text, blob);
+
+    assert_eq!(
+        text.atlas_revision(),
+        initial_revision,
+        "TextSystem::prepare must build CPU layout without changing atlas residency"
+    );
+    assert!(
+        !text.atlas_runtime.contains_key(key),
+        "prepared glyphs should enter the atlas only during frame residency"
+    );
+    assert!(
+        text.atlas_runtime
+            .pending_upload_bytes_for_key(key)
+            .is_none(),
+        "prepare must not enqueue texture uploads"
+    );
+}
+
+#[test]
+fn scene_text_resource_snapshot_ignores_unreferenced_prepare() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
     let style = TextStyle {
@@ -418,10 +448,10 @@ fn scene_text_resource_snapshot_ignores_unreferenced_atlas_revision_churn() {
     assert_eq!(initial.missing_glyph_resources, 0);
 
     let (_blob_b, _) = text.prepare("zzzz", &style, TextConstraints::default());
-    let churn_revision = text.atlas_revision();
-    assert_ne!(
-        churn_revision, initial_revision,
-        "test setup should change the global atlas revision with glyphs outside scene_a"
+    assert_eq!(
+        text.atlas_revision(),
+        initial_revision,
+        "unreferenced prepare should not change the glyph atlas"
     );
     assert_eq!(
         text.scene_text_resource_snapshot(&scene_a),
@@ -1294,7 +1324,7 @@ fn max_content_width_round_trip_does_not_force_wrapping_under_fractional_scale_f
 }
 
 #[test]
-fn prepared_mask_glyph_hits_reuse_cached_kind_before_color_and_subpixel_lookup() {
+fn prepare_does_not_probe_resident_atlas_glyphs() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut text = super::TextSystem::new(&ctx.device);
 
@@ -1326,22 +1356,38 @@ fn prepared_mask_glyph_hits_reuse_cached_kind_before_color_and_subpixel_lookup()
         seed_keys.iter().all(|key| key.is_mask()),
         "test setup expects regular text glyphs to use the mask atlas"
     );
+    let scene = scene_with_text(seed_blob);
+    text.prepare_for_scene(&scene, 0);
+    assert!(
+        seed_keys
+            .iter()
+            .all(|key| text.atlas_runtime.contains_key(*key)),
+        "frame residency should populate the mask atlas"
+    );
 
     text.begin_frame_diagnostics();
     let (_hit_blob, _) = text.prepare("abc", &style_with_feature, constraints);
     let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
 
-    assert!(
-        snap.mask_atlas.frame_hits >= 3,
-        "expected repeated letters to hit the populated mask atlas"
+    assert_eq!(
+        snap.mask_atlas.frame_hits, 0,
+        "prepare should not touch resident mask atlas glyphs"
+    );
+    assert_eq!(
+        snap.mask_atlas.frame_misses, 0,
+        "prepare should not probe resident mask atlas glyphs"
+    );
+    assert_eq!(
+        snap.mask_atlas.frame_inserts, 0,
+        "prepare should not insert resident mask atlas glyphs"
     );
     assert_eq!(
         snap.color_atlas.frame_misses, 0,
-        "mask glyph-kind hints should avoid probing the empty color atlas first"
+        "prepare should not probe the color atlas"
     );
     assert_eq!(
         snap.subpixel_atlas.frame_misses, 0,
-        "mask glyph-kind hints should avoid probing the empty subpixel atlas first"
+        "prepare should not probe the subpixel atlas"
     );
 }
 

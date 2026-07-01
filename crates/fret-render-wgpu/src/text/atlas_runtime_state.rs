@@ -167,19 +167,6 @@ impl TextAtlasRuntimeState {
         self.atlas_for_key(key).contains_key(key)
     }
 
-    pub(super) fn prepared_bounds_for_key(
-        &mut self,
-        key: GlyphKey,
-        x: i32,
-        y: i32,
-        epoch: u64,
-    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
-        let (x0, y0, w, h) = self
-            .atlas_mut_for_key(key)
-            .touch_bounds_for_key(key, x, y, epoch)?;
-        Some((key, x0, y0, w, h))
-    }
-
     pub(super) fn touch_if_present(&mut self, key: GlyphKey, epoch: u64) -> bool {
         self.atlas_mut_for_key(key).touch_if_present(key, epoch)
     }

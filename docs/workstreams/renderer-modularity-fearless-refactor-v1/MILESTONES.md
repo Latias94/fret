@@ -177,9 +177,8 @@ Current snapshot (2026-03-13):
 - The latest `text/mod.rs` state-shell tightening slice has also moved:
   - text blob/cache state under `crates/fret-render-wgpu/src/text/blob_state.rs`
   - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
-- The latest `text/mod.rs` state-shell tightening slice has also moved:
-  - text atlas epoch state under `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
-  - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
+- The latest `text/mod.rs` state-shell tightening slice also removed the former text atlas epoch
+  state; `TextSystem::prepare` no longer touches glyph-atlas residency.
 - The latest `text/mod.rs` state-shell tightening slice has also moved:
   - text atlas runtime state under
     `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
@@ -1296,9 +1295,8 @@ Current snapshot (2026-03-13):
 - The latest `text/mod.rs` state-shell tightening slice has also moved:
   - text blob/cache state under `crates/fret-render-wgpu/src/text/blob_state.rs`
   - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
-- The latest `text/mod.rs` state-shell tightening slice has also moved:
-  - text atlas epoch state under `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
-  - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
+- The latest `text/mod.rs` state-shell tightening slice also removed the former text atlas epoch
+  state; `TextSystem::prepare` no longer touches glyph-atlas residency.
 - The latest `text/mod.rs` state-shell tightening slice has also moved:
   - text atlas runtime state under
     `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`

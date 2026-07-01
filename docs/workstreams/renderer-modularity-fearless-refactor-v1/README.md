@@ -142,8 +142,8 @@ As of 2026-03-13:
   `text/mod.rs` no longer owns scene pin-ring bucket fields directly.
 - Text blob/cache state now lives under `crates/fret-render-wgpu/src/text/blob_state.rs`, and
   `text/mod.rs` no longer owns blob-cache/LRU state fields directly.
-- Text atlas epoch state now lives under `crates/fret-render-wgpu/src/text/atlas_epoch.rs`, and
-  `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly.
+- Text atlas epoch state was removed in the U8 prepare/residency split; `TextSystem::prepare` no
+  longer touches glyph-atlas residency.
 - Text atlas runtime state now lives under
   `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`, and `text/mod.rs` no longer owns
   atlas textures/bind-group-layout fields directly.
@@ -727,10 +727,8 @@ As of 2026-03-13:
   - text blob/cache state under
     `crates/fret-render-wgpu/src/text/blob_state.rs`
   - `text/mod.rs` no longer owns blob-cache/LRU state fields directly
-- The latest internal text state-shell tightening slice has also moved:
-  - text atlas epoch state under
-    `crates/fret-render-wgpu/src/text/atlas_epoch.rs`
-  - `text/mod.rs` no longer owns the raw glyph-atlas epoch field directly
+- The latest internal text state-shell tightening slice also removed the former text atlas epoch
+  state; `TextSystem::prepare` no longer touches glyph-atlas residency.
 - The latest internal text state-shell tightening slice has also moved:
   - text atlas runtime state under
     `crates/fret-render-wgpu/src/text/atlas_runtime_state.rs`
