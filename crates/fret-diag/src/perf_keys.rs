@@ -1832,6 +1832,34 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         PerfKeyAggregate::Max,
     ),
     count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_dry_run_candidates",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_append_only_matches",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_side_tables",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_material_state",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
         "renderer_scene_chunk_encoding_payload_entries_without_plan_candidate",
         PerfKeyAggregate::Max,
     ),
@@ -2572,6 +2600,9 @@ mod tests {
             "renderer_scene_chunk_encoding_payload_plan_shape_mismatches",
             "renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches",
             "renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches",
+            "renderer_scene_chunk_encoding_payload_reassembly_dry_run_candidates",
+            "renderer_scene_chunk_encoding_payload_reassembly_append_only_matches",
+            "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch",
             "renderer_render_plan_scene_chunk_candidates_changed",
             "renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate",
             "renderer_encode_scene_text_ops",

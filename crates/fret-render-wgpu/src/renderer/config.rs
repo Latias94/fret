@@ -207,6 +207,20 @@ impl Renderer {
                 .scene_chunk_encoding_payload_plan_stream_fingerprint_matches,
             scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: perf
                 .scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
+            scene_chunk_encoding_payload_reassembly_dry_run_candidates: perf
+                .scene_chunk_encoding_payload_reassembly_dry_run_candidates,
+            scene_chunk_encoding_payload_reassembly_append_only_matches: perf
+                .scene_chunk_encoding_payload_reassembly_append_only_matches,
+            scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch: perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch,
+            scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch: perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch,
+            scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws: perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws,
+            scene_chunk_encoding_payload_reassembly_blocked_by_side_tables: perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_side_tables,
+            scene_chunk_encoding_payload_reassembly_blocked_by_material_state: perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_material_state,
             scene_chunk_encoding_payload_entries_without_plan_candidate: perf
                 .scene_chunk_encoding_payload_entries_without_plan_candidate,
             scene_chunk_encoding_payload_plan_candidates_without_payload: perf

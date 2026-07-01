@@ -746,6 +746,21 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: u64,
     #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_dry_run_candidates: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_append_only_matches: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch:
+        u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_blocked_by_side_tables: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_reassembly_blocked_by_material_state: u64,
+    #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
     #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_plan_candidates_without_payload: u64,
@@ -1599,6 +1614,14 @@ impl UiFrameStatsV1 {
             renderer_scene_chunk_encoding_payload_plan_shape_mismatches: 0,
             renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_matches: 0,
             renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: 0,
+            renderer_scene_chunk_encoding_payload_reassembly_dry_run_candidates: 0,
+            renderer_scene_chunk_encoding_payload_reassembly_append_only_matches: 0,
+            renderer_scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch: 0,
+            renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch:
+                0,
+            renderer_scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws: 0,
+            renderer_scene_chunk_encoding_payload_reassembly_blocked_by_side_tables: 0,
+            renderer_scene_chunk_encoding_payload_reassembly_blocked_by_material_state: 0,
             renderer_scene_chunk_encoding_payload_entries_without_plan_candidate: 0,
             renderer_scene_chunk_encoding_payload_plan_candidates_without_payload: 0,
             renderer_render_plan_scene_chunk_candidates: 0,
@@ -1943,6 +1966,29 @@ impl UiFrameStatsV1 {
         self.renderer_scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches = sample
             .perf
             .scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches;
+        self.renderer_scene_chunk_encoding_payload_reassembly_dry_run_candidates = sample
+            .perf
+            .scene_chunk_encoding_payload_reassembly_dry_run_candidates;
+        self.renderer_scene_chunk_encoding_payload_reassembly_append_only_matches = sample
+            .perf
+            .scene_chunk_encoding_payload_reassembly_append_only_matches;
+        self.renderer_scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch = sample
+            .perf
+            .scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch;
+        self
+            .renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch =
+            sample
+                .perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch;
+        self.renderer_scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws = sample
+            .perf
+            .scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws;
+        self.renderer_scene_chunk_encoding_payload_reassembly_blocked_by_side_tables = sample
+            .perf
+            .scene_chunk_encoding_payload_reassembly_blocked_by_side_tables;
+        self.renderer_scene_chunk_encoding_payload_reassembly_blocked_by_material_state = sample
+            .perf
+            .scene_chunk_encoding_payload_reassembly_blocked_by_material_state;
         self.renderer_scene_chunk_encoding_payload_entries_without_plan_candidate = sample
             .perf
             .scene_chunk_encoding_payload_entries_without_plan_candidate;

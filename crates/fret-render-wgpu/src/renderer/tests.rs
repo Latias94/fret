@@ -1379,6 +1379,18 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
         1
     );
     assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_dry_run_candidates,
+        1
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_append_only_matches,
+        0
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch,
+        1
+    );
+    assert_eq!(
         last.scene_chunk_encoding_payload_entries_without_plan_candidate,
         0
     );
@@ -1416,6 +1428,18 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches,
+        1
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_dry_run_candidates,
+        1
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_append_only_matches,
+        0
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch,
         1
     );
     assert_eq!(

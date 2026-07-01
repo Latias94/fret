@@ -50,6 +50,13 @@ pub(super) struct SceneChunkEncodingFrameStats {
     pub(super) payload_plan_shape_mismatches: u64,
     pub(super) payload_plan_stream_fingerprint_matches: u64,
     pub(super) payload_plan_stream_fingerprint_mismatches: u64,
+    pub(super) payload_reassembly_dry_run_candidates: u64,
+    pub(super) payload_reassembly_append_only_matches: u64,
+    pub(super) payload_reassembly_blocked_by_shape_mismatch: u64,
+    pub(super) payload_reassembly_blocked_by_stream_fingerprint_mismatch: u64,
+    pub(super) payload_reassembly_blocked_by_non_quad_draws: u64,
+    pub(super) payload_reassembly_blocked_by_side_tables: u64,
+    pub(super) payload_reassembly_blocked_by_material_state: u64,
     pub(super) payload_entries_without_plan_candidate: u64,
     pub(super) payload_plan_candidates_without_payload: u64,
 }
@@ -97,6 +104,51 @@ impl CachedSceneChunkEncoding {
             .saturating_add(estimate_slice_bytes(&self.encoding.ordered_draws))
             .saturating_add(estimate_slice_bytes(&self.encoding.effect_markers))
     }
+
+    fn append_only_reassembly_blocker(&self) -> Option<SceneChunkPayloadReassemblyBlocker> {
+        if self.encoding.material_quad_ops > 0
+            || self.encoding.material_sampled_quad_ops > 0
+            || self.encoding.material_distinct > 0
+            || self.encoding.material_unknown_ids > 0
+            || self.encoding.material_degraded_due_to_budget > 0
+            || self.encoding.path_material_paints_degraded_to_solid_base > 0
+        {
+            return Some(SceneChunkPayloadReassemblyBlocker::MaterialState);
+        }
+
+        if !self.encoding.clip_path_masks.is_empty()
+            || !self.encoding.clips.is_empty()
+            || !self.encoding.masks.is_empty()
+            || self
+                .encoding
+                .uniform_mask_images
+                .iter()
+                .any(Option::is_some)
+            || !self.encoding.effect_markers.is_empty()
+        {
+            return Some(SceneChunkPayloadReassemblyBlocker::SideTables);
+        }
+
+        if self
+            .encoding
+            .ordered_draws
+            .iter()
+            .any(|draw| !matches!(draw, OrderedDraw::Quad(_)))
+        {
+            return Some(SceneChunkPayloadReassemblyBlocker::NonQuadDraws);
+        }
+
+        None
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SceneChunkPayloadReassemblyBlocker {
+    ShapeMismatch,
+    StreamFingerprintMismatch,
+    NonQuadDraws,
+    SideTables,
+    MaterialState,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -338,7 +390,8 @@ impl SceneChunkEncodingState {
             };
 
             let segment_shape = SceneChunkPayloadPlanShape::from_segment(segment);
-            if payload.plan_shape == segment_shape {
+            let shape_matches = payload.plan_shape == segment_shape;
+            if shape_matches {
                 stats.payload_plan_shape_matches =
                     stats.payload_plan_shape_matches.saturating_add(1);
             } else {
@@ -351,7 +404,9 @@ impl SceneChunkEncodingState {
                     flat_encoding,
                     segment.stream_ranges,
                 );
-            if payload.stream_fingerprint == segment_stream_fingerprint.fingerprint {
+            let stream_fingerprint_matches =
+                payload.stream_fingerprint == segment_stream_fingerprint.fingerprint;
+            if stream_fingerprint_matches {
                 stats.payload_plan_stream_fingerprint_matches = stats
                     .payload_plan_stream_fingerprint_matches
                     .saturating_add(1);
@@ -359,6 +414,49 @@ impl SceneChunkEncodingState {
                 stats.payload_plan_stream_fingerprint_mismatches = stats
                     .payload_plan_stream_fingerprint_mismatches
                     .saturating_add(1);
+            }
+
+            stats.payload_reassembly_dry_run_candidates = stats
+                .payload_reassembly_dry_run_candidates
+                .saturating_add(1);
+            let blocker = if !shape_matches {
+                Some(SceneChunkPayloadReassemblyBlocker::ShapeMismatch)
+            } else if !stream_fingerprint_matches {
+                Some(SceneChunkPayloadReassemblyBlocker::StreamFingerprintMismatch)
+            } else {
+                payload.append_only_reassembly_blocker()
+            };
+            match blocker {
+                None => {
+                    stats.payload_reassembly_append_only_matches = stats
+                        .payload_reassembly_append_only_matches
+                        .saturating_add(1);
+                }
+                Some(SceneChunkPayloadReassemblyBlocker::ShapeMismatch) => {
+                    stats.payload_reassembly_blocked_by_shape_mismatch = stats
+                        .payload_reassembly_blocked_by_shape_mismatch
+                        .saturating_add(1);
+                }
+                Some(SceneChunkPayloadReassemblyBlocker::StreamFingerprintMismatch) => {
+                    stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch = stats
+                        .payload_reassembly_blocked_by_stream_fingerprint_mismatch
+                        .saturating_add(1);
+                }
+                Some(SceneChunkPayloadReassemblyBlocker::NonQuadDraws) => {
+                    stats.payload_reassembly_blocked_by_non_quad_draws = stats
+                        .payload_reassembly_blocked_by_non_quad_draws
+                        .saturating_add(1);
+                }
+                Some(SceneChunkPayloadReassemblyBlocker::SideTables) => {
+                    stats.payload_reassembly_blocked_by_side_tables = stats
+                        .payload_reassembly_blocked_by_side_tables
+                        .saturating_add(1);
+                }
+                Some(SceneChunkPayloadReassemblyBlocker::MaterialState) => {
+                    stats.payload_reassembly_blocked_by_material_state = stats
+                        .payload_reassembly_blocked_by_material_state
+                        .saturating_add(1);
+                }
             }
         }
 
@@ -466,6 +564,20 @@ impl Renderer {
             stats.payload_plan_stream_fingerprint_matches;
         frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches =
             stats.payload_plan_stream_fingerprint_mismatches;
+        frame_perf.scene_chunk_encoding_payload_reassembly_dry_run_candidates =
+            stats.payload_reassembly_dry_run_candidates;
+        frame_perf.scene_chunk_encoding_payload_reassembly_append_only_matches =
+            stats.payload_reassembly_append_only_matches;
+        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch =
+            stats.payload_reassembly_blocked_by_shape_mismatch;
+        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch =
+            stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch;
+        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws =
+            stats.payload_reassembly_blocked_by_non_quad_draws;
+        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_side_tables =
+            stats.payload_reassembly_blocked_by_side_tables;
+        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_material_state =
+            stats.payload_reassembly_blocked_by_material_state;
         frame_perf.scene_chunk_encoding_payload_entries_without_plan_candidate =
             stats.payload_entries_without_plan_candidate;
         frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload =
@@ -751,6 +863,16 @@ mod tests {
         assert_eq!(stats.payload_plan_shape_mismatches, 0);
         assert_eq!(stats.payload_plan_stream_fingerprint_matches, 1);
         assert_eq!(stats.payload_plan_stream_fingerprint_mismatches, 0);
+        assert_eq!(stats.payload_reassembly_dry_run_candidates, 1);
+        assert_eq!(stats.payload_reassembly_append_only_matches, 1);
+        assert_eq!(stats.payload_reassembly_blocked_by_shape_mismatch, 0);
+        assert_eq!(
+            stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch,
+            0
+        );
+        assert_eq!(stats.payload_reassembly_blocked_by_non_quad_draws, 0);
+        assert_eq!(stats.payload_reassembly_blocked_by_side_tables, 0);
+        assert_eq!(stats.payload_reassembly_blocked_by_material_state, 0);
         assert_eq!(stats.payload_entries_without_plan_candidate, 0);
         assert_eq!(stats.payload_plan_candidates_without_payload, 0);
 
@@ -759,5 +881,11 @@ mod tests {
         assert_eq!(stats.payload_plan_shape_matches, 1);
         assert_eq!(stats.payload_plan_stream_fingerprint_matches, 0);
         assert_eq!(stats.payload_plan_stream_fingerprint_mismatches, 1);
+        assert_eq!(stats.payload_reassembly_dry_run_candidates, 1);
+        assert_eq!(stats.payload_reassembly_append_only_matches, 0);
+        assert_eq!(
+            stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch,
+            1
+        );
     }
 }

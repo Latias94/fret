@@ -733,6 +733,20 @@ pub struct RenderPerfSnapshot {
     /// Retained chunk payload upload streams whose normalized fingerprint does not match the
     /// corresponding flat render-plan candidate segment stream ranges.
     pub scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: u64,
+    /// Retained chunk payload/segment pairs considered by the conservative reassembly dry-run.
+    pub scene_chunk_encoding_payload_reassembly_dry_run_candidates: u64,
+    /// Reassembly dry-run candidates that match the current append-only quad-only safe subset.
+    pub scene_chunk_encoding_payload_reassembly_append_only_matches: u64,
+    /// Reassembly dry-run candidates blocked because payload and flat-plan shapes differ.
+    pub scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch: u64,
+    /// Reassembly dry-run candidates blocked because upload-stream fingerprints differ.
+    pub scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch: u64,
+    /// Reassembly dry-run candidates blocked because they contain non-quad draw kinds.
+    pub scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws: u64,
+    /// Reassembly dry-run candidates blocked because side tables/effect markers need rebasing.
+    pub scene_chunk_encoding_payload_reassembly_blocked_by_side_tables: u64,
+    /// Reassembly dry-run candidates blocked because material budget/order state is involved.
+    pub scene_chunk_encoding_payload_reassembly_blocked_by_material_state: u64,
     /// Retained chunk payload entries with no corresponding flat render-plan candidate segment.
     pub scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
     /// Flat render-plan candidate segments with no retained chunk payload entry in manifest order.
@@ -1095,6 +1109,13 @@ pub(super) struct RenderPerfStats {
     pub(super) scene_chunk_encoding_payload_plan_shape_mismatches: u64,
     pub(super) scene_chunk_encoding_payload_plan_stream_fingerprint_matches: u64,
     pub(super) scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_dry_run_candidates: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_append_only_matches: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_blocked_by_side_tables: u64,
+    pub(super) scene_chunk_encoding_payload_reassembly_blocked_by_material_state: u64,
     pub(super) scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
     pub(super) scene_chunk_encoding_payload_plan_candidates_without_payload: u64,
     pub(super) render_plan_estimated_peak_intermediate_bytes: u64,

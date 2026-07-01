@@ -2811,6 +2811,55 @@
       "unit": "count"
     },
     {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_dry_run_candidates",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_append_only_matches",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_side_tables",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_material_state",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_scene_chunk_encoding_payload_entries_without_plan_candidate",
       "kind": "counter",
       "scope": "frame",
