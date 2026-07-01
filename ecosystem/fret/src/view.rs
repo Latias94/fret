@@ -28,6 +28,7 @@ mod context;
 mod data;
 mod effects;
 mod local_state;
+mod raw;
 mod runtime;
 mod state;
 #[allow(unused_imports)]
@@ -55,6 +56,10 @@ pub use data::{LocalSelectorLayoutInputs, ModelSelectorInputs};
 pub use effects::AppUiEffects;
 pub use local_state::{
     LocalActionCapture, LocalState, LocalStateTxn, TrackedStateExt, WatchedState,
+};
+pub use raw::{
+    AppUiComponentLaneRequiresExplicitElementsEscapeHatch, AppUiRawActionNotifyExt,
+    AppUiRawModelExt,
 };
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use runtime::view_record_engine_frame;
@@ -88,103 +93,6 @@ pub struct AppUi<'cx, 'a, H: UiHost> {
     action_root: fret_ui::GlobalElementId,
     action_handlers: crate::actions::ActionHandlerTable,
     action_handlers_used: bool,
-}
-
-#[doc(hidden)]
-pub trait AppUiComponentLaneRequiresExplicitElementsEscapeHatch {}
-
-/// Explicit raw-model state hooks that intentionally stay off the default app authoring surface.
-///
-/// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
-/// `fret::advanced::prelude::*`.
-///
-/// Import it explicitly when advanced code still wants a stable callsite-keyed raw `Model<T>`
-/// handle rather than the grouped `cx.state().local*` surface. For loop/dynamic callsites, wrap
-/// `raw_model::<T>()` in `cx.keyed(...)` instead of relying on a separate keyed alias.
-pub trait AppUiRawModelExt {
-    #[track_caller]
-    fn raw_model<T>(&mut self) -> Model<T>
-    where
-        T: Any + Default;
-}
-
-impl<'cx, 'a, H: UiHost> AppUiRawModelExt for AppUi<'cx, 'a, H> {
-    #[track_caller]
-    fn raw_model<T>(&mut self) -> Model<T>
-    where
-        T: Any + Default,
-    {
-        self.raw_model_with(T::default)
-    }
-}
-
-/// Explicit raw action-registration hooks that intentionally stay off the default app authoring
-/// surface.
-///
-/// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
-/// `fret::advanced::prelude::*`.
-///
-/// Import it explicitly when advanced/manual-assembly code intentionally wants raw typed handler
-/// registration rather than the grouped `cx.actions()` helpers. Model/local mutation shorthands
-/// stay on the grouped default lane or on explicit store transactions; this trait keeps only the
-/// raw host-facing registration hooks.
-pub trait AppUiRawActionNotifyExt {
-    /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
-    ///
-    /// This is a small ergonomics helper: most action handlers that mutate models/state need both
-    /// `request_redraw(window)` and `notify(action_cx)` to participate in the view-cache closure.
-    fn on_action_notify<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
-    );
-
-    /// Register a typed payload action handler that requests redraw + notifies on `handled=true`.
-    fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
-    );
-}
-
-impl<'cx, 'a, H: UiHost> AppUiRawActionNotifyExt for AppUi<'cx, 'a, H> {
-    fn on_action_notify<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
-    ) {
-        self.register_action_handler::<A>(move |host, action_cx| {
-            let handled = f(host, action_cx);
-            if handled {
-                host.request_redraw(action_cx.window);
-                host.notify(action_cx);
-            }
-            handled
-        });
-    }
-
-    fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
-    ) {
-        self.register_payload_action_handler::<A>(move |host, action_cx, payload| {
-            let handled = f(host, action_cx, payload);
-            if handled {
-                host.request_redraw(action_cx.window);
-                host.notify(action_cx);
-            }
-            handled
-        });
-    }
 }
 
 impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {
@@ -683,6 +591,7 @@ mod tests {
     const DATA_RS_SOURCE: &str = include_str!("view/data.rs");
     const EFFECTS_RS_SOURCE: &str = include_str!("view/effects.rs");
     const LOCAL_STATE_RS_SOURCE: &str = include_str!("view/local_state.rs");
+    const RAW_RS_SOURCE: &str = include_str!("view/raw.rs");
     const RUNTIME_RS_SOURCE: &str = include_str!("view/runtime.rs");
     const STATE_RS_SOURCE: &str = include_str!("view/state.rs");
 
@@ -692,7 +601,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{
