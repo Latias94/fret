@@ -907,6 +907,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_geometry_upload_resident_dirty_range_bytes_estimate: u64,
     #[serde(default)]
+    pub renderer_geometry_upload_resident_stream_coverage_gaps: u64,
+    #[serde(default)]
     pub renderer_geometry_upload_resident_partial_write_dry_run_streams: u64,
     #[serde(default)]
     pub renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate: u64,
@@ -1727,6 +1729,7 @@ impl UiFrameStatsV1 {
             renderer_geometry_upload_resident_stream_misses: 0,
             renderer_geometry_upload_resident_stream_content_mismatches: 0,
             renderer_geometry_upload_resident_dirty_range_bytes_estimate: 0,
+            renderer_geometry_upload_resident_stream_coverage_gaps: 0,
             renderer_geometry_upload_resident_partial_write_dry_run_streams: 0,
             renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate: 0,
             renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate: 0,
@@ -2158,6 +2161,8 @@ impl UiFrameStatsV1 {
             geometry_upload.resident_stream_content_mismatches;
         self.renderer_geometry_upload_resident_dirty_range_bytes_estimate =
             geometry_upload.resident_dirty_range_bytes_estimate;
+        self.renderer_geometry_upload_resident_stream_coverage_gaps =
+            geometry_upload.resident_stream_coverage_gaps;
         self.renderer_geometry_upload_resident_partial_write_dry_run_streams =
             geometry_upload.resident_partial_write_dry_run_streams;
         self.renderer_geometry_upload_resident_partial_write_dry_run_write_count_estimate =

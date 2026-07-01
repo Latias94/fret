@@ -1987,6 +1987,7 @@ mod service_tests {
         perf.geometry_upload.resident_stream_misses = 33;
         perf.geometry_upload.resident_stream_content_mismatches = 34;
         perf.geometry_upload.resident_dirty_range_bytes_estimate = 4096;
+        perf.geometry_upload.resident_stream_coverage_gaps = 45;
         perf.geometry_upload.resident_partial_write_dry_run_streams = 35;
         perf.geometry_upload
             .resident_partial_write_dry_run_write_count_estimate = 36;
@@ -2076,6 +2077,10 @@ mod service_tests {
         assert_eq!(
             stats.renderer_geometry_upload_resident_dirty_range_bytes_estimate,
             4096
+        );
+        assert_eq!(
+            stats.renderer_geometry_upload_resident_stream_coverage_gaps,
+            45
         );
         assert_eq!(
             stats.renderer_geometry_upload_resident_partial_write_dry_run_streams,

@@ -2328,6 +2328,13 @@
       "unit": "bytes"
     },
     {
+      "key": "renderer_geometry_upload_resident_stream_coverage_gaps",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate",
       "kind": "counter",
       "scope": "frame",

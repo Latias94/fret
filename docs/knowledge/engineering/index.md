@@ -30,4 +30,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 resident geometry upload diagnostics](progress/2026-07-01-u7-resident-geometry-upload-diagnostics.md)
 - [U7 resident partial-write dry-run diagnostics](progress/2026-07-01-u7-resident-partial-write-dry-run.md)
 - [U7 exact resident write-plan diagnostics](progress/2026-07-01-u7-exact-resident-write-plan.md)
+- [U7 resident stream coverage gate](progress/2026-07-01-u7-resident-stream-coverage-gate.md)
 - [Log](log.md)

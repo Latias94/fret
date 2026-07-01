@@ -1591,6 +1591,10 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         "renderer_geometry_upload_resident_dirty_range_bytes_estimate",
         PerfKeyAggregate::Max,
     ),
+    count_key(
+        "renderer_geometry_upload_resident_stream_coverage_gaps",
+        PerfKeyAggregate::Max,
+    ),
     byte_key(
         "renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate",
         PerfKeyAggregate::Max,
@@ -2654,6 +2658,7 @@ mod tests {
             "renderer_instance_bytes",
             "renderer_geometry_upload_quad_instance_bytes",
             "renderer_geometry_upload_resident_dirty_range_bytes_estimate",
+            "renderer_geometry_upload_resident_stream_coverage_gaps",
             "renderer_geometry_upload_resident_partial_write_dry_run_bytes_estimate",
             "renderer_geometry_upload_resident_stream_content_mismatches",
             "renderer_geometry_upload_resident_stream_hits",

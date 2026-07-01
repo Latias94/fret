@@ -444,6 +444,8 @@ pub struct GeometryUploadPerfSnapshot {
     pub resident_stream_content_mismatches: u64,
     /// Estimated bytes covered by dirty resident stream ranges for missed candidates.
     pub resident_dirty_range_bytes_estimate: u64,
+    /// Candidate resident streams whose retained ranges do not cover the whole GPU stream.
+    pub resident_stream_coverage_gaps: u64,
     /// Streams that the resident diagnostics owner would write with a partial upload.
     pub resident_partial_write_dry_run_streams: u64,
     /// Estimated write calls needed for the resident partial-upload dry-run.
@@ -523,6 +525,9 @@ impl GeometryUploadPerfSnapshot {
         self.resident_dirty_range_bytes_estimate = self
             .resident_dirty_range_bytes_estimate
             .saturating_add(other.resident_dirty_range_bytes_estimate);
+        self.resident_stream_coverage_gaps = self
+            .resident_stream_coverage_gaps
+            .saturating_add(other.resident_stream_coverage_gaps);
         self.resident_partial_write_dry_run_streams = self
             .resident_partial_write_dry_run_streams
             .saturating_add(other.resident_partial_write_dry_run_streams);
