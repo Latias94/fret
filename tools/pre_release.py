@@ -64,6 +64,10 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/check_surface_policy.py")],
     )
     _run_checked(
+        "Consumption profiles",
+        [py, str(repo_root / "tools/check_consumption_profiles.py")],
+    )
+    _run_checked(
         "Execution surface policy",
         [py, str(repo_root / "tools/check_execution_surface.py")],
     )

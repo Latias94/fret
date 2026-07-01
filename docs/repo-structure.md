@@ -51,8 +51,8 @@ Notes:
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:
   - `fret-launch` (cross-platform launcher glue: desktop-first native runner + wasm/WebGPU runner)
-- Public facade:
-  - `fret` (re-exports)
+- Manual assembly facade:
+  - `fret-framework` (advanced/manual framework re-exports)
 - Other core glue:
   - `fret-a11y-accesskit`
   - `fret-fonts` (bundled default fonts for wasm/bootstrap)
@@ -72,6 +72,7 @@ Common examples:
   - `fret-docking` (was `fret-ui-docking`)
   - `fret-ui-shadcn`
 - "App kit" / default app policies:
+  - `fret` (desktop-first batteries-included app facade)
   - `fret-bootstrap` (opinionated startup glue over `fret-launch`)
   - `fret-ui-assets` (UI render asset caches and upload helpers)
 - Icons:
@@ -130,4 +131,5 @@ Indicators that a crate (or the whole `ecosystem/`) should move to a separate re
 When extracting:
 
 - Preserve crate names and public API paths whenever possible.
-- Keep `fret` facade framework-only (per ADR 0037).
+- Keep the `fret` app facade thin and framework/app-kit oriented; do not turn it into a component
+  catalog that should live in ecosystem recipe crates.

@@ -48,4 +48,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U8 editor paint cache artifact gate](progress/2026-07-01-u8-editor-paint-cache-artifact-gate.md)
 - [U8 text budget gate wrapper](progress/2026-07-01-u8-text-budget-gate-wrapper.md)
 - [U9 view context split](progress/2026-07-01-u9-view-context-split.md)
+- [U9 consumption profile gate hardening](progress/2026-07-01-u9-consumption-profile-gate.md)
 - [Log](log.md)

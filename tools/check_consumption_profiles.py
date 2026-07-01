@@ -76,7 +76,10 @@ def main(argv: list[str]) -> int:
     banned_backend_packages = {
         "fret-launch",
         "fret-platform-native",
+        "fret-platform-web",
         "fret-render",
+        "fret-render-wgpu",
+        "fret-runner-web",
         "fret-runner-winit",
         "wgpu",
         "winit",
@@ -94,8 +97,6 @@ def main(argv: list[str]) -> int:
                 "--no-default-features",
                 "-e",
                 "normal",
-                "--depth",
-                "4",
                 "--prefix",
                 "none",
             ],
@@ -117,8 +118,6 @@ def main(argv: list[str]) -> int:
                 "app",
                 "-e",
                 "normal",
-                "--depth",
-                "4",
                 "--prefix",
                 "none",
             ],
@@ -138,8 +137,6 @@ def main(argv: list[str]) -> int:
                 "--no-default-features",
                 "-e",
                 "normal",
-                "--depth",
-                "4",
                 "--prefix",
                 "none",
             ],
@@ -149,6 +146,14 @@ def main(argv: list[str]) -> int:
     _run_checked(
         "app-authoring: fret app check",
         ["cargo", "check", "-p", "fret", "--locked", "--no-default-features", "--features", "app"],
+    )
+    _run_checked(
+        "app-authoring: fret default facade check",
+        ["cargo", "check", "-p", "fret", "--locked"],
+    )
+    _run_checked(
+        "app-authoring: fret batteries facade check",
+        ["cargo", "check", "-p", "fret", "--locked", "--features", "batteries"],
     )
     _run_checked(
         "app-authoring: fret app authoring spec test check",
