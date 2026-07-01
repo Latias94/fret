@@ -197,7 +197,7 @@ impl Renderer {
             &encoding.effect_markers,
             &mut frame_perf,
         );
-        let reassembly_plan = self.record_scene_chunk_payload_plan_alignment_for_frame(
+        let payload_alignment = self.record_scene_chunk_payload_plan_alignment_for_frame(
             &plan,
             &encoding,
             perf_enabled,
@@ -235,7 +235,7 @@ impl Renderer {
                     device,
                     queue,
                     &plan,
-                    &reassembly_plan,
+                    &payload_alignment,
                     viewport_size,
                     &encoding.instances,
                     &encoding.path_paints,

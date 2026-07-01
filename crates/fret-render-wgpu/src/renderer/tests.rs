@@ -1453,6 +1453,83 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
 }
 
 #[test]
+fn scene_chunk_payload_and_resident_upload_state_warm_without_perf() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (32, 32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("scene chunk resident warmup test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        background: Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        }
+        .into(),
+        border: fret_core::Edges::all(Px(0.0)),
+        border_paint: Color::TRANSPARENT.into(),
+        corner_radii: Corners::all(Px(0.0)),
+    });
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk,
+        Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
+        Point::default(),
+    ));
+
+    let params = || super::RenderSceneParams {
+        format,
+        target_view: &target_view,
+        scene: &scene,
+        scene_chunks: Some(&manifest),
+        clear: super::ClearColor::default(),
+        scale_factor: 1.0,
+        viewport_size,
+    };
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+
+    renderer.set_perf_enabled(true);
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+
+    let last = renderer
+        .diagnostics_state
+        .last_frame_perf
+        .expect("last frame perf snapshot");
+    assert_eq!(last.scene_chunk_encoding_payload_cache_hits, 1);
+    assert_eq!(
+        last.scene_chunk_encoding_payload_reassembly_append_only_matches,
+        1
+    );
+    assert_eq!(last.geometry_upload.resident_stream_candidates, 1);
+    assert_eq!(last.geometry_upload.resident_stream_hits, 1);
+    assert_eq!(last.geometry_upload.resident_stream_misses, 0);
+}
+
+#[test]
 fn perf_snapshot_counts_path_material_paint_degradation() {
     let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
     let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);

@@ -105,66 +105,63 @@ impl ResidentGeometryUploadState {
     fn record_frame(
         &mut self,
         plan: &RenderPlan,
-        reassembly_plan: &SceneChunkPayloadReassemblyPlan,
-        frame_perf: &mut RenderPerfStats,
+        payload_alignment: &SceneChunkPayloadPlanAlignment,
+        frame_perf: Option<&mut RenderPerfStats>,
         slots: ResidentGeometryUploadSlots,
         streams: ResidentGeometryUploadStreams<'_>,
         invalidations: ResidentGeometryUploadInvalidations,
     ) {
+        let mut upload = frame_perf.map(|frame_perf| &mut frame_perf.geometry_upload);
         let eligible_candidates = plan
             .segments
             .iter()
             .filter(|segment| segment.scene_chunk_candidate.eligible)
             .count();
         if eligible_candidates == 0 {
-            frame_perf
-                .geometry_upload
-                .record_resident_full_upload_fallback_no_candidate();
+            if let Some(upload) = upload.as_deref_mut() {
+                upload.record_resident_full_upload_fallback_no_candidate();
+            }
             return;
         }
 
-        let missing_payloads =
-            frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload;
+        let alignment_stats = payload_alignment.stats;
+        let missing_payloads = alignment_stats.payload_plan_candidates_without_payload;
         if missing_payloads > 0 {
-            frame_perf
-                .geometry_upload
-                .record_resident_full_upload_fallback_missing_payload(missing_payloads);
+            if let Some(upload) = upload.as_deref_mut() {
+                upload.record_resident_full_upload_fallback_missing_payload(missing_payloads);
+            }
         }
 
-        let blocked_reassembly = frame_perf
-            .scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch
+        let blocked_reassembly = alignment_stats
+            .payload_reassembly_blocked_by_shape_mismatch
             .saturating_add(
-                frame_perf
-                    .scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch,
+                alignment_stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch,
             )
-            .saturating_add(
-                frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws,
-            )
-            .saturating_add(
-                frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_side_tables,
-            )
-            .saturating_add(
-                frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_material_state,
-            );
+            .saturating_add(alignment_stats.payload_reassembly_blocked_by_non_quad_draws)
+            .saturating_add(alignment_stats.payload_reassembly_blocked_by_side_tables)
+            .saturating_add(alignment_stats.payload_reassembly_blocked_by_material_state);
         if blocked_reassembly > 0 {
-            frame_perf
-                .geometry_upload
-                .record_resident_full_upload_fallback_reassembly_blocked(blocked_reassembly);
+            if let Some(upload) = upload.as_deref_mut() {
+                upload.record_resident_full_upload_fallback_reassembly_blocked(blocked_reassembly);
+            }
         }
 
-        if reassembly_plan.is_empty() {
+        if payload_alignment.reassembly_plan.is_empty() {
             return;
         }
 
-        let signatures =
-            ResidentGeometryUploadFrameSignatures::from_plan(plan, reassembly_plan, streams);
+        let signatures = ResidentGeometryUploadFrameSignatures::from_plan(
+            plan,
+            &payload_alignment.reassembly_plan,
+            streams,
+        );
         self.quad_instances.record_frame(
             slots.quad_instances,
             invalidations.quad_instances,
             signatures.quad_instances,
             streams.quad_instances.len(),
             estimate_range_bytes::<QuadInstance>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
         self.path_paints.record_frame(
             slots.path_paints,
@@ -172,7 +169,7 @@ impl ResidentGeometryUploadState {
             signatures.path_paints,
             streams.path_paints.len(),
             estimate_range_bytes::<PaintGpu>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
         self.text_paints.record_frame(
             slots.text_paints,
@@ -180,7 +177,7 @@ impl ResidentGeometryUploadState {
             signatures.text_paints,
             streams.text_paints.len(),
             estimate_range_bytes::<PaintGpu>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
         self.viewport_vertices.record_frame(
             slots.viewport_vertices,
@@ -188,7 +185,7 @@ impl ResidentGeometryUploadState {
             signatures.viewport_vertices,
             streams.viewport_vertices.len(),
             estimate_range_bytes::<ViewportVertex>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
         self.text_glyph_instances.record_frame(
             slots.text_glyph_instances,
@@ -196,7 +193,7 @@ impl ResidentGeometryUploadState {
             signatures.text_glyph_instances,
             streams.text_glyph_instances.len(),
             estimate_range_bytes::<TextGlyphInstance>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
         self.text_vertices.record_frame(
             slots.text_vertices,
@@ -204,7 +201,7 @@ impl ResidentGeometryUploadState {
             signatures.text_vertices,
             streams.text_vertices.len(),
             estimate_range_bytes::<TextVertex>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
         self.path_vertices.record_frame(
             slots.path_vertices,
@@ -212,7 +209,7 @@ impl ResidentGeometryUploadState {
             signatures.path_vertices,
             streams.path_vertices.len(),
             estimate_range_bytes::<PathVertex>,
-            &mut frame_perf.geometry_upload,
+            upload.as_deref_mut(),
         );
     }
 }
@@ -298,13 +295,16 @@ impl ResidentGeometryUploadStreamState {
         signatures: Vec<ResidentGeometryUploadStreamSignature>,
         stream_len: usize,
         estimate_bytes: fn(RenderPlanStreamRange) -> u64,
-        upload: &mut GeometryUploadPerfSnapshot,
+        upload: Option<&mut GeometryUploadPerfSnapshot>,
     ) {
         if signatures.is_empty() {
             return;
         }
 
-        upload.resident_stream_candidates = upload.resident_stream_candidates.saturating_add(1);
+        let mut upload = upload;
+        if let Some(upload) = upload.as_deref_mut() {
+            upload.resident_stream_candidates = upload.resident_stream_candidates.saturating_add(1);
+        }
         if invalidated {
             self.slots.clear();
         }
@@ -314,52 +314,62 @@ impl ResidentGeometryUploadStreamState {
 
         let covers_entire_stream = resident_stream_signatures_cover_stream(&signatures, stream_len);
         if !covers_entire_stream {
-            upload.resident_stream_coverage_gaps =
-                upload.resident_stream_coverage_gaps.saturating_add(1);
+            if let Some(upload) = upload.as_deref_mut() {
+                upload.resident_stream_coverage_gaps =
+                    upload.resident_stream_coverage_gaps.saturating_add(1);
+            }
         }
 
         match self.slots[slot].as_ref() {
             Some(previous) if previous == &signatures => {
-                upload.resident_stream_hits = upload.resident_stream_hits.saturating_add(1);
+                if let Some(upload) = upload.as_deref_mut() {
+                    upload.resident_stream_hits = upload.resident_stream_hits.saturating_add(1);
+                }
             }
             Some(previous) if resident_stream_layout_matches(previous, &signatures) => {
                 let dirty_bytes =
                     estimate_changed_signature_bytes(previous, &signatures, estimate_bytes);
-                upload.record_resident_stream_miss(dirty_bytes);
-                upload.resident_stream_content_mismatches =
-                    upload.resident_stream_content_mismatches.saturating_add(1);
-                if covers_entire_stream {
-                    let changed_ranges = count_changed_signatures(previous, &signatures) as u64;
-                    upload.record_resident_partial_write_dry_run(changed_ranges, dirty_bytes);
+                if let Some(upload) = upload.as_deref_mut() {
+                    upload.record_resident_stream_miss(dirty_bytes);
+                    upload.resident_stream_content_mismatches =
+                        upload.resident_stream_content_mismatches.saturating_add(1);
+                    if covers_entire_stream {
+                        let changed_ranges = count_changed_signatures(previous, &signatures) as u64;
+                        upload.record_resident_partial_write_dry_run(changed_ranges, dirty_bytes);
+                    }
+                    upload.resident_full_upload_fallbacks_stream_content_changed = upload
+                        .resident_full_upload_fallbacks_stream_content_changed
+                        .saturating_add(1);
                 }
-                upload.resident_full_upload_fallbacks_stream_content_changed = upload
-                    .resident_full_upload_fallbacks_stream_content_changed
-                    .saturating_add(1);
                 self.slots[slot] = Some(signatures);
             }
             Some(_) => {
-                upload.record_resident_stream_miss(estimate_signature_bytes(
-                    &signatures,
-                    estimate_bytes,
-                ));
-                upload.resident_full_upload_fallbacks_stream_layout_changed = upload
-                    .resident_full_upload_fallbacks_stream_layout_changed
-                    .saturating_add(1);
+                if let Some(upload) = upload.as_deref_mut() {
+                    upload.record_resident_stream_miss(estimate_signature_bytes(
+                        &signatures,
+                        estimate_bytes,
+                    ));
+                    upload.resident_full_upload_fallbacks_stream_layout_changed = upload
+                        .resident_full_upload_fallbacks_stream_layout_changed
+                        .saturating_add(1);
+                }
                 self.slots[slot] = Some(signatures);
             }
             None => {
-                upload.record_resident_stream_miss(estimate_signature_bytes(
-                    &signatures,
-                    estimate_bytes,
-                ));
-                if invalidated {
-                    upload.resident_full_upload_fallbacks_buffer_resized = upload
-                        .resident_full_upload_fallbacks_buffer_resized
-                        .saturating_add(1);
-                } else {
-                    upload.resident_full_upload_fallbacks_uninitialized = upload
-                        .resident_full_upload_fallbacks_uninitialized
-                        .saturating_add(1);
+                if let Some(upload) = upload.as_deref_mut() {
+                    upload.record_resident_stream_miss(estimate_signature_bytes(
+                        &signatures,
+                        estimate_bytes,
+                    ));
+                    if invalidated {
+                        upload.resident_full_upload_fallbacks_buffer_resized = upload
+                            .resident_full_upload_fallbacks_buffer_resized
+                            .saturating_add(1);
+                    } else {
+                        upload.resident_full_upload_fallbacks_uninitialized = upload
+                            .resident_full_upload_fallbacks_uninitialized
+                            .saturating_add(1);
+                    }
                 }
                 self.slots[slot] = Some(signatures);
             }
@@ -644,7 +654,7 @@ impl GeometryUploadState {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         plan: &RenderPlan,
-        reassembly_plan: &SceneChunkPayloadReassemblyPlan,
+        payload_alignment: &SceneChunkPayloadPlanAlignment,
         instances: &[QuadInstance],
         path_paints: &[PaintGpu],
         text_paints: &[PaintGpu],
@@ -697,34 +707,36 @@ impl GeometryUploadState {
                 .ensure_capacity(device, path_vertices.len()),
         };
 
-        if perf_enabled {
-            let slots = ResidentGeometryUploadSlots {
-                quad_instances: self.quad_instances.current_slot(),
-                path_paints: self.path_paints.current_slot(),
-                text_paints: self.text_paints.current_slot(),
-                viewport_vertices: self.viewport_vertices.current_slot(),
-                text_glyph_instances: self.text_glyph_instances.current_slot(),
-                text_vertices: self.text_vertices.current_slot(),
-                path_vertices: self.path_vertices.current_slot(),
-            };
-            let streams = ResidentGeometryUploadStreams {
-                quad_instances: instances,
-                path_paints,
-                text_paints,
-                viewport_vertices,
-                text_glyph_instances,
-                text_vertices,
-                path_vertices,
-            };
-            self.resident_uploads.record_frame(
-                plan,
-                reassembly_plan,
-                frame_perf,
-                slots,
-                streams,
-                invalidations,
-            );
-        }
+        let slots = ResidentGeometryUploadSlots {
+            quad_instances: self.quad_instances.current_slot(),
+            path_paints: self.path_paints.current_slot(),
+            text_paints: self.text_paints.current_slot(),
+            viewport_vertices: self.viewport_vertices.current_slot(),
+            text_glyph_instances: self.text_glyph_instances.current_slot(),
+            text_vertices: self.text_vertices.current_slot(),
+            path_vertices: self.path_vertices.current_slot(),
+        };
+        let streams = ResidentGeometryUploadStreams {
+            quad_instances: instances,
+            path_paints,
+            text_paints,
+            viewport_vertices,
+            text_glyph_instances,
+            text_vertices,
+            path_vertices,
+        };
+        self.resident_uploads.record_frame(
+            plan,
+            payload_alignment,
+            if perf_enabled {
+                Some(&mut *frame_perf)
+            } else {
+                None
+            },
+            slots,
+            streams,
+            invalidations,
+        );
 
         let (instance_buffer, quad_instance_bind_group) = self.quad_instances.next_pair();
         if !instances.is_empty() {
@@ -858,6 +870,20 @@ mod tests {
         SceneChunkPayloadReassemblyPlan::from_safe_segment_indices(indices.to_vec())
     }
 
+    fn payload_alignment(indices: &[usize]) -> SceneChunkPayloadPlanAlignment {
+        payload_alignment_with_stats(indices, SceneChunkEncodingFrameStats::default())
+    }
+
+    fn payload_alignment_with_stats(
+        indices: &[usize],
+        stats: SceneChunkEncodingFrameStats,
+    ) -> SceneChunkPayloadPlanAlignment {
+        SceneChunkPayloadPlanAlignment {
+            stats,
+            reassembly_plan: safe_plan(indices),
+        }
+    }
+
     fn resident_signature(start: u32, end: u32) -> ResidentGeometryUploadStreamSignature {
         ResidentGeometryUploadStreamSignature {
             layout_fingerprint: u64::from(start) << 32 | u64::from(end),
@@ -901,17 +927,6 @@ mod tests {
         }
     }
 
-    fn frame_perf_with_safe_candidate() -> RenderPerfStats {
-        frame_perf_with_safe_candidates(1)
-    }
-
-    fn frame_perf_with_safe_candidates(count: u64) -> RenderPerfStats {
-        RenderPerfStats {
-            scene_chunk_encoding_payload_reassembly_append_only_matches: count,
-            ..Default::default()
-        }
-    }
-
     #[test]
     fn resident_stream_coverage_requires_complete_stream_ranges() {
         assert!(resident_stream_signatures_cover_stream(
@@ -943,11 +958,12 @@ mod tests {
         let quad_instances = quad_instances(2);
         let mut state = ResidentGeometryUploadState::default();
 
-        let mut first = frame_perf_with_safe_candidate();
+        let alignment = payload_alignment(&[0]);
+        let mut first = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0]),
-            &mut first,
+            &alignment,
+            Some(&mut first),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -966,11 +982,11 @@ mod tests {
             1
         );
 
-        let mut second_slot = frame_perf_with_safe_candidate();
+        let mut second_slot = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0]),
-            &mut second_slot,
+            &alignment,
+            Some(&mut second_slot),
             slots(1),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -984,11 +1000,11 @@ mod tests {
             1
         );
 
-        let mut reused_slot = frame_perf_with_safe_candidate();
+        let mut reused_slot = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0]),
-            &mut reused_slot,
+            &alignment,
+            Some(&mut reused_slot),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -1009,20 +1025,55 @@ mod tests {
     }
 
     #[test]
+    fn resident_upload_state_warms_without_perf_recorder() {
+        let plan = plan_with_quad_range(0, 2, 7);
+        let quad_instances = quad_instances(2);
+        let alignment = payload_alignment(&[0]);
+        let mut state = ResidentGeometryUploadState::default();
+
+        state.record_frame(
+            &plan,
+            &alignment,
+            None,
+            slots(0),
+            streams_with_quad_instances(&quad_instances),
+            ResidentGeometryUploadInvalidations::default(),
+        );
+
+        let mut observed = RenderPerfStats::default();
+        state.record_frame(
+            &plan,
+            &alignment,
+            Some(&mut observed),
+            slots(0),
+            streams_with_quad_instances(&quad_instances),
+            ResidentGeometryUploadInvalidations::default(),
+        );
+
+        assert_eq!(observed.geometry_upload.resident_stream_candidates, 1);
+        assert_eq!(observed.geometry_upload.resident_stream_hits, 1);
+        assert_eq!(observed.geometry_upload.resident_stream_misses, 0);
+    }
+
+    #[test]
     fn resident_upload_diagnostics_report_fallback_reasons() {
         let plan = plan_with_quad_range(0, 2, 7);
         let quad_instances = quad_instances(2);
         let mut state = ResidentGeometryUploadState::default();
-        let mut frame_perf = RenderPerfStats {
-            scene_chunk_encoding_payload_plan_candidates_without_payload: 2,
-            scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch: 1,
-            ..Default::default()
-        };
+        let alignment = payload_alignment_with_stats(
+            &[],
+            SceneChunkEncodingFrameStats {
+                payload_plan_candidates_without_payload: 2,
+                payload_reassembly_blocked_by_stream_fingerprint_mismatch: 1,
+                ..Default::default()
+            },
+        );
+        let mut frame_perf = RenderPerfStats::default();
 
         state.record_frame(
             &plan,
-            &safe_plan(&[]),
-            &mut frame_perf,
+            &alignment,
+            Some(&mut frame_perf),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -1050,22 +1101,23 @@ mod tests {
         let changed_plan = plan_with_quad_range(1, 3, 8);
         let quad_instances = quad_instances(3);
         let mut state = ResidentGeometryUploadState::default();
+        let alignment = payload_alignment(&[0]);
 
-        let mut warmup = frame_perf_with_safe_candidate();
+        let mut warmup = RenderPerfStats::default();
         state.record_frame(
             &first_plan,
-            &safe_plan(&[0]),
-            &mut warmup,
+            &alignment,
+            Some(&mut warmup),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
         );
 
-        let mut changed = frame_perf_with_safe_candidate();
+        let mut changed = RenderPerfStats::default();
         state.record_frame(
             &changed_plan,
-            &safe_plan(&[0]),
-            &mut changed,
+            &alignment,
+            Some(&mut changed),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -1079,11 +1131,11 @@ mod tests {
             1
         );
 
-        let mut resized = frame_perf_with_safe_candidate();
+        let mut resized = RenderPerfStats::default();
         state.record_frame(
             &changed_plan,
-            &safe_plan(&[0]),
-            &mut resized,
+            &alignment,
+            Some(&mut resized),
             slots(0),
             streams_with_quad_instances(&quad_instances),
             ResidentGeometryUploadInvalidations {
@@ -1108,22 +1160,23 @@ mod tests {
         let mut changed_instances = quad_instances(2);
         changed_instances[0].rect[0] = 1.0;
         let mut state = ResidentGeometryUploadState::default();
+        let alignment = payload_alignment(&[0]);
 
-        let mut warmup = frame_perf_with_safe_candidate();
+        let mut warmup = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0]),
-            &mut warmup,
+            &alignment,
+            Some(&mut warmup),
             slots(0),
             streams_with_quad_instances(&first_instances),
             ResidentGeometryUploadInvalidations::default(),
         );
 
-        let mut changed = frame_perf_with_safe_candidate();
+        let mut changed = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0]),
-            &mut changed,
+            &alignment,
+            Some(&mut changed),
             slots(0),
             streams_with_quad_instances(&changed_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -1175,22 +1228,23 @@ mod tests {
         let mut changed_instances = quad_instances(2);
         changed_instances[0].rect[0] = 1.0;
         let mut state = ResidentGeometryUploadState::default();
+        let alignment = payload_alignment(&[1]);
 
-        let mut warmup = frame_perf_with_safe_candidate();
+        let mut warmup = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[1]),
-            &mut warmup,
+            &alignment,
+            Some(&mut warmup),
             slots(0),
             streams_with_quad_instances(&first_instances),
             ResidentGeometryUploadInvalidations::default(),
         );
 
-        let mut changed = frame_perf_with_safe_candidate();
+        let mut changed = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[1]),
-            &mut changed,
+            &alignment,
+            Some(&mut changed),
             slots(0),
             streams_with_quad_instances(&changed_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -1219,22 +1273,23 @@ mod tests {
         let mut changed_instances = quad_instances(2);
         changed_instances[1].rect[0] = 1.0;
         let mut state = ResidentGeometryUploadState::default();
+        let alignment = payload_alignment(&[1]);
 
-        let mut warmup = frame_perf_with_safe_candidate();
+        let mut warmup = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[1]),
-            &mut warmup,
+            &alignment,
+            Some(&mut warmup),
             slots(0),
             streams_with_quad_instances(&first_instances),
             ResidentGeometryUploadInvalidations::default(),
         );
 
-        let mut changed = frame_perf_with_safe_candidate();
+        let mut changed = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[1]),
-            &mut changed,
+            &alignment,
+            Some(&mut changed),
             slots(0),
             streams_with_quad_instances(&changed_instances),
             ResidentGeometryUploadInvalidations::default(),
@@ -1273,22 +1328,23 @@ mod tests {
         let mut changed_instances = quad_instances(2);
         changed_instances[1].rect[0] = 1.0;
         let mut state = ResidentGeometryUploadState::default();
+        let alignment = payload_alignment(&[0, 1]);
 
-        let mut warmup = frame_perf_with_safe_candidates(2);
+        let mut warmup = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0, 1]),
-            &mut warmup,
+            &alignment,
+            Some(&mut warmup),
             slots(0),
             streams_with_quad_instances(&first_instances),
             ResidentGeometryUploadInvalidations::default(),
         );
 
-        let mut changed = frame_perf_with_safe_candidates(2);
+        let mut changed = RenderPerfStats::default();
         state.record_frame(
             &plan,
-            &safe_plan(&[0, 1]),
-            &mut changed,
+            &alignment,
+            Some(&mut changed),
             slots(0),
             streams_with_quad_instances(&changed_instances),
             ResidentGeometryUploadInvalidations::default(),

@@ -278,53 +278,6 @@ impl SceneChunkEncodingKey {
 }
 
 impl SceneChunkEncodingState {
-    pub(super) fn begin_frame(
-        &mut self,
-        manifest: Option<&fret_core::SceneChunkManifest>,
-        context: SceneChunkEncodingContext,
-    ) -> SceneChunkEncodingFrameStats {
-        self.previous_counts.clear();
-        for key in &self.cached_keys {
-            let count = self.previous_counts.entry(*key).or_default();
-            *count = count.saturating_add(1);
-        }
-
-        self.next_keys.clear();
-
-        let mut stats = SceneChunkEncodingFrameStats::default();
-        if let Some(manifest) = manifest {
-            stats.entries = manifest.len() as u64;
-            if !manifest.is_empty() {
-                stats.key_cache_context_fingerprint = context.fingerprint();
-            }
-
-            self.next_keys.reserve(manifest.len());
-            for entry in manifest.entries() {
-                let key = SceneChunkEncodingKey::new(context, entry);
-                if let Some(count) = self.previous_counts.get_mut(&key) {
-                    if *count > 0 {
-                        *count -= 1;
-                        stats.key_cache_hits = stats.key_cache_hits.saturating_add(1);
-                    } else {
-                        stats.key_cache_misses = stats.key_cache_misses.saturating_add(1);
-                    }
-                } else {
-                    stats.key_cache_misses = stats.key_cache_misses.saturating_add(1);
-                }
-                self.next_keys.push(key);
-            }
-        }
-
-        stats.key_cache_stale_entries = self
-            .previous_counts
-            .values()
-            .fold(0u64, |total, count| total.saturating_add(u64::from(*count)));
-
-        std::mem::swap(&mut self.cached_keys, &mut self.next_keys);
-        self.next_keys.clear();
-        stats
-    }
-
     pub(super) fn begin_frame_with_payloads(
         &mut self,
         manifest: Option<&fret_core::SceneChunkManifest>,
@@ -548,20 +501,16 @@ impl Renderer {
         frame_perf: &mut RenderPerfStats,
     ) {
         let mut state = std::mem::take(&mut self.scene_chunk_encoding_state);
-        let stats = if perf_enabled {
-            let viewport_size = context.viewport_size;
-            let output_is_srgb = context.format.is_srgb();
-            state.begin_frame_with_payloads(scene_chunks, context, |entry| {
-                self.encode_scene_chunk_entry_payload(
-                    entry,
-                    scale_factor,
-                    viewport_size,
-                    output_is_srgb,
-                )
-            })
-        } else {
-            state.begin_frame(scene_chunks, context)
-        };
+        let viewport_size = context.viewport_size;
+        let output_is_srgb = context.format.is_srgb();
+        let stats = state.begin_frame_with_payloads(scene_chunks, context, |entry| {
+            self.encode_scene_chunk_entry_payload(
+                entry,
+                scale_factor,
+                viewport_size,
+                output_is_srgb,
+            )
+        });
         self.scene_chunk_encoding_state = state;
         if perf_enabled {
             frame_perf.scene_chunk_encoding_key_cache_entries = stats.entries;
@@ -584,44 +533,43 @@ impl Renderer {
         flat_encoding: &SceneEncoding,
         perf_enabled: bool,
         frame_perf: &mut RenderPerfStats,
-    ) -> SceneChunkPayloadReassemblyPlan {
-        if !perf_enabled {
-            return SceneChunkPayloadReassemblyPlan::default();
-        }
-
+    ) -> SceneChunkPayloadPlanAlignment {
         let alignment = self
             .scene_chunk_encoding_state
             .record_payload_plan_alignment(plan, flat_encoding);
-        let stats = alignment.stats;
-        frame_perf.scene_chunk_encoding_payload_plan_candidate_segments =
-            stats.payload_plan_candidate_segments;
-        frame_perf.scene_chunk_encoding_payload_plan_shape_matches =
-            stats.payload_plan_shape_matches;
-        frame_perf.scene_chunk_encoding_payload_plan_shape_mismatches =
-            stats.payload_plan_shape_mismatches;
-        frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_matches =
-            stats.payload_plan_stream_fingerprint_matches;
-        frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches =
-            stats.payload_plan_stream_fingerprint_mismatches;
-        frame_perf.scene_chunk_encoding_payload_reassembly_dry_run_candidates =
-            stats.payload_reassembly_dry_run_candidates;
-        frame_perf.scene_chunk_encoding_payload_reassembly_append_only_matches =
-            stats.payload_reassembly_append_only_matches;
-        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch =
-            stats.payload_reassembly_blocked_by_shape_mismatch;
-        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch =
-            stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch;
-        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws =
-            stats.payload_reassembly_blocked_by_non_quad_draws;
-        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_side_tables =
-            stats.payload_reassembly_blocked_by_side_tables;
-        frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_material_state =
-            stats.payload_reassembly_blocked_by_material_state;
-        frame_perf.scene_chunk_encoding_payload_entries_without_plan_candidate =
-            stats.payload_entries_without_plan_candidate;
-        frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload =
-            stats.payload_plan_candidates_without_payload;
-        alignment.reassembly_plan
+        if perf_enabled {
+            let stats = alignment.stats;
+            frame_perf.scene_chunk_encoding_payload_plan_candidate_segments =
+                stats.payload_plan_candidate_segments;
+            frame_perf.scene_chunk_encoding_payload_plan_shape_matches =
+                stats.payload_plan_shape_matches;
+            frame_perf.scene_chunk_encoding_payload_plan_shape_mismatches =
+                stats.payload_plan_shape_mismatches;
+            frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_matches =
+                stats.payload_plan_stream_fingerprint_matches;
+            frame_perf.scene_chunk_encoding_payload_plan_stream_fingerprint_mismatches =
+                stats.payload_plan_stream_fingerprint_mismatches;
+            frame_perf.scene_chunk_encoding_payload_reassembly_dry_run_candidates =
+                stats.payload_reassembly_dry_run_candidates;
+            frame_perf.scene_chunk_encoding_payload_reassembly_append_only_matches =
+                stats.payload_reassembly_append_only_matches;
+            frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_shape_mismatch =
+                stats.payload_reassembly_blocked_by_shape_mismatch;
+            frame_perf
+                .scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch =
+                stats.payload_reassembly_blocked_by_stream_fingerprint_mismatch;
+            frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_non_quad_draws =
+                stats.payload_reassembly_blocked_by_non_quad_draws;
+            frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_side_tables =
+                stats.payload_reassembly_blocked_by_side_tables;
+            frame_perf.scene_chunk_encoding_payload_reassembly_blocked_by_material_state =
+                stats.payload_reassembly_blocked_by_material_state;
+            frame_perf.scene_chunk_encoding_payload_entries_without_plan_candidate =
+                stats.payload_entries_without_plan_candidate;
+            frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload =
+                stats.payload_plan_candidates_without_payload;
+        }
+        alignment
     }
 
     fn encode_scene_chunk_entry_payload(
@@ -731,6 +679,16 @@ mod tests {
         manifest
     }
 
+    fn begin_frame(
+        state: &mut SceneChunkEncodingState,
+        manifest: Option<&SceneChunkManifest>,
+        context: SceneChunkEncodingContext,
+    ) -> SceneChunkEncodingFrameStats {
+        state.begin_frame_with_payloads(manifest, context, |_| {
+            CachedSceneChunkEncoding::new(SceneEncoding::default())
+        })
+    }
+
     fn quad_payload_encoding() -> SceneEncoding {
         let mut encoding = SceneEncoding::default();
         let instance: QuadInstance = bytemuck::Zeroable::zeroed();
@@ -760,21 +718,21 @@ mod tests {
         let second = entry(20.0);
         let frame = manifest(&[first.clone(), second.clone()]);
 
-        let stats = state.begin_frame(Some(&frame), context(1));
+        let stats = begin_frame(&mut state, Some(&frame), context(1));
         assert_eq!(stats.entries, 2);
         assert_eq!(stats.key_cache_hits, 0);
         assert_eq!(stats.key_cache_misses, 2);
         assert_eq!(stats.key_cache_stale_entries, 0);
         assert_ne!(stats.key_cache_context_fingerprint, 0);
 
-        let stats = state.begin_frame(Some(&frame), context(1));
+        let stats = begin_frame(&mut state, Some(&frame), context(1));
         assert_eq!(stats.key_cache_hits, 2);
         assert_eq!(stats.key_cache_misses, 0);
         assert_eq!(stats.key_cache_stale_entries, 0);
 
         let moved = entry(40.0);
         let frame = manifest(&[first, moved]);
-        let stats = state.begin_frame(Some(&frame), context(1));
+        let stats = begin_frame(&mut state, Some(&frame), context(1));
         assert_eq!(stats.key_cache_hits, 1);
         assert_eq!(stats.key_cache_misses, 1);
         assert_eq!(stats.key_cache_stale_entries, 1);
@@ -787,16 +745,16 @@ mod tests {
         let one = manifest(std::slice::from_ref(&entry));
         let duplicated = manifest(&[entry.clone(), entry.clone()]);
 
-        let stats = state.begin_frame(Some(&one), context(1));
+        let stats = begin_frame(&mut state, Some(&one), context(1));
         assert_eq!(stats.key_cache_misses, 1);
 
-        let stats = state.begin_frame(Some(&duplicated), context(1));
+        let stats = begin_frame(&mut state, Some(&duplicated), context(1));
         assert_eq!(stats.entries, 2);
         assert_eq!(stats.key_cache_hits, 1);
         assert_eq!(stats.key_cache_misses, 1);
         assert_eq!(stats.key_cache_stale_entries, 0);
 
-        let stats = state.begin_frame(Some(&one), context(1));
+        let stats = begin_frame(&mut state, Some(&one), context(1));
         assert_eq!(stats.key_cache_hits, 1);
         assert_eq!(stats.key_cache_misses, 0);
         assert_eq!(stats.key_cache_stale_entries, 1);
@@ -808,8 +766,8 @@ mod tests {
         let entry = entry(0.0);
         let frame = manifest(&[entry]);
 
-        state.begin_frame(Some(&frame), context(1));
-        let stats = state.begin_frame(Some(&frame), context(2));
+        begin_frame(&mut state, Some(&frame), context(1));
+        let stats = begin_frame(&mut state, Some(&frame), context(2));
         assert_eq!(stats.key_cache_hits, 0);
         assert_eq!(stats.key_cache_misses, 1);
         assert_eq!(stats.key_cache_stale_entries, 1);
