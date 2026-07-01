@@ -10,17 +10,18 @@ related_plan: docs/plans/2026-06-30-001-refactor-ui-framework-architecture-plan.
 
 - Goal: execute the implementation-ready fearless refactor plan for Fret's UI framework architecture convergence.
 - Branch: `feat/ui-framework-convergence` from local `main` after the planning commit.
-- Last verified: U9 view lane barriers split passed focused AppUi shell/facade nextest gates, the consumption profile gate, formatting, layering/surface gates, and `git diff --check`.
+- Last verified: U9 AppUi shell split passed focused AppUi shell/facade nextest gates, the consumption profile gate, formatting, layering/surface gates, and `git diff --check`.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 first observability slice for identity fallback pressure/parent repair/GC reachability/dispatch snapshot cache pressure, U4 second observability slice for dirty frontier breadth plus model/global observation-index churn, U5 first slice replacing raw `UiTree::dirty_boundaries` ownership with `DirtyViewFrontier`, U5 BoundaryFrameProducts slice grouping boundary dirty/prepaint/scene-fragment/paint-cache state under `ViewBoundaryState::frame_products`, U5 interaction replay entry removing `Node::interaction_cache` in favor of `BoundaryFrameProducts::interaction_cache`, U5 dispatch snapshot pre-slice moving raw `UiTree` dispatch snapshot generation/cache fields behind `DispatchSnapshotFrameProductState`, U5 hit-test bounds tree moving per-layer reusable bounds indexes into `BoundaryFrameProducts::hit_test_bounds`, U5 semantics subtree moving reusable clean boundary semantics subtree products into `BoundaryFrameProducts::semantics`, U5 hit-test path routing cache replacing raw `Option<HitTestPathCache>` ownership with `HitTestPathRoutingCacheState`, U5 command routing correctness and cache owner-state slices, U5 touch-drag routing correctness, U5 paint replay owner-state, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and resident upload lanes, U8 prepared shape cache budget/eviction, U8 glyph atlas page budget diagnostics, U8 text resource cache-key invalidation, U8 prepare/residency split, U8 visible text/glyph residency, U8 editor line text identity, U8 row text/row scene cache delta preservation, U8 code-editor text/cache diagnostics, U8 editor paint cache artifact gate, and U8 text budget gate wrapper.
-- Latest done: U9 view lane barriers split.
-- In progress: U9 facade modularization remains open; U8 target-machine native text budget runs and web/wasm runtime bundle evidence remain open.
+- Latest done: U9 AppUi shell split.
+- In progress: U9 facade modularization closeout decision remains open; U8 target-machine native text budget runs and web/wasm runtime bundle evidence remain open.
 - Blocked: no blocking issue.
-- Next action: decide whether to move the remaining core `AppUi` shell helpers into `view/shell.rs`, or pause U9 after the current modularity checkpoint.
+- Next action: audit whether U9 has remaining documentation/profile-map gaps, then either close the U9 checkpoint or continue with the next implementation unit in the fearless refactor plan.
 
 # Citations
 
 - [Plan](../../plans/2026-06-30-001-refactor-ui-framework-architecture-plan.md)
 - [Subagent Findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
+- [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

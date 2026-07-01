@@ -15,6 +15,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [Current State](current-state.md)
 - [UI framework architecture goal handoff](sessions/2026-06-30-ui-framework-architecture-goal.md)
 - [UI framework audit findings](subagents/2026-06-30-ui-framework-architecture-audit-findings.md)
+- [U9 AppUi shell split audit](subagents/2026-07-02-u9-appui-shell-split-audit.md)
 - [U7 renderer scene/upload observability](progress/2026-07-01-u7-renderer-scene-upload-observability.md)
 - [U7 scene chunk compatibility bridge](progress/2026-07-01-u7-scene-chunk-compatibility-bridge.md)
 - [U7 boundary scene chunk diagnostics](progress/2026-07-01-u7-boundary-scene-chunk-diagnostics.md)
@@ -58,4 +59,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U9 view bridge impls split](progress/2026-07-02-u9-view-bridges-split.md)
 - [U9 view scheduling and layout-query split](progress/2026-07-02-u9-view-scheduling-layout-split.md)
 - [U9 view lane barriers split](progress/2026-07-02-u9-view-lane-barriers-split.md)
+- [U9 AppUi shell split](progress/2026-07-02-u9-view-shell-split.md)
 - [Log](log.md)
