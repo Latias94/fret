@@ -1,5 +1,6 @@
 const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
+const VIEW_ACTIONS_RS: &str = include_str!("../src/view/actions.rs");
 
 fn app_module_slice() -> &'static str {
     let app_start = FRET_LIB_RS
@@ -30,9 +31,18 @@ fn advanced_prelude_slice() -> &'static str {
     &advanced_slice[prelude_start..]
 }
 
+fn view_api_surface() -> String {
+    let view_api = VIEW_RS
+        .split("\n#[cfg(test)]\nmod tests")
+        .next()
+        .expect("view.rs test module marker should exist");
+    format!("{view_api}\n{VIEW_ACTIONS_RS}")
+}
+
 #[test]
 fn app_render_actions_ext_is_part_of_the_default_and_advanced_preludes() {
-    assert!(VIEW_RS.contains("pub trait AppRenderActionsExt"));
+    let view_api = view_api_surface();
+    assert!(view_api.contains("pub trait AppRenderActionsExt"));
     assert!(app_prelude_slice().contains("pub use crate::view::AppRenderActionsExt as _;"));
     assert!(advanced_prelude_slice().contains("pub use crate::view::AppRenderActionsExt as _;"));
     assert!(!app_prelude_slice().contains("pub use crate::view::UiCxActionsExt as _;"));

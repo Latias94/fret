@@ -1,5 +1,6 @@
 const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
+const VIEW_DATA_RS: &str = include_str!("../src/view/data.rs");
 const ASYNC_PLAYGROUND_DEMO: &str =
     include_str!("../../../apps/fret-examples/src/async_playground_demo.rs");
 const QUERY_DEMO: &str = include_str!("../../../apps/fret-examples/src/query_demo.rs");
@@ -28,15 +29,24 @@ fn advanced_prelude_slice() -> &'static str {
     &advanced_slice[prelude_start..]
 }
 
+fn view_api_surface() -> String {
+    let view_api = VIEW_RS
+        .split("\n#[cfg(test)]\nmod tests")
+        .next()
+        .expect("view.rs test module marker should exist");
+    format!("{view_api}\n{VIEW_DATA_RS}")
+}
+
 #[test]
 fn app_render_data_ext_is_part_of_the_default_and_advanced_preludes() {
-    assert!(VIEW_RS.contains("pub trait AppRenderDataExt"));
+    let view_api = view_api_surface();
+    assert!(view_api.contains("pub trait AppRenderDataExt"));
     assert!(app_prelude_slice().contains("pub use crate::view::AppRenderDataExt as _;"));
     assert!(advanced_prelude_slice().contains("pub use crate::view::AppRenderDataExt as _;"));
     assert!(!app_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
     assert!(!advanced_prelude_slice().contains("pub use crate::view::UiCxDataExt as _;"));
-    assert!(!VIEW_RS.contains("pub use AppRenderDataExt as UiCxDataExt;"));
-    assert!(!VIEW_RS.contains("pub use AppRenderData as UiCxData;"));
+    assert!(!view_api.contains("pub use AppRenderDataExt as UiCxDataExt;"));
+    assert!(!view_api.contains("pub use AppRenderData as UiCxData;"));
 }
 
 #[test]
