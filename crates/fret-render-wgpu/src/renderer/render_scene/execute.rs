@@ -69,7 +69,7 @@ impl Renderer {
             &mut frame_perf,
         );
 
-        let text_atlas_revision = self.prepare_text_for_frame(
+        let text_frame_resources = self.prepare_text_for_frame(
             queue,
             scene,
             frame_index,
@@ -91,7 +91,7 @@ impl Renderer {
             format,
             viewport_size,
             scale_factor,
-            text_atlas_revision,
+            text_frame_resources.scene_resource_fingerprint,
         );
         self.record_scene_chunk_encoding_key_cache_for_frame(
             scene_chunks,
@@ -106,7 +106,7 @@ impl Renderer {
             viewport_size,
             scale_factor,
             scene,
-            text_atlas_revision,
+            text_frame_resources.scene_resource_fingerprint,
         );
 
         let (encoding, cache_hit) = self.acquire_scene_encoding_for_frame(

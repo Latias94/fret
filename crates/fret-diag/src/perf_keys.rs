@@ -2012,6 +2012,10 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         PerfKeyAggregate::Max,
     ),
     count_key(
+        "renderer_scene_encoding_cache_miss_text_scene_resource_key_changed",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
         "renderer_scene_encoding_cache_miss_text_quality_key_changed",
         PerfKeyAggregate::Max,
     ),
@@ -2698,6 +2702,7 @@ mod tests {
             "renderer_scene_chunk_encoding_payload_reassembly_blocked_by_stream_fingerprint_mismatch",
             "renderer_render_plan_scene_chunk_candidates_changed",
             "renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate",
+            "renderer_scene_encoding_cache_miss_text_scene_resource_key_changed",
             "renderer_text_scene_resource_fingerprint_changed",
             "renderer_text_atlas_revision_changed_scene_text_resources_stable",
             "renderer_encode_scene_text_ops",

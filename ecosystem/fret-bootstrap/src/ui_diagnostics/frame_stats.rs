@@ -967,6 +967,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_scene_encoding_cache_miss_text_atlas_revision_changed: u64,
     #[serde(default)]
+    pub renderer_scene_encoding_cache_miss_text_scene_resource_key_changed: u64,
+    #[serde(default)]
     pub renderer_scene_encoding_cache_miss_text_quality_key_changed: u64,
     #[serde(default)]
     pub renderer_scene_encoding_cache_miss_materials_generation_changed: u64,
@@ -1773,6 +1775,7 @@ impl UiFrameStatsV1 {
             renderer_scene_encoding_cache_miss_render_targets_generation_changed: 0,
             renderer_scene_encoding_cache_miss_images_generation_changed: 0,
             renderer_scene_encoding_cache_miss_text_atlas_revision_changed: 0,
+            renderer_scene_encoding_cache_miss_text_scene_resource_key_changed: 0,
             renderer_scene_encoding_cache_miss_text_quality_key_changed: 0,
             renderer_scene_encoding_cache_miss_materials_generation_changed: 0,
             renderer_scene_encoding_cache_miss_material_paint_budget_changed: 0,
@@ -2238,6 +2241,8 @@ impl UiFrameStatsV1 {
             miss_histogram.images_generation_changed;
         self.renderer_scene_encoding_cache_miss_text_atlas_revision_changed =
             miss_histogram.text_atlas_revision_changed;
+        self.renderer_scene_encoding_cache_miss_text_scene_resource_key_changed =
+            miss_histogram.text_scene_resource_key_changed;
         self.renderer_scene_encoding_cache_miss_text_quality_key_changed =
             miss_histogram.text_quality_key_changed;
         self.renderer_scene_encoding_cache_miss_materials_generation_changed =

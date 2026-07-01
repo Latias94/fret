@@ -8,7 +8,7 @@ pub(super) const SCENE_ENCODING_CACHE_MISS_SCENE_FINGERPRINT_CHANGED: u64 = 1 <<
 pub(super) const SCENE_ENCODING_CACHE_MISS_SCENE_OPS_LEN_CHANGED: u64 = 1 << 5;
 pub(super) const SCENE_ENCODING_CACHE_MISS_RENDER_TARGETS_GENERATION_CHANGED: u64 = 1 << 6;
 pub(super) const SCENE_ENCODING_CACHE_MISS_IMAGES_GENERATION_CHANGED: u64 = 1 << 7;
-pub(super) const SCENE_ENCODING_CACHE_MISS_TEXT_ATLAS_REVISION_CHANGED: u64 = 1 << 8;
+pub(super) const SCENE_ENCODING_CACHE_MISS_TEXT_SCENE_RESOURCE_KEY_CHANGED: u64 = 1 << 8;
 pub(super) const SCENE_ENCODING_CACHE_MISS_TEXT_QUALITY_KEY_CHANGED: u64 = 1 << 9;
 pub(super) const SCENE_ENCODING_CACHE_MISS_MATERIALS_GENERATION_CHANGED: u64 = 1 << 10;
 pub(super) const SCENE_ENCODING_CACHE_MISS_MATERIAL_PAINT_BUDGET_CHANGED: u64 = 1 << 11;
@@ -88,9 +88,9 @@ fn record_scene_encoding_cache_miss_histogram(
     if (reasons & SCENE_ENCODING_CACHE_MISS_IMAGES_GENERATION_CHANGED) != 0 {
         histogram.images_generation_changed = histogram.images_generation_changed.saturating_add(1);
     }
-    if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_ATLAS_REVISION_CHANGED) != 0 {
-        histogram.text_atlas_revision_changed =
-            histogram.text_atlas_revision_changed.saturating_add(1);
+    if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_SCENE_RESOURCE_KEY_CHANGED) != 0 {
+        histogram.text_scene_resource_key_changed =
+            histogram.text_scene_resource_key_changed.saturating_add(1);
     }
     if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_QUALITY_KEY_CHANGED) != 0 {
         histogram.text_quality_key_changed = histogram.text_quality_key_changed.saturating_add(1);
@@ -144,8 +144,8 @@ fn miss_reasons_for_key_change(
     if prev.images_generation != next.images_generation {
         reasons |= SCENE_ENCODING_CACHE_MISS_IMAGES_GENERATION_CHANGED;
     }
-    if prev.text_atlas_revision != next.text_atlas_revision {
-        reasons |= SCENE_ENCODING_CACHE_MISS_TEXT_ATLAS_REVISION_CHANGED;
+    if prev.text_scene_resource_key != next.text_scene_resource_key {
+        reasons |= SCENE_ENCODING_CACHE_MISS_TEXT_SCENE_RESOURCE_KEY_CHANGED;
     }
     if prev.text_quality_key != next.text_quality_key {
         reasons |= SCENE_ENCODING_CACHE_MISS_TEXT_QUALITY_KEY_CHANGED;
@@ -206,8 +206,8 @@ impl std::fmt::Display for SceneEncodingCacheMissReasonDisplay {
         if (reasons & SCENE_ENCODING_CACHE_MISS_IMAGES_GENERATION_CHANGED) != 0 {
             push("images_generation", f, &mut first)?;
         }
-        if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_ATLAS_REVISION_CHANGED) != 0 {
-            push("text_atlas_revision", f, &mut first)?;
+        if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_SCENE_RESOURCE_KEY_CHANGED) != 0 {
+            push("text_scene_resource_key", f, &mut first)?;
         }
         if (reasons & SCENE_ENCODING_CACHE_MISS_TEXT_QUALITY_KEY_CHANGED) != 0 {
             push("text_quality_key", f, &mut first)?;
@@ -241,7 +241,7 @@ mod tests {
             scene_ops_len: 1,
             render_targets_generation: 0,
             images_generation: 0,
-            text_atlas_revision: 0,
+            text_scene_resource_key: 0,
             text_quality_key: 0,
             materials_generation: 0,
             material_paint_budget_per_frame: 50_000,
@@ -321,6 +321,28 @@ mod tests {
         );
 
         let mut next = base;
+        next.text_scene_resource_key = 42;
+        record_scene_encoding_cache_frame_result(
+            Some(base),
+            next,
+            false,
+            true,
+            false,
+            &tracing::Span::none(),
+            &mut perf,
+        );
+        assert_eq!(perf.scene_encoding_cache_misses, 2);
+        assert_eq!(
+            perf.scene_encoding_cache_last_miss_reasons,
+            SCENE_ENCODING_CACHE_MISS_TEXT_SCENE_RESOURCE_KEY_CHANGED
+        );
+        assert_eq!(
+            perf.scene_encoding_cache_miss_histogram
+                .text_scene_resource_key_changed,
+            1
+        );
+
+        let mut next = base;
         next.scene_fingerprint = 9;
         next.scene_ops_len = 3;
         record_scene_encoding_cache_frame_result(
@@ -332,7 +354,7 @@ mod tests {
             &tracing::Span::none(),
             &mut perf,
         );
-        assert_eq!(perf.scene_encoding_cache_misses, 2);
+        assert_eq!(perf.scene_encoding_cache_misses, 3);
         assert_eq!(
             perf.scene_encoding_cache_miss_histogram
                 .scene_fingerprint_changed,

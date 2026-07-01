@@ -9,8 +9,8 @@ impl Renderer {
         perf_enabled: bool,
         trace_enabled: bool,
         frame_perf: &mut RenderPerfStats,
-    ) -> u64 {
-        let (text_atlas_revision, prepare_elapsed) = fret_perf::measure_span(
+    ) -> PreparedTextFrameResources {
+        let (text_frame_resources, prepare_elapsed) = fret_perf::measure_span(
             perf_enabled,
             trace_enabled,
             || tracing::trace_span!("fret.renderer.text.prepare", frame_index),
@@ -24,10 +24,9 @@ impl Renderer {
                     text_prepare_perf.flush_uploads += start.elapsed();
                 }
                 let text_atlas_revision = self.text_system.atlas_revision();
+                let scene_resource_snapshot = self.text_system.scene_text_resource_snapshot(scene);
                 if perf_enabled {
                     frame_perf.record_text_prepare_scene_perf(text_prepare_perf);
-                    let scene_resource_snapshot =
-                        self.text_system.scene_text_resource_snapshot(scene);
                     let scene_resource_observation = self
                         .text_scene_resource_key_state
                         .observe(text_atlas_revision, scene_resource_snapshot.fingerprint);
@@ -45,13 +44,15 @@ impl Renderer {
                     frame_perf.text_atlas_resets = atlas_perf.resets;
                     frame_perf.intermediate_budget_bytes = self.intermediate_state.budget_bytes;
                 }
-                text_atlas_revision
+                PreparedTextFrameResources {
+                    scene_resource_fingerprint: scene_resource_snapshot.fingerprint,
+                }
             },
         );
         if let Some(prepare_elapsed) = prepare_elapsed {
             frame_perf.prepare_text += prepare_elapsed;
         }
-        text_atlas_revision
+        text_frame_resources
     }
 
     pub(super) fn prepare_svg_for_frame(

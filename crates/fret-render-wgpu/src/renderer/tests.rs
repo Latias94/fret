@@ -22,7 +22,7 @@ use fret_core::PathService as _;
 use fret_core::geometry::{Corners, Point, Px, Transform2D};
 use fret_core::{
     Color, DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene,
-    SceneMeshVertex, SceneOp, Size, UvPoint, ViewportFit,
+    SceneMeshVertex, SceneOp, Size, TextConstraints, TextStyle, UvPoint, ViewportFit,
 };
 
 fn assert_approx_eq(a: f32, b: f32) {
@@ -1448,6 +1448,129 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     );
     assert_eq!(
         last.scene_chunk_encoding_payload_plan_candidates_without_payload,
+        0
+    );
+}
+
+#[test]
+fn unreferenced_text_atlas_churn_does_not_bust_scene_or_chunk_encoding_cache() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (64, 64);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("text resource key scene cache test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let (text_a, _) = fret_core::TextService::prepare_str(
+        &mut renderer,
+        "aaaa",
+        &style,
+        TextConstraints::default(),
+    );
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Text {
+        order: DrawOrder(0),
+        origin: Point::new(Px(0.0), Px(20.0)),
+        text: text_a,
+        paint: fret_core::Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        })
+        .into(),
+        outline: None,
+        shadow: None,
+    });
+    let chunk = fret_core::SceneChunk::from_scene(&scene);
+    let mut manifest = fret_core::SceneChunkManifest::default();
+    manifest.push(fret_core::SceneChunkManifestEntry::new(
+        chunk,
+        Rect::new(Point::default(), Size::new(Px(40.0), Px(24.0))),
+        Point::default(),
+    ));
+
+    let params = || super::RenderSceneParams {
+        format,
+        target_view: &target_view,
+        scene: &scene,
+        scene_chunks: Some(&manifest),
+        clear: super::ClearColor::default(),
+        scale_factor: 1.0,
+        viewport_size,
+    };
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+    let warmed_key = renderer
+        .scene_encoding_state
+        .cache_key()
+        .expect("scene encoding key after warmup");
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+    let warmed_frame = renderer
+        .diagnostics_state
+        .last_frame_perf
+        .expect("last frame perf snapshot");
+    assert_eq!(warmed_frame.scene_encoding_cache_hits, 1);
+    assert_eq!(warmed_frame.scene_chunk_encoding_key_cache_hits, 1);
+    assert_eq!(warmed_frame.scene_chunk_encoding_payload_cache_hits, 1);
+
+    let atlas_revision_before = renderer.text_system.atlas_revision();
+    let (_text_b, _) = fret_core::TextService::prepare_str(
+        &mut renderer,
+        "zzzz",
+        &style,
+        TextConstraints::default(),
+    );
+    assert_ne!(
+        renderer.text_system.atlas_revision(),
+        atlas_revision_before,
+        "test setup should create unreferenced atlas churn"
+    );
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, params());
+    let churn_key = renderer
+        .scene_encoding_state
+        .cache_key()
+        .expect("scene encoding key after unreferenced text churn");
+    let churn_frame = renderer
+        .diagnostics_state
+        .last_frame_perf
+        .expect("last frame perf snapshot");
+
+    assert_eq!(churn_key, warmed_key);
+    assert_eq!(churn_frame.scene_encoding_cache_hits, 1);
+    assert_eq!(churn_frame.scene_encoding_cache_misses, 0);
+    assert_eq!(churn_frame.scene_chunk_encoding_key_cache_hits, 1);
+    assert_eq!(churn_frame.scene_chunk_encoding_payload_cache_hits, 1);
+    assert_eq!(
+        churn_frame.text_atlas_revision_changed_scene_text_resources_stable,
+        1
+    );
+    assert_eq!(
+        churn_frame
+            .scene_encoding_cache_miss_histogram
+            .text_scene_resource_key_changed,
         0
     );
 }

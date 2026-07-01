@@ -7,7 +7,7 @@ impl Renderer {
         viewport_size: (u32, u32),
         scale_factor: f32,
         scene: &Scene,
-        text_atlas_revision: u64,
+        text_scene_resource_key: u64,
     ) -> SceneEncodingCacheKey {
         let (render_targets_generation, images_generation) = self.gpu_resources.generations();
         super::super::scene_encoding_cache::SceneEncodingState::build_key(
@@ -19,7 +19,7 @@ impl Renderer {
                 scene_ops_len: scene.ops_len(),
                 render_targets_generation,
                 images_generation,
-                text_atlas_revision,
+                text_scene_resource_key,
                 text_quality_key: self.text_system.text_quality_key(),
                 materials_generation: self.material_effect_state.materials_generation,
                 material_paint_budget_per_frame: self

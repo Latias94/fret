@@ -575,6 +575,7 @@ pub struct SceneEncodingCacheMissHistogramSnapshot {
     pub render_targets_generation_changed: u64,
     pub images_generation_changed: u64,
     pub text_atlas_revision_changed: u64,
+    pub text_scene_resource_key_changed: u64,
     pub text_quality_key_changed: u64,
     pub materials_generation_changed: u64,
     pub material_paint_budget_changed: u64,
@@ -607,6 +608,9 @@ impl SceneEncodingCacheMissHistogramSnapshot {
         self.text_atlas_revision_changed = self
             .text_atlas_revision_changed
             .saturating_add(other.text_atlas_revision_changed);
+        self.text_scene_resource_key_changed = self
+            .text_scene_resource_key_changed
+            .saturating_add(other.text_scene_resource_key_changed);
         self.text_quality_key_changed = self
             .text_quality_key_changed
             .saturating_add(other.text_quality_key_changed);
@@ -662,6 +666,11 @@ impl TextSceneResourceKeyState {
             atlas_revision_changed_but_scene_text_resources_stable,
         }
     }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct PreparedTextFrameResources {
+    pub(super) scene_resource_fingerprint: u64,
 }
 
 #[cfg(test)]
@@ -1931,7 +1940,7 @@ pub(super) struct SceneEncodingCacheKey {
     pub(super) scene_ops_len: usize,
     pub(super) render_targets_generation: u64,
     pub(super) images_generation: u64,
-    pub(super) text_atlas_revision: u64,
+    pub(super) text_scene_resource_key: u64,
     pub(super) text_quality_key: u64,
     pub(super) materials_generation: u64,
     pub(super) material_paint_budget_per_frame: u64,

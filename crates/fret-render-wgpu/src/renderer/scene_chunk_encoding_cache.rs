@@ -19,7 +19,7 @@ pub(super) struct SceneChunkEncodingContext {
     pub(super) scale_factor_bits: u32,
     pub(super) render_targets_generation: u64,
     pub(super) images_generation: u64,
-    pub(super) text_atlas_revision: u64,
+    pub(super) text_scene_resource_key: u64,
     pub(super) text_quality_key: u64,
     pub(super) materials_generation: u64,
     pub(super) material_paint_budget_per_frame: u64,
@@ -470,7 +470,7 @@ impl Renderer {
         format: wgpu::TextureFormat,
         viewport_size: (u32, u32),
         scale_factor: f32,
-        text_atlas_revision: u64,
+        text_scene_resource_key: u64,
     ) -> SceneChunkEncodingContext {
         let (render_targets_generation, images_generation) = self.gpu_resources.generations();
         SceneChunkEncodingContext {
@@ -479,7 +479,7 @@ impl Renderer {
             scale_factor_bits: scale_factor.to_bits(),
             render_targets_generation,
             images_generation,
-            text_atlas_revision,
+            text_scene_resource_key,
             text_quality_key: self.text_system.text_quality_key(),
             materials_generation: self.material_effect_state.materials_generation,
             material_paint_budget_per_frame: self
@@ -643,14 +643,14 @@ mod tests {
     use fret_core::{Point, Rect, SceneChunk, SceneChunkManifest, SceneChunkManifestEntry, Size};
     use std::sync::Arc;
 
-    fn context(text_atlas_revision: u64) -> SceneChunkEncodingContext {
+    fn context(text_scene_resource_key: u64) -> SceneChunkEncodingContext {
         SceneChunkEncodingContext {
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             viewport_size: (320, 200),
             scale_factor_bits: 1.0f32.to_bits(),
             render_targets_generation: 1,
             images_generation: 2,
-            text_atlas_revision,
+            text_scene_resource_key,
             text_quality_key: 3,
             materials_generation: 4,
             material_paint_budget_per_frame: 5,

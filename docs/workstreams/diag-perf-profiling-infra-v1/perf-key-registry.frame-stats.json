@@ -3126,6 +3126,13 @@
       "unit": "count"
     },
     {
+      "key": "renderer_scene_encoding_cache_miss_text_scene_resource_key_changed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_scene_encoding_cache_miss_text_quality_key_changed",
       "kind": "counter",
       "scope": "frame",
