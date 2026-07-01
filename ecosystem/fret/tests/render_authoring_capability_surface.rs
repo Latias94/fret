@@ -1,5 +1,6 @@
 const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
+const VIEW_BRIDGES_RS: &str = include_str!("../src/view/bridges.rs");
 const VIEW_CONTEXT_RS: &str = include_str!("../src/view/context.rs");
 const COOKBOOK_SCAFFOLD: &str = include_str!("../../../apps/fret-cookbook/src/scaffold.rs");
 const DEFAULT_SNIPPET_GATE: &str =
@@ -31,11 +32,20 @@ fn public_surface_slice() -> &'static str {
     &FRET_LIB_RS[..tests_start]
 }
 
+fn view_api_surface() -> String {
+    let view_api = VIEW_RS
+        .split("\n#[cfg(test)]\nmod tests")
+        .next()
+        .expect("view.rs test module marker should exist");
+    format!("{view_api}\n{VIEW_BRIDGES_RS}")
+}
+
 #[test]
 fn app_lane_exports_explicit_render_authoring_capability_surface() {
     let public_surface = public_surface_slice();
     let app_slice = app_module_slice();
     let app_prelude = app_prelude_slice();
+    let view_api = view_api_surface();
 
     assert!(app_slice.contains("pub use crate::view::{"));
     assert!(app_slice.contains("pub use crate::AppComponentCx;"));
@@ -51,22 +61,22 @@ fn app_lane_exports_explicit_render_authoring_capability_surface() {
         VIEW_CONTEXT_RS
             .contains("pub trait AppRenderContext<'a>: RenderContextAccess<'a, crate::app::App>")
     );
-    assert!(VIEW_RS.contains(
+    assert!(view_api.contains(
         "impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {"
     ));
-    assert!(VIEW_RS.contains(
+    assert!(view_api.contains(
         "impl<'cx, 'a, H: UiHost> fret_ui_kit::command::ElementCommandGatingExt for AppUi<'cx, 'a, H> {"
     ));
-    assert!(VIEW_RS.contains(
+    assert!(view_api.contains(
         "pub fn request_animation_frame(&mut self) {\n        self.cx.request_animation_frame();\n    }"
     ));
-    assert!(VIEW_RS.contains(
+    assert!(view_api.contains(
         "pub fn set_continuous_frames(&mut self, enabled: bool) {\n        fret_ui_kit::declarative::scheduling::set_continuous_frames(self.cx, enabled);\n    }"
     ));
-    assert!(VIEW_RS.contains("pub fn layout_query_bounds("));
-    assert!(VIEW_RS.contains("pub fn layout_query_region_with_id<I>("));
-    assert!(VIEW_RS.contains("pub fn layout_query_region<I>("));
-    assert!(VIEW_RS.contains(
+    assert!(view_api.contains("pub fn layout_query_bounds("));
+    assert!(view_api.contains("pub fn layout_query_region_with_id<I>("));
+    assert!(view_api.contains("pub fn layout_query_region<I>("));
+    assert!(view_api.contains(
         "let mut carried_action_handlers = Some(std::mem::take(&mut self.action_handlers));"
     ));
     assert!(

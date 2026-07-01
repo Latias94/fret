@@ -24,6 +24,7 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 
 mod actions;
 mod activation;
+mod bridges;
 mod context;
 mod data;
 mod effects;
@@ -93,74 +94,6 @@ pub struct AppUi<'cx, 'a, H: UiHost> {
     action_root: fret_ui::GlobalElementId,
     action_handlers: crate::actions::ActionHandlerTable,
     action_handlers_used: bool,
-}
-
-impl<'cx, 'a, H: UiHost> fret_ui::ElementContextAccess<'a, H> for AppUi<'cx, 'a, H> {
-    fn elements(&mut self) -> &mut ElementContext<'a, H> {
-        self.cx
-    }
-}
-
-impl<'cx, 'a, H: UiHost> fret_ui_kit::command::ElementCommandGatingExt for AppUi<'cx, 'a, H> {
-    fn command_is_enabled(&self, command: &fret_runtime::CommandId) -> bool {
-        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::command_is_enabled(
-            &*self.cx, command,
-        )
-    }
-
-    fn command_is_enabled_with_fallback_input_context(
-        &self,
-        command: &fret_runtime::CommandId,
-        fallback_input_ctx: fret_runtime::InputContext,
-    ) -> bool {
-        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::command_is_enabled_with_fallback_input_context(
-            &*self.cx,
-            command,
-            fallback_input_ctx,
-        )
-    }
-
-    fn dispatch_command_if_enabled(&mut self, command: fret_runtime::CommandId) -> bool {
-        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::dispatch_command_if_enabled(
-            self.cx,
-            command,
-        )
-    }
-
-    fn dispatch_command_if_enabled_with_fallback_input_context(
-        &mut self,
-        command: fret_runtime::CommandId,
-        fallback_input_ctx: fret_runtime::InputContext,
-    ) -> bool {
-        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::dispatch_command_if_enabled_with_fallback_input_context(
-            self.cx,
-            command,
-            fallback_input_ctx,
-        )
-    }
-
-    fn action_is_enabled(&self, action: &fret_runtime::ActionId) -> bool {
-        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::action_is_enabled(
-            &*self.cx, action,
-        )
-    }
-
-    fn dispatch_action_if_enabled(&mut self, action: fret_runtime::ActionId) -> bool {
-        <ElementContext<'a, H> as fret_ui_kit::command::ElementCommandGatingExt>::dispatch_action_if_enabled(
-            self.cx,
-            action,
-        )
-    }
-}
-
-impl<'cx, 'a, H: UiHost> fret_ui_kit::declarative::ElementContextThemeExt for AppUi<'cx, 'a, H> {
-    fn with_theme<R>(&mut self, f: impl FnOnce(&fret_ui::Theme) -> R) -> R {
-        f(self.cx.theme())
-    }
-
-    fn theme_snapshot(&mut self) -> fret_ui::ThemeSnapshot {
-        self.cx.theme().snapshot()
-    }
 }
 
 impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
@@ -586,6 +519,7 @@ mod tests {
     use std::task::{Context, Poll, Waker};
     const ACTIVATION_RS_SOURCE: &str = include_str!("view/activation.rs");
     const ACTIONS_RS_SOURCE: &str = include_str!("view/actions.rs");
+    const BRIDGES_RS_SOURCE: &str = include_str!("view/bridges.rs");
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     const CONTEXT_RS_SOURCE: &str = include_str!("view/context.rs");
     const DATA_RS_SOURCE: &str = include_str!("view/data.rs");
@@ -601,7 +535,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
         format!(
-            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{STATE_RS_SOURCE}"
+            "{view_api}\n{ACTIVATION_RS_SOURCE}\n{ACTIONS_RS_SOURCE}\n{BRIDGES_RS_SOURCE}\n{CONTEXT_RS_SOURCE}\n{DATA_RS_SOURCE}\n{EFFECTS_RS_SOURCE}\n{LOCAL_STATE_RS_SOURCE}\n{RAW_RS_SOURCE}\n{RUNTIME_RS_SOURCE}\n{STATE_RS_SOURCE}"
         )
     }
     use fret_core::{
