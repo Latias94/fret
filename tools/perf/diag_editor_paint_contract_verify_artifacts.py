@@ -244,6 +244,51 @@ def _nested_metric(doc: dict[str, Any], *keys: str) -> Any:
     return value
 
 
+def _int_metric(values: dict[str, Any], key: str) -> int | None:
+    value = values.get(key)
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
+
+
+def _hit_rate_pct(hits: int | None, get_calls: int | None) -> int | None:
+    if hits is None or get_calls is None or get_calls <= 0:
+        return None
+    return hits * 100 // get_calls
+
+
+def _code_editor_cache_decision_inputs(doc: dict[str, Any]) -> dict[str, Any]:
+    stats = validate.code_editor_cache_stats_for_doc(doc)
+    row_text_get_calls = _int_metric(stats, "row_text_get_calls")
+    row_text_hits = _int_metric(stats, "row_text_hits")
+    row_scene_get_calls = _int_metric(stats, "row_scene_get_calls")
+    row_scene_hits = _int_metric(stats, "row_scene_hits")
+    row_scene_fast_get_calls = _int_metric(stats, "row_scene_fast_get_calls")
+    row_scene_fast_hits = _int_metric(stats, "row_scene_fast_hits")
+
+    return {
+        "code_editor_row_text_get_calls": row_text_get_calls,
+        "code_editor_row_text_hits": row_text_hits,
+        "code_editor_row_text_misses": _int_metric(stats, "row_text_misses"),
+        "code_editor_row_text_evictions": _int_metric(stats, "row_text_evictions"),
+        "code_editor_row_text_resets": _int_metric(stats, "row_text_resets"),
+        "code_editor_row_text_hit_rate_pct": _hit_rate_pct(row_text_hits, row_text_get_calls),
+        "code_editor_row_scene_cache_get_calls": row_scene_get_calls,
+        "code_editor_row_scene_cache_hits": row_scene_hits,
+        "code_editor_row_scene_cache_misses": _int_metric(stats, "row_scene_misses"),
+        "code_editor_row_scene_cache_evictions": _int_metric(stats, "row_scene_evictions"),
+        "code_editor_row_scene_cache_resets": _int_metric(stats, "row_scene_resets"),
+        "code_editor_row_scene_cache_hit_rate_pct": _hit_rate_pct(row_scene_hits, row_scene_get_calls),
+        "code_editor_row_scene_fast_get_calls": row_scene_fast_get_calls,
+        "code_editor_row_scene_fast_hits": row_scene_fast_hits,
+        "code_editor_row_scene_fast_misses": _int_metric(stats, "row_scene_fast_misses"),
+        "code_editor_row_scene_fast_hit_rate_pct": _hit_rate_pct(
+            row_scene_fast_hits,
+            row_scene_fast_get_calls,
+        ),
+    }
+
+
 def _decision_inputs_for_doc(doc: object) -> dict[str, Any]:
     if not isinstance(doc, dict):
         return {}
@@ -256,7 +301,7 @@ def _decision_inputs_for_doc(doc: object) -> dict[str, Any]:
     if not isinstance(paint_hotspots, dict):
         paint_hotspots = {}
 
-    return {
+    decision_inputs = {
         "paint_widget_p95_us": p95.get("paint_widget_time_us"),
         "paint_widget_max_us": max_values.get("paint_widget_time_us"),
         "renderer_prepare_text_p95_us": p95.get("renderer_prepare_text_us"),
@@ -300,6 +345,8 @@ def _decision_inputs_for_doc(doc: object) -> dict[str, Any]:
             ),
         },
     }
+    decision_inputs.update(_code_editor_cache_decision_inputs(doc))
+    return decision_inputs
 
 
 def _stats_coverage_from_step(
@@ -484,6 +531,7 @@ def verify_summary_dir(
         if expect_with_paint_perf:
             required.append("code_editor_paint_perf")
             required.append("code_editor_torture_overlay_zero")
+            required.append("code_editor_cache_stats")
         missing = [key for key in required if not bool(coverage.get(key))]
         if missing:
             errors.append(f"{prefix}: missing stats coverage {missing}")

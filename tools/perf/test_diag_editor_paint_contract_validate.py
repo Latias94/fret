@@ -176,6 +176,25 @@ class EditorPaintContractValidateTests(unittest.TestCase):
                     "max": {"us_torture_overlay": 0},
                     "p95": {"us_total": 14},
                 },
+                "top": [
+                    {
+                        "code_editor_cache_stats": {
+                            "row_text_get_calls": 20,
+                            "row_text_hits": 16,
+                            "row_text_misses": 4,
+                            "row_text_evictions": 0,
+                            "row_text_resets": 0,
+                            "row_scene_get_calls": 8,
+                            "row_scene_hits": 6,
+                            "row_scene_misses": 2,
+                            "row_scene_evictions": 0,
+                            "row_scene_resets": 0,
+                            "row_scene_fast_get_calls": 5,
+                            "row_scene_fast_hits": 4,
+                            "row_scene_fast_misses": 1,
+                        }
+                    }
+                ],
             }
         )
 
@@ -185,6 +204,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
                 "renderer_text_encode_upload": True,
                 "code_editor_paint_perf": True,
                 "code_editor_torture_overlay_zero": True,
+                "code_editor_cache_stats": True,
             },
             coverage,
         )
@@ -196,6 +216,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertFalse(coverage["renderer_text_encode_upload"])
         self.assertFalse(coverage["code_editor_paint_perf"])
         self.assertFalse(coverage["code_editor_torture_overlay_zero"])
+        self.assertFalse(coverage["code_editor_cache_stats"])
 
     def test_stats_coverage_rejects_torture_overlay_work(self) -> None:
         coverage = validate.stats_coverage_for_doc(

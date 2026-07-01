@@ -67,6 +67,25 @@ def _step(
             },
             "frames": 4,
         }
+        stats_doc["top"] = [
+            {
+                "code_editor_cache_stats": {
+                    "row_text_get_calls": 20,
+                    "row_text_hits": 16,
+                    "row_text_misses": 4,
+                    "row_text_evictions": 0,
+                    "row_text_resets": 0,
+                    "row_scene_get_calls": 8,
+                    "row_scene_hits": 6,
+                    "row_scene_misses": 2,
+                    "row_scene_evictions": 0,
+                    "row_scene_resets": 0,
+                    "row_scene_fast_get_calls": 5,
+                    "row_scene_fast_hits": 4,
+                    "row_scene_fast_misses": 1,
+                }
+            }
+        ]
     _write_json(stats_path, stats_doc)
 
     fretboard_bin = validate._default_fretboard_bin()
@@ -178,6 +197,13 @@ def _remove_summary_field(summary_path: Path, field: str) -> None:
     summary_path.write_text(json.dumps(doc), encoding="utf-8")
 
 
+def _remove_stats_field(root: Path, step_name: str, field: str) -> None:
+    path = root / "runner-logs" / step_name / "stats.stdout.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc.pop(field, None)
+    path.write_text(json.dumps(doc), encoding="utf-8")
+
+
 class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
     def test_validation_summary_passes_without_code_editor_paint_perf(self) -> None:
         with TemporaryDirectory() as td:
@@ -210,6 +236,17 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertTrue(any("code_editor_torture_overlay_zero" in error for error in report["errors"]))
 
+    def test_attribution_summary_requires_code_editor_cache_stats(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=True)
+            _remove_stats_field(root, "typical-autoscroll", "top")
+
+            report = verify.verify_summary_dir(root, expect_with_paint_perf=True)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("code_editor_cache_stats" in error for error in report["errors"]))
+
     def test_pair_verification_accepts_validation_and_attribution_dirs(self) -> None:
         with TemporaryDirectory() as td:
             validation = Path(td) / "validation"
@@ -240,6 +277,20 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
         self.assertEqual(18, decision_inputs["code_editor_windowed_surface_callback_p95_us"])
         self.assertEqual(13, decision_inputs["code_editor_windowed_surface_row_paint_p95_us"])
         self.assertEqual(0, decision_inputs["code_editor_torture_overlay_max_us"])
+        self.assertEqual(20, decision_inputs["code_editor_row_text_get_calls"])
+        self.assertEqual(16, decision_inputs["code_editor_row_text_hits"])
+        self.assertEqual(4, decision_inputs["code_editor_row_text_misses"])
+        self.assertEqual(0, decision_inputs["code_editor_row_text_resets"])
+        self.assertEqual(80, decision_inputs["code_editor_row_text_hit_rate_pct"])
+        self.assertEqual(8, decision_inputs["code_editor_row_scene_cache_get_calls"])
+        self.assertEqual(6, decision_inputs["code_editor_row_scene_cache_hits"])
+        self.assertEqual(2, decision_inputs["code_editor_row_scene_cache_misses"])
+        self.assertEqual(0, decision_inputs["code_editor_row_scene_cache_resets"])
+        self.assertEqual(75, decision_inputs["code_editor_row_scene_cache_hit_rate_pct"])
+        self.assertEqual(5, decision_inputs["code_editor_row_scene_fast_get_calls"])
+        self.assertEqual(4, decision_inputs["code_editor_row_scene_fast_hits"])
+        self.assertEqual(1, decision_inputs["code_editor_row_scene_fast_misses"])
+        self.assertEqual(80, decision_inputs["code_editor_row_scene_fast_hit_rate_pct"])
         hotspot_summary = decision_inputs["paint_widget_hotspot_summary"]
         self.assertEqual(2, hotspot_summary["frames_with_hotspots"])
         self.assertEqual(20, hotspot_summary["canvas_exclusive_p95_us"])

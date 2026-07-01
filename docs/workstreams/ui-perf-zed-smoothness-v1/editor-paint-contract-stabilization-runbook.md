@@ -108,11 +108,12 @@ python tools/perf/diag_editor_paint_contract_verify_artifacts.py `
 
 This verifier checks that both summaries carry a non-empty `date_tag`, that the baseline-validation pass used the
 expected repeat/warmup shape, that every probe has `check.perf_thresholds.json` with `failures=[]`, that `diag stats
---json` output exists for every worst bundle, and that the attribution pass includes `code_editor_paint_perf` coverage.
+--json` output exists for every worst bundle, and that the attribution pass includes `code_editor_paint_perf` and
+`code_editor_cache_stats` coverage.
 For each verified probe, the report also projects `decision_inputs` from the captured `diag stats --json` output:
-paint-widget p95/max, renderer text/encode/upload p95, code-editor paint p95/max counters, and the
-`paint_widget_hotspot_summary` split needed to decide whether the next owner is Canvas/paint traversal, renderer text
-prepare, or no code change.
+paint-widget p95/max, renderer text/encode/upload p95, code-editor paint p95/max counters, row text/cache hit-rate and
+reset/eviction counters, and the `paint_widget_hotspot_summary` split needed to decide whether the next owner is
+Canvas/paint traversal, renderer text prepare, row cache identity, or no code change.
 It also rejects target summaries whose stored commands drift from the contract shape: resize must use the Windows
 code-editor resize suite plus release `fretboard-dev.exe` and either the default inspectable cargo gallery launch or the
 legacy release `fret-ui-gallery.exe`, while the direct `diag perf` probes must use `--reuse-launch`, the standard font

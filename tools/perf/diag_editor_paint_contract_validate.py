@@ -496,6 +496,48 @@ def _code_editor_max_metric_is_zero(doc: dict[str, Any], metric: str) -> bool:
     return max_values.get(metric) == 0
 
 
+def _is_non_negative_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def code_editor_cache_stats_for_doc(doc: object) -> dict[str, Any]:
+    if not isinstance(doc, dict):
+        return {}
+
+    stats = doc.get("code_editor_cache_stats")
+    if isinstance(stats, dict):
+        return stats
+
+    top = doc.get("top")
+    if not isinstance(top, list) or not top:
+        return {}
+    row = top[0]
+    if not isinstance(row, dict):
+        return {}
+    stats = row.get("code_editor_cache_stats")
+    return stats if isinstance(stats, dict) else {}
+
+
+def _has_code_editor_cache_stats(doc: dict[str, Any]) -> bool:
+    stats = code_editor_cache_stats_for_doc(doc)
+    required = [
+        "row_text_get_calls",
+        "row_text_hits",
+        "row_text_misses",
+        "row_text_evictions",
+        "row_text_resets",
+        "row_scene_get_calls",
+        "row_scene_hits",
+        "row_scene_misses",
+        "row_scene_evictions",
+        "row_scene_resets",
+        "row_scene_fast_get_calls",
+        "row_scene_fast_hits",
+        "row_scene_fast_misses",
+    ]
+    return all(_is_non_negative_int(stats.get(key)) for key in required)
+
+
 def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
     if not isinstance(doc, dict):
         return {
@@ -503,6 +545,7 @@ def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
             "renderer_text_encode_upload": False,
             "code_editor_paint_perf": False,
             "code_editor_torture_overlay_zero": False,
+            "code_editor_cache_stats": False,
         }
     code_editor = doc.get("code_editor_paint_perf")
     return {
@@ -517,6 +560,7 @@ def stats_coverage_for_doc(doc: object) -> dict[str, bool]:
         ),
         "code_editor_paint_perf": isinstance(code_editor, dict) and isinstance(code_editor.get("p95"), dict),
         "code_editor_torture_overlay_zero": _code_editor_max_metric_is_zero(doc, "us_torture_overlay"),
+        "code_editor_cache_stats": _has_code_editor_cache_stats(doc),
     }
 
 
