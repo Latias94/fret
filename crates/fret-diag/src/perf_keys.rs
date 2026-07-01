@@ -1812,6 +1812,26 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         PerfKeyAggregate::Max,
     ),
     count_key(
+        "renderer_scene_chunk_encoding_payload_plan_candidate_segments",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_plan_shape_matches",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_plan_shape_mismatches",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_entries_without_plan_candidate",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
+        "renderer_scene_chunk_encoding_payload_plan_candidates_without_payload",
+        PerfKeyAggregate::Max,
+    ),
+    count_key(
         "renderer_render_plan_scene_chunk_candidates",
         PerfKeyAggregate::Max,
     ),
@@ -2540,6 +2560,8 @@ mod tests {
             "renderer_scene_chunk_encoding_key_cache_hits",
             "renderer_scene_chunk_encoding_payload_cache_hits",
             "renderer_scene_chunk_encoding_payload_bytes_estimate",
+            "renderer_scene_chunk_encoding_payload_plan_shape_matches",
+            "renderer_scene_chunk_encoding_payload_plan_shape_mismatches",
             "renderer_render_plan_scene_chunk_candidates_changed",
             "renderer_render_plan_scene_chunk_candidate_upload_bytes_estimate",
             "renderer_encode_scene_text_ops",

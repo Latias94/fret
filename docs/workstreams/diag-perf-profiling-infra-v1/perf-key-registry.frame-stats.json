@@ -2776,6 +2776,41 @@
       "unit": "count"
     },
     {
+      "key": "renderer_scene_chunk_encoding_payload_plan_candidate_segments",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_plan_shape_matches",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_plan_shape_mismatches",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_entries_without_plan_candidate",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_scene_chunk_encoding_payload_plan_candidates_without_payload",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "renderer_render_plan_scene_chunk_candidates",
       "kind": "counter",
       "scope": "frame",

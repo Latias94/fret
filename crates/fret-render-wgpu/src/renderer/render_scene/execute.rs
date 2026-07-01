@@ -197,6 +197,11 @@ impl Renderer {
             &encoding.effect_markers,
             &mut frame_perf,
         );
+        self.record_scene_chunk_payload_plan_alignment_for_frame(
+            &plan,
+            perf_enabled,
+            &mut frame_perf,
+        );
 
         let (upload_resources, upload_elapsed) = fret_perf::measure_span(
             perf_enabled,

@@ -20,6 +20,22 @@ pub(super) struct RenderPlanSegmentFlags {
 }
 
 impl RenderPlanSegmentFlags {
+    pub(super) fn for_ordered_draws(draws: &[super::OrderedDraw]) -> Self {
+        let mut flags = Self::default();
+        for draw in draws {
+            match draw {
+                super::OrderedDraw::Quad(_) => flags.has_quad = true,
+                super::OrderedDraw::VertexColor(_) => flags.has_vertex_color = true,
+                super::OrderedDraw::Viewport(_) => flags.has_viewport = true,
+                super::OrderedDraw::Image(_) => flags.has_image = true,
+                super::OrderedDraw::Mask(_) => flags.has_mask = true,
+                super::OrderedDraw::Text(_) => flags.has_text = true,
+                super::OrderedDraw::Path(_) => flags.has_path = true,
+            }
+        }
+        flags
+    }
+
     pub(super) fn diagnostics_mask(self) -> u8 {
         u8::from(self.has_quad)
             | (u8::from(self.has_viewport) << 1)
@@ -96,7 +112,77 @@ pub(super) struct RenderPlanSegmentStreamRanges {
     pub(super) path_vertices: RenderPlanStreamRange,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RenderPlanSegmentStreamShape {
+    pub(super) quad_instances: u32,
+    pub(super) path_paints: u32,
+    pub(super) text_paints: u32,
+    pub(super) viewport_vertices: u32,
+    pub(super) text_glyph_instances: u32,
+    pub(super) text_vertices: u32,
+    pub(super) path_vertices: u32,
+}
+
 impl RenderPlanSegmentStreamRanges {
+    pub(super) fn for_ordered_draws(draws: &[super::OrderedDraw]) -> Self {
+        let mut ranges = Self::default();
+        for draw in draws {
+            match draw {
+                super::OrderedDraw::Quad(draw) => ranges.quad_instances.extend(
+                    draw.first_instance,
+                    draw.first_instance.saturating_add(draw.instance_count),
+                ),
+                super::OrderedDraw::Viewport(draw) => ranges.viewport_vertices.extend(
+                    draw.first_vertex,
+                    draw.first_vertex.saturating_add(draw.vertex_count),
+                ),
+                super::OrderedDraw::Image(draw) => ranges.viewport_vertices.extend(
+                    draw.first_vertex,
+                    draw.first_vertex.saturating_add(draw.vertex_count),
+                ),
+                super::OrderedDraw::VertexColor(draw) => ranges.viewport_vertices.extend(
+                    draw.first_vertex,
+                    draw.first_vertex.saturating_add(draw.vertex_count),
+                ),
+                super::OrderedDraw::Mask(draw) => ranges.text_vertices.extend(
+                    draw.first_vertex,
+                    draw.first_vertex.saturating_add(draw.vertex_count),
+                ),
+                super::OrderedDraw::Text(draw) => {
+                    ranges.text_glyph_instances.extend(
+                        draw.first_instance,
+                        draw.first_instance.saturating_add(draw.instance_count),
+                    );
+                    ranges
+                        .text_paints
+                        .extend(draw.paint_index, draw.paint_index.saturating_add(1));
+                }
+                super::OrderedDraw::Path(draw) => {
+                    ranges.path_vertices.extend(
+                        draw.first_vertex,
+                        draw.first_vertex.saturating_add(draw.vertex_count),
+                    );
+                    ranges
+                        .path_paints
+                        .extend(draw.paint_index, draw.paint_index.saturating_add(1));
+                }
+            }
+        }
+        ranges
+    }
+
+    pub(super) fn shape(self) -> RenderPlanSegmentStreamShape {
+        RenderPlanSegmentStreamShape {
+            quad_instances: self.quad_instances.len(),
+            path_paints: self.path_paints.len(),
+            text_paints: self.text_paints.len(),
+            viewport_vertices: self.viewport_vertices.len(),
+            text_glyph_instances: self.text_glyph_instances.len(),
+            text_vertices: self.text_vertices.len(),
+            path_vertices: self.path_vertices.len(),
+        }
+    }
+
     pub(super) fn estimated_upload_bytes(self) -> u64 {
         estimate_range_bytes::<super::QuadInstance>(self.quad_instances)
             .saturating_add(estimate_range_bytes::<super::PaintGpu>(self.path_paints))

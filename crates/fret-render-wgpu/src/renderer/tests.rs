@@ -1306,7 +1306,13 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::default(), fret_core::Size::new(Px(10.0), Px(10.0))),
-        background: Color::TRANSPARENT.into(),
+        background: Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        }
+        .into(),
         border: fret_core::Edges::all(Px(0.0)),
         border_paint: Color::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
@@ -1361,6 +1367,17 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     assert_eq!(last.scene_chunk_encoding_payload_chunks_encoded, 1);
     assert!(last.scene_chunk_encoding_payload_bytes_estimate > 0);
     assert_eq!(last.scene_chunk_encoding_payload_entries_live, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_plan_candidate_segments, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_plan_shape_matches, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_plan_shape_mismatches, 0);
+    assert_eq!(
+        last.scene_chunk_encoding_payload_entries_without_plan_candidate,
+        0
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_plan_candidates_without_payload,
+        0
+    );
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, params(Some(&manifest)));
     let key_with_stable_manifest = renderer
@@ -1382,6 +1399,17 @@ fn scene_chunk_manifest_is_reported_without_busting_scene_encoding_cache() {
     assert_eq!(last.scene_chunk_encoding_payload_chunks_encoded, 0);
     assert!(last.scene_chunk_encoding_payload_bytes_estimate > 0);
     assert_eq!(last.scene_chunk_encoding_payload_entries_live, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_plan_candidate_segments, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_plan_shape_matches, 1);
+    assert_eq!(last.scene_chunk_encoding_payload_plan_shape_mismatches, 0);
+    assert_eq!(
+        last.scene_chunk_encoding_payload_entries_without_plan_candidate,
+        0
+    );
+    assert_eq!(
+        last.scene_chunk_encoding_payload_plan_candidates_without_payload,
+        0
+    );
 }
 
 #[test]

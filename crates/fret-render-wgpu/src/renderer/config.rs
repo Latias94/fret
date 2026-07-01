@@ -197,6 +197,16 @@ impl Renderer {
                 .scene_chunk_encoding_payload_bytes_estimate,
             scene_chunk_encoding_payload_entries_live: perf
                 .scene_chunk_encoding_payload_entries_live,
+            scene_chunk_encoding_payload_plan_candidate_segments: perf
+                .scene_chunk_encoding_payload_plan_candidate_segments,
+            scene_chunk_encoding_payload_plan_shape_matches: perf
+                .scene_chunk_encoding_payload_plan_shape_matches,
+            scene_chunk_encoding_payload_plan_shape_mismatches: perf
+                .scene_chunk_encoding_payload_plan_shape_mismatches,
+            scene_chunk_encoding_payload_entries_without_plan_candidate: perf
+                .scene_chunk_encoding_payload_entries_without_plan_candidate,
+            scene_chunk_encoding_payload_plan_candidates_without_payload: perf
+                .scene_chunk_encoding_payload_plan_candidates_without_payload,
             render_plan_estimated_peak_intermediate_bytes: perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: perf.render_plan_segments,

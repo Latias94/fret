@@ -45,6 +45,11 @@ pub(super) struct SceneChunkEncodingFrameStats {
     pub(super) payload_chunks_encoded: u64,
     pub(super) payload_bytes_estimate: u64,
     pub(super) payload_entries_live: u64,
+    pub(super) payload_plan_candidate_segments: u64,
+    pub(super) payload_plan_shape_matches: u64,
+    pub(super) payload_plan_shape_mismatches: u64,
+    pub(super) payload_entries_without_plan_candidate: u64,
+    pub(super) payload_plan_candidates_without_payload: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -58,11 +63,16 @@ struct SceneChunkEncodingKey {
 #[derive(Default)]
 pub(super) struct CachedSceneChunkEncoding {
     encoding: SceneEncoding,
+    plan_shape: SceneChunkPayloadPlanShape,
 }
 
 impl CachedSceneChunkEncoding {
     pub(super) fn new(encoding: SceneEncoding) -> Self {
-        Self { encoding }
+        let plan_shape = SceneChunkPayloadPlanShape::from_ordered_draws(&encoding.ordered_draws);
+        Self {
+            encoding,
+            plan_shape,
+        }
     }
 
     fn estimated_bytes(&self) -> u64 {
@@ -80,6 +90,31 @@ impl CachedSceneChunkEncoding {
             .saturating_add(estimate_slice_bytes(&self.encoding.uniform_mask_images))
             .saturating_add(estimate_slice_bytes(&self.encoding.ordered_draws))
             .saturating_add(estimate_slice_bytes(&self.encoding.effect_markers))
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct SceneChunkPayloadPlanShape {
+    draw_count: u32,
+    flags_mask: u8,
+    stream_shape: RenderPlanSegmentStreamShape,
+}
+
+impl SceneChunkPayloadPlanShape {
+    fn from_ordered_draws(draws: &[OrderedDraw]) -> Self {
+        Self {
+            draw_count: u32::try_from(draws.len()).unwrap_or(u32::MAX),
+            flags_mask: RenderPlanSegmentFlags::for_ordered_draws(draws).diagnostics_mask(),
+            stream_shape: RenderPlanSegmentStreamRanges::for_ordered_draws(draws).shape(),
+        }
+    }
+
+    fn from_segment(segment: &RenderPlanSegment) -> Self {
+        Self {
+            draw_count: segment.scene_chunk_candidate.draw_count,
+            flags_mask: segment.flags.diagnostics_mask(),
+            stream_shape: segment.stream_ranges.shape(),
+        }
     }
 }
 
@@ -212,6 +247,52 @@ impl SceneChunkEncodingState {
         self.next_keys.clear();
         stats
     }
+
+    pub(super) fn record_payload_plan_alignment(
+        &self,
+        plan: &RenderPlan,
+    ) -> SceneChunkEncodingFrameStats {
+        let mut stats = SceneChunkEncodingFrameStats::default();
+        let mut candidates = plan
+            .segments
+            .iter()
+            .filter(|segment| segment.scene_chunk_candidate.eligible);
+
+        for key in &self.cached_keys {
+            let Some(segment) = candidates.next() else {
+                stats.payload_entries_without_plan_candidate = stats
+                    .payload_entries_without_plan_candidate
+                    .saturating_add(1);
+                continue;
+            };
+
+            let Some(payload) = self.payloads.get(key) else {
+                stats.payload_plan_shape_mismatches =
+                    stats.payload_plan_shape_mismatches.saturating_add(1);
+                continue;
+            };
+
+            let segment_shape = SceneChunkPayloadPlanShape::from_segment(segment);
+            if payload.plan_shape == segment_shape {
+                stats.payload_plan_shape_matches =
+                    stats.payload_plan_shape_matches.saturating_add(1);
+            } else {
+                stats.payload_plan_shape_mismatches =
+                    stats.payload_plan_shape_mismatches.saturating_add(1);
+            }
+        }
+
+        let mut remaining_candidates = 0u64;
+        for _ in candidates {
+            remaining_candidates = remaining_candidates.saturating_add(1);
+        }
+        stats.payload_plan_candidates_without_payload = remaining_candidates;
+        stats.payload_plan_candidate_segments = stats
+            .payload_plan_shape_matches
+            .saturating_add(stats.payload_plan_shape_mismatches)
+            .saturating_add(stats.payload_plan_candidates_without_payload);
+        stats
+    }
 }
 
 impl Renderer {
@@ -279,6 +360,31 @@ impl Renderer {
             frame_perf.scene_chunk_encoding_payload_bytes_estimate = stats.payload_bytes_estimate;
             frame_perf.scene_chunk_encoding_payload_entries_live = stats.payload_entries_live;
         }
+    }
+
+    pub(super) fn record_scene_chunk_payload_plan_alignment_for_frame(
+        &mut self,
+        plan: &RenderPlan,
+        perf_enabled: bool,
+        frame_perf: &mut RenderPerfStats,
+    ) {
+        if !perf_enabled {
+            return;
+        }
+
+        let stats = self
+            .scene_chunk_encoding_state
+            .record_payload_plan_alignment(plan);
+        frame_perf.scene_chunk_encoding_payload_plan_candidate_segments =
+            stats.payload_plan_candidate_segments;
+        frame_perf.scene_chunk_encoding_payload_plan_shape_matches =
+            stats.payload_plan_shape_matches;
+        frame_perf.scene_chunk_encoding_payload_plan_shape_mismatches =
+            stats.payload_plan_shape_mismatches;
+        frame_perf.scene_chunk_encoding_payload_entries_without_plan_candidate =
+            stats.payload_entries_without_plan_candidate;
+        frame_perf.scene_chunk_encoding_payload_plan_candidates_without_payload =
+            stats.payload_plan_candidates_without_payload;
     }
 
     fn encode_scene_chunk_entry_payload(
@@ -461,5 +567,63 @@ mod tests {
         assert_eq!(stats.payload_chunks_encoded, 0);
         assert_eq!(stats.payload_entries_live, 1);
         assert_eq!(builds, 2);
+    }
+
+    #[test]
+    fn payload_plan_alignment_compares_cached_payloads_to_candidate_segments_in_order() {
+        let mut state = SceneChunkEncodingState::default();
+        let frame = manifest(&[entry(0.0)]);
+        state.begin_frame_with_payloads(Some(&frame), context(1), |_| {
+            let mut encoding = SceneEncoding::default();
+            encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+                scissor: ScissorRect::full(320, 200),
+                uniform_index: 0,
+                first_instance: 0,
+                instance_count: 1,
+                pipeline: QuadPipelineKey {
+                    fill_kind: 0,
+                    border_kind: 0,
+                    border_present: false,
+                    dash_enabled: false,
+                    fill_material_sampled: false,
+                    border_material_sampled: false,
+                    shadow_mode: false,
+                },
+            }));
+            CachedSceneChunkEncoding::new(encoding)
+        });
+
+        let plan = RenderPlan {
+            segments: vec![RenderPlanSegment {
+                id: SceneSegmentId(0),
+                draw_range: 0..1,
+                start_uniform_index: Some(0),
+                start_uniform_fingerprint: 0,
+                flags: RenderPlanSegmentFlags {
+                    has_quad: true,
+                    ..Default::default()
+                },
+                scene_chunk_candidate: RenderPlanSceneChunkCandidate {
+                    eligible: true,
+                    draw_count: 1,
+                    fingerprint: 0,
+                },
+                stream_ranges: RenderPlanSegmentStreamRanges {
+                    quad_instances: RenderPlanStreamRange::new(0, 1),
+                    ..Default::default()
+                },
+            }],
+            passes: Vec::new(),
+            compile_stats: RenderPlanCompileStats::default(),
+            degradations: Vec::new(),
+        };
+
+        let stats = state.record_payload_plan_alignment(&plan);
+
+        assert_eq!(stats.payload_plan_candidate_segments, 1);
+        assert_eq!(stats.payload_plan_shape_matches, 1);
+        assert_eq!(stats.payload_plan_shape_mismatches, 0);
+        assert_eq!(stats.payload_entries_without_plan_candidate, 0);
+        assert_eq!(stats.payload_plan_candidates_without_payload, 0);
     }
 }

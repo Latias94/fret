@@ -104,18 +104,8 @@ impl RenderPlanCompilerCtx {
             0
         };
 
-        let mut flags = RenderPlanSegmentFlags::default();
-        for draw in draws.get(draw_range.start..draw_range.end).unwrap_or(&[]) {
-            match draw {
-                OrderedDraw::Quad(_) => flags.has_quad = true,
-                OrderedDraw::VertexColor(_) => flags.has_vertex_color = true,
-                OrderedDraw::Viewport(_) => flags.has_viewport = true,
-                OrderedDraw::Image(_) => flags.has_image = true,
-                OrderedDraw::Mask(_) => flags.has_mask = true,
-                OrderedDraw::Text(_) => flags.has_text = true,
-                OrderedDraw::Path(_) => flags.has_path = true,
-            }
-        }
+        let segment_draws = draws.get(draw_range.start..draw_range.end).unwrap_or(&[]);
+        let flags = RenderPlanSegmentFlags::for_ordered_draws(segment_draws);
 
         self.segments.push(RenderPlanSegment {
             id,
@@ -125,7 +115,7 @@ impl RenderPlanCompilerCtx {
                 start_uniform_fingerprint,
                 flags,
             ),
-            stream_ranges: segment_stream_ranges(draw_range.clone(), draws),
+            stream_ranges: RenderPlanSegmentStreamRanges::for_ordered_draws(segment_draws),
             draw_range,
             start_uniform_index,
             start_uniform_fingerprint,
@@ -191,56 +181,6 @@ fn mix_scissor(hash: &mut u64, scissor: ScissorRect) {
     *hash = mix_fnv1a(*hash, u64::from(scissor.y));
     *hash = mix_fnv1a(*hash, u64::from(scissor.w));
     *hash = mix_fnv1a(*hash, u64::from(scissor.h));
-}
-
-fn segment_stream_ranges(
-    draw_range: Range<usize>,
-    draws: &[OrderedDraw],
-) -> RenderPlanSegmentStreamRanges {
-    let mut ranges = RenderPlanSegmentStreamRanges::default();
-    for draw in draws.get(draw_range).unwrap_or(&[]) {
-        match draw {
-            OrderedDraw::Quad(draw) => ranges.quad_instances.extend(
-                draw.first_instance,
-                draw.first_instance.saturating_add(draw.instance_count),
-            ),
-            OrderedDraw::Viewport(draw) => ranges.viewport_vertices.extend(
-                draw.first_vertex,
-                draw.first_vertex.saturating_add(draw.vertex_count),
-            ),
-            OrderedDraw::Image(draw) => ranges.viewport_vertices.extend(
-                draw.first_vertex,
-                draw.first_vertex.saturating_add(draw.vertex_count),
-            ),
-            OrderedDraw::VertexColor(draw) => ranges.viewport_vertices.extend(
-                draw.first_vertex,
-                draw.first_vertex.saturating_add(draw.vertex_count),
-            ),
-            OrderedDraw::Mask(draw) => ranges.text_vertices.extend(
-                draw.first_vertex,
-                draw.first_vertex.saturating_add(draw.vertex_count),
-            ),
-            OrderedDraw::Text(draw) => {
-                ranges.text_glyph_instances.extend(
-                    draw.first_instance,
-                    draw.first_instance.saturating_add(draw.instance_count),
-                );
-                ranges
-                    .text_paints
-                    .extend(draw.paint_index, draw.paint_index.saturating_add(1));
-            }
-            OrderedDraw::Path(draw) => {
-                ranges.path_vertices.extend(
-                    draw.first_vertex,
-                    draw.first_vertex.saturating_add(draw.vertex_count),
-                );
-                ranges
-                    .path_paints
-                    .extend(draw.paint_index, draw.paint_index.saturating_add(1));
-            }
-        }
-    }
-    ranges
 }
 
 fn scene_chunk_candidate(

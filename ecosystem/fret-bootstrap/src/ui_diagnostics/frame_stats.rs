@@ -736,6 +736,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_scene_chunk_encoding_payload_entries_live: u64,
     #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_plan_candidate_segments: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_plan_shape_matches: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_plan_shape_mismatches: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_entries_without_plan_candidate: u64,
+    #[serde(default)]
+    pub renderer_scene_chunk_encoding_payload_plan_candidates_without_payload: u64,
+    #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidates: u64,
     #[serde(default)]
     pub renderer_render_plan_scene_chunk_candidate_draws: u64,
@@ -1580,6 +1590,11 @@ impl UiFrameStatsV1 {
             renderer_scene_chunk_encoding_payload_chunks_encoded: 0,
             renderer_scene_chunk_encoding_payload_bytes_estimate: 0,
             renderer_scene_chunk_encoding_payload_entries_live: 0,
+            renderer_scene_chunk_encoding_payload_plan_candidate_segments: 0,
+            renderer_scene_chunk_encoding_payload_plan_shape_matches: 0,
+            renderer_scene_chunk_encoding_payload_plan_shape_mismatches: 0,
+            renderer_scene_chunk_encoding_payload_entries_without_plan_candidate: 0,
+            renderer_scene_chunk_encoding_payload_plan_candidates_without_payload: 0,
             renderer_render_plan_scene_chunk_candidates: 0,
             renderer_render_plan_scene_chunk_candidate_draws: 0,
             renderer_render_plan_scene_chunk_candidates_stable: 0,
@@ -1908,6 +1923,20 @@ impl UiFrameStatsV1 {
             sample.perf.scene_chunk_encoding_payload_bytes_estimate;
         self.renderer_scene_chunk_encoding_payload_entries_live =
             sample.perf.scene_chunk_encoding_payload_entries_live;
+        self.renderer_scene_chunk_encoding_payload_plan_candidate_segments = sample
+            .perf
+            .scene_chunk_encoding_payload_plan_candidate_segments;
+        self.renderer_scene_chunk_encoding_payload_plan_shape_matches =
+            sample.perf.scene_chunk_encoding_payload_plan_shape_matches;
+        self.renderer_scene_chunk_encoding_payload_plan_shape_mismatches = sample
+            .perf
+            .scene_chunk_encoding_payload_plan_shape_mismatches;
+        self.renderer_scene_chunk_encoding_payload_entries_without_plan_candidate = sample
+            .perf
+            .scene_chunk_encoding_payload_entries_without_plan_candidate;
+        self.renderer_scene_chunk_encoding_payload_plan_candidates_without_payload = sample
+            .perf
+            .scene_chunk_encoding_payload_plan_candidates_without_payload;
         self.renderer_render_plan_scene_chunk_candidates =
             sample.perf.render_plan_scene_chunk_candidates;
         self.renderer_render_plan_scene_chunk_candidate_draws =
