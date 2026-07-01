@@ -152,6 +152,25 @@ fn scene_with_texts(text_blobs: &[fret_core::TextBlobId]) -> fret_core::Scene {
     scene
 }
 
+fn scene_chunk_with_text(text_blob: fret_core::TextBlobId, row: usize) -> fret_core::SceneChunk {
+    let mut scene = fret_core::Scene::default();
+    scene.push(fret_core::SceneOp::Text {
+        order: fret_core::DrawOrder(0),
+        origin: fret_core::Point::new(Px(0.0), Px(row as f32 * 20.0)),
+        text: text_blob,
+        paint: fret_core::Paint::Solid(fret_core::Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        })
+        .into(),
+        outline: None,
+        shadow: None,
+    });
+    fret_core::SceneChunk::from_scene(&scene)
+}
+
 fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
     text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
@@ -466,6 +485,112 @@ fn scene_text_resource_snapshot_ignores_unreferenced_prepare() {
     assert_eq!(reset.glyphs, initial.glyphs);
     assert_eq!(reset.missing_glyph_resources, reset.glyphs);
     assert!(reset.reset_generation > initial.reset_generation);
+}
+
+#[test]
+fn local_line_chunk_edit_preserves_unchanged_text_chunk_identity() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        font: fret_core::FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let constraints = TextConstraints {
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        ..Default::default()
+    };
+
+    let before = [
+        "000: fn main() {\n001:     let alpha = 1;",
+        "002:     let beta = alpha + 1;\n003:     println!(\"{beta}\");",
+        "004: }\n005:",
+    ];
+    let after = [
+        "000: fn main() {\n001:     let alpha = 42;",
+        "002:     let beta = alpha + 1;\n003:     println!(\"{beta}\");",
+        "004: }\n005:",
+    ];
+
+    let before_blobs = before
+        .iter()
+        .map(|chunk| text.prepare(chunk, &style, constraints).0)
+        .collect::<Vec<_>>();
+    let before_chunks = before_blobs
+        .iter()
+        .enumerate()
+        .map(|(row, &blob)| scene_chunk_with_text(blob, row))
+        .collect::<Vec<_>>();
+    let before_prepare = text.prepare_for_text_blobs_with_perf(&before_blobs, 0, true);
+    assert_eq!(before_prepare.scene_text_blobs, before.len() as u64);
+    assert!(
+        before_prepare.added_glyph_keys > 0,
+        "initial line chunks should populate glyph residency"
+    );
+    let before_resource_keys = before_chunks
+        .iter()
+        .map(|chunk| {
+            text.text_resource_snapshot_for_blobs(chunk.text_blob_ids())
+                .fingerprint
+        })
+        .collect::<Vec<_>>();
+
+    let after_blobs = after
+        .iter()
+        .map(|chunk| text.prepare(chunk, &style, constraints).0)
+        .collect::<Vec<_>>();
+    let after_chunks = after_blobs
+        .iter()
+        .enumerate()
+        .map(|(row, &blob)| scene_chunk_with_text(blob, row))
+        .collect::<Vec<_>>();
+    let after_prepare = text.prepare_for_text_blobs_with_perf(&after_blobs, 1, true);
+    assert_eq!(after_prepare.scene_text_blobs, after.len() as u64);
+    let after_resource_keys = after_chunks
+        .iter()
+        .map(|chunk| {
+            text.text_resource_snapshot_for_blobs(chunk.text_blob_ids())
+                .fingerprint
+        })
+        .collect::<Vec<_>>();
+
+    assert_ne!(
+        before_blobs[0], after_blobs[0],
+        "the edited line chunk should receive a new text blob"
+    );
+    assert_ne!(
+        before_chunks[0].fingerprint(),
+        after_chunks[0].fingerprint(),
+        "the edited scene chunk should invalidate its renderer encoding key"
+    );
+    assert_ne!(
+        before_resource_keys[0], after_resource_keys[0],
+        "the edited text chunk should invalidate its text resource key"
+    );
+
+    for index in 1..before.len() {
+        assert_eq!(
+            before_blobs[index], after_blobs[index],
+            "unchanged line chunk {index} should reuse its text blob"
+        );
+        assert_eq!(
+            before_chunks[index].fingerprint(),
+            after_chunks[index].fingerprint(),
+            "unchanged line chunk {index} should keep a stable scene chunk fingerprint"
+        );
+        assert_eq!(
+            before_resource_keys[index], after_resource_keys[index],
+            "unchanged line chunk {index} should keep a stable text resource key"
+        );
+    }
+
+    let before_full = text.prepare(&before.join("\n"), &style, constraints).0;
+    let after_full = text.prepare(&after.join("\n"), &style, constraints).0;
+    assert_ne!(
+        before_full, after_full,
+        "monolithic text identity would invalidate the whole editor buffer"
+    );
 }
 
 #[test]

@@ -291,6 +291,25 @@ fn apply_and_record_edit_inner(
     invalidate_syntax_row_cache_for_delta(st, delta);
     #[cfg(not(feature = "syntax"))]
     let _ = delta;
+    let can_shift_row_text_cache = edit_is_single_line
+        && before_wrap_cols == st.display_wrap_cols
+        && delta.lines.old_count == 1
+        && delta.lines.new_count == 1
+        && delta.lines.start == before_line
+        && st.line_folds.is_empty()
+        && st.line_inlays.is_empty();
+    if can_shift_row_text_cache {
+        let after_line_rows = st.display_map.line_display_row_range(before_line);
+        if after_line_rows.start == before_line_rows.start {
+            crate::editor::paint::shift_row_text_cache_for_single_line_edit(
+                st,
+                before_line_rows.clone(),
+                after_line_rows,
+                edit_old_end,
+                edit_byte_delta,
+            );
+        }
+    }
     st.selection = next_selection;
     st.caret_preferred_x = None;
 

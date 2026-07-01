@@ -32,7 +32,10 @@ use self::rich::{
 };
 #[cfg(test)]
 pub(super) use self::text::cached_row_text;
-pub(super) use self::text::{cached_row_content_snapshot, cached_row_text_with_range};
+pub(super) use self::text::{
+    cached_row_content_snapshot, cached_row_text_with_range,
+    shift_row_text_cache_for_single_line_edit,
+};
 use fret_core::TextMetrics;
 
 const ROW_CACHE_QUEUE_COMPACT_FACTOR: usize = 4;

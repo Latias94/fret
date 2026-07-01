@@ -63,6 +63,66 @@ fn cached_row_text_invalidates_on_buffer_revision_change() {
 }
 
 #[test]
+fn single_line_edit_preserves_unaffected_row_text_cache_entries() {
+    let handle = CodeEditorHandle::new("hello\nworld\nagain");
+
+    let before = {
+        let mut st = handle.state.borrow_mut();
+        (0..3)
+            .map(|row| {
+                let (range, text, _folds, _preedit, _spans) =
+                    paint::cached_row_text_with_range(&mut st, row, 64);
+                (row, range, text)
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let row_text_resets_before = handle.cache_stats().row_text_resets;
+    {
+        let mut st = handle.state.borrow_mut();
+        crate::editor::input::apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            Edit::Insert {
+                at: 0,
+                text: "!".to_string(),
+            },
+            Selection {
+                anchor: 1,
+                focus: 1,
+            },
+        )
+        .expect("edit should apply");
+
+        assert_eq!(st.row_text_cache_rev, st.buffer.revision());
+        assert_eq!(
+            st.cache_stats.row_text_resets, row_text_resets_before,
+            "single-line edits should delta-update row text cache instead of forcing a reset"
+        );
+        assert!(
+            !st.row_text_cache.contains_key(&0),
+            "edited row text must be rebuilt"
+        );
+
+        for (row, old_range, old_text) in before.into_iter().skip(1) {
+            let (snapshot, _) = st
+                .row_text_cache
+                .get(&row)
+                .expect("unaffected row should remain cached");
+            assert!(
+                Arc::ptr_eq(&snapshot.text, &old_text),
+                "unaffected row {row} should keep its text allocation"
+            );
+            assert_eq!(
+                snapshot.range,
+                (old_range.start + 1)..(old_range.end + 1),
+                "unaffected row {row} range should shift by inserted bytes"
+            );
+        }
+    }
+}
+
+#[test]
 fn cached_row_text_lru_eviction_rebuilds_evicted_rows() {
     let handle = CodeEditorHandle::new("hello\nworld");
 
