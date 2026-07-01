@@ -680,6 +680,8 @@ pub struct UiRendererGlyphAtlasPerfSnapshotV1 {
     pub width: u32,
     pub height: u32,
     pub pages: u32,
+    #[serde(default)]
+    pub max_pages: u32,
     pub entries: u64,
 
     pub used_px: u64,
@@ -704,6 +706,7 @@ impl UiRendererGlyphAtlasPerfSnapshotV1 {
             width: snapshot.width,
             height: snapshot.height,
             pages: snapshot.pages,
+            max_pages: snapshot.max_pages,
             entries: snapshot.entries,
             used_px: snapshot.used_px,
             capacity_px: snapshot.capacity_px,

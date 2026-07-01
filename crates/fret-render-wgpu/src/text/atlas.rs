@@ -252,6 +252,70 @@ mod tests {
         etagere::AllocId::deserialize(id)
     }
 
+    fn test_atlas_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("test glyph atlas bind group layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+            ],
+        })
+    }
+
+    fn test_atlas_sampler(device: &wgpu::Device) -> wgpu::Sampler {
+        device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("test glyph atlas sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        })
+    }
+
+    fn test_glyph_atlas(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        max_pages: usize,
+    ) -> GlyphAtlas {
+        let layout = test_atlas_bind_group_layout(device);
+        let sampler = test_atlas_sampler(device);
+        GlyphAtlas::new(
+            device,
+            &layout,
+            &sampler,
+            "test glyph atlas",
+            width,
+            height,
+            wgpu::TextureFormat::R8Unorm,
+            0,
+            max_pages,
+        )
+    }
+
+    fn mask_key(glyph_id: u32) -> GlyphKey {
+        let [_color, _subpixel, mask] =
+            GlyphKey::lookup_keys(face(), glyph_id, 16.0f32.to_bits(), 0, 0);
+        mask
+    }
+
     #[test]
     fn glyph_pin_keys_deduplicate_by_bucket() {
         let [color, subpixel, mask] = GlyphKey::lookup_keys(face(), 42, 16.0f32.to_bits(), 0, 0);
@@ -313,6 +377,52 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn glyph_atlas_diagnostics_report_page_budget_separately_from_live_pages() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut atlas = test_glyph_atlas(&ctx.device, 16, 16, 3);
+
+        let cold = atlas.diagnostics_snapshot();
+        assert_eq!(cold.pages, 0);
+        assert_eq!(cold.max_pages, 3);
+        assert_eq!(cold.capacity_px, 0);
+
+        let key = mask_key(7);
+        atlas
+            .get_or_insert(key, 10, 10, 0, 0, 1, vec![255; 100], 1)
+            .expect("glyph insert");
+
+        let snap = atlas.diagnostics_snapshot();
+        assert_eq!(snap.pages, 1);
+        assert_eq!(snap.max_pages, 3);
+        assert_eq!(snap.capacity_px, 16 * 16);
+        assert_eq!(snap.entries, 1);
+    }
+
+    #[test]
+    fn glyph_atlas_page_budget_blocks_growth_when_live_page_is_full() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut atlas = test_glyph_atlas(&ctx.device, 16, 16, 1);
+        let a = mask_key(11);
+        let b = mask_key(12);
+
+        atlas
+            .get_or_insert(a, 12, 12, 0, 0, 1, vec![1; 144], 1)
+            .expect("first glyph insert");
+        atlas.inc_live_refs(&[a]);
+
+        let err = atlas
+            .get_or_insert(b, 12, 12, 0, 0, 1, vec![2; 144], 2)
+            .expect_err("live full page should not grow beyond the configured budget");
+
+        let snap = atlas.diagnostics_snapshot();
+        assert_eq!(err, GlyphAtlasInsertError::OutOfSpace);
+        assert_eq!(snap.pages, 1);
+        assert_eq!(snap.max_pages, 1);
+        assert_eq!(snap.entries, 1);
+        assert_eq!(snap.frame_out_of_space, 1);
     }
 
     #[test]
@@ -516,7 +626,6 @@ pub(super) fn subpixel_bin_y(pos: f32) -> (i32, u8) {
     }
 }
 
-pub(super) const TEXT_ATLAS_MAX_PAGES: usize = 2;
 const GLYPH_ATLAS_INSERT_GUARD_LIMIT: u32 = 128;
 
 fn atlas_allocator_size(width: u32, height: u32) -> etagere::Size {
@@ -973,6 +1082,7 @@ impl GlyphAtlas {
 
     pub(super) fn diagnostics_snapshot(&self) -> RendererGlyphAtlasPerfSnapshot {
         let pages = self.pages.len() as u32;
+        let max_pages = self.max_pages.min(u32::MAX as usize) as u32;
         let capacity_px = u64::from(self.width)
             .saturating_mul(u64::from(self.height))
             .saturating_mul(u64::from(pages));
@@ -980,6 +1090,7 @@ impl GlyphAtlas {
             width: self.width,
             height: self.height,
             pages,
+            max_pages,
             entries: self.glyphs.len() as u64,
             used_px: self.used_px,
             capacity_px,

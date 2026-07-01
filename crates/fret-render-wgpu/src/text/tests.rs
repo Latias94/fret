@@ -689,6 +689,19 @@ fn text_diagnostics_report_no_cache_reset_churn_for_noop_rescan() {
 }
 
 #[test]
+fn text_diagnostics_report_configured_glyph_atlas_page_budget() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let text = super::TextSystem::new(&ctx.device);
+    let expected = fret_render_text::glyph_atlas_max_pages() as u32;
+
+    let snap = text.diagnostics_snapshot(fret_core::FrameId(1));
+
+    assert_eq!(snap.mask_atlas.max_pages, expected);
+    assert_eq!(snap.color_atlas.max_pages, expected);
+    assert_eq!(snap.subpixel_atlas.max_pages, expected);
+}
+
+#[test]
 fn text_measure_key_ignores_width_for_wrap_none() {
     let style = TextStyle::default();
 

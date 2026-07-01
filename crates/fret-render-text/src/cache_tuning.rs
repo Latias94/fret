@@ -70,6 +70,31 @@ fn default_prepared_shape_cache_entries() -> usize {
 }
 
 #[doc(hidden)]
+pub fn glyph_atlas_max_pages() -> usize {
+    static PAGES: OnceLock<usize> = OnceLock::new();
+    *PAGES.get_or_init(|| {
+        // Keep glyph residency as an explicit page budget instead of a renderer-local constant.
+        // Each page is a large GPU texture, so clamp env overrides to a conservative range.
+        std::env::var("FRET_TEXT_GLYPH_ATLAS_MAX_PAGES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(default_glyph_atlas_max_pages())
+            .clamp(1, 16)
+    })
+}
+
+fn default_glyph_atlas_max_pages() -> usize {
+    #[cfg(target_arch = "wasm32")]
+    {
+        1
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        2
+    }
+}
+
+#[doc(hidden)]
 pub fn measure_shaping_cache_min_text_len_bytes() -> usize {
     static MIN_BYTES: OnceLock<usize> = OnceLock::new();
     *MIN_BYTES.get_or_init(|| {

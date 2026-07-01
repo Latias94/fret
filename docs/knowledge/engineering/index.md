@@ -35,4 +35,5 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [U7 guarded quad instance partial upload](progress/2026-07-01-u7-guarded-quad-partial-upload.md)
 - [U7 non-quad resident partial uploads deferred](progress/2026-07-01-u7-non-quad-upload-closeout.md)
 - [U8 prepared shape cache budget](progress/2026-07-01-u8-prepared-shape-cache-budget.md)
+- [U8 glyph atlas page budget diagnostics](progress/2026-07-01-u8-glyph-atlas-page-budget.md)
 - [Log](log.md)

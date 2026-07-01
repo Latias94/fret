@@ -24,7 +24,7 @@ pub use cache_keys::{
     TextBlobKey, TextMeasureKey, TextShapeKey, spans_paint_fingerprint, spans_shaping_fingerprint,
 };
 pub use cache_tuning::{
-    measure_shaping_cache_entries, measure_shaping_cache_min_text_len_bytes,
+    glyph_atlas_max_pages, measure_shaping_cache_entries, measure_shaping_cache_min_text_len_bytes,
     prepared_shape_cache_entries, released_blob_cache_entries,
 };
 pub use decorations::{

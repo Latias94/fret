@@ -1,5 +1,5 @@
 use super::TextAtlasPerfSnapshot;
-use super::atlas::{GlyphAtlas, GlyphKey, TEXT_ATLAS_MAX_PAGES};
+use super::atlas::{GlyphAtlas, GlyphKey};
 
 #[cfg(not(target_arch = "wasm32"))]
 mod debug;
@@ -26,6 +26,7 @@ impl TextAtlasRuntimeState {
     pub(super) fn bootstrap(device: &wgpu::Device) -> Self {
         let atlas_sampler = create_atlas_sampler(device);
         let atlas_bind_group_layout = create_atlas_bind_group_layout(device);
+        let max_pages = fret_render_text::glyph_atlas_max_pages();
 
         let mask_atlas = create_text_atlas(
             device,
@@ -33,6 +34,7 @@ impl TextAtlasRuntimeState {
             &atlas_sampler,
             "fret glyph mask atlas",
             wgpu::TextureFormat::R8Unorm,
+            max_pages,
         );
         let color_atlas = create_text_atlas(
             device,
@@ -40,6 +42,7 @@ impl TextAtlasRuntimeState {
             &atlas_sampler,
             "fret glyph color atlas",
             wgpu::TextureFormat::Rgba8UnormSrgb,
+            max_pages,
         );
         let subpixel_atlas = create_text_atlas(
             device,
@@ -47,6 +50,7 @@ impl TextAtlasRuntimeState {
             &atlas_sampler,
             "fret glyph subpixel atlas",
             wgpu::TextureFormat::Rgba8Unorm,
+            max_pages,
         );
 
         Self::new(
@@ -308,6 +312,7 @@ fn create_text_atlas(
     atlas_sampler: &wgpu::Sampler,
     label_prefix: &str,
     format: wgpu::TextureFormat,
+    max_pages: usize,
 ) -> GlyphAtlas {
     GlyphAtlas::new(
         device,
@@ -318,6 +323,6 @@ fn create_text_atlas(
         TEXT_ATLAS_HEIGHT,
         format,
         0,
-        TEXT_ATLAS_MAX_PAGES,
+        max_pages,
     )
 }

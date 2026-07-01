@@ -72,6 +72,7 @@ pub struct RendererGlyphAtlasPerfSnapshot {
     pub width: u32,
     pub height: u32,
     pub pages: u32,
+    pub max_pages: u32,
     pub entries: u64,
 
     pub used_px: u64,
