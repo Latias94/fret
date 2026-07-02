@@ -2167,28 +2167,38 @@ impl<H: UiHost> UiTree<H> {
         let start = source_node.or(focus).unwrap_or(default_root);
         let start_in_default_root =
             start == default_root || dispatch_snapshot.is_descendant(default_root, start);
-        let descendant_fallback_route = if barrier_root.is_none() {
+        let base_dispatch_roots = [base_root];
+        let base_dispatch_snapshot = self.cached_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            &base_dispatch_roots,
+            None,
+        );
+        let action_route_fallback = {
             let (availability, route_node) = self
                 .command_availability_in_action_route_fallback_roots(
                     app,
                     &input_ctx,
-                    &dispatch_snapshot,
+                    &base_dispatch_snapshot,
                     command,
                 );
-            if availability == CommandAvailability::Available {
-                route_node
-            } else {
-                let (availability, route_node) =
-                    self.command_availability_in_subtree(app, &input_ctx, base_root, command, None);
-                (availability == CommandAvailability::Available)
-                    .then_some(route_node)
-                    .flatten()
-            }
+            (availability == CommandAvailability::Available)
+                .then_some(route_node)
+                .flatten()
+        };
+        let descendant_fallback_route = if barrier_root.is_none() && action_route_fallback.is_none()
+        {
+            let (availability, route_node) =
+                self.command_availability_in_subtree(app, &input_ctx, base_root, command, None);
+            (availability == CommandAvailability::Available)
+                .then_some(route_node)
+                .flatten()
         } else {
             None
         };
 
-        let mut bubble_from = |start: NodeId| -> (bool, bool, bool, Option<NodeId>) {
+        let mut bubble_from = |dispatch_snapshot: &UiDispatchSnapshot,
+                               start: NodeId|
+         -> (bool, bool, bool, Option<NodeId>) {
             let mut node_id = start;
             let mut handled = false;
             let mut needs_redraw = false;
@@ -2304,11 +2314,26 @@ impl<H: UiHost> UiTree<H> {
             (handled, needs_redraw, stopped, handled_by_node)
         };
 
-        let (mut handled, mut needs_redraw, mut stopped, mut handled_by_node) = bubble_from(start);
+        let (mut handled, mut needs_redraw, mut stopped, mut handled_by_node) =
+            bubble_from(&dispatch_snapshot, start);
         let mut used_default_root_fallback = false;
         if !handled && !stopped && start != default_root && !start_in_default_root {
             used_default_root_fallback = true;
-            let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(default_root);
+            let (handled2, needs_redraw2, stopped2, handled_by_node2) =
+                bubble_from(&dispatch_snapshot, default_root);
+            handled = handled || handled2;
+            needs_redraw = needs_redraw || needs_redraw2;
+            stopped = stopped || stopped2;
+            handled_by_node = handled_by_node.or(handled_by_node2);
+        }
+
+        if !handled
+            && !stopped
+            && let Some(route_node) = action_route_fallback
+        {
+            used_default_root_fallback = true;
+            let (handled2, needs_redraw2, stopped2, handled_by_node2) =
+                bubble_from(&base_dispatch_snapshot, route_node);
             handled = handled || handled2;
             needs_redraw = needs_redraw || needs_redraw2;
             stopped = stopped || stopped2;
@@ -2321,7 +2346,8 @@ impl<H: UiHost> UiTree<H> {
             && let Some(route_node) = descendant_fallback_route
         {
             used_default_root_fallback = true;
-            let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(route_node);
+            let (handled2, needs_redraw2, stopped2, handled_by_node2) =
+                bubble_from(&base_dispatch_snapshot, route_node);
             handled = handled || handled2;
             needs_redraw = needs_redraw || needs_redraw2;
             stopped = stopped || stopped2;

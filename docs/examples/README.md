@@ -58,6 +58,9 @@ In this repository, the public-surface equivalent is `cargo run -p fretboard -- 
    - Note: this template keeps `use fret::app::prelude::*` as the app surface and imports style
      nouns explicitly from `fret::style`. It enables the command-palette feature but intentionally
      does not enable selector/query/mutation features.
+   - Diagnostics: `tools/diag-scripts/public-app/workbench-lite-settings-dialog.json` covers
+     settings draft/save/cancel, Escape, focus containment, and focus restore with stable
+     `workbench_lite.*` selectors.
 
 ## 0.1) Surface taxonomy
 

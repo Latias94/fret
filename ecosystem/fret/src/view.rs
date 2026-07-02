@@ -129,6 +129,8 @@ mod tests {
     use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
     use fret_ui::declarative::render_root;
     use fret_ui::{UiTree, element::Length};
+    #[cfg(feature = "shadcn")]
+    use fret_ui_kit::IntoUiElementInExt;
 
     #[derive(Default)]
     struct FakeUiServices;
@@ -266,6 +268,15 @@ mod tests {
     impl fret_runtime::TypedAction for RuntimeIncrementAction {
         fn action_id() -> ActionId {
             ActionId::from("test.locals_with.runtime.increment.v1")
+        }
+    }
+
+    #[cfg(feature = "shadcn")]
+    struct RuntimeButtonIncrementAction;
+    #[cfg(feature = "shadcn")]
+    impl fret_runtime::TypedAction for RuntimeButtonIncrementAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.locals_with.runtime.button_increment.v1")
         }
     }
 
@@ -439,6 +450,61 @@ mod tests {
         root
     }
 
+    #[cfg(feature = "shadcn")]
+    struct RuntimeButtonActionView {
+        count: Option<LocalState<u32>>,
+    }
+
+    #[cfg(feature = "shadcn")]
+    impl View for RuntimeButtonActionView {
+        fn init(_app: &mut crate::app::App, _window: crate::WindowId) -> Self {
+            Self { count: None }
+        }
+
+        fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui {
+            if self.count.is_none() {
+                self.count = Some(cx.state().local_init(|| 0u32));
+            }
+
+            let count = self.count.as_ref().expect("count local").clone();
+            cx.actions()
+                .local(&count)
+                .update::<RuntimeButtonIncrementAction>(|value| {
+                    *value += 1;
+                });
+
+            crate::shadcn::Button::new("Increment")
+                .action(<RuntimeButtonIncrementAction as fret_runtime::TypedAction>::action_id())
+                .test_id("test.runtime_button_action")
+                .into_element_in(cx)
+                .into()
+        }
+    }
+
+    #[cfg(feature = "shadcn")]
+    fn render_runtime_button_action_view(
+        ui: &mut UiTree<crate::app::App>,
+        app: &mut crate::app::App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        st: &mut ViewWindowState<RuntimeButtonActionView>,
+    ) -> NodeId {
+        let root = render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "runtime-button-action",
+            |cx| view_view(cx, st),
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn seed_runtime_window_metrics(
         app: &mut crate::app::App,
         window: AppWindowId,
@@ -489,6 +555,20 @@ mod tests {
             .collect();
         ids.sort();
         ids
+    }
+
+    fn node_with_test_id(
+        ui: &mut UiTree<crate::app::App>,
+        test_id: &str,
+    ) -> Option<fret_core::NodeId> {
+        ui.request_semantics_snapshot();
+        ui.semantics_snapshot().and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+                .map(|node| node.id)
+        })
     }
 
     struct RuntimeToggleGroupFooterView {
@@ -1026,6 +1106,71 @@ mod tests {
             "notify should force the cached view root to rerender on the next frame"
         );
         assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[cfg(feature = "shadcn")]
+    #[test]
+    fn shadcn_button_action_keyboard_activation_dispatches_app_ui_action() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let mut services = FakeUiServices;
+        let mut st = view_init_window::<RuntimeButtonActionView>(&mut app, window);
+
+        app.set_frame_id(FrameId(1));
+        let _root = render_runtime_button_action_view(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &mut st,
+        );
+        let button = node_with_test_id(&mut ui, "test.runtime_button_action")
+            .expect("button semantics node");
+        ui.set_focus(Some(button));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let command = <RuntimeButtonIncrementAction as fret_runtime::TypedAction>::action_id();
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |effect| matches!(effect, Effect::Command { command: seen, .. } if *seen == command)
+            ),
+            "keyboard activation should emit the button action command"
+        );
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &command),
+            "the emitted button action command should route to the AppUi action root"
+        );
+        assert_eq!(
+            st.view
+                .count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
     }
 
     #[test]

@@ -10,17 +10,15 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U9 passed focused renderer tests, `cargo check -p fret-core --tests`,
-  `cargo check -p fret-render-wgpu --tests`, full `cargo nextest run -p fret-render-wgpu
-  --no-fail-fast` (349 passed), formatting, layering, surface policy, consumption profiles, perf
-  matrix audit, wiki validation, and `git diff --check` on 2026-07-02.
-- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: Phase 2 U8 replaces the ambiguous `scene_chunks: Option<_>` renderer input with
-  `RenderSceneSource`. Launch/default callers now pass flat scenes with diagnostic chunks, while
-  the first authoritative chunk-native path is limited to resource-free quad manifests assembled
-  from cached chunk payloads without flat-scene replay.
-- In progress: continue after Phase 2 U9. Image/ViewportSurface/text/path/mask/material/clip/effect
-  streams remain full upload until closure gates are explicit.
+- Last verified: Phase 2 U10 passed focused scaffold tests, the public workbench-lite settings
+  diagnostics script against a generated app, shadcn button action routing coverage, `cargo check -p
+  fret-ui`, `cargo nextest run -p fretboard scaffold --no-fail-fast`, formatting, layering, surface
+  policy, consumption profiles, execution-surface, and `git diff --check` on 2026-07-02.
+- Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, Phase 2 U9 VertexColor viewport partial upload, Phase 2 U10 workbench-lite public settings diagnostics, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
+- Latest done: Phase 2 U10 makes generated `workbench-lite` settings a public diagnostics gate and
+  fixes modal command dispatch so overlay commands can route to explicit base `AppUi` action fallback
+  roots without arbitrary underlay subtree dispatch.
+- In progress: continue to U11 public query/mutation/toast cookbook affordances behind `AppUi`.
 - Blocked: none known after the boundary store migration.
 - Next action: continue only to the next stream class or plan unit whose closure owner and fallback
   proof are explicit.
@@ -47,6 +45,7 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [Phase 2 U7 chunk-local text resource closure](progress/2026-07-02-phase2-u7-chunk-local-text-resource-closure.md)
 - [Phase 2 U8 explicit render scene source](progress/2026-07-02-phase2-u8-explicit-render-scene-source.md)
 - [Phase 2 U9 VertexColor viewport partial upload](progress/2026-07-02-phase2-u9-viewport-partial-upload.md)
+- [Phase 2 U10 workbench-lite settings diagnostics](progress/2026-07-02-phase2-u10-workbench-settings-diagnostics.md)
 - [Phase 2 U4 boundary store audit](subagents/2026-07-02-phase2-u4-boundary-store-audit.md)
 - [Phase 2 U4 durable ViewId audit](subagents/2026-07-02-phase2-u4-durable-viewid-audit.md)
 - [Phase 2 U5 boundary bridge audit](subagents/2026-07-02-phase2-u5-boundary-bridge-audit.md)

@@ -187,7 +187,7 @@ fn workbench_lite_template_cargo_toml_with(
     opts: ScaffoldOptions,
     deps: DependencySpec<'_>,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn", "command-palette"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn", "command-palette", "diagnostics"];
     match opts.icon_pack {
         IconPack::Lucide => {
             kit_features.push("icons");
@@ -1024,10 +1024,13 @@ const TEST_ID_SIDEBAR: &str = "workbench_lite.sidebar";
 const TEST_ID_COMMAND: &str = "workbench_lite.command";
 const TEST_ID_SETTINGS: &str = "workbench_lite.settings";
 const TEST_ID_DIALOG: &str = "workbench_lite.settings.dialog";
+const TEST_ID_PROJECT_LABEL: &str = "workbench_lite.settings.project_label";
+const TEST_ID_OWNER_LABEL: &str = "workbench_lite.settings.owner_label";
 const TEST_ID_PROJECT_INPUT: &str = "workbench_lite.settings.project";
 const TEST_ID_OWNER_INPUT: &str = "workbench_lite.settings.owner";
 const TEST_ID_SAVE_SETTINGS: &str = "workbench_lite.settings.save";
 const TEST_ID_CANCEL_SETTINGS: &str = "workbench_lite.settings.cancel";
+const TEST_ID_CLOSE_SETTINGS: &str = "workbench_lite.settings.close";
 const TEST_ID_PROMPT_INPUT: &str = "workbench_lite.prompt";
 const TEST_ID_SUBMIT: &str = "workbench_lite.submit";
 const TEST_ID_STATUS: &str = "workbench_lite.status";
@@ -1044,6 +1047,8 @@ struct WorkbenchLocals {
     settings_open: LocalState<bool>,
     project_name: LocalState<String>,
     owner_name: LocalState<String>,
+    draft_project_name: LocalState<String>,
+    draft_owner_name: LocalState<String>,
     prompt: LocalState<String>,
     submitted: LocalState<u32>,
     jobs: LocalState<Vec<WorkItem>>,
@@ -1055,6 +1060,8 @@ impl WorkbenchLocals {
             settings_open: cx.state().local_init(|| false),
             project_name: cx.state().local_init(|| "Fret Studio".to_string()),
             owner_name: cx.state().local_init(|| "UI Platform".to_string()),
+            draft_project_name: cx.state().local_init(|| "Fret Studio".to_string()),
+            draft_owner_name: cx.state().local_init(|| "UI Platform".to_string()),
             prompt: cx.state().local::<String>(),
             submitted: cx.state().local_init(|| 0u32),
             jobs: cx.state().local_init(|| vec![
@@ -1079,21 +1086,43 @@ impl WorkbenchLocals {
 
     fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
         cx.actions()
-            .local(&self.settings_open)
-            .set::<act::OpenSettings>(true);
+            .locals_with((
+                &self.settings_open,
+                &self.project_name,
+                &self.owner_name,
+                &self.draft_project_name,
+                &self.draft_owner_name,
+            ))
+            .on::<act::OpenSettings>(
+                |tx, (settings_open, project_name, owner_name, draft_project_name, draft_owner_name)| {
+                    tx.set(&draft_project_name, tx.value(&project_name))
+                        && tx.set(&draft_owner_name, tx.value(&owner_name))
+                        && tx.set(&settings_open, true)
+                },
+            );
 
         cx.actions()
-            .locals_with((&self.settings_open, &self.project_name, &self.owner_name))
-            .on::<act::SaveSettings>(|tx, (settings_open, project_name, owner_name)| {
-                let project = tx.value(&project_name).trim().to_string();
-                let owner = tx.value(&owner_name).trim().to_string();
+            .locals_with((
+                &self.settings_open,
+                &self.project_name,
+                &self.owner_name,
+                &self.draft_project_name,
+                &self.draft_owner_name,
+            ))
+            .on::<act::SaveSettings>(
+                |tx, (settings_open, project_name, owner_name, draft_project_name, draft_owner_name)| {
+                let project = tx.value(&draft_project_name).trim().to_string();
+                let owner = tx.value(&draft_owner_name).trim().to_string();
                 if project.is_empty() || owner.is_empty() {
                     return false;
                 }
-                tx.set(&project_name, project)
-                    && tx.set(&owner_name, owner)
-                    && tx.set(&settings_open, false)
-            });
+                    tx.set(&project_name, project.clone())
+                        && tx.set(&owner_name, owner.clone())
+                        && tx.set(&draft_project_name, project)
+                        && tx.set(&draft_owner_name, owner)
+                        && tx.set(&settings_open, false)
+                },
+            );
 
         cx.actions()
             .local(&self.settings_open)
@@ -1195,10 +1224,13 @@ fn sidebar_panel(theme: &ThemeSnapshot, project_name: &str, owner_name: &str) ->
             ui::v_flex(move |cx| {
                 ui::children![
                     cx;
-                    ui::text(project_name.clone()).font_semibold(),
+                    ui::text(project_name.clone())
+                        .font_semibold()
+                        .test_id(TEST_ID_PROJECT_LABEL),
                     ui::text(owner_name.clone())
                         .text_sm()
-                        .text_color(ColorRef::Color(muted)),
+                        .text_color(ColorRef::Color(muted))
+                        .test_id(TEST_ID_OWNER_LABEL),
                 ]
             })
             .gap(Space::N1),
@@ -1396,8 +1428,8 @@ fn status_bar(theme: &ThemeSnapshot, submitted: u32, item_count: usize) -> impl 
 
 fn settings_dialog(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> impl UiChild + use<> {
     let open_for_cancel = locals.settings_open.clone();
-    let project_name = locals.project_name.clone();
-    let owner_name = locals.owner_name.clone();
+    let draft_project_name = locals.draft_project_name.clone();
+    let draft_owner_name = locals.draft_owner_name.clone();
 
     shadcn::Dialog::new(&locals.settings_open).into_element_in(
         cx,
@@ -1415,7 +1447,7 @@ fn settings_dialog(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> impl UiC
                         ui::children![
                             cx;
                             shadcn::Label::new("Project"),
-                            shadcn::Input::new(&project_name)
+                            shadcn::Input::new(&draft_project_name)
                                 .a11y_label("Project")
                                 .placeholder("Project name")
                                 .test_id(TEST_ID_PROJECT_INPUT),
@@ -1426,7 +1458,7 @@ fn settings_dialog(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> impl UiC
                         ui::children![
                             cx;
                             shadcn::Label::new("Owner"),
-                            shadcn::Input::new(&owner_name)
+                            shadcn::Input::new(&draft_owner_name)
                                 .a11y_label("Owner")
                                 .placeholder("Team or person")
                                 .submit_action(act::SaveSettings)
@@ -1461,7 +1493,7 @@ fn settings_dialog(cx: &mut AppUi<'_, '_>, locals: &WorkbenchLocals) -> impl UiC
                 .into_element_in(cx),
                 shadcn::DialogClose::new(open_for_cancel)
                     .into_element_in(cx)
-                    .test_id("workbench_lite.settings.close"),
+                    .test_id(TEST_ID_CLOSE_SETTINGS),
             ])
             .show_close_button(false)
             .into_element_in(cx)
@@ -2135,14 +2167,26 @@ cargo clippy -- -D warnings
 cargo run --release
 ```
 
+## Diagnostics
+
+From the Fret repository, run the public settings-dialog script against this app:
+
+```bash
+cargo run -p fretboard-dev -- diag run tools/diag-scripts/public-app/workbench-lite-settings-dialog.json --launch -- cargo run --manifest-path path/to/{package_name}/Cargo.toml
+```
+
+The script covers settings open/close, focus containment, save, cancel, Escape, and focus restore
+through stable `workbench_lite.*` selectors.
+
 ## Notes
 
 - Theme: shadcn new-york-v4 (Slate / Light)
 {icons_line}- Command palette: enabled (Cmd/Ctrl+Shift+P)
+- Diagnostics: enabled for scripted native/web public app checks.
 - Ladder position: second-hour starter after `hello` -> `simple-todo` -> `todo`.
 - Authoring surface: `use fret::app::prelude::*;` plus explicit `fret::style` imports for styling nouns.
 - App slices: command palette button, settings dialog, content pane, status bar, and simulated submit flow.
-- State: view-owned `LocalState<T>` only. The submit flow is intentionally synchronous so the starter does not require mutation runtime setup.
+- State: view-owned `LocalState<T>` only. The settings dialog uses committed + draft local state so Cancel/Escape discard edits and Save commits trimmed values. The submit flow is intentionally synchronous so the starter does not require mutation runtime setup.
 - Dialog policy stays in the shadcn recipe layer; the template keeps raw runtime and manual assembly imports out of generated app code.
 - Stable diagnostics selectors are in `src/main.rs` as `TEST_ID_*` constants.
 
@@ -2486,10 +2530,23 @@ mod tests {
         assert!(src.contains("shadcn::Dialog::new(&locals.settings_open).into_element_in("));
         assert!(src.contains("shadcn::DialogContent::new(["));
         assert!(src.contains("TEST_ID_DIALOG"));
+        assert!(src.contains("TEST_ID_CLOSE_SETTINGS"));
+        assert!(src.contains("draft_project_name: LocalState<String>"));
+        assert!(src.contains("draft_owner_name: LocalState<String>"));
         assert!(src.contains("TEST_ID_PROMPT_INPUT"));
         assert!(src.contains("TEST_ID_SUBMIT"));
         assert!(src.contains("TEST_ID_STATUS"));
         assert!(src.contains("TEST_ID_CONTENT"));
+        assert!(src.contains("&self.draft_project_name"));
+        assert!(src.contains("&self.draft_owner_name"));
+        assert!(src.contains("tx.set(&draft_project_name, tx.value(&project_name))"));
+        assert!(src.contains("tx.set(&draft_owner_name, tx.value(&owner_name))"));
+        assert!(src.contains("tx.value(&draft_project_name).trim().to_string()"));
+        assert!(src.contains("tx.value(&draft_owner_name).trim().to_string()"));
+        assert!(src.contains("shadcn::Input::new(&draft_project_name)"));
+        assert!(src.contains("shadcn::Input::new(&draft_owner_name)"));
+        assert!(src.contains("test_id(TEST_ID_PROJECT_LABEL)"));
+        assert!(src.contains("test_id(TEST_ID_OWNER_LABEL)"));
         assert!(src.contains(".locals_with((&self.prompt, &self.submitted, &self.jobs))"));
         assert!(src.contains(".on::<act::SubmitJob>(|tx, (prompt, submitted, jobs)| {"));
         assert!(src.contains("ui::for_each_keyed(cx, jobs.iter(), |job| job.id, move |job| {"));
@@ -2513,6 +2570,7 @@ mod tests {
     fn workbench_lite_template_cargo_toml_enables_command_palette_without_state() {
         let toml = workbench_lite_template_cargo_toml_repo("workbench-lite-app", opts(), ".");
         assert!(toml.contains("\"command-palette\""));
+        assert!(toml.contains("\"diagnostics\""));
         assert!(toml.contains("\"desktop\""));
         assert!(toml.contains("\"shadcn\""));
         assert!(!toml.contains("\"state\""));
@@ -2528,6 +2586,9 @@ mod tests {
         assert!(readme.contains("Ladder position: second-hour starter"));
         assert!(readme.contains("command palette button, settings dialog, content pane"));
         assert!(readme.contains("keeps raw runtime and manual assembly imports out"));
+        assert!(
+            readme.contains("tools/diag-scripts/public-app/workbench-lite-settings-dialog.json")
+        );
     }
 
     #[test]

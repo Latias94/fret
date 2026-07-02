@@ -118,6 +118,12 @@ submit flow. It intentionally does not import `fret_ui`, `fret_core`, `FnDriver`
 advanced prelude. Replace its simulated submit flow with a cookbook mutation recipe only when real
 background work is the point.
 
+The settings dialog is the first public-app behavior gate for this rung. It keeps committed values
+separate from draft input, so Cancel/Escape discard edits and Save commits trimmed values. The
+script `tools/diag-scripts/public-app/workbench-lite-settings-dialog.json` locks the open, focus
+containment, save, cancel, Escape, and focus-restore behavior through stable `workbench_lite.*`
+selectors.
+
 ## 3) The three things you should learn first
 
 ### A) Keyed identity for dynamic lists

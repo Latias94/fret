@@ -1,0 +1,360 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "workbench-lite settings dialog public app gate",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["public-app", "workbench-lite", "settings", "dialog", "focus", "keyboard"],
+    "target_hints": [
+      "Run against a generated workbench-lite app.",
+      "Covers settings draft/save/cancel, Escape, keyboard activation, focus containment, and focus restore through stable workbench_lite.* selectors."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 620.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workbench_lite.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project_label" },
+        "text": "Fret Studio"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner_label" },
+        "text": "UI Platform"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.dialog" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project" },
+        "text": "Fret Studio"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" },
+        "text": "UI Platform"
+      }
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.cancel" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.save" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.close" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab", "modifiers": { "shift": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.save" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.project" }
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.project" },
+      "text": "Canceled Project"
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" },
+      "text": "Canceled Owner"
+    },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.cancel" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.dialog" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project_label" },
+        "text": "Fret Studio"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner_label" },
+        "text": "UI Platform"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project" },
+        "text": "Fret Studio"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" },
+        "text": "UI Platform"
+      }
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.project" },
+      "text": "Saved Project"
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" },
+      "text": "Saved Owner"
+    },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.cancel" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.save" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.dialog" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project_label" },
+        "text": "Saved Project"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.owner_label" },
+        "text": "Saved Owner"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings" },
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "workbench_lite.settings.dialog" },
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "workbench_lite.settings.project" },
+      "text": "Escape Project"
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.dialog" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workbench_lite.settings.project_label" },
+        "text": "Saved Project"
+      }
+    },
+    { "type": "capture_bundle", "label": "workbench-lite-settings-dialog" }
+  ]
+}

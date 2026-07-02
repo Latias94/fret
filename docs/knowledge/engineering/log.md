@@ -268,3 +268,8 @@ timestamp: 2026-06-30
   streams remain full upload. Verification passed: renderer checks, focused U9 tests, full
   `cargo nextest run -p fret-render-wgpu --no-fail-fast` (349 passed), formatting, layering,
   source-policy, consumption-profile, perf-matrix, wiki, and whitespace gates.
+- 2026-07-02: Phase 2 U10 turns generated `workbench-lite` settings into a public diagnostics gate.
+  The template now enables diagnostics, uses committed/draft settings state, and exposes stable
+  settings label/close selectors. The public script caught modal overlay command routing failing to
+  reach the base `AppUi` action root; `UiTree::dispatch_command` now applies explicit base
+  action-route fallback roots under modal barriers without arbitrary underlay subtree dispatch.

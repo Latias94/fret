@@ -205,6 +205,10 @@ The `workbench-lite` scaffold is the current second-hour reference for that budg
 command palette integration, settings dialog policy, a content pane, status bar, and simulated
 submit flow while keeping style nouns on explicit `fret::style` imports and keeping raw runtime
 imports out of generated app code.
+Its settings dialog is also the public-app diagnostics reference for this rung:
+`tools/diag-scripts/public-app/workbench-lite-settings-dialog.json` covers committed/draft settings
+state, Cancel/Escape discard semantics, Save commit semantics, focus containment, and focus restore
+without requiring raw runtime imports in the generated source.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
