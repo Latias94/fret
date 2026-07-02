@@ -174,3 +174,18 @@ timestamp: 2026-06-30
   failures. Main-thread reverse-patch baseline experiment reproduced the anchored scroll-transform
   failure without tracked U2 changes. U2 fixed the remaining stale-index risk by revalidating
   attachment on indexed hits and adding focused coverage.
+- 2026-07-02: Phase 2 U3 live fallback scan deletion removes `UiTree::live_nodes_for_element`,
+  the retained-tree `self.nodes.iter()` identity fallback, identity fallback scan frame stats,
+  bootstrap diagnostics fields, and `fret-diag` perf keys. Live element resolution is now
+  seed-or-index only; retained detached reuse remains explicit through
+  `resolve_reusable_node_for_element_seeded`.
+- U3 deletion verification passed: `cargo check -p fret-ui`, `cargo check -p fret-bootstrap`,
+  focused U3 identity and scroll-target nextest coverage,
+  `cargo nextest run -p fret-ui --no-fail-fast` (1180 passed),
+  `cargo nextest run -p fret-bootstrap --lib --no-fail-fast`, focused `fret-diag` perf-key
+  registry tests, `cargo fmt --all`, `cargo fmt --all --check`,
+  `python3 tools/check_layering.py`, `python3 tools/check_surface_policy.py`, and
+  `git diff --check`.
+- Remaining U3 cleanup candidate: `crates/fret-ui/src/declarative/frame.rs::element_id_map_for_window`
+  still lazily builds a semantics relation map from `WindowFrame.instances`; future fixes should
+  update semantics relation input or index maintenance, not restore live identity scan fallbacks.

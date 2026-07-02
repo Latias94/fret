@@ -10,12 +10,12 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 
 - Goal: execute `docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md` as a breaking Phase 2 UI framework refactor.
 - Branch: `feat/ui-framework-phase2-refactor`.
-- Last verified: Phase 2 U2 focused identity/diagnostics gates passed on 2026-07-02; full `cargo nextest run -p fret-ui --no-fail-fast` still has 23 scroll/layout/text/prepaint failures attributed to current-branch baseline regressions.
+- Last verified: Phase 2 U3 live fallback scan deletion passed full `cargo nextest run -p fret-ui --no-fail-fast` on 2026-07-02, plus focused `fret-diag`, `fret-bootstrap`, formatting, layering, surface-policy, and whitespace gates.
 - Done: local ADR/workstream research, crate/perf snapshots, GPUI/Zed comparison, architecture boundary audit, framework consumer audit, performance audit, implementation-ready plan, U1 convergence contract freeze, U2 source-policy gate, U3 first slice (`workbench-lite` public scaffold), U4 identity/dirty graph observability slices, U5 `ViewId` / boundary frame-product ownership slices, U6 policy vocabulary demotion/cleanup slices, U7 renderer scene/upload observability plus retained scene chunk and guarded quad resident upload lanes, U8 text/glyph/wasm budget work through web runtime evidence, U9 modular consumption profiles and `AppUi` facade split, workstream closeout audit, duplicate ADR ID `0324` resolution, and execution-surface allowlist alignment.
-- Latest done: ADR numbering and skip-heavy pre-release smoke restoration.
-- In progress: Phase 2 U2 stable element node index implementation is ready to commit with focused evidence.
-- Blocked: package-level `fret-ui` gate is red with 23 failures that explorer `019f21e5-3622-7111-a55e-0d7cddb35d15` and a reverse-patch baseline experiment attribute to current-branch scroll/layout/text/prepaint regressions, not direct U2 identity-index behavior.
-- Next action: commit the focused U2 slice, then start the next fix from the scroll/layout extent cluster before higher-level scroll-into-view or combobox retained-active failures.
+- Latest done: Phase 2 U3 removed normal-path live element fallback scans and identity fallback diagnostics; live element resolution is now seed-or-index only, with retained detached reuse kept as an explicit retained-cache path.
+- In progress: Phase 2 U3/U4 follow-up design cut: remove or quarantine the remaining semantics `element_id_map_for_window` `WindowFrame.instances` map, then move `ViewId` and boundary storage to entity-first identities.
+- Blocked: none known after the U3 deletion slice.
+- Next action: continue with the `element_id_map_for_window` semantics relation cleanup or start U4 `ViewId` / boundary storage migration if the semantics cleanup is folded into boundary identity work.
 
 # Citations
 
@@ -28,6 +28,7 @@ related_plan: docs/plans/2026-07-02-001-refactor-ui-framework-phase2-plan.md
 - [UI convergence plan closeout](progress/2026-07-02-ui-convergence-closeout.md)
 - [ADR numbering and pre-release smoke restored](progress/2026-07-02-adr-numbering-pre-release-smoke.md)
 - [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md)
+- [Phase 2 U3 live fallback scan deletion](progress/2026-07-02-phase2-u3-live-fallback-scan-deletion.md)
 - Commit `020bb34a37 docs(architecture): freeze ui convergence contract`
 - Commit `84f60d8355 feat(tools): add ui surface policy gate`
 - Commit `df0d6620ff feat(ui): expose dirty frontier diagnostics`

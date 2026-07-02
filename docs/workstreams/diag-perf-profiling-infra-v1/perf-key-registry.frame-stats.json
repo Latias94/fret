@@ -1866,34 +1866,6 @@
       "unit": "count"
     },
     {
-      "key": "identity_resolve_fallback_scans",
-      "kind": "counter",
-      "scope": "frame",
-      "suggested_aggregate": "max",
-      "unit": "count"
-    },
-    {
-      "key": "identity_resolve_fallback_scan_nodes",
-      "kind": "counter",
-      "scope": "frame",
-      "suggested_aggregate": "max",
-      "unit": "count"
-    },
-    {
-      "key": "identity_resolve_fallback_hits",
-      "kind": "counter",
-      "scope": "frame",
-      "suggested_aggregate": "max",
-      "unit": "count"
-    },
-    {
-      "key": "identity_resolve_fallback_misses",
-      "kind": "counter",
-      "scope": "frame",
-      "suggested_aggregate": "max",
-      "unit": "count"
-    },
-    {
       "key": "invalidation_walk_calls",
       "kind": "counter",
       "scope": "frame",

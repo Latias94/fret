@@ -94,10 +94,8 @@ fn seeded_live_node_resolution_ignores_stale_detached_node_entry() {
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_seeded_stale, 1);
     assert_eq!(stats.identity_resolve_index_hits, 1);
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
-    assert_eq!(stats.identity_resolve_fallback_hits, 0);
-    assert_eq!(stats.identity_resolve_fallback_misses, 0);
-    assert_eq!(stats.identity_resolve_fallback_scan_nodes, 0);
+    assert_eq!(stats.identity_resolve_index_stale, 0);
+    assert_eq!(stats.identity_resolve_index_misses, 0);
 }
 
 #[test]
@@ -117,13 +115,13 @@ fn seeded_reusable_node_resolution_reuses_detached_seed_when_no_live_attached_no
 
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_seeded_stale, 1);
-    assert_eq!(stats.identity_resolve_fallback_scans, 1);
-    assert_eq!(stats.identity_resolve_fallback_hits, 0);
-    assert_eq!(stats.identity_resolve_fallback_misses, 1);
+    assert_eq!(stats.identity_resolve_index_hits, 0);
+    assert_eq!(stats.identity_resolve_index_stale, 0);
+    assert_eq!(stats.identity_resolve_index_misses, 1);
 }
 
 #[test]
-fn seeded_live_node_resolution_records_seed_hit_without_fallback_scan() {
+fn seeded_live_node_resolution_records_seed_hit_without_index_lookup() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_debug_enabled(true);
@@ -143,7 +141,9 @@ fn seeded_live_node_resolution_records_seed_hit_without_fallback_scan() {
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_seeded_hits, 1);
     assert_eq!(stats.identity_resolve_seeded_stale, 0);
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
+    assert_eq!(stats.identity_resolve_index_hits, 0);
+    assert_eq!(stats.identity_resolve_index_stale, 0);
+    assert_eq!(stats.identity_resolve_index_misses, 0);
 }
 
 #[test]

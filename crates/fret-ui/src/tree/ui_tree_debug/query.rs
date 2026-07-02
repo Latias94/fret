@@ -358,31 +358,6 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(1);
     }
 
-    pub(crate) fn debug_record_identity_fallback_scan(&mut self, nodes_scanned: u64, hit: bool) {
-        if !self.debug_enabled {
-            return;
-        }
-        self.debug_stats.identity_resolve_fallback_scans = self
-            .debug_stats
-            .identity_resolve_fallback_scans
-            .saturating_add(1);
-        self.debug_stats.identity_resolve_fallback_scan_nodes = self
-            .debug_stats
-            .identity_resolve_fallback_scan_nodes
-            .saturating_add(nodes_scanned);
-        if hit {
-            self.debug_stats.identity_resolve_fallback_hits = self
-                .debug_stats
-                .identity_resolve_fallback_hits
-                .saturating_add(1);
-        } else {
-            self.debug_stats.identity_resolve_fallback_misses = self
-                .debug_stats
-                .identity_resolve_fallback_misses
-                .saturating_add(1);
-        }
-    }
-
     pub(crate) fn debug_record_parent_pointer_repair(&mut self, repaired: u32) {
         if !self.debug_enabled {
             return;

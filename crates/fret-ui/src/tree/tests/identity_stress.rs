@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn element_index_resolves_live_node_without_fallback_scan() {
+fn element_index_resolves_live_node_without_retained_scan() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_debug_enabled(true);
@@ -22,11 +22,10 @@ fn element_index_resolves_live_node_without_fallback_scan() {
     assert_eq!(stats.identity_resolve_index_hits, 1);
     assert_eq!(stats.identity_resolve_index_stale, 0);
     assert_eq!(stats.identity_resolve_index_misses, 0);
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
 }
 
 #[test]
-fn seeded_stale_resolution_uses_index_before_fallback_scan() {
+fn seeded_stale_resolution_uses_index_without_retained_scan() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_debug_enabled(true);
@@ -47,7 +46,6 @@ fn seeded_stale_resolution_uses_index_before_fallback_scan() {
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_seeded_stale, 1);
     assert_eq!(stats.identity_resolve_index_hits, 1);
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
 }
 
 #[test]
@@ -103,7 +101,6 @@ fn duplicate_live_element_ids_are_diagnostic_instead_of_silent_overwrite() {
 
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_index_duplicate_live, 1);
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
 }
 
 #[test]
@@ -131,7 +128,6 @@ fn seeded_duplicate_live_element_ids_are_still_diagnostic() {
         stats.identity_resolve_index_duplicate_live, 1,
         "a valid seed must not hide duplicate live declarative ids"
     );
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
 }
 
 #[test]
@@ -165,7 +161,6 @@ fn removed_node_seed_cannot_resolve_after_new_binding_reuses_element() {
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_seeded_stale, 1);
     assert_eq!(stats.identity_resolve_index_hits, 1);
-    assert_eq!(stats.identity_resolve_fallback_scans, 0);
 }
 
 #[test]
@@ -189,7 +184,7 @@ fn indexed_detached_handle_is_stale_even_when_binding_generation_matches() {
     let stats = ui.debug_stats();
     assert_eq!(stats.identity_resolve_index_stale, 1);
     assert_eq!(stats.identity_resolve_index_hits, 0);
-    assert_eq!(stats.identity_resolve_fallback_misses, 1);
+    assert_eq!(stats.identity_resolve_index_misses, 0);
 }
 
 #[test]

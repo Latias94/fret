@@ -53,6 +53,7 @@ It is a sidecar for session recovery and subagent synthesis, not a replacement f
 - [UI convergence closeout audits](subagents/2026-07-02-ui-convergence-closeout-audits.md)
 - [UI convergence plan closeout](progress/2026-07-02-ui-convergence-closeout.md)
 - [Phase 2 U2 stable element node index](progress/2026-07-02-phase2-u2-stable-element-index.md)
+- [Phase 2 U3 live fallback scan deletion](progress/2026-07-02-phase2-u3-live-fallback-scan-deletion.md)
 - [ADR numbering and pre-release smoke restored](progress/2026-07-02-adr-numbering-pre-release-smoke.md)
 - [U9 view context split](progress/2026-07-01-u9-view-context-split.md)
 - [U9 consumption profile gate hardening](progress/2026-07-01-u9-consumption-profile-gate.md)

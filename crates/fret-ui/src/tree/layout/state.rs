@@ -124,39 +124,6 @@ impl<H: UiHost> UiTree<H> {
         out
     }
 
-    pub(crate) fn live_nodes_for_element(
-        &mut self,
-        app: &mut H,
-        window: AppWindowId,
-        element: GlobalElementId,
-    ) -> Vec<NodeId> {
-        let mut seen = std::collections::HashSet::new();
-        let mut out = crate::declarative::with_window_frame(app, window, |window_frame| {
-            let Some(window_frame) = window_frame else {
-                return Vec::new();
-            };
-            let mut out = Vec::new();
-            for (node, record) in window_frame.instances.iter() {
-                if record.element != element || !self.node_is_attached_to_layer_tree(node) {
-                    continue;
-                }
-                if seen.insert(node) {
-                    out.push(node);
-                }
-            }
-            out
-        });
-        for (node, entry) in self.nodes.iter() {
-            if entry.element != Some(element) || !self.node_is_attached_to_layer_tree(node) {
-                continue;
-            }
-            if seen.insert(node) {
-                out.push(node);
-            }
-        }
-        out
-    }
-
     pub(crate) fn resolve_live_attached_node_for_element(
         &mut self,
         app: &mut H,
@@ -168,14 +135,6 @@ impl<H: UiHost> UiTree<H> {
                 window_state.node_entry(element).map(|entry| entry.node)
             });
             if let Some(node) = self.resolve_live_attached_node_for_element_seeded(element, seeded)
-            {
-                return Some(node);
-            }
-
-            if let Some(node) = self
-                .live_nodes_for_element(app, window, element)
-                .into_iter()
-                .next()
             {
                 return Some(node);
             }
@@ -208,16 +167,6 @@ impl<H: UiHost> UiTree<H> {
             ElementNodeIndexLiveLookup::Missing | ElementNodeIndexLiveLookup::Stale => {}
         }
 
-        let mut nodes_scanned: u64 = 0;
-        for (node, entry) in self.nodes.iter() {
-            nodes_scanned = nodes_scanned.saturating_add(1);
-            if entry.element == Some(element) && self.node_is_attached_to_layer_tree(node) {
-                self.debug_record_identity_fallback_scan(nodes_scanned, true);
-                return Some(node);
-            }
-        }
-
-        self.debug_record_identity_fallback_scan(nodes_scanned, false);
         None
     }
 
@@ -256,17 +205,20 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         for &element in requests {
-            for node in self.live_nodes_for_element(app, window, element) {
-                let inv = crate::declarative::frame::element_record_for_node(app, window, node)
-                    .map(|record| match record.instance {
-                        crate::declarative::frame::ElementInstance::VirtualList(_) => {
-                            Invalidation::Layout
-                        }
-                        _ => Invalidation::HitTestOnly,
-                    })
-                    .unwrap_or(Invalidation::HitTestOnly);
-                out.push((node, inv));
-            }
+            let Some(node) =
+                self.resolve_live_attached_node_for_element(app, Some(window), element)
+            else {
+                continue;
+            };
+            let inv = crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|record| match record.instance {
+                    crate::declarative::frame::ElementInstance::VirtualList(_) => {
+                        Invalidation::Layout
+                    }
+                    _ => Invalidation::HitTestOnly,
+                })
+                .unwrap_or(Invalidation::HitTestOnly);
+            out.push((node, inv));
         }
     }
 

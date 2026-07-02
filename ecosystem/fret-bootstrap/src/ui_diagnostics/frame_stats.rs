@@ -23,14 +23,6 @@ pub struct UiFrameStatsV1 {
     pub identity_resolve_index_misses: u32,
     #[serde(default)]
     pub identity_resolve_index_duplicate_live: u32,
-    #[serde(default)]
-    pub identity_resolve_fallback_scans: u32,
-    #[serde(default)]
-    pub identity_resolve_fallback_scan_nodes: u64,
-    #[serde(default)]
-    pub identity_resolve_fallback_hits: u32,
-    #[serde(default)]
-    pub identity_resolve_fallback_misses: u32,
     /// UI thread CPU time spent since the previous snapshot (approx frame CPU time).
     ///
     /// This is intended to distinguish "real work" from schedule noise: if wall time spikes but
@@ -1150,10 +1142,6 @@ impl UiFrameStatsV1 {
             identity_resolve_index_stale: stats.identity_resolve_index_stale,
             identity_resolve_index_misses: stats.identity_resolve_index_misses,
             identity_resolve_index_duplicate_live: stats.identity_resolve_index_duplicate_live,
-            identity_resolve_fallback_scans: stats.identity_resolve_fallback_scans,
-            identity_resolve_fallback_scan_nodes: stats.identity_resolve_fallback_scan_nodes,
-            identity_resolve_fallback_hits: stats.identity_resolve_fallback_hits,
-            identity_resolve_fallback_misses: stats.identity_resolve_fallback_misses,
             ui_thread_cpu_time_us: cpu.delta_time_us,
             ui_thread_cpu_total_time_us: cpu.total_time_us,
             ui_thread_cpu_cycle_time_delta_cycles: cpu.delta_cycles,

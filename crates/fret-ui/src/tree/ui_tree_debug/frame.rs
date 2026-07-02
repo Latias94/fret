@@ -41,10 +41,6 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.identity_resolve_index_stale = 0;
         self.debug_stats.identity_resolve_index_misses = 0;
         self.debug_stats.identity_resolve_index_duplicate_live = 0;
-        self.debug_stats.identity_resolve_fallback_scans = 0;
-        self.debug_stats.identity_resolve_fallback_scan_nodes = 0;
-        self.debug_stats.identity_resolve_fallback_hits = 0;
-        self.debug_stats.identity_resolve_fallback_misses = 0;
         self.debug_stats.dispatch_time = Duration::default();
         self.debug_stats.dispatch_inner_body_time = Duration::default();
         self.debug_stats.dispatch_pointer_events = u32::default();

@@ -216,6 +216,9 @@ fn event_scroll_target_invalidation_prefers_live_attached_node_over_stale_same_f
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     let requester_element = crate::GlobalElementId(91);
+    ui.set_node_element(requester, Some(requester_element));
+    ui.set_node_element(stale_target, Some(target_element));
+    ui.set_node_element(live_target, Some(target_element));
     crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
         window_frame.instances.insert(
             requester,

@@ -1387,13 +1387,6 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
         "identity_resolve_index_duplicate_live",
         PerfKeyAggregate::Max,
     ),
-    count_key("identity_resolve_fallback_scans", PerfKeyAggregate::Max),
-    count_key(
-        "identity_resolve_fallback_scan_nodes",
-        PerfKeyAggregate::Max,
-    ),
-    count_key("identity_resolve_fallback_hits", PerfKeyAggregate::Max),
-    count_key("identity_resolve_fallback_misses", PerfKeyAggregate::Max),
     count_key("invalidation_walk_calls", PerfKeyAggregate::Max),
     count_key("invalidation_walk_calls_focus", PerfKeyAggregate::Max),
     count_key(
@@ -2652,8 +2645,6 @@ mod tests {
             "element_children_vec_pool_grow_events",
             "identity_resolve_index_hits",
             "identity_resolve_index_duplicate_live",
-            "identity_resolve_fallback_scans",
-            "identity_resolve_fallback_scan_nodes",
             "parent_pointer_repairs",
             "gc_reachability_layer_nodes",
             "gc_stale_removed",
